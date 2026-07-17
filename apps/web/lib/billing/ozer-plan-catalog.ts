@@ -167,7 +167,12 @@ const ADDONS: OzerPlanDefinition[] = [
     stripePriceId: OZER_STRIPE_PRICES.addon_signatures_starter_monthly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 10 },
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxMailboxes: 10,
+    },
   },
   {
     productId: 'ozer-addon-signatures',
@@ -175,7 +180,12 @@ const ADDONS: OzerPlanDefinition[] = [
     stripePriceId: OZER_STRIPE_PRICES.addon_signatures_starter_yearly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 10 },
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxMailboxes: 10,
+    },
   },
   {
     productId: 'ozer-addon-signatures',
@@ -183,7 +193,12 @@ const ADDONS: OzerPlanDefinition[] = [
     stripePriceId: OZER_STRIPE_PRICES.addon_signatures_team_monthly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 50 },
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxMailboxes: 50,
+    },
   },
   {
     productId: 'ozer-addon-signatures',
@@ -191,7 +206,12 @@ const ADDONS: OzerPlanDefinition[] = [
     stripePriceId: OZER_STRIPE_PRICES.addon_signatures_team_yearly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 50 },
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxMailboxes: 50,
+    },
   },
   {
     productId: 'ozer-addon-signatures',
@@ -199,7 +219,12 @@ const ADDONS: OzerPlanDefinition[] = [
     stripePriceId: OZER_STRIPE_PRICES.addon_signatures_office_monthly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 150 },
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxMailboxes: 150,
+    },
   },
   {
     productId: 'ozer-addon-signatures',
@@ -207,7 +232,12 @@ const ADDONS: OzerPlanDefinition[] = [
     stripePriceId: OZER_STRIPE_PRICES.addon_signatures_office_yearly,
     family: 'addon_signatures',
     entitlementKey: 'addon_signatures',
-    limits: { maxMembers: null, maxProperties: null, maxVideos: null, maxMailboxes: 150 },
+    limits: {
+      maxMembers: null,
+      maxProperties: null,
+      maxVideos: null,
+      maxMailboxes: 150,
+    },
   },
   {
     productId: 'ozer-addon-rankly',
@@ -354,7 +384,9 @@ export function addonProductIds(): string[] {
   return [...ids];
 }
 
-export function catalogPlansForAddonProduct(productId: string): OzerPlanDefinition[] {
+export function catalogPlansForAddonProduct(
+  productId: string,
+): OzerPlanDefinition[] {
   return OZER_PLAN_CATALOG.filter((plan) => plan.productId === productId);
 }
 
@@ -453,5 +485,7 @@ export function launchedWorkspaceAddons() {
 }
 
 export function launchedAddonProductIds(): string[] {
-  return [...new Set(launchedWorkspaceAddons().map((addon) => addon.productId))];
+  return [
+    ...new Set(launchedWorkspaceAddons().map((addon) => addon.productId)),
+  ];
 }

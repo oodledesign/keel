@@ -445,7 +445,8 @@ export async function processDueRecurringSeries() {
         deposit_value: template.deposit_value ?? 0,
         late_fee_type: template.late_fee_type ?? null,
         late_fee_value: template.late_fee_value ?? 0,
-        footer_message: template.footer_message ?? DEFAULT_INVOICE_FOOTER_MESSAGE,
+        footer_message:
+          template.footer_message ?? DEFAULT_INVOICE_FOOTER_MESSAGE,
         email_subject: template.email_subject ?? DEFAULT_INVOICE_EMAIL_SUBJECT,
         email_body: template.email_body ?? DEFAULT_INVOICE_EMAIL_BODY,
         email_signature:

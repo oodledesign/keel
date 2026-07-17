@@ -63,7 +63,9 @@ export async function loadMeetingTranscriptEnrichmentByIds(
 
   const { data: summaries } = await admin
     .from('meeting_summaries')
-    .select('meeting_transcript_id, summary_text, attendee_emails, generated_at')
+    .select(
+      'meeting_transcript_id, summary_text, attendee_emails, generated_at',
+    )
     .eq('account_id', accountId)
     .in('meeting_transcript_id', transcriptIds);
 

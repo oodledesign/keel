@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
 import { exchangeDesktopConnectCode } from '~/lib/recorder/desktop-connect';
@@ -26,7 +27,10 @@ export async function POST(request: Request) {
 
   const token = await exchangeDesktopConnectCode(parsed.data);
   if (!token) {
-    return NextResponse.json({ error: 'Invalid or expired connect code' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Invalid or expired connect code' },
+      { status: 401 },
+    );
   }
 
   return NextResponse.json({ token });

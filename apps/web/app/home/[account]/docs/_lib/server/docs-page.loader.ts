@@ -4,15 +4,6 @@ import { redirect } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
 
-import {
-  linkOptionsForProfile,
-  loadWorkspaceLinkOptions,
-} from '../../../_lib/workspace-content/link-options.loader';
-import {
-  loadAccountDocById,
-  loadAccountDocs,
-} from '../../../_lib/workspace-content/docs-loader';
-import type { DocListItem } from '../../../_lib/workspace-content/types';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import {
   notesVariantFromProfile,
@@ -22,6 +13,15 @@ import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
+import {
+  loadAccountDocById,
+  loadAccountDocs,
+} from '../../../_lib/workspace-content/docs-loader';
+import {
+  linkOptionsForProfile,
+  loadWorkspaceLinkOptions,
+} from '../../../_lib/workspace-content/link-options.loader';
+import type { DocListItem } from '../../../_lib/workspace-content/types';
 
 export type WorkDocListItem = DocListItem;
 
@@ -89,10 +89,8 @@ export async function loadDocDetailData(accountSlug: string, docId: string) {
         doc.context?.type === 'job' || doc.context?.type === 'project'
           ? doc.context.label
           : null,
-      clientName:
-        doc.context?.type === 'client' ? doc.context.label : null,
-      propertyName:
-        doc.context?.type === 'property' ? doc.context.label : null,
+      clientName: doc.context?.type === 'client' ? doc.context.label : null,
+      propertyName: doc.context?.type === 'property' ? doc.context.label : null,
     },
   };
 }

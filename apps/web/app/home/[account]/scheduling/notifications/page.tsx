@@ -1,7 +1,7 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { withI18n } from '~/lib/i18n/with-i18n';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { NotificationsForm } from '../_components/notifications-form';
 import { loadSchedulingAccess } from '../_lib/server/scheduling-page.loader';

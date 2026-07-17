@@ -2,8 +2,8 @@
 
 import { FileText, Link2, Youtube } from 'lucide-react';
 
-import { YoutubeEmbed } from '~/components/youtube-embed';
 import { WorkspaceRichTextHtml } from '~/components/workspace-rich-text';
+import { YoutubeEmbed } from '~/components/youtube-embed';
 import { isHtmlContent } from '~/lib/sanitize-community-html';
 
 import type { MeetupContentItem } from '../_lib/community-schedule.types';
@@ -32,7 +32,10 @@ export function MeetupContentItemView({ item }: { item: MeetupContentItem }) {
           className="max-h-80 w-full rounded-xl border border-[color:var(--workspace-shell-border)]"
           src={item.url}
         >
-          <a href={item.url} className="text-[var(--ozer-accent-muted)] underline">
+          <a
+            href={item.url}
+            className="text-[var(--ozer-accent-muted)] underline"
+          >
             {item.url}
           </a>
         </video>
@@ -43,7 +46,7 @@ export function MeetupContentItemView({ item }: { item: MeetupContentItem }) {
           href={item.url}
           target="_blank"
           rel="noopener noreferrer"
-          className="text-sm text-[var(--ozer-accent-muted)] underline break-all"
+          className="text-sm break-all text-[var(--ozer-accent-muted)] underline"
         >
           {item.url}
         </a>
@@ -53,7 +56,9 @@ export function MeetupContentItemView({ item }: { item: MeetupContentItem }) {
         isHtmlContent(item.body) ? (
           <WorkspaceRichTextHtml html={item.body} />
         ) : (
-          <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/70">{item.body}</p>
+          <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/70">
+            {item.body}
+          </p>
         )
       ) : null}
     </div>

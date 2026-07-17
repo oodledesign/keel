@@ -1,15 +1,16 @@
 import { notFound } from 'next/navigation';
 
+import { loadRanklyPageDetail } from '~/lib/rankly-pages/db';
+
+import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
+import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
 import { RanklyPageDetailView } from '../../../../../_components/pages/rankly-page-detail';
 import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 import {
   ranklyPagespeedPagePath,
   ranklyProjectPaths,
 } from '../../../../../_lib/rankly-project-paths';
-import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
-import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
-import { loadRanklyPageDetail } from '~/lib/rankly-pages/db';
 
 type RanklyProjectPageDetailRouteProps = {
   params: Promise<{

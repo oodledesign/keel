@@ -3,6 +3,7 @@
 import { revalidatePath } from 'next/cache';
 
 import { z } from 'zod';
+
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -27,7 +28,9 @@ async function assertAccountOwnerOrAdmin(accountId: string, userId: string) {
 
 function revalidateBrandPaths(accountSlug: string) {
   revalidatePath(workPath(pathsConfig.app.accountBrandSettings, accountSlug));
-  revalidatePath(workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug));
+  revalidatePath(
+    workPath(pathsConfig.app.accountSignaturesDashboard, accountSlug),
+  );
   revalidatePath(workPath(pathsConfig.app.accountSignaturesStaff, accountSlug));
 }
 

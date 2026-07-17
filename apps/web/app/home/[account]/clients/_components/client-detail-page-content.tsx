@@ -2,13 +2,17 @@
 
 import { useRouter } from 'next/navigation';
 
-import type { LinkOption, NoteListItem, WorkspaceNotesVariant } from '../../_lib/workspace-content/types';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
-import type { DocListItem } from '../../_lib/workspace-content/types';
 import type {
   RanklyClientImportOption,
   RanklyProjectRow,
 } from '../../_lib/server/rankly-account-data';
+import type {
+  LinkOption,
+  NoteListItem,
+  WorkspaceNotesVariant,
+} from '../../_lib/workspace-content/types';
+import type { DocListItem } from '../../_lib/workspace-content/types';
 import type { ClientDetailOverviewSeed } from '../_lib/client-detail.types';
 import { ClientDetailSidebar } from './client-detail-sidebar';
 

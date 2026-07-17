@@ -1,11 +1,13 @@
 import { type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
@@ -49,7 +51,11 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
 
-    const addonDenied = await denyUnlessRanklyAddon(client, user.id, parsed.data.accountId);
+    const addonDenied = await denyUnlessRanklyAddon(
+      client,
+      user.id,
+      parsed.data.accountId,
+    );
     if (addonDenied) return addonDenied;
 
     const { accountId, ...updates } = parsed.data;

@@ -1,11 +1,8 @@
+import { googleSyncMetaParts, parseGoogleSyncMeta } from './google-sync-meta';
 import {
-  splitScheduleSegments,
   type ScheduleSegment,
+  splitScheduleSegments,
 } from './parse-plan-markdown';
-import {
-  googleSyncMetaParts,
-  parseGoogleSyncMeta,
-} from './google-sync-meta';
 
 export type EditablePlanBlock = {
   id: string;
@@ -121,8 +118,7 @@ export function parsePlanDocument(markdown: string): PlanDocument {
     }
 
     const segments = splitScheduleSegments(trimmed);
-    const isSectionHeading =
-      /^#{2,3}\s/.test(trimmed) && segments.length === 0;
+    const isSectionHeading = /^#{2,3}\s/.test(trimmed) && segments.length === 0;
 
     if (isSectionHeading) {
       if (currentSection) {
@@ -289,7 +285,11 @@ export function blocksFromCalendarFallback(
     .map((event) => {
       const startMinutes = isoToMinutes(event.start);
       const endMinutes = isoToMinutes(event.end);
-      if (startMinutes === null || endMinutes === null || endMinutes <= startMinutes) {
+      if (
+        startMinutes === null ||
+        endMinutes === null ||
+        endMinutes <= startMinutes
+      ) {
         return null;
       }
 

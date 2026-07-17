@@ -1,7 +1,9 @@
 import { type NextRequest } from 'next/server';
+
 import { z } from 'zod';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { playerConfigBodySchema } from '~/lib/videos/player-config-schema';
 import {
   configValuesFromRow,
   loadAccountPresets,
@@ -9,9 +11,6 @@ import {
   savePreset,
 } from '~/lib/videos/server/player-config-data';
 import { requireVideoAccountAccess } from '~/lib/videos/server/videos-access';
-import {
-  playerConfigBodySchema,
-} from '~/lib/videos/player-config-schema';
 
 export const runtime = 'nodejs';
 
@@ -19,9 +18,7 @@ const querySchema = z.object({
   accountId: z.string().uuid(),
 });
 
-function normalizeConfigInput(
-  parsed: z.infer<typeof playerConfigBodySchema>,
-) {
+function normalizeConfigInput(parsed: z.infer<typeof playerConfigBodySchema>) {
   return {
     name: parsed.name ?? 'Default',
     autoplay: parsed.autoplay,
@@ -80,8 +77,7 @@ export async function GET(request: NextRequest) {
         id: preset.id,
         name: preset.name,
         values: configValuesFromRow(preset),
-        isDefault:
-          settings.default_player_preset_id === preset.id,
+        isDefault: settings.default_player_preset_id === preset.id,
       })),
       defaultPresetId: settings.default_player_preset_id ?? null,
     });

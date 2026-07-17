@@ -7,20 +7,25 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { PROJECT_PRIMARY_CLIENT_EMBED } from '~/lib/projects/delivery-project-db';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
-import { displayTitle, resolveNoteAssignmentLabels } from '../workspace-content/context-resolve';
-import { toIsoDateString } from '../../../_lib/due-date-ymd';
+import { PROJECT_PRIMARY_CLIENT_EMBED } from '~/lib/projects/delivery-project-db';
 
+import { toIsoDateString } from '../../../_lib/due-date-ymd';
+import {
+  displayTitle,
+  resolveNoteAssignmentLabels,
+} from '../workspace-content/context-resolve';
 import { loadTeamWorkspace } from './team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from './workspace-route-guard';
 
 /** PostgREST returns 404 / schema-cache errors when the table is missing from the API (migrations not applied). */
-function isTableMissingFromApi(error: {
-  message?: string;
-  code?: string;
-} | null): boolean {
+function isTableMissingFromApi(
+  error: {
+    message?: string;
+    code?: string;
+  } | null,
+): boolean {
   if (!error) return false;
   const m = (error.message ?? '').toLowerCase();
   return (
@@ -293,9 +298,7 @@ async function loadDashboardPageDataImpl(
     .limit(4);
 
   const jobsUnavailable = isTableMissingFromApi(activeJobsResult.error);
-  const invoicesUnavailable = isTableMissingFromApi(
-    recentInvoicesResult.error,
-  );
+  const invoicesUnavailable = isTableMissingFromApi(recentInvoicesResult.error);
   const financeUnavailable = isTableMissingFromApi(financeMonthResult.error);
 
   if (activeJobsResult.error && !jobsUnavailable) {
@@ -412,12 +415,7 @@ async function loadDashboardPageDataImpl(
     hoursLogged,
   };
 
-  const orderedRoles: string[] = [
-    'admin',
-    'owner',
-    'staff',
-    'contractor',
-  ];
+  const orderedRoles: string[] = ['admin', 'owner', 'staff', 'contractor'];
 
   const teamMembersRaw = (teamMembersResult.data ?? []) as Array<{
     user_id: string;
@@ -453,7 +451,10 @@ async function loadDashboardPageDataImpl(
         const content = (row.content as string | null) ?? '';
         const titleRaw = (row.title as string | null) ?? '';
         const title = displayTitle(titleRaw, content);
-        const plain = content.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const plain = content
+          .replace(/<[^>]+>/g, ' ')
+          .replace(/\s+/g, ' ')
+          .trim();
         const assignment = resolveNoteAssignmentLabels(
           row as Parameters<typeof resolveNoteAssignmentLabels>[0],
         );
@@ -481,8 +482,7 @@ async function loadDashboardPageDataImpl(
     projectName: resolveTaskContextName(t),
   }));
 
-  const accountName =
-    account.name?.trim() || account.slug || accountSlug;
+  const accountName = account.name?.trim() || account.slug || accountSlug;
 
   return {
     accountId,
@@ -580,4 +580,3 @@ function resolveTaskContextName(task: {
 
   return null;
 }
-

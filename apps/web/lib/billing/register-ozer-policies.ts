@@ -1,7 +1,7 @@
-import { definePolicy, deny, allow } from '@kit/policies';
+import { allow, definePolicy, deny } from '@kit/policies';
 import {
-  invitationPolicyRegistry,
   type FeaturePolicyInvitationContext,
+  invitationPolicyRegistry,
 } from '@kit/team-accounts/policies';
 
 import { assertMemberInviteAllowed } from './entitlements';
@@ -10,9 +10,8 @@ const seatLimitInvitationPolicy = definePolicy<FeaturePolicyInvitationContext>({
   id: 'ozer-seat-limit',
   stages: ['submission'],
   evaluate: async (context) => {
-    const { getSupabaseServerClient } = await import(
-      '@kit/supabase/server-client'
-    );
+    const { getSupabaseServerClient } =
+      await import('@kit/supabase/server-client');
 
     const client = getSupabaseServerClient();
     const result = await assertMemberInviteAllowed(

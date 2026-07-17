@@ -4,20 +4,20 @@ import { revalidatePath } from 'next/cache';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-assistant-access';
+import {
+  enrichEmailActionItemLinks,
+  syncSuggestedActionItemsFromThreadLink,
+} from '~/lib/email-assistant/action-item-links';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import { loadEmailThreadDetailFromDb } from '../server/email-page.loader';
 import type {
   EmailActionItemRow,
   EmailDraftRow,
   EmailMessageRow,
   EmailThreadDetail,
 } from '../types';
-import { loadEmailThreadDetailFromDb } from '../server/email-page.loader';
-import {
-  enrichEmailActionItemLinks,
-  syncSuggestedActionItemsFromThreadLink,
-} from '~/lib/email-assistant/action-item-links';
 
 const EMAIL_PATH = '/app/email';
 
@@ -33,7 +33,9 @@ async function requireEmailAssistantAccess() {
 
 export async function loadEmailThreadDetail(
   threadId: string,
-): Promise<{ ok: true; data: EmailThreadDetail } | { ok: false; error: string }> {
+): Promise<
+  { ok: true; data: EmailThreadDetail } | { ok: false; error: string }
+> {
   const client = getSupabaseServerClient();
   const user = await requireEmailAssistantAccess();
 
@@ -46,9 +48,7 @@ export async function loadEmailThreadDetail(
   const [messagesResult, actionItemsResult, draftResult] = await Promise.all([
     client
       .from('email_messages')
-      .select(
-        'id, from_address, subject, body_text, snippet, internal_date',
-      )
+      .select('id, from_address, subject, body_text, snippet, internal_date')
       .eq('thread_id', threadId)
       .eq('user_id', user.id)
       .order('internal_date', { ascending: true, nullsFirst: false }),
@@ -80,15 +80,10 @@ export async function loadEmailThreadDetail(
 
   let actionItems = (actionItemsResult.data ?? []) as EmailActionItemRow[];
 
-  if (
-    thread.link.linked &&
-    (thread.link.clientId || thread.link.projectId)
-  ) {
+  if (thread.link.linked && (thread.link.clientId || thread.link.projectId)) {
     const needsSync = actionItems.some(
       (item) =>
-        item.status === 'suggested' &&
-        !item.client_id &&
-        !item.project_id,
+        item.status === 'suggested' && !item.client_id && !item.project_id,
     );
 
     if (needsSync) {

@@ -1,16 +1,15 @@
 import { Suspense } from 'react';
 
-import { PageBody } from '@kit/ui/page';
-
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { PageBody } from '@kit/ui/page';
+import { cn } from '@kit/ui/utils';
 
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { loadTasksForUser } from '../_lib/server/tasks.loader';
 import { TasksPageClient } from './_components/tasks-page-client';
-import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
-import { cn } from '@kit/ui/utils';
 
 export const metadata = { title: 'Tasks' };
 
@@ -28,7 +27,11 @@ export default function TasksPage(props: PageProps) {
   );
 }
 
-async function TasksContent({ searchParams }: { searchParams: Promise<{ workspace?: string }> }) {
+async function TasksContent({
+  searchParams,
+}: {
+  searchParams: Promise<{ workspace?: string }>;
+}) {
   const params = await searchParams;
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
@@ -39,8 +42,7 @@ async function TasksContent({ searchParams }: { searchParams: Promise<{ workspac
   ]);
 
   const initialWorkspaceFilter =
-    params.workspace?.trim() ||
-    (includeWorkspaceTasks ? 'all' : 'personal');
+    params.workspace?.trim() || (includeWorkspaceTasks ? 'all' : 'personal');
 
   return (
     <TasksPageClient

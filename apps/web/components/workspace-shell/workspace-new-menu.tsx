@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useEffect, useState } from 'react';
+
+import Link from 'next/link';
 
 import {
   BriefcaseBusiness,
@@ -31,11 +32,11 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
 import { HapticButton, HapticLink } from '~/components/haptic-link';
 import { openWorkspaceCreateTaskDialog } from '~/components/workspace-shell/workspace-create-task-host';
-import { MOBILE_FLOATING_CHROME_ABOVE } from '~/lib/mobile-nav/mobile-floating-chrome';
+import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
+import { MOBILE_FLOATING_CHROME_ABOVE } from '~/lib/mobile-nav/mobile-floating-chrome';
 
 type WorkspaceNewMenuProps =
   | {
@@ -80,7 +81,9 @@ function getNewMenuItems(props: WorkspaceNewMenuProps) {
 function prioritizeNewMenuItems(items: NewMenuItem[]): NewMenuItem[] {
   const task = items.find((item) => item.key === 'task');
   const note = items.find((item) => item.key === 'note');
-  const rest = items.filter((item) => item.key !== 'task' && item.key !== 'note');
+  const rest = items.filter(
+    (item) => item.key !== 'task' && item.key !== 'note',
+  );
 
   return [task, note, ...rest].filter(Boolean) as NewMenuItem[];
 }
@@ -125,7 +128,11 @@ function NewMenuItemRow({
   if (item.href) {
     if (variant === 'mobile') {
       return (
-        <HapticLink href={item.href} onClick={onNavigate} className={MOBILE_NEW_MENU_ROW_CLASS}>
+        <HapticLink
+          href={item.href}
+          onClick={onNavigate}
+          className={MOBILE_NEW_MENU_ROW_CLASS}
+        >
           <item.icon className={iconClassName} />
           {item.label}
         </HapticLink>
@@ -134,7 +141,11 @@ function NewMenuItemRow({
 
     if (variant === 'panel') {
       return (
-        <Link href={item.href} onClick={onNavigate} className={DESKTOP_NEW_MENU_ROW_CLASS}>
+        <Link
+          href={item.href}
+          onClick={onNavigate}
+          className={DESKTOP_NEW_MENU_ROW_CLASS}
+        >
           <item.icon className={iconClassName} />
           {item.label}
         </Link>
@@ -191,14 +202,19 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
         className={DESKTOP_NEW_MENU_CONTENT_CLASS}
       >
         <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">Create</p>
+          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Create
+          </p>
         </div>
 
         <nav className="max-h-[min(52vh,22rem)] overflow-y-auto px-1.5 py-1.5">
           <ul className="flex flex-col gap-0.5">
             {items.map((item) => (
               <li key={item.key}>
-                <DropdownMenuItem asChild className={DESKTOP_NEW_MENU_ITEM_CLASS}>
+                <DropdownMenuItem
+                  asChild
+                  className={DESKTOP_NEW_MENU_ITEM_CLASS}
+                >
                   <NewMenuItemRow
                     item={item}
                     variant="panel"
@@ -278,7 +294,9 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
           >
             <div className="overflow-hidden rounded-[1.25rem] border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_16px_48px_rgba(0,0,0,0.45)]">
               <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-                <p className="text-base font-semibold text-[var(--workspace-shell-text)]">Create</p>
+                <p className="text-base font-semibold text-[var(--workspace-shell-text)]">
+                  Create
+                </p>
                 <HapticButton
                   type="button"
                   aria-label="Close create menu"
@@ -300,7 +318,9 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
                           ? 'translate-y-0 opacity-100'
                           : 'translate-y-1 opacity-0',
                       )}
-                      style={{ transitionDelay: open ? `${index * 30}ms` : '0ms' }}
+                      style={{
+                        transitionDelay: open ? `${index * 30}ms` : '0ms',
+                      }}
                     >
                       <NewMenuItemRow
                         item={item}
@@ -323,7 +343,10 @@ function accountPath(account: string, template: string) {
   return template.replace('[account]', account);
 }
 
-function getTeamItems(account: string, spaceType: WorkspaceSpaceType): NewMenuItem[] {
+function getTeamItems(
+  account: string,
+  spaceType: WorkspaceSpaceType,
+): NewMenuItem[] {
   if (spaceType === 'community') {
     return [
       {

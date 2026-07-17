@@ -73,7 +73,9 @@ export async function savePageOptimizeReport(
     .single();
 
   if (error || !data) {
-    throw new Error(error?.message ?? 'Failed to save page optimization report');
+    throw new Error(
+      error?.message ?? 'Failed to save page optimization report',
+    );
   }
 
   return data.id as string;

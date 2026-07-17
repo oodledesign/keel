@@ -5,11 +5,11 @@ import Stripe from 'stripe';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { sendInvoicePaidNotifications } from './invoice-notifications';
+import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
 import {
   getCheckoutAmountPence,
   recordInvoicePayment,
 } from './invoice-v2.server';
-import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
 
 const STRIPE_SECRET = process.env.STRIPE_SECRET_KEY;
 
@@ -24,7 +24,7 @@ function getStripeClient() {
 function getPaymentIntentId(session: Stripe.Checkout.Session) {
   return typeof session.payment_intent === 'string'
     ? session.payment_intent
-    : session.payment_intent?.id ?? null;
+    : (session.payment_intent?.id ?? null);
 }
 
 async function applyPaidCheckoutSession(
@@ -44,7 +44,9 @@ async function applyPaidCheckoutSession(
   const admin = getSupabaseServerAdminClient();
   const { data: invoice, error: invoiceError } = await admin
     .from('invoices')
-    .select('id, account_id, status, public_token, total_pence, amount_paid_pence')
+    .select(
+      'id, account_id, status, public_token, total_pence, amount_paid_pence',
+    )
     .eq('id', invoiceId)
     .maybeSingle();
 
@@ -58,10 +60,12 @@ async function applyPaidCheckoutSession(
 
   if (invoice.status !== 'paid') {
     const paymentIntentId = getPaymentIntentId(session);
-    const amount = session.amount_total ?? Math.max(
-      0,
-      (invoice.total_pence ?? 0) - (invoice.amount_paid_pence ?? 0),
-    );
+    const amount =
+      session.amount_total ??
+      Math.max(
+        0,
+        (invoice.total_pence ?? 0) - (invoice.amount_paid_pence ?? 0),
+      );
 
     await recordInvoicePayment({
       accountId: invoice.account_id,
@@ -73,10 +77,13 @@ async function applyPaidCheckoutSession(
       actorId: null,
     });
 
-    await admin.from('invoices').update({
-      stripe_payment_intent_id: paymentIntentId,
-      stripe_checkout_session_id: session.id,
-    }).eq('id', invoice.id);
+    await admin
+      .from('invoices')
+      .update({
+        stripe_payment_intent_id: paymentIntentId,
+        stripe_checkout_session_id: session.id,
+      })
+      .eq('id', invoice.id);
 
     await admin.from('invoice_events').insert({
       account_id: invoice.account_id,
@@ -123,7 +130,9 @@ export async function createInvoiceCheckoutSessionByToken(
     throw new Error('This invoice is not available for payment');
   }
 
-  const paymentSettings = await loadPaymentSettingsForPortal(invoice.account_id);
+  const paymentSettings = await loadPaymentSettingsForPortal(
+    invoice.account_id,
+  );
   if (
     !paymentSettings?.stripe_connect_enabled ||
     !paymentSettings.stripe_account_id ||
@@ -132,12 +141,18 @@ export async function createInvoiceCheckoutSessionByToken(
     throw new Error('Card payments are not enabled for this invoice');
   }
 
-  const amount = getCheckoutAmountPence(invoice, options?.payDepositOnly ?? false);
+  const amount = getCheckoutAmountPence(
+    invoice,
+    options?.payDepositOnly ?? false,
+  );
   if (amount <= 0) {
     throw new Error('Nothing left to pay on this invoice');
   }
 
-  const baseUrl = process.env.NEXT_PUBLIC_SITE_URL ?? process.env.VERCEL_URL ?? 'http://localhost:3000';
+  const baseUrl =
+    process.env.NEXT_PUBLIC_SITE_URL ??
+    process.env.VERCEL_URL ??
+    'http://localhost:3000';
   const portalPath = `/portal/invoices/${encodeURIComponent(token)}`;
   const successUrl = `${baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`}${portalPath}?paid=1&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`}${portalPath}?cancelled=1`;
@@ -152,7 +167,9 @@ export async function createInvoiceCheckoutSessionByToken(
           unit_amount: amount,
           product_data: {
             name: `Invoice ${invoice.invoice_number}`,
-            description: options?.payDepositOnly ? 'Deposit payment' : 'Invoice payment',
+            description: options?.payDepositOnly
+              ? 'Deposit payment'
+              : 'Invoice payment',
           },
         },
         quantity: 1,

@@ -1,6 +1,11 @@
 import { Suspense } from 'react';
 
+import Link from 'next/link';
+
+import { cn } from '@kit/ui/utils';
+
 import { StackCostCalculatorClient } from '~/(marketing)/tools/stack-cost-calculator/_components/stack-cost-calculator';
+import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   marketingBodyText,
   marketingEyebrow,
@@ -8,17 +13,14 @@ import {
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
 import { CALCULATOR_FAQS } from '~/lib/marketing/stack-calculator-data';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import {
   articleJsonLd,
   breadcrumbJsonLd,
   faqPageJsonLd,
   schemaGraph,
 } from '~/lib/seo/schema';
-import { cn } from '@kit/ui/utils';
-import { withI18n } from '~/lib/i18n/with-i18n';
-import Link from 'next/link';
 
 export const metadata = buildMarketingMetadata({
   title: 'Stack cost calculator UK — Ozer',
@@ -39,7 +41,8 @@ function StackCostCalculatorPage() {
       <JsonLd
         data={schemaGraph([
           articleJsonLd({
-            headline: 'How much does business software cost for a small agency in the UK?',
+            headline:
+              'How much does business software cost for a small agency in the UK?',
             description:
               'Methodology for estimating annual SaaS spend for a small UK studio, compared with Ozer Business Team.',
             path: '/tools/stack-cost-calculator',
@@ -49,48 +52,60 @@ function StackCostCalculatorPage() {
           breadcrumbJsonLd([
             { name: 'Home', path: '/' },
             { name: 'Tools', path: '/tools/stack-cost-calculator' },
-            { name: 'Stack cost calculator', path: '/tools/stack-cost-calculator' },
+            {
+              name: 'Stack cost calculator',
+              path: '/tools/stack-cost-calculator',
+            },
           ]),
           faqPageJsonLd(CALCULATOR_FAQS),
         ])}
       />
 
-      <div className="relative mx-auto w-full max-w-5xl px-6 pb-20 pt-24 md:pt-28">
+      <div className="relative mx-auto w-full max-w-5xl px-6 pt-24 pb-20 md:pt-28">
         <span className={marketingEyebrow}>Tools</span>
-        <h1 className="font-heading mt-4 text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl">
+        <h1 className="font-heading mt-4 text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl">
           Stack cost calculator
         </h1>
 
-        <aside className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] mt-6 rounded-xl border p-4">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--workspace-shell-text)]">
+        <aside className="mt-6 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+          <h2 className="text-sm font-semibold tracking-wide text-[var(--workspace-shell-text)] uppercase">
             In brief
           </h2>
-          <ol className={cn('mt-2 list-decimal space-y-1 pl-5 text-sm', marketingBodyText)}>
+          <ol
+            className={cn(
+              'mt-2 list-decimal space-y-1 pl-5 text-sm',
+              marketingBodyText,
+            )}
+          >
             <li>
-              Defaults are sensible UK starting points for common tool categories — edit every
-              field to match your invoices.
+              Defaults are sensible UK starting points for common tool
+              categories — edit every field to match your invoices.
             </li>
             <li>
-              Per-seat tools multiply monthly price by seats; optional card fees use 2.9% of
-              annual card revenue plus £0.20 per transaction.
+              Per-seat tools multiply monthly price by seats; optional card fees
+              use 2.9% of annual card revenue plus £0.20 per transaction.
             </li>
             <li>
-              Ozer’s comparison figure is Business Team from billing config: a flat workspace
-              price for up to five members, with no subscription transaction fee.
+              Ozer’s comparison figure is Business Team from billing config: a
+              flat workspace price for up to five members, with no subscription
+              transaction fee.
             </li>
           </ol>
         </aside>
 
-        <p className={cn('mt-6 max-w-2xl text-lg leading-relaxed', marketingBodyText)}>
-          Add what you pay today. See the annual total in pounds next to Ozer — no login, no
-          stored profile data.
+        <p
+          className={cn(
+            'mt-6 max-w-2xl text-lg leading-relaxed',
+            marketingBodyText,
+          )}
+        >
+          Add what you pay today. See the annual total in pounds next to Ozer —
+          no login, no stored profile data.
         </p>
 
         <div className="mt-10">
           <Suspense
-            fallback={
-              <p className={marketingMutedText}>Loading calculator…</p>
-            }
+            fallback={<p className={marketingMutedText}>Loading calculator…</p>}
           >
             <StackCostCalculatorClient />
           </Suspense>
@@ -102,7 +117,10 @@ function StackCostCalculatorPage() {
             Ozer pricing
           </Link>
           {' · '}
-          <Link href="/pricing/explained" className="underline underline-offset-2">
+          <Link
+            href="/pricing/explained"
+            className="underline underline-offset-2"
+          >
             Ozer pricing, explained
           </Link>
           {' · '}

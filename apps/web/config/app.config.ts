@@ -78,7 +78,8 @@ const appConfig = AppConfigSchema.parse({
     | 'dark'
     | 'system',
   themeColor: process.env.NEXT_PUBLIC_THEME_COLOR ?? '#FBF6EC',
-  themeColorDark: process.env.NEXT_PUBLIC_THEME_COLOR_DARK ?? 'var(--ozer-plum-900)',
+  themeColorDark:
+    process.env.NEXT_PUBLIC_THEME_COLOR_DARK ?? 'var(--ozer-plum-900)',
   production,
 });
 

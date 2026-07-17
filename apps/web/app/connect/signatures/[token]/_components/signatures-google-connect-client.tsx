@@ -61,8 +61,12 @@ export function SignaturesGoogleConnectClient({
             <PlugZap className="h-5 w-5" />
           </div>
           <div>
-            <h2 className="font-semibold text-[var(--workspace-shell-text)]">Google Workspace setup</h2>
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">For {workspaceName}</p>
+            <h2 className="font-semibold text-[var(--workspace-shell-text)]">
+              Google Workspace setup
+            </h2>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              For {workspaceName}
+            </p>
           </div>
         </div>
 
@@ -74,12 +78,13 @@ export function SignaturesGoogleConnectClient({
           <li>
             Client ID:{' '}
             <code className="rounded bg-black/30 px-1 py-0.5 text-xs text-[var(--ozer-accent-muted)]">
-              {googleClientId ?? 'Ask Ozer support — service account not configured'}
+              {googleClientId ??
+                'Ask Ozer support — service account not configured'}
             </code>
           </li>
           <li>
             OAuth scopes:{' '}
-            <code className="break-all rounded bg-black/30 px-1 py-0.5 text-xs">
+            <code className="rounded bg-black/30 px-1 py-0.5 text-xs break-all">
               {googleScopes}
             </code>
           </li>

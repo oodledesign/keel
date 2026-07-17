@@ -1,8 +1,9 @@
 'use client';
 
+import { useEffect, useMemo, useState } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useEffect, useMemo, useState } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -75,7 +76,8 @@ export function RanklyProjectForm(props: {
         target_language: 'en',
         track_desktop: true,
         track_mobile: true,
-        clientId: mode === 'import' && selectedClientId ? selectedClientId : null,
+        clientId:
+          mode === 'import' && selectedClientId ? selectedClientId : null,
       });
       toast.success('Project created');
       setName('');
@@ -104,7 +106,7 @@ export function RanklyProjectForm(props: {
           className={`rounded-md px-3 py-1.5 text-xs font-medium ${
             mode === 'manual'
               ? 'bg-primary text-primary-foreground'
-              : 'bg-black/30 text-muted-foreground'
+              : 'text-muted-foreground bg-black/30'
           }`}
         >
           Manual
@@ -115,7 +117,7 @@ export function RanklyProjectForm(props: {
           className={`rounded-md px-3 py-1.5 text-xs font-medium ${
             mode === 'import'
               ? 'bg-primary text-primary-foreground'
-              : 'bg-black/30 text-muted-foreground'
+              : 'text-muted-foreground bg-black/30'
           }`}
         >
           Import from client
@@ -160,7 +162,7 @@ export function RanklyProjectForm(props: {
               ) : null}
             </>
           ) : (
-            <div className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-3 text-sm text-muted-foreground">
+            <div className="text-muted-foreground rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-3 text-sm">
               No clients found in this workspace.
               {props.clientsHref ? (
                 <>

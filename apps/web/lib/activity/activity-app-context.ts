@@ -85,7 +85,10 @@ function looksLikeFile(segment: string) {
   return FILE_EXTENSION_PATTERN.test(name) || trimmed.includes('/');
 }
 
-function extractBranch(value: string): { label: string; branch: string | null } {
+function extractBranch(value: string): {
+  label: string;
+  branch: string | null;
+} {
   const match = value.trim().match(/^(.+?)\s+\(([^)]+)\)$/);
   if (!match) {
     return { label: value.trim(), branch: null };
@@ -301,7 +304,10 @@ function parseDesignContext(
   block: ActivityBlockListRow,
   title: string,
 ): ActivityAppContext | null {
-  if (bundleIncludes(block, 'illustrator') || appIncludes(block, 'illustrator')) {
+  if (
+    bundleIncludes(block, 'illustrator') ||
+    appIncludes(block, 'illustrator')
+  ) {
     const illustratorMatch = title.match(
       /^(.+?\.ai)(?:\s*@\s*\d+(?:\.\d+)?%)?(?:\s*\(([^)]+)\))?/i,
     );
@@ -418,7 +424,10 @@ function parseEmailContext(title: string): ActivityAppContext | null {
   }
 
   const joined = parts.join(' - ').trim().toLowerCase();
-  if (GENERIC_APP_TITLES.has(joined) || GENERIC_APP_TITLES.has(parts[0]!.toLowerCase())) {
+  if (
+    GENERIC_APP_TITLES.has(joined) ||
+    GENERIC_APP_TITLES.has(parts[0]!.toLowerCase())
+  ) {
     return null;
   }
 
@@ -486,7 +495,10 @@ export function parseActivityAppContext(
     return context ? withIdeRepo(block, context) : null;
   }
 
-  if (isEmailApp(block) || block.domain?.trim().toLowerCase() === 'mail.google.com') {
+  if (
+    isEmailApp(block) ||
+    block.domain?.trim().toLowerCase() === 'mail.google.com'
+  ) {
     const emailContext = parseEmailContext(title);
     if (emailContext) {
       return emailContext;
@@ -511,7 +523,11 @@ export function parseActivityAppContext(
     return parseGoogleWorkspaceContext(block, title);
   }
 
-  if (block.domain || appIncludes(block, 'safari') || appIncludes(block, 'chrome')) {
+  if (
+    block.domain ||
+    appIncludes(block, 'safari') ||
+    appIncludes(block, 'chrome')
+  ) {
     return parseBrowserContext(block, title);
   }
 
@@ -519,7 +535,12 @@ export function parseActivityAppContext(
 }
 
 export type ActivityRuleMatch = {
-  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path' | 'repo_name';
+  matchType:
+    | 'domain'
+    | 'app_name'
+    | 'title_contains'
+    | 'url_path'
+    | 'repo_name';
   matchValue: string;
   label: string;
   level: ActivityRuleMatchLevel;
@@ -574,7 +595,11 @@ function ruleLabelForContext(
     return `${matchValue} project`;
   }
 
-  if (context.kind === 'design' && context.detail && !context.detail.includes('/')) {
+  if (
+    context.kind === 'design' &&
+    context.detail &&
+    !context.detail.includes('/')
+  ) {
     return `${matchValue} · ${context.detail}`;
   }
 
@@ -595,7 +620,10 @@ function normalizeUrlForRule(url: string): string | null {
 
 function browserTitleMatchesDomain(item: string, domain: string): boolean {
   const itemNorm = item.trim().toLowerCase();
-  const domainNorm = domain.trim().toLowerCase().replace(/^www\./, '');
+  const domainNorm = domain
+    .trim()
+    .toLowerCase()
+    .replace(/^www\./, '');
   const siteName = domainNorm.split('.')[0] ?? domainNorm;
 
   return itemNorm === siteName || itemNorm === domainNorm;

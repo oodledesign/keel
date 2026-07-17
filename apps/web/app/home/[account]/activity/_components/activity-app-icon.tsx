@@ -2,8 +2,8 @@
 
 import { cn } from '@kit/ui/utils';
 
-import type { ActivityBlockListRow } from '~/lib/activity/activity-history';
 import { resolveActivityAppIcon } from '~/lib/activity/activity-app-icons';
+import type { ActivityBlockListRow } from '~/lib/activity/activity-history';
 
 type ActivityAppIconProps = {
   block: Pick<ActivityBlockListRow, 'appName' | 'bundleId' | 'domain'>;
@@ -33,7 +33,6 @@ export function ActivityAppIcon({
       aria-hidden
     >
       {icon.src ? (
-        // eslint-disable-next-line @next/next/no-img-element
         <img
           src={icon.src}
           alt=""
@@ -45,7 +44,7 @@ export function ActivityAppIcon({
         />
       ) : (
         <span
-          className="text-[9px] font-semibold leading-none text-white"
+          className="text-[9px] leading-none font-semibold text-white"
           style={{ fontSize: size === 'md' ? 10 : 9 }}
         >
           {icon.fallback}

@@ -15,8 +15,7 @@ export function getOptionalZoomOAuthEnv() {
 
   const env = parsed.data;
   const clientId = env.ZOOM_OAUTH_CLIENT_ID ?? env.ZOOM_CLIENT_ID;
-  const clientSecret =
-    env.ZOOM_OAUTH_CLIENT_SECRET ?? env.ZOOM_CLIENT_SECRET;
+  const clientSecret = env.ZOOM_OAUTH_CLIENT_SECRET ?? env.ZOOM_CLIENT_SECRET;
   const redirectUri = env.ZOOM_OAUTH_REDIRECT_URI ?? env.ZOOM_REDIRECT_URI;
 
   if (!clientId || !clientSecret || !redirectUri) {

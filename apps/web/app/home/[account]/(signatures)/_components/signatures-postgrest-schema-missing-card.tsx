@@ -21,15 +21,13 @@ export function SignaturesPostgrestSchemaMissingCard({
           <CardTitle className="text-xl">{title}</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
-          <p className="text-sm text-muted-foreground">{description}</p>
-          <ol className="list-decimal space-y-2 pl-5 text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">{description}</p>
+          <ol className="text-muted-foreground list-decimal space-y-2 pl-5 text-sm">
             {steps.map((step, index) => (
               <li key={index}>{step}</li>
             ))}
           </ol>
-          {footer ? (
-            <div className="pt-2">{footer}</div>
-          ) : null}
+          {footer ? <div className="pt-2">{footer}</div> : null}
         </CardContent>
       </Card>
     </div>

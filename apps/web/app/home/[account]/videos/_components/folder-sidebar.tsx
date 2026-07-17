@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+
 import {
   ChevronDown,
   ChevronRight,
@@ -130,7 +131,7 @@ export function FolderSidebar(props: {
   return (
     <aside className="w-56 shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        <p className="text-muted-foreground text-xs font-semibold tracking-wide uppercase">
           Folders
         </p>
         <div className="flex items-center gap-0.5">
@@ -176,7 +177,7 @@ export function FolderSidebar(props: {
         <button
           type="button"
           onClick={props.onCreateFolder}
-          className="mt-2 w-full rounded-md border border-dashed border-[color:var(--workspace-shell-border)] px-2 py-3 text-left text-xs text-muted-foreground transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]"
+          className="text-muted-foreground mt-2 w-full rounded-md border border-dashed border-[color:var(--workspace-shell-border)] px-2 py-3 text-left text-xs transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]"
         >
           <span className="inline-flex items-center gap-1.5">
             <FolderPlus className="h-3.5 w-3.5" />

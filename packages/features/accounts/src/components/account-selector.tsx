@@ -7,6 +7,7 @@ import { CheckCircle, Plus } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
+import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import {
   Command,
@@ -16,7 +17,6 @@ import {
   CommandList,
   CommandSeparator,
 } from '@kit/ui/command';
-import { Badge } from '@kit/ui/badge';
 import { If } from '@kit/ui/if';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { Separator } from '@kit/ui/separator';
@@ -291,13 +291,7 @@ function Icon({ selected }: { selected: boolean }) {
   );
 }
 
-function RoleBadge({
-  role,
-  className,
-}: {
-  role: string;
-  className?: string;
-}) {
+function RoleBadge({ role, className }: { role: string; className?: string }) {
   const label =
     role === 'staff'
       ? 'Staff'

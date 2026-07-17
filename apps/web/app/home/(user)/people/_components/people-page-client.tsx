@@ -28,13 +28,13 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 
-import type { PersonListItem } from '../_lib/server/people.service';
 import {
   CIRCLE_TIER_OPTIONS,
   CIRCLE_TIER_ORDER,
   getCircleTierMeta,
 } from '../_lib/circle-tiers';
 import type { PersonCircleTier } from '../_lib/schema/people.schema';
+import type { PersonListItem } from '../_lib/server/people.service';
 import { CircleTierBadge } from './circle-tier-badge';
 import { PeopleOrbitView } from './people-orbit-view';
 import { PersonAvatar } from './person-avatar';
@@ -139,7 +139,7 @@ export function PeoplePageClient({ people, viewer }: Props) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-2 text-[var(--workspace-shell-text)] md:px-0">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pt-2 pb-12 text-[var(--workspace-shell-text)] md:px-0">
       <div className="flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-6 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight md:text-3xl">
@@ -161,7 +161,7 @@ export function PeoplePageClient({ people, viewer }: Props) {
 
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
             className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             placeholder="Search by name or relationship…"
@@ -169,7 +169,10 @@ export function PeoplePageClient({ people, viewer }: Props) {
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
-        <Select value={circleFilter} onValueChange={(v) => setCircleFilter(v as CircleFilter)}>
+        <Select
+          value={circleFilter}
+          onValueChange={(v) => setCircleFilter(v as CircleFilter)}
+        >
           <SelectTrigger className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:w-[170px]">
             <SelectValue placeholder="Circle" />
           </SelectTrigger>

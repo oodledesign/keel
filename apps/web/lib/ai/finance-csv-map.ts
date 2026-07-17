@@ -104,10 +104,12 @@ function heuristicMapping(headers: string[]): FinanceCsvMapResult {
   };
 
   const debitIdx = lower.findIndex(
-    (h) => h.includes('debit') || h.includes('money out') || h.includes('paid out'),
+    (h) =>
+      h.includes('debit') || h.includes('money out') || h.includes('paid out'),
   );
   const creditIdx = lower.findIndex(
-    (h) => h.includes('credit') || h.includes('money in') || h.includes('paid in'),
+    (h) =>
+      h.includes('credit') || h.includes('money in') || h.includes('paid in'),
   );
 
   return {

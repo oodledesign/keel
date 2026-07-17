@@ -497,7 +497,9 @@ function EditContactForm({
       toast.success('Contact updated');
       onSaved();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to update contact');
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to update contact',
+      );
     } finally {
       setSaving(false);
     }

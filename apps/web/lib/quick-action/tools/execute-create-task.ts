@@ -2,10 +2,13 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { createTask } from '~/home/(user)/_lib/actions/task-actions';
 import pathsConfig from '~/config/paths.config';
+import { createTask } from '~/home/(user)/_lib/actions/task-actions';
 
-import { assertAccountMember, assertTasksModuleEnabled } from '../module-access';
+import {
+  assertAccountMember,
+  assertTasksModuleEnabled,
+} from '../module-access';
 import type { CreateTaskActionData } from '../types';
 
 export async function executeCreateTask(

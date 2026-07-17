@@ -19,9 +19,9 @@ import { toast } from '@kit/ui/sonner';
 
 import billingConfig from '~/config/billing.config';
 import {
+  type OzerAddonKey,
   launchedAddonProductIds,
   launchedWorkspaceAddons,
-  type OzerAddonKey,
 } from '~/lib/billing/ozer-plan-catalog';
 
 import { createTeamAccountCheckoutSession } from '../_lib/server/server-actions';
@@ -51,7 +51,9 @@ function defaultProductForAddon(key: OzerAddonKey): string {
   return addon?.productId ?? 'ozer-addon-signatures';
 }
 
-function addonKeyFromHighlight(value: string | null | undefined): OzerAddonKey | null {
+function addonKeyFromHighlight(
+  value: string | null | undefined,
+): OzerAddonKey | null {
   if (value === 'signatures') return 'addon_signatures';
   if (value === 'site_studio' || value === 'site-studio') {
     return 'addon_site_studio';
@@ -114,8 +116,8 @@ export function OzerAddonCheckoutSection({
         <CardHeader>
           <CardTitle>Add-ons</CardTitle>
           <CardDescription>
-            Activate this workspace (Business Lite is free) before subscribing to
-            workspace add-ons.
+            Activate this workspace (Business Lite is free) before subscribing
+            to workspace add-ons.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -135,7 +137,7 @@ export function OzerAddonCheckoutSection({
       <CardHeader>
         <CardTitle>
           {availableAddons.length === 1
-            ? availableAddons[0]?.name ?? 'Add-ons'
+            ? (availableAddons[0]?.name ?? 'Add-ons')
             : 'Add-ons'}
         </CardTitle>
         <CardDescription>

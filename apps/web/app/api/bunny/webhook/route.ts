@@ -1,15 +1,11 @@
-import { createHmac, timingSafeEqual } from 'node:crypto';
-
 import { type NextRequest, NextResponse } from 'next/server';
 
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { createHmac, timingSafeEqual } from 'node:crypto';
 
 import { createBunnyStreamClient } from '@kit/bunny';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import {
-  clientIpFromRequest,
-  isRateLimited,
-} from '~/lib/rate-limit/in-memory';
+import { clientIpFromRequest, isRateLimited } from '~/lib/rate-limit/in-memory';
 import { resolveBunnyCdnHostname } from '~/lib/videos/server/videos-data';
 
 export const runtime = 'nodejs';
@@ -60,10 +56,7 @@ function verifyBunnyStreamSignature(
     .digest('hex');
   const received = signature.trim().toLowerCase();
 
-  if (
-    received.length !== expected.length ||
-    !/^[0-9a-f]+$/.test(received)
-  ) {
+  if (received.length !== expected.length || !/^[0-9a-f]+$/.test(received)) {
     return false;
   }
 
@@ -107,7 +100,9 @@ function mapWebhookStatus(payload: BunnyWebhookPayload): {
   eventType: string;
 } {
   const statusCode =
-    typeof payload.Status === 'number' ? payload.Status : Number(payload.Status);
+    typeof payload.Status === 'number'
+      ? payload.Status
+      : Number(payload.Status);
   const eventName = (payload.EventName ?? payload.Type ?? '').toLowerCase();
 
   if (
@@ -116,7 +111,10 @@ function mapWebhookStatus(payload: BunnyWebhookPayload): {
     eventName.includes('encoded') ||
     eventName.includes('finished')
   ) {
-    return { nextStatus: 'ready', eventType: eventName || `status_${statusCode}` };
+    return {
+      nextStatus: 'ready',
+      eventType: eventName || `status_${statusCode}`,
+    };
   }
 
   if (
@@ -125,7 +123,10 @@ function mapWebhookStatus(payload: BunnyWebhookPayload): {
     eventName.includes('failed') ||
     eventName.includes('error')
   ) {
-    return { nextStatus: 'failed', eventType: eventName || `status_${statusCode}` };
+    return {
+      nextStatus: 'failed',
+      eventType: eventName || `status_${statusCode}`,
+    };
   }
 
   if (statusCode === 6 || statusCode === 7) {
@@ -151,14 +152,19 @@ function mapWebhookStatus(payload: BunnyWebhookPayload): {
 
   return {
     nextStatus: null,
-    eventType: eventName || (Number.isFinite(statusCode) ? `status_${statusCode}` : 'unknown'),
+    eventType:
+      eventName ||
+      (Number.isFinite(statusCode) ? `status_${statusCode}` : 'unknown'),
   };
 }
 
 export async function POST(request: NextRequest) {
   const ip = clientIpFromRequest(request);
   if (isRateLimited(`bunny-webhook:${ip}`)) {
-    return NextResponse.json({ ok: false, error: 'rate_limited' }, { status: 429 });
+    return NextResponse.json(
+      { ok: false, error: 'rate_limited' },
+      { status: 429 },
+    );
   }
 
   const secret = getWebhookSigningSecret();
@@ -232,10 +238,7 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  await admin
-    .from('videos')
-    .update(patch)
-    .eq('bunny_video_id', bunnyVideoId);
+  await admin.from('videos').update(patch).eq('bunny_video_id', bunnyVideoId);
 
   return NextResponse.json({ ok: true });
 }

@@ -1,18 +1,21 @@
 import { redirect } from 'next/navigation';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
 import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
-import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
 import { syncAddonModulesFromEntitlements } from '~/lib/billing/sync-addon-modules-from-entitlements';
+import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import {
   isSiteStudioModuleEnabled,
   isWorkNavModuleEnabled,
@@ -91,7 +94,10 @@ async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
           <p className="text-muted-foreground text-xs">
             Need another app? Manage modules in{' '}
             <a
-              href={pathsConfig.app.accountSettings.replace('[account]', accountSlug)}
+              href={pathsConfig.app.accountSettings.replace(
+                '[account]',
+                accountSlug,
+              )}
               className="text-[var(--ozer-accent)] hover:underline"
             >
               workspace settings

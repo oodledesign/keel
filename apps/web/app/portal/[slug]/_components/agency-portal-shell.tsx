@@ -29,12 +29,16 @@ export function AgencyPortalShell({
               unoptimized
             />
           ) : (
-            <span className="text-lg font-semibold text-[var(--workspace-shell-text)]">{brandLabel}</span>
+            <span className="text-lg font-semibold text-[var(--workspace-shell-text)]">
+              {brandLabel}
+            </span>
           )}
         </div>
       </header>
 
-      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto max-w-5xl px-4 py-10 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   );
 }

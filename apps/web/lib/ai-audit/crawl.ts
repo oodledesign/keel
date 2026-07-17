@@ -27,11 +27,13 @@ const AI_BOTS = [
 ];
 
 export function normaliseDomain(domain: string): string {
-  return domain
-    .replace(/^https?:\/\//i, '')
-    .replace(/^www\./i, '')
-    .split('/')[0]
-    ?.toLowerCase() ?? domain;
+  return (
+    domain
+      .replace(/^https?:\/\//i, '')
+      .replace(/^www\./i, '')
+      .split('/')[0]
+      ?.toLowerCase() ?? domain
+  );
 }
 
 function extractBotSection(
@@ -47,9 +49,7 @@ function extractBotSection(
   const disallows = [...section.matchAll(/Disallow:\s*(.+)/gi)].map((m) =>
     m[1]?.trim(),
   );
-  const disallowsAll = disallows.some(
-    (path) => path === '/' || path === '/*',
-  );
+  const disallowsAll = disallows.some((path) => path === '/' || path === '/*');
 
   return { disallowsAll };
 }
@@ -151,9 +151,9 @@ export function extractAllJsonLd($: ReturnType<typeof load>): JsonLdBlock[] {
   $('script[type="application/ld+json"]').each((_, el) => {
     try {
       const parsed = JSON.parse($(el).html() ?? '') as Record<string, unknown>;
-      const items = (parsed['@graph'] as Record<string, unknown>[] | undefined) ?? [
-        parsed,
-      ];
+      const items = (parsed['@graph'] as
+        | Record<string, unknown>[]
+        | undefined) ?? [parsed];
 
       for (const item of items) {
         const typeValue = item['@type'];
@@ -198,7 +198,9 @@ export function detectFaqPattern($: ReturnType<typeof load>): boolean {
 
 function detectLastUpdated($: ReturnType<typeof load>): boolean {
   const text = $('body').text();
-  return /last updated|updated on|published|modified/i.test(text.slice(0, 8000));
+  return /last updated|updated on|published|modified/i.test(
+    text.slice(0, 8000),
+  );
 }
 
 function detectContactInfo($: ReturnType<typeof load>): boolean {
@@ -279,11 +281,17 @@ async function selectPagesToCrawl(
 
   return [
     homepage,
-    ...scored.filter((item) => item.url !== homepage).slice(0, 9).map((item) => item.url),
+    ...scored
+      .filter((item) => item.url !== homepage)
+      .slice(0, 9)
+      .map((item) => item.url),
   ];
 }
 
-function emptyPageCrawl(url: string, overrides?: Partial<PageCrawl>): PageCrawl {
+function emptyPageCrawl(
+  url: string,
+  overrides?: Partial<PageCrawl>,
+): PageCrawl {
   return {
     url,
     statusCode: 0,
@@ -313,26 +321,29 @@ function emptyPageCrawl(url: string, overrides?: Partial<PageCrawl>): PageCrawl 
   };
 }
 
-export async function crawlPage(url: string, domain: string): Promise<PageCrawl> {
+export async function crawlPage(
+  url: string,
+  domain: string,
+): Promise<PageCrawl> {
   const { response, profile, botBlockedInitially } = await crawlFetch(url, {
     timeoutMs: 10_000,
   });
   const html = await response.text();
   const $ = load(html);
 
-  $('nav, footer, header, script, style, .cookie-banner, #cookie-consent').remove();
+  $(
+    'nav, footer, header, script, style, .cookie-banner, #cookie-consent',
+  ).remove();
 
   const rawBodyText = $('body').text().trim();
   const isJsRendered = rawBodyText.length < 200 && $('script').length > 3;
   const host = normaliseDomain(domain);
 
   const internalLinkCount = $(`a[href^="/"], a[href*="${host}"]`).length;
-  const externalLinkCount = $('a[href^="http"]')
-    .filter((_, el) => {
-      const href = $(el).attr('href') ?? '';
-      return !href.includes(host);
-    })
-    .length;
+  const externalLinkCount = $('a[href^="http"]').filter((_, el) => {
+    const href = $(el).attr('href') ?? '';
+    return !href.includes(host);
+  }).length;
 
   return {
     url,
@@ -359,14 +370,17 @@ export async function crawlPage(url: string, domain: string): Promise<PageCrawl>
       .slice(0, 15),
     jsonLd: extractAllJsonLd($),
     bylinePresent:
-      $('[rel="author"], [itemprop="author"], .author, .byline, [class*="author"]')
-        .length > 0,
+      $(
+        '[rel="author"], [itemprop="author"], .author, .byline, [class*="author"]',
+      ).length > 0,
     tableCount: $('table').length,
     faqPatternPresent: detectFaqPattern($),
     wordCount: rawBodyText.split(/\s+/).filter(Boolean).length,
     isJsRendered,
     lastUpdatedVisible: detectLastUpdated($),
-    hasTldr: /tl;dr|tldr|key takeaway|summary/i.test(rawBodyText.slice(0, 5000)),
+    hasTldr: /tl;dr|tldr|key takeaway|summary/i.test(
+      rawBodyText.slice(0, 5000),
+    ),
     contactInfoPresent: detectContactInfo($),
     internalLinkCount,
     externalLinkCount,

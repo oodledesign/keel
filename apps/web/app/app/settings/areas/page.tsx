@@ -1,6 +1,7 @@
-import Link from 'next/link';
 import { revalidatePath } from 'next/cache';
+import Link from 'next/link';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Button } from '@kit/ui/button';
 import { PageBody } from '@kit/ui/page';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
@@ -8,7 +9,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 export const metadata = { title: 'Areas & modules' };
 
@@ -91,7 +91,13 @@ async function AreasSettingsPage() {
         .from('account_module_settings')
         .select('account_id, module_key, enabled')
         .in('account_id', accountIds)
-    : { data: [] as Array<{ account_id: string; module_key: string; enabled: boolean }> };
+    : {
+        data: [] as Array<{
+          account_id: string;
+          module_key: string;
+          enabled: boolean;
+        }>,
+      };
 
   const settingsMap = new Map<string, boolean>();
   for (const row of moduleRows ?? []) {
@@ -100,7 +106,9 @@ async function AreasSettingsPage() {
 
   const groupedAccounts: Record<SpaceType, typeof managedAccounts> = {
     work: managedAccounts.filter((account) => account.space_type === 'work'),
-    family: managedAccounts.filter((account) => account.space_type === 'family'),
+    family: managedAccounts.filter(
+      (account) => account.space_type === 'family',
+    ),
     community: managedAccounts.filter(
       (account) => account.space_type === 'community',
     ),
@@ -181,7 +189,10 @@ function AccountModuleList(props: {
   return (
     <div className="space-y-4">
       {props.accounts.map((account) => (
-        <div key={account.id} className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4">
+        <div
+          key={account.id}
+          className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4"
+        >
           <h3 className="text-sm font-semibold">{account.name}</h3>
           <div className="mt-3 flex flex-wrap gap-2">
             {SPACE_MODULES[props.spaceType].map((moduleKey) => {

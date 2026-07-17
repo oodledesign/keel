@@ -51,15 +51,18 @@ export async function recordDriftCheck(input: {
   const client = getSupabaseServerAdminClient();
   const delta = input.targetCount - input.sourceCount;
 
-  const { error } = await client.schema('platform_merge').from('drift_checks').insert({
-    source_app: input.sourceApp,
-    entity_type: input.entityType,
-    source_count: input.sourceCount,
-    target_count: input.targetCount,
-    delta,
-    sampled_equal: input.sampledEqual,
-    details: input.details ?? {},
-  });
+  const { error } = await client
+    .schema('platform_merge')
+    .from('drift_checks')
+    .insert({
+      source_app: input.sourceApp,
+      entity_type: input.entityType,
+      source_count: input.sourceCount,
+      target_count: input.targetCount,
+      delta,
+      sampled_equal: input.sampledEqual,
+      details: input.details ?? {},
+    });
 
   if (error) {
     throw error;

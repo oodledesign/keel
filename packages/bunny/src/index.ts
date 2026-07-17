@@ -189,13 +189,11 @@ export class BunnyStreamClient {
 
     const query = params.toString();
     const path = `/library/${libraryId}/videos${query ? `?${query}` : ''}`;
-    const response = await this.request<BunnyListVideosResponse | BunnyVideoRaw[]>(
-      path,
-    );
+    const response = await this.request<
+      BunnyListVideosResponse | BunnyVideoRaw[]
+    >(path);
 
-    const items = Array.isArray(response)
-      ? response
-      : (response.items ?? []);
+    const items = Array.isArray(response) ? response : (response.items ?? []);
 
     return items.map(mapBunnyVideo);
   }
@@ -221,17 +219,14 @@ export class BunnyStreamClient {
         config.preload === 'auto' ? 'true' : 'false',
       );
     }
-    if (config?.responsive === false) url.searchParams.set('responsive', 'false');
+    if (config?.responsive === false)
+      url.searchParams.set('responsive', 'false');
     if (config?.token) url.searchParams.set('token', config.token);
 
     return url.toString();
   }
 
-  getThumbnailUrl(
-    cdnHostname: string,
-    videoId: string,
-    time = 0,
-  ): string {
+  getThumbnailUrl(cdnHostname: string, videoId: string, time = 0): string {
     const host = cdnHostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
     if (time === 0) {
       return `https://${host}/${videoId}/thumbnail.jpg`;
@@ -246,7 +241,13 @@ export class BunnyStreamClient {
     try {
       const raw = await this.request<
         | Array<{ srclang?: string; language?: string; label?: string }>
-        | { captions?: Array<{ srclang?: string; language?: string; label?: string }> }
+        | {
+            captions?: Array<{
+              srclang?: string;
+              language?: string;
+              label?: string;
+            }>;
+          }
       >(`/library/${libraryId}/videos/${videoId}/captions`);
 
       const items = Array.isArray(raw) ? raw : (raw.captions ?? []);
@@ -295,10 +296,7 @@ export class BunnyStreamClient {
     }
   }
 
-  private async request<T>(
-    path: string,
-    init: RequestInit = {},
-  ): Promise<T> {
+  private async request<T>(path: string, init: RequestInit = {}): Promise<T> {
     const response = await fetch(`${STREAM_API_BASE}${path}`, {
       ...init,
       headers: {
@@ -324,7 +322,9 @@ export class BunnyStreamClient {
   }
 }
 
-export function createBunnyStreamClient(apiKey = process.env.BUNNY_STREAM_API_KEY) {
+export function createBunnyStreamClient(
+  apiKey = process.env.BUNNY_STREAM_API_KEY,
+) {
   if (!apiKey?.trim()) {
     throw new Error('BUNNY_STREAM_API_KEY is not configured');
   }

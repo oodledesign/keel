@@ -47,13 +47,11 @@ export async function loadAssistantSettings(userId: string) {
     throw new Error(error.message);
   }
 
-  return data as
-    | {
-        user_id: string;
-        last_history_id: string | null;
-        last_synced_at: string | null;
-      }
-    | null;
+  return data as {
+    user_id: string;
+    last_history_id: string | null;
+    last_synced_at: string | null;
+  } | null;
 }
 
 export async function saveAssistantCursor(
@@ -210,7 +208,10 @@ export async function upsertEmailMessage(input: {
   }
 }
 
-export async function deleteEmailMessage(userId: string, gmailMessageId: string) {
+export async function deleteEmailMessage(
+  userId: string,
+  gmailMessageId: string,
+) {
   const query = adminTable('email_messages')
     .delete()
     .eq('user_id', userId)

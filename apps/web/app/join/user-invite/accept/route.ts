@@ -6,8 +6,8 @@ import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
-import { Database } from '~/lib/database.types';
 import { loadAdminUserInviteByToken } from '~/lib/admin/user-invites.service';
+import { Database } from '~/lib/database.types';
 
 /**
  * Validates a super-admin user invite and generates a fresh Supabase auth link.
@@ -64,7 +64,9 @@ export async function GET(request: NextRequest) {
     }
 
     const verifyLink = generateLinkResponse.data.properties?.action_link;
-    const token = verifyLink ? new URL(verifyLink).searchParams.get('token') : null;
+    const token = verifyLink
+      ? new URL(verifyLink).searchParams.get('token')
+      : null;
 
     if (!token) {
       throw new Error('Token in verify link from Supabase Auth was not found');

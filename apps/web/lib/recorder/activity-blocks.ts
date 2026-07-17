@@ -97,7 +97,8 @@ async function loadActivityPrivacySettings(
 
   return {
     tracking_enabled: (data?.tracking_enabled as boolean | undefined) ?? false,
-    capture_full_urls: (data?.capture_full_urls as boolean | undefined) ?? false,
+    capture_full_urls:
+      (data?.capture_full_urls as boolean | undefined) ?? false,
   };
 }
 

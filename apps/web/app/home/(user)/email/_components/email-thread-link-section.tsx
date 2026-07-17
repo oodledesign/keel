@@ -13,14 +13,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { cn } from '@kit/ui/utils';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
-import {
-  loadTaskAssignmentOptionsForWorkspace,
-  type TaskAssignmentOption,
-} from '~/home/(user)/_lib/actions/task-actions';
 import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
+import {
+  type TaskAssignmentOption,
+  loadTaskAssignmentOptionsForWorkspace,
+} from '~/home/(user)/_lib/actions/task-actions';
 
 import { emailApiFetch } from '../_lib/email-api';
 import type { EmailThreadLink, EmailWorkspaceOption } from '../_lib/types';
@@ -55,11 +55,7 @@ export function EmailThreadLinkSection({
 }: Props) {
   const [workspaceId, setWorkspaceId] = useState(link.accountId ?? '');
   const [assignTo, setAssignTo] = useState(
-    link.projectId
-      ? link.projectId
-      : link.clientId
-        ? link.clientId
-        : 'none',
+    link.projectId ? link.projectId : link.clientId ? link.clientId : 'none',
   );
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
@@ -70,11 +66,7 @@ export function EmailThreadLinkSection({
   useEffect(() => {
     setWorkspaceId(link.accountId ?? '');
     setAssignTo(
-      link.projectId
-        ? link.projectId
-        : link.clientId
-          ? link.clientId
-          : 'none',
+      link.projectId ? link.projectId : link.clientId ? link.clientId : 'none',
     );
   }, [link.accountId, link.clientId, link.projectId, threadId]);
 
@@ -143,7 +135,9 @@ export function EmailThreadLinkSection({
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <Link2 className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Client / project</p>
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Client / project
+            </p>
           </div>
           {link.linked && currentLabel ? (
             <p className="mt-1 truncate text-xs text-[var(--workspace-shell-text-muted)]">
@@ -175,7 +169,9 @@ export function EmailThreadLinkSection({
 
       <div className="mt-3 grid gap-3 sm:grid-cols-2">
         <div className="space-y-1.5">
-          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Workspace</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Workspace
+          </Label>
           <Select
             value={workspaceId || 'none'}
             onValueChange={(value) => {
@@ -198,7 +194,9 @@ export function EmailThreadLinkSection({
         </div>
 
         <div className="space-y-1.5">
-          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Client or project</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Client or project
+          </Label>
           <TaskAssignmentCombobox
             value={assignTo}
             onValueChange={setAssignTo}
@@ -217,10 +215,7 @@ export function EmailThreadLinkSection({
           size="sm"
           className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
           disabled={
-            pending ||
-            !workspaceId ||
-            assignTo === 'none' ||
-            optionsLoading
+            pending || !workspaceId || assignTo === 'none' || optionsLoading
           }
           onClick={() => saveLink(false)}
         >

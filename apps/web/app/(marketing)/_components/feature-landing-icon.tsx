@@ -8,9 +8,9 @@ export function FeatureLandingIcon({
   name: string;
   className?: string;
 }) {
-  const Icon = LucideIcons[
-    name as keyof typeof LucideIcons
-  ] as LucideIcon | undefined;
+  const Icon = LucideIcons[name as keyof typeof LucideIcons] as
+    | LucideIcon
+    | undefined;
 
   if (!Icon) {
     return null;

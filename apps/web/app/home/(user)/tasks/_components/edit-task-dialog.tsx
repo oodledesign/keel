@@ -1,14 +1,10 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useRef,
-  useState,
-  useTransition,
-} from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
+
+import { ChevronDown, ChevronRight, Loader2, Trash2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -19,20 +15,18 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@kit/ui/alert-dialog';
+import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@kit/ui/dialog';
-import { Button } from '@kit/ui/button';
-import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
-import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 import {
   Select,
   SelectContent,
@@ -40,21 +34,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
-import { ChevronDown, ChevronRight, Loader2, Trash2 } from 'lucide-react';
+import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 
-import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import {
+  type TaskAssignmentOption,
+  type TaskAssignmentUpdate,
   createTask,
   deleteTask,
   loadTaskAssignmentOptions,
   loadTaskAssignmentOptionsForWorkspace,
   loadTaskForEdit,
   updateTask,
-  type TaskAssignmentOption,
-  type TaskAssignmentUpdate,
 } from '../../_lib/actions/task-actions';
+import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 
 const PRIORITIES = [
   { key: 'low', label: 'Low' },
@@ -189,7 +184,7 @@ function SubtaskEditorRow({
   }, [onRemove, subtask.id]);
 
   return (
-    <div className="group flex items-center gap-2 rounded-md py-1 pl-1 pr-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]/60">
+    <div className="group flex items-center gap-2 rounded-md py-1 pr-0.5 pl-1 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]/60">
       <Checkbox
         checked={isDone}
         disabled={disabled || busy}
@@ -197,7 +192,9 @@ function SubtaskEditorRow({
           if (value === 'indeterminate') return;
           void toggleStatus(Boolean(value));
         }}
-        aria-label={isDone ? 'Mark subtask as not done' : 'Mark subtask as done'}
+        aria-label={
+          isDone ? 'Mark subtask as not done' : 'Mark subtask as done'
+        }
         className="h-4 w-4 shrink-0 rounded-full border-[color:var(--workspace-shell-border)] shadow-none data-[state=checked]:border-[var(--ozer-accent)] data-[state=checked]:bg-[var(--ozer-accent-subtle)] data-[state=checked]:text-[var(--ozer-accent)]"
       />
       {editing ? (
@@ -239,7 +236,7 @@ function SubtaskEditorRow({
         type="button"
         disabled={disabled || busy}
         onClick={() => void handleDelete()}
-        className="rounded p-1 text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity hover:text-[#E85D75] focus-visible:opacity-100 group-hover:opacity-100 disabled:opacity-40"
+        className="rounded p-1 text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:text-[#E85D75] focus-visible:opacity-100 disabled:opacity-40"
         aria-label={`Delete subtask ${subtask.title}`}
       >
         <Trash2 className="h-3.5 w-3.5" />
@@ -271,14 +268,18 @@ export function EditTaskDialog({
   const [assignTo, setAssignTo] = useState(initialAssignTo(task));
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [subtaskAdding, setSubtaskAdding] = useState(false);
-  const [subtasks, setSubtasks] = useState<TasksPageTask[]>(task.subtasks ?? []);
+  const [subtasks, setSubtasks] = useState<TasksPageTask[]>(
+    task.subtasks ?? [],
+  );
   const [subtasksExpanded, setSubtasksExpanded] = useState(true);
   const [subtasksLoading, setSubtasksLoading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const isWorkspaceMode = Boolean(workspaceAccountId);
   const isRootTask = !task.parentTaskId;
-  const doneSubtaskCount = subtasks.filter((s) => s.status === 'completed').length;
+  const doneSubtaskCount = subtasks.filter(
+    (s) => s.status === 'completed',
+  ).length;
 
   const refreshSubtasks = useCallback(async () => {
     if (!isRootTask) return;
@@ -401,10 +402,7 @@ export function EditTaskDialog({
 
     const selected = options.find((o) => o.id === assignTo);
 
-    if (
-      isWorkspaceMode &&
-      (!selected || assignTo === 'none')
-    ) {
+    if (isWorkspaceMode && (!selected || assignTo === 'none')) {
       setError(
         'Choose a project or client so this task stays in this workspace.',
       );
@@ -444,9 +442,12 @@ export function EditTaskDialog({
           <DialogHeader>
             <DialogTitle>Edit task</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-              <strong className="font-medium text-[var(--workspace-shell-text-muted)]">Work</strong> means
-              linked to a team workspace project or CRM client (your business
-              workspace). <strong className="font-medium text-[var(--workspace-shell-text-muted)]">
+              <strong className="font-medium text-[var(--workspace-shell-text-muted)]">
+                Work
+              </strong>{' '}
+              means linked to a team workspace project or CRM client (your
+              business workspace).{' '}
+              <strong className="font-medium text-[var(--workspace-shell-text-muted)]">
                 Life
               </strong>{' '}
               is a personal area or no link — separate from team workspaces.
@@ -455,7 +456,10 @@ export function EditTaskDialog({
 
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-title" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="edit-title"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Title *
               </Label>
               <Input
@@ -468,7 +472,10 @@ export function EditTaskDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-notes" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="edit-notes"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Description
               </Label>
               <Textarea
@@ -491,7 +498,9 @@ export function EditTaskDialog({
                         className="rounded p-0.5 text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                         aria-expanded={subtasksExpanded}
                         aria-label={
-                          subtasksExpanded ? 'Collapse subtasks' : 'Expand subtasks'
+                          subtasksExpanded
+                            ? 'Collapse subtasks'
+                            : 'Expand subtasks'
                         }
                       >
                         {subtasksExpanded ? (
@@ -501,12 +510,15 @@ export function EditTaskDialog({
                         )}
                       </button>
                     ) : null}
-                    <Label htmlFor="new-subtask" className="text-[var(--workspace-shell-text-muted)]">
+                    <Label
+                      htmlFor="new-subtask"
+                      className="text-[var(--workspace-shell-text-muted)]"
+                    >
                       Subtasks
                     </Label>
                   </div>
                   {subtasks.length > 0 ? (
-                    <span className="shrink-0 text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+                    <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
                       {doneSubtaskCount}/{subtasks.length} complete
                     </span>
                   ) : null}
@@ -533,13 +545,17 @@ export function EditTaskDialog({
                           disabled={isPending || isDeleting || subtaskAdding}
                           onChange={(updated) => {
                             setSubtasks((prev) =>
-                              prev.map((s) => (s.id === updated.id ? updated : s)),
+                              prev.map((s) =>
+                                s.id === updated.id ? updated : s,
+                              ),
                             );
                             onSaved?.();
                             router.refresh();
                           }}
                           onRemove={(id) => {
-                            setSubtasks((prev) => prev.filter((s) => s.id !== id));
+                            setSubtasks((prev) =>
+                              prev.filter((s) => s.id !== id),
+                            );
                             onSaved?.();
                             router.refresh();
                           }}
@@ -587,7 +603,9 @@ export function EditTaskDialog({
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Priority
+                </Label>
                 <Select
                   value={priority}
                   onValueChange={(v) =>
@@ -607,12 +625,12 @@ export function EditTaskDialog({
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label className="text-[var(--workspace-shell-text-muted)]">Status</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Status
+                </Label>
                 <Select
                   value={status}
-                  onValueChange={(v) =>
-                    setStatus(v as TasksPageTask['status'])
-                  }
+                  onValueChange={(v) => setStatus(v as TasksPageTask['status'])}
                 >
                   <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                     <SelectValue />
@@ -663,7 +681,10 @@ export function EditTaskDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="edit-due" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="edit-due"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Due date
               </Label>
               <Input

@@ -3,11 +3,14 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { loadContractsPageData } from './_lib/server/contracts-page.loader';
 import { ContractsPageContent } from './_components/contracts-page-content';
+import { loadContractsPageData } from './_lib/server/contracts-page.loader';
 
 interface ContractsPageProps {
   params: Promise<{ account: string }>;
@@ -44,8 +47,12 @@ async function ContractsPage({ params }: ContractsPageProps) {
     );
   }
 
-  const { accountId, canViewContracts, canEditContracts, canManageContractStatus } =
-    await loadContractsPageData(accountSlug);
+  const {
+    accountId,
+    canViewContracts,
+    canEditContracts,
+    canManageContractStatus,
+  } = await loadContractsPageData(accountSlug);
 
   return (
     <>

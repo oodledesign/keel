@@ -5,7 +5,10 @@ export function buildInternalLinkCandidates(
   targetKeyword: string,
 ): InternalLinkCandidate[] {
   const targetTokens = new Set(
-    targetKeyword.toLowerCase().split(/\s+/).filter((t) => t.length > 2),
+    targetKeyword
+      .toLowerCase()
+      .split(/\s+/)
+      .filter((t) => t.length > 2),
   );
 
   return domainKeywords

@@ -19,6 +19,7 @@ export function SignatureEmailMockup({
   signatureHtml,
   isPersonalShare,
   token,
+  showInstructions = true,
 }: {
   templateName: string;
   accountName: string | null;
@@ -27,6 +28,8 @@ export function SignatureEmailMockup({
   signatureHtml: string;
   isPersonalShare: boolean;
   token: string;
+  /** When false, hide Outlook install steps and show only the mock email. */
+  showInstructions?: boolean;
 }) {
   const [theme, setTheme] = useState<Theme>('light');
   const isDark = theme === 'dark';
@@ -62,34 +65,55 @@ export function SignatureEmailMockup({
 </html>`;
   }, [fromName, isDark, signatureHtml]);
 
+  const subtitle = showInstructions
+    ? isPersonalShare
+      ? accountName
+        ? `${accountName} · preview, download, and install in Outlook`
+        : 'Preview, download, and install in Outlook'
+      : accountName
+        ? `${accountName} · mock email with this signature applied`
+        : 'Mock email with this signature applied'
+    : accountName
+      ? `${accountName} · mock email with this signature applied`
+      : 'Mock email with this signature applied';
+
   return (
     <div className="min-h-svh w-full bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-900)]">
-      <div className="mx-auto flex w-full max-w-6xl flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8">
+      <div
+        className={cn(
+          'mx-auto flex w-full flex-col gap-6 px-4 py-8 sm:px-6 lg:px-8',
+          showInstructions ? 'max-w-6xl' : 'max-w-3xl',
+        )}
+      >
         <header className="space-y-1">
           <p className="text-xs font-medium tracking-wide text-[color-mix(in_srgb,var(--ozer-plum-900)_50%,transparent)] uppercase">
-            {isPersonalShare ? 'Your signature' : 'Signature preview'}
+            {showInstructions && isPersonalShare
+              ? 'Your signature'
+              : 'Signature preview'}
           </p>
           <h1 className="font-[family-name:var(--ozer-font-display)] text-3xl font-bold tracking-tight">
             {isPersonalShare ? fromName : templateName}
           </h1>
           <p className="max-w-2xl text-sm text-[var(--ozer-plum-900)]/70">
-            {isPersonalShare
-              ? accountName
-                ? `${accountName} · preview, download, and install in Outlook`
-                : 'Preview, download, and install in Outlook'
-              : accountName
-                ? `${accountName} · mock email with this signature applied`
-                : 'Mock email with this signature applied'}
+            {subtitle}
           </p>
         </header>
 
-        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]">
-          <SignatureInstallSteps
-            signatureHtml={signatureHtml}
-            fromName={fromName}
-            token={token}
-            canRequestChanges={isPersonalShare}
-          />
+        <div
+          className={cn(
+            'grid items-start gap-6',
+            showInstructions &&
+              'lg:grid-cols-[minmax(0,0.95fr)_minmax(0,1.05fr)]',
+          )}
+        >
+          {showInstructions ? (
+            <SignatureInstallSteps
+              signatureHtml={signatureHtml}
+              fromName={fromName}
+              token={token}
+              canRequestChanges={isPersonalShare}
+            />
+          ) : null}
 
           <section
             className={cn(
@@ -175,7 +199,7 @@ export function SignatureEmailMockup({
 
         <footer className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ozer-plum-900)]/60">
           <p>
-            {isPersonalShare
+            {showInstructions && isPersonalShare
               ? "Install when you're ready — this page never changes your Outlook settings for you."
               : 'This is a shareable preview — no inbox changes are made.'}
           </p>

@@ -1,14 +1,16 @@
 import { type NextRequest } from 'next/server';
 import { after } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { runBriefJob } from '~/lib/briefs/runner';
 import { estimateBriefCredits } from '~/lib/briefs/types';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -38,8 +40,8 @@ async function assertProjectAccess(
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
 
-    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
-    if (addonDenied) return addonDenied;
+  const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+  if (addonDenied) return addonDenied;
 
   const { data: project } = await supabaseCustomSchema(client, 'rankly')
     .from('projects')
@@ -93,11 +95,7 @@ export async function POST(request: NextRequest) {
         : parsed.data.mode;
 
     if (mode === 'quick' && !parsed.data.keyword?.trim()) {
-      return jsonErr(
-        'VALIDATION',
-        'Keyword is required for quick mode',
-        400,
-      );
+      return jsonErr('VALIDATION', 'Keyword is required for quick mode', 400);
     }
 
     const { data: job, error } = await supabaseCustomSchema(client, 'rankly')

@@ -1,12 +1,13 @@
+import { writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { buildConfig } from '../src/config';
 import {
   BLOCK_TO_LAYOUT_PRESET,
   SITE_BLOCK_TYPES,
   type SiteBlockType,
 } from '../src/mapping';
-import { writeFileSync } from 'node:fs';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 type FieldSchema = {
   name: string;
@@ -14,7 +15,9 @@ type FieldSchema = {
   label?: string;
 };
 
-function fieldsToSchema(fields: Record<string, { type?: string; label?: string } | undefined>): FieldSchema[] {
+function fieldsToSchema(
+  fields: Record<string, { type?: string; label?: string } | undefined>,
+): FieldSchema[] {
   return Object.entries(fields).map(([name, field]) => ({
     name,
     type: field?.type ?? 'text',

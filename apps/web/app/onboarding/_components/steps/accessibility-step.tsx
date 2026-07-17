@@ -6,12 +6,12 @@ import { useRouter } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
 
+import type { StepDef } from '../../_lib/onboarding-steps.config';
 import {
   completeOnboarding,
   updateOnboardingStep,
   upsertUserSettings,
 } from '../../_lib/server/onboarding.actions';
-import type { StepDef } from '../../_lib/onboarding-steps.config';
 import { PrimaryButton } from '../primary-button';
 import { SegmentedControl } from '../segmented-control';
 import { ToggleRow } from '../toggle-row';
@@ -44,13 +44,9 @@ export function AccessibilityStep({
   initial,
 }: AccessibilityStepProps) {
   const router = useRouter();
-  const [textSize, setTextSize] = useState<
-    'small' | 'standard' | 'large'
-  >(
-    (initial?.accessibility_text_size as
-      | 'small'
-      | 'standard'
-      | 'large') ?? 'standard',
+  const [textSize, setTextSize] = useState<'small' | 'standard' | 'large'>(
+    (initial?.accessibility_text_size as 'small' | 'standard' | 'large') ??
+      'standard',
   );
   const [highContrast, setHighContrast] = useState(
     initial?.accessibility_high_contrast ?? false,
@@ -103,7 +99,8 @@ export function AccessibilityStep({
           Set Up Your Preferences
         </h2>
         <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-          Customise the app to work best for you. You can change these anytime in settings.
+          Customise the app to work best for you. You can change these anytime
+          in settings.
         </p>
       </div>
 
@@ -114,9 +111,7 @@ export function AccessibilityStep({
         <SegmentedControl
           options={TEXT_SIZES}
           value={textSize}
-          onChange={(v) =>
-            setTextSize(v as 'small' | 'standard' | 'large')
-          }
+          onChange={(v) => setTextSize(v as 'small' | 'standard' | 'large')}
         />
       </div>
 

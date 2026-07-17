@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from 'react';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -33,8 +39,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -180,7 +186,11 @@ export function MeetingsPageContent({
     if (!canEdit) return;
     startTransition(async () => {
       try {
-        await deleteMeetingTranscript({ accountId, accountSlug, transcriptId: id });
+        await deleteMeetingTranscript({
+          accountId,
+          accountSlug,
+          transcriptId: id,
+        });
         setRows((prev) => prev.filter((row) => row.id !== id));
         toast.success('Deleted');
         router.refresh();
@@ -212,13 +222,13 @@ export function MeetingsPageContent({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div className="min-w-0 max-w-2xl">
+        <div className="max-w-2xl min-w-0">
           <h1 className="font-heading text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
             Meetings
           </h1>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            All meeting transcripts across clients. Open a meeting to read the full
-            transcript and extract tasks with AI.
+            All meeting transcripts across clients. Open a meeting to read the
+            full transcript and extract tasks with AI.
           </p>
         </div>
         {canEdit ? (
@@ -237,7 +247,9 @@ export function MeetingsPageContent({
         <div className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
-            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">New meeting</h3>
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              New meeting
+            </h3>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">
             <div>
@@ -325,7 +337,9 @@ export function MeetingsPageContent({
           {rows.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center">
               <Mic className="mx-auto mb-3 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
-              <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meetings yet.</p>
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                No meetings yet.
+              </p>
               {canEdit ? (
                 <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                   Add a meeting or save transcripts from a client page.
@@ -367,7 +381,9 @@ export function MeetingsPageContent({
                     </p>
                   </div>
                   <div className="flex shrink-0 items-center gap-1">
-                    <MeetingParticipantAvatars participants={row.participants} />
+                    <MeetingParticipantAvatars
+                      participants={row.participants}
+                    />
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button
@@ -414,8 +430,8 @@ export function MeetingsPageContent({
           )}
 
           <p className="pt-2 text-xs text-[var(--workspace-shell-text-muted)]">
-            Tip: you can also add meetings from a client&apos;s Meetings tab — they appear
-            here automatically.
+            Tip: you can also add meetings from a client&apos;s Meetings tab —
+            they appear here automatically.
           </p>
         </div>
 

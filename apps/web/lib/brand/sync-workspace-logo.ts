@@ -14,9 +14,7 @@ export async function syncWorkspaceLogo(
   logoUrl: string | null,
 ) {
   const admin = getSupabaseServerAdminClient() as SupabaseClient;
-  const normalized = logoUrl
-    ? toSupabasePublicStorageUrl(logoUrl)
-    : null;
+  const normalized = logoUrl ? toSupabasePublicStorageUrl(logoUrl) : null;
 
   const { error: accountError } = await admin
     .from('accounts')

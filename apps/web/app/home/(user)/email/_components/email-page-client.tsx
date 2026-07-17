@@ -7,11 +7,11 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Loader2, RefreshCw, Settings2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import { cn } from '@kit/ui/utils';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import pathsConfig from '~/config/paths.config';
 
 import { emailApiFetch } from '../_lib/email-api';
 import type {
@@ -152,7 +152,9 @@ export function EmailPageClient({ initialData }: Props) {
     (threadId: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('thread', threadId);
-      router.push(`${pathsConfig.app.personalEmailAssistant}?${params.toString()}`);
+      router.push(
+        `${pathsConfig.app.personalEmailAssistant}?${params.toString()}`,
+      );
     },
     [router, searchParams],
   );
@@ -212,7 +214,6 @@ export function EmailPageClient({ initialData }: Props) {
           linked += result.assistant?.linked ?? 0;
           complete = result.backfillComplete !== false;
           guard += 1;
-
         } while (!complete && guard < maxBatches);
 
         await reloadThreads();
@@ -268,7 +269,9 @@ export function EmailPageClient({ initialData }: Props) {
       setNextCursor(data.nextCursor);
       setHasMore(Boolean(data.nextCursor));
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not load more');
+      toast.error(
+        error instanceof Error ? error.message : 'Could not load more',
+      );
     } finally {
       setLoadingMore(false);
     }
@@ -285,8 +288,8 @@ export function EmailPageClient({ initialData }: Props) {
             Email
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
-            Sync Gmail threads, auto-draft replies that need a response, and save
-            them back to Gmail.
+            Sync Gmail threads, auto-draft replies that need a response, and
+            save them back to Gmail.
           </p>
         </div>
 

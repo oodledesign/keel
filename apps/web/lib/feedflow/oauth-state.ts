@@ -21,7 +21,9 @@ function stateSecret(): string {
     .digest('hex');
 }
 
-export function signFeedflowOAuthState(payload: FeedflowOAuthStatePayload): string {
+export function signFeedflowOAuthState(
+  payload: FeedflowOAuthStatePayload,
+): string {
   const body = Buffer.from(JSON.stringify(payload)).toString('base64url');
   const sig = createHmac('sha256', stateSecret())
     .update(body)

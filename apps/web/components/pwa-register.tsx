@@ -26,7 +26,10 @@ export function PwaRegister() {
       window.location.reload();
     };
 
-    navigator.serviceWorker.addEventListener('controllerchange', onControllerChange);
+    navigator.serviceWorker.addEventListener(
+      'controllerchange',
+      onControllerChange,
+    );
 
     return () => {
       navigator.serviceWorker.removeEventListener(

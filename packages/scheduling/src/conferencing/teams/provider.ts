@@ -1,7 +1,4 @@
-import type {
-  ConferencingProvider,
-  CreateMeetingResult,
-} from '../types';
+import type { ConferencingProvider, CreateMeetingResult } from '../types';
 
 /**
  * Microsoft Teams online meetings via Graph API.

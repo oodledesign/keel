@@ -65,10 +65,16 @@ export function WorkspaceRichTextEditor({
         <ToolbarBtn label="Italic" onClick={() => exec('italic')}>
           <Italic className="h-3.5 w-3.5" />
         </ToolbarBtn>
-        <ToolbarBtn label="Bullet list" onClick={() => exec('insertUnorderedList')}>
+        <ToolbarBtn
+          label="Bullet list"
+          onClick={() => exec('insertUnorderedList')}
+        >
           <List className="h-3.5 w-3.5" />
         </ToolbarBtn>
-        <ToolbarBtn label="Numbered list" onClick={() => exec('insertOrderedList')}>
+        <ToolbarBtn
+          label="Numbered list"
+          onClick={() => exec('insertOrderedList')}
+        >
           <ListOrdered className="h-3.5 w-3.5" />
         </ToolbarBtn>
         <ToolbarBtn label="Link" onClick={addLink}>
@@ -126,7 +132,10 @@ type WorkspaceRichTextHtmlProps = {
 };
 
 /** Render sanitized HTML from rich text fields. */
-export function WorkspaceRichTextHtml({ html, className }: WorkspaceRichTextHtmlProps) {
+export function WorkspaceRichTextHtml({
+  html,
+  className,
+}: WorkspaceRichTextHtmlProps) {
   const safe = sanitizeCommunityHtml(html);
   if (!safe.trim()) return null;
 

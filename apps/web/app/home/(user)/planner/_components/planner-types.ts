@@ -1,8 +1,5 @@
-import type {
-  PlannerPageData,
-  PlannerTask,
-} from '~/lib/planner/types';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
+import type { PlannerPageData, PlannerTask } from '~/lib/planner/types';
 
 export type PlanningMode = 'day' | 'week';
 export type DeepWorkPreference = 'morning' | 'afternoon' | 'none';

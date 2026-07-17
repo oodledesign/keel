@@ -2,6 +2,8 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
+import Link from 'next/link';
+
 import {
   ChevronDown,
   ChevronRight,
@@ -9,7 +11,6 @@ import {
   FileText,
   Plus,
 } from 'lucide-react';
-import Link from 'next/link';
 
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import {
@@ -26,17 +27,17 @@ import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '../../_lib/error-message';
 import { updateJob } from '../../_lib/server/server-actions';
 import {
-  formatTimelineRange,
-  formatValue,
-  getProjectGroupId,
   JOB_STATUS_CELL,
+  type JobPriority,
+  type JobStatus,
   PHASE_CELL,
   PRIORITY_CELL,
   PROJECT_GROUPS,
-  truncateText,
-  type JobPriority,
-  type JobStatus,
   type ProjectGroupId,
+  formatTimelineRange,
+  formatValue,
+  getProjectGroupId,
+  truncateText,
 } from './jobs-pm.constants';
 
 export type JobsPmRow = {
@@ -170,8 +171,10 @@ export function JobsPmMainTable({
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[960px] border-collapse text-sm">
                   <thead>
-                    <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                      <th className="w-[220px] px-4 py-2 md:px-5">{projectLabel}</th>
+                    <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                      <th className="w-[220px] px-4 py-2 md:px-5">
+                        {projectLabel}
+                      </th>
                       <th className="w-[72px] px-2 py-2">PM</th>
                       <th className="min-w-[180px] px-2 py-2">Overview</th>
                       <th className="w-[140px] px-2 py-2">Status</th>
@@ -242,7 +245,9 @@ export function JobsPmMainTable({
                                 +{job.assignment_count}
                               </span>
                             ) : (
-                              <span className="text-[var(--workspace-shell-text-muted)]">—</span>
+                              <span className="text-[var(--workspace-shell-text-muted)]">
+                                —
+                              </span>
                             )}
                           </td>
                           <td className="px-2 py-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
@@ -284,10 +289,7 @@ export function JobsPmMainTable({
                               <Select
                                 value={job.priority}
                                 onValueChange={(v) =>
-                                  handlePriorityChange(
-                                    job.id,
-                                    v as JobPriority,
-                                  )
+                                  handlePriorityChange(job.id, v as JobPriority)
                                 }
                               >
                                 <SelectTrigger
@@ -332,7 +334,7 @@ export function JobsPmMainTable({
                           <td className="px-2 py-1.5 md:pr-5">
                             <Link
                               href={jobDetailPath.replace('[id]', job.id)}
-                              className="inline-flex h-7 w-7 items-center justify-center rounded text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] group-hover:opacity-100"
+                              className="inline-flex h-7 w-7 items-center justify-center rounded text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                               aria-label="Open project"
                             >
                               <ExternalLink className="h-3.5 w-3.5" />
@@ -367,16 +369,10 @@ export function JobsPmMainTable({
                       <td />
                       <td />
                       <td className="px-2 py-2">
-                        <GroupSummaryBar
-                          jobs={group.jobs}
-                          field="status"
-                        />
+                        <GroupSummaryBar jobs={group.jobs} field="status" />
                       </td>
                       <td className="px-2 py-2">
-                        <GroupSummaryBar
-                          jobs={group.jobs}
-                          field="priority"
-                        />
+                        <GroupSummaryBar jobs={group.jobs} field="priority" />
                       </td>
                       <td className="px-2 py-2">
                         <StatusPill style={phaseStyle} />
@@ -386,7 +382,10 @@ export function JobsPmMainTable({
                       </td>
                       {!isContractorView && (
                         <td className="px-2 py-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                          {group.jobs.filter((j) => j.value_pence != null).length}{' '}
+                          {
+                            group.jobs.filter((j) => j.value_pence != null)
+                              .length
+                          }{' '}
                           valued
                         </td>
                       )}
@@ -446,8 +445,7 @@ function GroupSummaryBar({
   jobs: JobsPmRow[];
   field: 'status' | 'priority';
 }) {
-  const palette =
-    field === 'status' ? JOB_STATUS_CELL : PRIORITY_CELL;
+  const palette = field === 'status' ? JOB_STATUS_CELL : PRIORITY_CELL;
 
   const counts = jobs.reduce<Record<string, number>>((acc, job) => {
     const key = job[field];
@@ -459,7 +457,9 @@ function GroupSummaryBar({
   const segments = Object.entries(counts);
 
   if (segments.length === 0) {
-    return <div className="h-2 rounded-full bg-[var(--workspace-control-surface)]" />;
+    return (
+      <div className="h-2 rounded-full bg-[var(--workspace-control-surface)]" />
+    );
   }
 
   return (

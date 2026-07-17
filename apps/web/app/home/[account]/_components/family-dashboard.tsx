@@ -51,7 +51,7 @@ export function FamilyDashboard({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(52,211,153,0.10),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(16,185,129,0.08),transparent_40%)] px-4 pb-10 pt-5 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(52,211,153,0.10),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(16,185,129,0.08),transparent_40%)] px-4 pt-5 pb-10 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Open Tasks"
@@ -160,7 +160,7 @@ function StatCard({
           >
             <Icon className={`h-4 w-4 ${toneText}`} />
           </span>
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/50">
+          <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text)]/50 uppercase">
             {label}
           </p>
         </div>
@@ -183,7 +183,10 @@ function UpcomingTasksPanel({
     return (
       <p className="py-6 text-center text-sm text-[var(--workspace-shell-text)]/45">
         Nothing due in the next week.{' '}
-        <Link href={tasksPath} className="text-[var(--ozer-accent-muted)] hover:underline">
+        <Link
+          href={tasksPath}
+          className="text-[var(--ozer-accent-muted)] hover:underline"
+        >
           Add a task
         </Link>
       </p>
@@ -203,11 +206,15 @@ function UpcomingTasksPanel({
               {task.title}
             </p>
             {task.planName ? (
-              <p className="truncate text-xs text-[var(--workspace-shell-text)]/45">{task.planName}</p>
+              <p className="truncate text-xs text-[var(--workspace-shell-text)]/45">
+                {task.planName}
+              </p>
             ) : null}
           </div>
           {task.dueLabel ? (
-            <span className="shrink-0 text-xs text-[var(--workspace-shell-text)]/50">{task.dueLabel}</span>
+            <span className="shrink-0 text-xs text-[var(--workspace-shell-text)]/50">
+              {task.dueLabel}
+            </span>
           ) : null}
         </li>
       ))}
@@ -271,13 +278,15 @@ function MealPlanWeek({
           key={day.planDate}
           className="flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 py-2.5"
         >
-          <span className="w-10 shrink-0 text-xs font-semibold uppercase text-[var(--ozer-accent-muted)]/90">
+          <span className="w-10 shrink-0 text-xs font-semibold text-[var(--ozer-accent-muted)]/90 uppercase">
             {day.dayLabel}
           </span>
           <p
             className={cn(
               'min-w-0 flex-1 text-sm',
-              day.summary ? 'text-[var(--workspace-shell-text)]/85' : 'text-[var(--workspace-shell-text)]/35 italic',
+              day.summary
+                ? 'text-[var(--workspace-shell-text)]/85'
+                : 'text-[var(--workspace-shell-text)]/35 italic',
             )}
           >
             {day.summary ?? 'Not planned yet'}
@@ -307,7 +316,10 @@ function EventsPanel({
     return (
       <p className="py-6 text-center text-sm text-[var(--workspace-shell-text)]/45">
         No events in the next two weeks.{' '}
-        <Link href={calendarPath} className="text-[var(--ozer-accent-muted)] hover:underline">
+        <Link
+          href={calendarPath}
+          className="text-[var(--ozer-accent-muted)] hover:underline"
+        >
           Open calendar
         </Link>
       </p>
@@ -328,9 +340,13 @@ function EventsPanel({
             <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
               {event.title}
             </p>
-            <p className="text-xs text-[var(--workspace-shell-text)]/45">{event.dateLabel}</p>
+            <p className="text-xs text-[var(--workspace-shell-text)]/45">
+              {event.dateLabel}
+            </p>
           </div>
-          <span className="shrink-0 text-xs text-[var(--workspace-shell-text)]/50">{event.timeLabel}</span>
+          <span className="shrink-0 text-xs text-[var(--workspace-shell-text)]/50">
+            {event.timeLabel}
+          </span>
         </li>
       ))}
     </ul>

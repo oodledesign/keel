@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+
 import Link from 'next/link';
 
 import { ArrowLeft, Plus, Sparkles, Trash2 } from 'lucide-react';
@@ -16,14 +17,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { toast } from '@kit/ui/sonner';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
-import { YoutubeEmbed } from '~/components/youtube-embed';
 import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
+import { YoutubeEmbed } from '~/components/youtube-embed';
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
+import type {
+  EveningPart,
+  MeetupDetail,
+  MeetupSeriesOption,
+} from '../_lib/community-schedule.types';
 import {
   addMeetupContentItem,
   deleteMeetupContentItem,
@@ -34,11 +40,6 @@ import {
   updateCommunityMeetup,
 } from '../_lib/server/community-schedule.actions';
 import { MeetupContentItemView } from './meetup-content-item-view';
-import type {
-  EveningPart,
-  MeetupDetail,
-  MeetupSeriesOption,
-} from '../_lib/community-schedule.types';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5';
@@ -69,7 +70,9 @@ export function CommunityMeetupDetailClient({
   const [isPending, startTransition] = useTransition();
 
   const [title, setTitle] = useState(detail.title);
-  const [startsAt, setStartsAt] = useState(() => isoToDatetimeLocal(detail.startsAt));
+  const [startsAt, setStartsAt] = useState(() =>
+    isoToDatetimeLocal(detail.startsAt),
+  );
   const [location, setLocation] = useState(detail.location ?? '');
   const [seriesId, setSeriesId] = useState(detail.seriesId ?? 'none');
   const [seriesLabel, setSeriesLabel] = useState(detail.seriesLabel ?? '');
@@ -239,7 +242,10 @@ export function CommunityMeetupDetailClient({
           Schedule
         </Link>
         {detail.seriesName || detail.seriesLabel ? (
-          <Badge variant="outline" className="border-amber-400/30 text-amber-200">
+          <Badge
+            variant="outline"
+            className="border-amber-400/30 text-amber-200"
+          >
             {detail.seriesName}
             {detail.seriesLabel ? ` · ${detail.seriesLabel}` : ''}
           </Badge>
@@ -248,7 +254,9 @@ export function CommunityMeetupDetailClient({
 
       <div>
         <h1 className="text-2xl font-bold">{title}</h1>
-        <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">{startsDisplay}</p>
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">
+          {startsDisplay}
+        </p>
       </div>
 
       <Tabs value={tab} onValueChange={setTab}>
@@ -454,7 +462,9 @@ export function CommunityMeetupDetailClient({
           <div className={panelClass}>
             <h3 className="mb-4 font-semibold">Session content</h3>
             {detail.contentItems.length === 0 ? (
-              <p className="text-sm text-[var(--workspace-shell-text)]/50">No content items yet.</p>
+              <p className="text-sm text-[var(--workspace-shell-text)]/50">
+                No content items yet.
+              </p>
             ) : (
               <ul className="space-y-3">
                 {detail.contentItems.map((item) => (
@@ -597,7 +607,7 @@ export function CommunityMeetupDetailClient({
           {aiSummary ? (
             <div className={panelClass}>
               <h3 className="mb-2 font-semibold">AI summary</h3>
-              <div className="prose prose-invert max-w-none whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/80">
+              <div className="prose prose-invert max-w-none text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/80">
                 {aiSummary}
               </div>
             </div>

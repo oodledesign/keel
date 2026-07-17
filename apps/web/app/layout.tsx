@@ -4,13 +4,16 @@ import { CookieBanner } from '@kit/ui/cookie-banner';
 import { cn } from '@kit/ui/utils';
 
 import { AppToaster } from '~/components/app-toaster';
-import { PwaRegister } from '~/components/pwa-register';
 import { GoogleAnalytics } from '~/components/google-analytics';
+import { PwaRegister } from '~/components/pwa-register';
 import { RootProviders } from '~/components/root-providers';
 import { TextSizeSync } from '~/components/text-size-sync';
 import { getFontsClassName } from '~/lib/fonts';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
-import { generateRootMetadata, generateRootViewport } from '~/lib/root-metadata';
+import {
+  generateRootMetadata,
+  generateRootViewport,
+} from '~/lib/root-metadata';
 import { getRootTheme } from '~/lib/root-theme';
 
 import '../styles/globals.css';
@@ -37,8 +40,16 @@ export default async function RootLayout({
   return (
     <html lang={language} className={className} suppressHydrationWarning>
       <head>
-        <link rel="preconnect" href="https://api.fontshare.com" crossOrigin="" />
-        <link rel="preconnect" href="https://cdn.fontshare.com" crossOrigin="" />
+        <link
+          rel="preconnect"
+          href="https://api.fontshare.com"
+          crossOrigin=""
+        />
+        <link
+          rel="preconnect"
+          href="https://cdn.fontshare.com"
+          crossOrigin=""
+        />
       </head>
       <body suppressHydrationWarning>
         <TextSizeSync />

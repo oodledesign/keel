@@ -1,11 +1,12 @@
+import type { EmailRecipientList } from '~/lib/admin-email/campaigns';
+import { EMAIL_RECIPIENT_LISTS } from '~/lib/admin-email/campaigns';
+
 import { CampaignComposer } from '../_components/campaign-composer';
 import {
   loadContactListsForComposer,
   loadCurrentSuperAdminEmail,
   loadCustomRecipientUsers,
 } from '../_lib/server/email-marketing.loader';
-import type { EmailRecipientList } from '~/lib/admin-email/campaigns';
-import { EMAIL_RECIPIENT_LISTS } from '~/lib/admin-email/campaigns';
 
 export const metadata = {
   title: 'New campaign',

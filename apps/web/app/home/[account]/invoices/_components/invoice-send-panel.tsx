@@ -25,11 +25,7 @@ import {
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@kit/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import {
@@ -117,9 +113,7 @@ function RecipientPill({
         </TooltipTrigger>
         <TooltipContent side="top" className="text-xs">
           {recipient.email}
-          {recipient.role
-            ? ` · ${formatContactRoleLabel(recipient.role)}`
-            : ''}
+          {recipient.role ? ` · ${formatContactRoleLabel(recipient.role)}` : ''}
         </TooltipContent>
       </Tooltip>
     </TooltipProvider>
@@ -278,7 +272,10 @@ export function InvoiceSendPanel({
         toast.message('That recipient is already added');
         return prev;
       }
-      return [...prev, { ...next, email: next.email.trim(), id: next.id || email }];
+      return [
+        ...prev,
+        { ...next, email: next.email.trim(), id: next.id || email },
+      ];
     });
   };
 
@@ -576,8 +573,8 @@ export function InvoiceSendPanel({
               </Popover>
             </div>
             <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-              Hover a recipient to see their email. Invoices go to all recipients
-              listed here.
+              Hover a recipient to see their email. Invoices go to all
+              recipients listed here.
             </p>
           </div>
 
@@ -668,8 +665,8 @@ export function InvoiceSendPanel({
 
         <TabsContent value="link" className="mt-4 space-y-4">
           <p className="text-muted-foreground text-sm">
-            Share this link with your client to view and pay the invoice.
-            Card payments via Stripe may incur a small processing fee.
+            Share this link with your client to view and pay the invoice. Card
+            payments via Stripe may incur a small processing fee.
           </p>
           {isDraft ? (
             <div className="flex items-center gap-2">
@@ -753,12 +750,11 @@ export function InvoiceSendPanel({
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              To:{' '}
-              {recipients.map((r) => r.name).join(', ') || 'No recipients'}
+              To: {recipients.map((r) => r.name).join(', ') || 'No recipients'}
             </p>
             <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white p-4 text-[var(--ozer-text-on-light)] shadow-sm">
               <p className="mb-3 text-base font-semibold">{previewSubject}</p>
-              <p className="whitespace-pre-wrap leading-relaxed">
+              <p className="leading-relaxed whitespace-pre-wrap">
                 {previewBody}
               </p>
               <div className="my-4 rounded-xl border border-zinc-200 bg-zinc-50 p-4 text-sm">
@@ -766,9 +762,7 @@ export function InvoiceSendPanel({
                 <p className="mt-1">Total: {formatPence(totalPence)}</p>
                 <p className="mt-1 text-zinc-600">
                   Due date:{' '}
-                  {dueAt
-                    ? new Date(dueAt).toLocaleDateString('en-GB')
-                    : '—'}
+                  {dueAt ? new Date(dueAt).toLocaleDateString('en-GB') : '—'}
                 </p>
                 <p className="mt-3 text-[var(--ozer-accent)] underline">
                   View and pay invoice
@@ -777,7 +771,7 @@ export function InvoiceSendPanel({
                   Paying online by card may incur a small processing fee.
                 </p>
               </div>
-              <p className="whitespace-pre-wrap leading-relaxed text-zinc-700">
+              <p className="leading-relaxed whitespace-pre-wrap text-zinc-700">
                 {previewSignature}
               </p>
             </div>

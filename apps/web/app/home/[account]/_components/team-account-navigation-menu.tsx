@@ -4,12 +4,12 @@ import {
 } from '@kit/ui/bordered-navigation-menu';
 
 import { AppLogo } from '~/components/app-logo';
-import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
-import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
+import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import { TeamAccountAccountsSelector } from '~/home/[account]/_components/team-account-accounts-selector';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
+import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 
 // local imports
 import { TeamAccountWorkspace } from '../_lib/server/team-account-workspace.loader';
@@ -18,7 +18,9 @@ export async function TeamAccountNavigationMenu(props: {
   workspace: TeamAccountWorkspace;
 }) {
   const { account, user } = props.workspace;
-  const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+  const client = (
+    await import('@kit/supabase/server-client')
+  ).getSupabaseServerClient();
   const switcherAccounts = await loadWorkspaceSwitcherAccounts(client, user.id);
 
   const routes = getTeamAccountSidebarConfig(

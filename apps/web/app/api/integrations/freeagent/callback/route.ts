@@ -27,7 +27,9 @@ export async function GET(request: Request) {
   const returnUrl = payload.returnPath;
 
   if (error || !code) {
-    return redirect(`${returnUrl}?finance_error=${encodeURIComponent(error ?? 'denied')}`);
+    return redirect(
+      `${returnUrl}?finance_error=${encodeURIComponent(error ?? 'denied')}`,
+    );
   }
 
   const client = getSupabaseServerClient();
@@ -43,17 +45,19 @@ export async function GET(request: Request) {
     const tokens = await exchangeFreeAgentCode(code);
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    const { error: upsertError } = await client.from('finance_connections').upsert(
-      {
-        account_id: payload.accountId,
-        provider: 'freeagent',
-        access_token: tokens.access_token,
-        refresh_token: tokens.refresh_token,
-        token_expires_at: expiresAt.toISOString(),
-        connected_by: user.id,
-      },
-      { onConflict: 'account_id,provider' },
-    );
+    const { error: upsertError } = await client
+      .from('finance_connections')
+      .upsert(
+        {
+          account_id: payload.accountId,
+          provider: 'freeagent',
+          access_token: tokens.access_token,
+          refresh_token: tokens.refresh_token,
+          token_expires_at: expiresAt.toISOString(),
+          connected_by: user.id,
+        },
+        { onConflict: 'account_id,provider' },
+      );
 
     if (upsertError) throw upsertError;
 

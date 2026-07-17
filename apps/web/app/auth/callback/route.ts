@@ -42,7 +42,10 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    const { nextPath } = await service.exchangeCodeForSession(request, baseParams);
+    const { nextPath } = await service.exchangeCodeForSession(
+      request,
+      baseParams,
+    );
     return redirect(await landingAfterAuth(client, nextPath));
   }
 

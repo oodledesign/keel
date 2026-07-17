@@ -42,7 +42,9 @@ export function isEmailContactImportMappingComplete(
     if (matches.length !== 1) return false;
   }
 
-  const targets = Object.values(mapping).filter((target) => target !== '__skip__');
+  const targets = Object.values(mapping).filter(
+    (target) => target !== '__skip__',
+  );
   const counts = new Map<string, number>();
   for (const target of targets) {
     counts.set(target, (counts.get(target) ?? 0) + 1);
@@ -60,7 +62,11 @@ export function countEmailContactRowsMissingRequired(
 ): number {
   let missing = 0;
   for (const row of rows) {
-    if (!isEmailContactImportRowImportable(applyEmailContactImportMapping(row, mapping))) {
+    if (
+      !isEmailContactImportRowImportable(
+        applyEmailContactImportMapping(row, mapping),
+      )
+    ) {
       missing += 1;
     }
   }

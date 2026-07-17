@@ -127,9 +127,7 @@ export function splitScheduleSegments(text: string): ScheduleSegment[] {
       .filter(Boolean);
 
     const title = parts[0] ?? body;
-    const meta = parts
-      .slice(1)
-      .filter((part) => !/^no project$/i.test(part));
+    const meta = parts.slice(1).filter((part) => !/^no project$/i.test(part));
 
     const { startMinutes, endMinutes } = resolveRangeMinutes(rawStart, rawEnd);
 
@@ -160,7 +158,8 @@ export function parseDayScheduleFromMarkdown(
     if (!line || /^#{1,6}\s/.test(line)) continue;
 
     for (const segment of splitScheduleSegments(line)) {
-      if (segment.startMinutes === null || segment.endMinutes === null) continue;
+      if (segment.startMinutes === null || segment.endMinutes === null)
+        continue;
       if (segment.endMinutes <= segment.startMinutes) continue;
 
       const start = new Date(base);
@@ -220,7 +219,8 @@ export function parseScheduledBlocksForCalendarPush(
     for (const segment of splitScheduleSegments(line)) {
       // Calendar events already exist in Google Calendar — don't duplicate.
       if (segment.isCalendarEvent) continue;
-      if (segment.startMinutes === null || segment.endMinutes === null) continue;
+      if (segment.startMinutes === null || segment.endMinutes === null)
+        continue;
       if (segment.endMinutes <= segment.startMinutes) continue;
 
       const start = new Date(currentDate);

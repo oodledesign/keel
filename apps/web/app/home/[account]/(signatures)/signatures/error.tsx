@@ -13,7 +13,10 @@ type SignaturesErrorProps = {
   reset: () => void;
 };
 
-export default function SignaturesError({ error, reset }: SignaturesErrorProps) {
+export default function SignaturesError({
+  error,
+  reset,
+}: SignaturesErrorProps) {
   const { t } = useTranslation('signatures');
 
   if (isSignaturesPostgrestSchemaError(error)) {
@@ -29,7 +32,7 @@ export default function SignaturesError({ error, reset }: SignaturesErrorProps) 
         description={t('description')}
       />
       <PageBody className="space-y-4 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
-        <p className="text-sm text-destructive">{t('errors.generic')}</p>
+        <p className="text-destructive text-sm">{t('errors.generic')}</p>
         <Button type="button" variant="outline" onClick={reset}>
           {t('errors.postgrestSchemaRetry')}
         </Button>

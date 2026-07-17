@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
+
 import { syncSuggestedActionItemsFromThreadLink } from './action-item-links';
 
 type UpdateEmailThreadLinkInput = {
@@ -60,8 +61,7 @@ export async function updateEmailThreadLink(
   threadId: string,
   input: UpdateEmailThreadLinkInput,
 ) {
-  const clearing =
-    !input.accountId && !input.clientId && !input.projectId;
+  const clearing = !input.accountId && !input.clientId && !input.projectId;
 
   if (clearing) {
     const { error } = await client
@@ -100,14 +100,10 @@ export async function updateEmailThreadLink(
   );
 
   let clientId = input.clientId;
-  let projectId = input.projectId;
+  const projectId = input.projectId;
 
   if (projectId) {
-    const project = await validateProject(
-      readDb,
-      projectId,
-      input.accountId,
-    );
+    const project = await validateProject(readDb, projectId, input.accountId);
     clientId = clientId ?? project.client_id;
   }
 

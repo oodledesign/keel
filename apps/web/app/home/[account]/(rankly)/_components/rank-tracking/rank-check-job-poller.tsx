@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useRef, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -139,7 +140,7 @@ export function RankCheckJobPoller({
       <div
         className={`rounded-lg border px-4 py-3 text-sm ${
           cancelled
-            ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground'
+            ? 'text-muted-foreground border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]'
             : 'border-red-500/30 bg-red-500/10 text-red-200'
         }`}
       >

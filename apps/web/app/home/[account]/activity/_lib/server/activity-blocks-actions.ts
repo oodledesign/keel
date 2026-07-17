@@ -55,7 +55,12 @@ type AssignUnassignedReportFilterInput = {
   workClassification?: 'billable' | 'internal' | 'neutral';
   rememberRule?: boolean;
   ruleMatch?: {
-    matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path' | 'repo_name';
+    matchType:
+      | 'domain'
+      | 'app_name'
+      | 'title_contains'
+      | 'url_path'
+      | 'repo_name';
     matchValue: string;
   };
 };
@@ -63,7 +68,12 @@ type AssignUnassignedReportFilterInput = {
 type CreateActivityRuleInput = {
   accountId: string;
   accountSlug: string;
-  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path' | 'repo_name';
+  matchType:
+    | 'domain'
+    | 'app_name'
+    | 'title_contains'
+    | 'url_path'
+    | 'repo_name';
   matchValue: string;
   projectId?: string | null;
   clientId?: string | null;
@@ -188,7 +198,9 @@ export async function excludeActivityBlockAction(
 export async function bulkUpdateActivityBlocksAction(
   input: BulkUpdateActivityBlocksInput,
 ): Promise<{ success: boolean; error?: string }> {
-  const blockIds = [...new Set(input.blockIds.map((id) => id.trim()).filter(Boolean))];
+  const blockIds = [
+    ...new Set(input.blockIds.map((id) => id.trim()).filter(Boolean)),
+  ];
 
   if (blockIds.length === 0) {
     return { success: false, error: 'No activity blocks selected' };
@@ -242,7 +254,9 @@ export async function bulkUpdateActivityBlocksAction(
 export async function bulkExcludeActivityBlocksAction(
   input: BulkExcludeActivityBlocksInput,
 ): Promise<{ success: boolean; error?: string }> {
-  const blockIds = [...new Set(input.blockIds.map((id) => id.trim()).filter(Boolean))];
+  const blockIds = [
+    ...new Set(input.blockIds.map((id) => id.trim()).filter(Boolean)),
+  ];
 
   if (blockIds.length === 0) {
     return { success: false, error: 'No activity blocks selected' };
@@ -349,7 +363,10 @@ export async function assignUnassignedReportFilterAction(
   );
 
   if (targets.length === 0) {
-    return { success: false, error: 'No unassigned sessions match this filter' };
+    return {
+      success: false,
+      error: 'No unassigned sessions match this filter',
+    };
   }
 
   const blockIds = targets.map((block) => block.id);
@@ -404,7 +421,12 @@ function normalizeRuleMatchValue(
     throw new Error('Rule match value is required');
   }
 
-  if (matchType === 'domain' || matchType === 'app_name' || matchType === 'url_path' || matchType === 'repo_name') {
+  if (
+    matchType === 'domain' ||
+    matchType === 'app_name' ||
+    matchType === 'url_path' ||
+    matchType === 'repo_name'
+  ) {
     return trimmed.toLowerCase();
   }
 
@@ -534,7 +556,10 @@ export async function createActivityRuleAction(
   }
 
   if (!input.projectId && !input.clientId) {
-    return { success: false, error: 'Choose a client or project for this rule' };
+    return {
+      success: false,
+      error: 'Choose a client or project for this rule',
+    };
   }
 
   if (input.projectId) {

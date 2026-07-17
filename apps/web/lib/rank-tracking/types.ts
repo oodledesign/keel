@@ -46,12 +46,13 @@ export type RankTrackingSettings = {
   nextRankCheckAt: string | null;
 };
 
-export const RANK_REFRESH_INTERVAL_LABELS: Record<RankRefreshInterval, string> = {
-  manual: 'Manual only',
-  daily: 'Daily',
-  weekly: 'Weekly',
-  monthly: 'Monthly',
-};
+export const RANK_REFRESH_INTERVAL_LABELS: Record<RankRefreshInterval, string> =
+  {
+    manual: 'Manual only',
+    daily: 'Daily',
+    weekly: 'Weekly',
+    monthly: 'Monthly',
+  };
 
 export const INTERVAL_DAYS: Record<RankRefreshInterval, number | null> = {
   manual: null,

@@ -15,6 +15,7 @@ import {
   XCircle,
 } from 'lucide-react';
 
+import { Button } from '@kit/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,7 +23,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
-import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
@@ -60,7 +60,11 @@ export function InvoiceRowMenu({
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const run = async (key: string, fn: () => Promise<unknown>, success: string) => {
+  const run = async (
+    key: string,
+    fn: () => Promise<unknown>,
+    success: string,
+  ) => {
     setLoading(key);
     try {
       await fn();
@@ -81,7 +85,11 @@ export function InvoiceRowMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -89,12 +97,22 @@ export function InvoiceRowMenu({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-        <DropdownMenuItem onClick={() => router.push(editPath)}>Open</DropdownMenuItem>
+      <DropdownMenuContent
+        align="end"
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+      >
+        <DropdownMenuItem onClick={() => router.push(editPath)}>
+          Open
+        </DropdownMenuItem>
         {canEditInvoices ? (
           <DropdownMenuItem
             onClick={() =>
-              run('duplicate', () => duplicateInvoiceAction({ accountId, invoiceId: invoice.id }), 'Invoice duplicated')
+              run(
+                'duplicate',
+                () =>
+                  duplicateInvoiceAction({ accountId, invoiceId: invoice.id }),
+                'Invoice duplicated',
+              )
             }
           >
             <Copy className="mr-2 h-4 w-4" />
@@ -102,7 +120,11 @@ export function InvoiceRowMenu({
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild>
-          <a href={`/api/invoices/pdf?invoiceId=${invoice.id}`} target="_blank" rel="noreferrer">
+          <a
+            href={`/api/invoices/pdf?invoiceId=${invoice.id}`}
+            target="_blank"
+            rel="noreferrer"
+          >
             <Download className="mr-2 h-4 w-4" />
             Export to PDF
           </a>
@@ -110,7 +132,11 @@ export function InvoiceRowMenu({
         {canEditInvoices && ['sent', 'read'].includes(invoice.status) ? (
           <DropdownMenuItem
             onClick={() =>
-              run('resend', () => resendInvoiceAction({ accountId, invoiceId: invoice.id }), 'Invoice resent')
+              run(
+                'resend',
+                () => resendInvoiceAction({ accountId, invoiceId: invoice.id }),
+                'Invoice resent',
+              )
             }
           >
             <Send className="mr-2 h-4 w-4" />
@@ -138,7 +164,11 @@ export function InvoiceRowMenu({
             </DropdownMenuItem>
             <DropdownMenuItem
               onClick={() =>
-                run('void', () => voidInvoiceAction({ accountId, invoiceId: invoice.id }), 'Invoice voided')
+                run(
+                  'void',
+                  () => voidInvoiceAction({ accountId, invoiceId: invoice.id }),
+                  'Invoice voided',
+                )
               }
             >
               <XCircle className="mr-2 h-4 w-4" />
@@ -151,7 +181,12 @@ export function InvoiceRowMenu({
             onClick={() =>
               run(
                 'archive',
-                () => archiveInvoiceAction({ accountId, invoiceId: invoice.id, archived: true }),
+                () =>
+                  archiveInvoiceAction({
+                    accountId,
+                    invoiceId: invoice.id,
+                    archived: true,
+                  }),
                 'Invoice archived',
               )
             }
@@ -166,7 +201,11 @@ export function InvoiceRowMenu({
             <DropdownMenuItem
               className="text-red-400 focus:text-red-300"
               onClick={() =>
-                run('delete', () => deleteInvoice({ accountId, invoiceId: invoice.id }), 'Invoice deleted')
+                run(
+                  'delete',
+                  () => deleteInvoice({ accountId, invoiceId: invoice.id }),
+                  'Invoice deleted',
+                )
               }
             >
               <Trash2 className="mr-2 h-4 w-4" />

@@ -1,7 +1,4 @@
-import {
-  serializeJsonLd,
-  type JsonLd,
-} from '~/lib/seo/schema';
+import { type JsonLd, serializeJsonLd } from '~/lib/seo/schema';
 
 type JsonLdProps = {
   data: JsonLd | JsonLd[] | null | undefined;

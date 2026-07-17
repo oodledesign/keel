@@ -1,14 +1,19 @@
 import 'server-only';
 
-import type { ShortcutCatalogItem, ResolvedShortcut, StoredShortcut } from './types';
-import { catalogItemKey } from './types';
-import { catalogItemHref, resolveShortcutHref } from './resolve-href';
-import { normalizeAppHref } from './personal-home-url';
 import {
+  type MobileNavIconKey,
   coerceMobileNavIconKey,
   resolveNavIconKey,
-  type MobileNavIconKey,
 } from '~/lib/mobile-nav/nav-icon-keys';
+
+import { normalizeAppHref } from './personal-home-url';
+import { catalogItemHref, resolveShortcutHref } from './resolve-href';
+import type {
+  ResolvedShortcut,
+  ShortcutCatalogItem,
+  StoredShortcut,
+} from './types';
+import { catalogItemKey } from './types';
 
 const LEGACY_MODULE_ICON_KEYS: Record<string, MobileNavIconKey> = {
   projects: 'jobs',
@@ -76,7 +81,10 @@ export function resolveStoredShortcuts(
   const resolved: ResolvedShortcut[] = [];
 
   for (const row of stored) {
-    const key = catalogItemKey({ catalogId: row.catalogId, params: row.params });
+    const key = catalogItemKey({
+      catalogId: row.catalogId,
+      params: row.params,
+    });
     const match = catalogMap.get(key);
     const href =
       resolveShortcutHref(row.catalogId, row.params) ??

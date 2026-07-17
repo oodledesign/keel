@@ -3,9 +3,7 @@ import { redirect } from 'next/navigation';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import {
-  getGoogleServiceAccountClientId,
-} from '~/lib/signatures/google-workspace';
+import { getGoogleServiceAccountClientId } from '~/lib/signatures/google-workspace';
 import { loadIntegrationInviteByToken } from '~/lib/signatures/integration-invite';
 
 import { SignaturesGoogleConnectClient } from './_components/signatures-google-connect-client';
@@ -54,9 +52,12 @@ export default async function SignaturesConnectPage({ params }: PageProps) {
             Connect Microsoft 365
           </h1>
           <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
-            You were invited to connect <strong className="text-[var(--workspace-shell-text)]">{workspaceName}</strong>{' '}
-            to Ozer Signatures. Sign in with a Microsoft 365 administrator account
-            and grant consent. You do not need a Ozer login.
+            You were invited to connect{' '}
+            <strong className="text-[var(--workspace-shell-text)]">
+              {workspaceName}
+            </strong>{' '}
+            to Ozer Signatures. Sign in with a Microsoft 365 administrator
+            account and grant consent. You do not need a Ozer login.
           </p>
           <Link
             href={authUrl}
@@ -65,8 +66,8 @@ export default async function SignaturesConnectPage({ params }: PageProps) {
             Continue with Microsoft admin consent
           </Link>
           <p className="mt-4 text-xs text-[var(--workspace-shell-text-muted)]">
-            This link expires soon and works once. After connecting, you can close
-            this page — the business owner manages signatures in Ozer.
+            This link expires soon and works once. After connecting, you can
+            close this page — the business owner manages signatures in Ozer.
           </p>
         </div>
       </main>
@@ -81,8 +82,10 @@ export default async function SignaturesConnectPage({ params }: PageProps) {
         </h1>
         <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
           Complete domain-wide delegation for{' '}
-          <strong className="text-[var(--workspace-shell-text)]">{workspaceName}</strong>. No Ozer account
-          required.
+          <strong className="text-[var(--workspace-shell-text)]">
+            {workspaceName}
+          </strong>
+          . No Ozer account required.
         </p>
       </div>
       <SignaturesGoogleConnectClient

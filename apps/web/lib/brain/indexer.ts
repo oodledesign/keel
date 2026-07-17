@@ -4,19 +4,19 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { htmlToMarkdown } from '~/lib/markdown';
 
-import { splitIntoChunks } from './chunking';
 import { brainChunksNeedRefresh } from './brain-index-refresh';
+import { splitIntoChunks } from './chunking';
 import {
+  type MeetingTranscriptEnrichment,
   buildMeetingTranscriptIndexText,
   loadMeetingTranscriptEnrichmentByIds,
   meetingTranscriptIndexUpdatedAt,
-  type MeetingTranscriptEnrichment,
 } from './meeting-transcript-index';
 import {
-  buildBrainSourceUrl,
-  buildPhaseSourceUrl,
   type BrainChunkMetadata,
   type BrainSourceType,
+  buildBrainSourceUrl,
+  buildPhaseSourceUrl,
 } from './paths';
 import { embedTexts, isVoyageConfigured } from './voyage';
 
@@ -537,10 +537,7 @@ async function upsertRecordChunks(
   return chunks.length;
 }
 
-export async function deleteSourceChunks(
-  admin: AdminClient,
-  sourceId: string,
-) {
+export async function deleteSourceChunks(admin: AdminClient, sourceId: string) {
   await admin.from('brain_chunks').delete().eq('source_id', sourceId);
 }
 
@@ -550,7 +547,8 @@ export async function indexSource(
   sourceType: BrainSourceType,
   sourceId: string,
 ) {
-  if (!isVoyageConfigured()) return { skipped: true as const, reason: 'no_voyage_key' };
+  if (!isVoyageConfigured())
+    return { skipped: true as const, reason: 'no_voyage_key' };
 
   const record = await loadIndexableSource(
     admin,
@@ -636,7 +634,10 @@ export async function indexAccount(
   };
 }
 
-export async function getBrainIndexStats(admin: AdminClient, accountId: string) {
+export async function getBrainIndexStats(
+  admin: AdminClient,
+  accountId: string,
+) {
   const { data, error } = await admin
     .from('brain_chunks')
     .select('source_type, indexed_at')
@@ -644,7 +645,10 @@ export async function getBrainIndexStats(admin: AdminClient, accountId: string) 
 
   if (error) throw new Error(error.message);
 
-  const byType = new Map<string, { count: number; lastIndexedAt: string | null }>();
+  const byType = new Map<
+    string,
+    { count: number; lastIndexedAt: string | null }
+  >();
   for (const row of data ?? []) {
     const type = row.source_type as string;
     const current = byType.get(type) ?? { count: 0, lastIndexedAt: null };

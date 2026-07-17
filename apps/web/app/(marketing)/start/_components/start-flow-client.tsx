@@ -1,9 +1,9 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import {
   ArrowLeft,
@@ -110,9 +110,7 @@ export function StartFlowClient() {
   const router = useRouter();
   const [step, setStep] = useState<Step>('personal');
   const [workspace, setWorkspace] = useState<WorkspaceChoice | null>(null);
-  const [businessTier, setBusinessTier] = useState<BusinessTier | null>(
-    'solo',
-  );
+  const [businessTier, setBusinessTier] = useState<BusinessTier | null>('solo');
 
   const solo = planByProductId('ozer-business-solo');
   const team = planByProductId('ozer-business-team');
@@ -172,7 +170,12 @@ export function StartFlowClient() {
   return (
     <div className="mx-auto w-full max-w-2xl">
       <div className="mb-8 flex items-center justify-between gap-3">
-        <p className={cn('text-xs font-medium uppercase tracking-[0.14em]', marketingMutedText)}>
+        <p
+          className={cn(
+            'text-xs font-medium tracking-[0.14em] uppercase',
+            marketingMutedText,
+          )}
+        >
           Step {Math.min(stepIndex + 1, totalSteps)} of {totalSteps}
         </p>
         <div className="flex gap-1.5">
@@ -197,9 +200,14 @@ export function StartFlowClient() {
             <h1 className="font-heading text-3xl font-bold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
               Everyone starts with a free personal account
             </h1>
-            <p className={cn('mx-auto max-w-lg text-base leading-relaxed', marketingBodyText)}>
-              {MARKETING_FREE_TIER.description} No card required. Extra workspaces
-              are optional — you can add one on the next step.
+            <p
+              className={cn(
+                'mx-auto max-w-lg text-base leading-relaxed',
+                marketingBodyText,
+              )}
+            >
+              {MARKETING_FREE_TIER.description} No card required. Extra
+              workspaces are optional — you can add one on the next step.
             </p>
           </div>
 
@@ -250,7 +258,12 @@ export function StartFlowClient() {
               Continue
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Button>
-            <Button asChild size="lg" variant="outline" className={marketingBtnOutline}>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className={marketingBtnOutline}
+            >
               <Link href={buildPricingSignupUrl({})}>
                 Skip — create personal account
               </Link>
@@ -268,9 +281,15 @@ export function StartFlowClient() {
             <h1 className="font-heading text-3xl font-bold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
               Want another workspace?
             </h1>
-            <p className={cn('mx-auto max-w-lg text-base leading-relaxed', marketingBodyText)}>
-              Your personal account is always free. Here for an app like Signatures?
-              Choose that path. Or add a full business workspace — or start personal-only.
+            <p
+              className={cn(
+                'mx-auto max-w-lg text-base leading-relaxed',
+                marketingBodyText,
+              )}
+            >
+              Your personal account is always free. Here for an app like
+              Signatures? Choose that path. Or add a full business workspace —
+              or start personal-only.
             </p>
           </div>
 
@@ -298,7 +317,10 @@ export function StartFlowClient() {
                               marketingFeatureCard,
                               'border-dashed border-[var(--ozer-accent)]/40 bg-[var(--ozer-accent-subtle)]/40 hover:border-[var(--ozer-accent)]/60',
                             )
-                          : cn(marketingFeatureCard, 'hover:border-[var(--ozer-accent)]/35'),
+                          : cn(
+                              marketingFeatureCard,
+                              'hover:border-[var(--ozer-accent)]/35',
+                            ),
                     )}
                   >
                     <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]">
@@ -318,7 +340,9 @@ export function StartFlowClient() {
                           </span>
                         ) : null}
                       </span>
-                      <span className={cn('mt-1 block text-sm', marketingMutedText)}>
+                      <span
+                        className={cn('mt-1 block text-sm', marketingMutedText)}
+                      >
                         {option.description}
                       </span>
                     </span>
@@ -384,9 +408,15 @@ export function StartFlowClient() {
             <h1 className="font-heading text-3xl font-bold tracking-tight text-[var(--workspace-shell-text)] md:text-4xl">
               Pick a business workspace
             </h1>
-            <p className={cn('mx-auto max-w-lg text-base leading-relaxed', marketingBodyText)}>
-              Personal stays free. Paid plans include a 14-day trial with no card
-              required. Lite is free forever if you only need apps like Signatures.
+            <p
+              className={cn(
+                'mx-auto max-w-lg text-base leading-relaxed',
+                marketingBodyText,
+              )}
+            >
+              Personal stays free. Paid plans include a 14-day trial with no
+              card required. Lite is free forever if you only need apps like
+              Signatures.
             </p>
           </div>
 
@@ -463,7 +493,10 @@ export function StartFlowClient() {
                         ),
                       !selected &&
                         !isApps &&
-                        cn(marketingFeatureCard, 'hover:border-[var(--ozer-accent)]/35'),
+                        cn(
+                          marketingFeatureCard,
+                          'hover:border-[var(--ozer-accent)]/35',
+                        ),
                     )}
                   >
                     {isApps ? (
@@ -497,7 +530,9 @@ export function StartFlowClient() {
                           </span>
                         ) : null}
                       </span>
-                      <span className={cn('mt-1 block text-sm', marketingMutedText)}>
+                      <span
+                        className={cn('mt-1 block text-sm', marketingMutedText)}
+                      >
                         {option.description}
                       </span>
                     </span>
@@ -538,7 +573,8 @@ export function StartFlowClient() {
             </Button>
           </div>
           <p className={cn('text-center text-sm', marketingMutedText)}>
-            Next: create your personal account, then we&apos;ll set up the workspace.
+            Next: create your personal account, then we&apos;ll set up the
+            workspace.
           </p>
         </section>
       ) : null}

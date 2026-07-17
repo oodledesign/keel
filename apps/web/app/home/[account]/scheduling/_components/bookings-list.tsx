@@ -14,8 +14,8 @@ import {
   DialogTitle,
 } from '@kit/ui/dialog';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import {
   workspaceBtnPrimaryMd,
@@ -128,8 +128,8 @@ export function BookingsList({
             <DialogTitle>Cancel booking</DialogTitle>
           </DialogHeader>
           <p className={`text-sm ${workspaceTextMuted}`}>
-            Cancel the meeting with {cancelTarget?.inviteeName}? The invitee will
-            be notified if cancellation emails are enabled.
+            Cancel the meeting with {cancelTarget?.inviteeName}? The invitee
+            will be notified if cancellation emails are enabled.
           </p>
           <div className="space-y-2">
             <Label htmlFor="cancel-reason">Reason (optional)</Label>

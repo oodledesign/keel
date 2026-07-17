@@ -30,7 +30,9 @@ function stateSecret() {
 }
 
 function signPayload(payload: string) {
-  return createHmac('sha256', stateSecret()).update(payload).digest('base64url');
+  return createHmac('sha256', stateSecret())
+    .update(payload)
+    .digest('base64url');
 }
 
 export function signQuickActionToken(

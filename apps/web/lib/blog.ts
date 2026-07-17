@@ -58,23 +58,25 @@ export const getBlogPosts = cache(async (): Promise<BlogPostListItem[]> => {
   return (data ?? []) as BlogPostListItem[];
 });
 
-export const getBlogPost = cache(async (slug: string): Promise<BlogPost | null> => {
-  const client = getSupabaseServerAdminClient();
+export const getBlogPost = cache(
+  async (slug: string): Promise<BlogPost | null> => {
+    const client = getSupabaseServerAdminClient();
 
-  const { data, error } = await client
-    .from('blog_posts')
-    .select(ALL_COLUMNS)
-    .eq('slug', slug)
-    .eq('status', 'published')
-    .maybeSingle();
+    const { data, error } = await client
+      .from('blog_posts')
+      .select(ALL_COLUMNS)
+      .eq('slug', slug)
+      .eq('status', 'published')
+      .maybeSingle();
 
-  if (error) {
-    console.error('Failed to load blog post', error.message);
-    return null;
-  }
+    if (error) {
+      console.error('Failed to load blog post', error.message);
+      return null;
+    }
 
-  return (data as BlogPost | null) ?? null;
-});
+    return (data as BlogPost | null) ?? null;
+  },
+);
 
 export const getBlogPostSlugs = cache(async (): Promise<string[]> => {
   const client = getSupabaseServerAdminClient();

@@ -8,15 +8,14 @@ describe('google-auth crypto', () => {
   });
 
   it('round-trips plaintext with AES-256-GCM layout iv(12)|tag(16)|cipher', () => {
-    vi.stubEnv(
-      'GOOGLE_TOKEN_ENC_KEY',
-      Buffer.alloc(32, 7).toString('base64'),
-    );
+    vi.stubEnv('GOOGLE_TOKEN_ENC_KEY', Buffer.alloc(32, 7).toString('base64'));
 
     const plain = 'ya29.access-token-example';
     const blob = encrypt(plain);
 
-    expect(Buffer.from(blob, 'base64').length).toBeGreaterThan(IV_TAG_MIN_LEN());
+    expect(Buffer.from(blob, 'base64').length).toBeGreaterThan(
+      IV_TAG_MIN_LEN(),
+    );
 
     expect(decrypt(blob)).toBe(plain);
   });

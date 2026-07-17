@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
+
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { getDefaultAccountPath } from '../_lib/role-access';
@@ -10,9 +11,9 @@ import {
   isWorkModuleEnabled,
 } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { loadJobsPageData } from './_lib/server/jobs-page.loader';
-import { loadJobsPageInitialData } from './_lib/server/jobs-page-initial.loader';
 import { JobsPageContent } from './_components/jobs-page-content';
+import { loadJobsPageInitialData } from './_lib/server/jobs-page-initial.loader';
+import { loadJobsPageData } from './_lib/server/jobs-page.loader';
 
 interface JobsPageProps {
   params: Promise<{ account: string }>;

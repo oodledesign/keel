@@ -1,7 +1,7 @@
 import 'server-only';
 
 import { delay } from '~/lib/clusters/utils';
-import { dfsPost, type DfsResponse } from '~/lib/dataforseo/client';
+import { type DfsResponse, dfsPost } from '~/lib/dataforseo/client';
 import { getPageRanks, normaliseOprDomain } from '~/lib/openpagerank/client';
 
 import { normaliseDomain } from './crawl';
@@ -62,7 +62,10 @@ const LLM_PLATFORMS: LlmPlatformConfig[] = [
   },
 ];
 
-export function deriveBrandQueries(domain: string, pages: PageCrawl[]): string[] {
+export function deriveBrandQueries(
+  domain: string,
+  pages: PageCrawl[],
+): string[] {
   const host = normaliseDomain(domain);
   const homepage =
     pages.find((page) => {
@@ -86,7 +89,12 @@ export function deriveBrandQueries(domain: string, pages: PageCrawl[]): string[]
 
   const serviceTerms = homepage.h2s
     .slice(0, 5)
-    .map((heading) => heading.toLowerCase().replace(/[^a-z\s]/g, '').trim())
+    .map((heading) =>
+      heading
+        .toLowerCase()
+        .replace(/[^a-z\s]/g, '')
+        .trim(),
+    )
     .filter((heading) => heading.length > 5);
 
   const queries: string[] = [];
@@ -131,7 +139,9 @@ function extractLlmAnnotationUrls(
   const urls: string[] = [];
 
   for (const item of items) {
-    const sections = item.sections as Array<Record<string, unknown>> | undefined;
+    const sections = item.sections as
+      | Array<Record<string, unknown>>
+      | undefined;
     for (const section of sections ?? []) {
       const annotations = section.annotations as
         | Array<{ url?: string }>
@@ -178,8 +188,10 @@ function summarisePlatform(
   const averagePresenceRate =
     citations.length > 0
       ? Math.round(
-          citations.reduce((sum, citation) => sum + (citation.presenceRate ?? 0), 0) /
-            citations.length,
+          citations.reduce(
+            (sum, citation) => sum + (citation.presenceRate ?? 0),
+            0,
+          ) / citations.length,
         )
       : 0;
 
@@ -411,7 +423,10 @@ export async function checkAiCitations(
   brandQueries: string[],
   locationCode: number,
   country = 'gb',
-  contextualQueries: { google: string[]; llm: string[] } = { google: [], llm: [] },
+  contextualQueries: { google: string[]; llm: string[] } = {
+    google: [],
+    llm: [],
+  },
 ): Promise<AiCitationResult> {
   const host = normaliseDomain(domain);
   const countryIso = countryToIso(country);
@@ -463,5 +478,7 @@ export function filterPlatformsByLayer(
   platforms: PlatformCitationResult[],
   layer: PromptLayer,
 ): PlatformCitationResult[] {
-  return platforms.filter((platform) => platformPromptLayer(platform) === layer);
+  return platforms.filter(
+    (platform) => platformPromptLayer(platform) === layer,
+  );
 }

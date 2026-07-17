@@ -9,9 +9,7 @@ export async function OzerUsePreferencesSection() {
   const client = getSupabaseServerClient();
   const { data } = await client
     .from('user_settings')
-    .select(
-      'use_ozer_for_work, use_ozer_for_family, use_ozer_for_community',
-    )
+    .select('use_ozer_for_work, use_ozer_for_family, use_ozer_for_community')
     .eq('user_id', user.id)
     .maybeSingle();
 

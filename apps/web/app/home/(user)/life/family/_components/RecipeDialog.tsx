@@ -24,7 +24,12 @@ import {
   type RecipeMealType,
   type RecipeRow,
 } from '../_lib/schema/family-meal.schema';
-import { ACCENT, dietaryChoices, mealTypeLabels, priorityChoices } from './meal-ui';
+import {
+  ACCENT,
+  dietaryChoices,
+  mealTypeLabels,
+  priorityChoices,
+} from './meal-ui';
 
 type Props = {
   open: boolean;
@@ -230,7 +235,11 @@ function RecipeForm({
               className="h-9 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-sm text-[var(--workspace-shell-text)] outline-none focus:border-[color:var(--workspace-shell-border)]"
             >
               {RECIPE_MEAL_TYPES.map((mt) => (
-                <option key={mt} value={mt} className="bg-[var(--ozer-surface-panel)]">
+                <option
+                  key={mt}
+                  value={mt}
+                  className="bg-[var(--ozer-surface-panel)]"
+                >
                   {mealTypeLabels[mt]}
                 </option>
               ))}
@@ -267,25 +276,27 @@ function RecipeForm({
         <div className="space-y-2">
           <Label>Tags</Label>
           <div className="flex flex-wrap gap-1.5">
-            {Array.from(new Set([...suggestedTags, ...form.tags])).map((tag) => {
-              const active = form.tags.includes(tag);
-              return (
-                <button
-                  key={tag}
-                  type="button"
-                  onClick={() => toggleTag(tag)}
-                  className={cn(
-                    'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
-                    active
-                      ? 'border-transparent text-[var(--workspace-shell-text)]'
-                      : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-                  )}
-                  style={active ? { backgroundColor: ACCENT } : undefined}
-                >
-                  {tag}
-                </button>
-              );
-            })}
+            {Array.from(new Set([...suggestedTags, ...form.tags])).map(
+              (tag) => {
+                const active = form.tags.includes(tag);
+                return (
+                  <button
+                    key={tag}
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    className={cn(
+                      'rounded-full border px-2.5 py-1 text-xs font-medium capitalize transition-colors',
+                      active
+                        ? 'border-transparent text-[var(--workspace-shell-text)]'
+                        : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                    )}
+                    style={active ? { backgroundColor: ACCENT } : undefined}
+                  >
+                    {tag}
+                  </button>
+                );
+              },
+            )}
           </div>
           <div className="flex gap-2">
             <Input

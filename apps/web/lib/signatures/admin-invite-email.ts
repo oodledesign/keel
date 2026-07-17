@@ -11,11 +11,14 @@ export function buildSignaturesAdminInviteEmail(params: {
   const provider = providerLabel(params.provider);
   const workspace = params.accountName.trim() || 'our workspace';
   const expiresLine = params.expiresAt
-    ? `This link expires on ${new Date(params.expiresAt).toLocaleDateString('en-GB', {
-        day: 'numeric',
-        month: 'long',
-        year: 'numeric',
-      })} and can only be used once.`
+    ? `This link expires on ${new Date(params.expiresAt).toLocaleDateString(
+        'en-GB',
+        {
+          day: 'numeric',
+          month: 'long',
+          year: 'numeric',
+        },
+      )} and can only be used once.`
     : 'This link expires in 7 days and can only be used once.';
 
   const subject = `Please connect ${provider} for ${workspace} email signatures`;

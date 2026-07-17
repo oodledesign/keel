@@ -3,8 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 
-import { ColumnDef } from '@tanstack/react-table';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { ColumnDef } from '@tanstack/react-table';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
@@ -86,7 +86,11 @@ function AdminUsersFilters(props: { query: string }) {
         />
         <Button type="submit">Search</Button>
         {query ? (
-          <Button type="button" variant="outline" onClick={() => router.push(pathname)}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push(pathname)}
+          >
             Clear
           </Button>
         ) : null}
@@ -148,7 +152,9 @@ const columns: ColumnDef<AdminUserRow>[] = [
       const accountId = row.original.personalAccountId;
 
       if (!accountId) {
-        return <span className="text-muted-foreground text-sm">No account</span>;
+        return (
+          <span className="text-muted-foreground text-sm">No account</span>
+        );
       }
 
       return (

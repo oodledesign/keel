@@ -3,11 +3,11 @@ import 'server-only';
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 
 import type { QuickActionContext } from './context';
-import type { ProposedQuickAction, QuickActionPlanResponse } from './types';
 import {
   quickActionToolDefinitions,
   runQuickActionTool,
 } from './tools/registry';
+import type { ProposedQuickAction, QuickActionPlanResponse } from './types';
 
 const MAX_TOOL_ROUNDS = 3;
 
@@ -99,10 +99,14 @@ async function callAnthropic(
   };
 }
 
-function extractAssistantText(content: AnthropicContentBlock[] | undefined): string {
+function extractAssistantText(
+  content: AnthropicContentBlock[] | undefined,
+): string {
   if (!content?.length) return '';
   return content
-    .filter((block): block is { type: 'text'; text: string } => block.type === 'text')
+    .filter(
+      (block): block is { type: 'text'; text: string } => block.type === 'text',
+    )
     .map((block) => block.text)
     .join('\n')
     .trim();

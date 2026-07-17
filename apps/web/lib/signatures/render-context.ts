@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { resolveBranchForStaff } from '~/lib/brand/account-branches';
+import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
 import type { SignaturesStaffRow } from './render-template';
 import type { RenderTemplateOptions } from './render-template';

@@ -48,9 +48,7 @@ export function flattenFreeAgentCategoriesResponse(
       seenUrls.add(url);
 
       const kind =
-        defaultKind ??
-        kindFromNominalCode(item.nominal_code) ??
-        'expense';
+        defaultKind ?? kindFromNominalCode(item.nominal_code) ?? 'expense';
 
       results.push({
         ...item,
@@ -89,6 +87,8 @@ export function freeAgentCategoryKind(
   return 'expense';
 }
 
-export function freeAgentCategoryDisplayName(cat: FreeAgentCategoryRecord): string {
+export function freeAgentCategoryDisplayName(
+  cat: FreeAgentCategoryRecord,
+): string {
   return String(cat.description ?? cat.name ?? 'Category').trim();
 }

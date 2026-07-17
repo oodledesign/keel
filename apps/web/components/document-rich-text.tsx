@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useRef } from 'react';
 
-import { Bold, Heading1, Heading2, Heading3, Italic, Link2, List, ListOrdered } from 'lucide-react';
+import {
+  Bold,
+  Heading1,
+  Heading2,
+  Heading3,
+  Italic,
+  Link2,
+  List,
+  ListOrdered,
+} from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -64,16 +73,28 @@ export function DocumentRichTextEditor({
     >
       {!readOnly ? (
         <div className="flex flex-wrap gap-1 border-b border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] px-2 py-1.5">
-          <ToolbarButton onClick={() => exec('formatBlock', 'h1')} title="Heading 1">
+          <ToolbarButton
+            onClick={() => exec('formatBlock', 'h1')}
+            title="Heading 1"
+          >
             <Heading1 className="h-4 w-4" />
           </ToolbarButton>
-          <ToolbarButton onClick={() => exec('formatBlock', 'h2')} title="Heading 2">
+          <ToolbarButton
+            onClick={() => exec('formatBlock', 'h2')}
+            title="Heading 2"
+          >
             <Heading2 className="h-4 w-4" />
           </ToolbarButton>
-          <ToolbarButton onClick={() => exec('formatBlock', 'h3')} title="Heading 3">
+          <ToolbarButton
+            onClick={() => exec('formatBlock', 'h3')}
+            title="Heading 3"
+          >
             <Heading3 className="h-4 w-4" />
           </ToolbarButton>
-          <ToolbarButton onClick={() => exec('formatBlock', 'p')} title="Paragraph">
+          <ToolbarButton
+            onClick={() => exec('formatBlock', 'p')}
+            title="Paragraph"
+          >
             P
           </ToolbarButton>
           <ToolbarButton onClick={() => exec('bold')} title="Bold">
@@ -82,10 +103,16 @@ export function DocumentRichTextEditor({
           <ToolbarButton onClick={() => exec('italic')} title="Italic">
             <Italic className="h-4 w-4" />
           </ToolbarButton>
-          <ToolbarButton onClick={() => exec('insertUnorderedList')} title="Bullet list">
+          <ToolbarButton
+            onClick={() => exec('insertUnorderedList')}
+            title="Bullet list"
+          >
             <List className="h-4 w-4" />
           </ToolbarButton>
-          <ToolbarButton onClick={() => exec('insertOrderedList')} title="Numbered list">
+          <ToolbarButton
+            onClick={() => exec('insertOrderedList')}
+            title="Numbered list"
+          >
             <ListOrdered className="h-4 w-4" />
           </ToolbarButton>
           <ToolbarButton onClick={addLink} title="Link">
@@ -140,7 +167,7 @@ export function DocumentHtmlPreview({
   return (
     <div
       className={cn(
-        'prose prose-sm max-w-none rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white px-6 py-4 text-[var(--ozer-text-on-light)] prose-headings:font-semibold',
+        'prose prose-sm prose-headings:font-semibold max-w-none rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white px-6 py-4 text-[var(--ozer-text-on-light)]',
         className,
       )}
       dangerouslySetInnerHTML={{ __html: sanitizeCommunityHtml(html) }}

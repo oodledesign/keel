@@ -18,10 +18,10 @@ import { toast } from '@kit/ui/sonner';
 
 import { createNoteCategoryAction } from '../../_lib/workspace-content/note-categories-actions';
 import {
-  getNoteCategoryLabel,
-  NOTE_FILE_CATEGORY_OPTIONS,
   type CustomNoteCategory,
+  NOTE_FILE_CATEGORY_OPTIONS,
   type NoteFileCategory,
+  getNoteCategoryLabel,
 } from '../../_lib/workspace-content/types';
 
 export function CategorySelect({
@@ -77,7 +77,9 @@ export function CategorySelect({
   return (
     <div className="space-y-3">
       <div className="space-y-2">
-        <Label className="text-[var(--workspace-shell-text-muted)]">Category</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">
+          Category
+        </Label>
         <Select
           value={value}
           onValueChange={(v) => onChange(v as NoteFileCategory)}
@@ -100,7 +102,9 @@ export function CategorySelect({
             {value &&
             !NOTE_FILE_CATEGORY_OPTIONS.includes(value) &&
             !customCategories.some((cat) => cat.slug === value) ? (
-              <SelectItem value={value}>{getNoteCategoryLabel(value)}</SelectItem>
+              <SelectItem value={value}>
+                {getNoteCategoryLabel(value)}
+              </SelectItem>
             ) : null}
           </SelectContent>
         </Select>
@@ -108,7 +112,9 @@ export function CategorySelect({
 
       {canAddCustom ? (
         <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
-          <Label className="text-[var(--workspace-shell-text-muted)]">Custom category</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">
+            Custom category
+          </Label>
           <div className="flex gap-2">
             <Input
               value={newLabel}
@@ -149,7 +155,7 @@ export function CategoryBadge({
   customCategories?: CustomNoteCategory[];
 }) {
   return (
-    <span className="rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium capitalize text-[var(--workspace-shell-text-muted)]">
+    <span className="rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)] capitalize">
       {getNoteCategoryLabel(category, customCategories)}
     </span>
   );

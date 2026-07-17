@@ -1,8 +1,4 @@
-export type CompanyRole =
-  | 'admin'
-  | 'staff_member'
-  | 'contractor'
-  | 'client';
+export type CompanyRole = 'admin' | 'staff_member' | 'contractor' | 'client';
 
 export interface StepDef {
   step: number;
@@ -44,22 +40,15 @@ const CLIENT_STEPS: StepDef[] = [
   { step: 3, title: 'Accessibility', key: 'accessibility' },
 ];
 
-export function getStepsForPersona(
-  companyRole: CompanyRole | null,
-): StepDef[] {
+export function getStepsForPersona(companyRole: CompanyRole | null): StepDef[] {
   if (companyRole === 'admin') return ADMIN_STEPS;
-  if (
-    companyRole === 'staff_member' ||
-    companyRole === 'contractor'
-  )
+  if (companyRole === 'staff_member' || companyRole === 'contractor')
     return STAFF_STEPS;
   if (companyRole === 'client') return CLIENT_STEPS;
   return STAFF_STEPS;
 }
 
-export function getMaxStepForPersona(
-  companyRole: CompanyRole | null,
-): number {
+export function getMaxStepForPersona(companyRole: CompanyRole | null): number {
   const steps = getStepsForPersona(companyRole);
   return steps.length;
 }

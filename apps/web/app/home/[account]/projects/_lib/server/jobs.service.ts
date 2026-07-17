@@ -5,19 +5,21 @@ import { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import {
+  queueBrainDeleteSource,
+  queueBrainIndexSource,
+} from '~/lib/brain/sync';
 import { Database } from '~/lib/database.types';
-import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
 import {
   DELIVERY_PROJECT_FILTER,
+  PROJECTS_TABLE,
   PROJECT_ASSIGNMENTS_TABLE,
   PROJECT_DELIVERY_NOTES_TABLE,
   PROJECT_PRIMARY_CLIENT_EMBED,
-  PROJECTS_TABLE,
 } from '~/lib/projects/delivery-project-db';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
 import { isRecoverableProjectsClientsEmbedError } from '../../../_lib/server/supabase-errors';
-
 import type {
   AddJobAssignmentInput,
   AddJobNoteInput,
@@ -26,26 +28,20 @@ import type {
   DeleteJobNoteInput,
   GetJobInput,
   ListJobAssignmentsInput,
-  ListJobsInput,
   ListJobNotesInput,
+  ListJobsInput,
   RemoveJobAssignmentInput,
   UpdateJobInput,
 } from '../schema/jobs.schema';
 
-type AccountRole =
-  | 'owner'
-  | 'admin'
-  | 'staff'
-  | 'contractor'
-  | 'client'
-  | null;
+type AccountRole = 'owner' | 'admin' | 'staff' | 'contractor' | 'client' | null;
 
 export function createJobsService(client: SupabaseClient<Database>) {
   return new JobsService(client);
 }
 
 // Database types may not include jobs/job_assignments/job_notes until supabase:typegen is run.
- 
+
 class JobsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
@@ -57,7 +53,10 @@ class JobsService {
   private throwErr(err: unknown, fallback = 'Something went wrong'): never {
     if (err instanceof Error) throw err;
     const msg =
-      err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+      err &&
+      typeof err === 'object' &&
+      'message' in err &&
+      typeof (err as { message: unknown }).message === 'string'
         ? (err as { message: string }).message
         : fallback;
     throw new Error(msg);
@@ -106,7 +105,10 @@ class JobsService {
   }
 
   /** Check if current user is assigned to the project (for contractor update/note). */
-  private async isAssignedToJob(accountId: string, jobId: string): Promise<boolean> {
+  private async isAssignedToJob(
+    accountId: string,
+    jobId: string,
+  ): Promise<boolean> {
     const user = await this.ensureUser();
     const { data, error } = await this.db
       .from(PROJECT_ASSIGNMENTS_TABLE)
@@ -121,14 +123,24 @@ class JobsService {
   private mapDeliveryRow(row: Record<string, unknown>) {
     return {
       ...row,
-      title: deliveryProjectTitle(row as { title?: string | null; name?: string | null }),
+      title: deliveryProjectTitle(
+        row as { title?: string | null; name?: string | null },
+      ),
     };
   }
 
   async listJobs(params: ListJobsInput) {
     await this.ensureUser();
 
-    const { accountId, tab, page = 1, pageSize = 20, query, status, priority } = params;
+    const {
+      accountId,
+      tab,
+      page = 1,
+      pageSize = 20,
+      query,
+      status,
+      priority,
+    } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
 
@@ -149,7 +161,9 @@ class JobsService {
 
     if (query?.trim()) {
       const term = `%${query.trim()}%`;
-      q = q.or(`name.ilike.${term},title.ilike.${term},description.ilike.${term}`);
+      q = q.or(
+        `name.ilike.${term},title.ilike.${term},description.ilike.${term}`,
+      );
     }
     if (status) q = q.eq('status', status);
     if (priority) q = q.eq('priority', priority);
@@ -190,12 +204,15 @@ class JobsService {
       }
       if (query?.trim()) {
         const term = `%${query.trim()}%`;
-        fallbackQ = fallbackQ.or(`name.ilike.${term},title.ilike.${term},description.ilike.${term}`);
+        fallbackQ = fallbackQ.or(
+          `name.ilike.${term},title.ilike.${term},description.ilike.${term}`,
+        );
       }
       if (status) fallbackQ = fallbackQ.eq('status', status);
       if (priority) fallbackQ = fallbackQ.eq('priority', priority);
       const fallbackResult = await fallbackQ;
-      if (fallbackResult.error) this.throwErr(fallbackResult.error, 'Failed to load jobs');
+      if (fallbackResult.error)
+        this.throwErr(fallbackResult.error, 'Failed to load jobs');
       rows = fallbackResult.data;
       count = fallbackResult.count ?? null;
     }
@@ -219,14 +236,24 @@ class JobsService {
     );
     const assigneesByJob = (assignments ?? []).reduce<
       Record<string, { user_id: string; role_on_job: string | null }[]>
-    >((acc, row: { project_id: string; user_id: string; role_on_project: string | null }) => {
-      if (!acc[row.project_id]) acc[row.project_id] = [];
-      acc[row.project_id].push({
-        user_id: row.user_id,
-        role_on_job: row.role_on_project,
-      });
-      return acc;
-    }, {});
+    >(
+      (
+        acc,
+        row: {
+          project_id: string;
+          user_id: string;
+          role_on_project: string | null;
+        },
+      ) => {
+        if (!acc[row.project_id]) acc[row.project_id] = [];
+        acc[row.project_id].push({
+          user_id: row.user_id,
+          role_on_job: row.role_on_project,
+        });
+        return acc;
+      },
+      {},
+    );
     const data = jobs.map((job) => ({
       ...job,
       assignment_count: countByJob[job.id] ?? 0,
@@ -251,7 +278,10 @@ class JobsService {
   }
 
   async createJob(input: CreateJobInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'jobs.edit',
+    );
 
     const { data, error } = await this.db
       .from(PROJECTS_TABLE)
@@ -302,7 +332,8 @@ class JobsService {
         payload.title = input.title;
         payload.name = input.title;
       }
-      if (input.description !== undefined) payload.description = input.description;
+      if (input.description !== undefined)
+        payload.description = input.description;
       if (input.status !== undefined) payload.status = input.status;
       if (input.priority !== undefined) payload.priority = input.priority;
       if (input.start_date !== undefined) payload.start_date = input.start_date;
@@ -311,7 +342,8 @@ class JobsService {
         payload.estimated_minutes = input.estimated_minutes;
       if (input.actual_minutes !== undefined)
         payload.actual_minutes = input.actual_minutes;
-      if (input.value_pence !== undefined) payload.value_pence = input.value_pence;
+      if (input.value_pence !== undefined)
+        payload.value_pence = input.value_pence;
       if (input.cost_pence !== undefined) payload.cost_pence = input.cost_pence;
 
       const { data, error } = await this.db

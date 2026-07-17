@@ -1,9 +1,12 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { buildZoomAuthUrl, isZoomConfigured } from '~/lib/integrations/zoom/oauth';
+import {
+  buildZoomAuthUrl,
+  isZoomConfigured,
+} from '~/lib/integrations/zoom/oauth';
 
 export const dynamic = 'force-dynamic';
 

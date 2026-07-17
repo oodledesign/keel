@@ -22,7 +22,9 @@ const COUNTRY_ALIASES: Record<string, string> = {
   'new zealand': 'NZ',
 };
 
-export function countryToTargetCountry(country: string | null | undefined): string {
+export function countryToTargetCountry(
+  country: string | null | undefined,
+): string {
   if (!country?.trim()) return 'GB';
   const trimmed = country.trim();
   if (trimmed.length === 2) return trimmed.toUpperCase();

@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+
 import { Loader2, MoreHorizontal, Settings2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -12,9 +13,9 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 
+import pathsConfig from '~/config/paths.config';
 import { formatDuration } from '~/lib/videos/format';
 import type { VideoRow } from '~/lib/videos/types';
-import pathsConfig from '~/config/paths.config';
 
 import { VideoThumbnail } from './video-thumbnail';
 
@@ -49,17 +50,17 @@ export function VideoCard(props: {
         <div className="absolute inset-0 flex items-center justify-center bg-black/0 opacity-0 transition group-hover:bg-black/30 group-hover:opacity-100">
           <Settings2 className="h-10 w-10 text-[var(--workspace-shell-text)]" />
         </div>
-        <span className="absolute bottom-2 right-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-[var(--workspace-shell-text)]">
+        <span className="absolute right-2 bottom-2 rounded bg-black/70 px-1.5 py-0.5 text-xs text-[var(--workspace-shell-text)]">
           {formatDuration(video.duration_seconds)}
         </span>
         {video.status === 'processing' || video.status === 'uploading' ? (
-          <span className="absolute left-2 top-2 inline-flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
+          <span className="absolute top-2 left-2 inline-flex items-center gap-1 rounded bg-black/70 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
             <Loader2 className="h-3 w-3 animate-spin" />
             {video.status === 'uploading' ? 'Uploading' : 'Processing'}
           </span>
         ) : null}
         {video.status === 'failed' ? (
-          <span className="absolute left-2 top-2 rounded bg-red-500/90 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
+          <span className="absolute top-2 left-2 rounded bg-red-500/90 px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
             Failed
           </span>
         ) : null}

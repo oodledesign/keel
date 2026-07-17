@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { Button } from '@kit/ui/button';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -35,7 +35,10 @@ function ConsentError({ title, message }: { title: string; message: string }) {
         <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
           {message}
         </p>
-        <Button asChild className="mt-6 w-full bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]">
+        <Button
+          asChild
+          className="mt-6 w-full bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
+        >
           <Link href={pathsConfig.app.home}>Back to Ozer</Link>
         </Button>
       </div>

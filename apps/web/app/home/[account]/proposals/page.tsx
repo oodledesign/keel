@@ -5,7 +5,10 @@ import { PageBody } from '@kit/ui/page';
 import { loadPipelineDataForAccount } from '~/home/(user)/_lib/server/pipeline.loader';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { ProposalsPageContent } from './_components/proposals-page-content';
@@ -46,8 +49,13 @@ async function ProposalsPage({ params }: ProposalsPageProps) {
     );
   }
 
-  const { accountId, canViewProposals, canEditProposals, canManageProposalStatus, user } =
-    await loadProposalsPageData(accountSlug);
+  const {
+    accountId,
+    canViewProposals,
+    canEditProposals,
+    canManageProposalStatus,
+    user,
+  } = await loadProposalsPageData(accountSlug);
 
   const pipeline = await loadPipelineDataForAccount(accountId);
   const accountName =

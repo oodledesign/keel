@@ -15,7 +15,9 @@ async function PersonalNotesPage() {
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 text-[var(--workspace-shell-text)] lg:px-8">
       <div className="mb-6">
-        <h1 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">Notes</h1>
+        <h1 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
+          Notes
+        </h1>
         <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           Personal notes — saved as Markdown, private to your home.
         </p>

@@ -414,10 +414,7 @@ export function compareYmd(a: string, b: string): number {
   return a.localeCompare(b);
 }
 
-export function getWeekdayForYmd(
-  ymd: string,
-  timezone: string,
-): number | null {
+export function getWeekdayForYmd(ymd: string, timezone: string): number | null {
   const parts = ymd.split('-').map(Number);
   if (parts.length !== 3 || parts.some((part) => Number.isNaN(part))) {
     return null;
@@ -598,8 +595,7 @@ export function computeWorkspaceFocusState(
 
   return {
     isWithinWorkHours,
-    nextWorkStart:
-      options?.nextWorkStart ?? findNextWorkStart(settings, now),
+    nextWorkStart: options?.nextWorkStart ?? findNextWorkStart(settings, now),
     nextWorkEnd: findNextWorkEnd(settings, now),
     isHolidayModeActive,
     isWorkspaceSilenced,

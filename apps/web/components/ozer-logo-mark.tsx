@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 
 import Image from 'next/image';
+
 import { useTheme } from 'next-themes';
 
 import { cn } from '@kit/ui/utils';
@@ -17,7 +18,10 @@ export type OzerLogoMarkProps = {
   tone?: 'light' | 'dark' | 'auto';
 };
 
-function resolveWordmark(tone: OzerLogoMarkProps['tone'], resolvedTheme?: string) {
+function resolveWordmark(
+  tone: OzerLogoMarkProps['tone'],
+  resolvedTheme?: string,
+) {
   if (tone === 'light') {
     return brandAssets.wordmarkOnLight;
   }
@@ -41,10 +45,7 @@ export function OzerLogoMark({
 
   useEffect(() => setMounted(true), []);
 
-  const wordmarkSrc = resolveWordmark(
-    tone,
-    mounted ? resolvedTheme : 'dark',
-  );
+  const wordmarkSrc = resolveWordmark(tone, mounted ? resolvedTheme : 'dark');
 
   if (collapsed) {
     return (

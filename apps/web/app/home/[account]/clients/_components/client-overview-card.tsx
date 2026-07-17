@@ -49,8 +49,14 @@ export function ClientOverviewCard({
   onToggleFavorite,
 }: ClientOverviewCardProps) {
   const detailHref = `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${client.id}`;
-  const jobsHref = pathsConfig.app.accountJobs.replace('[account]', accountSlug);
-  const remainingProjects = Math.max(0, client.projectCount - client.projects.length);
+  const jobsHref = pathsConfig.app.accountJobs.replace(
+    '[account]',
+    accountSlug,
+  );
+  const remainingProjects = Math.max(
+    0,
+    client.projectCount - client.projects.length,
+  );
 
   return (
     <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-sm transition hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel-hover)]">
@@ -90,32 +96,48 @@ export function ClientOverviewCard({
               />
             </button>
           </div>
-          <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">{client.tagline}</p>
+          <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">
+            {client.tagline}
+          </p>
         </div>
       </div>
 
       <dl className="mt-5 grid grid-cols-3 gap-3 border-y border-[color:var(--workspace-shell-border)] py-4">
         <div>
-          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">{client.projectCount}</dd>
-          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">Projects</dt>
+          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+            {client.projectCount}
+          </dd>
+          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Projects
+          </dt>
         </div>
         <div>
-          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">{client.teamMemberCount}</dd>
-          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">Team Members</dt>
+          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+            {client.teamMemberCount}
+          </dd>
+          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Team Members
+          </dt>
         </div>
         <div>
-          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">{client.dueTaskCount}</dd>
-          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">Due Tasks</dt>
+          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+            {client.dueTaskCount}
+          </dd>
+          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Due Tasks
+          </dt>
         </div>
       </dl>
 
       <div className="mt-4 flex-1">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--workspace-shell-text-muted)]">
+        <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
           Projects
         </p>
 
         {client.projects.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No active projects yet.</p>
+          <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+            No active projects yet.
+          </p>
         ) : (
           <ul className="mt-3 space-y-3">
             {client.projects.map((project) => {
@@ -126,16 +148,24 @@ export function ClientOverviewCard({
 
               return (
                 <li key={project.id}>
-                  <Link href={projectHref} className="block rounded-lg hover:bg-[var(--workspace-shell-sidebar-accent)]">
+                  <Link
+                    href={projectHref}
+                    className="block rounded-lg hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  >
                     <div className="flex items-center gap-2">
                       <span
-                        className={cn('h-2 w-2 shrink-0 rounded-full', health.dot)}
+                        className={cn(
+                          'h-2 w-2 shrink-0 rounded-full',
+                          health.dot,
+                        )}
                         aria-hidden
                       />
                       <span className="min-w-0 flex-1 truncate text-sm text-[var(--workspace-shell-text)]">
                         {project.title}
                       </span>
-                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">{project.progress}%</span>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        {project.progress}%
+                      </span>
                     </div>
                     <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
                       <div

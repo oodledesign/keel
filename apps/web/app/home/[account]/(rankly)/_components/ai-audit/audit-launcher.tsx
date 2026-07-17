@@ -1,13 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
-import { AUDIT_CREDITS_ESTIMATE } from '~/lib/ai-audit/types';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { AUDIT_CREDITS_ESTIMATE } from '~/lib/ai-audit/types';
 
 type ApiResponse<T> =
   | { ok: true; data: T }
@@ -61,12 +62,12 @@ export function AuditLauncher(props: {
     <div className="space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5">
       <div>
         <h3 className="text-lg font-semibold">AI Search Audit</h3>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           Domain-level report across entity, content, E-E-A-T, and tech — checks
           citations on Google AI Overview, ChatGPT, Perplexity, and Claude via
           DataForSEO (~{AUDIT_CREDITS_ESTIMATE} credits) + Claude synthesis.
         </p>
-        <p className="mt-1 text-xs text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-xs">
           Target: {props.targetDomain}
         </p>
       </div>
@@ -80,9 +81,7 @@ export function AuditLauncher(props: {
             </span>{' '}
             · {new Date(props.lastRun.created_at).toLocaleDateString()}
             {trend != null && trend !== 0 ? (
-              <span
-                className={trend > 0 ? ' text-emerald-400' : ' text-red-400'}
-              >
+              <span className={trend > 0 ? 'text-emerald-400' : 'text-red-400'}>
                 {' '}
                 ({trend > 0 ? '+' : ''}
                 {trend} since first run)

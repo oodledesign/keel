@@ -1,7 +1,8 @@
 import { Check } from 'lucide-react';
 
-import type { SignupContext } from '~/lib/auth/signup-context';
 import { cn } from '@kit/ui/utils';
+
+import type { SignupContext } from '~/lib/auth/signup-context';
 
 export function SignupContextPanel({
   context,

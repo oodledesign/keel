@@ -9,6 +9,7 @@ import { Button } from '@kit/ui/button';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 
+import { getErrorMessage } from '../_lib/error-message';
 import {
   createJobEvent,
   deleteJobEvent,
@@ -17,8 +18,6 @@ import {
   listJobEvents,
   updateJobEvent,
 } from '../_lib/server/server-actions';
-import { getErrorMessage } from '../_lib/error-message';
-
 import { JobEventForm } from './job-event-form';
 
 export type JobEventRow = {
@@ -38,8 +37,17 @@ export type JobEventRow = {
   updated_at: string;
 };
 
-type MemberInfo = { user_id: string; name: string | null; email: string | null; picture_url?: string | null };
-type AssignmentRow = { job_event_id: string; user_id: string; role_on_event: string | null };
+type MemberInfo = {
+  user_id: string;
+  name: string | null;
+  email: string | null;
+  picture_url?: string | null;
+};
+type AssignmentRow = {
+  job_event_id: string;
+  user_id: string;
+  role_on_event: string | null;
+};
 
 function formatEventDateTime(iso: string): string {
   return new Date(iso).toLocaleString('en-GB', {
@@ -74,16 +82,23 @@ function EventCardAssignees({
       <Users className="h-3.5 w-3.5 text-[var(--workspace-shell-text-muted)]" />
       {assignments.map((a) => {
         const m = members.find((x) => x.user_id === a.user_id);
-        const label = m ? m.name || m.email || a.user_id.slice(0, 8) : a.user_id.slice(0, 8);
+        const label = m
+          ? m.name || m.email || a.user_id.slice(0, 8)
+          : a.user_id.slice(0, 8);
         return (
-          <div key={a.user_id} className="flex items-center gap-1 rounded-full bg-[var(--workspace-shell-panel-hover)]/80 px-2 py-0.5">
+          <div
+            key={a.user_id}
+            className="flex items-center gap-1 rounded-full bg-[var(--workspace-shell-panel-hover)]/80 px-2 py-0.5"
+          >
             <Avatar className="h-5 w-5 rounded-full">
               <AvatarImage src={m?.picture_url ?? undefined} />
-              <AvatarFallback className="text-[10px] bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]">
+              <AvatarFallback className="bg-[var(--workspace-shell-panel-hover)] text-[10px] text-[var(--workspace-shell-text-muted)]">
                 {(label || '?').slice(0, 2).toUpperCase()}
               </AvatarFallback>
             </Avatar>
-            <span className="text-xs text-[var(--workspace-shell-text-muted)]">{label}</span>
+            <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {label}
+            </span>
           </div>
         );
       })}
@@ -104,7 +119,9 @@ export function JobEventsTabContent({
 }) {
   const [upcoming, setUpcoming] = useState<JobEventRow[]>([]);
   const [previous, setPrevious] = useState<JobEventRow[]>([]);
-  const [assignmentsByEvent, setAssignmentsByEvent] = useState<Record<string, AssignmentRow[]>>({});
+  const [assignmentsByEvent, setAssignmentsByEvent] = useState<
+    Record<string, AssignmentRow[]>
+  >({});
   const [members, setMembers] = useState<MemberInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -114,12 +131,18 @@ export function JobEventsTabContent({
   const fetchEvents = useCallback(async () => {
     setLoading(true);
     try {
-      const [eventsResult, assignmentsResult, membersResult] = await Promise.all([
-        listJobEvents({ accountId, jobId }),
-        listJobEventAssignmentsForJob({ accountId, jobId }),
-        accountSlug ? listAccountMembers({ accountSlug }) : Promise.resolve([]),
-      ]);
-      const raw = eventsResult as { upcoming?: unknown[]; previous?: unknown[] };
+      const [eventsResult, assignmentsResult, membersResult] =
+        await Promise.all([
+          listJobEvents({ accountId, jobId }),
+          listJobEventAssignmentsForJob({ accountId, jobId }),
+          accountSlug
+            ? listAccountMembers({ accountSlug })
+            : Promise.resolve([]),
+        ]);
+      const raw = eventsResult as {
+        upcoming?: unknown[];
+        previous?: unknown[];
+      };
       setUpcoming((raw.upcoming ?? []) as JobEventRow[]);
       setPrevious((raw.previous ?? []) as JobEventRow[]);
       const assignments = (assignmentsResult ?? []) as AssignmentRow[];
@@ -129,7 +152,9 @@ export function JobEventsTabContent({
         byEvent[a.job_event_id].push(a);
       }
       setAssignmentsByEvent(byEvent);
-      setMembers((Array.isArray(membersResult) ? membersResult : []) as MemberInfo[]);
+      setMembers(
+        (Array.isArray(membersResult) ? membersResult : []) as MemberInfo[],
+      );
     } catch (err) {
       toast.error(getErrorMessage(err));
       setUpcoming([]);
@@ -190,13 +215,19 @@ export function JobEventsTabContent({
       )}
 
       {loading ? (
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Loading…
+        </p>
       ) : (
         <>
           <section>
-            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Upcoming</h3>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+              Upcoming
+            </h3>
             {upcoming.length === 0 ? (
-              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">No upcoming visits or meetings.</p>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                No upcoming visits or meetings.
+              </p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {upcoming.map((event) => (
@@ -217,18 +248,24 @@ export function JobEventsTabContent({
                               : 'bg-violet-500/20 text-violet-400'
                           }`}
                         >
-                          {event.event_type === 'site_visit' ? 'Site visit' : 'Meeting'}
+                          {event.event_type === 'site_visit'
+                            ? 'Site visit'
+                            : 'Meeting'}
                         </span>
                         {event.location && (
                           <span className="flex items-center gap-1 text-[var(--workspace-shell-text-muted)]">
                             <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate max-w-[200px]">{event.location}</span>
+                            <span className="max-w-[200px] truncate">
+                              {event.location}
+                            </span>
                           </span>
                         )}
                       </div>
-                      <p className="mt-1.5 font-medium text-[var(--workspace-shell-text)]">{event.title}</p>
+                      <p className="mt-1.5 font-medium text-[var(--workspace-shell-text)]">
+                        {event.title}
+                      </p>
                       <div className="mt-1.5 flex flex-wrap items-start gap-x-4 gap-y-1">
-                        <p className="min-w-0 flex-1 text-sm text-[var(--workspace-shell-text-muted)] basis-0">
+                        <p className="min-w-0 flex-1 basis-0 text-sm text-[var(--workspace-shell-text-muted)]">
                           {snippet(event.prep_notes, 120)}
                         </p>
                         <div className="shrink-0">
@@ -247,9 +284,13 @@ export function JobEventsTabContent({
           </section>
 
           <section>
-            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Previous</h3>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+              Previous
+            </h3>
             {previous.length === 0 ? (
-              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">No previous visits or meetings.</p>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                No previous visits or meetings.
+              </p>
             ) : (
               <ul className="mt-2 space-y-2">
                 {previous.map((event) => (
@@ -270,18 +311,24 @@ export function JobEventsTabContent({
                               : 'bg-violet-500/20 text-violet-400'
                           }`}
                         >
-                          {event.event_type === 'site_visit' ? 'Site visit' : 'Meeting'}
+                          {event.event_type === 'site_visit'
+                            ? 'Site visit'
+                            : 'Meeting'}
                         </span>
                         {event.location && (
                           <span className="flex items-center gap-1 text-[var(--workspace-shell-text-muted)]">
                             <MapPin className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate max-w-[200px]">{event.location}</span>
+                            <span className="max-w-[200px] truncate">
+                              {event.location}
+                            </span>
                           </span>
                         )}
                       </div>
-                      <p className="mt-1.5 font-medium text-[var(--workspace-shell-text)]">{event.title}</p>
+                      <p className="mt-1.5 font-medium text-[var(--workspace-shell-text)]">
+                        {event.title}
+                      </p>
                       <div className="mt-1.5 flex flex-wrap items-start gap-x-4 gap-y-1">
-                        <p className="min-w-0 flex-1 text-sm text-[var(--workspace-shell-text-muted)] basis-0">
+                        <p className="min-w-0 flex-1 basis-0 text-sm text-[var(--workspace-shell-text-muted)]">
                           {snippet(event.outcome_notes, 120)}
                         </p>
                         <div className="shrink-0">
@@ -302,15 +349,15 @@ export function JobEventsTabContent({
       )}
 
       <Sheet open={sheetOpen} onOpenChange={(open) => !open && closeSheet()}>
-        <SheetContent className="flex max-sm:w-full flex-col border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
+        <SheetContent className="flex flex-col border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] max-sm:w-full sm:max-w-lg">
           <SheetHeader className="shrink-0">
             <SheetTitle className="text-[var(--workspace-shell-text)]">
               {isCreate ? 'Add visit/meeting' : 'Visit / meeting'}
             </SheetTitle>
           </SheetHeader>
-          <div className="min-h-0 flex-1 overflow-y-auto mt-6 pr-1 -mr-1">
+          <div className="mt-6 -mr-1 min-h-0 flex-1 overflow-y-auto pr-1">
             <JobEventForm
-              key={isCreate ? 'create' : selectedEventId ?? 'create'}
+              key={isCreate ? 'create' : (selectedEventId ?? 'create')}
               accountSlug={accountSlug}
               accountId={accountId}
               jobId={jobId}
@@ -318,7 +365,13 @@ export function JobEventsTabContent({
               isCreate={isCreate}
               canEditJobs={canEditJobs}
               onSuccess={closeSheet}
-              onDelete={isCreate ? undefined : selectedEventId ? () => handleDelete(selectedEventId) : undefined}
+              onDelete={
+                isCreate
+                  ? undefined
+                  : selectedEventId
+                    ? () => handleDelete(selectedEventId)
+                    : undefined
+              }
             />
           </div>
         </SheetContent>

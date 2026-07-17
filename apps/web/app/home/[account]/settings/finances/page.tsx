@@ -1,19 +1,20 @@
 import { Suspense } from 'react';
+
 import { redirect } from 'next/navigation';
 
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../_lib/role-access';
+import {
+  isPropertyNavModuleEnabled,
+  isWorkNavModuleEnabled,
+} from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
-import {
-  isPropertyNavModuleEnabled,
-  isWorkNavModuleEnabled,
-} from '../../_lib/server/account-modules';
 import { spaceTypeFromProfile } from '../../_lib/workspace-profile';
 import { loadFinancesSettingsAction } from '../../finances/_lib/server/finances-actions';
 import { FinancesSettingsPanel } from './_components/finances-settings-panel';

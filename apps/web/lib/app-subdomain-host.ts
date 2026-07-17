@@ -33,7 +33,11 @@ const APP_HOST_STATIC_PATHS = [
 ] as const;
 
 export function isAppHostStaticPath(pathname: string): boolean {
-  if (APP_HOST_STATIC_PATHS.includes(pathname as (typeof APP_HOST_STATIC_PATHS)[number])) {
+  if (
+    APP_HOST_STATIC_PATHS.includes(
+      pathname as (typeof APP_HOST_STATIC_PATHS)[number],
+    )
+  ) {
     return true;
   }
 
@@ -47,9 +51,7 @@ export function isAppHostStaticPath(pathname: string): boolean {
 
 /** OAuth / MCP discovery and consent — must stay on app.ozer.so without redirecting to /app. */
 export function isAppHostOAuthPublicPath(pathname: string): boolean {
-  return (
-    pathname.startsWith('/.well-known/') || pathname.startsWith('/oauth/')
-  );
+  return pathname.startsWith('/.well-known/') || pathname.startsWith('/oauth/');
 }
 
 /**

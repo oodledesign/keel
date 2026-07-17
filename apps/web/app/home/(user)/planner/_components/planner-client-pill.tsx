@@ -52,12 +52,16 @@ export function PlannerClientPill({
   return (
     <span
       className={cn(
-        'inline-flex max-w-[9rem] shrink-0 items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] py-0.5 pl-0.5 pr-2 text-[10px] font-medium leading-none text-[var(--workspace-shell-text-muted)]',
+        'inline-flex max-w-[9rem] shrink-0 items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] py-0.5 pr-2 pl-0.5 text-[10px] leading-none font-medium text-[var(--workspace-shell-text-muted)]',
         className,
       )}
       title={trimmed}
     >
-      <PlannerClientAvatar name={trimmed} pictureUrl={pictureUrl} color={color} />
+      <PlannerClientAvatar
+        name={trimmed}
+        pictureUrl={pictureUrl}
+        color={color}
+      />
       <span className="truncate">{trimmed}</span>
     </span>
   );

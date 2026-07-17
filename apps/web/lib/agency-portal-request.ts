@@ -8,15 +8,13 @@ import {
 } from '~/lib/agency-portal-host';
 
 function readRequestHostname(headerStore: Headers): string {
-  return (
-    headerStore.get('x-forwarded-host') ??
-    headerStore.get('host') ??
-    ''
-  );
+  return headerStore.get('x-forwarded-host') ?? headerStore.get('host') ?? '';
 }
 
 /** True when this request is the public agency portal for the given route slug. */
-export async function isAgencyPortalRequest(routeSlug: string): Promise<boolean> {
+export async function isAgencyPortalRequest(
+  routeSlug: string,
+): Promise<boolean> {
   const requestHeaders = await headers();
   const normalizedRouteSlug = routeSlug.trim().toLowerCase();
 

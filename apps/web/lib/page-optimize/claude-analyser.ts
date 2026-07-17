@@ -1,7 +1,6 @@
 import 'server-only';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
-
 import type { CompetitorPage } from '~/lib/briefs/types';
 
 import type { PageOptimizeAnalysis } from './types';
@@ -114,9 +113,7 @@ function parseAnalysis(text: string): PageOptimizeAnalysis {
   return JSON.parse(cleaned) as PageOptimizeAnalysis;
 }
 
-export async function detectPageKeyword(
-  page: CompetitorPage,
-): Promise<string> {
+export async function detectPageKeyword(page: CompetitorPage): Promise<string> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is not configured');

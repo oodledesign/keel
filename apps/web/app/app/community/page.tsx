@@ -14,7 +14,9 @@ async function CommunitySpacePage() {
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)]">
       <div className="mx-auto max-w-2xl space-y-4 p-6">
-        <h1 className="text-[1.5rem] font-semibold tracking-tight">Community</h1>
+        <h1 className="text-[1.5rem] font-semibold tracking-tight">
+          Community
+        </h1>
         <p className="text-muted-foreground text-sm leading-relaxed">
           Schedule, tasks, and notes will live here for community spaces, with
           invites and roles aligned to work and family.

@@ -20,7 +20,9 @@ export function isFirecrawlConfigured(): boolean {
   return Boolean(process.env.FIRECRAWL_API_KEY?.trim());
 }
 
-export async function fetchPageHtmlWithFirecrawl(url: string): Promise<string | null> {
+export async function fetchPageHtmlWithFirecrawl(
+  url: string,
+): Promise<string | null> {
   const apiKey = process.env.FIRECRAWL_API_KEY?.trim();
   if (!apiKey) {
     return null;
@@ -44,9 +46,7 @@ export async function fetchPageHtmlWithFirecrawl(url: string): Promise<string | 
   });
 
   if (!res.ok) {
-    console.warn(
-      `[firecrawl] scrape failed for ${url}: HTTP ${res.status}`,
-    );
+    console.warn(`[firecrawl] scrape failed for ${url}: HTTP ${res.status}`);
     return null;
   }
 

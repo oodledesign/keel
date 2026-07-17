@@ -5,11 +5,11 @@ import { revalidatePath } from 'next/cache';
 import { enhanceAction } from '@kit/next/actions';
 
 import pathsConfig from '~/config/paths.config';
+import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
   createApiToken,
   revokeApiToken,
 } from '~/lib/api-tokens/api-tokens.service';
-import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 
 import {
   createApiTokenActionSchema,
@@ -28,7 +28,10 @@ function revalidateSettings(input: {
   const slug = input.accountSlug?.trim();
   if (!slug) return;
 
-  revalidatePath(workAccountPath(pathsConfig.app.accountSettings, slug), 'page');
+  revalidatePath(
+    workAccountPath(pathsConfig.app.accountSettings, slug),
+    'page',
+  );
 }
 
 export const createApiTokenAction = enhanceAction(

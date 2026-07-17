@@ -9,7 +9,10 @@ export function computeCitationStrength(referringDomains: number): number {
   return Math.min(100, Math.round(score));
 }
 
-export function computeLinkTrust(authorityRank: number, spamScore: number): number {
+export function computeLinkTrust(
+  authorityRank: number,
+  spamScore: number,
+): number {
   const penalty = Math.min(authorityRank, spamScore * 0.6);
   return Math.max(0, Math.round(authorityRank - penalty));
 }
@@ -35,7 +38,9 @@ export function computeBrandSignal(input: {
   const genericRows = input.brandVisibility.filter(
     (row) => (row.promptLayer ?? 'generic') === 'generic',
   );
-  const visibilityRows = genericRows.length ? genericRows : input.brandVisibility;
+  const visibilityRows = genericRows.length
+    ? genericRows
+    : input.brandVisibility;
   const hasVisibility = visibilityRows.length > 0;
   const citedPlatforms = visibilityRows.filter((row) => row.domainCited).length;
   const totalPlatforms = visibilityRows.length;
@@ -67,14 +72,16 @@ export function buildBrandVisibilityRows(
 ): BrandVisibilityRow[] {
   const filtered = options?.promptLayer
     ? platforms.filter(
-        (platform) => (platform.promptLayer ?? 'generic') === options.promptLayer,
+        (platform) =>
+          (platform.promptLayer ?? 'generic') === options.promptLayer,
       )
     : platforms;
 
   return filtered.map((platform) => {
     const citations = platform.citations;
     const promptsChecked = citations.length;
-    const sampleRunsPerPrompt = citations[0]?.sampleCount ?? CITATION_SAMPLE_RUNS;
+    const sampleRunsPerPrompt =
+      citations[0]?.sampleCount ?? CITATION_SAMPLE_RUNS;
 
     const presenceRatePct =
       platform.averagePresenceRate ??
@@ -119,16 +126,17 @@ export function buildBrandVisibilityRows(
   });
 }
 
-export function ranklyMetricsFromBacklinks(
-  backlinks: BacklinkSummaryMetrics,
-): {
+export function ranklyMetricsFromBacklinks(backlinks: BacklinkSummaryMetrics): {
   authorityRank: number;
   linkTrust: number;
   citationStrength: number;
   domainPower: number;
 } {
   const citationStrength = computeCitationStrength(backlinks.referringDomains);
-  const linkTrust = computeLinkTrust(backlinks.authorityRank, backlinks.spamScore);
+  const linkTrust = computeLinkTrust(
+    backlinks.authorityRank,
+    backlinks.spamScore,
+  );
   const domainPower = computeDomainPower({
     authorityRank: backlinks.authorityRank,
     linkTrust,

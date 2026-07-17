@@ -22,8 +22,14 @@ import {
 import { isHtmlContent } from '~/lib/sanitize-community-html';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
-import { createMemberNote, deleteMemberNote } from '../_lib/server/community-schedule.actions';
-import type { GroupMemberOption, MemberNoteRow } from '../_lib/community-schedule.types';
+import type {
+  GroupMemberOption,
+  MemberNoteRow,
+} from '../_lib/community-schedule.types';
+import {
+  createMemberNote,
+  deleteMemberNote,
+} from '../_lib/server/community-schedule.actions';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -80,7 +86,7 @@ export function CommunityMemberNotesPanel({
   return (
     <section className={panelClass}>
       <div className="border-b border-[color:var(--workspace-shell-border)] px-5 py-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200/80">
+        <h3 className="text-sm font-semibold tracking-wide text-amber-200/80 uppercase">
           Member notes & prayer requests
         </h3>
         <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/50">
@@ -88,7 +94,10 @@ export function CommunityMemberNotesPanel({
         </p>
       </div>
 
-      <form onSubmit={submit} className="space-y-4 border-b border-[color:var(--workspace-shell-border)] p-5">
+      <form
+        onSubmit={submit}
+        className="space-y-4 border-b border-[color:var(--workspace-shell-border)] p-5"
+      >
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label>About</Label>
@@ -126,9 +135,7 @@ export function CommunityMemberNotesPanel({
             <Label>Visibility</Label>
             <Select
               value={visibility}
-              onValueChange={(v) =>
-                setVisibility(v as typeof visibility)
-              }
+              onValueChange={(v) => setVisibility(v as typeof visibility)}
             >
               <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
@@ -138,7 +145,9 @@ export function CommunityMemberNotesPanel({
                 <SelectItem value="leaders_and_subject">
                   Leaders + this person
                 </SelectItem>
-                <SelectItem value="private">Private (author + leaders)</SelectItem>
+                <SelectItem value="private">
+                  Private (author + leaders)
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -152,19 +161,27 @@ export function CommunityMemberNotesPanel({
             minHeight={100}
           />
         </div>
-        <Button type="submit" disabled={isPending} className={workspaceBtnPrimaryMd}>
+        <Button
+          type="submit"
+          disabled={isPending}
+          className={workspaceBtnPrimaryMd}
+        >
           Add note
         </Button>
       </form>
 
       {notes.length === 0 ? (
-        <p className="px-5 py-6 text-sm text-[var(--workspace-shell-text)]/50">No notes you can view yet.</p>
+        <p className="px-5 py-6 text-sm text-[var(--workspace-shell-text)]/50">
+          No notes you can view yet.
+        </p>
       ) : (
         <ul className="divide-y divide-white/6">
           {notes.map((n) => (
             <li key={n.id} className="px-5 py-4">
               <div className="flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text)]/50">
-                <span className="font-medium text-[var(--workspace-shell-text)]/80">{n.subjectName}</span>
+                <span className="font-medium text-[var(--workspace-shell-text)]/80">
+                  {n.subjectName}
+                </span>
                 {n.category === 'prayer_request' ? (
                   <span className="inline-flex items-center gap-1 text-rose-300/90">
                     <Heart className="h-3 w-3" />

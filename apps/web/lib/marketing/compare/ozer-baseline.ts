@@ -1,7 +1,7 @@
 import {
+  PRICING_LAST_VERIFIED,
   formatGbp,
   getBillingProductPrice,
-  PRICING_LAST_VERIFIED,
 } from '~/lib/billing/billing-config-prices';
 import type { SourcedValue } from '~/lib/marketing/compare/types';
 
@@ -37,7 +37,9 @@ export const OZER_TEAM_OF_FOUR = {
   meetingIntelligence: ozerSourced(
     'Mac Assistant: meetings, dictation, and desktop activity tracking; on-device processing; audio not kept as a permanent recording',
   ),
-  emailIntegration: ozerSourced('Gmail-connected email assistant in the Workspace OS'),
+  emailIntegration: ozerSourced(
+    'Gmail-connected email assistant in the Workspace OS',
+  ),
   clientPortal: ozerSourced('Branded client portals on the project record'),
   dataResidency: ozerSourced('EU data residency'),
   compliancePosture: ozerSourced(

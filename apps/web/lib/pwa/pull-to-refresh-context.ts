@@ -1,5 +1,5 @@
-import { isStandalonePwa } from './is-standalone-pwa';
 import { isNoteEditorRoute } from './is-note-editor-route';
+import { isStandalonePwa } from './is-standalone-pwa';
 import {
   isWorkspaceDashboardHome,
   normalizePublicPathname,
@@ -14,9 +14,7 @@ function resolvePullToRefreshPathname(): string {
     return currentPathname;
   }
 
-  return normalizePublicPathname(
-    window.location.pathname || currentPathname,
-  );
+  return normalizePublicPathname(window.location.pathname || currentPathname);
 }
 
 let currentPathname =

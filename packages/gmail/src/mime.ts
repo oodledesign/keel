@@ -18,7 +18,10 @@ export function encodeBase64Url(value: string): string {
 }
 
 function getHeader(
-  headers: Array<{ name?: string | null; value?: string | null }> | null | undefined,
+  headers:
+    | Array<{ name?: string | null; value?: string | null }>
+    | null
+    | undefined,
   name: string,
 ): string | null {
   const match = headers?.find(
@@ -64,7 +67,10 @@ export function parseMessage(message: GmailMessage): ParsedGmailMessage {
   const headers = message.payload?.headers ?? [];
   const parts = { text: [] as string[], html: [] as string[] };
 
-  if (message.payload?.body?.data && message.payload.mimeType === 'text/plain') {
+  if (
+    message.payload?.body?.data &&
+    message.payload.mimeType === 'text/plain'
+  ) {
     parts.text.push(decodeBase64Url(message.payload.body.data));
   } else if (
     message.payload?.body?.data &&
@@ -157,7 +163,10 @@ export function buildHtmlEmailBody(
     plainSignature?: string | null;
   },
 ): string {
-  const messageBody = stripTrailingPlainSignature(body, options?.plainSignature);
+  const messageBody = stripTrailingPlainSignature(
+    body,
+    options?.plainSignature,
+  );
   const messageHtml = plainTextToHtmlContent(messageBody);
   const signatureHtml = options?.signatureHtml?.trim();
 

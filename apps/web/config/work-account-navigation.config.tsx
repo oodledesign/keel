@@ -2,9 +2,9 @@ import {
   Activity,
   BarChart3,
   Briefcase,
-    Calendar,
-    CalendarClock,
-    CheckSquare,
+  Calendar,
+  CalendarClock,
+  CheckSquare,
   ClipboardList,
   CreditCard,
   FileSignature,
@@ -15,8 +15,8 @@ import {
   LayoutGrid,
   LifeBuoy,
   ListChecks,
-  MessageSquareText,
   MessageSquare,
+  MessageSquareText,
   Mic,
   PenLine,
   Settings,
@@ -28,9 +28,12 @@ import {
   Wallet,
 } from 'lucide-react';
 
+import { SidebarMenuBadge } from '@kit/ui/shadcn-sidebar';
+
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import { WORK_BUSINESS_MODULE_ORDER } from '~/config/workspace-module-order';
+import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
   isFeedflowModuleEnabled,
   isRanklyModuleEnabled,
@@ -38,8 +41,6 @@ import {
   isVideosModuleEnabled,
   isWorkNavModuleEnabled,
 } from '~/home/[account]/_lib/server/account-modules';
-import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
-import { SidebarMenuBadge } from '@kit/ui/shadcn-sidebar';
 
 const iconClasses = 'w-4';
 
@@ -102,7 +103,10 @@ function buildWorkAppsGroup(
       },
       {
         label: 'Social Feeds',
-        path: createPath(pathsConfig.app.accountFeedflowSocialAccounts, account),
+        path: createPath(
+          pathsConfig.app.accountFeedflowSocialAccounts,
+          account,
+        ),
         Icon: <Share2 className={iconClasses} />,
         description: 'Connect and publish to social accounts.',
       },
@@ -145,10 +149,7 @@ export function buildWorkSpaceNavChildren(
   const ms = moduleSettings;
   const home = createPath(pathsConfig.app.accountHome, account);
 
-  const registry: Record<
-    string,
-    () => NavChild | NavCollapsible | null
-  > = {
+  const registry: Record<string, () => NavChild | NavCollapsible | null> = {
     dashboard: () =>
       access.canViewDashboard && isWorkNavModuleEnabled(ms, 'dashboard')
         ? {

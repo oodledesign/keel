@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
+import { WEBSITE_SITEMAP_SCHEMA_VERSION } from './planning-types';
 import {
   applySymbolToPages,
   migrateSitemapDocument,
   migrateSitemapPages,
 } from './sitemap-document';
-import { WEBSITE_SITEMAP_SCHEMA_VERSION } from './planning-types';
 
 describe('migrateSitemapDocument', () => {
   it('upgrades a legacy page array', () => {
@@ -110,9 +110,9 @@ describe('applySymbolToPages', () => {
       },
     );
 
-    expect(pages.every((page) => page.sections[0]?.title === 'Site header')).toBe(
-      true,
-    );
+    expect(
+      pages.every((page) => page.sections[0]?.title === 'Site header'),
+    ).toBe(true);
     expect(pages[0]?.sections[0]?.status).toBe('approved');
   });
 });

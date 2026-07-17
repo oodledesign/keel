@@ -71,14 +71,12 @@ export async function createThreadDraft(input: {
       .limit(1)
       .maybeSingle();
 
-    const existing = existingDraft as
-      | {
-          id: string;
-          reply_to_message_id: string | null;
-          gmail_draft_id: string | null;
-          status: string;
-        }
-      | null;
+    const existing = existingDraft as {
+      id: string;
+      reply_to_message_id: string | null;
+      gmail_draft_id: string | null;
+      status: string;
+    } | null;
 
     if (existing?.reply_to_message_id === latestMessageId) {
       if (input.saveToGmail && !existing.gmail_draft_id) {
@@ -89,7 +87,10 @@ export async function createThreadDraft(input: {
         return { draftId: existing.id, gmailDraftId: saved.gmailDraftId };
       }
 
-      return { draftId: existing.id, gmailDraftId: existing.gmail_draft_id ?? undefined };
+      return {
+        draftId: existing.id,
+        gmailDraftId: existing.gmail_draft_id ?? undefined,
+      };
     }
   }
 

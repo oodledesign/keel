@@ -1,27 +1,43 @@
 'use client';
 
-import dynamic from 'next/dynamic';
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { Calendar as CalendarIcon, MapPin, Pencil, Users } from 'lucide-react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
+
+import { Calendar as CalendarIcon, MapPin, Pencil, Users } from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
-import type { CalendarEventClickPayload, CalendarItemNormalized } from '~/components/calendar/OzerCalendar';
+import type {
+  CalendarEventClickPayload,
+  CalendarItemNormalized,
+} from '~/components/calendar/OzerCalendar';
 import type { OzerCalendarView } from '~/components/calendar/OzerCalendar';
-
-const OzerCalendar = dynamic(
-  () => import('~/components/calendar/OzerCalendar').then((m) => m.OzerCalendar),
-  { ssr: false, loading: () => <div className="flex h-[420px] items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)]">Loading calendar…</div> },
-);
-
 import pathsConfig from '~/config/paths.config';
 
-import { getCalendarItemDetails, getJobCalendarItems, listAccountMembers, listJobEventAssignments } from '../_lib/server/server-actions';
 import { getErrorMessage } from '../_lib/error-message';
+import {
+  getCalendarItemDetails,
+  getJobCalendarItems,
+  listAccountMembers,
+  listJobEventAssignments,
+} from '../_lib/server/server-actions';
+
+const OzerCalendar = dynamic(
+  () =>
+    import('~/components/calendar/OzerCalendar').then((m) => m.OzerCalendar),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="flex h-[420px] items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)]">
+        Loading calendar…
+      </div>
+    ),
+  },
+);
 
 function formatDateTime(iso: string): string {
   return new Date(iso).toLocaleString('en-GB', {
@@ -55,12 +71,22 @@ export function JobScheduleTabContent({
 }) {
   const [events, setEvents] = useState<CalendarItemNormalized[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateRange, setDateRange] = useState<{ start: Date; end: Date } | null>(null);
+  const [dateRange, setDateRange] = useState<{ start: Date; end: Date } | null>(
+    null,
+  );
   const [view, setView] = useState<OzerCalendarView>('month');
-  const [selectedEvent, setSelectedEvent] = useState<CalendarItemNormalized | null>(null);
+  const [selectedEvent, setSelectedEvent] =
+    useState<CalendarItemNormalized | null>(null);
   const [details, setDetails] = useState<Record<string, unknown> | null>(null);
   const [detailsLoading, setDetailsLoading] = useState(false);
-  const [assignees, setAssignees] = useState<{ user_id: string; name: string | null; email: string | null; picture_url?: string | null }[]>([]);
+  const [assignees, setAssignees] = useState<
+    {
+      user_id: string;
+      name: string | null;
+      email: string | null;
+      picture_url?: string | null;
+    }[]
+  >([]);
   const [assigneesLoading, setAssigneesLoading] = useState(false);
 
   const fetchItems = useCallback(
@@ -91,7 +117,9 @@ export function JobScheduleTabContent({
 
   const handleDatesSet = useCallback((range: { start: Date; end: Date }) => {
     setDateRange((prev) =>
-      prev && prev.start.getTime() === range.start.getTime() && prev.end.getTime() === range.end.getTime()
+      prev &&
+      prev.start.getTime() === range.start.getTime() &&
+      prev.end.getTime() === range.end.getTime()
         ? prev
         : range,
     );
@@ -131,13 +159,23 @@ export function JobScheduleTabContent({
           listJobEventAssignments({ accountId, eventId: selectedEvent.id }),
           listAccountMembers({ accountSlug }),
         ]);
-        const assignments = (Array.isArray(rawAssignments) ? rawAssignments : []) as { user_id: string }[];
-        const members = (Array.isArray(rawMembers) ? rawMembers : []) as { user_id: string; name: string | null; email: string | null; picture_url?: string | null }[];
+        const assignments = (
+          Array.isArray(rawAssignments) ? rawAssignments : []
+        ) as { user_id: string }[];
+        const members = (Array.isArray(rawMembers) ? rawMembers : []) as {
+          user_id: string;
+          name: string | null;
+          email: string | null;
+          picture_url?: string | null;
+        }[];
         const byId = new Map(members.map((m) => [m.user_id, m]));
         setAssignees(
-          assignments
-            .map((a) => byId.get(a.user_id))
-            .filter(Boolean) as { user_id: string; name: string | null; email: string | null; picture_url?: string | null }[],
+          assignments.map((a) => byId.get(a.user_id)).filter(Boolean) as {
+            user_id: string;
+            name: string | null;
+            email: string | null;
+            picture_url?: string | null;
+          }[],
         );
       } catch {
         setAssignees([]);
@@ -148,8 +186,12 @@ export function JobScheduleTabContent({
     loadAssignees();
   }, [accountId, accountSlug, selectedEvent]);
 
-  const jobEditPath = pathsConfig.app.accountJobEdit?.replace('[account]', accountSlug).replace('[id]', jobId);
-  const jobPath = pathsConfig.app.accountJobDetail?.replace('[account]', accountSlug).replace('[id]', jobId);
+  const jobEditPath = pathsConfig.app.accountJobEdit
+    ?.replace('[account]', accountSlug)
+    .replace('[id]', jobId);
+  const jobPath = pathsConfig.app.accountJobDetail
+    ?.replace('[account]', accountSlug)
+    .replace('[id]', jobId);
 
   return (
     <div className="mt-4 flex flex-col gap-4 lg:flex-row">
@@ -159,7 +201,11 @@ export function JobScheduleTabContent({
             type="button"
             variant={view === 'month' ? 'default' : 'outline'}
             size="sm"
-            className={view === 'month' ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]' : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'}
+            className={
+              view === 'month'
+                ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]'
+                : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'
+            }
             onClick={() => setView('month')}
           >
             <CalendarIcon className="mr-1.5 h-4 w-4" />
@@ -169,7 +215,11 @@ export function JobScheduleTabContent({
             type="button"
             variant={view === 'week' ? 'default' : 'outline'}
             size="sm"
-            className={view === 'week' ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]' : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'}
+            className={
+              view === 'week'
+                ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]'
+                : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'
+            }
             onClick={() => setView('week')}
           >
             Week
@@ -178,14 +228,20 @@ export function JobScheduleTabContent({
             type="button"
             variant={view === 'agenda' ? 'default' : 'outline'}
             size="sm"
-            className={view === 'agenda' ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]' : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'}
+            className={
+              view === 'agenda'
+                ? 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)]'
+                : 'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]'
+            }
             onClick={() => setView('agenda')}
           >
             Upcoming
           </Button>
         </div>
         {loading && events.length === 0 && (
-          <p className="text-sm text-[var(--workspace-shell-text-muted)] mb-2">Loading calendar…</p>
+          <p className="mb-2 text-sm text-[var(--workspace-shell-text-muted)]">
+            Loading calendar…
+          </p>
         )}
         <OzerCalendar
           key={view}
@@ -198,11 +254,17 @@ export function JobScheduleTabContent({
       </div>
 
       <aside className="w-full shrink-0 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 lg:w-[30%] lg:min-w-[260px]">
-        <h4 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Details</h4>
+        <h4 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+          Details
+        </h4>
         {detailsLoading ? (
-          <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
+          <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+            Loading…
+          </p>
         ) : !selectedEvent || !details ? (
-          <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">Select an item to view details.</p>
+          <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+            Select an item to view details.
+          </p>
         ) : (
           <div className="mt-3 space-y-3 text-sm">
             <div className="flex flex-wrap items-center gap-2">
@@ -214,7 +276,9 @@ export function JobScheduleTabContent({
                       : 'bg-violet-500/20 text-violet-400'
                   }`}
                 >
-                  {selectedEvent.event_type === 'site_visit' ? 'Site visit' : 'Meeting'}
+                  {selectedEvent.event_type === 'site_visit'
+                    ? 'Site visit'
+                    : 'Meeting'}
                 </span>
               ) : (
                 <span className="inline-flex rounded-full bg-amber-500/20 px-2 py-0.5 text-xs font-medium text-amber-400">
@@ -232,36 +296,53 @@ export function JobScheduleTabContent({
                 </span>
               )}
             </div>
-            <p className="font-medium text-[var(--workspace-shell-text)]">{selectedEvent.title}</p>
+            <p className="font-medium text-[var(--workspace-shell-text)]">
+              {selectedEvent.title}
+            </p>
             <p className="text-[var(--workspace-shell-text-muted)]">
               {selectedEvent.all_day
                 ? formatDate(selectedEvent.start_at)
                 : formatDateTime(selectedEvent.start_at)}
             </p>
-            {selectedEvent.source_type === 'job_event' && (details.location || selectedEvent.location) && (
-              <p className="flex items-center gap-1.5 text-[var(--workspace-shell-text-muted)]">
-                <MapPin className="h-3.5 w-3.5 shrink-0" />
-                {(details.location as string) || selectedEvent.location || ''}
-              </p>
-            )}
+            {selectedEvent.source_type === 'job_event' &&
+              (details.location || selectedEvent.location) && (
+                <p className="flex items-center gap-1.5 text-[var(--workspace-shell-text-muted)]">
+                  <MapPin className="h-3.5 w-3.5 shrink-0" />
+                  {(details.location as string) || selectedEvent.location || ''}
+                </p>
+              )}
             {selectedEvent.job_id && (
               <p className="text-[var(--workspace-shell-text-muted)]">
                 Job:{' '}
-                <Link href={jobPath ?? '#'} className="text-sky-400 hover:underline">
-                  {selectedEvent.source_type === 'job_deadline' ? (details.title as string) : 'View job'}
+                <Link
+                  href={jobPath ?? '#'}
+                  className="text-sky-400 hover:underline"
+                >
+                  {selectedEvent.source_type === 'job_deadline'
+                    ? (details.title as string)
+                    : 'View job'}
                 </Link>
               </p>
             )}
-            {selectedEvent.source_type === 'job_event' && (details.prep_notes || details.outcome_notes) && (
-              <div className="rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-2 text-[var(--workspace-shell-text-muted)]">
-                {details.prep_notes && (
-                  <p className="whitespace-pre-wrap text-xs">{(details.prep_notes as string).slice(0, 200)}{(details.prep_notes as string).length > 200 ? '…' : ''}</p>
-                )}
-                {details.outcome_notes && (
-                  <p className="mt-1 whitespace-pre-wrap text-xs">{(details.outcome_notes as string).slice(0, 200)}{(details.outcome_notes as string).length > 200 ? '…' : ''}</p>
-                )}
-              </div>
-            )}
+            {selectedEvent.source_type === 'job_event' &&
+              (details.prep_notes || details.outcome_notes) && (
+                <div className="rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-2 text-[var(--workspace-shell-text-muted)]">
+                  {details.prep_notes && (
+                    <p className="text-xs whitespace-pre-wrap">
+                      {(details.prep_notes as string).slice(0, 200)}
+                      {(details.prep_notes as string).length > 200 ? '…' : ''}
+                    </p>
+                  )}
+                  {details.outcome_notes && (
+                    <p className="mt-1 text-xs whitespace-pre-wrap">
+                      {(details.outcome_notes as string).slice(0, 200)}
+                      {(details.outcome_notes as string).length > 200
+                        ? '…'
+                        : ''}
+                    </p>
+                  )}
+                </div>
+              )}
             {selectedEvent.source_type === 'job_event' && (
               <div className="mt-2 space-y-1">
                 <div className="flex items-center gap-1 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
@@ -269,9 +350,13 @@ export function JobScheduleTabContent({
                   <span>Assigned team</span>
                 </div>
                 {assigneesLoading ? (
-                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">Loading team…</p>
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    Loading team…
+                  </p>
                 ) : assignees.length === 0 ? (
-                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">No one assigned yet.</p>
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    No one assigned yet.
+                  </p>
                 ) : (
                   <ul className="space-y-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
                     {assignees.map((m) => (
@@ -279,10 +364,14 @@ export function JobScheduleTabContent({
                         <Avatar className="h-5 w-5">
                           <AvatarImage src={m.picture_url ?? undefined} />
                           <AvatarFallback className="bg-[var(--workspace-shell-panel-hover)] text-[10px] text-[var(--workspace-shell-text)]">
-                            {(m.name || m.email || m.user_id.slice(0, 2)).slice(0, 2).toUpperCase()}
+                            {(m.name || m.email || m.user_id.slice(0, 2))
+                              .slice(0, 2)
+                              .toUpperCase()}
                           </AvatarFallback>
                         </Avatar>
-                        <span>{m.name || m.email || m.user_id.slice(0, 8)}</span>
+                        <span>
+                          {m.name || m.email || m.user_id.slice(0, 8)}
+                        </span>
                       </li>
                     ))}
                   </ul>

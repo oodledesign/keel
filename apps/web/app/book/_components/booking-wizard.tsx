@@ -226,13 +226,7 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
     return () => {
       cancelled = true;
     };
-  }, [
-    page.slug,
-    eventType.slug,
-    durationMinutes,
-    inviteeTimezone,
-    monthRange,
-  ]);
+  }, [page.slug, eventType.slug, durationMinutes, inviteeTimezone, monthRange]);
 
   const slotsByDay = useMemo(() => {
     const map = new Map<string, Slot[]>();

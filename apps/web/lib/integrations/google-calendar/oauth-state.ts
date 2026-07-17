@@ -19,10 +19,12 @@ function stateSecret() {
     );
   }
 
-  return createHmac('sha256', tokenKey)
-    // keep legacy salt string — changing breaks in-flight OAuth state
-    .update('keel-google-calendar-oauth-state-v1')
-    .digest('hex');
+  return (
+    createHmac('sha256', tokenKey)
+      // keep legacy salt string — changing breaks in-flight OAuth state
+      .update('keel-google-calendar-oauth-state-v1')
+      .digest('hex')
+  );
 }
 
 export function signGoogleCalendarOAuthState(

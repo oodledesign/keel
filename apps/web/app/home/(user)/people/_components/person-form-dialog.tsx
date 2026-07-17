@@ -22,16 +22,16 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 
 import {
-  CATCHUP_CADENCE_OPTIONS,
-  DEFAULT_PERSON_CIRCLE_TIER,
-  RELATIONSHIP_PRESETS,
-  type PersonRow,
-} from '../_lib/schema/people.schema';
-import { CIRCLE_TIER_OPTIONS } from '../_lib/circle-tiers';
-import {
   createPersonAction,
   updatePersonAction,
 } from '../_lib/actions/people-actions';
+import { CIRCLE_TIER_OPTIONS } from '../_lib/circle-tiers';
+import {
+  CATCHUP_CADENCE_OPTIONS,
+  DEFAULT_PERSON_CIRCLE_TIER,
+  type PersonRow,
+  RELATIONSHIP_PRESETS,
+} from '../_lib/schema/people.schema';
 import { PersonImageUploader } from './person-image-uploader';
 
 type Props = {
@@ -95,9 +95,10 @@ export function PersonFormDialog({
         circleTier,
       };
 
-      const result = isEdit && person
-        ? await updatePersonAction({ ...payload, id: person.id })
-        : await createPersonAction(payload);
+      const result =
+        isEdit && person
+          ? await updatePersonAction({ ...payload, id: person.id })
+          : await createPersonAction(payload);
 
       if (!result.success) {
         setError(result.error ?? 'Could not save');
@@ -158,7 +159,10 @@ export function PersonFormDialog({
             </div>
             <div className="grid gap-2">
               <Label>Relationship</Label>
-              <Select value={relationship || 'none'} onValueChange={(v) => setRelationship(v === 'none' ? '' : v)}>
+              <Select
+                value={relationship || 'none'}
+                onValueChange={(v) => setRelationship(v === 'none' ? '' : v)}
+              >
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="Choose…" />
                 </SelectTrigger>
@@ -194,8 +198,11 @@ export function PersonFormDialog({
               </SelectContent>
             </Select>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              {CIRCLE_TIER_OPTIONS.find((option) => option.value === circleTier)
-                ?.description}
+              {
+                CIRCLE_TIER_OPTIONS.find(
+                  (option) => option.value === circleTier,
+                )?.description
+              }
             </p>
           </div>
 

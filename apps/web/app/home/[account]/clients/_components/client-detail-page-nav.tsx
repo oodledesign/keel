@@ -25,12 +25,23 @@ export function ClientDetailPageNav({
       >
         <Home className="h-4 w-4" />
       </Link>
-      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" aria-hidden />
-      <Link href={clientsListHref} className="transition hover:text-[var(--workspace-shell-text)]">
+      <ChevronRight
+        className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]"
+        aria-hidden
+      />
+      <Link
+        href={clientsListHref}
+        className="transition hover:text-[var(--workspace-shell-text)]"
+      >
         Clients
       </Link>
-      <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" aria-hidden />
-      <span className="truncate font-medium text-[var(--workspace-shell-text)]">{clientDisplayName}</span>
+      <ChevronRight
+        className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]"
+        aria-hidden
+      />
+      <span className="truncate font-medium text-[var(--workspace-shell-text)]">
+        {clientDisplayName}
+      </span>
     </nav>
   );
 }

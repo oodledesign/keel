@@ -13,7 +13,8 @@ const STRIPE_WEBHOOK_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
  * Uses the same STRIPE_WEBHOOK_SECRET as billing (or set STRIPE_INVOICE_WEBHOOK_SECRET).
  */
 export async function POST(request: Request) {
-  const secret = process.env.STRIPE_INVOICE_WEBHOOK_SECRET ?? STRIPE_WEBHOOK_SECRET;
+  const secret =
+    process.env.STRIPE_INVOICE_WEBHOOK_SECRET ?? STRIPE_WEBHOOK_SECRET;
   if (!STRIPE_SECRET?.startsWith('sk_') || !secret?.startsWith('whsec_')) {
     return NextResponse.json(
       { error: 'Stripe webhook not configured' },
@@ -44,7 +45,10 @@ export async function POST(request: Request) {
   const result = await applyInvoicePaymentFromCheckoutSession(session);
 
   if (!result.paid && result.reason === 'update_failed') {
-    return NextResponse.json({ error: 'Failed to update invoice' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to update invoice' },
+      { status: 500 },
+    );
   }
 
   return NextResponse.json({ received: true });

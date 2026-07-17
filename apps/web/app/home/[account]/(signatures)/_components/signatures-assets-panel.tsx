@@ -1,6 +1,7 @@
 'use client';
 
-import { useMemo, useState, type ReactNode } from 'react';
+import { type ReactNode, useMemo, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { Plus, Save, Trash2, Upload } from 'lucide-react';
@@ -16,8 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { AccountBranch } from '~/lib/brand/account-branches';
@@ -89,10 +90,7 @@ async function fileToBadgeDataUrl(file: File): Promise<string> {
   }
 }
 
-function scopeLabel(
-  asset: SignatureAsset,
-  branches: AccountBranch[],
-): string {
+function scopeLabel(asset: SignatureAsset, branches: AccountBranch[]): string {
   if (asset.scope === 'workspace') {
     return 'All signatures';
   }
@@ -176,7 +174,9 @@ export function SignaturesAssetsPanel({
         badgeDataUrl: kind === 'award_badge' ? badgeDataUrl : null,
         sortOrder: 0,
       });
-      toast.success(kind === 'custom_text' ? 'Shared text saved' : 'Badge saved');
+      toast.success(
+        kind === 'custom_text' ? 'Shared text saved' : 'Badge saved',
+      );
       resetForm();
       router.refresh();
     } catch (error) {
@@ -390,7 +390,7 @@ export function SignaturesAssetsPanel({
           deletingId={deletingId}
           onRemove={remove}
           renderPreview={(asset) => (
-            <p className="mt-1 whitespace-pre-wrap text-xs text-[var(--workspace-shell-text-muted)]">
+            <p className="mt-1 text-xs whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
               {asset.body}
             </p>
           )}

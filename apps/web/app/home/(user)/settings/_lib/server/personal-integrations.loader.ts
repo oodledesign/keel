@@ -52,9 +52,10 @@ export const loadPersonalIntegrationsData = cache(
       google_account_email?: string | null;
     }>;
 
-    const gmailRow = gmailConnection.data as
-      | { google_email?: string | null; connected_at?: string | null }
-      | null;
+    const gmailRow = gmailConnection.data as {
+      google_email?: string | null;
+      connected_at?: string | null;
+    } | null;
 
     return {
       calendar: {

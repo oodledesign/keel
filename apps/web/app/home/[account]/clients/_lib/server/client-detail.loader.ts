@@ -9,8 +9,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { getAgencyBrandingByBusinessId } from '~/lib/agency-branding';
 
+import type { LinkValue } from '../../../_components/workspace-content/link-to-select';
 import { getTeamAccountAccess } from '../../../_lib/role-access';
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
+import { createMeetingTranscriptsService } from '../../../_lib/server/meeting-transcripts.service';
 import {
   loadRanklyClientImportOptions,
   loadRanklyImportSeedForClient,
@@ -31,8 +33,6 @@ import type {
   LinkOption,
   NoteListItem,
 } from '../../../_lib/workspace-content/types';
-import type { LinkValue } from '../../../_components/workspace-content/link-to-select';
-import { createMeetingTranscriptsService } from '../../../_lib/server/meeting-transcripts.service';
 import { createSchedulingService } from '../../../scheduling/_lib/server/scheduling.service';
 import type { ClientDetailOverviewSeed } from '../client-detail.types';
 import { createClientsService } from './clients.service';
@@ -106,12 +106,10 @@ async function loadClientDetailPageDataImpl(
       console.error('[client-detail] notes failed', error);
       return [];
     }),
-    transcriptsService
-      .listForClient({ accountId, clientId })
-      .catch((error) => {
-        console.error('[client-detail] meetings failed', error);
-        return [];
-      }),
+    transcriptsService.listForClient({ accountId, clientId }).catch((error) => {
+      console.error('[client-detail] meetings failed', error);
+      return [];
+    }),
     schedulingService
       .listUpcomingBookingsForClient(accountId, clientId)
       .catch((error) => {
@@ -160,34 +158,38 @@ async function loadClientDetailPageDataImpl(
     jobs: Array.isArray(jobsResult)
       ? (jobsResult as ClientDetailOverviewSeed['jobs'])
       : [],
-    notes: ((notesResult ?? []) as Array<{
-      id: string;
-      note: string;
-      created_at: string;
-    }>).map((note) => ({
+    notes: (
+      (notesResult ?? []) as Array<{
+        id: string;
+        note: string;
+        created_at: string;
+      }>
+    ).map((note) => ({
       id: note.id,
       note: note.note,
       created_at: note.created_at,
     })),
-    meetings: ((meetingsResult ?? []) as Array<{
-      id: string;
-      title: string;
-      meetingDate: string | null;
-      createdAt: string;
-    }>).map((meeting) => ({
+    meetings: (
+      (meetingsResult ?? []) as Array<{
+        id: string;
+        title: string;
+        meetingDate: string | null;
+        createdAt: string;
+      }>
+    ).map((meeting) => ({
       id: meeting.id,
       title: meeting.title,
       meetingDate: meeting.meetingDate,
       createdAt: meeting.createdAt,
     })),
-    bookings: ((bookingsResult ?? []) as ClientDetailOverviewSeed['bookings']).map(
-      (booking) => ({
-        id: booking.id,
-        startAt: booking.startAt,
-        eventTypeName: booking.eventTypeName,
-        inviteeName: booking.inviteeName,
-      }),
-    ),
+    bookings: (
+      (bookingsResult ?? []) as ClientDetailOverviewSeed['bookings']
+    ).map((booking) => ({
+      id: booking.id,
+      startAt: booking.startAt,
+      eventTypeName: booking.eventTypeName,
+      inviteeName: booking.inviteeName,
+    })),
   };
 
   const portalHref = agencyBranding?.slug
@@ -218,10 +220,7 @@ async function loadClientDetailPageDataImpl(
     client: clientRow,
     clientDisplayName,
     portalHref,
-    clientsListHref: pathsConfig.app.accountClients.replace(
-      '[account]',
-      slug,
-    ),
+    clientsListHref: pathsConfig.app.accountClients.replace('[account]', slug),
     accountHomeHref: pathsConfig.app.accountHome.replace('[account]', slug),
     workspaceNotes,
     workspaceDocs,

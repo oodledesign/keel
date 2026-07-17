@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { delay } from '~/lib/clusters/utils';
 import { getAppSiteOrigin } from '~/lib/app-host-routing';
+import { delay } from '~/lib/clusters/utils';
 
 import { getRankCheckJob, updateRankCheckJob } from './db';
 import { RANK_WORKER_TRIGGER_DEBOUNCE_SEC } from './queue-config';
@@ -72,7 +72,9 @@ export async function triggerRankCheckRunDebounced(
 ): Promise<boolean> {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
-    console.error('[rankly] CRON_SECRET missing; cannot trigger rank check run');
+    console.error(
+      '[rankly] CRON_SECRET missing; cannot trigger rank check run',
+    );
     return false;
   }
 

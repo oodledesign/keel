@@ -18,6 +18,7 @@ import { toast } from '@kit/ui/sonner';
 
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 
+import { getErrorMessage } from '../_lib/error-message';
 import {
   createJobEvent,
   getJobEvent,
@@ -26,8 +27,6 @@ import {
   setJobEventAssignments,
   updateJobEvent,
 } from '../_lib/server/server-actions';
-import { getErrorMessage } from '../_lib/error-message';
-
 import { ClientCombobox } from './client-combobox';
 
 type JobEventFormProps = {
@@ -52,7 +51,9 @@ export function JobEventForm({
   onDelete,
 }: JobEventFormProps) {
   const [title, setTitle] = useState('');
-  const [eventType, setEventType] = useState<'site_visit' | 'meeting'>('site_visit');
+  const [eventType, setEventType] = useState<'site_visit' | 'meeting'>(
+    'site_visit',
+  );
   const [scheduledStartAt, setScheduledStartAt] = useState('');
   const [scheduledEndAt, setScheduledEndAt] = useState('');
   const [location, setLocation] = useState('');
@@ -61,12 +62,18 @@ export function JobEventForm({
   const [followUpRequired, setFollowUpRequired] = useState(false);
   const [followUpAt, setFollowUpAt] = useState('');
   const [clientId, setClientId] = useState('');
-  const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
+  const [clients, setClients] = useState<
+    { id: string; display_name: string | null }[]
+  >([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [assignments, setAssignments] = useState<{ user_id: string; role_on_event: string | null }[]>([]);
-  const [members, setMembers] = useState<{ user_id: string; name: string | null; email: string | null }[]>([]);
+  const [assignments, setAssignments] = useState<
+    { user_id: string; role_on_event: string | null }[]
+  >([]);
+  const [members, setMembers] = useState<
+    { user_id: string; name: string | null; email: string | null }[]
+  >([]);
   const [selectedMemberId, setSelectedMemberId] = useState('');
   const [assignRole, setAssignRole] = useState('');
 
@@ -75,16 +82,22 @@ export function JobEventForm({
     getJobEvent({ accountId, eventId })
       .then((event: Record<string, unknown>) => {
         setTitle((event.title as string) ?? '');
-        setEventType((event.event_type as 'site_visit' | 'meeting') ?? 'site_visit');
+        setEventType(
+          (event.event_type as 'site_visit' | 'meeting') ?? 'site_visit',
+        );
         setScheduledStartAt(
           event.scheduled_start_at
-            ? new Date(event.scheduled_start_at as string).toISOString().slice(0, 16)
-            : ''
+            ? new Date(event.scheduled_start_at as string)
+                .toISOString()
+                .slice(0, 16)
+            : '',
         );
         setScheduledEndAt(
           event.scheduled_end_at
-            ? new Date(event.scheduled_end_at as string).toISOString().slice(0, 16)
-            : ''
+            ? new Date(event.scheduled_end_at as string)
+                .toISOString()
+                .slice(0, 16)
+            : '',
         );
         setLocation((event.location as string) ?? '');
         setPrepNotes((event.prep_notes as string) ?? '');
@@ -93,7 +106,7 @@ export function JobEventForm({
         setFollowUpAt(
           event.follow_up_at
             ? new Date(event.follow_up_at as string).toISOString().slice(0, 16)
-            : ''
+            : '',
         );
         setClientId((event.client_id as string) ?? '');
       })
@@ -105,7 +118,9 @@ export function JobEventForm({
     listJobEventAssignments({ accountId, eventId })
       .then((raw: unknown) => {
         const list = Array.isArray(raw) ? raw : [];
-        setAssignments(list as { user_id: string; role_on_event: string | null }[]);
+        setAssignments(
+          list as { user_id: string; role_on_event: string | null }[],
+        );
       })
       .catch(() => setAssignments([]));
   }, [accountId, eventId]);
@@ -115,7 +130,13 @@ export function JobEventForm({
     listAccountMembers({ accountSlug })
       .then((raw: unknown) => {
         const list = Array.isArray(raw) ? raw : [];
-        setMembers(list as { user_id: string; name: string | null; email: string | null }[]);
+        setMembers(
+          list as {
+            user_id: string;
+            name: string | null;
+            email: string | null;
+          }[],
+        );
       })
       .catch(() => setMembers([]));
   }, [accountSlug]);
@@ -131,7 +152,9 @@ export function JobEventForm({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setClients((list || []) as { id: string; display_name: string | null }[]);
+        setClients(
+          (list || []) as { id: string; display_name: string | null }[],
+        );
       })
       .catch(() => setClients([]))
       .finally(() => setClientsLoading(false));
@@ -157,7 +180,9 @@ export function JobEventForm({
           title: title.trim(),
           event_type: eventType,
           scheduled_start_at: new Date(scheduledStartAt),
-          scheduled_end_at: scheduledEndAt ? new Date(scheduledEndAt) : undefined,
+          scheduled_end_at: scheduledEndAt
+            ? new Date(scheduledEndAt)
+            : undefined,
           location: location.trim() || undefined,
           prep_notes: prepNotes.trim() || undefined,
           follow_up_required: followUpRequired,
@@ -213,7 +238,9 @@ export function JobEventForm({
   };
 
   const assignedUserIds = new Set(assignments.map((a) => a.user_id));
-  const membersNotAssigned = members.filter((m) => !assignedUserIds.has(m.user_id));
+  const membersNotAssigned = members.filter(
+    (m) => !assignedUserIds.has(m.user_id),
+  );
 
   const canEditAll = canEditJobs;
   /* Contractor can edit only prep_notes and outcome_notes; Save still shown for notes-only updates */
@@ -221,7 +248,9 @@ export function JobEventForm({
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-4">
       <div>
-        <Label className="text-[var(--workspace-shell-text-muted)]">Title *</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">
+          Title *
+        </Label>
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -247,10 +276,15 @@ export function JobEventForm({
         </Select>
       </div>
       <div>
-        <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">
+          Client
+        </Label>
         <div className="mt-1">
           <ClientCombobox
-            clients={clients.map((c) => ({ id: c.id, display_name: c.display_name }))}
+            clients={clients.map((c) => ({
+              id: c.id,
+              display_name: c.display_name,
+            }))}
             value={clientId}
             onValueChange={setClientId}
             loading={clientsLoading}
@@ -261,7 +295,9 @@ export function JobEventForm({
       </div>
       <div className="grid grid-cols-2 gap-4">
         <div>
-          <Label className="text-[var(--workspace-shell-text-muted)]">Start *</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">
+            Start *
+          </Label>
           <Input
             type="datetime-local"
             value={scheduledStartAt}
@@ -271,7 +307,9 @@ export function JobEventForm({
           />
         </div>
         <div>
-          <Label className="text-[var(--workspace-shell-text-muted)]">End</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">
+            End
+          </Label>
           <Input
             type="datetime-local"
             value={scheduledEndAt}
@@ -282,7 +320,9 @@ export function JobEventForm({
         </div>
       </div>
       <div>
-        <Label className="text-[var(--workspace-shell-text-muted)]">Location</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">
+          Location
+        </Label>
         <Input
           value={location}
           onChange={(e) => setLocation(e.target.value)}
@@ -292,7 +332,9 @@ export function JobEventForm({
         />
       </div>
       <div>
-        <Label className="text-[var(--workspace-shell-text-muted)]">Prep notes</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">
+          Prep notes
+        </Label>
         <textarea
           value={prepNotes}
           onChange={(e) => setPrepNotes(e.target.value)}
@@ -303,7 +345,9 @@ export function JobEventForm({
       </div>
       {!isCreate && (
         <div>
-          <Label className="text-[var(--workspace-shell-text-muted)]">Outcome notes</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">
+            Outcome notes
+          </Label>
           <textarea
             value={outcomeNotes}
             onChange={(e) => setOutcomeNotes(e.target.value)}
@@ -333,13 +377,18 @@ export function JobEventForm({
           disabled={!canEditAll}
           className="rounded border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
         />
-        <Label htmlFor="follow_up" className="text-[var(--workspace-shell-text-muted)]">
+        <Label
+          htmlFor="follow_up"
+          className="text-[var(--workspace-shell-text-muted)]"
+        >
           Follow-up required
         </Label>
       </div>
       {followUpRequired && (
         <div>
-          <Label className="text-[var(--workspace-shell-text-muted)]">Follow-up by</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">
+            Follow-up by
+          </Label>
           <Input
             type="datetime-local"
             value={followUpAt}
@@ -352,17 +401,24 @@ export function JobEventForm({
 
       {!isCreate && eventId && canEditAll && (
         <div className="border-t border-[color:var(--workspace-shell-border)] pt-4">
-          <Label className="text-[var(--workspace-shell-text-muted)]">Assigned team</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">
+            Assigned team
+          </Label>
           <ul className="mt-2 space-y-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
             {assignments.map((a) => {
               const m = members.find((x) => x.user_id === a.user_id);
-              const label = m ? m.name || m.email || a.user_id.slice(0, 8) : a.user_id.slice(0, 8);
+              const label = m
+                ? m.name || m.email || a.user_id.slice(0, 8)
+                : a.user_id.slice(0, 8);
               return (
                 <li
                   key={a.user_id}
                   className="flex items-center justify-between rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2"
                 >
-                  <span>{a.role_on_event ? `${a.role_on_event}: ` : ''}{label}</span>
+                  <span>
+                    {a.role_on_event ? `${a.role_on_event}: ` : ''}
+                    {label}
+                  </span>
                   <Button
                     type="button"
                     variant="ghost"
@@ -403,7 +459,11 @@ export function JobEventForm({
             <Button
               type="button"
               size="sm"
-              className={selectedMemberId ? 'bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)] text-[var(--ozer-white)]' : 'bg-[var(--workspace-shell-panel-hover)] hover:bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]'}
+              className={
+                selectedMemberId
+                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]'
+                  : 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]'
+              }
               disabled={!selectedMemberId}
               onClick={handleAddAssignment}
             >

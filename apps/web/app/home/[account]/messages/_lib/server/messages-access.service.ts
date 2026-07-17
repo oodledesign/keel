@@ -74,7 +74,9 @@ class MessagesAccessService {
       if (error) throw error;
 
       if ((members ?? []).length !== dedupMemberIds.length) {
-        throw new Error('One or more selected team members are not in this business');
+        throw new Error(
+          'One or more selected team members are not in this business',
+        );
       }
     }
 
@@ -88,7 +90,9 @@ class MessagesAccessService {
       if (error) throw error;
 
       if ((clients ?? []).length !== dedupClientIds.length) {
-        throw new Error('One or more selected clients are not in this business');
+        throw new Error(
+          'One or more selected clients are not in this business',
+        );
       }
     }
 

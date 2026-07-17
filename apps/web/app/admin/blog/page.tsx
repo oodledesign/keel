@@ -13,9 +13,7 @@ import {
   TableRow,
 } from '@kit/ui/table';
 
-import {
-  getAdminBlogPosts,
-} from './_actions';
+import { getAdminBlogPosts } from './_actions';
 import { BlogPostRowActions } from './_components/blog-post-row-actions';
 
 export const metadata = {
@@ -37,10 +35,7 @@ async function AdminBlogPage() {
 
   return (
     <>
-      <PageHeader
-        title="Blog"
-        description="Manage marketing blog posts."
-      >
+      <PageHeader title="Blog" description="Manage marketing blog posts.">
         <Button asChild>
           <Link href="/admin/blog/new">New Post</Link>
         </Button>
@@ -62,7 +57,10 @@ async function AdminBlogPage() {
             <TableBody>
               {posts.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-muted-foreground py-8 text-center">
+                  <TableCell
+                    colSpan={6}
+                    className="text-muted-foreground py-8 text-center"
+                  >
                     No blog posts yet.
                   </TableCell>
                 </TableRow>

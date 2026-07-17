@@ -3,7 +3,9 @@ import 'server-only';
 import type { SiteCrawlPageRow } from './types';
 import { SITE_CRAWL_ISSUE_LABELS } from './types';
 
-function escapeCsv(value: string | number | boolean | null | undefined): string {
+function escapeCsv(
+  value: string | number | boolean | null | undefined,
+): string {
   const text = String(value ?? '');
   if (/[",\n]/.test(text)) {
     return `"${text.replace(/"/g, '""')}"`;
@@ -46,10 +48,10 @@ export function siteCrawlPagesToCsv(pages: SiteCrawlPageRow[]): string {
       page.internal_links_out,
       page.external_links_out,
       (page.schema_types ?? []).join('; '),
-      page.schema_objects?.length
-        ? JSON.stringify(page.schema_objects)
-        : '',
-      page.issues.map((issue) => SITE_CRAWL_ISSUE_LABELS[issue.code] ?? issue.code).join('; '),
+      page.schema_objects?.length ? JSON.stringify(page.schema_objects) : '',
+      page.issues
+        .map((issue) => SITE_CRAWL_ISSUE_LABELS[issue.code] ?? issue.code)
+        .join('; '),
       page.crawl_error ?? '',
     ]
       .map(escapeCsv)

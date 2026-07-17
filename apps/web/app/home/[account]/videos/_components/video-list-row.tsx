@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+
 import { Loader2, MoreHorizontal } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -12,9 +13,9 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 
+import pathsConfig from '~/config/paths.config';
 import { formatDuration } from '~/lib/videos/format';
 import type { VideoRow } from '~/lib/videos/types';
-import pathsConfig from '~/config/paths.config';
 
 import { VideoThumbnail } from './video-thumbnail';
 
@@ -63,7 +64,7 @@ export function VideoListRow(props: {
 
       <div className="flex items-center gap-2">
         {video.status === 'processing' || video.status === 'uploading' ? (
-          <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+          <span className="text-muted-foreground inline-flex items-center gap-1 text-xs">
             <Loader2 className="h-3 w-3 animate-spin" />
             {video.status}
           </span>

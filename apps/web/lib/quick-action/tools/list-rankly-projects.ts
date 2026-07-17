@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { loadTeamAccountIdsForUser } from '~/home/_lib/server/workspace-scope';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
-import { fuzzyMatchByName } from '../fuzzy-match';
 import type { QuickActionContext } from '../context';
+import { fuzzyMatchByName } from '../fuzzy-match';
 
 const listRanklySchema = z.object({
   query: z.string().trim().optional(),
@@ -36,9 +36,7 @@ export async function listRanklyProjects(
     throw new Error(`Failed to list Rankly projects: ${error.message}`);
   }
 
-  const workspaceByAccountId = new Map(
-    ctx.workspaces.map((w) => [w.id, w]),
-  );
+  const workspaceByAccountId = new Map(ctx.workspaces.map((w) => [w.id, w]));
 
   const rows = (data ?? []).map((row) => {
     const r = row as {

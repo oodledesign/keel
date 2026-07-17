@@ -24,11 +24,7 @@ export type ProjectFieldDefinition = {
   sortOrder: number;
 };
 
-export type ProjectFieldValue =
-  | string
-  | number
-  | boolean
-  | null;
+export type ProjectFieldValue = string | number | boolean | null;
 
 export type ProjectClientRow = {
   clientId: string;

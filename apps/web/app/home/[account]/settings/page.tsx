@@ -1,6 +1,5 @@
-import { redirect } from 'next/navigation';
-
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
@@ -12,12 +11,15 @@ import {
 import featuresFlagConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
-import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
-import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
+import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { WorkspaceDashboardShortcutsSection } from './_components/workspace-dashboard-shortcuts-section';
 
 export const generateMetadata = async () => {
@@ -86,7 +88,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
         <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <div>
             <h2 className="text-base font-semibold">Desktop recorder</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-sm">
               API tokens and monthly usage limits are managed in your personal
               settings. Paid workspaces get much higher recorder limits.
             </p>
@@ -104,7 +106,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
         <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <div>
             <h2 className="text-base font-semibold">Dashboard shortcuts</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
+            <p className="text-muted-foreground mt-1 text-sm">
               Pin quick links to the top of this workspace&apos;s dashboard.
             </p>
           </div>

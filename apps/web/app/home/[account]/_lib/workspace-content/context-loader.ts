@@ -1,15 +1,15 @@
 import 'server-only';
 
 import {
+  type WorkspaceProfile,
+  resolveWorkspaceProfile,
+} from '../workspace-profile';
+import { loadAccountDocs } from './docs-loader';
+import {
   linkOptionsForProfile,
   loadWorkspaceLinkOptions,
 } from './link-options.loader';
-import { loadAccountDocs } from './docs-loader';
 import { loadAccountNotes } from './notes-loader';
-import {
-  resolveWorkspaceProfile,
-  type WorkspaceProfile,
-} from '../workspace-profile';
 
 export async function loadContextWorkspaceContent(input: {
   accountId: string;
@@ -43,12 +43,12 @@ export async function loadContextWorkspaceContent(input: {
 
   const defaultLink =
     'jobId' in input.scope
-      ? ({ type: 'job' as const, id: input.scope.jobId })
+      ? { type: 'job' as const, id: input.scope.jobId }
       : 'projectId' in input.scope
-        ? ({ type: 'project' as const, id: input.scope.projectId })
+        ? { type: 'project' as const, id: input.scope.projectId }
         : 'clientOrgId' in input.scope
-          ? ({ type: 'client' as const, id: input.scope.clientOrgId })
-          : ({ type: 'property' as const, id: input.scope.propertyId });
+          ? { type: 'client' as const, id: input.scope.clientOrgId }
+          : { type: 'property' as const, id: input.scope.propertyId };
 
   return {
     profile,

@@ -3,6 +3,7 @@ import { Metadata, Viewport } from 'next';
 import appConfig from '~/config/app.config';
 import { brandAssets, brandConfig } from '~/config/brand.config';
 import { getSearchIndexingRobots } from '~/lib/seo/search-indexing';
+
 export const generateRootMetadata = (): Metadata => ({
   title: appConfig.title,
   description: appConfig.description,
@@ -16,11 +17,11 @@ export const generateRootMetadata = (): Metadata => ({
     statusBarStyle: 'black-translucent',
   },
   openGraph: {
-      url: appConfig.url,
-      siteName: appConfig.name,
-      title: appConfig.title,
-      description: appConfig.description,
-    },
+    url: appConfig.url,
+    siteName: appConfig.name,
+    title: appConfig.title,
+    description: appConfig.description,
+  },
   twitter: {
     card: 'summary_large_image',
     title: appConfig.title,
@@ -30,7 +31,11 @@ export const generateRootMetadata = (): Metadata => ({
     icon: [
       { url: brandAssets.favicon, type: 'image/svg+xml' },
       { url: brandAssets.connectorIcon, type: 'image/svg+xml', sizes: 'any' },
-      { url: brandConfig.logos.icon.light, type: 'image/svg+xml', sizes: 'any' },
+      {
+        url: brandConfig.logos.icon.light,
+        type: 'image/svg+xml',
+        sizes: 'any',
+      },
     ],
     apple: brandAssets.connectorIcon,
   },

@@ -210,7 +210,7 @@ export const loadFamilyDashboardData = cache(
     const weekDates = Array.from({ length: 7 }, (_, i) => addDaysYmd(weekStart, i));
     const dayFormatter = new Intl.DateTimeFormat('en-GB', { weekday: 'short' });
 
-    let mealByDate = new Map<string, string>();
+    const mealByDate = new Map<string, string>();
     if (accountId) {
       const weekEndDate = addDaysYmd(weekStart, 6);
       const { data: meals, error } = await client

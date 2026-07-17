@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -38,7 +39,9 @@ const PROGRESS_STEPS = [
 ] as const;
 
 function progressPercent(status: string): number {
-  const index = PROGRESS_STEPS.indexOf(status as (typeof PROGRESS_STEPS)[number]);
+  const index = PROGRESS_STEPS.indexOf(
+    status as (typeof PROGRESS_STEPS)[number],
+  );
   if (index < 0) return status === 'error' ? 0 : 10;
   return Math.round((index / (PROGRESS_STEPS.length - 1)) * 100);
 }
@@ -116,9 +119,7 @@ export function ClusterJobPoller({
         throw new Error(json.error.message);
       }
       toast.success('Fetching SERPs…');
-      setJob((prev) =>
-        prev ? { ...prev, status: 'fetching_serps' } : prev,
-      );
+      setJob((prev) => (prev ? { ...prev, status: 'fetching_serps' } : prev));
       // resume polling
       const poll = async () => {
         const current = await fetchStatus();
@@ -140,9 +141,7 @@ export function ClusterJobPoller({
   };
 
   if (!job) {
-    return (
-      <p className="text-sm text-muted-foreground">Loading job status…</p>
-    );
+    return <p className="text-muted-foreground text-sm">Loading job status…</p>;
   }
 
   const percent = progressPercent(job.status);
@@ -164,8 +163,8 @@ export function ClusterJobPoller({
       <div className="max-w-xl space-y-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-4">
         <p className="text-sm text-amber-100">
           Found <strong>{count}</strong> candidate keywords after filtering.
-          Fetching SERPs will use approximately{' '}
-          <strong>{credits}</strong> DataForSEO credits.
+          Fetching SERPs will use approximately <strong>{credits}</strong>{' '}
+          DataForSEO credits.
         </p>
         {credits > 500 ? (
           <p className="text-xs text-amber-200/80">
@@ -181,9 +180,7 @@ export function ClusterJobPoller({
   }
 
   if (job.status === 'done') {
-    return (
-      <p className="text-sm text-emerald-400">Cluster plan ready.</p>
-    );
+    return <p className="text-sm text-emerald-400">Cluster plan ready.</p>;
   }
 
   return (
@@ -194,7 +191,7 @@ export function ClusterJobPoller({
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-black/30">
         <div
-          className="h-full rounded-full bg-primary transition-all duration-500"
+          className="bg-primary h-full rounded-full transition-all duration-500"
           style={{ width: `${percent}%` }}
         />
       </div>

@@ -4,7 +4,10 @@ import featureFlagsConfig from '~/config/feature-flags.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { WorkspaceBillingPanel } from '../_components/workspace-billing-panel';
 

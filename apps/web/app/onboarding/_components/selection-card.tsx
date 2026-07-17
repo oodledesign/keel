@@ -24,7 +24,9 @@ export function SelectionCard({
       }`}
     >
       <span className="font-medium">{title}</span>
-      {selected && <Check className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]" />}
+      {selected && (
+        <Check className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]" />
+      )}
     </button>
   );
 }

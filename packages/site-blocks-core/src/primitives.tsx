@@ -2,8 +2,8 @@
 
 import type { ReactNode } from 'react';
 
-import { cn } from './lib/cn';
 import { useWireframeMode } from './context/wireframe-mode';
+import { cn } from './lib/cn';
 
 export function SectionShell({
   children,

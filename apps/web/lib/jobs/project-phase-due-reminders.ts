@@ -94,11 +94,13 @@ export async function runProjectPhaseDueReminders(admin: SupabaseClient) {
         dueDate,
       });
 
-      const { error: logErr } = await admin.from('project_phase_reminder_log').insert({
-        account_id: row.account_id,
-        phase_id: row.id,
-        due_date: dueDate,
-      });
+      const { error: logErr } = await admin
+        .from('project_phase_reminder_log')
+        .insert({
+          account_id: row.account_id,
+          phase_id: row.id,
+          due_date: dueDate,
+        });
 
       if (logErr) {
         errors.push(`${row.id}: log insert failed — ${logErr.message}`);

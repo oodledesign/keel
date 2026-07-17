@@ -131,16 +131,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   planner: {
     slug: 'planner',
     name: 'Planner',
-    shortDescription:
-      'Today’s work, pulled from real projects and deadlines.',
+    shortDescription: 'Today’s work, pulled from real projects and deadlines.',
     indexIcon: 'CalendarDays',
     primaryKeyword: 'daily planner for freelancers',
-  answerFirst:
-    'Ozer planner shows what to work on today by reading your projects, client deadlines, and calendar. It is not a separate to-do list. Tasks stay on the job record and overdue work surfaces early. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on planning the day on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer planner shows what to work on today by reading your projects, client deadlines, and calendar. It is not a separate to-do list. Tasks stay on the job record and overdue work surfaces early. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on planning the day on the Ozer blog',
+    },
     metadata: {
       title: 'Today plan from real projects — Ozer',
       description:
@@ -212,12 +211,12 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           question: 'Can I add personal tasks as well as client work?',
           answer:
-            'Yes. You can add any task to your daily plan, whether it\'s client-facing or internal. Everything lives in one view.',
+            "Yes. You can add any task to your daily plan, whether it's client-facing or internal. Everything lives in one view.",
         },
         {
           question: 'Does it work with my calendar?',
           answer:
-            'Yes. Ozer reads your calendar so meetings block time automatically. Your plannable hours are what\'s left.',
+            "Yes. Ozer reads your calendar so meetings block time automatically. Your plannable hours are what's left.",
         },
       ],
     },
@@ -225,16 +224,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   'email-assistant': {
     slug: 'email-assistant',
     name: 'Email Assistant',
-    shortDescription:
-      'Inbox replies and tasks, with client context attached.',
+    shortDescription: 'Inbox replies and tasks, with client context attached.',
     indexIcon: 'Sparkles',
     primaryKeyword: 'AI email assistant for freelancers',
-  answerFirst:
-    'Ozer email assistant links inbox threads to clients and projects, drafts replies with that history, and turns client asks into tasks. Mail stays in Gmail; action lives in Ozer. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on client email on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer email assistant links inbox threads to clients and projects, drafts replies with that history, and turns client asks into tasks. Mail stays in Gmail; action lives in Ozer. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on client email on the Ozer blog',
+    },
     metadata: {
       title: 'Client-aware email assistant — Ozer',
       description:
@@ -324,12 +322,12 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       'Mac app: meetings, dictation, and activity tracking — tasks and follow-ups without a separate stack.',
     indexIcon: 'Mic',
     primaryKeyword: 'meeting notes desktop app Mac',
-  answerFirst:
-    'Ozer Assistant for Mac records meetings, labels speakers, extracts tasks, and drafts follow-ups. Audio is processed on your Mac and is not kept as a permanent recording. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on meeting capture on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer Assistant for Mac records meetings, labels speakers, extracts tasks, and drafts follow-ups. Audio is processed on your Mac and is not kept as a permanent recording. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on meeting capture on the Ozer blog',
+    },
     heroBadge: 'Native macOS app · Download for Mac',
     secondaryCta: {
       label: 'Download for Mac',
@@ -362,8 +360,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     },
     props: {
       eyebrow: 'Ozer Assistant for Mac',
-      heading:
-        'Meetings become tasks on Mac',
+      heading: 'Meetings become tasks on Mac',
       subheading:
         'Ozer’s meeting intelligence answers “what happened on that call?” Assistant records any call or room meeting, labels speakers, extracts tasks, and drafts the follow-up. Audio is processed on your Mac — we do not keep a permanent recording.',
       highlights: [
@@ -436,16 +433,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   dictation: {
     slug: 'dictation',
     name: 'Dictation',
-    shortDescription:
-      'Press fn, speak, get clean text in any Mac app.',
+    shortDescription: 'Press fn, speak, get clean text in any Mac app.',
     indexIcon: 'Keyboard',
     primaryKeyword: 'voice dictation Mac app',
-  answerFirst:
-    'Ozer dictation is part of Assistant for Mac. Press fn in any text field, speak naturally, and get punctuated text where your cursor is without a separate window. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on Mac dictation on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer dictation is part of Assistant for Mac. Press fn in any text field, speak naturally, and get punctuated text where your cursor is without a separate window. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on Mac dictation on the Ozer blog',
+    },
     heroBadge: 'Included in Ozer Assistant for Mac',
     secondaryCta: {
       label: 'Download for Mac',
@@ -646,16 +642,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   'client-portals': {
     slug: 'client-portals',
     name: 'Client Portals',
-    shortDescription:
-      'Branded client spaces that stay on the project.',
+    shortDescription: 'Branded client spaces that stay on the project.',
     indexIcon: 'LayoutDashboard',
     primaryKeyword: 'client portal software for agencies',
-  answerFirst:
-    'Ozer client portals give each client a branded space for files, updates, and approvals on the project record inside the Workspace OS. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on client portals on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer client portals give each client a branded space for files, updates, and approvals on the project record inside the Workspace OS. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on client portals on the Ozer blog',
+    },
     metadata: {
       title: 'Client portals on the project — Ozer',
       description:
@@ -740,16 +735,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   invoicing: {
     slug: 'invoicing',
     name: 'Invoicing',
-    shortDescription:
-      'Raise invoices from the project. Chase what is unpaid.',
+    shortDescription: 'Raise invoices from the project. Chase what is unpaid.',
     indexIcon: 'FileText',
     primaryKeyword: 'invoicing software for freelancers',
-  answerFirst:
-    'Ozer invoicing raises invoices from the project with client details filled in. Outstanding amounts surface so you can chase payment without a second billing app. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on getting paid on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer invoicing raises invoices from the project with client details filled in. Outstanding amounts surface so you can chase payment without a second billing app. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on getting paid on the Ozer blog',
+    },
     metadata: {
       title: 'Invoices from the project — Ozer',
       description:
@@ -799,8 +793,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'Palette',
           title: 'Branded, professional PDFs',
-          description:
-            'Send invoices you are happy to put your name on.',
+          description: 'Send invoices you are happy to put your name on.',
         },
       ],
       connectedTo: [
@@ -836,16 +829,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   'second-brain': {
     slug: 'second-brain',
     name: 'Second Brain',
-    shortDescription:
-      'Ask what you agreed — answers cite meetings and mail.',
+    shortDescription: 'Ask what you agreed — answers cite meetings and mail.',
     indexIcon: 'Brain',
     primaryKeyword: 'second brain for freelancers',
-  answerFirst:
-    'Ozer second brain indexes meetings, email, notes, and projects. Ask in plain English and get answers with citations back to the source. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on searchable knowledge on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer second brain indexes meetings, email, notes, and projects. Ask in plain English and get answers with citations back to the source. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on searchable knowledge on the Ozer blog',
+    },
     metadata: {
       title: 'Ask what you agreed — Ozer',
       description:
@@ -890,8 +882,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'Link',
           title: 'Every answer cites a source',
-          description:
-            'Jump to the transcript, thread, or note it came from.',
+          description: 'Jump to the transcript, thread, or note it came from.',
         },
         {
           icon: 'Database',
@@ -931,16 +922,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   messaging: {
     slug: 'messaging',
     name: 'Messaging',
-    shortDescription:
-      'Client and team chat on the project — not WhatsApp.',
+    shortDescription: 'Client and team chat on the project — not WhatsApp.',
     indexIcon: 'MessageSquare',
     primaryKeyword: 'client messaging software for agencies',
-  answerFirst:
-    'Ozer messaging keeps client and team chat on the project record so approvals do not live in personal WhatsApp. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on client chat on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer messaging keeps client and team chat on the project record so approvals do not live in personal WhatsApp. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on client chat on the Ozer blog',
+    },
     metadata: {
       title: 'Project chat, not WhatsApp — Ozer',
       description:
@@ -965,8 +955,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
     },
     props: {
       eyebrow: 'Ozer Messaging',
-      heading:
-        'Chat on the project record',
+      heading: 'Chat on the project record',
       subheading:
         "Direct messaging with clients and your team, tied to the projects they're about. No context-switching, no digging through WhatsApp threads to find what was agreed.",
       highlights: [
@@ -991,8 +980,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'ShieldCheck',
           title: 'Work stays professional',
-          description:
-            'Client talk stays in Ozer. Your phone stays personal.',
+          description: 'Client talk stays in Ozer. Your phone stays personal.',
         },
       ],
       connectedTo: [
@@ -1021,16 +1009,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   notes: {
     slug: 'notes',
     name: 'Notes',
-    shortDescription:
-      'Notes on the client or project they belong to.',
+    shortDescription: 'Notes on the client or project they belong to.',
     indexIcon: 'StickyNote',
     primaryKeyword: 'notes app for freelancers',
-  answerFirst:
-    'Ozer notes attach to the client or project they belong to. Meeting notes land from Assistant and stay searchable in second brain. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on project notes on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer notes attach to the client or project they belong to. Meeting notes land from Assistant and stay searchable in second brain. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on project notes on the Ozer blog',
+    },
     metadata: {
       title: 'Notes on the job record — Ozer',
       description:
@@ -1075,8 +1062,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'Search',
           title: 'Found via second brain',
-          description:
-            'Notes are indexed with mail and meetings.',
+          description: 'Notes are indexed with mail and meetings.',
         },
         {
           icon: 'Mic',
@@ -1091,8 +1077,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         { label: 'Second Brain', href: '/features/second-brain' },
         { label: 'Planner', href: '/features/planner' },
       ],
-      connectionHeading:
-        'Notes on the project record',
+      connectionHeading: 'Notes on the project record',
       connectionDescription:
         'A note on the client record is useful. The same note in a separate app is noise.',
       faqs: [
@@ -1112,16 +1097,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   'project-management': {
     slug: 'project-management',
     name: 'Project Management',
-    shortDescription:
-      'Jobs, phases, and timelines on the client record.',
+    shortDescription: 'Jobs, phases, and timelines on the client record.',
     indexIcon: 'FolderKanban',
     primaryKeyword: 'project management for freelancers',
-  answerFirst:
-    'Ozer projects run jobs with phases, timelines, and tasks on the client record with contracts and invoices on the same job. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on delivery on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer projects run jobs with phases, timelines, and tasks on the client record with contracts and invoices on the same job. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on delivery on the Ozer blog',
+    },
     metadata: {
       title: 'Delivery on the client record — Ozer',
       description:
@@ -1159,14 +1143,12 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'Layers',
           title: 'Phases and deliverables',
-          description:
-            'Know the stage and what ships next.',
+          description: 'Know the stage and what ships next.',
         },
         {
           icon: 'Users',
           title: 'Client context built in',
-          description:
-            'Messages, portal, and history sit on the same job.',
+          description: 'Messages, portal, and history sit on the same job.',
         },
         {
           icon: 'ArrowRight',
@@ -1203,16 +1185,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   tasks: {
     slug: 'tasks',
     name: 'Tasks',
-    shortDescription:
-      'One task list across workspaces, linked to real work.',
+    shortDescription: 'One task list across workspaces, linked to real work.',
     indexIcon: 'CheckSquare',
     primaryKeyword: 'task management for freelancers',
-  answerFirst:
-    'Ozer tasks unify personal and client work in one list, link to projects, feed the planner, and receive items from meetings and email. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on task lists on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer tasks unify personal and client work in one list, link to projects, feed the planner, and receive items from meetings and email. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on task lists on the Ozer blog',
+    },
     metadata: {
       title: 'One task list, full context — Ozer',
       description:
@@ -1250,20 +1231,17 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'Users',
           title: 'Linked to clients and jobs',
-          description:
-            'Tasks appear on the project, not as orphans.',
+          description: 'Tasks appear on the project, not as orphans.',
         },
         {
           icon: 'CalendarDays',
           title: 'Powers the planner',
-          description:
-            'Due work surfaces in today automatically.',
+          description: 'Due work surfaces in today automatically.',
         },
         {
           icon: 'Sparkles',
           title: 'From meetings and email',
-          description:
-            'Extracted action items land here for review.',
+          description: 'Extracted action items land here for review.',
         },
       ],
       connectedTo: [
@@ -1292,16 +1270,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   contracts: {
     slug: 'contracts',
     name: 'Contracts',
-    shortDescription:
-      'Send and track contracts on the client and job.',
+    shortDescription: 'Send and track contracts on the client and job.',
     indexIcon: 'FileSignature',
     primaryKeyword: 'contract management for freelancers',
-  answerFirst:
-    'Ozer contracts send agreements for signature and track status on the client and project without a separate e-sign product. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on contracts on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer contracts send agreements for signature and track status on the client and project without a separate e-sign product. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on contracts on the Ozer blog',
+    },
     metadata: {
       title: 'Contracts on the job — Ozer',
       description:
@@ -1319,8 +1296,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'Contract Management for Freelancers',
-      description:
-        'Send, sign, and track client contracts linked to projects.',
+      description: 'Send, sign, and track client contracts linked to projects.',
       url: 'https://ozer.so/features/contracts',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
@@ -1333,26 +1309,22 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'FileSignature',
           title: 'Send and collect signatures',
-          description:
-            'Secure link, clear status: sent, viewed, signed.',
+          description: 'Secure link, clear status: sent, viewed, signed.',
         },
         {
           icon: 'Users',
           title: 'Tied to the client',
-          description:
-            'Every agreement sits on the relationship record.',
+          description: 'Every agreement sits on the relationship record.',
         },
         {
           icon: 'FolderKanban',
           title: 'Linked to projects',
-          description:
-            'Signed terms sit on the job before work starts.',
+          description: 'Signed terms sit on the job before work starts.',
         },
         {
           icon: 'CreditCard',
           title: 'Payment milestones optional',
-          description:
-            'Align totals with how you invoice later.',
+          description: 'Align totals with how you invoice later.',
         },
       ],
       connectedTo: [
@@ -1381,16 +1353,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   sops: {
     slug: 'sops',
     name: 'SOPs',
-    shortDescription:
-      'Playbooks your team runs — not PDFs nobody opens.',
+    shortDescription: 'Playbooks your team runs — not PDFs nobody opens.',
     indexIcon: 'ListChecks',
     primaryKeyword: 'SOP software for agencies',
-  answerFirst:
-    'Ozer SOPs turn processes into playbooks you run as checklists with assignees and history inside the Workspace OS. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on playbooks on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer SOPs turn processes into playbooks you run as checklists with assignees and history inside the Workspace OS. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on playbooks on the Ozer blog',
+    },
     metadata: {
       title: 'Playbooks you actually run — Ozer',
       description:
@@ -1408,8 +1379,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       '@context': 'https://schema.org',
       '@type': 'WebPage',
       name: 'SOPs & Playbooks for Agencies',
-      description:
-        'Playbooks run as checklists with assignees and history.',
+      description: 'Playbooks run as checklists with assignees and history.',
       url: 'https://ozer.so/features/sops',
       isPartOf: { '@type': 'WebSite', name: 'Ozer', url: 'https://ozer.so' },
     },
@@ -1428,20 +1398,17 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'RefreshCw',
           title: 'Recurring or per project',
-          description:
-            'Schedule runs or attach a checklist to a kickoff.',
+          description: 'Schedule runs or attach a checklist to a kickoff.',
         },
         {
           icon: 'Users',
           title: 'Assignees per step',
-          description:
-            'Everyone knows what they own.',
+          description: 'Everyone knows what they own.',
         },
         {
           icon: 'Sparkles',
           title: 'Import from existing docs',
-          description:
-            'Paste a process doc and Ozer structures the steps.',
+          description: 'Paste a process doc and Ozer structures the steps.',
         },
       ],
       connectedTo: [
@@ -1470,16 +1437,15 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
   pipeline: {
     slug: 'pipeline',
     name: 'Pipeline',
-    shortDescription:
-      'Leads to projects — win once, never re-enter.',
+    shortDescription: 'Leads to projects — win once, never re-enter.',
     indexIcon: 'Kanban',
     primaryKeyword: 'CRM pipeline for freelancers',
-  answerFirst:
-    'Ozer pipeline tracks leads and proposals. When you win, the deal becomes a project with context intact and no re-entry. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on pipeline on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer pipeline tracks leads and proposals. When you win, the deal becomes a project with context intact and no re-entry. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on pipeline on the Ozer blog',
+    },
     metadata: {
       title: 'Win once, deliver once — Ozer',
       description:
@@ -1512,26 +1478,22 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'Kanban',
           title: 'Pipeline at a glance',
-          description:
-            'See what is active, stalled, or needs a nudge.',
+          description: 'See what is active, stalled, or needs a nudge.',
         },
         {
           icon: 'FileSignature',
           title: 'Proposal tracking',
-          description:
-            'Know when a prospect has viewed the proposal.',
+          description: 'Know when a prospect has viewed the proposal.',
         },
         {
           icon: 'ArrowRight',
           title: 'Win becomes a project',
-          description:
-            'Client, brief, and context carry over in one step.',
+          description: 'Client, brief, and context carry over in one step.',
         },
         {
           icon: 'Clock',
           title: 'History from first contact',
-          description:
-            'The relationship record starts when the lead enters.',
+          description: 'The relationship record starts when the lead enters.',
         },
       ],
       connectedTo: [
@@ -1564,12 +1526,12 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
       'What you earned, what is owed — optional FreeAgent sync.',
     indexIcon: 'BarChart3',
     primaryKeyword: 'freelance finance management',
-  answerFirst:
-    'Ozer finances shows revenue, outstanding invoices, and project profitability in pounds, with optional FreeAgent sync for UK books. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
-  relatedBlog: {
-    href: '/blog',
-    label: 'Studio notes on studio finances on the Ozer blog',
-  },
+    answerFirst:
+      'Ozer finances shows revenue, outstanding invoices, and project profitability in pounds, with optional FreeAgent sync for UK books. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK. It is part of the Ozer Workspace OS for freelancers and small agencies in the UK.',
+    relatedBlog: {
+      href: '/blog',
+      label: 'Studio notes on studio finances on the Ozer blog',
+    },
     heroBadge: 'FreeAgent sync for UK books',
     metadata: {
       title: 'Money next to the work — Ozer',
@@ -1609,8 +1571,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'PieChart',
           title: 'Per-project profitability',
-          description:
-            'See which clients pay for the time you spend.',
+          description: 'See which clients pay for the time you spend.',
         },
         {
           icon: 'RefreshCw',
@@ -1621,8 +1582,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           icon: 'AlertTriangle',
           title: 'Unpaid invoices surface',
-          description:
-            'Ozer shows what is overdue so you can chase it.',
+          description: 'Ozer shows what is overdue so you can chase it.',
         },
       ],
       connectedTo: [

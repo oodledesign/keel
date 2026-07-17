@@ -123,7 +123,10 @@ async function loadLatestAuditBrandData(projectId: string): Promise<{
   };
 }
 
-function delta(current: number, previous: number | null | undefined): number | null {
+function delta(
+  current: number,
+  previous: number | null | undefined,
+): number | null {
   if (previous == null) return null;
   return current - previous;
 }
@@ -186,8 +189,14 @@ export async function refreshSiteOverview(input: {
       rankMetrics.organic.count,
       existing?.organicKeywords,
     ),
-    organic_traffic_delta: delta(rankMetrics.organic.etv, existing?.organicTraffic),
-    organic_value_delta: delta(rankMetrics.organic.value, existing?.organicValue),
+    organic_traffic_delta: delta(
+      rankMetrics.organic.etv,
+      existing?.organicTraffic,
+    ),
+    organic_value_delta: delta(
+      rankMetrics.organic.value,
+      existing?.organicValue,
+    ),
     paid_keywords: rankMetrics.paid.count,
     paid_traffic: rankMetrics.paid.etv,
     paid_value: rankMetrics.paid.value,

@@ -7,22 +7,27 @@ import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import {
+  createTask,
+  loadTaskAssignmentOptionsForWorkspace,
+} from '~/home/(user)/_lib/actions/task-actions';
+import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
+import { MAX_EXTRACT_INSTRUCTIONS_LENGTH } from '~/lib/ai/extract-instructions';
+import {
+  type WorkspaceContextForExtract,
   extractWorkspaceTasksWithAnthropic,
   resolveDraftAssignment,
-  type WorkspaceContextForExtract,
 } from '~/lib/ai/workspace-task-extract';
-import { MAX_EXTRACT_INSTRUCTIONS_LENGTH } from '~/lib/ai/extract-instructions';
-
-import { createTask, loadTaskAssignmentOptionsForWorkspace } from '~/home/(user)/_lib/actions/task-actions';
-import pathsConfig from '~/config/paths.config';
-import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 
 function revalidateWorkspaceTaskPages(accountSlug: string) {
   const slug = accountSlug.trim();
   if (!slug) return;
   const workTasks = workAccountPath(pathsConfig.app.accountTasks, slug);
-  const workExtract = workAccountPath(pathsConfig.app.accountTasksExtract, slug);
+  const workExtract = workAccountPath(
+    pathsConfig.app.accountTasksExtract,
+    slug,
+  );
   const workReview = workAccountPath(pathsConfig.app.accountTasksReview, slug);
   const homeTasks = `/home/${slug}/tasks`;
   const homeExtract = `/home/${slug}/tasks/extract`;
@@ -98,7 +103,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       .map((o) => ({ id: o.id, name: o.name }));
 
     const preferredClient = input.preferredClientId
-      ? clients.find((c) => c.id === input.preferredClientId) ?? null
+      ? (clients.find((c) => c.id === input.preferredClientId) ?? null)
       : null;
 
     const context: WorkspaceContextForExtract = {
@@ -181,7 +186,9 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
       options.filter((o) => o.type === 'client').map((o) => o.id),
     );
 
-    async function resolveClientId(candidate: string | null): Promise<string | null> {
+    async function resolveClientId(
+      candidate: string | null,
+    ): Promise<string | null> {
       if (!candidate) return null;
       if (validClient.has(candidate)) return candidate;
 

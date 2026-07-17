@@ -32,7 +32,10 @@ export function SopRunAssigneeSelect({
 }) {
   return (
     <div className="space-y-1">
-      <Label htmlFor={id} className="text-xs text-[var(--workspace-shell-text-muted)]">
+      <Label
+        htmlFor={id}
+        className="text-xs text-[var(--workspace-shell-text-muted)]"
+      >
         {label}
       </Label>
       <Select

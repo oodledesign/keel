@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { Loader2, Plus, Trash2 } from 'lucide-react';
@@ -123,10 +124,10 @@ export function BrandBranchesSection({
     <div className="grid gap-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
       <div>
         <h2 className="text-lg font-semibold">Branches</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Office locations used in email signatures. Staff pick a branch; address,
-          phone, and email fall back to branch details when not overridden on
-          their profile.
+        <p className="text-muted-foreground mt-1 text-sm">
+          Office locations used in email signatures. Staff pick a branch;
+          address, phone, and email fall back to branch details when not
+          overridden on their profile.
         </p>
       </div>
 
@@ -166,7 +167,9 @@ export function BrandBranchesSection({
                 <Label>Address</Label>
                 <Input
                   value={branch.address}
-                  onChange={(e) => updateRow(index, { address: e.target.value })}
+                  onChange={(e) =>
+                    updateRow(index, { address: e.target.value })
+                  }
                   placeholder="123 High Street, Tonbridge, TN9 1AB"
                   disabled={!canEdit}
                 />

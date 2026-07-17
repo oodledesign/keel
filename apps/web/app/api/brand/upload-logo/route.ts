@@ -24,7 +24,9 @@ async function authorizeWorkspaceLogoEdit(accountId: string, userId: string) {
     await assertCanEditBrandSettings(accountId, userId);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'You cannot edit workspace settings.';
+      error instanceof Error
+        ? error.message
+        : 'You cannot edit workspace settings.';
     const status = message === 'Account not found' ? 404 : 403;
     return NextResponse.json({ error: message }, { status });
   }
@@ -99,7 +101,8 @@ export async function POST(request: Request) {
       {
         error:
           (uploadError.message ||
-            'Failed to upload logo. Ensure brand storage is configured.') + hint,
+            'Failed to upload logo. Ensure brand storage is configured.') +
+          hint,
       },
       { status: 500 },
     );
@@ -149,7 +152,10 @@ export async function DELETE(request: Request) {
 
   const accountId = String(body.accountId ?? '').trim();
   if (!accountId) {
-    return NextResponse.json({ error: 'accountId is required.' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'accountId is required.' },
+      { status: 400 },
+    );
   }
 
   const authError = await authorizeWorkspaceLogoEdit(accountId, user.id);
@@ -159,7 +165,9 @@ export async function DELETE(request: Request) {
     await syncWorkspaceLogo(accountId, null);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'Failed to remove workspace logo.';
+      error instanceof Error
+        ? error.message
+        : 'Failed to remove workspace logo.';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 

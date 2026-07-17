@@ -1,5 +1,4 @@
 /** Adapt E1 nested SEO → legacy flat fields for old export/ packs. */
-
 import type { WebsiteSeoPageSeo } from './seo-types';
 import { emptyWebsiteSeoPageSeo } from './seo-types';
 

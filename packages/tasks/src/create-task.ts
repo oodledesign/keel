@@ -10,17 +10,11 @@ const TASK_STATUSES = new Set([
   'cancelled',
 ] as const);
 
-const TASK_PRIORITIES = new Set([
-  'low',
-  'medium',
-  'high',
-  'urgent',
-] as const);
+const TASK_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent'] as const);
 
-export type TaskStatus = (typeof TASK_STATUSES extends Set<infer T> ? T : never);
-export type TaskPriority = (typeof TASK_PRIORITIES extends Set<infer T>
-  ? T
-  : never);
+export type TaskStatus = typeof TASK_STATUSES extends Set<infer T> ? T : never;
+export type TaskPriority =
+  typeof TASK_PRIORITIES extends Set<infer T> ? T : never;
 
 export type CreateTaskInput = {
   title: string;
@@ -51,10 +45,10 @@ export type CreateTaskResult =
   | { success: true; id: string; error: null }
   | { success: false; id: null; error: string };
 
-function normalizeTaskPriority(
-  input: string | undefined | null,
-): TaskPriority {
-  const raw = String(input ?? 'medium').trim().toLowerCase();
+function normalizeTaskPriority(input: string | undefined | null): TaskPriority {
+  const raw = String(input ?? 'medium')
+    .trim()
+    .toLowerCase();
   if (TASK_PRIORITIES.has(raw as TaskPriority)) {
     return raw as TaskPriority;
   }
@@ -65,7 +59,9 @@ function normalizeTaskPriority(
 }
 
 function normalizeTaskStatus(input: string | undefined | null): TaskStatus {
-  const raw = String(input ?? 'todo').trim().toLowerCase();
+  const raw = String(input ?? 'todo')
+    .trim()
+    .toLowerCase();
 
   switch (raw) {
     case 'pending':
@@ -224,7 +220,7 @@ export async function createTaskForUser(
     const msg =
       error.message?.includes("'client_id'") &&
       error.message?.toLowerCase().includes('schema cache')
-        ? "Tasks table is missing the client_id column. Run migrations (e.g. pnpm supabase:web:reset or supabase db push from apps/web) then pnpm --filter web supabase:typegen."
+        ? 'Tasks table is missing the client_id column. Run migrations (e.g. pnpm supabase:web:reset or supabase db push from apps/web) then pnpm --filter web supabase:typegen.'
         : error.message;
     return { success: false, id: null, error: msg };
   }

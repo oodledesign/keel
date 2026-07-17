@@ -44,31 +44,45 @@ export function ActionPreviewCard(props: Props) {
         <dl className="space-y-2 text-sm">
           <div>
             <dt className="text-[var(--workspace-shell-text)]/50">Workspace</dt>
-            <dd className="text-[var(--workspace-shell-text)]">{preview.workspaceName}</dd>
+            <dd className="text-[var(--workspace-shell-text)]">
+              {preview.workspaceName}
+            </dd>
           </div>
           <div>
             <dt className="text-[var(--workspace-shell-text)]/50">Title</dt>
-            <dd className="font-medium text-[var(--workspace-shell-text)]">{preview.title}</dd>
+            <dd className="font-medium text-[var(--workspace-shell-text)]">
+              {preview.title}
+            </dd>
           </div>
           {preview.notes ? (
             <div>
               <dt className="text-[var(--workspace-shell-text)]/50">Notes</dt>
-              <dd className="whitespace-pre-wrap text-[var(--workspace-shell-text)]/90">{preview.notes}</dd>
+              <dd className="whitespace-pre-wrap text-[var(--workspace-shell-text)]/90">
+                {preview.notes}
+              </dd>
             </div>
           ) : null}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <dt className="text-[var(--workspace-shell-text)]/50">Due</dt>
-              <dd className="text-[var(--workspace-shell-text)]">{formatDueDate(preview.dueDate)}</dd>
+              <dd className="text-[var(--workspace-shell-text)]">
+                {formatDueDate(preview.dueDate)}
+              </dd>
             </div>
             <div>
-              <dt className="text-[var(--workspace-shell-text)]/50">Priority</dt>
-              <dd className="capitalize text-[var(--workspace-shell-text)]">{preview.priority}</dd>
+              <dt className="text-[var(--workspace-shell-text)]/50">
+                Priority
+              </dt>
+              <dd className="text-[var(--workspace-shell-text)] capitalize">
+                {preview.priority}
+              </dd>
             </div>
           </div>
           {preview.projectName || preview.clientName ? (
             <div>
-              <dt className="text-[var(--workspace-shell-text)]/50">Linked to</dt>
+              <dt className="text-[var(--workspace-shell-text)]/50">
+                Linked to
+              </dt>
               <dd className="text-[var(--workspace-shell-text)]">
                 {preview.projectName ?? preview.clientName}
               </dd>
@@ -77,7 +91,12 @@ export function ActionPreviewCard(props: Props) {
         </dl>
 
         <div className="mt-4 flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onCancel} disabled={confirming}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onCancel}
+            disabled={confirming}
+          >
             Cancel
           </Button>
           <Button
@@ -103,20 +122,31 @@ export function ActionPreviewCard(props: Props) {
       <dl className="space-y-2 text-sm">
         <div>
           <dt className="text-[var(--workspace-shell-text)]/50">Workspace</dt>
-          <dd className="text-[var(--workspace-shell-text)]">{preview.workspaceName}</dd>
+          <dd className="text-[var(--workspace-shell-text)]">
+            {preview.workspaceName}
+          </dd>
         </div>
         <div>
           <dt className="text-[var(--workspace-shell-text)]/50">Project</dt>
-          <dd className="font-medium text-[var(--workspace-shell-text)]">{preview.projectName}</dd>
+          <dd className="font-medium text-[var(--workspace-shell-text)]">
+            {preview.projectName}
+          </dd>
         </div>
         <div>
           <dt className="text-[var(--workspace-shell-text)]/50">Domain</dt>
-          <dd className="text-[var(--workspace-shell-text)]/90">{preview.domain}</dd>
+          <dd className="text-[var(--workspace-shell-text)]/90">
+            {preview.domain}
+          </dd>
         </div>
       </dl>
 
       <div className="mt-4 flex justify-end gap-2">
-        <Button type="button" variant="outline" onClick={onCancel} disabled={confirming}>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onCancel}
+          disabled={confirming}
+        >
           Cancel
         </Button>
         <Button

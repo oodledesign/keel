@@ -1,13 +1,13 @@
 import { z } from 'zod';
 
-import type { OzerMcpToolRegistrar } from './types';
 import {
+  OPEN_TASK_STATUSES,
   assertClientOrgAccess,
   assertSupabaseOk,
   dealDisplayName,
-  OPEN_TASK_STATUSES,
   toolJson,
 } from './shared';
+import type { OzerMcpToolRegistrar } from './types';
 
 const getClientSchema = z.object({
   id: z.string().uuid(),
@@ -109,7 +109,9 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
 
           return mapClientOrg(resolved);
         })
-        .filter((client): client is NonNullable<typeof client> => client !== null);
+        .filter(
+          (client): client is NonNullable<typeof client> => client !== null,
+        );
 
       return toolJson({ clients });
     },
@@ -145,7 +147,11 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
         .select('id')
         .eq('client_org_id', input.id);
 
-      assertSupabaseOk(linkedClients, linkedClientsError, 'load linked clients');
+      assertSupabaseOk(
+        linkedClients,
+        linkedClientsError,
+        'load linked clients',
+      );
 
       const clientIds = (linkedClients ?? []).map(
         (row) => (row as { id: string }).id,
@@ -156,9 +162,7 @@ export const registerClientTools: OzerMcpToolRegistrar = (server, context) => {
       if (clientIds.length > 0) {
         const { data: taskRows, error: tasksError } = await supabase
           .from('tasks')
-          .select(
-            'id, title, status, priority, due_date, project_id, area_id',
-          )
+          .select('id, title, status, priority, due_date, project_id, area_id')
           .eq('user_id', userId)
           .in('status', [...OPEN_TASK_STATUSES])
           .in('client_id', clientIds)

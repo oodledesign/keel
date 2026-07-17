@@ -16,9 +16,9 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
-import { updatePhase } from '../../_lib/server/server-actions';
 import { getErrorMessage } from '../../_lib/error-message';
 import type { PhaseStatus } from '../../_lib/schema/project-phases.schema';
+import { updatePhase } from '../../_lib/server/server-actions';
 import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
@@ -122,7 +122,9 @@ export function PhaseMetaPanel({
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-lg font-semibold text-[var(--workspace-shell-text)]"
             />
           ) : (
-            <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">{phase.name}</h1>
+            <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+              {phase.name}
+            </h1>
           )}
 
           <span
@@ -155,7 +157,9 @@ export function PhaseMetaPanel({
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         <div>
-          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Status</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Status
+          </Label>
           {canEdit ? (
             <Select
               value={phase.status}
@@ -180,7 +184,9 @@ export function PhaseMetaPanel({
         </div>
 
         <div>
-          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Colour</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Colour
+          </Label>
           {canEdit ? (
             <Input
               type="color"
@@ -197,7 +203,9 @@ export function PhaseMetaPanel({
         </div>
 
         <div>
-          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Start</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Start
+          </Label>
           {canEdit ? (
             <Input
               type="date"
@@ -218,7 +226,9 @@ export function PhaseMetaPanel({
         </div>
 
         <div>
-          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Due</Label>
+          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Due
+          </Label>
           {canEdit ? (
             <Input
               type="date"

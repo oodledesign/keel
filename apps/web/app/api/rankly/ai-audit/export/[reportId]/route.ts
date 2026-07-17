@@ -1,13 +1,14 @@
 import { type NextRequest } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadAuditReportBundle } from '~/lib/ai-audit/db';
 import {
-  DIMENSION_LABELS,
   type AuditRecommendationRow,
   type AuditReportRow,
+  DIMENSION_LABELS,
 } from '~/lib/ai-audit/types';
 import { jsonErr } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api-access';

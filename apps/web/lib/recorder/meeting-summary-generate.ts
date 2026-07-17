@@ -92,7 +92,9 @@ ${trimmedTranscript.slice(0, MAX_TRANSCRIPT_CHARS)}
     content?: Array<{ type: string; text?: string }>;
   };
 
-  const text = body.content?.find((block) => block.type === 'text')?.text?.trim();
+  const text = body.content
+    ?.find((block) => block.type === 'text')
+    ?.text?.trim();
 
   if (!text) {
     throw new Error('Empty summary from Anthropic');

@@ -44,10 +44,14 @@ export function PhasePlanningLinks({
     <section className="rounded-xl border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent)]/5 px-4 py-3">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Website planning</p>
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            Website planning
+          </p>
           <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             Linked to {websiteName}
-            {planningTab ? ` · open ${TAB_LABELS[planningTab].toLowerCase()}` : ''}
+            {planningTab
+              ? ` · open ${TAB_LABELS[planningTab].toLowerCase()}`
+              : ''}
           </p>
         </div>
         <Link

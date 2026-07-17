@@ -2,15 +2,15 @@ import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
-  isBusinessProfile,
-  spaceTypeFromProfile,
-  type WorkspaceProfile,
-} from '~/home/[account]/_lib/workspace-profile';
-import {
   isPropertyNavModuleEnabled,
   isWorkModuleEnabled,
   isWorkNavModuleEnabled,
 } from '~/home/[account]/_lib/server/account-modules';
+import {
+  type WorkspaceProfile,
+  isBusinessProfile,
+  spaceTypeFromProfile,
+} from '~/home/[account]/_lib/workspace-profile';
 
 export type WorkspaceSettingsNavIcon = 'calendar-off';
 
@@ -23,10 +23,7 @@ export type WorkspaceSettingsNavItem = {
   icon?: WorkspaceSettingsNavIcon;
 };
 
-function settingsPath(
-  template: string,
-  accountSlug: string,
-): string {
+function settingsPath(template: string, accountSlug: string): string {
   return template.replace('[account]', accountSlug);
 }
 
@@ -83,7 +80,10 @@ export function buildWorkspaceSettingsNav(input: {
       items.push({
         id: 'finances',
         label: 'Finances',
-        href: settingsPath(pathsConfig.app.accountFinancesSettings, accountSlug),
+        href: settingsPath(
+          pathsConfig.app.accountFinancesSettings,
+          accountSlug,
+        ),
       });
     }
 
@@ -112,10 +112,7 @@ export function buildWorkspaceSettingsNav(input: {
       href: settingsPath(pathsConfig.app.accountBrainKnowledge, accountSlug),
     });
 
-    if (
-      access.canViewBilling &&
-      featureFlagsConfig.enableTeamAccountBilling
-    ) {
+    if (access.canViewBilling && featureFlagsConfig.enableTeamAccountBilling) {
       items.push({
         id: 'billing',
         label: 'Billing',
@@ -131,10 +128,7 @@ export function buildWorkspaceSettingsNav(input: {
       });
     }
 
-    if (
-      access.canViewBilling &&
-      featureFlagsConfig.enableTeamAccountBilling
-    ) {
+    if (access.canViewBilling && featureFlagsConfig.enableTeamAccountBilling) {
       items.push({
         id: 'billing',
         label: 'Billing',

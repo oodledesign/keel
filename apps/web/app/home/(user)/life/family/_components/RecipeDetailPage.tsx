@@ -19,7 +19,10 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
-import { deleteRecipeAction, toggleRecipeFavoriteAction } from '../_lib/actions';
+import {
+  deleteRecipeAction,
+  toggleRecipeFavoriteAction,
+} from '../_lib/actions';
 import { buildRecipesListPath } from '../_lib/family-meal.paths';
 import type { RecipeRow } from '../_lib/schema/family-meal.schema';
 import { RecipeDialog } from './RecipeDialog';
@@ -77,7 +80,7 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 pb-12 pt-6 text-[var(--workspace-shell-text)] md:px-2">
+    <div className="mx-auto flex w-full max-w-3xl flex-col gap-6 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-2">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href={backHref}
@@ -132,7 +135,7 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
               AI generated
             </span>
           ) : null}
-          <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-[11px] capitalize text-[var(--workspace-shell-text-muted)]">
+          <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-[11px] text-[var(--workspace-shell-text-muted)] capitalize">
             {mealTypeLabels[recipe.meal_type]}
           </span>
         </div>
@@ -140,7 +143,9 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
         <h1 className="text-3xl font-bold tracking-tight">{recipe.name}</h1>
 
         {recipe.description ? (
-          <p className="text-base text-[var(--workspace-shell-text-muted)]">{recipe.description}</p>
+          <p className="text-base text-[var(--workspace-shell-text-muted)]">
+            {recipe.description}
+          </p>
         ) : null}
 
         <div className="flex flex-wrap items-center gap-4 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -170,7 +175,7 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
             {recipe.tags.map((tag) => (
               <span
                 key={tag}
-                className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-xs capitalize text-[var(--workspace-shell-text-muted)]"
+                className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-xs text-[var(--workspace-shell-text-muted)] capitalize"
               >
                 {titleCase(tag)}
               </span>
@@ -181,7 +186,9 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
 
       <div className="grid gap-4 md:grid-cols-2">
         <section className={cn(panelClass, 'p-5')}>
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Ingredients</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Ingredients
+          </h2>
           {recipe.ingredients.length > 0 ? (
             <ul className="mt-3 space-y-2 text-sm text-[var(--workspace-shell-text-muted)]">
               {recipe.ingredients.map((item) => (
@@ -192,18 +199,24 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
               ))}
             </ul>
           ) : (
-            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No ingredients listed.</p>
+            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+              No ingredients listed.
+            </p>
           )}
         </section>
 
         <section className={cn(panelClass, 'p-5 md:col-span-2')}>
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Method</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Method
+          </h2>
           {recipe.instructions?.trim() ? (
-            <div className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
+            <div className="mt-3 text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
               {recipe.instructions}
             </div>
           ) : (
-            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">No instructions yet.</p>
+            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+              No instructions yet.
+            </p>
           )}
         </section>
       </div>

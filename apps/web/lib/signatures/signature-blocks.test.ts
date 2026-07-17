@@ -32,7 +32,9 @@ describe('signatureBlocksToHtml / htmlToSignatureBlocks', () => {
     const doc = {
       version: 1 as const,
       layout: 'stacked' as const,
-      blocks: [createSignatureBlock('custom_text', { text: 'Hello & welcome' })],
+      blocks: [
+        createSignatureBlock('custom_text', { text: 'Hello & welcome' }),
+      ],
     };
 
     const parsed = htmlToSignatureBlocks(signatureBlocksToHtml(doc));

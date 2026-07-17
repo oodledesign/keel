@@ -6,8 +6,8 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '@kit/ui/utils';
 
 import {
-  splitScheduleSegments,
   type ScheduleSegment,
+  splitScheduleSegments,
 } from '~/lib/planner/parse-plan-markdown';
 
 type Props = {
@@ -53,7 +53,7 @@ export function PlanOutputRenderer({ markdown }: Props) {
             return (
               <h3
                 className={cn(
-                  'pt-3 text-sm font-semibold uppercase tracking-wide text-[var(--workspace-shell-accent-text)]',
+                  'pt-3 text-sm font-semibold tracking-wide text-[var(--workspace-shell-accent-text)] uppercase',
                   muted && 'text-[var(--workspace-shell-text-muted)]',
                 )}
               >
@@ -100,11 +100,17 @@ function PlanParagraph({
 
   if (/notes/i.test(text)) {
     return (
-      <p className="text-sm italic leading-relaxed text-[var(--workspace-shell-text)]/55">{children}</p>
+      <p className="text-sm leading-relaxed text-[var(--workspace-shell-text)]/55 italic">
+        {children}
+      </p>
     );
   }
 
-  return <p className="text-sm leading-relaxed text-[var(--workspace-shell-text)]/70">{children}</p>;
+  return (
+    <p className="text-sm leading-relaxed text-[var(--workspace-shell-text)]/70">
+      {children}
+    </p>
+  );
 }
 
 function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
@@ -115,7 +121,8 @@ function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
       className={cn(
         'flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5',
         segment.isCalendarEvent && 'border-sky-400/15 bg-sky-400/10',
-        isBreak && 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
+        isBreak &&
+          'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
       )}
     >
       <span
@@ -132,7 +139,7 @@ function ScheduleSegmentRow({ segment }: { segment: ScheduleSegment }) {
       <div className="min-w-0 flex-1">
         <p
           className={cn(
-            'text-sm font-medium leading-snug',
+            'text-sm leading-snug font-medium',
             segment.isCalendarEvent
               ? 'text-sky-900'
               : isBreak

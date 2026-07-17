@@ -10,11 +10,11 @@ import {
   releaseBillingEmailEvent,
 } from './account-billing-lifecycle';
 import {
+  type AccountBillingRow,
+  type AccountBillingStatus,
   BILLING_CANCEL_AFTER_SUSPEND_DAYS,
   BILLING_GRACE_PERIOD_DAYS,
   BILLING_SUSPEND_AFTER_DAYS,
-  type AccountBillingRow,
-  type AccountBillingStatus,
   type BillingEmailKind,
 } from './account-billing-types';
 import { BILLING_TRIAL_DAYS } from './billing-config-prices';
@@ -134,16 +134,20 @@ async function loadBillingRows(
     throw error;
   }
 
-  return ((data ?? []) as unknown as Array<
-    AccountBillingRow & {
-      accounts:
-        | { id: string; name: string | null; slug: string | null }
-        | Array<{ id: string; name: string | null; slug: string | null }>
-        | null;
-    }
-  >).map((row) => ({
+  return (
+    (data ?? []) as unknown as Array<
+      AccountBillingRow & {
+        accounts:
+          | { id: string; name: string | null; slug: string | null }
+          | Array<{ id: string; name: string | null; slug: string | null }>
+          | null;
+      }
+    >
+  ).map((row) => ({
     ...row,
-    accounts: Array.isArray(row.accounts) ? (row.accounts[0] ?? null) : row.accounts,
+    accounts: Array.isArray(row.accounts)
+      ? (row.accounts[0] ?? null)
+      : row.accounts,
   }));
 }
 
@@ -395,9 +399,7 @@ export async function runBillingDunningLifecycleCron(
 }
 
 /** Combined daily run (trial + dunning). */
-export async function runBillingLifecycleCron(
-  admin: AnyClient,
-): Promise<{
+export async function runBillingLifecycleCron(admin: AnyClient): Promise<{
   trial: BillingLifecycleCronResult;
   dunning: BillingLifecycleCronResult;
 }> {
@@ -405,4 +407,3 @@ export async function runBillingLifecycleCron(
   const dunning = await runBillingDunningLifecycleCron(admin);
   return { trial, dunning };
 }
-

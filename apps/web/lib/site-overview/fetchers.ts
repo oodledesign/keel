@@ -1,9 +1,9 @@
 import 'server-only';
 
-import { countryToLocationCode } from '~/lib/clusters/utils';
-import { dfsPost, isDfsAccessDenied } from '~/lib/dataforseo/client';
 import { fetchDomainKeywords } from '~/lib/briefs/domain-analysis';
+import { countryToLocationCode } from '~/lib/clusters/utils';
 import { delay } from '~/lib/clusters/utils';
+import { dfsPost, isDfsAccessDenied } from '~/lib/dataforseo/client';
 
 import { normaliseOverviewDomain, projectCountryToCode } from './domain';
 import type {
@@ -32,7 +32,9 @@ function parseOrganicPaid(
   };
 }
 
-export function locationCodeForProjectCountry(country: string | null | undefined): number {
+export function locationCodeForProjectCountry(
+  country: string | null | undefined,
+): number {
   return countryToLocationCode(projectCountryToCode(country));
 }
 
@@ -41,9 +43,10 @@ export async function fetchDomainRankMetrics(
   locationCode: number,
 ): Promise<DomainRankMetrics> {
   const target = normaliseOverviewDomain(domain);
-  const json = await dfsPost('/dataforseo_labs/google/domain_rank_overview/live', [
-    { target, location_code: locationCode, language_code: 'en' },
-  ]);
+  const json = await dfsPost(
+    '/dataforseo_labs/google/domain_rank_overview/live',
+    [{ target, location_code: locationCode, language_code: 'en' }],
+  );
 
   const result = json.tasks?.[0]?.result?.[0] as
     | { items?: Array<{ metrics?: Record<string, unknown> }> }
@@ -74,7 +77,9 @@ export async function fetchLabsBulkRank(domain: string): Promise<number> {
   ]);
 
   const items = (
-    json.tasks?.[0]?.result?.[0] as { items?: Array<{ rank?: number }> } | undefined
+    json.tasks?.[0]?.result?.[0] as
+      | { items?: Array<{ rank?: number }> }
+      | undefined
   )?.items;
 
   const rank = Number(items?.[0]?.rank ?? 0);
@@ -202,7 +207,9 @@ export async function countAiOverviewCitations(
       const result = json.tasks?.[0]?.result?.[0] as
         | { items?: Array<Record<string, unknown>> }
         | undefined;
-      const aiOverview = result?.items?.find((item) => item.type === 'ai_overview');
+      const aiOverview = result?.items?.find(
+        (item) => item.type === 'ai_overview',
+      );
 
       if (!aiOverview) continue;
 
@@ -216,7 +223,11 @@ export async function countAiOverviewCitations(
         count += 1;
       }
     } catch (error) {
-      console.error('[site-overview] ai overview check failed', row.keyword, error);
+      console.error(
+        '[site-overview] ai overview check failed',
+        row.keyword,
+        error,
+      );
     }
 
     await delay(200);

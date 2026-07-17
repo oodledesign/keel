@@ -7,7 +7,10 @@ import { isStarlingConfigured } from '~/lib/integrations/starling/env';
 import { buildStarlingAuthUrl } from '~/lib/integrations/starling/oauth';
 
 function financesPath(accountSlug: string, query?: Record<string, string>) {
-  const base = pathsConfig.app.accountFinances.replace('[account]', accountSlug);
+  const base = pathsConfig.app.accountFinances.replace(
+    '[account]',
+    accountSlug,
+  );
   if (!query || Object.keys(query).length === 0) return base;
   const params = new URLSearchParams(query);
   return `${base}?${params.toString()}`;

@@ -18,10 +18,9 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 
-import { ClientCombobox } from './client-combobox';
 import { getErrorMessage } from '../_lib/error-message';
-
 import { createJob } from '../_lib/server/server-actions';
+import { ClientCombobox } from './client-combobox';
 
 export function CreateJobSheet({
   open,
@@ -44,7 +43,9 @@ export function CreateJobSheet({
   const [dueDate, setDueDate] = useState('');
   const [valuePence, setValuePence] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
+  const [clients, setClients] = useState<
+    { id: string; display_name: string | null }[]
+  >([]);
   const [clientsLoading, setClientsLoading] = useState(false);
 
   useEffect(() => {
@@ -58,7 +59,9 @@ export function CreateJobSheet({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setClients((list || []) as { id: string; display_name: string | null }[]);
+        setClients(
+          (list || []) as { id: string; display_name: string | null }[],
+        );
       })
       .catch(() => setClients([]))
       .finally(() => setClientsLoading(false));
@@ -77,10 +80,17 @@ export function CreateJobSheet({
         title: title.trim(),
         description: description.trim() || undefined,
         client_id: clientId.trim() || undefined,
-        status: status as 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled',
+        status: status as
+          | 'pending'
+          | 'in_progress'
+          | 'on_hold'
+          | 'completed'
+          | 'cancelled',
         priority: priority as 'low' | 'medium' | 'high' | 'urgent',
         due_date: dueDate ? new Date(dueDate) : undefined,
-        value_pence: valuePence ? Math.round(parseFloat(valuePence) * 100) : undefined,
+        value_pence: valuePence
+          ? Math.round(parseFloat(valuePence) * 100)
+          : undefined,
       });
       toast.success('Job created');
       setTitle('');
@@ -103,11 +113,16 @@ export function CreateJobSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <SheetHeader>
-          <SheetTitle className="text-[var(--workspace-shell-text)]">Create job</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">
+            Create job
+          </SheetTitle>
         </SheetHeader>
         <form onSubmit={handleSubmit} className="mt-6 flex flex-col gap-4">
           <div>
-            <Label htmlFor="title" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="title"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Title *
             </Label>
             <Input
@@ -119,7 +134,9 @@ export function CreateJobSheet({
             />
           </div>
           <div>
-            <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Client
+            </Label>
             <div className="mt-1">
               <ClientCombobox
                 clients={clients}
@@ -127,12 +144,18 @@ export function CreateJobSheet({
                 onValueChange={setClientId}
                 loading={clientsLoading}
                 placeholder="Select client"
-                addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+                addClientHref={pathsConfig.app.accountClients.replace(
+                  '[account]',
+                  accountSlug,
+                )}
               />
             </div>
           </div>
           <div>
-            <Label htmlFor="description" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="description"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Description
             </Label>
             <textarea
@@ -146,7 +169,9 @@ export function CreateJobSheet({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-[var(--workspace-shell-text-muted)]">Status</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Status
+              </Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -161,7 +186,9 @@ export function CreateJobSheet({
               </Select>
             </div>
             <div>
-              <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Priority
+              </Label>
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -176,7 +203,10 @@ export function CreateJobSheet({
             </div>
           </div>
           <div>
-            <Label htmlFor="due_date" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="due_date"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Due date
             </Label>
             <Input
@@ -188,7 +218,10 @@ export function CreateJobSheet({
             />
           </div>
           <div>
-            <Label htmlFor="value" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="value"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Value (£)
             </Label>
             <Input

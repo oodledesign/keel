@@ -2,9 +2,10 @@
 
 import Link from 'next/link';
 
+import { ColumnDef } from '@tanstack/react-table';
+
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
-import { ColumnDef } from '@tanstack/react-table';
 import { DataTable } from '@kit/ui/enhanced-data-table';
 
 import { formatPlatformTicketNumber } from '~/lib/support/platform-support.types';
@@ -26,7 +27,9 @@ export function AdminSupportTicketsTable({
 }) {
   if (tickets.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">No platform support tickets.</p>
+      <p className="text-muted-foreground text-sm">
+        No platform support tickets.
+      </p>
     );
   }
 

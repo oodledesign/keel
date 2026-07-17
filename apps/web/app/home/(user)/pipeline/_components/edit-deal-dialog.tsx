@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
+import { Loader2 } from 'lucide-react';
+
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -21,19 +23,17 @@ import {
 } from '@kit/ui/select';
 import { cn } from '@kit/ui/utils';
 
-import { Loader2 } from 'lucide-react';
-
 import {
   PIPELINE_WORKSPACE_BUSINESS_PREFIX,
   pickDefaultPipelineTargetId,
 } from '~/home/(user)/_lib/pipeline-constants';
-import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
+import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-transcripts-block';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
-import { updateDeal } from '../actions';
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
-import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-transcripts-block';
+import { updateDeal } from '../actions';
 
 type ClientOption = { id: string; display_name: string | null };
 
@@ -75,7 +75,8 @@ export function EditDealDialog({
 
   const [stage, setStage] = useState(deal?.stage ?? 'lead');
   const [businessId, setBusinessId] = useState(
-    deal?.businessId ?? pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
+    deal?.businessId ??
+      pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
   );
   const [mode, setMode] = useState<Mode>(deal?.clientId ? 'client' : 'lead');
   const [clientId, setClientId] = useState(deal?.clientId ?? '');
@@ -99,7 +100,8 @@ export function EditDealDialog({
       setStage(deal.stage);
       setBusinessId(
         (deal.businessId ||
-          pickDefaultPipelineTargetId(businesses, { workspaceScoped })) ?? '',
+          pickDefaultPipelineTargetId(businesses, { workspaceScoped })) ??
+          '',
       );
       setMode(deal.clientId ? 'client' : 'lead');
       setClientId(deal.clientId ?? '');
@@ -159,7 +161,8 @@ export function EditDealDialog({
     }
 
     const resolvedBusinessId =
-      businessId || pickDefaultPipelineTargetId(businesses, { workspaceScoped });
+      businessId ||
+      pickDefaultPipelineTargetId(businesses, { workspaceScoped });
 
     if (!resolvedBusinessId) {
       setError('Please select a workspace');
@@ -250,7 +253,9 @@ export function EditDealDialog({
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           {mode === 'client' ? (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Client *</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Client *
+              </Label>
               <ClientCombobox
                 clients={clients}
                 value={clientId}
@@ -262,7 +267,10 @@ export function EditDealDialog({
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="edit-contactName" className="text-[var(--workspace-shell-text-muted)]">
+                <Label
+                  htmlFor="edit-contactName"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
                   Contact name *
                 </Label>
                 <Input
@@ -274,7 +282,10 @@ export function EditDealDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="edit-companyName" className="text-[var(--workspace-shell-text-muted)]">
+                <Label
+                  htmlFor="edit-companyName"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
                   Company
                 </Label>
                 <Input
@@ -288,10 +299,14 @@ export function EditDealDialog({
             </div>
           )}
 
-          <div className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          <div
+            className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}
+          >
             {showAssignField ? (
               <div className="space-y-2">
-                <Label className="text-[var(--workspace-shell-text-muted)]">Workspace *</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Workspace *
+                </Label>
                 <Select value={businessId} onValueChange={setBusinessId}>
                   <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                     <SelectValue placeholder="Select workspace" />
@@ -315,7 +330,9 @@ export function EditDealDialog({
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Stage</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Stage
+              </Label>
               <Select value={stage} onValueChange={setStage}>
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -332,7 +349,10 @@ export function EditDealDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="edit-value" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="edit-value"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Value (£)
             </Label>
             <Input
@@ -349,7 +369,10 @@ export function EditDealDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="edit-nextAction" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="edit-nextAction"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Short description / next action
               </Label>
               <Input
@@ -361,7 +384,10 @@ export function EditDealDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-nextActionDate" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="edit-nextActionDate"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Action date
               </Label>
               <Input

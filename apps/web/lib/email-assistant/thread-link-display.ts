@@ -4,7 +4,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import type { EmailThreadLink, EmailThreadSummary } from '~/home/(user)/email/_lib/types';
+import type {
+  EmailThreadLink,
+  EmailThreadSummary,
+} from '~/home/(user)/email/_lib/types';
 
 type LinkRow = {
   id: string;
@@ -17,7 +20,9 @@ type LinkRow = {
 export const EMAIL_THREAD_LINK_SELECT =
   'account_id, client_id, project_id, link_source';
 
-export function mapThreadLinkFields(row: Record<string, unknown>): EmailThreadLink {
+export function mapThreadLinkFields(
+  row: Record<string, unknown>,
+): EmailThreadLink {
   const linkSource = row.link_source;
   const clientId = (row.client_id as string | null) ?? null;
   const projectId = (row.project_id as string | null) ?? null;
@@ -52,16 +57,21 @@ export async function enrichEmailThreadLinks(
   ];
   const projectIds = [
     ...new Set(
-      threads.map((thread) => thread.link.projectId).filter(Boolean) as string[],
+      threads
+        .map((thread) => thread.link.projectId)
+        .filter(Boolean) as string[],
     ),
   ];
   const accountIds = [
     ...new Set(
-      threads.map((thread) => thread.link.accountId).filter(Boolean) as string[],
+      threads
+        .map((thread) => thread.link.accountId)
+        .filter(Boolean) as string[],
     ),
   ];
 
-  const nameClient = getSupabaseServerAdminClient() as unknown as SupabaseClient;
+  const nameClient =
+    getSupabaseServerAdminClient() as unknown as SupabaseClient;
 
   const [clientsResult, projectsResult, accountsResult] = await Promise.all([
     clientIds.length > 0
@@ -82,7 +92,9 @@ export async function enrichEmailThreadLinks(
   for (const row of clientsResult.data ?? []) {
     const displayName = String(row.display_name ?? '').trim();
     const parts = [row.first_name, row.last_name]
-      .filter((value): value is string => Boolean(value && String(value).trim()))
+      .filter((value): value is string =>
+        Boolean(value && String(value).trim()),
+      )
       .map((value) => String(value).trim())
       .join(' ');
     const company = String(row.company_name ?? '').trim();

@@ -19,10 +19,7 @@ export type ClusterJobSummary = {
 };
 
 export const loadClusterJobsForProject = cache(
-  async (
-    projectId: string,
-    userId: string,
-  ): Promise<ClusterJobSummary[]> => {
+  async (projectId: string, userId: string): Promise<ClusterJobSummary[]> => {
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'rankly')
       .from('keyword_cluster_jobs')

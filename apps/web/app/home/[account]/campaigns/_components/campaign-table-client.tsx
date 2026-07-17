@@ -114,7 +114,9 @@ export function CampaignTableClient({
         toast.success('Client added to campaign');
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to add client');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to add client',
+        );
       }
     });
   };
@@ -131,7 +133,9 @@ export function CampaignTableClient({
         toast.success('Client removed from campaign');
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to remove client');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to remove client',
+        );
       }
     });
   };
@@ -140,10 +144,13 @@ export function CampaignTableClient({
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">{project.name}</h1>
+          <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+            {project.name}
+          </h1>
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {project.clientCount} client{project.clientCount === 1 ? '' : 's'} ·{' '}
-            {project.fields.length} column{project.fields.length === 1 ? '' : 's'}
+            {project.fields.length} column
+            {project.fields.length === 1 ? '' : 's'}
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -176,13 +183,13 @@ export function CampaignTableClient({
           <table className="min-w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
-                <th className="sticky left-0 z-10 min-w-[180px] bg-[#0f1729] px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                <th className="sticky left-0 z-10 min-w-[180px] bg-[#0f1729] px-4 py-3 text-left text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   Client
                 </th>
                 {project.fields.map((field) => (
                   <th
                     key={field.id}
-                    className="min-w-[160px] px-3 py-3 text-left text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]"
+                    className="min-w-[160px] px-3 py-3 text-left text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase"
                   >
                     {field.label}
                   </th>
@@ -199,12 +206,16 @@ export function CampaignTableClient({
                     colSpan={project.fields.length + (canEdit ? 2 : 1)}
                     className="px-4 py-10 text-center text-[var(--workspace-shell-text-muted)]"
                   >
-                    No clients in this campaign yet. Add clients to start tracking.
+                    No clients in this campaign yet. Add clients to start
+                    tracking.
                   </td>
                 </tr>
               ) : (
                 project.rows.map((row) => (
-                  <tr key={row.clientId} className="border-b border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]">
+                  <tr
+                    key={row.clientId}
+                    className="border-b border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  >
                     <td className="sticky left-0 z-10 bg-[var(--workspace-shell-panel)] px-4 py-2">
                       <Link
                         href={clientHref(row.clientId)}
@@ -213,7 +224,9 @@ export function CampaignTableClient({
                         {row.displayName}
                       </Link>
                       {row.email ? (
-                        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{row.email}</p>
+                        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                          {row.email}
+                        </p>
                       ) : null}
                     </td>
                     {project.fields.map((field) => (
@@ -224,7 +237,9 @@ export function CampaignTableClient({
                           canEdit={canEdit}
                           accountSlug={accountSlug}
                           linkOptions={linkOptions}
-                          onChange={(value) => saveValue(row.clientId, field.id, value)}
+                          onChange={(value) =>
+                            saveValue(row.clientId, field.id, value)
+                          }
                         />
                       </td>
                     ))}

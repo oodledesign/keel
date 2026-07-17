@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { Layers, Plus } from 'lucide-react';
@@ -15,13 +16,13 @@ import {
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
-import { createCommunityMeetupSeries } from '../_lib/server/community-schedule.actions';
 import type { MeetupSeriesOption } from '../_lib/community-schedule.types';
+import { createCommunityMeetupSeries } from '../_lib/server/community-schedule.actions';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -63,7 +64,9 @@ export function CommunitySeriesPanel({
         setDescription('');
         router.refresh();
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Could not create series');
+        toast.error(
+          err instanceof Error ? err.message : 'Could not create series',
+        );
       }
     });
   }
@@ -72,12 +75,12 @@ export function CommunitySeriesPanel({
     <section className={panelClass}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-5 py-4">
         <div>
-          <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200/80">
+          <h3 className="text-sm font-semibold tracking-wide text-amber-200/80 uppercase">
             Meetup series
           </h3>
           <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/50">
-            Named tracks for recurring home groups (e.g. &quot;Acts study&quot;, &quot;Summer
-            term&quot;).
+            Named tracks for recurring home groups (e.g. &quot;Acts study&quot;,
+            &quot;Summer term&quot;).
           </p>
         </div>
         <Button
@@ -144,7 +147,11 @@ export function CommunitySeriesPanel({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending} className={workspaceBtnPrimaryMd}>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className={workspaceBtnPrimaryMd}
+              >
                 {isPending ? 'Creating…' : 'Create series'}
               </Button>
             </DialogFooter>

@@ -1,13 +1,14 @@
 'use client';
 
 import { useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
@@ -26,8 +27,12 @@ export function RanklyProjectSettingsForm(props: {
   };
 }) {
   const router = useRouter();
-  const [brandName, setBrandName] = useState(props.initial.brief_brand_name ?? '');
-  const [voiceNotes, setVoiceNotes] = useState(props.initial.brief_voice_notes ?? '');
+  const [brandName, setBrandName] = useState(
+    props.initial.brief_brand_name ?? '',
+  );
+  const [voiceNotes, setVoiceNotes] = useState(
+    props.initial.brief_voice_notes ?? '',
+  );
   const [mentionRules, setMentionRules] = useState(
     props.initial.brief_mention_rules ?? '',
   );
@@ -105,7 +110,7 @@ export function RanklyProjectSettingsForm(props: {
         <Label htmlFor="brief-research-depth">Research depth</Label>
         <select
           id="brief-research-depth"
-          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:outline-none focus-visible:ring-2"
+          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex h-10 w-full rounded-md border px-3 py-2 text-sm focus-visible:ring-2 focus-visible:outline-none"
           value={researchDepth}
           onChange={(event) =>
             setResearchDepth(event.target.value as 'standard' | 'deep')

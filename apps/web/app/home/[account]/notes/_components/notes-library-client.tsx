@@ -179,8 +179,9 @@ export function NotesLibraryClient({
 
   function createAndOpenNote() {
     if (!canEdit) return;
-    const folderId =
-      selection.startsWith('folder:') ? selection.slice('folder:'.length) : null;
+    const folderId = selection.startsWith('folder:')
+      ? selection.slice('folder:'.length)
+      : null;
 
     startTransition(async () => {
       try {
@@ -287,9 +288,7 @@ export function NotesLibraryClient({
         });
         setNotes((current) =>
           current.map((item) =>
-            item.id === note.id
-              ? { ...item, isPinned: !item.isPinned }
-              : item,
+            item.id === note.id ? { ...item, isPinned: !item.isPinned } : item,
           ),
         );
       } catch (error) {
@@ -339,7 +338,9 @@ export function NotesLibraryClient({
           folderId: folder.id,
           personalScope,
         });
-        setFolders((current) => current.filter((item) => item.id !== folder.id));
+        setFolders((current) =>
+          current.filter((item) => item.id !== folder.id),
+        );
         setNotes((current) =>
           current.map((note) =>
             note.folderId === folder.id ? { ...note, folderId: null } : note,
@@ -367,7 +368,7 @@ export function NotesLibraryClient({
     <div className="flex min-h-[70vh] flex-col gap-4 lg:flex-row lg:gap-0 lg:overflow-hidden lg:rounded-2xl lg:border lg:border-[color:var(--workspace-shell-border)] lg:bg-[var(--workspace-shell-panel)]">
       <aside className="w-full shrink-0 border-[color:var(--workspace-shell-border)] lg:w-56 lg:border-r xl:w-64">
         <div className="flex items-center justify-between gap-2 px-3 py-3">
-          <p className="text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+          <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Folders
           </p>
           {canEdit && foldersAvailable ? (
@@ -402,11 +403,14 @@ export function NotesLibraryClient({
 
           {folders.length > 0 ? (
             <div className="pt-3">
-              <p className="px-2 pb-1 text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+              <p className="px-2 pb-1 text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 Your folders
               </p>
               {folders.map((folder) => (
-                <div key={folder.id} className="group flex items-center gap-0.5">
+                <div
+                  key={folder.id}
+                  className="group flex items-center gap-0.5"
+                >
                   <SidebarButton
                     active={selection === `folder:${folder.id}`}
                     onClick={() => setSelection(`folder:${folder.id}`)}
@@ -459,7 +463,8 @@ export function NotesLibraryClient({
               size="icon"
               className={cn(
                 'h-8 w-8 rounded-full',
-                layout === 'list' && 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
+                layout === 'list' &&
+                  'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
               )}
               onClick={() => setLayout('list')}
               title="List view"
@@ -472,7 +477,8 @@ export function NotesLibraryClient({
               size="icon"
               className={cn(
                 'h-8 w-8 rounded-full',
-                layout === 'cards' && 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
+                layout === 'cards' &&
+                  'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
               )}
               onClick={() => setLayout('cards')}
               title="Card view"
@@ -602,7 +608,11 @@ export function NotesLibraryClient({
             This cannot be undone.
           </p>
           <DialogFooter className="gap-2">
-            <Button type="button" variant="ghost" onClick={() => setDeleteTarget(null)}>
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={() => setDeleteTarget(null)}
+            >
               Cancel
             </Button>
             <Button
@@ -690,7 +700,10 @@ function NoteActionsMenu({
           <span className="sr-only">Note actions</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" onClick={(event) => event.stopPropagation()}>
+      <DropdownMenuContent
+        align="end"
+        onClick={(event) => event.stopPropagation()}
+      >
         <DropdownMenuItem onClick={onOpen}>Open note</DropdownMenuItem>
         {canEdit ? (
           <>
@@ -836,7 +849,11 @@ function NoteCard({
           onDelete={onDelete}
         />
       </div>
-      <button type="button" className="flex flex-1 flex-col text-left" onClick={onOpen}>
+      <button
+        type="button"
+        className="flex flex-1 flex-col text-left"
+        onClick={onOpen}
+      >
         <div className="flex items-center gap-2 pr-8">
           {note.isPinned ? (
             <Badge

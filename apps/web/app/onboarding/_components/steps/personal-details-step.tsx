@@ -26,12 +26,8 @@ export function PersonalDetailsStep({
   initial,
 }: PersonalDetailsStepProps) {
   const router = useRouter();
-  const [firstName, setFirstName] = useState(
-    initial?.first_name ?? '',
-  );
-  const [lastName, setLastName] = useState(
-    initial?.last_name ?? '',
-  );
+  const [firstName, setFirstName] = useState(initial?.first_name ?? '');
+  const [lastName, setLastName] = useState(initial?.last_name ?? '');
   const [mobile, setMobile] = useState(initial?.mobile ?? '');
   const [loading, setLoading] = useState(false);
 
@@ -73,7 +69,7 @@ export function PersonalDetailsStep({
             type="text"
             value={firstName}
             onChange={(e) => setFirstName(e.target.value)}
-            className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none focus:ring-1 focus:ring-[var(--ozer-accent)]/30"
+            className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:ring-1 focus:ring-[var(--ozer-accent)]/30 focus:outline-none"
             placeholder="eg. John"
           />
         </div>
@@ -89,7 +85,7 @@ export function PersonalDetailsStep({
             type="text"
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
-            className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none focus:ring-1 focus:ring-[var(--ozer-accent)]/30"
+            className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:ring-1 focus:ring-[var(--ozer-accent)]/30 focus:outline-none"
             placeholder="eg. Smith"
           />
         </div>
@@ -107,7 +103,7 @@ export function PersonalDetailsStep({
           type="tel"
           value={mobile}
           onChange={(e) => setMobile(e.target.value)}
-          className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none focus:ring-1 focus:ring-[var(--ozer-accent)]/30"
+          className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:ring-1 focus:ring-[var(--ozer-accent)]/30 focus:outline-none"
           placeholder="+44 7700 900000"
         />
       </div>

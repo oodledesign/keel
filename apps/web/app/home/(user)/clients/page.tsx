@@ -10,16 +10,15 @@ import { Trans } from '@kit/ui/trans';
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { ClientsPageContent } from '../../[account]/clients/_components/clients-page-content';
-import { loadClientsPageData } from '../../[account]/clients/_lib/server/clients-page.loader';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../[account]/_lib/role-access';
 import { loadTeamWorkspace } from '../../[account]/_lib/server/team-account-workspace.loader';
+import { ClientsPageContent } from '../../[account]/clients/_components/clients-page-content';
+import { loadClientsPageData } from '../../[account]/clients/_lib/server/clients-page.loader';
 import { HomeAddAccountButton } from '../_components/home-add-account-button';
 import { loadUserWorkspace } from '../_lib/server/load-user-workspace';
-
 import { PersonalClientsAccountPicker } from './_components/personal-clients-account-picker';
 
 type Props = { searchParams: Promise<{ account?: string }> };
@@ -46,7 +45,10 @@ async function PersonalClientsPage({ searchParams }: Props) {
             <Trans i18nKey="account:clientsNeedTeam" />
           </p>
           <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
-            <Button asChild className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]">
+            <Button
+              asChild
+              className="bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
+            >
               <Link href={pathsConfig.app.home}>
                 <Trans i18nKey="account:goToHome" />
               </Link>
@@ -70,9 +72,7 @@ async function PersonalClientsPage({ searchParams }: Props) {
 
   const slugIsMember = accounts.some((a) => a.value === slug);
   if (!slugIsMember && accounts[0]?.value) {
-    redirect(
-      `/app/clients?account=${encodeURIComponent(accounts[0].value)}`,
-    );
+    redirect(`/app/clients?account=${encodeURIComponent(accounts[0].value)}`);
   }
 
   const workspace = await loadTeamWorkspace(slug);
@@ -86,7 +86,10 @@ async function PersonalClientsPage({ searchParams }: Props) {
 
   if (!access.canViewClients) {
     redirect(
-      getDefaultAccountPath(slug, workspace.account as Parameters<typeof getDefaultAccountPath>[1]),
+      getDefaultAccountPath(
+        slug,
+        workspace.account as Parameters<typeof getDefaultAccountPath>[1],
+      ),
     );
   }
 
@@ -109,9 +112,11 @@ async function PersonalClientsPage({ searchParams }: Props) {
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
               Pick the workspace (team) these people belong to, then use{' '}
-              <span className="text-[var(--workspace-shell-text-muted)]">Add Client</span>. Each client is
-              stored under that workspace—the same one you use for jobs and
-              billing.
+              <span className="text-[var(--workspace-shell-text-muted)]">
+                Add Client
+              </span>
+              . Each client is stored under that workspace—the same one you use
+              for jobs and billing.
             </p>
           </div>
           <PersonalClientsAccountPicker

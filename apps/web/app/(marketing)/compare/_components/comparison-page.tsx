@@ -1,14 +1,16 @@
 import Link from 'next/link';
 
 import { Button } from '@kit/ui/button';
+import { cn } from '@kit/ui/utils';
 
+import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
+import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 import {
+  SourcedText,
   formatGbp,
   formatGbpYear,
-  SourcedText,
 } from '~/lib/marketing/compare/sourced';
 import type { ComparisonConfig } from '~/lib/marketing/compare/types';
-import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -18,8 +20,6 @@ import {
   marketingMutedText,
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
-import { cn } from '@kit/ui/utils';
-import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 
 type ComparisonPageProps = {
   config: ComparisonConfig;
@@ -30,14 +30,15 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
 
   return (
     <main className={cn('relative overflow-hidden', marketingShellClass)}>
-      <article className="relative mx-auto w-full max-w-3xl px-6 pb-20 pt-24 md:pt-28">
+      <article className="relative mx-auto w-full max-w-3xl px-6 pt-24 pb-20 md:pt-28">
         <span className={marketingEyebrow}>Compare</span>
-        <h1 className="font-heading mt-4 text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl">
+        <h1 className="font-heading mt-4 text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl">
           {competitorName} alternatives (2026)
         </h1>
         <p className={cn('mt-4 text-lg leading-relaxed', marketingBodyText)}>
-          Honest UK comparison of {competitorName} and Ozer for a four-person studio.
-          Text names only — no logos, no scorecards designed to crown a winner.
+          Honest UK comparison of {competitorName} and Ozer for a four-person
+          studio. Text names only — no logos, no scorecards designed to crown a
+          winner.
         </p>
 
         {/* a. In brief */}
@@ -48,7 +49,12 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
           >
             In brief
           </h2>
-          <ol className={cn('mt-4 list-decimal space-y-2 pl-5', marketingBodyText)}>
+          <ol
+            className={cn(
+              'mt-4 list-decimal space-y-2 pl-5',
+              marketingBodyText,
+            )}
+          >
             {config.inBrief.map((sentence) => (
               <li key={sentence}>{sentence}</li>
             ))}
@@ -95,10 +101,14 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
                     >
                       {row.label}
                     </th>
-                    <td className={cn('px-4 py-3 align-top', marketingMutedText)}>
+                    <td
+                      className={cn('px-4 py-3 align-top', marketingMutedText)}
+                    >
                       <SourcedText sourced={row.competitor} />
                     </td>
-                    <td className={cn('px-4 py-3 align-top', marketingMutedText)}>
+                    <td
+                      className={cn('px-4 py-3 align-top', marketingMutedText)}
+                    >
                       <SourcedText sourced={row.ozer} />
                     </td>
                   </tr>
@@ -190,7 +200,12 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
             </div>
           </div>
 
-          <ul className={cn('mt-4 list-disc space-y-1 pl-5 text-xs', marketingMutedText)}>
+          <ul
+            className={cn(
+              'mt-4 list-disc space-y-1 pl-5 text-xs',
+              marketingMutedText,
+            )}
+          >
             {config.pricingMaths.footnotes.map((note) => (
               <li key={note.text}>
                 {note.text}{' '}
@@ -203,7 +218,7 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
                   Source
                 </a>
                 {!note.verified && process.env.NODE_ENV === 'development' ? (
-                  <span className="ml-1 rounded bg-amber-200 px-1 py-0.5 text-[10px] font-semibold uppercase text-amber-950">
+                  <span className="ml-1 rounded bg-amber-200 px-1 py-0.5 text-[10px] font-semibold text-amber-950 uppercase">
                     verify me
                   </span>
                 ) : null}
@@ -220,7 +235,9 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
           >
             Choose {competitorShortName} if…
           </h2>
-          <ul className={cn('mt-4 list-disc space-y-2 pl-5', marketingBodyText)}>
+          <ul
+            className={cn('mt-4 list-disc space-y-2 pl-5', marketingBodyText)}
+          >
             {config.chooseCompetitorIf.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -235,7 +252,9 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
           >
             Choose Ozer if…
           </h2>
-          <ul className={cn('mt-4 list-disc space-y-2 pl-5', marketingBodyText)}>
+          <ul
+            className={cn('mt-4 list-disc space-y-2 pl-5', marketingBodyText)}
+          >
             {config.chooseOzerIf.map((item) => (
               <li key={item}>{item}</li>
             ))}
@@ -260,7 +279,9 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
           >
             Moving to Ozer
           </h2>
-          <p className={cn('mt-3', marketingBodyText)}>{config.migrationNote}</p>
+          <p className={cn('mt-3', marketingBodyText)}>
+            {config.migrationNote}
+          </p>
         </section>
 
         <section className="mt-14" aria-labelledby="related-heading">
@@ -287,16 +308,38 @@ export function ComparisonPage({ config }: ComparisonPageProps) {
           <Button asChild size="lg" className={marketingBtnGradient}>
             <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
           </Button>
-          <Button asChild size="lg" variant="outline" className={marketingBtnOutline}>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className={marketingBtnOutline}
+          >
             <Link href="/pricing">See pricing</Link>
           </Button>
-          <Button asChild size="lg" variant="outline" className={marketingBtnOutline}>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className={marketingBtnOutline}
+          >
             <Link href="/pricing/explained">Ozer pricing, explained</Link>
           </Button>
-          <Button asChild size="lg" variant="outline" className={marketingBtnOutline}>
-            <Link href="/tools/stack-cost-calculator">Stack cost calculator</Link>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className={marketingBtnOutline}
+          >
+            <Link href="/tools/stack-cost-calculator">
+              Stack cost calculator
+            </Link>
           </Button>
-          <Button asChild size="lg" variant="outline" className={marketingBtnOutline}>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className={marketingBtnOutline}
+          >
             <Link href="/compare">All comparisons</Link>
           </Button>
         </div>

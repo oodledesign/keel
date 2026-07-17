@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 
-import { ClipboardList, LayoutGrid } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+
+import { ClipboardList, LayoutGrid } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -23,21 +24,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
-import {
-  workspaceSelectContentClass,
-  workspaceSelectItemClass,
-} from '~/lib/workspace-ui';
+import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { WEBSITE_REVAMP_CAMPAIGN_FIELDS } from '~/lib/campaign-projects/website-revamp-template';
 import {
   PROJECT_TYPE_META,
   type ProjectType,
 } from '~/lib/projects/project-types';
-import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import {
+  workspaceSelectContentClass,
+  workspaceSelectItemClass,
+} from '~/lib/workspace-ui';
 
 import { createCampaignProject } from '../_lib/campaign/server/server-actions';
 import { getErrorMessage } from '../_lib/error-message';
@@ -80,13 +81,13 @@ export function CreateProjectDialog({
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
   const [valuePence, setValuePence] = useState('');
-  const [campaignTemplate, setCampaignTemplate] = useState<'blank' | 'website_revamp'>(
-    'blank',
-  );
+  const [campaignTemplate, setCampaignTemplate] = useState<
+    'blank' | 'website_revamp'
+  >('blank');
   const [submitting, setSubmitting] = useState(false);
-  const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>(
-    [],
-  );
+  const [clients, setClients] = useState<
+    { id: string; display_name: string | null }[]
+  >([]);
   const [clientsLoading, setClientsLoading] = useState(false);
 
   const resetForm = () => {
@@ -118,7 +119,9 @@ export function CreateProjectDialog({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setClients((list || []) as { id: string; display_name: string | null }[]);
+        setClients(
+          (list || []) as { id: string; display_name: string | null }[],
+        );
       })
       .catch(() => setClients([]))
       .finally(() => setClientsLoading(false));
@@ -130,7 +133,8 @@ export function CreateProjectDialog({
   };
 
   const projectDetailPath = (id: string) =>
-    pathsConfig.app.accountProjects.replace('[account]', accountSlug) + `/${id}`;
+    pathsConfig.app.accountProjects.replace('[account]', accountSlug) +
+    `/${id}`;
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -169,9 +173,13 @@ export function CreateProjectDialog({
           | 'cancelled',
         priority: priority as 'low' | 'medium' | 'high' | 'urgent',
         due_date: dueDate ? new Date(dueDate) : undefined,
-        value_pence: valuePence ? Math.round(parseFloat(valuePence) * 100) : undefined,
+        value_pence: valuePence
+          ? Math.round(parseFloat(valuePence) * 100)
+          : undefined,
       });
-      toast.success(isMaintenance ? 'Maintenance job created' : 'Project created');
+      toast.success(
+        isMaintenance ? 'Maintenance job created' : 'Project created',
+      );
       handleOpenChange(false);
       onSuccess();
     } catch (err) {
@@ -181,7 +189,9 @@ export function CreateProjectDialog({
     }
   };
 
-  const dialogTitle = isMaintenance ? 'Create maintenance job' : 'Create project';
+  const dialogTitle = isMaintenance
+    ? 'Create maintenance job'
+    : 'Create project';
   const dialogDescription = isMaintenance
     ? 'Track phased maintenance work for a client with tasks and timeline.'
     : 'Choose a delivery project or a multi-client campaign tracker, then fill in the details.';
@@ -209,7 +219,9 @@ export function CreateProjectDialog({
         <form onSubmit={handleSubmit} className="space-y-5">
           {!isMaintenance ? (
             <div className="space-y-2">
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Project type</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Project type
+              </Label>
               <div className="grid grid-cols-2 gap-2">
                 {(['delivery', 'campaign'] as const).map((type) => {
                   const meta = PROJECT_TYPE_META[type];
@@ -236,9 +248,14 @@ export function CreateProjectDialog({
                             : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
                         )}
                       >
-                        <Icon className="h-5 w-5" strokeWidth={selected ? 2.25 : 2} />
+                        <Icon
+                          className="h-5 w-5"
+                          strokeWidth={selected ? 2.25 : 2}
+                        />
                       </div>
-                      <span className="text-sm font-medium text-[var(--workspace-shell-text)]">{meta.label}</span>
+                      <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {meta.label}
+                      </span>
                       <span className="mt-0.5 text-[11px] leading-snug text-[var(--workspace-shell-text-muted)]">
                         {meta.shortLabel === 'Delivery'
                           ? 'Phases, tasks & timeline'
@@ -255,7 +272,10 @@ export function CreateProjectDialog({
           ) : null}
 
           <div>
-            <Label htmlFor="project-name" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="project-name"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               {projectType === 'campaign' ? 'Campaign name' : 'Project name'} *
             </Label>
             <Input
@@ -275,7 +295,9 @@ export function CreateProjectDialog({
           {projectType === 'delivery' ? (
             <>
               <div>
-                <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Client
+                </Label>
                 <div className="mt-1">
                   <ClientCombobox
                     clients={clients}
@@ -292,7 +314,10 @@ export function CreateProjectDialog({
               </div>
 
               <div>
-                <Label htmlFor="description" className="text-[var(--workspace-shell-text-muted)]">
+                <Label
+                  htmlFor="description"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
                   Description
                 </Label>
                 <Textarea
@@ -307,31 +332,80 @@ export function CreateProjectDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Status</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Status
+                  </Label>
                   <Select value={status} onValueChange={setStatus}>
                     <SelectTrigger className={fieldClass}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className={workspaceSelectContentClass}>
-                      <SelectItem value="pending" className={workspaceSelectItemClass}>Pending</SelectItem>
-                      <SelectItem value="in_progress" className={workspaceSelectItemClass}>In progress</SelectItem>
-                      <SelectItem value="on_hold" className={workspaceSelectItemClass}>On hold</SelectItem>
-                      <SelectItem value="completed" className={workspaceSelectItemClass}>Completed</SelectItem>
-                      <SelectItem value="cancelled" className={workspaceSelectItemClass}>Cancelled</SelectItem>
+                      <SelectItem
+                        value="pending"
+                        className={workspaceSelectItemClass}
+                      >
+                        Pending
+                      </SelectItem>
+                      <SelectItem
+                        value="in_progress"
+                        className={workspaceSelectItemClass}
+                      >
+                        In progress
+                      </SelectItem>
+                      <SelectItem
+                        value="on_hold"
+                        className={workspaceSelectItemClass}
+                      >
+                        On hold
+                      </SelectItem>
+                      <SelectItem
+                        value="completed"
+                        className={workspaceSelectItemClass}
+                      >
+                        Completed
+                      </SelectItem>
+                      <SelectItem
+                        value="cancelled"
+                        className={workspaceSelectItemClass}
+                      >
+                        Cancelled
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
                 <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Priority
+                  </Label>
                   <Select value={priority} onValueChange={setPriority}>
                     <SelectTrigger className={fieldClass}>
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent className={workspaceSelectContentClass}>
-                      <SelectItem value="low" className={workspaceSelectItemClass}>Low</SelectItem>
-                      <SelectItem value="medium" className={workspaceSelectItemClass}>Medium</SelectItem>
-                      <SelectItem value="high" className={workspaceSelectItemClass}>High</SelectItem>
-                      <SelectItem value="urgent" className={workspaceSelectItemClass}>Urgent</SelectItem>
+                      <SelectItem
+                        value="low"
+                        className={workspaceSelectItemClass}
+                      >
+                        Low
+                      </SelectItem>
+                      <SelectItem
+                        value="medium"
+                        className={workspaceSelectItemClass}
+                      >
+                        Medium
+                      </SelectItem>
+                      <SelectItem
+                        value="high"
+                        className={workspaceSelectItemClass}
+                      >
+                        High
+                      </SelectItem>
+                      <SelectItem
+                        value="urgent"
+                        className={workspaceSelectItemClass}
+                      >
+                        Urgent
+                      </SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -339,7 +413,10 @@ export function CreateProjectDialog({
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label htmlFor="due_date" className="text-[var(--workspace-shell-text-muted)]">
+                  <Label
+                    htmlFor="due_date"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
                     Due date
                   </Label>
                   <Input
@@ -351,7 +428,10 @@ export function CreateProjectDialog({
                   />
                 </div>
                 <div>
-                  <Label htmlFor="value" className="text-[var(--workspace-shell-text-muted)]">
+                  <Label
+                    htmlFor="value"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
                     Value (£)
                   </Label>
                   <Input
@@ -370,7 +450,9 @@ export function CreateProjectDialog({
           ) : (
             <>
               <div>
-                <Label className="text-[var(--workspace-shell-text-muted)]">Starting template</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Starting template
+                </Label>
                 <Select
                   value={campaignTemplate}
                   onValueChange={(value) =>
@@ -381,10 +463,16 @@ export function CreateProjectDialog({
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent className={workspaceSelectContentClass}>
-                    <SelectItem value="blank" className={workspaceSelectItemClass}>
+                    <SelectItem
+                      value="blank"
+                      className={workspaceSelectItemClass}
+                    >
                       Blank — add your own columns later
                     </SelectItem>
-                    <SelectItem value="website_revamp" className={workspaceSelectItemClass}>
+                    <SelectItem
+                      value="website_revamp"
+                      className={workspaceSelectItemClass}
+                    >
                       Website revamp — outreach & pricing columns
                     </SelectItem>
                   </SelectContent>
@@ -407,14 +495,14 @@ export function CreateProjectDialog({
                     ))}
                   </ul>
                   <p className="mt-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
-                    You can add, reorder, or remove columns after creation from the
-                    campaign board.
+                    You can add, reorder, or remove columns after creation from
+                    the campaign board.
                   </p>
                 </div>
               ) : (
                 <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  Start with an empty tracker. Add text, status, URL, currency, and
-                  other column types from the campaign view.
+                  Start with an empty tracker. Add text, status, URL, currency,
+                  and other column types from the campaign view.
                 </p>
               )}
             </>

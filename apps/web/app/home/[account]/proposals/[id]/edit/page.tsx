@@ -34,8 +34,12 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
     notFound();
   }
 
-  const { accountId, canViewProposals, canEditProposals, canManageProposalStatus } =
-    await loadProposalsPageData(accountSlug);
+  const {
+    accountId,
+    canViewProposals,
+    canEditProposals,
+    canManageProposalStatus,
+  } = await loadProposalsPageData(accountSlug);
 
   if (!id) notFound();
   if (!canViewProposals) notFound();
@@ -49,7 +53,8 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
   if (!proposal) notFound();
 
   const brand = await loadAccountBrandResolved(accountId);
-  const title = (proposal as { title?: string | null }).title?.trim() || 'Proposal';
+  const title =
+    (proposal as { title?: string | null }).title?.trim() || 'Proposal';
 
   return (
     <>

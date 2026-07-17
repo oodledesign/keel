@@ -4,14 +4,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { loadWorkspaceMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
-import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
+import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 
 import { loadWorkNavCounts } from './work-nav-counts.loader';
 
 export type TeamWorkspaceShellAdornments = {
   navCounts: WorkNavCounts;
-  mobileNavShortcuts: Awaited<ReturnType<typeof loadWorkspaceMobileNavShortcuts>>;
+  mobileNavShortcuts: Awaited<
+    ReturnType<typeof loadWorkspaceMobileNavShortcuts>
+  >;
   focusSettingsByAccountId: ReturnType<typeof serializeWorkspaceFocusMap>;
 };
 

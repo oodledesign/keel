@@ -8,14 +8,17 @@ import {
 describe('isTransientSupabaseError', () => {
   it('detects AuthRetryableFetchError', () => {
     expect(
-      isTransientSupabaseError({ name: 'AuthRetryableFetchError', status: 504 }),
+      isTransientSupabaseError({
+        name: 'AuthRetryableFetchError',
+        status: 504,
+      }),
     ).toBe(true);
   });
 
   it('detects statement timeout codes', () => {
-    expect(isTransientSupabaseError({ code: '57014', message: 'timeout' })).toBe(
-      true,
-    );
+    expect(
+      isTransientSupabaseError({ code: '57014', message: 'timeout' }),
+    ).toBe(true);
   });
 
   it('ignores invalid token errors', () => {

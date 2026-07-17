@@ -17,7 +17,9 @@ export async function GET() {
 export async function POST(request: Request) {
   await requireSuperAdmin();
 
-  const body = (await request.json().catch(() => null)) as { to?: string } | null;
+  const body = (await request.json().catch(() => null)) as {
+    to?: string;
+  } | null;
   const to = body?.to?.trim();
 
   if (!to) {

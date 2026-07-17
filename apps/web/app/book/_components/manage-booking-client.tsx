@@ -15,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import {
   formatBookingWhenForEmail,
@@ -253,12 +253,7 @@ export function ManageBookingClient({ booking: initial, durations }: Props) {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
-                {[
-                  inviteeTimezone,
-                  'Europe/London',
-                  'America/New_York',
-                  'UTC',
-                ]
+                {[inviteeTimezone, 'Europe/London', 'America/New_York', 'UTC']
                   .filter((tz, index, all) => all.indexOf(tz) === index)
                   .map((tz) => (
                     <SelectItem key={tz} value={tz}>
@@ -343,7 +338,10 @@ export function ManageBookingClient({ booking: initial, durations }: Props) {
       ) : null}
 
       <p className="text-sm text-[color:var(--ozer-text-muted,#6B5B63)]">
-        <Link href={`/book/${booking.pageSlug}`} className="underline-offset-2 hover:underline">
+        <Link
+          href={`/book/${booking.pageSlug}`}
+          className="underline-offset-2 hover:underline"
+        >
           Back to booking page
         </Link>
       </p>

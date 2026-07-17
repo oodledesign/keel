@@ -1,13 +1,14 @@
 'use client';
 
 import { useTransition } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { createPlatformSupportTicketAction } from '~/lib/support/platform-support.actions';
 
@@ -40,7 +41,9 @@ export function PlatformSupportTicketForm(props: {
               router.push(`/app/support/${result.id}`);
             }
           } catch (err) {
-            toast.error(err instanceof Error ? err.message : 'Could not submit');
+            toast.error(
+              err instanceof Error ? err.message : 'Could not submit',
+            );
           }
         });
       }}

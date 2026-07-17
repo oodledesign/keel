@@ -1,11 +1,11 @@
 import 'server-only';
 
+import {
+  type FreeAgentCategoryRecord,
+  flattenFreeAgentCategoriesResponse,
+} from './categories';
 import { getFreeAgentEnv } from './env';
 import { refreshFreeAgentToken } from './oauth';
-import {
-  flattenFreeAgentCategoriesResponse,
-  type FreeAgentCategoryRecord,
-} from './categories';
 
 type FreeAgentList<T> = Record<string, T[]>;
 
@@ -72,9 +72,10 @@ export class FreeAgentClient {
   }
 
   async listBankAccounts() {
-    const data = await this.request<FreeAgentList<Record<string, unknown>>>(
-      '/bank_accounts',
-    );
+    const data =
+      await this.request<FreeAgentList<Record<string, unknown>>>(
+        '/bank_accounts',
+      );
     return data.bank_accounts ?? [];
   }
 
@@ -134,10 +135,12 @@ export class FreeAgentClient {
   }
 
   async createTransactionExplanation(body: Record<string, unknown>) {
-    return this.request<{ bank_transaction_explanation: Record<string, unknown> }>(
-      '/bank_transaction_explanations',
-      { method: 'POST', body: JSON.stringify({ bank_transaction_explanation: body }) },
-    );
+    return this.request<{
+      bank_transaction_explanation: Record<string, unknown>;
+    }>('/bank_transaction_explanations', {
+      method: 'POST',
+      body: JSON.stringify({ bank_transaction_explanation: body }),
+    });
   }
 
   async updateTransactionExplanation(
@@ -145,20 +148,26 @@ export class FreeAgentClient {
     body: Record<string, unknown>,
   ) {
     const path = explanationUrl.replace(getFreeAgentEnv().apiBase, '');
-    return this.request<{ bank_transaction_explanation: Record<string, unknown> }>(
-      path,
-      { method: 'PUT', body: JSON.stringify({ bank_transaction_explanation: body }) },
-    );
+    return this.request<{
+      bank_transaction_explanation: Record<string, unknown>;
+    }>(path, {
+      method: 'PUT',
+      body: JSON.stringify({ bank_transaction_explanation: body }),
+    });
   }
 }
 
-export function parseFreeAgentId(url: string | null | undefined): string | null {
+export function parseFreeAgentId(
+  url: string | null | undefined,
+): string | null {
   if (!url) return null;
   const parts = url.split('/').filter(Boolean);
   return parts[parts.length - 1] ?? null;
 }
 
-export function poundsToPence(value: string | number | null | undefined): number {
+export function poundsToPence(
+  value: string | number | null | undefined,
+): number {
   const n = typeof value === 'string' ? parseFloat(value) : Number(value ?? 0);
   if (!Number.isFinite(n)) return 0;
   return Math.round(n * 100);

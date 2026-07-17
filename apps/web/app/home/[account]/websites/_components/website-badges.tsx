@@ -1,4 +1,7 @@
-import type { WebsiteStack, WebsiteStatus } from '../_lib/schema/websites.schema';
+import type {
+  WebsiteStack,
+  WebsiteStatus,
+} from '../_lib/schema/websites.schema';
 
 export const websiteStatusStyles: Record<
   WebsiteStatus,

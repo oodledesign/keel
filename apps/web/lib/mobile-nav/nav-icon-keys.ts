@@ -1,9 +1,10 @@
+import { isReservedWorkspaceUrlSegment } from '@kit/shared/workspace-url';
+
 import pathsConfig from '~/config/paths.config';
 import {
   navHrefPathname,
   normalizeAppHref,
 } from '~/lib/dashboard-shortcuts/personal-home-url';
-import { isReservedWorkspaceUrlSegment } from '@kit/shared/workspace-url';
 
 /** Serializable icon keys for mobile bottom nav (resolved client-side). */
 export type MobileNavIconKey =
@@ -144,7 +145,9 @@ type WorkspaceRouteParts = {
 };
 
 /** Parse `/app/{slug}/…` and legacy `/app/work/{slug}/…` workspace module paths. */
-function parseWorkspaceRouteParts(normalized: string): WorkspaceRouteParts | null {
+function parseWorkspaceRouteParts(
+  normalized: string,
+): WorkspaceRouteParts | null {
   const parts = normalized.split('/').filter(Boolean);
   if (parts[0] !== 'app') return null;
 

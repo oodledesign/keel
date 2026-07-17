@@ -49,9 +49,12 @@ export function LinkToSelect({
       <SelectContent>
         <SelectItem value="__none__">None</SelectItem>
         {options.map((opt) => (
-          <SelectItem key={`${opt.type}:${opt.id}`} value={`${opt.type}:${opt.id}`}>
+          <SelectItem
+            key={`${opt.type}:${opt.id}`}
+            value={`${opt.type}:${opt.id}`}
+          >
             {opt.label}
-            <span className="ml-2 text-xs text-muted-foreground capitalize">
+            <span className="text-muted-foreground ml-2 text-xs capitalize">
               ({opt.type === 'job' ? 'project' : opt.type})
             </span>
           </SelectItem>

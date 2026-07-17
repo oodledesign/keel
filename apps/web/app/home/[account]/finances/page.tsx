@@ -1,4 +1,5 @@
 import { Suspense } from 'react';
+
 import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
@@ -6,19 +7,22 @@ import { PageBody } from '@kit/ui/page';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
+import {
+  isPropertyNavModuleEnabled,
+  isWorkNavModuleEnabled,
+} from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../_lib/server/workspace-route-guard';
-import {
-  isPropertyNavModuleEnabled,
-  isWorkNavModuleEnabled,
-} from '../_lib/server/account-modules';
 import { spaceTypeFromProfile } from '../_lib/workspace-profile';
-import { FinancesPageContent } from './_components/finances-page-content';
 import { FinancesDashboardSkeleton } from './_components/finances-dashboard-skeleton';
+import { FinancesPageContent } from './_components/finances-page-content';
 
 interface FinancesPageProps {
   params: Promise<{ account: string }>;
@@ -31,11 +35,7 @@ export const generateMetadata = async () => ({
 async function FinancesPage({ params }: FinancesPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(
-    workspace,
-    accountSlug,
-    BUSINESS_WORKSPACE_SPACE_TYPES,
-  );
+  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
 
   const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
 
@@ -67,7 +67,10 @@ async function FinancesPage({ params }: FinancesPageProps) {
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)]">
         <Suspense fallback={<FinancesDashboardSkeleton />}>
-          <FinancesPageContent accountId={accountId} accountSlug={accountSlug} />
+          <FinancesPageContent
+            accountId={accountId}
+            accountSlug={accountSlug}
+          />
         </Suspense>
       </PageBody>
     </>

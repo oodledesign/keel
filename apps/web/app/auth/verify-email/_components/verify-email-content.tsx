@@ -49,7 +49,10 @@ export function VerifyEmailContent({ email }: { email: string | null }) {
       <Alert variant="default">
         <MailCheck className="h-4 w-4" />
         <AlertTitle>
-          <Trans i18nKey="auth:verifyEmailHeading" defaults="Verify your email" />
+          <Trans
+            i18nKey="auth:verifyEmailHeading"
+            defaults="Verify your email"
+          />
         </AlertTitle>
         <AlertDescription className="space-y-2">
           <p>
@@ -59,7 +62,9 @@ export function VerifyEmailContent({ email }: { email: string | null }) {
             />
           </p>
           {email ? (
-            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">{email}</p>
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              {email}
+            </p>
           ) : null}
         </AlertDescription>
       </Alert>
@@ -74,7 +79,10 @@ export function VerifyEmailContent({ email }: { email: string | null }) {
           {sent ? (
             <Trans i18nKey="auth:verificationEmailSent" defaults="Email sent" />
           ) : (
-            <Trans i18nKey="auth:resendVerificationEmail" defaults="Resend verification email" />
+            <Trans
+              i18nKey="auth:resendVerificationEmail"
+              defaults="Resend verification email"
+            />
           )}
         </Button>
 

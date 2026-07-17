@@ -1,6 +1,6 @@
 import { getBlogPosts } from '~/lib/blog';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { blogJsonLd, breadcrumbJsonLd, schemaGraph } from '~/lib/seo/schema';
 
 import { SitePageHeader } from '../_components/site-page-header';
@@ -47,7 +47,11 @@ export default async function BlogPage() {
         ) : (
           <div className="mx-auto grid w-full max-w-6xl gap-8 md:grid-cols-2 xl:grid-cols-3">
             {posts.map((post, index) => (
-              <BlogPostCard key={post.id} post={post} preloadImage={index < 3} />
+              <BlogPostCard
+                key={post.id}
+                post={post}
+                preloadImage={index < 3}
+              />
             ))}
           </div>
         )}

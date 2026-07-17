@@ -17,7 +17,7 @@ export function UpdateAccountDetailsFormContainer({
 
   const firstName =
     settings?.first_name ??
-    (user.name ? user.name.split(/\s+/)[0] ?? '' : '') ??
+    (user.name ? (user.name.split(/\s+/)[0] ?? '') : '') ??
     '';
   const lastName =
     settings?.last_name ??

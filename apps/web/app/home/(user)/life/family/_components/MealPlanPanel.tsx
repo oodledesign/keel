@@ -4,13 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import {
-  ChevronLeft,
-  ChevronRight,
-  Sparkles,
-  Wand2,
-  X,
-} from 'lucide-react';
+import { ChevronLeft, ChevronRight, Sparkles, Wand2, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -18,21 +12,21 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { clearMealEntryAction, setMealEntryAction } from '../_lib/actions';
-import {
-  addDays,
-  monthCalendarGrid,
-  monthLabel,
-  shiftMonth,
-  toYmd,
-  weekdayLabel,
-  mealPlanUrl,
-} from '../_lib/server/family-meal.dates';
 import type {
   MealEntryRow,
   MealPlanView,
   MealPreferencesRow,
   RecipeRow,
 } from '../_lib/schema/family-meal.schema';
+import {
+  addDays,
+  mealPlanUrl,
+  monthCalendarGrid,
+  monthLabel,
+  shiftMonth,
+  toYmd,
+  weekdayLabel,
+} from '../_lib/server/family-meal.dates';
 import { MealDayEditDialog } from './MealDayEditDialog';
 import { MealPlanGenerateDialog } from './MealPlanGenerateDialog';
 import { ACCENT, panelClass, titleCase } from './meal-ui';
@@ -211,7 +205,9 @@ export function MealPlanPanel({
 
   function openGenerator(mode: 'generate' | 'fill') {
     if (mode === 'fill' && emptyDates.length === 0) {
-      toast.info('Every day already has a meal — try "Generate plan" to replace.');
+      toast.info(
+        'Every day already has a meal — try "Generate plan" to replace.',
+      );
       return;
     }
     setGenerateDialog({ open: true, mode });
@@ -264,7 +260,9 @@ export function MealPlanPanel({
               <ChevronLeft className="h-4 w-4" />
             </Button>
             <div className="min-w-[140px] text-center">
-              <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{periodTitle}</p>
+              <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                {periodTitle}
+              </p>
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {filledCount}/{planDates.length} planned
               </p>
@@ -303,11 +301,13 @@ export function MealPlanPanel({
 
       {hasDietary || hasPriorities ? (
         <div className="flex flex-wrap items-center gap-1.5 text-xs">
-          <span className="text-[var(--workspace-shell-text-muted)]">Planning for:</span>
+          <span className="text-[var(--workspace-shell-text-muted)]">
+            Planning for:
+          </span>
           {preferences.dietary_requirements.map((d) => (
             <span
               key={`d-${d}`}
-              className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 capitalize text-emerald-200"
+              className="rounded-full border border-emerald-400/20 bg-emerald-400/10 px-2 py-0.5 text-emerald-200 capitalize"
             >
               {d}
             </span>
@@ -323,8 +323,8 @@ export function MealPlanPanel({
         </div>
       ) : (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          Tip: set dietary requirements and preferences in the Preferences tab to
-          tailor the generator.
+          Tip: set dietary requirements and preferences in the Preferences tab
+          to tailor the generator.
         </p>
       )}
 
@@ -334,7 +334,7 @@ export function MealPlanPanel({
             {WEEKDAY_HEADERS.map((label) => (
               <div
                 key={label}
-                className="py-1 text-center text-[11px] font-medium uppercase text-[var(--workspace-shell-text-muted)]"
+                className="py-1 text-center text-[11px] font-medium text-[var(--workspace-shell-text-muted)] uppercase"
               >
                 {label}
               </div>
@@ -355,23 +355,29 @@ export function MealPlanPanel({
                     cell.inMonth
                       ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]'
                       : 'border-transparent bg-transparent opacity-30',
-                    isToday && cell.inMonth && 'border-[#FFE3DA]/30 bg-[#FFE3DA]/5',
+                    isToday &&
+                      cell.inMonth &&
+                      'border-[#FFE3DA]/30 bg-[#FFE3DA]/5',
                   )}
                 >
                   <span
                     className={cn(
                       'text-[11px] font-semibold sm:text-xs',
-                      isToday ? 'text-[var(--ozer-accent-muted)]' : 'text-[var(--workspace-shell-text-muted)]',
+                      isToday
+                        ? 'text-[var(--ozer-accent-muted)]'
+                        : 'text-[var(--workspace-shell-text-muted)]',
                     )}
                   >
                     {Number(cell.date.slice(8, 10))}
                   </span>
                   {cell.inMonth && entry?.title ? (
-                    <span className="mt-1 line-clamp-2 text-[10px] font-medium leading-tight text-[var(--workspace-shell-text)] sm:text-xs">
+                    <span className="mt-1 line-clamp-2 text-[10px] leading-tight font-medium text-[var(--workspace-shell-text)] sm:text-xs">
                       {entry.title}
                     </span>
                   ) : cell.inMonth ? (
-                    <span className="mt-1 text-[10px] text-[var(--workspace-shell-text-muted)]">+</span>
+                    <span className="mt-1 text-[10px] text-[var(--workspace-shell-text-muted)]">
+                      +
+                    </span>
                   ) : null}
                 </button>
               );
@@ -395,7 +401,9 @@ export function MealPlanPanel({
                     <p
                       className={cn(
                         'text-xs font-semibold uppercase',
-                        isToday ? 'text-[var(--ozer-accent-muted)]' : 'text-[var(--workspace-shell-text-muted)]',
+                        isToday
+                          ? 'text-[var(--ozer-accent-muted)]'
+                          : 'text-[var(--workspace-shell-text-muted)]',
                       )}
                     >
                       {weekdayLabel(date).slice(0, 3)}
@@ -423,7 +431,10 @@ export function MealPlanPanel({
                             }}
                             className="h-9 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-sm text-[var(--workspace-shell-text)] outline-none focus:border-[color:var(--workspace-shell-border)]"
                           >
-                            <option value="" className="bg-[var(--ozer-surface-panel)]">
+                            <option
+                              value=""
+                              className="bg-[var(--ozer-surface-panel)]"
+                            >
                               Free text / no recipe
                             </option>
                             {recipes.map((r) => (
@@ -502,7 +513,7 @@ export function MealPlanPanel({
                                   {recipe.tags.slice(0, 3).map((tag) => (
                                     <span
                                       key={tag}
-                                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[10px] capitalize text-[var(--workspace-shell-text-muted)]"
+                                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[10px] text-[var(--workspace-shell-text-muted)] capitalize"
                                     >
                                       {tag}
                                     </span>
@@ -556,9 +567,7 @@ export function MealPlanPanel({
           setGenerateDialog((current) => ({ ...current, open }))
         }
         mode={generateDialog.mode}
-        targetDates={
-          generateDialog.mode === 'fill' ? emptyDates : planDates
-        }
+        targetDates={generateDialog.mode === 'fill' ? emptyDates : planDates}
         planDates={planDates}
         preferences={preferences}
         accountSlug={accountSlug}

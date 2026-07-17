@@ -6,7 +6,10 @@ import { isSuperAdmin } from '@kit/admin';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
-import { hasEntitlement, isAccountBillingExempt } from '~/lib/billing/entitlements';
+import {
+  hasEntitlement,
+  isAccountBillingExempt,
+} from '~/lib/billing/entitlements';
 
 export type RecorderAccessTier = 'limited' | 'standard';
 
@@ -149,10 +152,7 @@ export async function assertRecorderSyncAllowed(
   return summary;
 }
 
-export async function recordRecorderSync(
-  userId: string,
-  durationSeconds = 0,
-) {
+export async function recordRecorderSync(userId: string, durationSeconds = 0) {
   const admin = getSupabaseServerAdminClient();
   const period = currentUsagePeriod();
   const incrementDuration = Math.max(0, durationSeconds);

@@ -1,6 +1,5 @@
-import Link from 'next/link';
-
 import Image from 'next/image';
+import Link from 'next/link';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 
@@ -55,7 +54,9 @@ export function BlogPostCard({ post, preloadImage }: BlogPostCardProps) {
           />
         ) : (
           <div className="text-muted-foreground flex h-full items-end bg-[var(--ozer-cream-100)] p-5 dark:bg-[var(--ozer-plum-800)]">
-            <span className="font-heading text-sm tracking-tight">Ozer Blog</span>
+            <span className="font-heading text-sm tracking-tight">
+              Ozer Blog
+            </span>
           </div>
         )}
       </Link>
@@ -63,7 +64,9 @@ export function BlogPostCard({ post, preloadImage }: BlogPostCardProps) {
       <div className="flex flex-1 flex-col gap-3 p-5">
         <div className="text-muted-foreground flex flex-wrap items-center gap-x-2 gap-y-1 text-xs">
           {publishedLabel ? (
-            <time dateTime={post.published_at ?? undefined}>{publishedLabel}</time>
+            <time dateTime={post.published_at ?? undefined}>
+              {publishedLabel}
+            </time>
           ) : null}
           {post.reading_time_minutes ? (
             <>
@@ -87,7 +90,9 @@ export function BlogPostCard({ post, preloadImage }: BlogPostCardProps) {
 
         <div className="border-border/40 mt-auto flex items-center gap-3 border-t pt-4">
           <Avatar className="h-9 w-9">
-            {avatarUrl ? <AvatarImage src={avatarUrl} alt={post.author_name} /> : null}
+            {avatarUrl ? (
+              <AvatarImage src={avatarUrl} alt={post.author_name} />
+            ) : null}
             <AvatarFallback className="text-xs uppercase">
               {post.author_name.slice(0, 1)}
             </AvatarFallback>

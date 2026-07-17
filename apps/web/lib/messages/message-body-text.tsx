@@ -2,8 +2,7 @@ import { Fragment } from 'react';
 
 import { cn } from '@kit/ui/utils';
 
-const URL_REGEX =
-  /(\b(?:https?:\/\/|www\.)[^\s<]+[^\s<.,:;"')\]}])/gi;
+const URL_REGEX = /(\b(?:https?:\/\/|www\.)[^\s<]+[^\s<.,:;"')\]}])/gi;
 
 type MessageBodyPart =
   | { type: 'text'; value: string }
@@ -46,7 +45,9 @@ export function MessageBodyText({
   const parts = splitMessageBody(text);
 
   return (
-    <p className={cn('whitespace-pre-wrap break-words leading-snug', className)}>
+    <p
+      className={cn('leading-snug break-words whitespace-pre-wrap', className)}
+    >
       {parts.map((part, index) =>
         part.type === 'link' ? (
           <a

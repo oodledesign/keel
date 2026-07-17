@@ -1,16 +1,19 @@
 import 'server-only';
 
 import { countryToLocationCode } from '~/lib/clusters/utils';
-
-import { checkAiCitations, deriveBrandQueries } from './ai-citations';
-import { loadContextualPromptInputs, sliceContextualPromptsForLlm } from './contextual-prompts';
-import { scoreAndRecommend } from './claude-scorer';
 import {
   compareBacklinks,
   getBacklinkSummary,
   isCommonCrawlBacklinksEnabled,
 } from '~/lib/commoncrawl/athena';
 import { getPageRank } from '~/lib/openpagerank/client';
+
+import { checkAiCitations, deriveBrandQueries } from './ai-citations';
+import { scoreAndRecommend } from './claude-scorer';
+import {
+  loadContextualPromptInputs,
+  sliceContextualPromptsForLlm,
+} from './contextual-prompts';
 import {
   crawlLlmsTxt,
   crawlPages,
@@ -18,11 +21,7 @@ import {
   crawlSitemap,
   normaliseDomain,
 } from './crawl';
-import {
-  getAuditJob,
-  saveAuditReport,
-  updateAuditJobStatus,
-} from './db';
+import { getAuditJob, saveAuditReport, updateAuditJobStatus } from './db';
 import { AUDIT_CREDITS_ESTIMATE } from './types';
 
 function localeToCountry(locale: string | null | undefined): string {
@@ -81,11 +80,13 @@ export async function runAuditJob(
         : { google: [], llm: [] },
     );
 
-    const [targetOpr, targetBacklinks, competitorBacklinks] = await Promise.all([
-      getPageRank(domain),
-      getBacklinkSummary(domain, 200),
-      compareBacklinks(aiCitations.competingBrands),
-    ]);
+    const [targetOpr, targetBacklinks, competitorBacklinks] = await Promise.all(
+      [
+        getPageRank(domain),
+        getBacklinkSummary(domain, 200),
+        compareBacklinks(aiCitations.competingBrands),
+      ],
+    );
 
     const backlinksEnabled = isCommonCrawlBacklinksEnabled();
 

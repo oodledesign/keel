@@ -7,18 +7,15 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import { fetchPagespeedInsights } from './client';
 import {
+  type PagespeedTask,
   buildPagespeedTasks,
   getPagespeedCheckJob,
   loadPagespeedPagesAdmin,
   savePagespeedResult,
   touchPagespeedSchedule,
   updatePagespeedCheckJob,
-  type PagespeedTask,
 } from './db';
-import {
-  RUN_TIME_BUDGET_MS,
-  triggerPagespeedRun,
-} from './trigger-run';
+import { RUN_TIME_BUDGET_MS, triggerPagespeedRun } from './trigger-run';
 import type { PagespeedRefreshInterval } from './types';
 
 function ranklyAdmin() {

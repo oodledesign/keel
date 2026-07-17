@@ -60,9 +60,8 @@ export async function generateMetadata({
   }
 
   const { title, publishedAt, description } = data.entry;
-  const { buildMarketingMetadata } = await import(
-    '~/lib/seo/marketing-metadata'
-  );
+  const { buildMarketingMetadata } =
+    await import('~/lib/seo/marketing-metadata');
   const branded =
     title.includes('— Ozer') || title.includes('| Ozer')
       ? title

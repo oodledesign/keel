@@ -19,9 +19,6 @@ export default async function PortalSupportPage({
   const tickets = await service.listTickets(ctx.clientOrgId);
 
   return (
-    <PortalSupportListContent
-      clientSlug={slug}
-      initialTickets={tickets}
-    />
+    <PortalSupportListContent clientSlug={slug} initialTickets={tickets} />
   );
 }

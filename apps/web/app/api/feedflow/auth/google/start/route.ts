@@ -16,7 +16,9 @@ function absoluteUrl(path: string) {
  */
 export async function GET(request: NextRequest) {
   const returnParam = request.nextUrl.searchParams.get('return');
-  const base = returnParam?.startsWith('/') ? absoluteUrl(returnParam) : absoluteUrl(pathsConfig.app.home);
+  const base = returnParam?.startsWith('/')
+    ? absoluteUrl(returnParam)
+    : absoluteUrl(pathsConfig.app.home);
 
   if (!getOptionalGoogle()) {
     return NextResponse.redirect(

@@ -42,6 +42,9 @@ export function useWorkspaceFocusSettings(
   return byAccountId.get(accountId) ?? null;
 }
 
-export function useWorkspaceFocusSettingsMap(): Map<string, WorkspaceFocusInput> {
+export function useWorkspaceFocusSettingsMap(): Map<
+  string,
+  WorkspaceFocusInput
+> {
   return useContext(WorkspaceFocusContext).byAccountId;
 }

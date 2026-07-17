@@ -1,9 +1,9 @@
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Trans } from '@kit/ui/trans';
 
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { PersonalSettingsPanel } from '../_components/personal-settings-panel';
 import { AccessibilitySettingsForm } from './_components/accessibility-settings-form';
@@ -19,7 +19,9 @@ async function loadUserAccessibilitySettings(userId: string) {
   const client = getSupabaseServerClient();
   const { data } = await client
     .from('user_settings')
-    .select('accessibility_text_size, accessibility_high_contrast, accessibility_simplified_mode, accessibility_enhanced_focus, accessibility_dyslexia_font')
+    .select(
+      'accessibility_text_size, accessibility_high_contrast, accessibility_simplified_mode, accessibility_enhanced_focus, accessibility_dyslexia_font',
+    )
     .eq('user_id', userId)
     .maybeSingle();
 

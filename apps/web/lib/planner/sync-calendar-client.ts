@@ -20,7 +20,9 @@ export async function syncPlannerCalendarBlocks(input: {
     body: JSON.stringify(input),
   });
 
-  const body = (await response.json()) as PlannerSyncResponse & { error?: string };
+  const body = (await response.json()) as PlannerSyncResponse & {
+    error?: string;
+  };
 
   if (!response.ok) {
     throw new Error(body.error ?? 'Could not sync to Google Calendar');

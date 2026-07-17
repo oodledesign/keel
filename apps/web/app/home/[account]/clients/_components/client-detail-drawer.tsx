@@ -23,10 +23,7 @@ export function ClientDetailDrawer({
 }) {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent
-        side="right"
-        className="w-full overflow-y-auto sm:max-w-xl"
-      >
+      <SheetContent side="right" className="w-full overflow-y-auto sm:max-w-xl">
         <div className="mt-6 space-y-6">
           <ClientForm
             accountId={accountId}

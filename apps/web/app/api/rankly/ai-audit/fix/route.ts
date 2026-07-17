@@ -1,7 +1,9 @@
 import { type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { generateFixSnippet } from '~/lib/ai-audit/claude-scorer';

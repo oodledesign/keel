@@ -12,7 +12,10 @@ export function classifyTemplate(
     return { template: 'how-to', rationale: 'Keyword starts with "how to"' };
   }
   if (/\b(best|top \d+|[\d]+ best)\b/.test(kw)) {
-    return { template: 'best-of', rationale: 'Keyword contains "best" or "top N"' };
+    return {
+      template: 'best-of',
+      rationale: 'Keyword contains "best" or "top N"',
+    };
   }
   if (/\bvs\.?\b|versus|compared to|comparison\b/.test(kw)) {
     return { template: 'comparison', rationale: 'Keyword implies comparison' };
@@ -23,11 +26,13 @@ export function classifyTemplate(
 
   const titleSignals = serp.slice(0, 10).map((result) => {
     const t = result.title.toLowerCase();
-    if (/\d+ (ways|tips|tools|reasons|examples|ideas)/.test(t)) return 'listicle';
+    if (/\d+ (ways|tips|tools|reasons|examples|ideas)/.test(t))
+      return 'listicle';
     if (/^how to|^how do/.test(t)) return 'how-to';
     if (/\bvs\b|versus|comparison/.test(t)) return 'comparison';
     if (/\bbest\b/.test(t)) return 'best-of';
-    if (/guide|everything you need|complete|ultimate/.test(t)) return 'ultimate-guide';
+    if (/guide|everything you need|complete|ultimate/.test(t))
+      return 'ultimate-guide';
     if (/what is|explained|definition/.test(t)) return 'explainer';
     return 'explainer';
   });

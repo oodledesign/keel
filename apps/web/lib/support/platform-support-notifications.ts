@@ -180,7 +180,9 @@ export async function loadTicketAccountName(
     .maybeSingle();
 
   if (!data) return null;
-  return (data as { name?: string | null; slug?: string | null }).name ??
+  return (
+    (data as { name?: string | null; slug?: string | null }).name ??
     (data as { slug?: string | null }).slug ??
-    null;
+    null
+  );
 }

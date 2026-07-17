@@ -5,12 +5,12 @@ Pure slot computation, Google Calendar free/busy, and conferencing providers
 
 ## Modules
 
-| Export | Purpose |
-|--------|---------|
-| `@kit/scheduling` | `computeAvailableSlots`, shared types, Google errors |
-| `@kit/scheduling/google` | `getGoogleClientForWorkspace`, busy intervals |
+| Export                              | Purpose                                                    |
+| ----------------------------------- | ---------------------------------------------------------- |
+| `@kit/scheduling`                   | `computeAvailableSlots`, shared types, Google errors       |
+| `@kit/scheduling/google`            | `getGoogleClientForWorkspace`, busy intervals              |
 | `@kit/scheduling/calendar-provider` | Calendar free/busy interface (Google today; Outlook later) |
-| `@kit/scheduling/conferencing` | Zoom / Teams meeting create + delete |
+| `@kit/scheduling/conferencing`      | Zoom / Teams meeting create + delete                       |
 
 ## Conferencing providers
 
@@ -39,8 +39,8 @@ Calendar API `conferenceData` path in the booking layer.
 
 ## Env
 
-| Provider | Variables |
-|----------|-----------|
-| Zoom | `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_REDIRECT_URI` |
-| Teams | `MICROSOFT_TEAMS_CLIENT_ID`, `MICROSOFT_TEAMS_CLIENT_SECRET`, `MICROSOFT_TEAMS_REDIRECT_URI` |
-| Tokens | `TOKEN_ENCRYPTION_KEY` (shared with Google Calendar encryption) |
+| Provider | Variables                                                                                    |
+| -------- | -------------------------------------------------------------------------------------------- |
+| Zoom     | `ZOOM_CLIENT_ID`, `ZOOM_CLIENT_SECRET`, `ZOOM_REDIRECT_URI`                                  |
+| Teams    | `MICROSOFT_TEAMS_CLIENT_ID`, `MICROSOFT_TEAMS_CLIENT_SECRET`, `MICROSOFT_TEAMS_REDIRECT_URI` |
+| Tokens   | `TOKEN_ENCRYPTION_KEY` (shared with Google Calendar encryption)                              |

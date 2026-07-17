@@ -86,7 +86,9 @@ export function AdminPersonalAddonsPanel(props: {
           disabled={pending}
           onClick={toggleExempt}
         >
-          {props.billingExempt ? 'Remove billing exempt' : 'Mark billing exempt'}
+          {props.billingExempt
+            ? 'Remove billing exempt'
+            : 'Mark billing exempt'}
         </Button>
       </CardHeader>
       <CardContent className="space-y-3">

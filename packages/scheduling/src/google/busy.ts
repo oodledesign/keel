@@ -128,7 +128,5 @@ export async function getBusyIntervals(
     }),
   );
 
-  return batches
-    .flat()
-    .sort((a, b) => a.start.getTime() - b.start.getTime());
+  return batches.flat().sort((a, b) => a.start.getTime() - b.start.getTime());
 }

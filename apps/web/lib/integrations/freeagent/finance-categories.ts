@@ -11,7 +11,9 @@ export const KEEL_DEFAULT_CATEGORY_NAMES = [
   'Uncategorised',
 ] as const;
 
-export function freeAgentCategoryDisplayName(cat: Record<string, unknown>): string {
+export function freeAgentCategoryDisplayName(
+  cat: Record<string, unknown>,
+): string {
   return String(cat.description ?? cat.name ?? 'Category').trim();
 }
 

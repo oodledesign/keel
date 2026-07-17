@@ -50,7 +50,9 @@ async function AdminFinancesPage({ searchParams }: PageProps) {
       >
         <div className="flex items-center gap-2">
           <Button asChild variant="outline" size="sm">
-            <Link href={`/admin/finances?month=${shiftMonth(data.periodMonth, -1)}`}>
+            <Link
+              href={`/admin/finances?month=${shiftMonth(data.periodMonth, -1)}`}
+            >
               Previous
             </Link>
           </Button>
@@ -58,7 +60,9 @@ async function AdminFinancesPage({ searchParams }: PageProps) {
             {monthKey}
           </Badge>
           <Button asChild variant="outline" size="sm">
-            <Link href={`/admin/finances?month=${shiftMonth(data.periodMonth, 1)}`}>
+            <Link
+              href={`/admin/finances?month=${shiftMonth(data.periodMonth, 1)}`}
+            >
               Next
             </Link>
           </Button>
@@ -132,7 +136,9 @@ async function AdminFinancesPage({ searchParams }: PageProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Top workspaces by AI cost</CardTitle>
+            <CardTitle className="text-base">
+              Top workspaces by AI cost
+            </CardTitle>
             <CardDescription>This month, estimated USD</CardDescription>
           </CardHeader>
           <CardContent>
@@ -264,7 +270,9 @@ async function AdminFinancesPage({ searchParams }: PageProps) {
 
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">AI model rates (USD / MTok)</CardTitle>
+            <CardTitle className="text-base">
+              AI model rates (USD / MTok)
+            </CardTitle>
             <CardDescription>
               Used to estimate AI COGS from the usage ledger. Update when
               provider pricing changes.

@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
 import {
   CalendarDays,
   ChevronDown,
@@ -9,8 +12,6 @@ import {
   LayoutGrid,
   Plus,
 } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -92,11 +93,7 @@ export function JobsPageContent({
         ...(searchDebounced ? { query: searchDebounced } : {}),
         ...(priorityFilter
           ? {
-              priority: priorityFilter as
-                | 'low'
-                | 'medium'
-                | 'high'
-                | 'urgent',
+              priority: priorityFilter as 'low' | 'medium' | 'high' | 'urgent',
             }
           : {}),
       });
@@ -181,7 +178,9 @@ export function JobsPageContent({
       {/* Page header — Monday-style */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 md:px-5">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">{copy.title}</h1>
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+            {copy.title}
+          </h1>
           <ChevronDown className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
         </div>
         {canEditJobs && (
@@ -248,7 +247,9 @@ export function JobsPageContent({
 
       {loading ? (
         <div className="flex min-h-[320px] flex-1 items-center justify-center">
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading projects…</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            Loading projects…
+          </p>
         </div>
       ) : view === 'table' ? (
         <JobsPmMainTable

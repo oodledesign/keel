@@ -2,9 +2,9 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { EmailActionItemRow } from '~/home/(user)/email/_lib/types';
-
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import type { EmailActionItemRow } from '~/home/(user)/email/_lib/types';
 
 export type EmailActionItemLinkFields = {
   accountId: string | null;
@@ -72,10 +72,13 @@ export async function enrichEmailActionItemLinks(
     ...new Set(items.map((item) => item.client_id).filter(Boolean) as string[]),
   ];
   const projectIds = [
-    ...new Set(items.map((item) => item.project_id).filter(Boolean) as string[]),
+    ...new Set(
+      items.map((item) => item.project_id).filter(Boolean) as string[],
+    ),
   ];
 
-  const nameClient = getSupabaseServerAdminClient() as unknown as SupabaseClient;
+  const nameClient =
+    getSupabaseServerAdminClient() as unknown as SupabaseClient;
 
   const [clientsResult, projectsResult] = await Promise.all([
     clientIds.length > 0
@@ -93,7 +96,9 @@ export async function enrichEmailActionItemLinks(
   for (const row of clientsResult.data ?? []) {
     const displayName = String(row.display_name ?? '').trim();
     const parts = [row.first_name, row.last_name]
-      .filter((value): value is string => Boolean(value && String(value).trim()))
+      .filter((value): value is string =>
+        Boolean(value && String(value).trim()),
+      )
       .map((value) => String(value).trim())
       .join(' ');
     const company = String(row.company_name ?? '').trim();

@@ -1,8 +1,8 @@
 import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import { PageBody } from '@kit/ui/page';
+
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { DELIVERY_PROJECT_TYPE } from '~/lib/projects/project-types';
@@ -14,11 +14,11 @@ import {
   redirectIfSpaceNotIn,
 } from '../../_lib/server/workspace-route-guard';
 import { loadContextWorkspaceContent } from '../../_lib/workspace-content/context-loader';
-import { loadCampaignDetailPageData } from '../_lib/campaign/server/campaign-page.loader';
 import { CampaignTableClient } from '../_components/campaign/campaign-table-client';
-import { createJobsService } from '../_lib/server/jobs.service';
-import { loadJobsPageData } from '../_lib/server/jobs-page.loader';
 import { JobDetailContent } from '../_components/job-detail-content';
+import { loadCampaignDetailPageData } from '../_lib/campaign/server/campaign-page.loader';
+import { loadJobsPageData } from '../_lib/server/jobs-page.loader';
+import { createJobsService } from '../_lib/server/jobs.service';
 
 interface ProjectDetailPageProps {
   params: Promise<{ account: string; id: string }>;
@@ -35,7 +35,9 @@ export const generateMetadata = async ({ params }: ProjectDetailPageProps) => {
     .maybeSingle();
 
   const title =
-    (data as { title?: string | null; name?: string | null } | null)?.title?.trim() ||
+    (
+      data as { title?: string | null; name?: string | null } | null
+    )?.title?.trim() ||
     (data as { name?: string | null } | null)?.name?.trim() ||
     'Project';
 
@@ -70,12 +72,16 @@ async function ProjectDetailPage({
     notFound();
   }
 
-  const projectType = (projectRow as { project_type?: string | null }).project_type;
+  const projectType = (projectRow as { project_type?: string | null })
+    .project_type;
 
   if (projectType !== DELIVERY_PROJECT_TYPE) {
     try {
       const data = await loadCampaignDetailPageData(accountSlug, id);
-      const listPath = pathsConfig.app.accountProjects.replace('[account]', accountSlug);
+      const listPath = pathsConfig.app.accountProjects.replace(
+        '[account]',
+        accountSlug,
+      );
 
       return (
         <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-6 md:px-6">
@@ -127,27 +133,28 @@ async function ProjectDetailPage({
     jobClient = data;
   }
 
-  const workspaceContent = initialTab === 'docs'
-    ? await loadContextWorkspaceContent({
-        accountId,
-        spaceType: (workspace.account as { space_type?: string }).space_type,
-        businessType: workspace.businessType,
-        scope: { jobId: id },
-      })
-    : {
-        notes: [],
-        docs: [],
-        notesTableAvailable: true,
-        docsTableAvailable: true,
-        linkOptions: {
-          projects: [],
-          jobs: [],
-          clients: [],
-          properties: [],
-          tasks: [],
-        },
-        defaultLink: { type: 'job' as const, id },
-      };
+  const workspaceContent =
+    initialTab === 'docs'
+      ? await loadContextWorkspaceContent({
+          accountId,
+          spaceType: (workspace.account as { space_type?: string }).space_type,
+          businessType: workspace.businessType,
+          scope: { jobId: id },
+        })
+      : {
+          notes: [],
+          docs: [],
+          notesTableAvailable: true,
+          docsTableAvailable: true,
+          linkOptions: {
+            projects: [],
+            jobs: [],
+            clients: [],
+            properties: [],
+            tasks: [],
+          },
+          defaultLink: { type: 'job' as const, id },
+        };
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">

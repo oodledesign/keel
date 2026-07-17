@@ -8,7 +8,12 @@ import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
 
 export type ActivityRuleRow = {
   id: string;
-  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path' | 'repo_name';
+  matchType:
+    | 'domain'
+    | 'app_name'
+    | 'title_contains'
+    | 'url_path'
+    | 'repo_name';
   matchValue: string;
   projectId: string | null;
   projectName: string | null;
@@ -28,7 +33,10 @@ async function revalidateActivityPaths(accountSlug: string) {
     'page',
   );
   revalidatePath(
-    workAccountPath(pathsConfig.app.accountActivityPrivacySettings, accountSlug),
+    workAccountPath(
+      pathsConfig.app.accountActivityPrivacySettings,
+      accountSlug,
+    ),
     'page',
   );
 }
@@ -84,8 +92,9 @@ export async function listActivityRulesAction(
         null,
       clientId: (row.client_id as string | null) ?? null,
       clientName:
-        (row.clients as { display_name?: string | null } | null)?.display_name?.trim() ||
-        null,
+        (
+          row.clients as { display_name?: string | null } | null
+        )?.display_name?.trim() || null,
       createdFrom: row.created_from as ActivityRuleRow['createdFrom'],
       createdAt: row.created_at as string,
     })),
@@ -123,7 +132,12 @@ export async function deleteActivityRuleAction(input: {
 export async function createManualActivityRuleAction(input: {
   accountId: string;
   accountSlug: string;
-  matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path' | 'repo_name';
+  matchType:
+    | 'domain'
+    | 'app_name'
+    | 'title_contains'
+    | 'url_path'
+    | 'repo_name';
   matchValue: string;
   projectId?: string | null;
   clientId?: string | null;

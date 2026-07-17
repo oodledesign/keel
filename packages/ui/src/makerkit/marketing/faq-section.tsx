@@ -1,16 +1,17 @@
 'use client';
 
 import React from 'react';
+
 import Link from 'next/link';
 
 import { cn } from '../../lib/utils';
-import { Button } from '../../shadcn/button';
 import {
   Accordion,
   AccordionContent,
   AccordionItem,
   AccordionTrigger,
 } from '../../shadcn/accordion';
+import { Button } from '../../shadcn/button';
 
 interface FAQItemProps {
   question: string;
@@ -20,11 +21,14 @@ interface FAQItemProps {
 
 export function FAQItem({ question, answer, value }: FAQItemProps) {
   return (
-    <AccordionItem value={value} className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900">
+    <AccordionItem
+      value={value}
+      className="rounded-lg border border-gray-200 bg-white dark:border-gray-800 dark:bg-gray-900"
+    >
       <AccordionTrigger className="px-6 py-4 text-left font-semibold text-gray-900 hover:bg-gray-50 dark:text-white dark:hover:bg-gray-800">
         {question}
       </AccordionTrigger>
-      <AccordionContent className="px-6 pb-6 pt-2">
+      <AccordionContent className="px-6 pt-2 pb-6">
         <p className="text-gray-600 dark:text-gray-400">{answer}</p>
       </AccordionContent>
     </AccordionItem>
@@ -55,7 +59,7 @@ export function FAQSection({
     <section className={cn('py-16 lg:py-24', className)}>
       <div className="container mx-auto">
         <div className="mb-12 text-center">
-          <h2 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white lg:text-4xl">
+          <h2 className="mb-4 text-3xl font-bold text-gray-900 lg:text-4xl dark:text-white">
             {heading}
           </h2>
           {subheading && (

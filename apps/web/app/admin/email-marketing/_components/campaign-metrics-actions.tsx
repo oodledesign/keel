@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -36,10 +37,18 @@ export function CampaignMetricsActions({
     startTransition(async () => {
       try {
         const newId = await duplicateCampaign(campaignId);
-        toast.success(sendAgain ? 'Campaign duplicated — choose a new audience' : 'Campaign duplicated');
+        toast.success(
+          sendAgain
+            ? 'Campaign duplicated — choose a new audience'
+            : 'Campaign duplicated',
+        );
         router.push(`/admin/email-marketing/${newId}/edit`);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to duplicate campaign');
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Failed to duplicate campaign',
+        );
       }
     });
   };
@@ -72,7 +81,9 @@ export function CampaignMetricsActions({
 
         toast.success(`Copy sent to ${to}`);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to send copy');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to send copy',
+        );
       }
     });
   };
@@ -81,8 +92,14 @@ export function CampaignMetricsActions({
     <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
       <div className="flex flex-wrap gap-2">
         {status === 'draft' ? (
-          <Button asChild variant="outline" className="border-[color:var(--workspace-shell-border)]">
-            <Link href={`/admin/email-marketing/${campaignId}/edit`}>Edit draft</Link>
+          <Button
+            asChild
+            variant="outline"
+            className="border-[color:var(--workspace-shell-border)]"
+          >
+            <Link href={`/admin/email-marketing/${campaignId}/edit`}>
+              Edit draft
+            </Link>
           </Button>
         ) : null}
         {status === 'sent' || status === 'cancelled' ? (
@@ -109,7 +126,9 @@ export function CampaignMetricsActions({
 
       <div className="flex w-full max-w-md flex-col gap-2 sm:flex-row sm:items-end">
         <div className="flex-1 space-y-2">
-          <Label className="text-[var(--workspace-shell-text-muted)]">Send a copy to</Label>
+          <Label className="text-[var(--workspace-shell-text-muted)]">
+            Send a copy to
+          </Label>
           <Input
             value={copyTo}
             onChange={(event) => setCopyTo(event.target.value)}
@@ -120,7 +139,7 @@ export function CampaignMetricsActions({
         <Button
           variant="outline"
           disabled={isPending || !copyTo.trim()}
-          className="border-[color:var(--workspace-shell-border)] shrink-0"
+          className="shrink-0 border-[color:var(--workspace-shell-border)]"
           onClick={handleSendCopy}
         >
           <Mail className="mr-2 h-4 w-4" />

@@ -9,8 +9,8 @@ import { Palette } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -102,7 +102,9 @@ export function NotificationsForm({
 
   return (
     <div className="grid gap-6 xl:grid-cols-[minmax(0,28rem)_minmax(0,1fr)]">
-      <div className={`space-y-6 rounded-2xl border p-5 ${workspacePanelBorder}`}>
+      <div
+        className={`space-y-6 rounded-2xl border p-5 ${workspacePanelBorder}`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold">Notifications</h2>
@@ -227,7 +229,9 @@ export function NotificationsForm({
         </div>
       </div>
 
-      <div className={`space-y-4 rounded-2xl border p-5 ${workspacePanelBorder}`}>
+      <div
+        className={`space-y-4 rounded-2xl border p-5 ${workspacePanelBorder}`}
+      >
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold">Email previews</h2>
@@ -384,7 +388,7 @@ function EmailPreviewCard({
       <div className="flex items-center justify-between gap-2 border-b border-black/5 bg-[#f6f4f5] px-3 py-2">
         <p className="text-xs font-medium text-[#3d2a33]">{label}</p>
         {!enabled ? (
-          <span className="text-[10px] uppercase tracking-wide text-[#7a6870]">
+          <span className="text-[10px] tracking-wide text-[#7a6870] uppercase">
             Off
           </span>
         ) : null}
@@ -427,7 +431,11 @@ function ToggleRow({
   return (
     <div className="flex items-center justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 py-3">
       <Label>{label}</Label>
-      <Switch checked={checked} disabled={disabled} onCheckedChange={onChange} />
+      <Switch
+        checked={checked}
+        disabled={disabled}
+        onCheckedChange={onChange}
+      />
     </div>
   );
 }

@@ -2,7 +2,10 @@ import { redirect } from 'next/navigation';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../../_lib/role-access';
 import {
   getSpaceTypeFromAccount,
   isCommunityNavModuleEnabled,

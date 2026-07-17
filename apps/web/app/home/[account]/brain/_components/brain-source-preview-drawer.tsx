@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useState } from 'react';
+
+import Link from 'next/link';
 
 import { ExternalLink, Loader2 } from 'lucide-react';
 
@@ -27,23 +28,34 @@ type PreviewRef = {
 
 function highlightContent(content: string, chunk?: string) {
   const needle = chunk?.trim();
-  if (!needle) return <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">{content}</p>;
+  if (!needle)
+    return (
+      <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
+        {content}
+      </p>
+    );
 
   const index = content.indexOf(needle);
   if (index < 0) {
     return (
       <div className="space-y-3">
-        <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">{content}</p>
+        <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
+          {content}
+        </p>
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-          <p className="mb-1 text-xs font-medium text-amber-200">Matched excerpt</p>
-          <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">{needle}</p>
+          <p className="mb-1 text-xs font-medium text-amber-200">
+            Matched excerpt
+          </p>
+          <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
+            {needle}
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
+    <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
       {content.slice(0, index)}
       <mark className="rounded bg-[var(--ozer-accent-subtle)] px-0.5 text-[var(--workspace-shell-text)]">
         {content.slice(index, index + needle.length)}
@@ -101,7 +113,10 @@ export function BrainSourcePreviewDrawer({
   }, [accountId, accountSlug, previewRef]);
 
   return (
-    <Sheet open={Boolean(previewRef)} onOpenChange={(open) => !open && onClose()}>
+    <Sheet
+      open={Boolean(previewRef)}
+      onOpenChange={(open) => !open && onClose()}
+    >
       <SheetContent
         side="right"
         className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg"
@@ -127,7 +142,9 @@ export function BrainSourcePreviewDrawer({
           ) : preview ? (
             highlightContent(preview.content, previewRef?.chunkText)
           ) : (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">Could not load this source.</p>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Could not load this source.
+            </p>
           )}
         </div>
 

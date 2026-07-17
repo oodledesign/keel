@@ -2,21 +2,22 @@
 
 import dynamic from 'next/dynamic';
 
-import { ChevronRight, StickyNote, ArrowUpRight } from 'lucide-react';
+import { ArrowUpRight, ChevronRight, StickyNote } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
+import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-task-detail-trigger';
 import { HapticLink } from '~/components/haptic-link';
 import { workspaceDashboardMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
-import { NoteAssignmentLabels } from './note-assignment-labels';
+import pathsConfig from '~/config/paths.config';
+
 import type {
   DashboardFinanceMonth,
   DashboardMetrics,
   DashboardNoteSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
-import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-task-detail-trigger';
-import pathsConfig from '~/config/paths.config';
+import { NoteAssignmentLabels } from './note-assignment-labels';
 
 const FinanceTrendBarChart = dynamic(
   () =>
@@ -76,9 +77,18 @@ export function BusinessDashboardMobile({
     ? formatCurrency(metrics.financeNetPence / 100)
     : null;
 
-  const tasksHref = pathsConfig.app.accountTasks.replace('[account]', accountSlug);
-  const notesHref = pathsConfig.app.accountNotes.replace('[account]', accountSlug);
-  const financesHref = pathsConfig.app.accountFinances.replace('[account]', accountSlug);
+  const tasksHref = pathsConfig.app.accountTasks.replace(
+    '[account]',
+    accountSlug,
+  );
+  const notesHref = pathsConfig.app.accountNotes.replace(
+    '[account]',
+    accountSlug,
+  );
+  const financesHref = pathsConfig.app.accountFinances.replace(
+    '[account]',
+    accountSlug,
+  );
   const noteDetailPath = (id: string) =>
     pathsConfig.app.accountNoteDetail
       .replace('[account]', accountSlug)
@@ -94,7 +104,7 @@ export function BusinessDashboardMobile({
       <section className={cn(panelClass, 'overflow-hidden p-4 xl:col-span-2')}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+            <p className="text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               {metrics.hasFinanceData ? 'This month' : 'Revenue'}
             </p>
             <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
@@ -121,7 +131,7 @@ export function BusinessDashboardMobile({
           <HapticLink
             href={financesHref}
             aria-label="Open finances"
-            className="absolute bottom-0 right-0 flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
+            className="absolute right-0 bottom-0 flex h-8 w-8 items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
           >
             <ArrowUpRight className="h-4 w-4" />
           </HapticLink>
@@ -134,7 +144,9 @@ export function BusinessDashboardMobile({
 
       <section className={panelClass}>
         <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Upcoming tasks</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Upcoming tasks
+          </h2>
           <HapticLink href={tasksHref} className={dashboardLinkClass}>
             View all
             <ChevronRight className="h-3.5 w-3.5" />
@@ -153,7 +165,9 @@ export function BusinessDashboardMobile({
                   workspaceAccountId={accountId}
                   className={cn(
                     'flex flex-col gap-0.5 rounded-xl border px-3 py-2.5 transition-colors active:scale-[0.99]',
-                    dashboardTaskBackgrounds[index % dashboardTaskBackgrounds.length],
+                    dashboardTaskBackgrounds[
+                      index % dashboardTaskBackgrounds.length
+                    ],
                   )}
                 >
                   <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
@@ -173,7 +187,9 @@ export function BusinessDashboardMobile({
 
       <section>
         <div className="mb-2 flex items-center justify-between px-0.5">
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Recent notes</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Recent notes
+          </h2>
           <HapticLink href={notesHref} className={dashboardLinkClass}>
             View all
             <ChevronRight className="h-3.5 w-3.5" />
@@ -181,7 +197,12 @@ export function BusinessDashboardMobile({
         </div>
 
         {recentNotes.length === 0 ? (
-          <div className={cn(panelClass, 'px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]')}>
+          <div
+            className={cn(
+              panelClass,
+              'px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]',
+            )}
+          >
             No notes yet.
           </div>
         ) : (

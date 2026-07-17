@@ -43,7 +43,9 @@ export async function createIntegrationConnectInvite(input: {
   const token = generateIntegrationInviteToken();
   const tokenHash = hashIntegrationInviteToken(token);
   const days = Math.min(Math.max(input.expiresInDays ?? 7, 1), 30);
-  const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000).toISOString();
+  const expiresAt = new Date(
+    Date.now() + days * 24 * 60 * 60 * 1000,
+  ).toISOString();
 
   const db = getSignaturesSupabaseClient();
   const { data, error } = await db

@@ -64,7 +64,7 @@ function parseSecondaryKeywords(value: string | null | undefined) {
 
 async function resolveAuthorFields(data: BlogPostFormData) {
   const authorUserId = data.author_user_id?.trim() || null;
-  let authorName = data.author_name?.trim() || 'Dan Potter';
+  const authorName = data.author_name?.trim() || 'Dan Potter';
   let authorAvatarUrl: string | null = null;
 
   if (authorUserId) {
@@ -78,7 +78,9 @@ async function resolveAuthorFields(data: BlogPostFormData) {
     if (error) {
       console.error('[blog] author account lookup failed:', error.message);
     } else if (account) {
-      const pictureUrl = (account.picture_url as string | null | undefined)?.trim();
+      const pictureUrl = (
+        account.picture_url as string | null | undefined
+      )?.trim();
       authorAvatarUrl = pictureUrl || null;
     }
   }
@@ -235,7 +237,10 @@ export async function deleteBlogPost(id: string) {
 
   const existing = await getAdminBlogPost(id);
 
-  const { error } = await adminClient().from('blog_posts').delete().eq('id', id);
+  const { error } = await adminClient()
+    .from('blog_posts')
+    .delete()
+    .eq('id', id);
 
   if (error) throw new Error(error.message);
 

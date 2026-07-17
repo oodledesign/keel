@@ -75,7 +75,9 @@ export function SiteAppsNavMenu() {
                 </span>
                 <span className="min-w-0">
                   <span className={marketingNavDropdownTitle}>{app.name}</span>
-                  <span className={marketingNavDropdownDesc}>{app.description}</span>
+                  <span className={marketingNavDropdownDesc}>
+                    {app.description}
+                  </span>
                 </span>
               </Link>
             );

@@ -1,10 +1,7 @@
 import 'server-only';
 
 import type { PageJsonLd } from '~/lib/crawl/json-ld';
-import {
-  getObjectSchemaTypes,
-  hasNonEmptyField,
-} from '~/lib/crawl/json-ld';
+import { getObjectSchemaTypes, hasNonEmptyField } from '~/lib/crawl/json-ld';
 
 import { normaliseHost } from './domain';
 import type { SiteCrawlIssue } from './types';
@@ -22,7 +19,10 @@ function isHomepageUrl(url: string, domain: string): boolean {
   }
 }
 
-function validateTypedObject(type: string, item: Record<string, unknown>): string | null {
+function validateTypedObject(
+  type: string,
+  item: Record<string, unknown>,
+): string | null {
   switch (type) {
     case 'FAQPage':
       if (!hasNonEmptyField(item.mainEntity)) {

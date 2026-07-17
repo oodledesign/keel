@@ -15,22 +15,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
   BRIEF_SECTIONS,
-  emptyBriefAiProvenance,
-  emptyWebsiteBrief,
-  newBriefItemId,
-  overallBriefCompleteness,
-  sectionCompleteness,
   type BriefAiSource,
   type BriefSectionKey,
   type WebsiteBrief,
   type WebsiteBriefAiProvenance,
   type WebsiteBriefStackPreference,
+  emptyBriefAiProvenance,
+  emptyWebsiteBrief,
+  newBriefItemId,
+  overallBriefCompleteness,
+  sectionCompleteness,
 } from '~/lib/websites/brief-types';
 
 import {
@@ -141,7 +141,9 @@ function Field({
         ) : null}
       </div>
       {hint ? (
-        <p className="text-xs text-[var(--workspace-shell-text-muted)]">{hint}</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {hint}
+        </p>
       ) : null}
       {children}
     </div>
@@ -425,11 +427,7 @@ export function WebsiteBriefEditor({
         </div>
       ) : null}
 
-      <SectionShell
-        sectionKey="org"
-        brief={brief}
-        title="Organisation"
-      >
+      <SectionShell sectionKey="org" brief={brief} title="Organisation">
         <div className="grid gap-4 md:grid-cols-2">
           <Field
             label="Name"
@@ -892,11 +890,7 @@ export function WebsiteBriefEditor({
         </Field>
       </SectionShell>
 
-      <SectionShell
-        sectionKey="competitors"
-        brief={brief}
-        title="Competitors"
-      >
+      <SectionShell sectionKey="competitors" brief={brief} title="Competitors">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <AiBadge
@@ -1002,11 +996,7 @@ export function WebsiteBriefEditor({
         </div>
       </SectionShell>
 
-      <SectionShell
-        sectionKey="references"
-        brief={brief}
-        title="References"
-      >
+      <SectionShell sectionKey="references" brief={brief} title="References">
         <div className="space-y-2">
           <div className="flex items-center justify-between">
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
@@ -1165,7 +1155,9 @@ function SectionShell({
         <span className="inline-flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
           <CompletenessDot ratio={ratio} />
           {filled}/{total}
-          {ratio >= 1 ? <Check className="h-3.5 w-3.5 text-emerald-500" /> : null}
+          {ratio >= 1 ? (
+            <Check className="h-3.5 w-3.5 text-emerald-500" />
+          ) : null}
         </span>
       </div>
       <div className="space-y-4">{children}</div>

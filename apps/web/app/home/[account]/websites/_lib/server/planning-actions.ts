@@ -20,7 +20,8 @@ function getService() {
 }
 
 export const getWebsitePlanning = enhanceAction(
-  async (input) => getService().getPlanningBundle(input.accountId, input.websiteId),
+  async (input) =>
+    getService().getPlanningBundle(input.accountId, input.websiteId),
   { schema: GetWebsitePlanningSchema },
 );
 

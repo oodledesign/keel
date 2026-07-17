@@ -2,9 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
-
 import pathsConfig from '~/config/paths.config';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 export type BillingNotificationType =
   | 'trial_ending_3d'
@@ -123,10 +122,15 @@ async function loadTrialReminderCandidates(
   const results: TrialReminderRow[] = [];
 
   for (const sub of subs) {
-    const trialEndsAt = new Date((sub as { trial_ends_at: string }).trial_ends_at);
+    const trialEndsAt = new Date(
+      (sub as { trial_ends_at: string }).trial_ends_at,
+    );
     const endsMs = trialEndsAt.getTime();
-    const account = (sub as { accounts: { id: string; name: string | null; slug: string | null } })
-      .accounts;
+    const account = (
+      sub as {
+        accounts: { id: string; name: string | null; slug: string | null };
+      }
+    ).accounts;
     const accountId = (sub as { account_id: string }).account_id;
     const subscriptionId = (sub as { id: string }).id;
     const slug = account.slug;
@@ -178,7 +182,8 @@ async function loadWorkspaceOwnerEmail(
   const userId = (membership as { user_id?: string } | null)?.user_id;
   if (!userId) return null;
 
-  const { data: userResult, error } = await admin.auth.admin.getUserById(userId);
+  const { data: userResult, error } =
+    await admin.auth.admin.getUserById(userId);
   if (error || !userResult.user?.email) return null;
 
   return userResult.user.email;

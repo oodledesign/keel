@@ -1,7 +1,10 @@
 import { createFeedflowAdminClient } from '~/lib/feedflow/admin';
 import { decryptSecret } from '~/lib/feedflow/crypto-tokens';
-import { fetchInstagramMedia, type IgMediaItem } from '~/lib/feedflow/instagram';
-import { fetchTikTokVideos, type TikTokVideo } from '~/lib/feedflow/tiktok';
+import {
+  type IgMediaItem,
+  fetchInstagramMedia,
+} from '~/lib/feedflow/instagram';
+import { type TikTokVideo, fetchTikTokVideos } from '~/lib/feedflow/tiktok';
 
 export type UnifiedPost = {
   id: string;

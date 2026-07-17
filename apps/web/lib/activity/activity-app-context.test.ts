@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 
-import type { ActivityBlockListRow } from '~/lib/activity/activity-history';
 import {
   blockContextLabel,
   getActivityRuleMatchOptions,
@@ -8,9 +7,11 @@ import {
   parseActivityAppContext,
   resolveIdeRepoName,
 } from '~/lib/activity/activity-app-context';
+import type { ActivityBlockListRow } from '~/lib/activity/activity-history';
 
 function makeBlock(
-  overrides: Partial<ActivityBlockListRow> & Pick<ActivityBlockListRow, 'id' | 'startedAt'>,
+  overrides: Partial<ActivityBlockListRow> &
+    Pick<ActivityBlockListRow, 'id' | 'startedAt'>,
 ): ActivityBlockListRow {
   return {
     userId: 'user-1',
@@ -358,7 +359,7 @@ describe('activity app context parsing', () => {
       domain: 'arcanum-cyber.com',
       url: 'https://arcanum-cyber.com/wp-admin/post.php?post=1',
       windowTitle:
-        "Cyber Security Consultancy in the UK (NCSC Certified) | Arcanum Cyber Security",
+        'Cyber Security Consultancy in the UK (NCSC Certified) | Arcanum Cyber Security',
     });
 
     const options = getActivityRuleMatchOptions(block);

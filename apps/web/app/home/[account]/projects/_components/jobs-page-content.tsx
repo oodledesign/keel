@@ -2,6 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 
+import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+
 import {
   CalendarDays,
   ChevronDown,
@@ -10,26 +13,24 @@ import {
   LayoutGrid,
   Plus,
 } from 'lucide-react';
-import Link from 'next/link';
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 
-import { getErrorMessage } from '../_lib/error-message';
 import { listCampaignProjects } from '../_lib/campaign/server/server-actions';
+import { getErrorMessage } from '../_lib/error-message';
 import { listAccountMembers, listJobs } from '../_lib/server/server-actions';
 import { CreateProjectDialog } from './create-project-dialog';
 import { JobsPmMainTable, type JobsPmRow } from './jobs-pm/jobs-pm-main-table';
 import { JobsPmTimelineView } from './jobs-pm/jobs-pm-timeline-view';
 import { JobsPmToolbar } from './jobs-pm/jobs-pm-toolbar';
 import {
+  type ProjectsKanbanItem,
+  ProjectsKanbanView,
   mapCampaignRowToKanbanItem,
   mapDeliveryRowToKanbanItem,
-  ProjectsKanbanView,
-  type ProjectsKanbanItem,
 } from './projects-kanban-view';
 
 type PageView = 'table' | 'timeline' | 'schedule' | 'kanban';
@@ -96,9 +97,9 @@ export function JobsPageContent({
   const [searchDebounced, setSearchDebounced] = useState('');
   const [priorityFilter, setPriorityFilter] = useState<string | null>(null);
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
-  const [createDialogType, setCreateDialogType] = useState<'delivery' | 'campaign'>(
-    'delivery',
-  );
+  const [createDialogType, setCreateDialogType] = useState<
+    'delivery' | 'campaign'
+  >('delivery');
   const [members, setMembers] = useState<
     {
       user_id: string;
@@ -108,10 +109,13 @@ export function JobsPageContent({
     }[]
   >(initialMembers ?? []);
 
-  const openCreateDialog = useCallback((type: 'delivery' | 'campaign' = 'delivery') => {
-    setCreateDialogType(type);
-    setCreateDialogOpen(true);
-  }, []);
+  const openCreateDialog = useCallback(
+    (type: 'delivery' | 'campaign' = 'delivery') => {
+      setCreateDialogType(type);
+      setCreateDialogOpen(true);
+    },
+    [],
+  );
 
   useEffect(() => {
     if (searchParams.get('create') === 'campaign') {
@@ -119,7 +123,9 @@ export function JobsPageContent({
       const params = new URLSearchParams(searchParams.toString());
       params.delete('create');
       const query = params.toString();
-      router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+      router.replace(query ? `${pathname}?${query}` : pathname, {
+        scroll: false,
+      });
     }
   }, [searchParams, pathname, router, openCreateDialog]);
 
@@ -185,8 +191,11 @@ export function JobsPageContent({
         const campaignsResult = campaignsSettled.value;
         const campaignRows = Array.isArray(campaignsResult)
           ? campaignsResult
-          : ((campaignsResult as { projects?: Array<{ id: string; name: string }> })
-              ?.projects ?? []);
+          : ((
+              campaignsResult as {
+                projects?: Array<{ id: string; name: string }>;
+              }
+            )?.projects ?? []);
         setCampaigns(
           campaignRows.map((row) => ({
             id: row.id,
@@ -277,12 +286,16 @@ export function JobsPageContent({
       ? []
       : campaigns.filter((row) => {
           if (!searchDebounced.trim()) return true;
-          return row.name.toLowerCase().includes(searchDebounced.trim().toLowerCase());
+          return row.name
+            .toLowerCase()
+            .includes(searchDebounced.trim().toLowerCase());
         });
 
   const visibleJobs = typeFilter === 'campaign' ? [] : jobs;
   const kanbanItems: ProjectsKanbanItem[] = [
-    ...visibleJobs.map((row) => mapDeliveryRowToKanbanItem(row as Record<string, unknown>)),
+    ...visibleJobs.map((row) =>
+      mapDeliveryRowToKanbanItem(row as Record<string, unknown>),
+    ),
     ...visibleCampaigns.map((row) => mapCampaignRowToKanbanItem(row)),
   ];
 
@@ -297,7 +310,9 @@ export function JobsPageContent({
       {/* Page header — Monday-style */}
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 md:px-5">
         <div className="flex items-center gap-2">
-          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">{copy.title}</h1>
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+            {copy.title}
+          </h1>
           <ChevronDown className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
         </div>
         {canEditJobs && (
@@ -381,7 +396,9 @@ export function JobsPageContent({
 
       {loading ? (
         <div className="flex min-h-[320px] flex-1 items-center justify-center">
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading projects…</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            Loading projects…
+          </p>
         </div>
       ) : view === 'table' ? (
         <JobsPmMainTable

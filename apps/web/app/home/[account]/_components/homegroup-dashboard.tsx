@@ -22,7 +22,10 @@ import type {
   CommunityDashboardData,
   CommunityNextSession,
 } from '../_lib/server/community-dashboard.loader';
-import type { GroupMember, GroupTask } from '../_lib/server/group-dashboard.loader';
+import type {
+  GroupMember,
+  GroupTask,
+} from '../_lib/server/group-dashboard.loader';
 
 const panelClass =
   'rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]';
@@ -56,7 +59,7 @@ export function HomegroupDashboard({
   const notesPath = accountPath(accountSlug, pathsConfig.app.accountNotes);
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(251,191,36,0.09),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(245,158,11,0.08),transparent_40%)] px-4 pb-10 pt-5 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-[radial-gradient(circle_at_18%_0%,rgba(251,191,36,0.09),transparent_35%),radial-gradient(circle_at_82%_6%,rgba(245,158,11,0.08),transparent_40%)] px-4 pt-5 pb-10 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Open Tasks"
@@ -118,10 +121,7 @@ export function HomegroupDashboard({
           )}
           {activeTab === 'members' && <MembersPanel members={members} />}
 
-          <NextSessionCard
-            session={nextSession}
-            schedulePath={schedulePath}
-          />
+          <NextSessionCard session={nextSession} schedulePath={schedulePath} />
         </CardContent>
       </Card>
 
@@ -131,7 +131,9 @@ export function HomegroupDashboard({
             <StickyNote className="h-4.5 w-4.5 text-amber-400" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">Group Notes</p>
+            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Group Notes
+            </p>
             <p className="text-xs text-[var(--workspace-shell-text)]/50">
               Shared notes for your homegroup
             </p>
@@ -158,7 +160,7 @@ function NextSessionCard({
   return (
     <div className="rounded-2xl border border-amber-400/15 bg-[var(--workspace-shell-canvas)] p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
-        <p className="text-xs font-semibold uppercase tracking-wide text-amber-200/80">
+        <p className="text-xs font-semibold tracking-wide text-amber-200/80 uppercase">
           Next session
         </p>
         <a
@@ -180,7 +182,9 @@ function NextSessionCard({
         </p>
       ) : (
         <div className="space-y-2">
-          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">{session.title}</p>
+          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">
+            {session.title}
+          </p>
           <p className="flex flex-wrap items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">
             <Calendar className="h-3.5 w-3.5 text-amber-400/80" />
             <span>{session.dateLabel}</span>
@@ -188,7 +192,9 @@ function NextSessionCard({
             <span>{session.timeLabel}</span>
           </p>
           {session.location ? (
-            <p className="text-xs text-[var(--workspace-shell-text)]/50">{session.location}</p>
+            <p className="text-xs text-[var(--workspace-shell-text)]/50">
+              {session.location}
+            </p>
           ) : null}
           {session.sessionNotes ? (
             <p className="text-sm leading-relaxed text-[var(--workspace-shell-text)]/60">
@@ -262,7 +268,9 @@ function TasksPanel({
             }`}
           >
             <div className="min-w-0 flex-1">
-              <p className="truncate font-medium text-[var(--workspace-shell-text)]">{task.title}</p>
+              <p className="truncate font-medium text-[var(--workspace-shell-text)]">
+                {task.title}
+              </p>
               {task.projectName ? (
                 <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/50">
                   {task.projectName}
@@ -273,7 +281,9 @@ function TasksPanel({
               {task.dueDate ? (
                 <span
                   className={`inline-flex items-center gap-1 text-xs ${
-                    overdue ? 'text-rose-300' : 'text-[var(--workspace-shell-text)]/50'
+                    overdue
+                      ? 'text-rose-300'
+                      : 'text-[var(--workspace-shell-text)]/50'
                   }`}
                 >
                   <Calendar className="h-3 w-3" />
@@ -331,7 +341,7 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
               {member.email ?? formatRole(member.role)}
             </p>
           </div>
-          <span className="text-xs capitalize text-[var(--workspace-shell-text)]/40">
+          <span className="text-xs text-[var(--workspace-shell-text)]/40 capitalize">
             {formatRole(member.role)}
           </span>
         </div>
@@ -377,14 +387,16 @@ function StatCard({
           >
             <Icon className="h-4 w-4" />
           </span>
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/50">
+          <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text)]/50 uppercase">
             {label}
           </p>
         </div>
         <p className="text-2xl font-semibold tracking-tight md:text-3xl">
           {value}
         </p>
-        <p className="text-xs text-[var(--workspace-shell-text)]/40">{helper}</p>
+        <p className="text-xs text-[var(--workspace-shell-text)]/40">
+          {helper}
+        </p>
       </CardContent>
     </Card>
   );
@@ -392,13 +404,21 @@ function StatCard({
 
 function TaskStatusBadge({ status }: { status: string }) {
   const map: Record<string, { bg: string; text: string; label: string }> = {
-    todo: { bg: 'bg-[var(--workspace-shell-sidebar-accent)]', text: 'text-[var(--workspace-shell-text)]/50', label: 'To do' },
+    todo: {
+      bg: 'bg-[var(--workspace-shell-sidebar-accent)]',
+      text: 'text-[var(--workspace-shell-text)]/50',
+      label: 'To do',
+    },
     in_progress: {
       bg: 'bg-sky-500/15',
       text: 'text-sky-300',
       label: 'In progress',
     },
-    done: { bg: 'bg-[var(--ozer-accent-subtle)]', text: 'text-[var(--ozer-accent-muted)]', label: 'Done' },
+    done: {
+      bg: 'bg-[var(--ozer-accent-subtle)]',
+      text: 'text-[var(--ozer-accent-muted)]',
+      label: 'Done',
+    },
     blocked: { bg: 'bg-rose-500/15', text: 'text-rose-300', label: 'Blocked' },
   };
   const style = map[status] ?? map.todo;

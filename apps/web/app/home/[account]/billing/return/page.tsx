@@ -26,9 +26,7 @@ async function ReturnCheckoutSessionPage({
   const sessionId = (await searchParams).session_id;
 
   if (!sessionId) {
-    redirect(
-      pathsConfig.app.accountBilling.replace('[account]', account),
-    );
+    redirect(pathsConfig.app.accountBilling.replace('[account]', account));
   }
 
   const { customerEmail, checkoutToken } = await loadCheckoutSession(sessionId);

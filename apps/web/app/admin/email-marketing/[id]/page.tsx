@@ -12,12 +12,13 @@ import {
   TableRow,
 } from '@kit/ui/table';
 
-import {
-  formatUkDateTimeShort,
-} from '~/lib/format/uk-datetime';
+import { formatUkDateTimeShort } from '~/lib/format/uk-datetime';
 
-import { loadCampaignMetrics, loadCurrentSuperAdminEmail } from '../_lib/server/email-marketing.loader';
 import { CampaignMetricsActions } from '../_components/campaign-metrics-actions';
+import {
+  loadCampaignMetrics,
+  loadCurrentSuperAdminEmail,
+} from '../_lib/server/email-marketing.loader';
 
 export const metadata = {
   title: 'Campaign metrics',
@@ -27,10 +28,14 @@ function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">{label}</CardTitle>
+        <CardTitle className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+          {label}
+        </CardTitle>
       </CardHeader>
       <CardContent>
-        <div className="text-2xl font-bold text-[var(--workspace-shell-text)]">{value}</div>
+        <div className="text-2xl font-bold text-[var(--workspace-shell-text)]">
+          {value}
+        </div>
       </CardContent>
     </Card>
   );
@@ -62,10 +67,17 @@ export default async function CampaignMetricsPage({
         </Link>
         <div className="mt-3 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
           <div>
-            <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">{campaign.title}</h1>
-            <p className="text-[var(--workspace-shell-text-muted)]">{campaign.subject}</p>
+            <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">
+              {campaign.title}
+            </h1>
+            <p className="text-[var(--workspace-shell-text-muted)]">
+              {campaign.subject}
+            </p>
           </div>
-          <Badge variant="outline" className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]">
+          <Badge
+            variant="outline"
+            className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
+          >
             {campaign.status}
           </Badge>
         </div>
@@ -93,41 +105,66 @@ export default async function CampaignMetricsPage({
 
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-[var(--workspace-shell-text)]">Recipients</CardTitle>
+          <CardTitle className="text-[var(--workspace-shell-text)]">
+            Recipients
+          </CardTitle>
         </CardHeader>
         <CardContent className="p-0">
           <Table>
             <TableHeader>
               <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Email</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Sent</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Opened</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Clicked</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Counts</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Email
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Sent
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Opened
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Clicked
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Counts
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {rows.length === 0 ? (
                 <TableRow className="border-[color:var(--workspace-shell-border)]">
-                  <TableCell colSpan={5} className="py-10 text-center text-[var(--workspace-shell-text-muted)]">
+                  <TableCell
+                    colSpan={5}
+                    className="py-10 text-center text-[var(--workspace-shell-text-muted)]"
+                  >
                     No recipient metrics yet.
                   </TableCell>
                 </TableRow>
               ) : (
                 rows.map((row) => (
-                  <TableRow key={row.id} className="border-[color:var(--workspace-shell-border)]">
-                    <TableCell className="text-[var(--workspace-shell-text)]">{row.email}</TableCell>
+                  <TableRow
+                    key={row.id}
+                    className="border-[color:var(--workspace-shell-border)]"
+                  >
+                    <TableCell className="text-[var(--workspace-shell-text)]">
+                      {row.email}
+                    </TableCell>
                     <TableCell className="text-[var(--workspace-shell-text-muted)]">
                       {row.sent_at ? formatUkDateTimeShort(row.sent_at) : '—'}
                     </TableCell>
                     <TableCell className="text-[var(--workspace-shell-text-muted)]">
-                      {row.opened_at ? formatUkDateTimeShort(row.opened_at) : 'No'}
+                      {row.opened_at
+                        ? formatUkDateTimeShort(row.opened_at)
+                        : 'No'}
                     </TableCell>
                     <TableCell className="text-[var(--workspace-shell-text-muted)]">
-                      {row.clicked_at ? formatUkDateTimeShort(row.clicked_at) : 'No'}
+                      {row.clicked_at
+                        ? formatUkDateTimeShort(row.clicked_at)
+                        : 'No'}
                     </TableCell>
                     <TableCell className="text-[var(--workspace-shell-text-muted)]">
-                      {row.open_count ?? 0} opens / {row.click_count ?? 0} clicks
+                      {row.open_count ?? 0} opens / {row.click_count ?? 0}{' '}
+                      clicks
                     </TableCell>
                   </TableRow>
                 ))

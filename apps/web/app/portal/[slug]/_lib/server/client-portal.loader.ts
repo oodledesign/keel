@@ -77,9 +77,7 @@ export const loadClientPortalContext = cache(
       .maybeSingle();
 
     const displayName =
-      profile?.full_name?.trim() ||
-      user.email?.split('@')[0] ||
-      'there';
+      profile?.full_name?.trim() || user.email?.split('@')[0] || 'there';
 
     return {
       userId: user.id,

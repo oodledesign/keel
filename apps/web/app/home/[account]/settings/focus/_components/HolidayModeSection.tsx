@@ -2,9 +2,10 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
+import Link from 'next/link';
+
 import { format } from 'date-fns';
 import { CalendarIcon, Loader2 } from 'lucide-react';
-import Link from 'next/link';
 import type { UseFormReturn } from 'react-hook-form';
 
 import { Button } from '@kit/ui/button';
@@ -19,28 +20,28 @@ import {
 } from '@kit/ui/form';
 import { Input } from '@kit/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
+import type {
+  GmailVacationStatus,
+  WorkspaceFocusSettings,
+} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 import {
   getGmailVacationStatus,
   syncHolidayModeToGmail,
   turnOffGmailVacationResponder,
 } from '~/home/[account]/settings/focus/actions';
-import type {
-  GmailVacationStatus,
-  WorkspaceFocusSettings,
-} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 
 import {
+  type FocusFormValues,
   HOLIDAY_LABEL_PRESETS,
   holidayUntilToIso,
   parseHolidayUntilDate,
   toWorkspaceFocusPreview,
-  type FocusFormValues,
 } from '../_lib/focus-form';
 import { FocusStatusBadge } from './FocusStatusBadge';
 
@@ -60,9 +61,9 @@ export function HolidayModeSection({
   persisted,
 }: HolidayModeSectionProps) {
   const [pending, startTransition] = useTransition();
-  const [gmailStatus, setGmailStatus] = useState<GmailVacationStatus | 'loading'>(
-    'loading',
-  );
+  const [gmailStatus, setGmailStatus] = useState<
+    GmailVacationStatus | 'loading'
+  >('loading');
   const values = form.watch();
   const holidayEnabled = values.holiday_mode_enabled;
   const previewSettings = toWorkspaceFocusPreview(values, accountId, persisted);
@@ -128,7 +129,9 @@ export function HolidayModeSection({
     void getGmailVacationStatus(userId).then(setGmailStatus);
   }
 
-  function runGmailAction(action: () => Promise<{ success: boolean; error?: string }>) {
+  function runGmailAction(
+    action: () => Promise<{ success: boolean; error?: string }>,
+  ) {
     startTransition(async () => {
       const result = await action();
 
@@ -185,7 +188,9 @@ export function HolidayModeSection({
                 name="holiday_mode_label"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-[var(--workspace-shell-text-muted)]">Label</FormLabel>
+                    <FormLabel className="text-[var(--workspace-shell-text-muted)]">
+                      Label
+                    </FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -228,7 +233,8 @@ export function HolidayModeSection({
                               variant="outline"
                               className={cn(
                                 'w-full justify-start border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-left font-normal text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-control-surface)] hover:text-[var(--workspace-shell-text)]',
-                                !selectedDate && 'text-[var(--workspace-shell-text-muted)]',
+                                !selectedDate &&
+                                  'text-[var(--workspace-shell-text-muted)]',
                               )}
                             >
                               <CalendarIcon className="mr-2 h-4 w-4" />
@@ -340,12 +346,7 @@ function GmailVacationSyncPanel({
           Your Google account was connected before vacation replies were
           supported. A quick reconnect adds this permission.
         </p>
-        <Button
-          asChild
-          size="sm"
-          className="mt-3"
-          variant="outline"
-        >
+        <Button asChild size="sm" className="mt-3" variant="outline">
           <Link href={reconnectHref}>Reconnect Google</Link>
         </Button>
       </div>

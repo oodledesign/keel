@@ -1,21 +1,23 @@
 import { PageBody } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
+import { redirectIfAddonNotAllowed } from '~/lib/billing/require-addon-access';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
+import {
+  getSignaturesMailProvider,
+  isSignaturesMailConnected,
+} from '~/lib/signatures/signatures-provider';
+import { isSignaturesUxPreviewEnabled } from '~/lib/signatures/ux-preview';
+
+import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { isSignaturesModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 import { SignaturesConnectionGate } from '../_components/signatures-connection-gate';
 import { SignaturesModuleDisabled } from '../_components/signatures-module-disabled';
-import { SignaturesPostgrestSchemaMissing } from '../_components/signatures-postgrest-schema-missing';
 import { SignaturesNav } from '../_components/signatures-nav';
+import { SignaturesPostgrestSchemaMissing } from '../_components/signatures-postgrest-schema-missing';
 import { isSignaturesPostgrestSchemaError } from '../_lib/signatures-postgrest-schema-error';
-import { isSignaturesUxPreviewEnabled } from '~/lib/signatures/ux-preview';
-
-import { redirectIfAddonNotAllowed } from '~/lib/billing/require-addon-access';
-
-import { getSignaturesMailProvider, isSignaturesMailConnected } from '~/lib/signatures/signatures-provider';
 
 type SignaturesLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
@@ -53,7 +55,8 @@ export default async function SignaturesLayout({
   const accountId = workspace.account.id as string;
   const uxPreview = isSignaturesUxPreviewEnabled();
   let hasRealConnection = false;
-  let mailProvider: Awaited<ReturnType<typeof getSignaturesMailProvider>> = null;
+  let mailProvider: Awaited<ReturnType<typeof getSignaturesMailProvider>> =
+    null;
 
   try {
     hasRealConnection = await isSignaturesMailConnected(accountId);

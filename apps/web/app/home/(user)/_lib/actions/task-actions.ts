@@ -2,24 +2,25 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { createTaskForUser } from '@kit/tasks/create-task';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { createTaskForUser } from '@kit/tasks/create-task';
 
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import type { TasksPageTask } from '../server/tasks.loader';
-import { loadTaskById, loadTasksForClient } from '../server/tasks.loader';
+
 import {
   loadTaskAssignmentOptions as loadTaskAssignmentOptionsCached,
   loadTaskAssignmentOptionsForWorkspace as loadTaskAssignmentOptionsForWorkspaceCached,
 } from '../server/task-assignment-options.loader';
+import type { TasksPageTask } from '../server/tasks.loader';
+import { loadTaskById, loadTasksForClient } from '../server/tasks.loader';
 
 const TASK_DB_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent']);
 
 /** Maps UI / AI labels to values allowed by `tasks_priority_check` in the database. */
-function normalizeTaskPriorityForDb(
-  input: string | undefined | null,
-): string {
-  const raw = String(input ?? 'medium').trim().toLowerCase();
+function normalizeTaskPriorityForDb(input: string | undefined | null): string {
+  const raw = String(input ?? 'medium')
+    .trim()
+    .toLowerCase();
   if (TASK_DB_PRIORITIES.has(raw)) return raw;
   if (raw === 'normal' || raw === 'default') return 'medium';
   return 'medium';
@@ -221,7 +222,7 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
     const msg =
       error.message?.includes("'client_id'") &&
       error.message?.toLowerCase().includes('schema cache')
-        ? "Tasks table is missing the client_id column. Run migrations (e.g. pnpm supabase:web:reset or supabase db push from apps/web) then pnpm --filter web supabase:typegen."
+        ? 'Tasks table is missing the client_id column. Run migrations (e.g. pnpm supabase:web:reset or supabase db push from apps/web) then pnpm --filter web supabase:typegen.'
         : error.message;
     return { success: false, error: msg };
   }
@@ -269,7 +270,9 @@ export async function loadTaskAssignmentOptionsForWorkspace(
   return loadTaskAssignmentOptionsForWorkspaceCached(accountId);
 }
 
-export async function loadTaskAssignmentOptions(): Promise<TaskAssignmentOption[]> {
+export async function loadTaskAssignmentOptions(): Promise<
+  TaskAssignmentOption[]
+> {
   return loadTaskAssignmentOptionsCached();
 }
 

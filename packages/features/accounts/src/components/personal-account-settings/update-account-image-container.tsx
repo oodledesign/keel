@@ -8,9 +8,8 @@ import { ImageUploader } from '@kit/ui/image-uploader';
 import { toast } from '@kit/ui/sonner';
 import { Trans } from '@kit/ui/trans';
 
-import { toSupabasePublicStorageUrl } from '../../lib/public-storage-url';
-
 import { useRevalidatePersonalAccountDataQuery } from '../../hooks/use-personal-account-data';
+import { toSupabasePublicStorageUrl } from '../../lib/public-storage-url';
 
 export function UpdateAccountImageContainer({
   user,

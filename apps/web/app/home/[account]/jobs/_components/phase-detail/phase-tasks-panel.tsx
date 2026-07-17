@@ -15,12 +15,9 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
-import {
-  createJobTask,
-  updateJobTask,
-} from '../../_lib/server/server-actions';
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
+import { createJobTask, updateJobTask } from '../../_lib/server/server-actions';
 import {
   PRIORITY_DOT,
   TASK_STATUS_LABELS,
@@ -69,8 +66,12 @@ export function PhaseTasksPanel({
             jobId,
             taskId: task.id,
             title: updates.title,
-            status: updates.status as (typeof TASK_STATUSES)[number] | undefined,
-            priority: updates.priority as (typeof PRIORITIES)[number] | undefined,
+            status: updates.status as
+              | (typeof TASK_STATUSES)[number]
+              | undefined,
+            priority: updates.priority as
+              | (typeof PRIORITIES)[number]
+              | undefined,
             dueDate:
               updates.due_date === undefined
                 ? undefined
@@ -114,14 +115,18 @@ export function PhaseTasksPanel({
 
   return (
     <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-      <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Tasks</h2>
+      <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+        Tasks
+      </h2>
       <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
         {tasks.length} in this phase
       </p>
 
       <div className="mt-3 space-y-2">
         {tasks.length === 0 && (
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">No tasks yet.</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            No tasks yet.
+          </p>
         )}
         {tasks.map((task) => (
           <div
@@ -138,11 +143,14 @@ export function PhaseTasksPanel({
                   className="h-8 flex-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
                   onBlur={(e) => {
                     const title = e.target.value.trim();
-                    if (title && title !== task.title) patchTask(task, { title });
+                    if (title && title !== task.title)
+                      patchTask(task, { title });
                   }}
                 />
               ) : (
-                <span className="flex-1 text-sm text-[var(--workspace-shell-text)]">{task.title}</span>
+                <span className="flex-1 text-sm text-[var(--workspace-shell-text)]">
+                  {task.title}
+                </span>
               )}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">

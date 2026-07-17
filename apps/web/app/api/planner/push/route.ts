@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -68,17 +69,19 @@ export async function POST(request: NextRequest) {
   const parsed = pushSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Invalid calendar push request', details: parsed.error.flatten() },
+      {
+        error: 'Invalid calendar push request',
+        details: parsed.error.flatten(),
+      },
       { status: 400 },
     );
   }
 
-  const blocks =
-    parsed.data.blocks?.length
-      ? parsed.data.blocks
-      : parsed.data.planMarkdown
-        ? parseBlocksFromMarkdown(parsed.data.planMarkdown, parsed.data.date)
-        : [];
+  const blocks = parsed.data.blocks?.length
+    ? parsed.data.blocks
+    : parsed.data.planMarkdown
+      ? parseBlocksFromMarkdown(parsed.data.planMarkdown, parsed.data.date)
+      : [];
 
   if (blocks.length === 0) {
     return NextResponse.json(

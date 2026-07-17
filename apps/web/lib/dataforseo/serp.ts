@@ -1,13 +1,17 @@
 import 'server-only';
 
-import { dfsPost } from './client';
-import type { ClusterDraft, ClusterKeyword, SerpCache } from '../clusters/types';
+import type {
+  ClusterDraft,
+  ClusterKeyword,
+  SerpCache,
+} from '../clusters/types';
 import {
   countryToLocationCode,
   delay,
   groupBy,
   normaliseUrl,
 } from '../clusters/utils';
+import { dfsPost } from './client';
 
 export function overlapScore(urlsA: string[], urlsB: string[]): number {
   const setA = new Set(urlsA);
@@ -39,7 +43,9 @@ export async function fetchSerpsForKeywords(
       const urls = Array.isArray(items)
         ? items
             .filter((item) => (item as { type?: string }).type === 'organic')
-            .map((item) => normaliseUrl(String((item as { url?: string }).url ?? '')))
+            .map((item) =>
+              normaliseUrl(String((item as { url?: string }).url ?? '')),
+            )
             .filter(Boolean)
         : [];
 
@@ -125,9 +131,11 @@ export function mergeHighOverlapKeywords(
 
       if (score >= 7) {
         current.keywords.push(...other.keywords);
-        current.name = current.keywords
-          .slice()
-          .sort((a, b) => b.search_volume - a.search_volume)[0]?.keyword ?? current.name;
+        current.name =
+          current.keywords
+            .slice()
+            .sort((a, b) => b.search_volume - a.search_volume)[0]?.keyword ??
+          current.name;
         consumed.add(other.id);
       }
     }

@@ -10,23 +10,22 @@ import {
 } from 'react';
 
 import {
-  ReactFlow,
   Background,
-  Controls,
-  MiniMap,
-  Handle,
-  Position,
-  addEdge,
-  useEdgesState,
-  useNodesState,
   type Connection,
+  Controls,
   type Edge,
+  Handle,
+  MiniMap,
   type Node,
   type NodeProps,
   type OnNodeDrag,
+  Position,
+  ReactFlow,
+  addEdge,
+  useEdgesState,
+  useNodesState,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-
 import {
   Component,
   PanelRightClose,
@@ -46,36 +45,36 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
   PAGE_TYPE_OPTIONS,
   PLANNING_STATUS_OPTIONS,
   SECTION_TYPE_OPTIONS,
+  WEBSITE_SITEMAP_SCHEMA_VERSION,
+  type WebsitePageType,
+  type WebsitePlanningStatus,
+  type WebsiteSectionType,
+  type WebsiteSitemapDocument,
+  type WebsiteSitemapPage,
+  type WebsiteSitemapSection,
+  type WebsiteSitemapSymbol,
   createPlanningId,
   planningStatusMeta,
   sectionColor,
   sectionTypeMeta,
   slugifyPageTitle,
-  type WebsitePageType,
-  type WebsitePlanningStatus,
-  type WebsiteSectionType,
-  WEBSITE_SITEMAP_SCHEMA_VERSION,
-  type WebsiteSitemapDocument,
-  type WebsiteSitemapPage,
-  type WebsiteSitemapSection,
-  type WebsiteSitemapSymbol,
 } from '~/lib/websites/planning-types';
+import type {
+  SitemapProposal,
+  SitemapProposeMode,
+} from '~/lib/websites/site-studio-ai-types';
 import {
   SITE_STUDIO_AI_CREDITS,
   siteStudioCreditLabel,
 } from '~/lib/websites/site-studio-credits';
-import type {
-  SitemapProposeMode,
-  SitemapProposal,
-} from '~/lib/websites/site-studio-ai-types';
 import {
   DEFAULT_SITEMAP_SYMBOLS,
   applySymbolToPages,
@@ -84,10 +83,7 @@ import {
 
 import { saveWebsiteSitemap } from '../../_lib/server/planning-actions';
 import { proposeWebsiteSitemap } from '../../_lib/server/site-studio-actions';
-import {
-  SitemapAiPreview,
-  SitemapAiUndoBar,
-} from './sitemap-ai-preview';
+import { SitemapAiPreview, SitemapAiUndoBar } from './sitemap-ai-preview';
 
 const inputClass =
   'border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]';
@@ -159,14 +155,16 @@ function SitemapPageNode({ data }: NodeProps<Node<PageNodeData>>) {
                   className={cn(
                     'flex w-full items-center gap-1.5 rounded-md border px-2 py-1 text-left text-[11px]',
                     meta.colorClass,
-                    selected
-                      ? 'ring-1 ring-[var(--ozer-accent)]'
-                      : '',
-                    isSymbol && 'outline outline-1 outline-[var(--ozer-accent)]/40',
+                    selected ? 'ring-1 ring-[var(--ozer-accent)]' : '',
+                    isSymbol &&
+                      'outline outline-1 outline-[var(--ozer-accent)]/40',
                   )}
                 >
                   <span
-                    className={cn('h-2 w-2 shrink-0 rounded-full', meta.dotClass)}
+                    className={cn(
+                      'h-2 w-2 shrink-0 rounded-full',
+                      meta.dotClass,
+                    )}
                   />
                   <span className="min-w-0 flex-1 truncate text-[var(--workspace-shell-text)]">
                     {section.title || 'Untitled'}
@@ -207,7 +205,10 @@ function pagesToFlow(
   const pageIds = new Set(pages.map((page) => page.id));
   const edges: Edge[] = pages
     .filter(
-      (page) => page.parentId && pageIds.has(page.parentId) && page.parentId !== page.id,
+      (page) =>
+        page.parentId &&
+        pageIds.has(page.parentId) &&
+        page.parentId !== page.id,
     )
     .map((page) => ({
       id: `e-${page.parentId}-${page.id}`,
@@ -254,7 +255,9 @@ export function WebsiteSitemapCanvas({
   const [selection, setSelection] = useState<Selection>(null);
   const [symbolsOpen, setSymbolsOpen] = useState(true);
   const [inspectorOpen, setInspectorOpen] = useState(true);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(
+    'idle',
+  );
   const [isGenerating, startGenerating] = useTransition();
   const [, startTransition] = useTransition();
   const [proposal, setProposal] = useState<SitemapProposal | null>(null);
@@ -451,9 +454,7 @@ export function WebsiteSitemapCanvas({
       patch.color ??
       (patch.sectionType !== undefined ? patch.sectionType : undefined);
     const normalizedPatch =
-      color !== undefined
-        ? { ...patch, color, sectionType: color }
-        : patch;
+      color !== undefined ? { ...patch, color, sectionType: color } : patch;
 
     const source = pages
       .find((page) => page.id === pageId)
@@ -655,7 +656,9 @@ export function WebsiteSitemapCanvas({
             variant="outline"
             disabled={!canEdit || isGenerating}
             onClick={() => propose('from-brief')}
-            title={siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)}
+            title={siteStudioCreditLabel(
+              SITE_STUDIO_AI_CREDITS.sitemapGenerate,
+            )}
           >
             <Sparkles className="mr-1.5 h-3.5 w-3.5" />
             {isGenerating
@@ -668,9 +671,12 @@ export function WebsiteSitemapCanvas({
             variant="outline"
             disabled={!canEdit || isGenerating}
             onClick={() => propose('add-missing-seo-pages')}
-            title={siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)}
+            title={siteStudioCreditLabel(
+              SITE_STUDIO_AI_CREDITS.sitemapGenerate,
+            )}
           >
-            Add SEO pages ({siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)})
+            Add SEO pages (
+            {siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)})
           </Button>
           <Button
             type="button"
@@ -678,9 +684,12 @@ export function WebsiteSitemapCanvas({
             variant="outline"
             disabled={!canEdit || isGenerating}
             onClick={() => propose('local-service-variants')}
-            title={siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)}
+            title={siteStudioCreditLabel(
+              SITE_STUDIO_AI_CREDITS.sitemapGenerate,
+            )}
           >
-            Local/service variants ({siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)})
+            Local/service variants (
+            {siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.sitemapGenerate)})
           </Button>
           {undoSnapshot ? (
             <Button
@@ -761,10 +770,7 @@ export function WebsiteSitemapCanvas({
                   >
                     <div className="flex items-center gap-1.5">
                       <span
-                        className={cn(
-                          'h-2 w-2 rounded-full',
-                          meta.dotClass,
-                        )}
+                        className={cn('h-2 w-2 rounded-full', meta.dotClass)}
                       />
                       <span className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
                         {symbol.title}

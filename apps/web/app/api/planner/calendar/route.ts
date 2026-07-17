@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -38,7 +38,8 @@ export async function GET(request: NextRequest) {
 
   const mode =
     request.nextUrl.searchParams.get('mode') === 'week' ? 'week' : 'day';
-  const date = request.nextUrl.searchParams.get('date') ?? new Date().toISOString();
+  const date =
+    request.nextUrl.searchParams.get('date') ?? new Date().toISOString();
   const { timeMin, timeMax } = rangeFor(date, mode);
   const configured =
     Boolean(getOptionalGoogleCalendarEnv()) || isPlannerMockCalendarEnabled();

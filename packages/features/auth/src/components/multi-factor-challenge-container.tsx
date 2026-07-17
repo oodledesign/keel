@@ -78,10 +78,7 @@ export function MultiFactorChallengeContainer({
 
   if (!factorId) {
     return (
-      <FactorsListContainer
-        userId={userId}
-        onSelect={handleSelectFactor}
-      />
+      <FactorsListContainer userId={userId} onSelect={handleSelectFactor} />
     );
   }
 

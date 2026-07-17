@@ -1,4 +1,5 @@
 import React from 'react';
+
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -83,7 +84,7 @@ export function ActionPreview({
           </div>
 
           {overlayFeatures && overlayFeatures.length > 0 ? (
-            <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-[274px] rounded-lg border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900 lg:right-8">
+            <div className="absolute top-1/2 -right-4 w-[274px] -translate-y-1/2 rounded-lg border border-gray-200 bg-white p-6 shadow-xl lg:right-8 dark:border-gray-800 dark:bg-gray-900">
               <div className="flex flex-col gap-6">
                 {overlayFeatures.map((item, i) => (
                   <div key={i} className="flex items-start gap-4">
@@ -103,7 +104,7 @@ export function ActionPreview({
               </div>
             </div>
           ) : overlayCard ? (
-            <div className="absolute -right-4 top-1/2 -translate-y-1/2 rounded-lg border border-gray-200 bg-white p-6 shadow-xl dark:border-gray-800 dark:bg-gray-900 lg:right-8">
+            <div className="absolute top-1/2 -right-4 -translate-y-1/2 rounded-lg border border-gray-200 bg-white p-6 shadow-xl lg:right-8 dark:border-gray-800 dark:bg-gray-900">
               <h3 className="mb-2 text-lg font-semibold text-gray-900 dark:text-white">
                 {overlayCard.title}
               </h3>
@@ -117,9 +118,7 @@ export function ActionPreview({
                   asChild
                   className="h-9 rounded-lg bg-[#57C87F] px-4 text-sm font-semibold text-white hover:bg-[#57C87F]/90"
                 >
-                  <Link href={overlayCard.ctaHref}>
-                    {overlayCard.ctaLabel}
-                  </Link>
+                  <Link href={overlayCard.ctaHref}>{overlayCard.ctaLabel}</Link>
                 </Button>
               )}
             </div>

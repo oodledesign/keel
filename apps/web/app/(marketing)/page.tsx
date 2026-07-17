@@ -1,15 +1,26 @@
 import Link from 'next/link';
 
-import { Activity, Calendar, CreditCard, MessagesSquare, Users } from 'lucide-react';
+import {
+  Activity,
+  Calendar,
+  CreditCard,
+  MessagesSquare,
+  Users,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { cn } from '@kit/ui/utils';
 
-import { withI18n } from '~/lib/i18n/with-i18n';
+import {
+  formatGbp,
+  getBillingProductPrice,
+} from '~/lib/billing/billing-config-prices';
 import {
   MARKETING_FREE_SIGNUP_URL,
   MARKETING_FREE_TIER,
   MARKETING_WORKSPACE_PLANS,
 } from '~/lib/billing/pricing-marketing';
+import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   marketingBtnGradient,
   marketingBtnOutline,
@@ -17,22 +28,17 @@ import {
   marketingSectionMuted,
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
-import { cn } from '@kit/ui/utils';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import {
   absoluteUrl,
   schemaGraph,
   softwareApplicationJsonLd,
 } from '~/lib/seo/schema';
-import {
-  formatGbp,
-  getBillingProductPrice,
-} from '~/lib/billing/billing-config-prices';
 
-import { MarketingHomeHero } from './_components/marketing-home-hero';
 import { ComingSoon } from './_components/coming-soon';
 import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
+import { MarketingHomeHero } from './_components/marketing-home-hero';
 
 export const metadata = buildMarketingMetadata({
   title: 'Workspace OS for studios — Ozer',
@@ -113,29 +119,33 @@ function Home() {
       <JsonLd data={schema} />
 
       {/* Tighter top padding so the connection map peeks above the fold */}
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pb-14 pt-14 md:pb-20 md:pt-20">
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pt-14 pb-14 md:pt-20 md:pb-20">
         <MarketingHomeHero />
       </section>
 
       <InterconnectedWorkspacesSection tone="light" />
 
-      <section className="relative mx-auto w-full max-w-7xl px-6 pb-24 pt-16 md:pt-24">
+      <section className="relative mx-auto w-full max-w-7xl px-6 pt-16 pb-24 md:pt-24">
         <div className="mb-8">
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
             Your life connects too — free forever
           </h2>
           <p className="mt-3 max-w-2xl text-[var(--workspace-shell-text-muted)]">
-            Every other tool stops at the office door. Ozer&apos;s personal and family
-            workspaces are free forever, and they share one planner and one today
-            view with your studio — school runs and client calls on the same timeline.
+            Every other tool stops at the office door. Ozer&apos;s personal and
+            family workspaces are free forever, and they share one planner and
+            one today view with your studio — school runs and client calls on
+            the same timeline.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           {features.map((feature) => {
             const card = (
               <>
-                <feature.icon className="h-5 w-5 text-[var(--ozer-accent)]" aria-hidden />
-                <h3 className="mt-4 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
+                <feature.icon
+                  className="h-5 w-5 text-[var(--ozer-accent)]"
+                  aria-hidden
+                />
+                <h3 className="font-heading mt-4 text-xl font-semibold text-[var(--workspace-shell-text)]">
                   {feature.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
@@ -160,7 +170,10 @@ function Home() {
             }
 
             return (
-              <article key={feature.title} className={cn(marketingFeatureCard, 'p-6')}>
+              <article
+                key={feature.title}
+                className={cn(marketingFeatureCard, 'p-6')}
+              >
                 {card}
               </article>
             );
@@ -185,8 +198,12 @@ function Home() {
               href={item.href}
               className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5 transition-[border-color,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-[var(--ozer-accent)]/25 hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
-              <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">{item.title}</h3>
-              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">{item.copy}</p>
+              <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
+                {item.title}
+              </h3>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                {item.copy}
+              </p>
             </Link>
           ))}
         </div>
@@ -210,12 +227,18 @@ function Home() {
             Flat price for the whole team
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[var(--workspace-shell-text-muted)]">
-            From {formatGbp(getBillingProductPrice('ozer-business-solo')?.monthlyPriceGbp ?? 29)}
-            /month for solo freelancers. {formatGbp(
-              getBillingProductPrice('ozer-business-team')?.monthlyPriceGbp ?? 79,
+            From{' '}
+            {formatGbp(
+              getBillingProductPrice('ozer-business-solo')?.monthlyPriceGbp ??
+                29,
             )}
-            /month flat for a team of five — no per-seat maths, no transaction fees
-            on your subscription.
+            /month for solo freelancers.{' '}
+            {formatGbp(
+              getBillingProductPrice('ozer-business-team')?.monthlyPriceGbp ??
+                79,
+            )}
+            /month flat for a team of five — no per-seat maths, no transaction
+            fees on your subscription.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button asChild className={marketingBtnGradient}>
@@ -236,8 +259,8 @@ function Home() {
             Run the studio from one home
           </h2>
           <p className="max-w-2xl text-[var(--workspace-shell-text-muted)]">
-            If your stack is fragmented, Ozer brings projects, people, plans, and
-            priorities into one calm workspace.
+            If your stack is fragmented, Ozer brings projects, people, plans,
+            and priorities into one calm workspace.
           </p>
           <Button
             asChild

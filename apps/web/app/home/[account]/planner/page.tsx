@@ -11,7 +11,5 @@ export default async function WorkspacePlannerIndexPage({
 }: WorkspacePlannerIndexPageProps) {
   const accountSlug = (await params).account;
 
-  redirect(
-    pathsConfig.app.accountPlanner.replace('[account]', accountSlug),
-  );
+  redirect(pathsConfig.app.accountPlanner.replace('[account]', accountSlug));
 }

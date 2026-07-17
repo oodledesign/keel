@@ -1,7 +1,4 @@
-import type {
-  ConferencingProvider,
-  CreateMeetingResult,
-} from '../types';
+import type { ConferencingProvider, CreateMeetingResult } from '../types';
 
 /**
  * Zoom meetings via user OAuth (meetings:write / meeting:write:meeting).
@@ -37,7 +34,9 @@ export class ZoomConferencingProvider implements ConferencingProvider {
       body: JSON.stringify({
         topic: input.booking.summary,
         type: 2,
-        start_time: input.booking.startAt.toISOString().replace(/\.\d{3}Z$/, 'Z'),
+        start_time: input.booking.startAt
+          .toISOString()
+          .replace(/\.\d{3}Z$/, 'Z'),
         duration: durationMinutes,
         timezone: input.booking.timezone,
         agenda: input.booking.description?.slice(0, 2000) ?? undefined,

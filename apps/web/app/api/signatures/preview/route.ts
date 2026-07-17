@@ -1,17 +1,18 @@
 import { type NextRequest, NextResponse } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { loadSignatureRenderOptions } from '~/lib/signatures/render-context';
 import { jsonErr } from '~/lib/rankly/api-response';
 import { assertAccountMember } from '~/lib/signatures/account-access';
-import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 import {
   type SignaturesStaffRow,
   getSignaturesSupabaseClient,
   renderTemplate,
 } from '~/lib/signatures/graph';
+import { loadSignatureRenderOptions } from '~/lib/signatures/render-context';
+import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,7 +28,10 @@ export async function GET(request: NextRequest) {
 
     const staffId = request.nextUrl.searchParams.get('staffId');
     const templateId = request.nextUrl.searchParams.get('templateId');
-    if (!staffId?.match(/^[0-9a-f-]{36}$/i) || !templateId?.match(/^[0-9a-f-]{36}$/i)) {
+    if (
+      !staffId?.match(/^[0-9a-f-]{36}$/i) ||
+      !templateId?.match(/^[0-9a-f-]{36}$/i)
+    ) {
       return jsonErr(
         'VALIDATION',
         'Query parameters staffId and templateId (uuids) are required',
@@ -54,7 +58,11 @@ export async function GET(request: NextRequest) {
     const memberErr = await assertAccountMember(client, accountId, user.id);
     if (memberErr) return memberErr;
 
-    const addonDenied = await denyUnlessSignaturesAddon(client, user.id, accountId);
+    const addonDenied = await denyUnlessSignaturesAddon(
+      client,
+      user.id,
+      accountId,
+    );
     if (addonDenied) return addonDenied;
 
     const { data: templateRow, error: te } = await db
@@ -70,7 +78,10 @@ export async function GET(request: NextRequest) {
       return jsonErr('NOT_FOUND', 'Template not found', 404);
     }
 
-    const renderOptions = await loadSignatureRenderOptions(accountId, staffRow as SignaturesStaffRow);
+    const renderOptions = await loadSignatureRenderOptions(
+      accountId,
+      staffRow as SignaturesStaffRow,
+    );
     const html = renderTemplate(
       templateRow.html_template as string,
       staffRow as SignaturesStaffRow,
@@ -101,10 +112,6 @@ export async function GET(request: NextRequest) {
       },
     });
   } catch (e) {
-    return jsonErr(
-      'UNKNOWN',
-      e instanceof Error ? e.message : 'Error',
-      500,
-    );
+    return jsonErr('UNKNOWN', e instanceof Error ? e.message : 'Error', 500);
   }
 }

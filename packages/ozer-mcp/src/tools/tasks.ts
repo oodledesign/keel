@@ -2,12 +2,8 @@ import { z } from 'zod';
 
 import { createTaskForUser } from '@kit/tasks/create-task';
 
+import { assertSupabaseOk, pickDefined, toolJson } from './shared';
 import type { OzerMcpToolRegistrar } from './types';
-import {
-  assertSupabaseOk,
-  pickDefined,
-  toolJson,
-} from './shared';
 
 const taskStatusSchema = z.enum([
   'todo',
@@ -79,9 +75,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
     async (input) => {
       let query = supabase
         .from('tasks')
-        .select(
-          'id, title, status, priority, due_date, project_id, area_id',
-        )
+        .select('id, title, status, priority, due_date, project_id, area_id')
         .order('due_date', { ascending: true, nullsFirst: false })
         .limit(input.limit);
 
@@ -126,9 +120,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
 
       const { data, error } = await supabase
         .from('tasks')
-        .select(
-          'id, title, status, priority, due_date, project_id, area_id',
-        )
+        .select('id, title, status, priority, due_date, project_id, area_id')
         .eq('id', result.id)
         .single();
 
@@ -150,7 +142,8 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         status: input.status,
         priority: input.priority,
         due_date: input.due_date,
-        notes: input.notes === undefined ? undefined : input.notes?.trim() || null,
+        notes:
+          input.notes === undefined ? undefined : input.notes?.trim() || null,
       });
 
       if (Object.keys(updates).length === 0) {
@@ -161,9 +154,7 @@ export const registerTaskTools: OzerMcpToolRegistrar = (server, context) => {
         .from('tasks')
         .update(updates)
         .eq('id', input.id)
-        .select(
-          'id, title, status, priority, due_date, project_id, area_id',
-        )
+        .select('id, title, status, priority, due_date, project_id, area_id')
         .maybeSingle();
 
       assertSupabaseOk(data, error, 'update task');

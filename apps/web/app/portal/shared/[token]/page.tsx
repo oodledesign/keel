@@ -48,8 +48,7 @@ async function loadSharedItem(token: string) {
   let fileUrl = (doc.file_url as string | null) ?? null;
   if (!fileUrl && doc.kind === 'uploaded') {
     const path =
-      (doc.file_path as string | null) ??
-      (doc.storage_path as string | null);
+      (doc.file_path as string | null) ?? (doc.storage_path as string | null);
     if (path) {
       const { data: signed } = await client.storage
         .from('account-documents')

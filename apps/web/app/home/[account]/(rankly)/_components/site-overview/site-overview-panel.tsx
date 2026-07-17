@@ -1,13 +1,14 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
-import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import { BrandVisibilityLayerPanel } from '~/home/[account]/(rankly)/_components/brand-visibility-layers';
+import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { SiteOverviewSnapshot } from '~/lib/site-overview/types';
 
 type ApiResponse<T> =
@@ -37,7 +38,7 @@ function MetricCard(props: {
 }) {
   return (
     <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-      <p className="text-muted-foreground text-xs uppercase tracking-wide">
+      <p className="text-muted-foreground text-xs tracking-wide uppercase">
         {props.label}
       </p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{props.value}</p>
@@ -133,13 +134,18 @@ export function SiteOverviewPanel(props: {
           disabled={loading}
           onClick={() => refresh(true)}
         >
-          {loading ? 'Refreshing…' : data ? 'Refresh overview' : 'Load overview'}
+          {loading
+            ? 'Refreshing…'
+            : data
+              ? 'Refresh overview'
+              : 'Load overview'}
         </Button>
       </div>
 
       {!data ? (
         <p className="text-muted-foreground rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm">
-          Pull authority, traffic, backlink, and AI visibility metrics for this domain.
+          Pull authority, traffic, backlink, and AI visibility metrics for this
+          domain.
         </p>
       ) : (
         <>
@@ -167,8 +173,14 @@ export function SiteOverviewPanel(props: {
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <MetricCard label="Referring domains" value={data.referringDomains.toLocaleString()} />
-            <MetricCard label="Backlinks" value={data.backlinksCount.toLocaleString()} />
+            <MetricCard
+              label="Referring domains"
+              value={data.referringDomains.toLocaleString()}
+            />
+            <MetricCard
+              label="Backlinks"
+              value={data.backlinksCount.toLocaleString()}
+            />
             <MetricCard
               label="Link Trust"
               value={data.linkTrust}
@@ -179,7 +191,7 @@ export function SiteOverviewPanel(props: {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-              <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
                 Organic search
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -211,20 +223,29 @@ export function SiteOverviewPanel(props: {
             </div>
 
             <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-              <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
                 Paid search
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
-                <MetricCard label="Keywords" value={data.paidKeywords.toLocaleString()} />
-                <MetricCard label="Traffic" value={data.paidTraffic.toLocaleString()} />
-                <MetricCard label="Value" value={formatCurrency(data.paidValue)} />
+                <MetricCard
+                  label="Keywords"
+                  value={data.paidKeywords.toLocaleString()}
+                />
+                <MetricCard
+                  label="Traffic"
+                  value={data.paidTraffic.toLocaleString()}
+                />
+                <MetricCard
+                  label="Value"
+                  value={formatCurrency(data.paidValue)}
+                />
               </div>
             </div>
           </div>
 
           <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-muted-foreground text-xs uppercase tracking-wide">
+              <p className="text-muted-foreground text-xs tracking-wide uppercase">
                 Brand visibility
               </p>
               <p className="text-muted-foreground text-xs">

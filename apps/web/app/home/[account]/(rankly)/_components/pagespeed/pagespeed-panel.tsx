@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -68,7 +69,7 @@ function MetricCell({
 }) {
   if (!metrics) {
     return (
-      <td colSpan={5} className="px-4 py-3 text-muted-foreground">
+      <td colSpan={5} className="text-muted-foreground px-4 py-3">
         {label}: not checked yet
       </td>
     );
@@ -84,19 +85,27 @@ function MetricCell({
 
   return (
     <>
-      <td className={`px-4 py-3 text-right font-medium tabular-nums ${scoreTone(metrics.performanceScore)}`}>
+      <td
+        className={`px-4 py-3 text-right font-medium tabular-nums ${scoreTone(metrics.performanceScore)}`}
+      >
         {formatScore(metrics.performanceScore)}
       </td>
-      <td className={`px-4 py-3 text-right tabular-nums ${scoreTone(metrics.accessibilityScore)}`}>
+      <td
+        className={`px-4 py-3 text-right tabular-nums ${scoreTone(metrics.accessibilityScore)}`}
+      >
         {formatScore(metrics.accessibilityScore)}
       </td>
-      <td className={`px-4 py-3 text-right tabular-nums ${scoreTone(metrics.bestPracticesScore)}`}>
+      <td
+        className={`px-4 py-3 text-right tabular-nums ${scoreTone(metrics.bestPracticesScore)}`}
+      >
         {formatScore(metrics.bestPracticesScore)}
       </td>
-      <td className={`px-4 py-3 text-right tabular-nums ${scoreTone(metrics.seoScore)}`}>
+      <td
+        className={`px-4 py-3 text-right tabular-nums ${scoreTone(metrics.seoScore)}`}
+      >
         {formatScore(metrics.seoScore)}
       </td>
-      <td className="px-4 py-3 text-right text-xs tabular-nums text-muted-foreground">
+      <td className="text-muted-foreground px-4 py-3 text-right text-xs tabular-nums">
         LCP {formatMs(metrics.lcpMs)}
       </td>
     </>
@@ -142,7 +151,9 @@ export function PagespeedPanel(props: {
           pagespeedRefreshInterval: interval,
         }),
       });
-      const json = (await res.json()) as ApiResponse<{ settings: PagespeedSettings }>;
+      const json = (await res.json()) as ApiResponse<{
+        settings: PagespeedSettings;
+      }>;
       if (!json.ok) throw new Error(json.error.message);
       toast.success('PageSpeed schedule updated');
       router.refresh();
@@ -230,7 +241,10 @@ export function PagespeedPanel(props: {
       {props.settings?.lastCheckAt ? (
         <p className="text-muted-foreground text-sm">
           Last scan{' '}
-          <time dateTime={props.settings.lastCheckAt} className="text-[var(--workspace-shell-text)]">
+          <time
+            dateTime={props.settings.lastCheckAt}
+            className="text-[var(--workspace-shell-text)]"
+          >
             {formatScanDate(props.settings.lastCheckAt)}
           </time>
           {props.settings.nextCheckAt && interval !== 'manual' ? (
@@ -257,7 +271,9 @@ export function PagespeedPanel(props: {
             className="border-input bg-background flex h-10 w-full max-w-xs rounded-md border px-3 py-2 text-sm"
           >
             {(
-              Object.keys(PAGESPEED_REFRESH_INTERVAL_LABELS) as PagespeedRefreshInterval[]
+              Object.keys(
+                PAGESPEED_REFRESH_INTERVAL_LABELS,
+              ) as PagespeedRefreshInterval[]
             ).map((value) => (
               <option key={value} value={value}>
                 {PAGESPEED_REFRESH_INTERVAL_LABELS[value]}
@@ -296,9 +312,13 @@ export function PagespeedPanel(props: {
       </div>
 
       <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
-        Homepage is tracked automatically for <strong className="text-[var(--workspace-shell-text)]">{props.domain}</strong>{' '}
-        on desktop and mobile. Scores are from Google PageSpeed Insights (0–100).
-        Open a page to view score history and Lighthouse fix recommendations.
+        Homepage is tracked automatically for{' '}
+        <strong className="text-[var(--workspace-shell-text)]">
+          {props.domain}
+        </strong>{' '}
+        on desktop and mobile. Scores are from Google PageSpeed Insights
+        (0–100). Open a page to view score history and Lighthouse fix
+        recommendations.
       </p>
 
       {activeJobId ? (
@@ -308,7 +328,10 @@ export function PagespeedPanel(props: {
         />
       ) : null}
 
-      <form onSubmit={addPage} className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end">
+      <form
+        onSubmit={addPage}
+        className="grid gap-3 sm:grid-cols-[1fr_12rem_auto] sm:items-end"
+      >
         <div className="space-y-2">
           <Label htmlFor="pagespeed-url">Add page to track</Label>
           <Input
@@ -346,8 +369,7 @@ export function PagespeedPanel(props: {
               props.projectId,
               page.pageId,
             );
-            const fixes =
-              issueCount(page.mobile) + issueCount(page.desktop);
+            const fixes = issueCount(page.mobile) + issueCount(page.desktop);
 
             return (
               <div
@@ -408,7 +430,7 @@ export function PagespeedPanel(props: {
                 </div>
 
                 <table className="w-full min-w-[40rem] text-left text-sm">
-                  <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs uppercase tracking-wide text-muted-foreground">
+                  <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide uppercase">
                     <tr>
                       <th className="px-4 py-2">Device</th>
                       <th className="px-4 py-2 text-right">Perf</th>
@@ -420,11 +442,15 @@ export function PagespeedPanel(props: {
                   </thead>
                   <tbody>
                     <tr className="border-b border-[color:var(--workspace-shell-border)]">
-                      <td className="px-4 py-3 text-muted-foreground">Mobile</td>
+                      <td className="text-muted-foreground px-4 py-3">
+                        Mobile
+                      </td>
                       <MetricCell label="Mobile" metrics={page.mobile} />
                     </tr>
                     <tr>
-                      <td className="px-4 py-3 text-muted-foreground">Desktop</td>
+                      <td className="text-muted-foreground px-4 py-3">
+                        Desktop
+                      </td>
                       <MetricCell label="Desktop" metrics={page.desktop} />
                     </tr>
                   </tbody>

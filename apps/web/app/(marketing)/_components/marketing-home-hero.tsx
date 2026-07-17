@@ -47,7 +47,7 @@ export function MarketingHomeHero() {
 
         <div className="mt-6 space-y-5 md:mt-8">
           <motion.h1
-            className="font-heading text-[2.625rem] font-bold leading-[1.06] tracking-[-0.02em] text-[var(--workspace-shell-text)] md:text-6xl lg:text-[4.5rem]"
+            className="font-heading text-[2.625rem] leading-[1.06] font-bold tracking-[-0.02em] text-[var(--workspace-shell-text)] md:text-6xl lg:text-[4.5rem]"
             {...fadeUpProps(0.06, 0.42)}
           >
             Run your studio from{' '}
@@ -58,9 +58,9 @@ export function MarketingHomeHero() {
             className={`mx-auto max-w-[34rem] text-base leading-[1.65] md:text-lg md:leading-[1.7] ${marketingMutedText}`}
             {...fadeUpProps(0.14, 0.38)}
           >
-            Clients, projects, invoices, pipeline, activity tracking, and your plan
-            for the day — one place, one login. From £29/month flat, with no
-            per-seat maths and no transaction fees.
+            Clients, projects, invoices, pipeline, activity tracking, and your
+            plan for the day — one place, one login. From £29/month flat, with
+            no per-seat maths and no transaction fees.
           </motion.p>
         </div>
 
@@ -74,7 +74,12 @@ export function MarketingHomeHero() {
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild variant="outline" size="lg" className={marketingBtnOutline}>
+          <Button
+            asChild
+            variant="outline"
+            size="lg"
+            className={marketingBtnOutline}
+          >
             <Link href="/pricing">See pricing</Link>
           </Button>
         </motion.div>

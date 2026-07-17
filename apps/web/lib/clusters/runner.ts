@@ -41,11 +41,7 @@ export async function runClusterExpansion(jobId: string): Promise<void> {
     await updateJobStatus(jobId, 'expanding');
 
     const candidates = await expandSeeds(job.seeds, job.country);
-    const filtered = filterCandidates(
-      candidates,
-      job.min_volume,
-      job.max_kd,
-    );
+    const filtered = filterCandidates(candidates, job.min_volume, job.max_kd);
 
     const estimatedCredits = estimateSerpCredits(filtered.length);
 
@@ -145,7 +141,8 @@ export async function runClusterSerpAndSave(jobId: string): Promise<void> {
       .from('keyword_cluster_jobs')
       .update({
         status: 'error',
-        error_msg: error instanceof Error ? error.message : 'Cluster job failed',
+        error_msg:
+          error instanceof Error ? error.message : 'Cluster job failed',
       })
       .eq('id', jobId);
     throw error;

@@ -63,12 +63,12 @@ type BusinessRow = {
 
 function mapDealRow(row: PipelineDealRow): PipelineDeal {
   const bizName =
-    row.businesses?.name?.trim() ||
-    row.accounts?.name?.trim() ||
-    'Workspace';
+    row.businesses?.name?.trim() || row.accounts?.name?.trim() || 'Workspace';
   const syntheticBizId =
     row.business_id ??
-    (row.account_id ? `${PIPELINE_WORKSPACE_BUSINESS_PREFIX}${row.account_id}` : '');
+    (row.account_id
+      ? `${PIPELINE_WORKSPACE_BUSINESS_PREFIX}${row.account_id}`
+      : '');
   const clientName = row.clients?.display_name?.trim() || null;
   return {
     id: row.id,
@@ -233,7 +233,8 @@ export const loadPipelineDataForAccount = cache(
 
     const synthetic: BusinessRow = {
       id: `${PIPELINE_WORKSPACE_BUSINESS_PREFIX}${accountId}`,
-      name: (accountRow as { name?: string | null } | null)?.name ?? 'Workspace',
+      name:
+        (accountRow as { name?: string | null } | null)?.name ?? 'Workspace',
       colour: null,
     };
 

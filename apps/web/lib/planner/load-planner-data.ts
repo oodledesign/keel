@@ -4,16 +4,16 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import {
+  type PipelineDeal,
   loadPipelineData,
   loadPipelineDataForAccount,
-  type PipelineDeal,
 } from '~/home/(user)/_lib/server/pipeline.loader';
 import {
   loadTasksForTeamAccount,
   loadTasksForUser,
 } from '~/home/(user)/_lib/server/tasks.loader';
-import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import {
   isWorkModuleEnabled,
   isWorkNavModuleEnabled,
@@ -23,9 +23,9 @@ import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '~/home/[account]/_lib/server/workspace-route-guard';
+import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import { getGoogleCalendarConnectionStatus } from '~/lib/integrations/google-calendar/connection';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
-import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { getSopsDb } from '~/lib/sops/types';
 
@@ -223,10 +223,7 @@ function parseViewDateYmd(dateYmd: string | undefined): string {
   return dateYmd;
 }
 
-async function buildPlannerBundle(
-  scope: PlannerScope,
-  viewDateYmd?: string,
-) {
+async function buildPlannerBundle(scope: PlannerScope, viewDateYmd?: string) {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
   const includeWorkspaceTasks = await loadPersonalIncludeWorkspaceTasks(
@@ -256,7 +253,10 @@ async function buildPlannerBundle(
   const dayViewHref =
     scope.kind === 'personal'
       ? pathsConfig.app.personalPlannerDay
-      : pathsConfig.app.accountPlannerDay.replace('[account]', scope.accountSlug);
+      : pathsConfig.app.accountPlannerDay.replace(
+          '[account]',
+          scope.accountSlug,
+        );
 
   const planViewHref =
     scope.kind === 'personal'
@@ -281,8 +281,9 @@ async function buildPlannerBundle(
   };
 }
 
-export const loadPersonalPlannerPageData = cache(async (): Promise<PlannerPageData> =>
-  buildPlannerBundle({ kind: 'personal' }),
+export const loadPersonalPlannerPageData = cache(
+  async (): Promise<PlannerPageData> =>
+    buildPlannerBundle({ kind: 'personal' }),
 );
 
 export const loadPersonalDayViewData = cache(
@@ -391,13 +392,12 @@ export const loadWorkspaceDayViewData = cache(
 
 export async function assertWorkspacePlannerAccess(accountSlug: string) {
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(
-    workspace,
-    accountSlug,
-    BUSINESS_WORKSPACE_SPACE_TYPES,
-  );
+  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
 
-  const tasksEnabled = isWorkNavModuleEnabled(workspace.moduleSettings, 'tasks');
+  const tasksEnabled = isWorkNavModuleEnabled(
+    workspace.moduleSettings,
+    'tasks',
+  );
   if (!tasksEnabled) {
     throw new Error('Tasks module is not enabled for this workspace.');
   }

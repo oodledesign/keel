@@ -9,9 +9,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
-import {
-  isHighConfidenceMeetingSuggestion,
-} from '~/lib/recorder/meeting-task-confidence';
+import { isHighConfidenceMeetingSuggestion } from '~/lib/recorder/meeting-task-confidence';
 import { publishMeetingTaskToPlanner } from '~/lib/recorder/publish-meeting-task';
 
 function revalidateReviewPages(accountSlug: string) {

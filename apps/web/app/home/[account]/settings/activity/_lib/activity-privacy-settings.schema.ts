@@ -33,4 +33,6 @@ export const ActivityPrivacyFormSchema = z.object({
   excluded_domains_text: z.string().max(8000),
 });
 
-export type ActivityPrivacyFormValues = z.infer<typeof ActivityPrivacyFormSchema>;
+export type ActivityPrivacyFormValues = z.infer<
+  typeof ActivityPrivacyFormSchema
+>;

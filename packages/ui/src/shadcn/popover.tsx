@@ -4,8 +4,8 @@ import * as React from 'react';
 
 import { Popover as PopoverPrimitive } from 'radix-ui';
 
-import { cn } from '../lib/utils';
 import { popoverViewportClass } from '../lib/overlay-layout';
+import { cn } from '../lib/utils';
 
 const Popover = PopoverPrimitive.Root;
 
@@ -15,7 +15,13 @@ const PopoverAnchor = PopoverPrimitive.Anchor;
 
 const PopoverContent: React.FC<
   React.ComponentProps<typeof PopoverPrimitive.Content>
-> = ({ className, align = 'center', sideOffset = 4, collisionPadding = 16, ...props }) => (
+> = ({
+  className,
+  align = 'center',
+  sideOffset = 4,
+  collisionPadding = 16,
+  ...props
+}) => (
   <PopoverPrimitive.Portal>
     <PopoverPrimitive.Content
       align={align}

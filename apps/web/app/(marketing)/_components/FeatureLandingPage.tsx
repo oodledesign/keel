@@ -4,6 +4,7 @@ import { ArrowRight, Download } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
+import type { FeatureSlug } from '~/lib/marketing/feature-landing-pages';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -20,7 +21,6 @@ import { FeatureCoverPreview } from './feature-cover-previews';
 import type { FAQItem } from './feature-landing-faqs';
 import { FeatureLandingIcon } from './feature-landing-icon';
 import { MarketingFaqsSection } from './marketing-faqs';
-import type { FeatureSlug } from '~/lib/marketing/feature-landing-pages';
 
 export type FeatureHighlight = {
   icon: string;
@@ -80,10 +80,10 @@ export function FeatureLandingPage({
 }: FeatureLandingPageProps) {
   return (
     <main
-      className="relative overflow-hidden marketing-shell"
+      className="marketing-shell relative overflow-hidden"
       aria-label={primaryKeyword}
     >
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 pb-16 pt-24 md:pt-28 lg:flex-row lg:items-center lg:gap-12">
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-10 px-6 pt-24 pb-16 md:pt-28 lg:flex-row lg:items-center lg:gap-12">
         <div className="max-w-3xl flex-1 space-y-8">
           <div className="flex flex-wrap items-center gap-2">
             <span className={marketingEyebrow}>{eyebrow}</span>
@@ -95,14 +95,18 @@ export function FeatureLandingPage({
           </div>
 
           <div className="space-y-5">
-            <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
+            <h1 className="font-heading text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
               {heading}
             </h1>
-            <p className={`max-w-2xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
+            <p
+              className={`max-w-2xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}
+            >
               {answerFirst}
             </p>
             {subheading !== answerFirst ? (
-              <p className={`max-w-2xl text-sm leading-relaxed ${marketingMutedText}`}>
+              <p
+                className={`max-w-2xl text-sm leading-relaxed ${marketingMutedText}`}
+              >
                 {subheading}
               </p>
             ) : null}
@@ -116,14 +120,24 @@ export function FeatureLandingPage({
               </Link>
             </Button>
             {secondaryCta ? (
-              <Button asChild variant="outline" size="lg" className={marketingBtnOutline}>
+              <Button
+                asChild
+                variant="outline"
+                size="lg"
+                className={marketingBtnOutline}
+              >
                 <Link href={secondaryCta.href}>
                   <Download className="mr-1.5 h-4 w-4" />
                   {secondaryCta.label}
                 </Link>
               </Button>
             ) : null}
-            <Button asChild variant="outline" size="lg" className={marketingBtnOutline}>
+            <Button
+              asChild
+              variant="outline"
+              size="lg"
+              className={marketingBtnOutline}
+            >
               <Link href="/features">See all features</Link>
             </Button>
           </div>
@@ -150,7 +164,9 @@ export function FeatureLandingPage({
               <h3 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
                 {item.title}
               </h3>
-              <p className={`mt-3 text-sm leading-relaxed ${marketingMutedText}`}>
+              <p
+                className={`mt-3 text-sm leading-relaxed ${marketingMutedText}`}
+              >
                 {item.description}
               </p>
             </article>
@@ -207,20 +223,26 @@ export function FeatureLandingPage({
       </section>
 
       {faqs && faqs.length > 0 ? (
-        <MarketingFaqsSection faqs={faqs} tone="muted" headingId="feature-faq-heading" />
+        <MarketingFaqsSection
+          faqs={faqs}
+          tone="muted"
+          headingId="feature-faq-heading"
+        />
       ) : null}
 
       <section
         id="early-access"
-        className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-6 pb-20 pt-4"
+        className="relative mx-auto w-full max-w-7xl scroll-mt-24 px-6 pt-4 pb-20"
       >
         <div className={`${marketingPanelDeep} p-8 text-center md:p-12`}>
           <h2 className="font-heading text-3xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
             Run this in your Workspace OS
           </h2>
-          <p className={`mx-auto mt-3 max-w-xl text-sm leading-relaxed md:text-base ${marketingBodyText}`}>
-            Start free. Personal and family stay free. Pay when you add a paid workspace —
-            one price covers the team.
+          <p
+            className={`mx-auto mt-3 max-w-xl text-sm leading-relaxed md:text-base ${marketingBodyText}`}
+          >
+            Start free. Personal and family stay free. Pay when you add a paid
+            workspace — one price covers the team.
           </p>
           <Button asChild size="lg" className={`mt-6 ${marketingBtnGradient}`}>
             <Link href={ctaHref}>

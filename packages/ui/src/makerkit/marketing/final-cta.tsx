@@ -1,4 +1,5 @@
 import React from 'react';
+
 import Link from 'next/link';
 
 import { ArrowRight } from 'lucide-react';
@@ -32,10 +33,7 @@ export function FinalCta({
 }: FinalCtaProps) {
   return (
     <section
-      className={cn(
-        'bg-[#57C87F] px-4 py-16 lg:px-8 lg:py-24',
-        className,
-      )}
+      className={cn('bg-[#57C87F] px-4 py-16 lg:px-8 lg:py-24', className)}
     >
       <div className="container mx-auto">
         <div className="mx-auto max-w-3xl text-center">
@@ -55,7 +53,9 @@ export function FinalCta({
                 >
                   <Link href={primaryCta.href}>
                     {primaryCta.label}
-                    {primaryCtaShowArrow && <ArrowRight className="ml-2 h-4 w-4" />}
+                    {primaryCtaShowArrow && (
+                      <ArrowRight className="ml-2 h-4 w-4" />
+                    )}
                   </Link>
                 </Button>
               )}

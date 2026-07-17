@@ -5,6 +5,7 @@ import { ArrowLeft } from 'lucide-react';
 
 import { AuthLayoutShell } from '@kit/auth/shared';
 import { MultiFactorAuthError, requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Button } from '@kit/ui/button';
 import { Heading } from '@kit/ui/heading';
@@ -17,7 +18,6 @@ import {
   fulfillAdminUserInvite,
   loadAdminUserInviteByToken,
 } from '~/lib/admin/user-invites.service';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -65,13 +65,19 @@ async function AdminUserInvitePage(props: AdminUserInvitePageProps) {
       redirect(`${pathsConfig.auth.verifyMfa}?${urlParams.toString()}`);
     }
 
-    redirect(`/join/user-invite/accept?invite_token=${encodeURIComponent(token)}`);
+    redirect(
+      `/join/user-invite/accept?invite_token=${encodeURIComponent(token)}`,
+    );
   }
 
   const adminClient = getSupabaseServerAdminClient();
   const invitation = await loadAdminUserInviteByToken(adminClient, token);
 
-  if (!invitation || invitation.status === 'revoked' || invitation.status === 'expired') {
+  if (
+    !invitation ||
+    invitation.status === 'revoked' ||
+    invitation.status === 'expired'
+  ) {
     return (
       <AuthLayoutShell Logo={AppLogo}>
         <InviteError message="Invitation not found or expired" />
@@ -116,7 +122,9 @@ async function AdminUserInvitePage(props: AdminUserInvitePageProps) {
       <AuthLayoutShell Logo={AppLogo}>
         <InviteError
           message={
-            error instanceof Error ? error.message : 'Could not complete invitation'
+            error instanceof Error
+              ? error.message
+              : 'Could not complete invitation'
           }
         />
       </AuthLayoutShell>

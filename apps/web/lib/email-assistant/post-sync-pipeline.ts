@@ -3,8 +3,8 @@ import 'server-only';
 import { classify } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { autoLinkEmailThread } from './auto-link-thread';
 import { isFromOwner } from './address-utils';
+import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
 import { buildThreadText } from './thread-text';
@@ -61,9 +61,7 @@ export async function runEmailAssistantPipeline(
 
   const { data: settingsRow, error: settingsError } = await admin
     .from('email_assistant_settings')
-    .select(
-      'auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts',
-    )
+    .select('auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts')
     .eq('user_id', userId)
     .maybeSingle();
 
@@ -104,7 +102,9 @@ export async function runEmailAssistantPipeline(
     return result;
   }
 
-  let draftsRemaining = settings.auto_draft_enabled ? MAX_AUTO_DRAFT_PER_RUN : 0;
+  let draftsRemaining = settings.auto_draft_enabled
+    ? MAX_AUTO_DRAFT_PER_RUN
+    : 0;
 
   for (const thread of (threadRows ?? []) as ThreadRow[]) {
     if (result.classified >= MAX_CLASSIFY_PER_RUN && draftsRemaining <= 0) {

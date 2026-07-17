@@ -1,11 +1,10 @@
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 
 import { SitePageHeader } from '../_components/site-page-header';
 import { DocsCards } from './_components/docs-cards';
 import { getDocs } from './_lib/server/docs.loader';
-
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 
 export const generateMetadata = async () => {
   return buildMarketingMetadata({

@@ -2,13 +2,14 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
+
 import {
   canAccessPaidWorkspace,
-  hasEntitlement,
   hasActiveWorkspaceSubscription,
+  hasEntitlement,
 } from './entitlements';
 import type { OzerAddonKey } from './ozer-plan-catalog';
-import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
 export type WorkspaceAddonState = {
   workspacePaid: boolean;

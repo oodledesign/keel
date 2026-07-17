@@ -2,9 +2,8 @@
 
 import { useState, useTransition } from 'react';
 
-import { toast } from '@kit/ui/sonner';
-
 import { Button } from '@kit/ui/button';
+import { toast } from '@kit/ui/sonner';
 
 import { DashboardShortcutsEditor } from '~/components/dashboard-shortcuts/dashboard-shortcuts-editor';
 import { saveWorkspaceDashboardShortcutsAction } from '~/lib/dashboard-shortcuts/dashboard-shortcuts.actions';
@@ -53,8 +52,8 @@ export function WorkspaceDashboardShortcutsSettingsForm({
             Dashboard shortcuts
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Quick links at the top of this workspace&apos;s dashboard — only pages
-            within this workspace.
+            Quick links at the top of this workspace&apos;s dashboard — only
+            pages within this workspace.
           </p>
         </div>
         <DashboardShortcutsEditor

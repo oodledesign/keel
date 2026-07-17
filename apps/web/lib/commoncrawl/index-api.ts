@@ -50,8 +50,7 @@ export async function discoverUrlsForDomain(
     return entries
       .filter(
         (entry) =>
-          entry.status === '200' &&
-          (entry.mime?.includes('html') ?? true),
+          entry.status === '200' && (entry.mime?.includes('html') ?? true),
       )
       .map((entry) => entry.url)
       .filter((url) => {

@@ -50,6 +50,7 @@ export function isGoogleCalendarReconnectRequiredError(
     (typeof error === 'object' &&
       error !== null &&
       'code' in error &&
-      (error as { code: unknown }).code === 'GOOGLE_CALENDAR_RECONNECT_REQUIRED')
+      (error as { code: unknown }).code ===
+        'GOOGLE_CALENDAR_RECONNECT_REQUIRED')
   );
 }

@@ -1,12 +1,12 @@
 import 'server-only';
 
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
   loadAccountBrandResolved,
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
   DEFAULT_CONTRACT_EMAIL_BODY,
@@ -84,14 +84,18 @@ export async function sendContractIssuedEmail(params: {
 
   const subjectTemplate =
     contract.email_subject?.trim() || DEFAULT_CONTRACT_EMAIL_SUBJECT;
-  const bodyTemplate = contract.email_body?.trim() || DEFAULT_CONTRACT_EMAIL_BODY;
+  const bodyTemplate =
+    contract.email_body?.trim() || DEFAULT_CONTRACT_EMAIL_BODY;
   const signatureTemplate =
     contract.email_signature?.trim() || DEFAULT_CONTRACT_EMAIL_SIGNATURE;
 
   const subject = renderContractSmartFields(subjectTemplate, smartCtx);
   const bodyText = renderContractSmartFields(bodyTemplate, smartCtx);
   const signature = renderContractSmartFields(signatureTemplate, smartCtx);
-  const amount = formatPence(contract.total_pence ?? 0, contract.currency ?? 'gbp');
+  const amount = formatPence(
+    contract.total_pence ?? 0,
+    contract.currency ?? 'gbp',
+  );
 
   const brand = await loadAccountBrandResolved(params.accountId);
   const issuedInner = `
@@ -179,7 +183,9 @@ export async function sendContractSignedNotifications(params: {
             Boolean(member.email)
           );
         })
-        .map((member: { email?: string | null }) => member.email!.toLowerCase()),
+        .map((member: { email?: string | null }) =>
+          member.email!.toLowerCase(),
+        ),
     ),
   );
 
@@ -190,7 +196,10 @@ export async function sendContractSignedNotifications(params: {
     'Client';
   const clientEmail =
     client?.email ?? contract.sent_to_email ?? contract.recipient_email ?? null;
-  const amount = formatPence(contract.total_pence ?? 0, contract.currency ?? 'gbp');
+  const amount = formatPence(
+    contract.total_pence ?? 0,
+    contract.currency ?? 'gbp',
+  );
   const portalContractUrl = contract.public_token
     ? new URL(`/portal/contracts/${contract.public_token}`, siteUrl).href
     : null;

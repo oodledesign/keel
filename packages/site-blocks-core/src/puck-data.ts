@@ -1,13 +1,13 @@
 import type { Data } from '@puckeditor/core';
 
-import { buildConfig, type SiteBlocksPropsMap } from './config';
+import { type SiteBlocksPropsMap, buildConfig } from './config';
 import {
   BLOCK_TO_LAYOUT_PRESET,
   LAYOUT_PRESET_TO_BLOCK,
-  resolveBlockType,
-  resolveLayoutPreset,
   type SiteBlockLayoutPreset,
   type SiteBlockType,
+  resolveBlockType,
+  resolveLayoutPreset,
 } from './mapping';
 
 export type WireframeSectionInput = {
@@ -40,9 +40,7 @@ function parseOutline(outline?: string | null) {
   const ctaLine = lines.find((line) => /^CTA:/i.test(line));
   const nonMeta = lines.filter(
     (line) =>
-      !line.startsWith('•') &&
-      !line.startsWith('-') &&
-      !/^CTA:/i.test(line),
+      !line.startsWith('•') && !line.startsWith('-') && !/^CTA:/i.test(line),
   );
   return {
     headline: nonMeta[0] ?? '',
@@ -52,10 +50,7 @@ function parseOutline(outline?: string | null) {
   };
 }
 
-function slot(
-  section: WireframeSectionInput,
-  ...keys: string[]
-): string {
+function slot(section: WireframeSectionInput, ...keys: string[]): string {
   const slots = section.copy?.slots ?? {};
   for (const key of keys) {
     const value = slots[key];
@@ -76,9 +71,11 @@ function defaultPropsFor(
 /**
  * Map a Site Studio wireframe section into typed Puck block props.
  */
-export function sectionToBlockProps(
-  section: WireframeSectionInput,
-): { type: SiteBlockType; layoutPreset: SiteBlockLayoutPreset; props: Record<string, unknown> } {
+export function sectionToBlockProps(section: WireframeSectionInput): {
+  type: SiteBlockType;
+  layoutPreset: SiteBlockLayoutPreset;
+  props: Record<string, unknown>;
+} {
   const layoutPreset = resolveLayoutPreset(section);
   const type = LAYOUT_PRESET_TO_BLOCK[layoutPreset];
   const defaults = defaultPropsFor(type) as Record<string, unknown>;
@@ -251,7 +248,8 @@ export function sectionToBlockProps(
           heading: headline || 'FAQs',
           items: items.length
             ? items.map((item) => ({
-                question: item.slots?.question ?? item.slots?.title ?? 'Question?',
+                question:
+                  item.slots?.question ?? item.slots?.title ?? 'Question?',
                 answer: item.slots?.answer ?? item.slots?.body ?? '',
               }))
             : defaults.items,
@@ -333,7 +331,10 @@ export function sectionToBlockProps(
           heading: headline || 'Gallery',
           captions:
             slot(section, 'captions') ||
-            items.map((item) => item.slots?.title ?? item.slots?.caption).filter(Boolean).join(', ') ||
+            items
+              .map((item) => item.slots?.title ?? item.slots?.caption)
+              .filter(Boolean)
+              .join(', ') ||
             String(defaults.captions ?? ''),
         },
       };
@@ -354,9 +355,7 @@ export function sectionToBlockProps(
   }
 }
 
-export function sectionsToPuckData(
-  sections: WireframeSectionInput[],
-): Data {
+export function sectionsToPuckData(sections: WireframeSectionInput[]): Data {
   return {
     root: { props: {} },
     content: sections.map((section) => {

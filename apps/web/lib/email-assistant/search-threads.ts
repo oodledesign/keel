@@ -29,7 +29,9 @@ function participantMatches(
 
     const participant = entry as { name?: unknown; email?: unknown };
     const name =
-      typeof participant.name === 'string' ? participant.name.toLowerCase() : '';
+      typeof participant.name === 'string'
+        ? participant.name.toLowerCase()
+        : '';
     const email =
       typeof participant.email === 'string'
         ? participant.email.toLowerCase()
@@ -61,28 +63,29 @@ export async function searchEmailThreadIds(
   const normalizedQuery = query.trim().toLowerCase();
   const ids = new Set<string>();
 
-  const [threadsResult, messagesResult, recentThreadsResult] = await Promise.all([
-    client
-      .from('email_threads')
-      .select('id')
-      .eq('user_id', userId)
-      .or(`subject.ilike.${term},snippet.ilike.${term}`)
-      .limit(MAX_THREAD_MATCHES),
-    client
-      .from('email_messages')
-      .select('thread_id')
-      .eq('user_id', userId)
-      .or(
-        `from_address.ilike.${term},subject.ilike.${term},body_text.ilike.${term},snippet.ilike.${term}`,
-      )
-      .limit(MAX_MESSAGE_MATCHES),
-    client
-      .from('email_threads')
-      .select('id, participants')
-      .eq('user_id', userId)
-      .order('last_message_at', { ascending: false, nullsFirst: false })
-      .limit(MAX_PARTICIPANT_SCAN),
-  ]);
+  const [threadsResult, messagesResult, recentThreadsResult] =
+    await Promise.all([
+      client
+        .from('email_threads')
+        .select('id')
+        .eq('user_id', userId)
+        .or(`subject.ilike.${term},snippet.ilike.${term}`)
+        .limit(MAX_THREAD_MATCHES),
+      client
+        .from('email_messages')
+        .select('thread_id')
+        .eq('user_id', userId)
+        .or(
+          `from_address.ilike.${term},subject.ilike.${term},body_text.ilike.${term},snippet.ilike.${term}`,
+        )
+        .limit(MAX_MESSAGE_MATCHES),
+      client
+        .from('email_threads')
+        .select('id, participants')
+        .eq('user_id', userId)
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .limit(MAX_PARTICIPANT_SCAN),
+    ]);
 
   if (threadsResult.error) {
     throw new Error(threadsResult.error.message);

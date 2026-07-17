@@ -11,18 +11,20 @@ import {
 } from '@kit/ui/shadcn-sidebar';
 import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
-import { FocusStatusBadge } from '~/home/[account]/settings/focus/_components/FocusStatusBadge';
-import {
-  getWorkspaceFocusMutedClassName,
-  WorkspaceFocusSidebarDecorations,
-} from '~/components/workspace-shell/workspace-focus-sidebar-decorations';
 import { useWorkspaceFocusSettings } from '~/components/workspace-shell/workspace-focus-context';
+import {
+  WorkspaceFocusSidebarDecorations,
+  getWorkspaceFocusMutedClassName,
+} from '~/components/workspace-shell/workspace-focus-sidebar-decorations';
+import pathsConfig from '~/config/paths.config';
+import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
+import { FocusStatusBadge } from '~/home/[account]/settings/focus/_components/FocusStatusBadge';
 import { useWorkspaceFocusSnapshot } from '~/lib/hooks/use-workspace-focus';
 
-import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
-
-import { workspaceAccentColor, workspaceColorForSpaceType } from '../_lib/workspace-accent';
+import {
+  workspaceAccentColor,
+  workspaceColorForSpaceType,
+} from '../_lib/workspace-accent';
 
 function PersonalWorkspaceNavItem({ ws }: { ws: PersonalNavWorkspace }) {
   const pathname = usePathname() ?? '';
@@ -41,7 +43,10 @@ function PersonalWorkspaceNavItem({ ws }: { ws: PersonalNavWorkspace }) {
         asChild
         isActive={active}
         tooltip={ws.label}
-        className={cn('h-auto min-h-10 py-2', getWorkspaceFocusMutedClassName(focusSettings))}
+        className={cn(
+          'h-auto min-h-10 py-2',
+          getWorkspaceFocusMutedClassName(focusSettings),
+        )}
       >
         <Link href={href}>
           <Avatar className={cn('h-6 w-6 rounded-md', 'shrink-0')}>

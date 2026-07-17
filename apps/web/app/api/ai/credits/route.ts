@@ -1,4 +1,5 @@
 import { type NextRequest } from 'next/server';
+
 import { z } from 'zod';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';

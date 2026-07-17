@@ -1,14 +1,15 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import { summarizeMeetupTranscript } from '~/lib/ai/meetup-summary';
 import { sanitizeCommunityHtml } from '~/lib/sanitize-community-html';
-import pathsConfig from '~/config/paths.config';
 
 import type { EveningPart } from '../community-schedule.types';
 
@@ -57,7 +58,7 @@ export const createCommunityMeetup = enhanceAction(
     let eveningParts: EveningPart[] = input.eveningParts ?? [];
     let mealPlan = input.mealPlan?.trim() || null;
     let title = input.title.trim();
-    let sessionNotes = input.sessionNotes?.trim() || null;
+    const sessionNotes = input.sessionNotes?.trim() || null;
 
     if (input.templateId) {
       const { data: tpl } = await client
@@ -468,7 +469,9 @@ export const createCommunityMeetupSeries = enhanceAction(
   },
 );
 
-function sanitizeRichTextField(value: string | null | undefined): string | null {
+function sanitizeRichTextField(
+  value: string | null | undefined,
+): string | null {
   if (value == null) return null;
   const trimmed = value.trim();
   if (!trimmed) return null;

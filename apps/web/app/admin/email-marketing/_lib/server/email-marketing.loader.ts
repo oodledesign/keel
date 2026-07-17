@@ -5,11 +5,11 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { requireSuperAdmin } from '~/admin/_lib/server/require-super-admin';
 import type { EmailCampaignRow } from '~/lib/admin-email/campaigns';
 import {
-  loadCustomContactLists,
-  loadRecipientListsOverview,
   type EmailRecipientList,
   type RecipientListMember,
   type RecipientListSummary,
+  loadCustomContactLists,
+  loadRecipientListsOverview,
 } from '~/lib/admin-email/campaigns';
 
 type DbClient = {
@@ -86,8 +86,11 @@ export async function loadCampaigns(): Promise<CampaignListRow[]> {
     opened_at: string | null;
     clicked_at: string | null;
   }>) {
-    const entry =
-      metricsByCampaign.get(row.campaign_id) ?? { rows: 0, opens: 0, clicks: 0 };
+    const entry = metricsByCampaign.get(row.campaign_id) ?? {
+      rows: 0,
+      opens: 0,
+      clicks: 0,
+    };
     entry.rows += 1;
     if (row.opened_at) entry.opens += 1;
     if (row.clicked_at) entry.clicks += 1;
@@ -110,7 +113,9 @@ export async function loadCampaigns(): Promise<CampaignListRow[]> {
   });
 }
 
-export async function loadCampaign(id: string): Promise<EmailCampaignRow | null> {
+export async function loadCampaign(
+  id: string,
+): Promise<EmailCampaignRow | null> {
   await requireSuperAdmin();
   const admin = adminClient();
   const { data, error } = await admin
@@ -188,7 +193,9 @@ export async function loadContacts(params?: {
   if (params?.source) query = query.eq('source', params.source);
   if (params?.query) {
     const pattern = `%${params.query.replace(/%/g, '\\%')}%`;
-    query = query.or(`first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern}`);
+    query = query.or(
+      `first_name.ilike.${pattern},last_name.ilike.${pattern},email.ilike.${pattern}`,
+    );
   }
 
   const { data, error } = await query;
@@ -249,11 +256,7 @@ export async function loadCurrentSuperAdminEmail() {
   return data.users.find((user) => user.id === userId)?.email ?? '';
 }
 
-export type {
-  EmailRecipientList,
-  RecipientListMember,
-  RecipientListSummary,
-};
+export type { EmailRecipientList, RecipientListMember, RecipientListSummary };
 
 export async function loadRecipientLists(params?: {
   list?: string;

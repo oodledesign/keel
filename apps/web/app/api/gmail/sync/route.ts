@@ -1,11 +1,15 @@
+import { syncMailbox } from '@kit/gmail';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { syncMailbox } from '@kit/gmail';
-import { CRON_KILL_SWITCH, cronSkippedResponse, isCronDisabled } from '~/lib/cron/cron-guards';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import {
+  CRON_KILL_SWITCH,
+  cronSkippedResponse,
+  isCronDisabled,
+} from '~/lib/cron/cron-guards';
 import { authorizeCron } from '~/lib/email-assistant/cron-auth';
 import { runEmailAssistantPipeline } from '~/lib/email-assistant/post-sync-pipeline';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const runtime = 'nodejs';
 export const maxDuration = 120;
@@ -63,8 +67,7 @@ async function syncAllConnectedUsers() {
       results.push({
         userId,
         ok: false,
-        error:
-          syncError instanceof Error ? syncError.message : 'Sync failed',
+        error: syncError instanceof Error ? syncError.message : 'Sync failed',
       });
     }
   }

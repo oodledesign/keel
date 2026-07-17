@@ -87,7 +87,8 @@ export type OzerTransactionalShellOptions = {
 export function renderOzerTransactionalEmail(
   options: OzerTransactionalShellOptions,
 ): string {
-  const productName = options.productName ?? process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
+  const productName =
+    options.productName ?? process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
   const assets = getOzerEmailAssetUrls();
   const preview = options.preview
     ? `<div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;font-size:1px;line-height:1px;">${escapeEmailHtml(options.preview)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;</div>`

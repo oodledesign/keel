@@ -22,7 +22,8 @@ export type NotesFilesListItem = {
 
 export const listNotesAndFilesForContextAction = enhanceAction(
   async (data) => {
-    const { getSupabaseServerClient } = await import('@kit/supabase/server-client');
+    const { getSupabaseServerClient } =
+      await import('@kit/supabase/server-client');
     const client = getSupabaseServerClient();
 
     let clientOrgId = data.clientId ?? data.clientOrgId ?? null;
@@ -90,12 +91,10 @@ export const listNotesAndFilesForContextAction = enhanceAction(
 
 export const loadJobWorkspaceContentAction = enhanceAction(
   async (data) => {
-    const { loadContextWorkspaceContent } = await import(
-      '../../_lib/workspace-content/context-loader'
-    );
-    const { loadTeamWorkspace } = await import(
-      '../../_lib/server/team-account-workspace.loader'
-    );
+    const { loadContextWorkspaceContent } =
+      await import('../../_lib/workspace-content/context-loader');
+    const { loadTeamWorkspace } =
+      await import('../../_lib/server/team-account-workspace.loader');
     const workspace = await loadTeamWorkspace(data.accountSlug);
 
     return loadContextWorkspaceContent({

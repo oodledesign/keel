@@ -1,4 +1,10 @@
-export type LastUnit = 'minutes' | 'hours' | 'days' | 'weeks' | 'months' | 'years';
+export type LastUnit =
+  | 'minutes'
+  | 'hours'
+  | 'days'
+  | 'weeks'
+  | 'months'
+  | 'years';
 
 export type AnalyticsDatePreset =
   | 'today'
@@ -130,12 +136,22 @@ export function resolveAnalyticsDateRange(
   const todayEnd = endOfDay(now);
 
   if (selection.preset === 'today') {
-    return { from: today, to: todayEnd, fromIso: toIsoDate(today), toIso: toIsoDate(today) };
+    return {
+      from: today,
+      to: todayEnd,
+      fromIso: toIsoDate(today),
+      toIso: toIsoDate(today),
+    };
   }
 
   if (selection.preset === 'yesterday') {
     const y = subtractDays(today, 1);
-    return { from: y, to: endOfDay(y), fromIso: toIsoDate(y), toIso: toIsoDate(y) };
+    return {
+      from: y,
+      to: endOfDay(y),
+      fromIso: toIsoDate(y),
+      toIso: toIsoDate(y),
+    };
   }
 
   if (selection.preset === 'period_to_date') {
@@ -221,7 +237,10 @@ export function resolveAnalyticsDateRange(
     return { from, to: end, fromIso: toIsoDate(from), toIso: toIsoDate(end) };
   }
   if (unit === 'weeks') {
-    const from = subtractDays(startOfDay(end), count * 7 - (includeToday ? 0 : 1));
+    const from = subtractDays(
+      startOfDay(end),
+      count * 7 - (includeToday ? 0 : 1),
+    );
     return { from, to: end, fromIso: toIsoDate(from), toIso: toIsoDate(end) };
   }
   if (unit === 'months') {

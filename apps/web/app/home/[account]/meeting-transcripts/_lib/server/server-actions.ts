@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { z } from 'zod';
+
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-import { z } from 'zod';
 
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
@@ -107,7 +108,10 @@ function revalidateMeetingPages(accountSlug: string, transcriptId?: string) {
   const slug = accountSlug.trim();
   if (!slug) return;
 
-  revalidatePath(workAccountPath(pathsConfig.app.accountMeetings, slug), 'page');
+  revalidatePath(
+    workAccountPath(pathsConfig.app.accountMeetings, slug),
+    'page',
+  );
 
   if (transcriptId) {
     revalidatePath(

@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -34,10 +34,9 @@ export async function GET(request: NextRequest) {
   }
 
   const payload = stateToken ? verifyZoomState(stateToken) : null;
-  const returnPath =
-    payload?.returnPath?.startsWith('/')
-      ? payload.returnPath
-      : pathsConfig.app.home;
+  const returnPath = payload?.returnPath?.startsWith('/')
+    ? payload.returnPath
+    : pathsConfig.app.home;
   const returnUrl = absoluteUrl(returnPath);
 
   if (!payload || payload.userId !== user.id) {

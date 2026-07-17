@@ -2,9 +2,10 @@
 
 import { useEffect, useState } from 'react';
 
-import { ArrowLeft, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+
+import { ArrowLeft, Trash2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -31,7 +32,6 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 
-import { ClientCombobox } from './client-combobox';
 import { getErrorMessage } from '../_lib/error-message';
 import {
   addJobAssignment,
@@ -41,6 +41,7 @@ import {
   removeJobAssignment,
   updateJob,
 } from '../_lib/server/server-actions';
+import { ClientCombobox } from './client-combobox';
 
 type Job = {
   id: string;
@@ -71,8 +72,13 @@ export function JobEditContent({
   canDeleteJobs: boolean;
 }) {
   const router = useRouter();
-  const jobsPath = pathsConfig.app.accountJobs.replace('[account]', accountSlug);
-  const detailPath = pathsConfig.app.accountJobDetail.replace('[account]', accountSlug).replace('[id]', jobId);
+  const jobsPath = pathsConfig.app.accountJobs.replace(
+    '[account]',
+    accountSlug,
+  );
+  const detailPath = pathsConfig.app.accountJobDetail
+    .replace('[account]', accountSlug)
+    .replace('[id]', jobId);
 
   const [title, setTitle] = useState(job.title);
   const [clientId, setClientId] = useState<string>(job.client_id ?? '');
@@ -80,19 +86,25 @@ export function JobEditContent({
   const [status, setStatus] = useState(job.status);
   const [priority, setPriority] = useState(job.priority);
   const [dueDate, setDueDate] = useState(
-    job.due_date ? new Date(job.due_date).toISOString().slice(0, 10) : ''
+    job.due_date ? new Date(job.due_date).toISOString().slice(0, 10) : '',
   );
   const [valuePence, setValuePence] = useState(
-    job.value_pence != null ? (job.value_pence / 100).toFixed(2) : ''
+    job.value_pence != null ? (job.value_pence / 100).toFixed(2) : '',
   );
   const [submitting, setSubmitting] = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [clients, setClients] = useState<{ id: string; display_name: string | null }[]>([]);
+  const [clients, setClients] = useState<
+    { id: string; display_name: string | null }[]
+  >([]);
   const [clientsLoading, setClientsLoading] = useState(true);
   const [clientsError, setClientsError] = useState<string | null>(null);
-  const [members, setMembers] = useState<{ user_id: string; name: string | null; email: string | null }[]>([]);
-  const [assignments, setAssignments] = useState<{ user_id: string; role_on_job: string | null }[]>([]);
+  const [members, setMembers] = useState<
+    { user_id: string; name: string | null; email: string | null }[]
+  >([]);
+  const [assignments, setAssignments] = useState<
+    { user_id: string; role_on_job: string | null }[]
+  >([]);
   const [assignmentsLoading, setAssignmentsLoading] = useState(true);
   const [selectedMemberId, setSelectedMemberId] = useState<string>('');
   const [assignRole, setAssignRole] = useState('');
@@ -110,10 +122,14 @@ export function JobEditContent({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setClients((list || []) as { id: string; display_name: string | null }[]);
+        setClients(
+          (list || []) as { id: string; display_name: string | null }[],
+        );
       })
       .catch((err) => {
-        setClientsError(err instanceof Error ? err.message : 'Failed to load clients');
+        setClientsError(
+          err instanceof Error ? err.message : 'Failed to load clients',
+        );
         setClients([]);
         toast.error(getErrorMessage(err));
       })
@@ -125,7 +141,13 @@ export function JobEditContent({
     listAccountMembers({ accountSlug })
       .then((raw: unknown) => {
         const list = Array.isArray(raw) ? raw : [];
-        setMembers(list as { user_id: string; name: string | null; email: string | null }[]);
+        setMembers(
+          list as {
+            user_id: string;
+            name: string | null;
+            email: string | null;
+          }[],
+        );
       })
       .catch(() => setMembers([]));
   }, [accountSlug]);
@@ -141,7 +163,9 @@ export function JobEditContent({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setAssignments((list ?? []) as { user_id: string; role_on_job: string | null }[]);
+        setAssignments(
+          (list ?? []) as { user_id: string; role_on_job: string | null }[],
+        );
       })
       .catch(() => setAssignments([]))
       .finally(() => setAssignmentsLoading(false));
@@ -161,10 +185,17 @@ export function JobEditContent({
         title: title.trim(),
         description: description.trim() || null,
         client_id: clientId.trim() || null,
-        status: status as 'pending' | 'in_progress' | 'on_hold' | 'completed' | 'cancelled',
+        status: status as
+          | 'pending'
+          | 'in_progress'
+          | 'on_hold'
+          | 'completed'
+          | 'cancelled',
         priority: priority as 'low' | 'medium' | 'high' | 'urgent',
         due_date: dueDate ? new Date(dueDate) : null,
-        value_pence: valuePence ? Math.round(parseFloat(valuePence) * 100) : null,
+        value_pence: valuePence
+          ? Math.round(parseFloat(valuePence) * 100)
+          : null,
       });
       toast.success('Job updated');
       router.push(detailPath);
@@ -209,7 +240,9 @@ export function JobEditContent({
         : Array.isArray((raw as { data?: unknown })?.data)
           ? (raw as { data: unknown[] }).data
           : [];
-      setAssignments((list ?? []) as { user_id: string; role_on_job: string | null }[]);
+      setAssignments(
+        (list ?? []) as { user_id: string; role_on_job: string | null }[],
+      );
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -228,12 +261,16 @@ export function JobEditContent({
   };
 
   const assignedUserIds = new Set(assignments.map((a) => a.user_id));
-  const membersNotAssigned = members.filter((m) => !assignedUserIds.has(m.user_id));
+  const membersNotAssigned = members.filter(
+    (m) => !assignedUserIds.has(m.user_id),
+  );
 
   if (!canEditJobs) {
     return (
       <div className="flex min-h-[60vh] w-full items-center justify-center rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8">
-        <p className="text-center text-[var(--workspace-shell-text-muted)]">You don&apos;t have permission to edit this job.</p>
+        <p className="text-center text-[var(--workspace-shell-text-muted)]">
+          You don&apos;t have permission to edit this job.
+        </p>
       </div>
     );
   }
@@ -248,10 +285,16 @@ export function JobEditContent({
         Back to job
       </Link>
 
-      <form onSubmit={handleSubmit} className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
+      <form
+        onSubmit={handleSubmit}
+        className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6"
+      >
         <div className="flex flex-col gap-4">
           <div>
-            <Label htmlFor="title" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="title"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Title *
             </Label>
             <Input
@@ -263,7 +306,9 @@ export function JobEditContent({
             />
           </div>
           <div>
-            <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Client
+            </Label>
             <div className="mt-1">
               <ClientCombobox
                 clients={clients}
@@ -271,7 +316,10 @@ export function JobEditContent({
                 onValueChange={setClientId}
                 loading={clientsLoading}
                 placeholder="Select client"
-                addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+                addClientHref={pathsConfig.app.accountClients.replace(
+                  '[account]',
+                  accountSlug,
+                )}
               />
             </div>
             {clientsError && (
@@ -279,7 +327,10 @@ export function JobEditContent({
             )}
           </div>
           <div>
-            <Label htmlFor="description" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="description"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Description
             </Label>
             <textarea
@@ -293,7 +344,9 @@ export function JobEditContent({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <Label className="text-[var(--workspace-shell-text-muted)]">Status</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Status
+              </Label>
               <Select value={status} onValueChange={setStatus}>
                 <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -308,7 +361,9 @@ export function JobEditContent({
               </Select>
             </div>
             <div>
-              <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Priority
+              </Label>
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -323,7 +378,10 @@ export function JobEditContent({
             </div>
           </div>
           <div>
-            <Label htmlFor="due_date" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="due_date"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Due date
             </Label>
             <Input
@@ -335,7 +393,10 @@ export function JobEditContent({
             />
           </div>
           <div>
-            <Label htmlFor="value" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="value"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Value (£)
             </Label>
             <Input
@@ -351,15 +412,21 @@ export function JobEditContent({
           </div>
 
           <div className="border-t border-[color:var(--workspace-shell-border)] pt-6">
-            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Assigned team</h3>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+              Assigned team
+            </h3>
             {assignmentsLoading ? (
-              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                Loading…
+              </p>
             ) : (
               <>
                 <ul className="mt-2 space-y-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
                   {assignments.map((a) => {
                     const member = members.find((m) => m.user_id === a.user_id);
-                    const label = member ? member.name || member.email || a.user_id.slice(0, 8) : a.user_id.slice(0, 8);
+                    const label = member
+                      ? member.name || member.email || a.user_id.slice(0, 8)
+                      : a.user_id.slice(0, 8);
                     return (
                       <li
                         key={a.user_id}
@@ -383,14 +450,20 @@ export function JobEditContent({
                   })}
                 </ul>
                 {assignments.length === 0 && (
-                  <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">No one assigned yet.</p>
+                  <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                    No one assigned yet.
+                  </p>
                 )}
                 <div className="mt-4 flex flex-wrap items-end gap-2">
                   <div className="min-w-[180px]">
-                    <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Add team member</Label>
+                    <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Add team member
+                    </Label>
                     <Select
                       value={selectedMemberId || 'none'}
-                      onValueChange={(v) => setSelectedMemberId(v === 'none' ? '' : v)}
+                      onValueChange={(v) =>
+                        setSelectedMemberId(v === 'none' ? '' : v)
+                      }
                       disabled={membersNotAssigned.length === 0}
                     >
                       <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
@@ -423,7 +496,9 @@ export function JobEditContent({
                   </Button>
                 </div>
                 {membersNotAssigned.length === 0 && members.length > 0 && (
-                  <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">All members are already assigned.</p>
+                  <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                    All members are already assigned.
+                  </p>
                 )}
               </>
             )}
@@ -437,12 +512,20 @@ export function JobEditContent({
             >
               {submitting ? 'Saving...' : 'Save changes'}
             </Button>
-            <Button type="button" variant="outline" className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]" asChild>
+            <Button
+              type="button"
+              variant="outline"
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+              asChild
+            >
               <Link href={detailPath}>Cancel</Link>
             </Button>
 
             {canDeleteJobs && (
-              <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+              <AlertDialog
+                open={deleteDialogOpen}
+                onOpenChange={setDeleteDialogOpen}
+              >
                 <AlertDialogTrigger asChild>
                   <Button
                     type="button"
@@ -457,8 +540,8 @@ export function JobEditContent({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Delete this job?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      This action cannot be undone. The job and all its assignments and notes will be
-                      permanently removed.
+                      This action cannot be undone. The job and all its
+                      assignments and notes will be permanently removed.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter className="gap-2 sm:gap-0">

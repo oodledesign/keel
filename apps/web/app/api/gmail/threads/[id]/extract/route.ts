@@ -1,17 +1,17 @@
-import { extract, type EmailActionItem } from '@kit/email-assistant';
+import { type EmailActionItem, extract } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import {
   loadAccountMembersForExtraction,
   resolveSuggestedAssigneeId,
   shouldIncludeExtractedItem,
 } from '~/lib/email-assistant/account-members';
-import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
-import { buildThreadText } from '~/lib/email-assistant/thread-text';
-import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { linkFieldsFromThread } from '~/lib/email-assistant/action-item-links';
+import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
+import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { buildThreadText } from '~/lib/email-assistant/thread-text';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -93,7 +93,11 @@ export async function POST(request: Request, context: RouteContext) {
   const threadText = buildThreadText(messages ?? []);
 
   if (!threadText.trim()) {
-    return jsonErr('EMPTY_THREAD', 'Thread has no message content to analyze', 400);
+    return jsonErr(
+      'EMPTY_THREAD',
+      'Thread has no message content to analyze',
+      400,
+    );
   }
 
   let items: EmailActionItem[];

@@ -1,8 +1,8 @@
 import { NextResponse } from 'next/server';
 
 import { resolveActiveWebsiteShare } from '~/home/[account]/websites/_lib/server/site-studio.service';
-import { buildExport } from '~/lib/websites/export-contract';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
+import { buildExport } from '~/lib/websites/export-contract';
 
 export const dynamic = 'force-dynamic';
 
@@ -19,10 +19,7 @@ export async function GET(request: Request) {
 
   const token = new URL(request.url).searchParams.get('token')?.trim() ?? '';
   if (!token) {
-    return NextResponse.json(
-      { error: 'Missing share token' },
-      { status: 400 },
-    );
+    return NextResponse.json({ error: 'Missing share token' }, { status: 400 });
   }
 
   const share = await resolveActiveWebsiteShare(token);

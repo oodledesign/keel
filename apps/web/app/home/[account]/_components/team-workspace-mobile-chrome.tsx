@@ -1,37 +1,34 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { usePathname } from 'next/navigation';
+
+import type { JWTUserData } from '@kit/supabase/types';
 
 import { MobileTapHaptics } from '~/components/mobile-tap-haptics';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
+import { buildPersonalSwitcherAccounts } from '~/components/workspace-shell/workspace-accounts-selector';
+import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-create-task-host';
+import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import {
-  buildPersonalSwitcherAccounts,
-} from '~/components/workspace-shell/workspace-accounts-selector';
-import {
-  WorkspaceMobileNewMenu,
-} from '~/components/workspace-shell/workspace-new-menu';
-import {
-  useWorkspaceMobileNav,
+  type MobileNavLink,
   WorkspaceMobileBottomNav,
   WorkspaceMobileHeaderBar,
   WorkspaceMobileHeaderSelector,
   WorkspaceMobileMenu,
-  type MobileNavLink,
+  useWorkspaceMobileNav,
 } from '~/components/workspace-shell/workspace-mobile-nav';
-import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
-import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';
-import { syncPullToRefreshPathname } from '~/lib/pwa/pull-to-refresh-context';
-import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
-
-import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-create-task-host';
-import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
+import { WorkspaceMobileNewMenu } from '~/components/workspace-shell/workspace-new-menu';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
-import type { JWTUserData } from '@kit/supabase/types';
+import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';
+import { syncPullToRefreshPathname } from '~/lib/pwa/pull-to-refresh-context';
+import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
 
 type TeamWorkspaceMobileChromeProps = {
   account: string;
@@ -65,7 +62,10 @@ export function TeamWorkspaceMobileChrome({
   }, [pathname]);
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
   const accounts = buildPersonalSwitcherAccounts(rawAccounts);
-  const settingsHref = pathsConfig.app.accountSettings.replace('[account]', account);
+  const settingsHref = pathsConfig.app.accountSettings.replace(
+    '[account]',
+    account,
+  );
 
   return (
     <>
@@ -102,13 +102,9 @@ export function TeamWorkspaceMobileChrome({
         </WorkspaceMobileHeaderBar>
 
         {noteEditorScroll ? (
-          <div className="min-w-0 flex-1 lg:pb-0">
-            {children}
-          </div>
+          <div className="min-w-0 flex-1 lg:pb-0">{children}</div>
         ) : (
-          <PullToRefresh className="min-w-0 lg:pb-0">
-            {children}
-          </PullToRefresh>
+          <PullToRefresh className="min-w-0 lg:pb-0">{children}</PullToRefresh>
         )}
       </div>
 

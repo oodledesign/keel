@@ -28,10 +28,7 @@ export async function emailApiFetch<T>(
   const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
 
   if (!payload.ok) {
-    throw new EmailApiError(
-      payload.error.code,
-      payload.error.message,
-    );
+    throw new EmailApiError(payload.error.code, payload.error.message);
   }
 
   return payload.data;

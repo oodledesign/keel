@@ -47,7 +47,14 @@ export function CampaignFieldCell({
   onChange: (value: ProjectFieldValue) => void;
 }) {
   if (!canEdit) {
-    return <CampaignFieldDisplay field={field} value={value} accountSlug={accountSlug} linkOptions={linkOptions} />;
+    return (
+      <CampaignFieldDisplay
+        field={field}
+        value={value}
+        accountSlug={accountSlug}
+        linkOptions={linkOptions}
+      />
+    );
   }
 
   switch (field.fieldType) {
@@ -186,7 +193,9 @@ export function CampaignFieldDisplay({
       return <span>{value === true ? 'Yes' : 'No'}</span>;
     case 'currency':
       return (
-        <span>{typeof value === 'number' ? formatCurrency(value) : String(value)}</span>
+        <span>
+          {typeof value === 'number' ? formatCurrency(value) : String(value)}
+        </span>
       );
     case 'url':
       return (
@@ -204,7 +213,10 @@ export function CampaignFieldDisplay({
       if (!client) return <span>{String(value)}</span>;
       const href = `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${client.id}`;
       return (
-        <Link href={href} className="text-[var(--ozer-accent-muted)] hover:underline">
+        <Link
+          href={href}
+          className="text-[var(--ozer-accent-muted)] hover:underline"
+        >
           {client.name}
         </Link>
       );
@@ -216,7 +228,10 @@ export function CampaignFieldDisplay({
         .replace('[account]', accountSlug)
         .replace('[id]', project.id);
       return (
-        <Link href={href} className="text-[var(--ozer-accent-muted)] hover:underline">
+        <Link
+          href={href}
+          className="text-[var(--ozer-accent-muted)] hover:underline"
+        >
           {project.name}
         </Link>
       );

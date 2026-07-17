@@ -3,7 +3,6 @@
 import { useState } from 'react';
 
 import dynamic from 'next/dynamic';
-
 import Link from 'next/link';
 
 import { Loader2, RefreshCcw } from 'lucide-react';
@@ -59,7 +58,10 @@ export function PlanOutputPanel({
     ? flattenPlanBlocks(planDocument).length
     : 0;
   const showDayScheduleEditor =
-    complete && mode === 'day' && planDocument !== null && editableBlockCount > 0;
+    complete &&
+    mode === 'day' &&
+    planDocument !== null &&
+    editableBlockCount > 0;
 
   return (
     <section className="sticky top-4 min-h-[min(80vh,720px)] rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.22)]">

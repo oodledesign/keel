@@ -8,10 +8,7 @@ import pathsConfig from '~/config/paths.config';
 import type { TeamAccountWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
 
-import {
-  canEnterWorkspace,
-  checkAccountAccess,
-} from './check-account-access';
+import { canEnterWorkspace, checkAccountAccess } from './check-account-access';
 import { canAccessPaidWorkspace } from './entitlements';
 import { requiredEntitlementForProfile } from './ozer-plan-catalog';
 

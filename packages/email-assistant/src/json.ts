@@ -152,7 +152,9 @@ export function parseClassifyResponse(raw: string): {
   };
 }
 
-export function serializeExtractResponse(items: EmailActionItem[]): ExtractResponseJson {
+export function serializeExtractResponse(
+  items: EmailActionItem[],
+): ExtractResponseJson {
   return {
     items: items.map((item) => ({
       title: item.title,

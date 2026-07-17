@@ -35,39 +35,37 @@ export type AdminBillingAnalytics = {
 export const loadAdminBillingAnalytics = cache(
   async (): Promise<AdminBillingAnalytics> => {
     const client = getSupabaseServerClient();
-    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const thirtyDaysAgo = new Date(
+      Date.now() - 30 * 24 * 60 * 60 * 1000,
+    ).toISOString();
 
-    const [
-      statusRows,
-      pastDueRows,
-      cancelledRows,
-      activeSubs,
-    ] = await Promise.all([
-      client.from('subscriptions').select('status'),
-      client
-        .from('subscriptions')
-        .select(
-          'id, status, updated_at, account_id, accounts!inner(name, slug)',
-        )
-        .in('status', ['past_due', 'unpaid'])
-        .order('updated_at', { ascending: true })
-        .limit(25),
-      client
-        .from('subscriptions')
-        .select(
-          'id, updated_at, accounts!inner(name, slug)',
-        )
-        .eq('status', 'canceled')
-        .gte('updated_at', thirtyDaysAgo)
-        .order('updated_at', { ascending: false })
-        .limit(15),
-      client
-        .from('subscriptions')
-        .select('id, currency')
-        .in('status', ['active', 'trialing']),
-    ]);
+    const [statusRows, pastDueRows, cancelledRows, activeSubs] =
+      await Promise.all([
+        client.from('subscriptions').select('status'),
+        client
+          .from('subscriptions')
+          .select(
+            'id, status, updated_at, account_id, accounts!inner(name, slug)',
+          )
+          .in('status', ['past_due', 'unpaid'])
+          .order('updated_at', { ascending: true })
+          .limit(25),
+        client
+          .from('subscriptions')
+          .select('id, updated_at, accounts!inner(name, slug)')
+          .eq('status', 'canceled')
+          .gte('updated_at', thirtyDaysAgo)
+          .order('updated_at', { ascending: false })
+          .limit(15),
+        client
+          .from('subscriptions')
+          .select('id, currency')
+          .in('status', ['active', 'trialing']),
+      ]);
 
-    const activeSubIds = (activeSubs.data ?? []).map((s) => (s as { id: string }).id);
+    const activeSubIds = (activeSubs.data ?? []).map(
+      (s) => (s as { id: string }).id,
+    );
     const currencyBySub = new Map(
       (activeSubs.data ?? []).map((s) => [
         (s as { id: string }).id,
@@ -79,7 +77,9 @@ export const loadAdminBillingAnalytics = cache(
       activeSubIds.length > 0
         ? await client
             .from('subscription_items')
-            .select('price_amount, quantity, interval, interval_count, subscription_id')
+            .select(
+              'price_amount, quantity, interval, interval_count, subscription_id',
+            )
             .in('subscription_id', activeSubIds)
         : { data: [] };
 
@@ -93,12 +93,17 @@ export const loadAdminBillingAnalytics = cache(
     let currency = 'gbp';
 
     for (const item of mrrRows.data ?? []) {
-      const subscriptionId = (item as { subscription_id: string }).subscription_id;
+      const subscriptionId = (item as { subscription_id: string })
+        .subscription_id;
       currency = currencyBySub.get(subscriptionId) ?? currency;
-      const priceAmount = Number((item as { price_amount: number | null }).price_amount ?? 0);
+      const priceAmount = Number(
+        (item as { price_amount: number | null }).price_amount ?? 0,
+      );
       const quantity = Number((item as { quantity: number }).quantity ?? 1);
       const interval = String((item as { interval: string }).interval);
-      const intervalCount = Number((item as { interval_count: number }).interval_count ?? 1);
+      const intervalCount = Number(
+        (item as { interval_count: number }).interval_count ?? 1,
+      );
 
       if (!priceAmount) continue;
 
@@ -115,8 +120,9 @@ export const loadAdminBillingAnalytics = cache(
     }
 
     const pastDue = (pastDueRows.data ?? []).map((row) => {
-      const account = (row as { accounts: { name: string | null; slug: string | null } })
-        .accounts;
+      const account = (
+        row as { accounts: { name: string | null; slug: string | null } }
+      ).accounts;
       const slug = account.slug ?? '';
       return {
         subscriptionId: (row as { id: string }).id,
@@ -129,8 +135,9 @@ export const loadAdminBillingAnalytics = cache(
     });
 
     const recentlyCancelled = (cancelledRows.data ?? []).map((row) => {
-      const account = (row as { accounts: { name: string | null; slug: string | null } })
-        .accounts;
+      const account = (
+        row as { accounts: { name: string | null; slug: string | null } }
+      ).accounts;
       const slug = account.slug ?? '';
       return {
         subscriptionId: (row as { id: string }).id,

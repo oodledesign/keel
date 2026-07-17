@@ -16,9 +16,7 @@ interface WebsiteEditPageProps {
   params: Promise<{ account: string; id: string }>;
 }
 
-export const generateMetadata = async ({
-  params,
-}: WebsiteEditPageProps) => {
+export const generateMetadata = async ({ params }: WebsiteEditPageProps) => {
   const { id } = await params;
   return { title: `Edit website – ${id}` };
 };

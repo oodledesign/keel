@@ -3,6 +3,11 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
+  type FreeAgentCategoryRecord,
+  freeAgentCategoryDisplayName,
+  freeAgentCategoryKind,
+} from './categories';
+import {
   FreeAgentClient,
   freeAgentTransactionDate,
   parseFreeAgentId,
@@ -12,11 +17,6 @@ import {
   buildCategoryUrlToIdMap,
   removeOzerDefaultCategories,
 } from './finance-categories';
-import {
-  freeAgentCategoryDisplayName,
-  freeAgentCategoryKind,
-  type FreeAgentCategoryRecord,
-} from './categories';
 
 type ConnectionRow = {
   id: string;
@@ -96,7 +96,9 @@ function clientFromConnection(db: SupabaseClient, row: ConnectionRow) {
   );
 }
 
-function explanationCategoryUrl(explanation: Record<string, unknown>): string | null {
+function explanationCategoryUrl(
+  explanation: Record<string, unknown>,
+): string | null {
   const category = explanation.category;
   if (typeof category === 'string' && category.trim()) {
     return category.trim();
@@ -124,7 +126,9 @@ async function fetchExplanationMapForBankAccount(
     if (explanations.length === 0) break;
 
     for (const explanation of explanations) {
-      const bankTransactionUrl = String(explanation.bank_transaction ?? '').trim();
+      const bankTransactionUrl = String(
+        explanation.bank_transaction ?? '',
+      ).trim();
       const explanationUrl = String(explanation.url ?? '').trim();
       if (!bankTransactionUrl || !explanationUrl) continue;
 
@@ -193,7 +197,9 @@ async function syncFreeAgentCategories(
   return synced;
 }
 
-function incrementalSyncFromDate(lastSyncAt: string | null | undefined): string {
+function incrementalSyncFromDate(
+  lastSyncAt: string | null | undefined,
+): string {
   const today = new Date();
   const cap = new Date(today);
   cap.setDate(cap.getDate() - 90);
@@ -371,9 +377,9 @@ async function importBankTransactionsForWindow(
   return stats;
 }
 
-function readConnectionSyncState(
-  connection: { sync_state?: unknown },
-): ConnectionSyncState {
+function readConnectionSyncState(connection: {
+  sync_state?: unknown;
+}): ConnectionSyncState {
   const raw = connection.sync_state;
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     return {};
@@ -456,7 +462,7 @@ export async function syncFreeAgentHistoryChunk(
   const syncState = readConnectionSyncState(connection);
   const windows = historyDateWindows();
 
-  let historyBackfill =
+  const historyBackfill =
     options.reset || syncState.historyBackfill?.status !== 'running'
       ? initialHistoryBackfillState()
       : { ...syncState.historyBackfill! };
@@ -483,7 +489,8 @@ export async function syncFreeAgentHistoryChunk(
   let categoriesSynced = 0;
   if (
     options.reset ||
-    (historyBackfill.bankAccountIndex === 0 && historyBackfill.windowIndex === 0)
+    (historyBackfill.bankAccountIndex === 0 &&
+      historyBackfill.windowIndex === 0)
   ) {
     categoriesSynced = await syncFreeAgentCategories(db, accountId, client);
   }
@@ -526,11 +533,15 @@ export async function syncFreeAgentHistoryChunk(
       1;
     historyProgress = `${yearLabel} · ${accountLabel} (${step}/${totalSteps})`;
 
-    const explanationMap = await fetchExplanationMapForBankAccount(client, baUrl, {
-      fromDate: window.fromDate,
-      toDate: window.toDate,
-      maxPages: 0,
-    });
+    const explanationMap = await fetchExplanationMapForBankAccount(
+      client,
+      baUrl,
+      {
+        fromDate: window.fromDate,
+        toDate: window.toDate,
+        maxPages: 0,
+      },
+    );
 
     const stats = await importBankTransactionsForWindow(db, {
       accountId,
@@ -626,7 +637,8 @@ export async function syncFreeAgentToOzer(
     .eq('id', connection.id);
 
   const fromDate = isIncremental
-    ? (options.fromDate ?? incrementalSyncFromDate(connection.last_sync_at as string | null))
+    ? (options.fromDate ??
+      incrementalSyncFromDate(connection.last_sync_at as string | null))
     : isHistory
       ? null
       : fullSyncFromDate();
@@ -774,7 +786,8 @@ export async function pushCategoryToFreeAgent(
     .eq('account_id', accountId)
     .maybeSingle();
 
-  if (txError || !tx?.freeagent_transaction_url || !tx.category_id) return false;
+  if (txError || !tx?.freeagent_transaction_url || !tx.category_id)
+    return false;
 
   const { data: category } = await db
     .from('finance_categories')
@@ -802,7 +815,9 @@ export async function pushCategoryToFreeAgent(
       category: category.freeagent_category_url,
       description: tx.description || 'Categorised in Ozer',
       gross_value: grossValue,
-      dated_on: String(tx.transaction_date ?? new Date().toISOString().slice(0, 10)),
+      dated_on: String(
+        tx.transaction_date ?? new Date().toISOString().slice(0, 10),
+      ),
     };
 
     if (tx.freeagent_explanation_url) {

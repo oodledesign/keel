@@ -1,10 +1,10 @@
 import 'server-only';
 
+import { createSonioxTemporaryApiKey } from '~/lib/integrations/soniox/create-temporary-api-key';
 import {
   SONIOX_REALTIME_MODEL,
   SONIOX_WEBSOCKET_URL,
 } from '~/lib/integrations/soniox/env';
-import { createSonioxTemporaryApiKey } from '~/lib/integrations/soniox/create-temporary-api-key';
 import type { RecorderUsageSummary } from '~/lib/recorder/access';
 
 const TEMP_KEY_EXPIRES_SECONDS = 120;
@@ -59,13 +59,8 @@ export class SonioxTranscribeSessionError extends Error {
   }
 }
 
-function resolveMaxSessionDurationSeconds(
-  summary: RecorderUsageSummary,
-) {
-  return Math.min(
-    summary.remainingDurationSeconds,
-    SONIOX_MAX_SESSION_SECONDS,
-  );
+function resolveMaxSessionDurationSeconds(summary: RecorderUsageSummary) {
+  return Math.min(summary.remainingDurationSeconds, SONIOX_MAX_SESSION_SECONDS);
 }
 
 export async function createSonioxTranscribeSession(
@@ -79,8 +74,7 @@ export async function createSonioxTranscribeSession(
     );
   }
 
-  const maxSessionDurationSeconds =
-    resolveMaxSessionDurationSeconds(summary);
+  const maxSessionDurationSeconds = resolveMaxSessionDurationSeconds(summary);
 
   const temporaryKey = await createSonioxTemporaryApiKey({
     expiresInSeconds: TEMP_KEY_EXPIRES_SECONDS,

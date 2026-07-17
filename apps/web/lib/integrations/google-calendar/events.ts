@@ -164,7 +164,8 @@ function mapGoogleEvent(
     title: event.summary?.trim() || 'Busy',
     start,
     end,
-    calendar: event.organizer?.displayName ?? event.organizer?.email ?? 'Google',
+    calendar:
+      event.organizer?.displayName ?? event.organizer?.email ?? 'Google',
     calendar_id: calendarId,
     is_all_day: Boolean(event.start?.date),
   };
@@ -202,8 +203,7 @@ const MEETING_HOST_HINTS = [
   'facetime.apple.com',
 ];
 
-const URL_IN_TEXT =
-  /https?:\/\/[^\s<>"')\]]+/gi;
+const URL_IN_TEXT = /https?:\/\/[^\s<>"')\]]+/gi;
 
 function extractMeetingUrl(event: GoogleEvent): string | null {
   const hangout = event.hangoutLink?.trim();
@@ -235,7 +235,11 @@ function firstMeetingUrlInText(text: string | undefined): string | null {
     if (!isHttpUrl(cleaned)) continue;
     try {
       const host = new URL(cleaned).hostname.toLowerCase();
-      if (MEETING_HOST_HINTS.some((hint) => host === hint || host.endsWith(`.${hint}`))) {
+      if (
+        MEETING_HOST_HINTS.some(
+          (hint) => host === hint || host.endsWith(`.${hint}`),
+        )
+      ) {
         return cleaned;
       }
     } catch {
@@ -391,7 +395,9 @@ export async function getRecorderCalendarEvent(
 ): Promise<RecorderCalendarEventResult> {
   const nowMs = Date.now();
   const timeMin = new Date(nowMs - RECORDER_CALENDAR_LOOKBACK_MS).toISOString();
-  const timeMax = new Date(nowMs + RECORDER_CALENDAR_NEXT_LOOKAHEAD_MS).toISOString();
+  const timeMax = new Date(
+    nowMs + RECORDER_CALENDAR_NEXT_LOOKAHEAD_MS,
+  ).toISOString();
 
   if (isPlannerMockCalendarEnabled()) {
     const events = mockRecorderEvents(nowMs);
@@ -405,7 +411,12 @@ export async function getRecorderCalendarEvent(
 
   const connection = await validConnection(client, input.userId);
   if (!connection) {
-    return { connected: false, event: null, next_event: null, upcoming_events: [] };
+    return {
+      connected: false,
+      event: null,
+      next_event: null,
+      upcoming_events: [],
+    };
   }
 
   const items = await listGoogleCalendarEventsInRange(
@@ -436,8 +447,12 @@ export async function findRecorderCalendarEventAt(
   input: { userId: string; instant: Date },
 ): Promise<RecorderCalendarEvent | null> {
   const instantMs = input.instant.getTime();
-  const timeMin = new Date(instantMs - RECORDING_MATCH_LOOKBACK_MS).toISOString();
-  const timeMax = new Date(instantMs + RECORDING_MATCH_LOOKAHEAD_MS).toISOString();
+  const timeMin = new Date(
+    instantMs - RECORDING_MATCH_LOOKBACK_MS,
+  ).toISOString();
+  const timeMax = new Date(
+    instantMs + RECORDING_MATCH_LOOKAHEAD_MS,
+  ).toISOString();
 
   if (isPlannerMockCalendarEnabled()) {
     const events = mockRecorderEvents(instantMs);
@@ -449,7 +464,11 @@ export async function findRecorderCalendarEventAt(
     return null;
   }
 
-  const items = await listGoogleCalendarEventsInRange(connection, timeMin, timeMax);
+  const items = await listGoogleCalendarEventsInRange(
+    connection,
+    timeMin,
+    timeMax,
+  );
   const events = items
     .map(({ item, calendarId }) => mapRecorderCalendarEvent(item, calendarId))
     .filter((event): event is RecorderCalendarEvent => Boolean(event));
@@ -547,7 +566,11 @@ export async function listPlannerCalendarEvents(
   },
 ) {
   if (isPlannerMockCalendarEnabled()) {
-    return { connected: false, configured: true, events: mockEvents(input.timeMin) };
+    return {
+      connected: false,
+      configured: true,
+      events: mockEvents(input.timeMin),
+    };
   }
 
   const connection = await validConnection(client, input.userId);
@@ -602,14 +625,18 @@ async function resolvePlannerCalendarId(
 
   if (hasFullCalendarScope) {
     try {
-      const created = await googleJson<{ id: string }>(connection, '/calendars', {
-        method: 'POST',
-        body: JSON.stringify({
-          summary: PLANNER_CALENDAR_NAME,
-          description: 'Tasks scheduled by Ozer Planner',
-          timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
-        }),
-      });
+      const created = await googleJson<{ id: string }>(
+        connection,
+        '/calendars',
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            summary: PLANNER_CALENDAR_NAME,
+            description: 'Tasks scheduled by Ozer Planner',
+            timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC',
+          }),
+        },
+      );
 
       if (created.id) {
         return created.id;
@@ -619,7 +646,9 @@ async function resolvePlannerCalendarId(
     }
   }
 
-  const primary = (calendars.items ?? []).find((calendar) => calendar.primary)?.id;
+  const primary = (calendars.items ?? []).find(
+    (calendar) => calendar.primary,
+  )?.id;
   return primary ?? connection.calendarId ?? 'primary';
 }
 
@@ -649,21 +678,29 @@ export async function createPlannerCalendarEvents(
     throw new Error('Connect Google Calendar before pushing planner events');
   }
 
-  const calendarId = await ensurePlannerCalendar(client, input.userId, connection);
+  const calendarId = await ensurePlannerCalendar(
+    client,
+    input.userId,
+    connection,
+  );
   const errors: string[] = [];
   let created = 0;
 
   for (const block of input.blocks) {
     try {
-      await googleJson(connection, `/calendars/${encodeURIComponent(calendarId)}/events`, {
-        method: 'POST',
-        body: JSON.stringify({
-          summary: block.title,
-          description: 'Scheduled by Ozer Planner',
-          start: { dateTime: block.start },
-          end: { dateTime: block.end },
-        }),
-      });
+      await googleJson(
+        connection,
+        `/calendars/${encodeURIComponent(calendarId)}/events`,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            summary: block.title,
+            description: 'Scheduled by Ozer Planner',
+            start: { dateTime: block.start },
+            end: { dateTime: block.end },
+          }),
+        },
+      );
       created += 1;
     } catch (err) {
       errors.push(
@@ -812,21 +849,25 @@ export async function listBusyIntervalsForScheduling(
         }
 
         const perCalendar = await Promise.all(
-          calendarIds.slice(0, MAX_RECORDER_CALENDARS).map(async (calendarId) => {
-            try {
-              const body = await googleJson<{ items?: GoogleEvent[] }>(
-                connection,
-                `/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
-              );
+          calendarIds
+            .slice(0, MAX_RECORDER_CALENDARS)
+            .map(async (calendarId) => {
+              try {
+                const body = await googleJson<{ items?: GoogleEvent[] }>(
+                  connection,
+                  `/calendars/${encodeURIComponent(calendarId)}/events?${params}`,
+                );
 
-              return (body.items ?? [])
-                .map((item) => mapGoogleEvent(item, calendarId))
-                .filter((event): event is PlannerCalendarEvent => Boolean(event))
-                .map((event) => ({ start: event.start, end: event.end }));
-            } catch {
-              return [];
-            }
-          }),
+                return (body.items ?? [])
+                  .map((item) => mapGoogleEvent(item, calendarId))
+                  .filter((event): event is PlannerCalendarEvent =>
+                    Boolean(event),
+                  )
+                  .map((event) => ({ start: event.start, end: event.end }));
+              } catch {
+                return [];
+              }
+            }),
         );
 
         return perCalendar.flat();
@@ -854,7 +895,11 @@ export async function createTaskCalendarEvent(
     throw new Error('Assignee has not connected Google Calendar');
   }
 
-  const calendarId = await ensurePlannerCalendar(client, input.userId, connection);
+  const calendarId = await ensurePlannerCalendar(
+    client,
+    input.userId,
+    connection,
+  );
 
   const created = await googleJson<{ id?: string }>(
     connection,

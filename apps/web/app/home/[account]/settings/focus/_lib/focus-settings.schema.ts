@@ -8,9 +8,7 @@ export const WorkspaceFocusSettingsSchema = z
     work_days: z
       .array(z.number().min(0).max(6))
       .min(1, 'Select at least one work day'),
-    work_start_time: z
-      .string()
-      .regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
+    work_start_time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
     work_end_time: z.string().regex(/^\d{2}:\d{2}$/, 'Invalid time format'),
     timezone: z.string().min(1),
     holiday_mode_enabled: z.boolean(),

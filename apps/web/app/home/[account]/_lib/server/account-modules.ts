@@ -1,8 +1,8 @@
 import {
+  type WorkspaceSpaceType,
   normalizeSpaceType,
   resolveWorkspaceProfile,
   spaceTypeFromProfile,
-  type WorkspaceSpaceType,
 } from '../workspace-profile';
 
 export type { WorkspaceSpaceType };
@@ -53,7 +53,10 @@ export function isWorkNavModuleEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,
   navKey: string,
 ) {
-  return isAccountModuleEnabled(moduleSettings, resolveAccountModuleKey(navKey));
+  return isAccountModuleEnabled(
+    moduleSettings,
+    resolveAccountModuleKey(navKey),
+  );
 }
 
 export function isPropertyNavModuleEnabled(
@@ -100,7 +103,9 @@ export function isCommunityNavModuleEnabled(
 
 export const FAMILY_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = ['family'];
 
-export type AccountModuleSettingsMap = Partial<Record<AccountModuleKey, boolean>>;
+export type AccountModuleSettingsMap = Partial<
+  Record<AccountModuleKey, boolean>
+>;
 
 export function getSpaceTypeFromAccount(
   account: {

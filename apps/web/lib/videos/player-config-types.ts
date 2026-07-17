@@ -1,6 +1,10 @@
 export type PlayerPreload = 'none' | 'metadata' | 'auto';
 
-export type LogoPosition = 'top-left' | 'top-right' | 'bottom-left' | 'bottom-right';
+export type LogoPosition =
+  | 'top-left'
+  | 'top-right'
+  | 'bottom-left'
+  | 'bottom-right';
 
 export type AspectRatio = '16:9' | '4:3' | '1:1' | '9:16';
 
@@ -43,7 +47,12 @@ export type VideoPlayerConfigRow = VideoPlayerConfigValues & {
 
 export const PLAYBACK_SPEED_OPTIONS = [0.5, 0.75, 1, 1.25, 1.5, 2] as const;
 
-export const ASPECT_RATIO_OPTIONS: AspectRatio[] = ['16:9', '4:3', '1:1', '9:16'];
+export const ASPECT_RATIO_OPTIONS: AspectRatio[] = [
+  '16:9',
+  '4:3',
+  '1:1',
+  '9:16',
+];
 
 export const DEFAULT_PLAYER_CONFIG: VideoPlayerConfigValues = {
   name: 'Default',

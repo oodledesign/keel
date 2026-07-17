@@ -1,9 +1,7 @@
 'use client';
 
-import Link from 'next/link';
-import { useSearchParams } from 'next/navigation';
-
 import {
+  type CSSProperties,
   Fragment,
   useCallback,
   useEffect,
@@ -11,14 +9,17 @@ import {
   useRef,
   useState,
   useTransition,
-  type CSSProperties,
 } from 'react';
+
+import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 
 import {
   Archive,
   Copy,
   FileText,
   ImagePlus,
+  Link2,
   MoreHorizontal,
   Plus,
   Search,
@@ -27,17 +28,10 @@ import {
   Star,
   Trash2,
   X,
-  Link2,
 } from 'lucide-react';
 
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
-
-import { mergeChatMessagesById } from '../_lib/merge-chat-messages';
-import {
-  Avatar,
-  AvatarFallback,
-  AvatarImage,
-} from '@kit/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 import {
   Dialog,
@@ -63,9 +57,11 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
+
 import pathsConfig from '~/config/paths.config';
 import { MessageBodyText } from '~/lib/messages/message-body-text';
 
+import { mergeChatMessagesById } from '../_lib/merge-chat-messages';
 import type {
   ChatMessageItem,
   MessageThreadListItem,
@@ -79,10 +75,9 @@ import {
   listThreadMessages,
   markMessageThreadRead,
   renameMessageThread,
-  setMessageThreadJob,
   sendThreadMessage,
+  setMessageThreadJob,
 } from '../_lib/server/server-actions';
-
 import { SearchableMultiSelect } from './searchable-multi-select';
 
 const FAV_STORAGE_KEY = 'ozer:favourite-chat-ids';
@@ -145,9 +140,16 @@ function formatShortTime(iso: string) {
   const d = new Date(iso);
   if (Number.isNaN(d.getTime())) return '';
   const now = new Date();
-  const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const startOfToday = new Date(
+    now.getFullYear(),
+    now.getMonth(),
+    now.getDate(),
+  );
   if (d >= startOfToday) {
-    return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+    return d.toLocaleTimeString(undefined, {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
   }
   const startOfWeek = new Date(startOfToday);
   startOfWeek.setDate(startOfWeek.getDate() - 6);
@@ -159,7 +161,10 @@ function formatShortTime(iso: string) {
 
 function formatMessageTime(iso: string) {
   const d = new Date(iso);
-  return d.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+  return d.toLocaleTimeString(undefined, {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
 }
 
 function startOfLocalDay(date: Date) {
@@ -205,37 +210,48 @@ function threadCategory(thread: MessageThreadListItem): {
   label: 'Internal' | 'Client' | 'Job' | 'Job private';
   badgeClassName: string;
 } {
-  const hasClientParticipant = thread.participants.some((p) => p.kind === 'client');
-  const memberCount = thread.participants.filter((p) => p.kind === 'member').length;
+  const hasClientParticipant = thread.participants.some(
+    (p) => p.kind === 'client',
+  );
+  const memberCount = thread.participants.filter(
+    (p) => p.kind === 'member',
+  ).length;
 
   if (thread.type === 'job') {
     if (hasClientParticipant && memberCount <= 2) {
       return {
         label: 'Job private',
-        badgeClassName: 'border-[#57C87F]/40 bg-[#57C87F]/15 text-emerald-800 dark:text-[#C7E9D0]',
+        badgeClassName:
+          'border-[#57C87F]/40 bg-[#57C87F]/15 text-emerald-800 dark:text-[#C7E9D0]',
       };
     }
 
     return {
       label: 'Job',
-      badgeClassName: 'border-[#57C87F]/40 bg-[#57C87F]/15 text-emerald-800 dark:text-[#97D9AA]',
+      badgeClassName:
+        'border-[#57C87F]/40 bg-[#57C87F]/15 text-emerald-800 dark:text-[#97D9AA]',
     };
   }
 
   if (hasClientParticipant) {
     return {
       label: 'Client',
-      badgeClassName: 'border-[#39AEB3]/45 bg-[#39AEB3]/15 text-teal-800 dark:text-[#7DBCBD]',
+      badgeClassName:
+        'border-[#39AEB3]/45 bg-[#39AEB3]/15 text-teal-800 dark:text-[#7DBCBD]',
     };
   }
 
   return {
     label: 'Internal',
-    badgeClassName: 'border-[#8D6BA5]/45 bg-[#8D6BA5]/15 text-purple-800 dark:text-[#DDD3E9]',
+    badgeClassName:
+      'border-[#8D6BA5]/45 bg-[#8D6BA5]/15 text-purple-800 dark:text-[#DDD3E9]',
   };
 }
 
-function threadReadAccessSummary(thread: MessageThreadListItem, currentUserId: string) {
+function threadReadAccessSummary(
+  thread: MessageThreadListItem,
+  currentUserId: string,
+) {
   const readableBy = thread.participants
     .filter((p) => p.kind === 'member' || p.kind === 'client')
     .map((p) => p.display_name)
@@ -269,7 +285,11 @@ type Props = {
   canMessageClients: boolean;
   initialThreads: MessageThreadListItem[];
   memberOptions: Array<{ userId: string; email: string; role: string | null }>;
-  clientOptions: Array<{ clientId: string; name: string; email: string | null }>;
+  clientOptions: Array<{
+    clientId: string;
+    name: string;
+    email: string | null;
+  }>;
   jobOptions: Array<{ id: string; title: string }>;
 };
 
@@ -285,7 +305,9 @@ export function MessagesPageContent(props: Props) {
   const [hasMoreMessages, setHasMoreMessages] = useState(false);
   const [messageInput, setMessageInput] = useState('');
   const [pendingImageFile, setPendingImageFile] = useState<File | null>(null);
-  const [pendingImagePreviewUrl, setPendingImagePreviewUrl] = useState<string | null>(null);
+  const [pendingImagePreviewUrl, setPendingImagePreviewUrl] = useState<
+    string | null
+  >(null);
   const [isPending, startTransition] = useTransition();
   const [newChatOpen, setNewChatOpen] = useState(false);
   const [linkJobOpen, setLinkJobOpen] = useState(false);
@@ -320,9 +342,13 @@ export function MessagesPageContent(props: Props) {
     setListSearch(searchParams.get('search') ?? '');
   }, [searchParams]);
   const [favouriteThreadIds, setFavouriteThreadIds] = useState<string[]>([]);
-  const [pendingAttachments, setPendingAttachments] = useState<PendingAttachment[]>([]);
+  const [pendingAttachments, setPendingAttachments] = useState<
+    PendingAttachment[]
+  >([]);
   const [attachDialogOpen, setAttachDialogOpen] = useState(false);
-  const [attachableItems, setAttachableItems] = useState<PendingAttachment[]>([]);
+  const [attachableItems, setAttachableItems] = useState<PendingAttachment[]>(
+    [],
+  );
   const [attachLoading, setAttachLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
@@ -371,7 +397,9 @@ export function MessagesPageContent(props: Props) {
     });
   }
 
-  const [threadType, setThreadType] = useState<'direct' | 'group' | 'job'>('direct');
+  const [threadType, setThreadType] = useState<'direct' | 'group' | 'job'>(
+    'direct',
+  );
   const [threadTitle, setThreadTitle] = useState('');
   const [jobId, setJobId] = useState('');
   const [selectedMembers, setSelectedMembers] = useState<string[]>([]);
@@ -414,7 +442,8 @@ export function MessagesPageContent(props: Props) {
       const bFav = favSet.has(b.id) ? 1 : 0;
       if (aFav !== bFav) return bFav - aFav;
       return (
-        new Date(b.last_message_at).getTime() - new Date(a.last_message_at).getTime()
+        new Date(b.last_message_at).getTime() -
+        new Date(a.last_message_at).getTime()
       );
     });
   }, [threads, favouriteThreadIds]);
@@ -446,7 +475,9 @@ export function MessagesPageContent(props: Props) {
     try {
       const parsed = JSON.parse(raw) as unknown;
       if (Array.isArray(parsed)) {
-        setFavouriteThreadIds(parsed.filter((x): x is string => typeof x === 'string'));
+        setFavouriteThreadIds(
+          parsed.filter((x): x is string => typeof x === 'string'),
+        );
       }
     } catch {
       // noop
@@ -454,7 +485,10 @@ export function MessagesPageContent(props: Props) {
   }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(FAV_STORAGE_KEY, JSON.stringify(favouriteThreadIds));
+    window.localStorage.setItem(
+      FAV_STORAGE_KEY,
+      JSON.stringify(favouriteThreadIds),
+    );
   }, [favouriteThreadIds]);
 
   useEffect(() => {
@@ -549,7 +583,13 @@ export function MessagesPageContent(props: Props) {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [selectedThreadId, props.accountId, props.userId, supabase, refreshThreads]);
+  }, [
+    selectedThreadId,
+    props.accountId,
+    props.userId,
+    supabase,
+    refreshThreads,
+  ]);
 
   // Fallback when postgres_changes is unavailable (e.g. publication not applied)
   // or Realtime is blocked; keeps thread in sync without a full page refresh.
@@ -557,7 +597,10 @@ export function MessagesPageContent(props: Props) {
     if (!selectedThreadId) return;
     let cancelled = false;
     const syncMessages = async () => {
-      if (typeof document !== 'undefined' && document.visibilityState !== 'visible') {
+      if (
+        typeof document !== 'undefined' &&
+        document.visibilityState !== 'visible'
+      ) {
         return;
       }
       try {
@@ -656,7 +699,9 @@ export function MessagesPageContent(props: Props) {
       const latest = await refreshThreads();
       setSelectedThreadId(result?.threadId ?? latest[0]?.id ?? null);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create chat');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create chat',
+      );
     }
   }
 
@@ -697,7 +742,9 @@ export function MessagesPageContent(props: Props) {
   async function onArchiveThread() {
     if (!selectedThreadId) return;
     toast.warning('This will archive the chat from your inbox.');
-    const confirmed = window.confirm('Archive this chat? You can only access it again if re-added later.');
+    const confirmed = window.confirm(
+      'Archive this chat? You can only access it again if re-added later.',
+    );
     if (!confirmed) return;
     try {
       await archiveMessageThread({
@@ -710,14 +757,18 @@ export function MessagesPageContent(props: Props) {
       setMessages([]);
       toast.success('Chat archived');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to archive chat');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to archive chat',
+      );
     }
   }
 
   async function onDeleteMessage(messageId: string) {
     if (!selectedThreadId) return;
     toast.warning('This will delete the message permanently for this chat.');
-    const confirmed = window.confirm('Delete this message? This cannot be undone.');
+    const confirmed = window.confirm(
+      'Delete this message? This cannot be undone.',
+    );
     if (!confirmed) return;
     try {
       await deleteThreadMessage({
@@ -730,7 +781,9 @@ export function MessagesPageContent(props: Props) {
       await refreshThreads();
       toast.success('Message deleted');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to delete message');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to delete message',
+      );
     }
   }
 
@@ -766,7 +819,9 @@ export function MessagesPageContent(props: Props) {
       await refreshThreads();
       toast.success('Chat renamed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to rename chat');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to rename chat',
+      );
     }
   }
 
@@ -788,7 +843,9 @@ export function MessagesPageContent(props: Props) {
       await refreshThreads();
       toast.success(nextJobId ? 'Chat linked to job' : 'Job link removed');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to update job link');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to update job link',
+      );
     }
   }
 
@@ -842,7 +899,9 @@ export function MessagesPageContent(props: Props) {
       setPendingAttachments([]);
       await refreshThreads();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to send message');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to send message',
+      );
       setMessageInput(text);
     }
   }
@@ -877,7 +936,7 @@ export function MessagesPageContent(props: Props) {
   };
   const canSend = Boolean(
     selectedThreadId &&
-      (messageInput.trim() || pendingImageFile || pendingAttachments.length > 0),
+    (messageInput.trim() || pendingImageFile || pendingAttachments.length > 0),
   );
 
   return (
@@ -885,7 +944,9 @@ export function MessagesPageContent(props: Props) {
       {/* Sidebar — chat list */}
       <aside className="flex w-full shrink-0 flex-col border-[color:var(--workspace-shell-border)] md:w-[min(100%,380px)] md:border-r">
         <div className="flex items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] px-3 py-3">
-          <h2 className="text-lg font-semibold tracking-tight text-[var(--workspace-shell-text)]">Chats</h2>
+          <h2 className="text-lg font-semibold tracking-tight text-[var(--workspace-shell-text)]">
+            Chats
+          </h2>
           <Button
             type="button"
             variant="ghost"
@@ -928,7 +989,9 @@ export function MessagesPageContent(props: Props) {
                   type="button"
                   onClick={() => setSelectedThreadId(thread.id)}
                   className={`flex w-full gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-2.5 text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] ${
-                    selectedThreadId === thread.id ? 'bg-[var(--workspace-shell-sidebar-accent)]' : ''
+                    selectedThreadId === thread.id
+                      ? 'bg-[var(--workspace-shell-sidebar-accent)]'
+                      : ''
                   }`}
                 >
                   <Avatar className="h-12 w-12 shrink-0">
@@ -942,14 +1005,18 @@ export function MessagesPageContent(props: Props) {
                         {isFavourite ? (
                           <Star className="h-3.5 w-3.5 shrink-0 text-[#F2C94C]" />
                         ) : null}
-                        <p className="truncate font-medium text-[var(--workspace-shell-text)]">{title}</p>
+                        <p className="truncate font-medium text-[var(--workspace-shell-text)]">
+                          {title}
+                        </p>
                         <span
-                          className={`inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${category.badgeClassName}`}
+                          className={`inline-flex shrink-0 items-center rounded-full border px-1.5 py-0.5 text-[10px] font-semibold tracking-wide uppercase ${category.badgeClassName}`}
                         >
                           {category.label}
                         </span>
                       </div>
-                      <span className="shrink-0 text-[11px] text-[var(--workspace-shell-text-muted)]">{timeLabel}</span>
+                      <span className="shrink-0 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                        {timeLabel}
+                      </span>
                     </div>
                     <div className="mt-0.5 flex items-center justify-between gap-2">
                       <p className="truncate text-sm text-[var(--workspace-shell-text-muted)]">
@@ -957,7 +1024,9 @@ export function MessagesPageContent(props: Props) {
                       </p>
                       {thread.unread_count > 0 ? (
                         <span className="flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-[var(--brand-green-500)] px-1 text-[11px] font-semibold text-black">
-                          {thread.unread_count > 99 ? '99+' : thread.unread_count}
+                          {thread.unread_count > 99
+                            ? '99+'
+                            : thread.unread_count}
                         </span>
                       ) : null}
                     </div>
@@ -976,7 +1045,9 @@ export function MessagesPageContent(props: Props) {
             <>
               <Avatar className="h-10 w-10 shrink-0 md:hidden">
                 <AvatarFallback className="bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]">
-                  {senderInitials(threadPrimaryTitle(selectedThread, jobTitleById))}
+                  {senderInitials(
+                    threadPrimaryTitle(selectedThread, jobTitleById),
+                  )}
                 </AvatarFallback>
               </Avatar>
               <div className="min-w-0 flex-1">
@@ -1046,12 +1117,18 @@ export function MessagesPageContent(props: Props) {
               </DropdownMenu>
             </>
           ) : (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">Select a chat to start messaging</p>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Select a chat to start messaging
+            </p>
           )}
         </header>
 
         <div className="relative flex min-h-0 flex-1 flex-col">
-          <div className="absolute inset-0" style={chatSurfaceStyle} aria-hidden />
+          <div
+            className="absolute inset-0"
+            style={chatSurfaceStyle}
+            aria-hidden
+          />
           <div className="relative z-[1] flex min-h-0 flex-1 flex-col">
             {selectedThread ? (
               <div className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2">
@@ -1066,8 +1143,14 @@ export function MessagesPageContent(props: Props) {
             >
               {!selectedThreadId ? (
                 <div className="flex h-full flex-col items-center justify-center gap-2 px-4 text-center">
-                  <p className="text-sm text-[var(--workspace-shell-text-muted)]">Choose a conversation from the list</p>
-                  <Button variant="outline" size="sm" onClick={openNewChatDialog}>
+                  <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                    Choose a conversation from the list
+                  </p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={openNewChatDialog}
+                  >
                     <Plus className="mr-1.5 h-4 w-4" />
                     New chat
                   </Button>
@@ -1094,7 +1177,8 @@ export function MessagesPageContent(props: Props) {
                       calendarDayKey(prev.created_at) !==
                         calendarDayKey(message.created_at);
                     const isGroupLike =
-                      selectedThread?.type === 'group' || selectedThread?.type === 'job';
+                      selectedThread?.type === 'group' ||
+                      selectedThread?.type === 'job';
                     const showSenderName =
                       isGroupLike &&
                       !isOwn &&
@@ -1116,142 +1200,146 @@ export function MessagesPageContent(props: Props) {
                             showSenderName ? 'mt-3' : 'mt-0.5'
                           }`}
                         >
-                        <Avatar className="mt-auto mb-0.5 h-8 w-8 shrink-0">
-                          <AvatarImage
-                            src={message.sender_avatar_url ?? undefined}
-                            alt={label}
-                          />
-                          <AvatarFallback className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] font-medium text-[var(--workspace-shell-text)]">
-                            {initials}
-                          </AvatarFallback>
-                        </Avatar>
-                        <div
-                          className={`flex min-w-0 max-w-[min(85%,32rem)] flex-col ${
-                            isOwn ? 'items-end' : 'items-start'
-                          }`}
-                        >
-                          {showSenderName ? (
-                            <span className="mb-0.5 flex max-w-full items-center gap-1.5 px-0.5">
-                              <span
-                                className={`shrink-0 rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[10px] font-bold leading-none tracking-wide ${senderNameColorClass(message.sender_user_id)}`}
-                                aria-hidden="true"
-                              >
-                                {initials}
-                              </span>
-                              <span
-                                className={`truncate text-[13px] font-medium ${senderNameColorClass(message.sender_user_id)}`}
-                              >
-                                {label}
-                              </span>
-                            </span>
-                          ) : null}
+                          <Avatar className="mt-auto mb-0.5 h-8 w-8 shrink-0">
+                            <AvatarImage
+                              src={message.sender_avatar_url ?? undefined}
+                              alt={label}
+                            />
+                            <AvatarFallback className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] font-medium text-[var(--workspace-shell-text)]">
+                              {initials}
+                            </AvatarFallback>
+                          </Avatar>
                           <div
-                            className={cn(
-                              'rounded-lg px-2 py-1.5 pr-2 pb-1 text-sm shadow-sm text-[var(--workspace-shell-text)]',
-                              isOwn
-                                ? 'rounded-br-none bg-[var(--ozer-accent-subtle)]'
-                                : 'rounded-bl-none bg-[var(--workspace-shell-sidebar-accent)]',
-                            )}
+                            className={`flex max-w-[min(85%,32rem)] min-w-0 flex-col ${
+                              isOwn ? 'items-end' : 'items-start'
+                            }`}
                           >
-                            {message.image_url ? (
-                              <img
-                                src={message.image_url}
-                                alt="Message attachment"
-                                className="mb-1.5 max-h-72 w-full rounded-md object-contain"
-                              />
-                            ) : null}
-                            {message.body ? (
-                              <MessageBodyText
-                                text={message.body}
-                                linkClassName={
-                                  isOwn
-                                    ? 'text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]'
-                                    : 'text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]'
-                                }
-                              />
-                            ) : null}
-                            {message.attachments?.length ? (
-                              <div className="mt-1.5 space-y-1">
-                                {message.attachments.map((attachment) => (
-                                  <div
-                                    key={`${attachment.type}-${attachment.id}`}
-                                    className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5"
-                                  >
-                                    {attachment.href ? (
-                                      <a
-                                        href={attachment.href}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="flex items-center gap-2 text-sm text-[var(--workspace-shell-accent-text)] underline-offset-2 hover:text-[var(--ozer-accent)] hover:underline"
-                                      >
-                                        <FileText className="h-4 w-4 shrink-0" />
-                                        <span className="truncate">
-                                          {attachment.title}
-                                        </span>
-                                      </a>
-                                    ) : (
-                                      <div className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
-                                        <FileText className="h-4 w-4 shrink-0" />
-                                        <span className="truncate">
-                                          {attachment.title}
-                                        </span>
-                                      </div>
-                                    )}
-                                    {attachment.isPublic ? (
-                                      <p className="mt-0.5 text-[10px] uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                                        Public link
-                                      </p>
-                                    ) : null}
-                                  </div>
-                                ))}
-                              </div>
+                            {showSenderName ? (
+                              <span className="mb-0.5 flex max-w-full items-center gap-1.5 px-0.5">
+                                <span
+                                  className={`shrink-0 rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[10px] leading-none font-bold tracking-wide ${senderNameColorClass(message.sender_user_id)}`}
+                                  aria-hidden="true"
+                                >
+                                  {initials}
+                                </span>
+                                <span
+                                  className={`truncate text-[13px] font-medium ${senderNameColorClass(message.sender_user_id)}`}
+                                >
+                                  {label}
+                                </span>
+                              </span>
                             ) : null}
                             <div
-                              className={`mt-0.5 flex items-end justify-end gap-1 text-[11px] text-[var(--workspace-shell-text-muted)]`}
+                              className={cn(
+                                'rounded-lg px-2 py-1.5 pr-2 pb-1 text-sm text-[var(--workspace-shell-text)] shadow-sm',
+                                isOwn
+                                  ? 'rounded-br-none bg-[var(--ozer-accent-subtle)]'
+                                  : 'rounded-bl-none bg-[var(--workspace-shell-sidebar-accent)]',
+                              )}
                             >
-                              <span>{formatMessageTime(message.created_at)}</span>
+                              {message.image_url ? (
+                                <img
+                                  src={message.image_url}
+                                  alt="Message attachment"
+                                  className="mb-1.5 max-h-72 w-full rounded-md object-contain"
+                                />
+                              ) : null}
+                              {message.body ? (
+                                <MessageBodyText
+                                  text={message.body}
+                                  linkClassName={
+                                    isOwn
+                                      ? 'text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]'
+                                      : 'text-[var(--workspace-shell-accent-text)] hover:text-[var(--ozer-accent)]'
+                                  }
+                                />
+                              ) : null}
+                              {message.attachments?.length ? (
+                                <div className="mt-1.5 space-y-1">
+                                  {message.attachments.map((attachment) => (
+                                    <div
+                                      key={`${attachment.type}-${attachment.id}`}
+                                      className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5"
+                                    >
+                                      {attachment.href ? (
+                                        <a
+                                          href={attachment.href}
+                                          target="_blank"
+                                          rel="noopener noreferrer"
+                                          className="flex items-center gap-2 text-sm text-[var(--workspace-shell-accent-text)] underline-offset-2 hover:text-[var(--ozer-accent)] hover:underline"
+                                        >
+                                          <FileText className="h-4 w-4 shrink-0" />
+                                          <span className="truncate">
+                                            {attachment.title}
+                                          </span>
+                                        </a>
+                                      ) : (
+                                        <div className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
+                                          <FileText className="h-4 w-4 shrink-0" />
+                                          <span className="truncate">
+                                            {attachment.title}
+                                          </span>
+                                        </div>
+                                      )}
+                                      {attachment.isPublic ? (
+                                        <p className="mt-0.5 text-[10px] tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                                          Public link
+                                        </p>
+                                      ) : null}
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : null}
+                              <div
+                                className={`mt-0.5 flex items-end justify-end gap-1 text-[11px] text-[var(--workspace-shell-text-muted)]`}
+                              >
+                                <span>
+                                  {formatMessageTime(message.created_at)}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="mt-1 flex w-full justify-end">
+                              <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                  <button
+                                    type="button"
+                                    className="rounded p-1 text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                                    aria-label="Message options"
+                                  >
+                                    <MoreHorizontal className="h-4 w-4" />
+                                  </button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent
+                                  align={isOwn ? 'end' : 'start'}
+                                  className="w-40"
+                                >
+                                  <DropdownMenuItem
+                                    onClick={() =>
+                                      void onCopyMessage(
+                                        [message.body, message.image_url]
+                                          .filter(Boolean)
+                                          .join('\n'),
+                                      )
+                                    }
+                                  >
+                                    <Copy className="mr-2 h-4 w-4" />
+                                    Copy
+                                  </DropdownMenuItem>
+                                  {isOwn ? (
+                                    <DropdownMenuItem
+                                      onClick={() =>
+                                        void onDeleteMessage(message.id)
+                                      }
+                                      className="text-red-500"
+                                    >
+                                      <Trash2 className="mr-2 h-4 w-4" />
+                                      Delete
+                                    </DropdownMenuItem>
+                                  ) : null}
+                                </DropdownMenuContent>
+                              </DropdownMenu>
                             </div>
                           </div>
-                          <div className="mt-1 flex w-full justify-end">
-                            <DropdownMenu>
-                              <DropdownMenuTrigger asChild>
-                                <button
-                                  type="button"
-                                  className="rounded p-1 text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] group-hover:opacity-100"
-                                  aria-label="Message options"
-                                >
-                                  <MoreHorizontal className="h-4 w-4" />
-                                </button>
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align={isOwn ? 'end' : 'start'}
-                                className="w-40"
-                              >
-                                <DropdownMenuItem
-                                  onClick={() =>
-                                    void onCopyMessage(
-                                      [message.body, message.image_url]
-                                        .filter(Boolean)
-                                        .join('\n'),
-                                    )
-                                  }
-                                >
-                                  <Copy className="mr-2 h-4 w-4" />
-                                  Copy
-                                </DropdownMenuItem>
-                                {isOwn ? (
-                                  <DropdownMenuItem
-                                    onClick={() => void onDeleteMessage(message.id)}
-                                    className="text-red-500"
-                                  >
-                                    <Trash2 className="mr-2 h-4 w-4" />
-                                    Delete
-                                  </DropdownMenuItem>
-                                ) : null}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </div>
                         </div>
                       </Fragment>
                     );
@@ -1377,7 +1465,9 @@ export function MessagesPageContent(props: Props) {
                   type="button"
                   size="icon"
                   className={`h-10 w-10 shrink-0 rounded-full transition-colors ${
-                    canSend ? 'text-black' : 'text-[var(--workspace-shell-text-muted)]'
+                    canSend
+                      ? 'text-black'
+                      : 'text-[var(--workspace-shell-text-muted)]'
                   }`}
                   style={{
                     backgroundColor: canSend ? '#57C87F' : '#243549',
@@ -1404,7 +1494,9 @@ export function MessagesPageContent(props: Props) {
             items or those linked to clients on the chat.
           </p>
           {attachLoading ? (
-            <p className="py-6 text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
+            <p className="py-6 text-sm text-[var(--workspace-shell-text-muted)]">
+              Loading…
+            </p>
           ) : attachableItems.length === 0 ? (
             <p className="py-6 text-sm text-[var(--workspace-shell-text-muted)]">
               No shareable notes or files yet. Upload files in Notes and files,
@@ -1423,13 +1515,15 @@ export function MessagesPageContent(props: Props) {
                       className={`flex w-full items-center gap-2 rounded-lg px-3 py-2 text-left text-sm transition-colors ${
                         selected
                           ? 'bg-emerald-900/40 text-emerald-100'
-                          : 'hover:bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                          : 'text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]'
                       }`}
                       onClick={() => togglePendingAttachment(item)}
                     >
                       <FileText className="h-4 w-4 shrink-0" />
-                      <span className="min-w-0 flex-1 truncate">{item.title}</span>
-                      <span className="shrink-0 text-[10px] uppercase text-[var(--workspace-shell-text-muted)]">
+                      <span className="min-w-0 flex-1 truncate">
+                        {item.title}
+                      </span>
+                      <span className="shrink-0 text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
                         {item.type === 'note' ? 'Note' : 'File'}
                         {item.isPublic ? ' · Public' : ''}
                       </span>
@@ -1458,10 +1552,14 @@ export function MessagesPageContent(props: Props) {
           </DialogHeader>
           <div className="space-y-3 pt-1">
             <div className="space-y-1.5">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Type</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Type
+              </Label>
               <Select
                 value={threadType}
-                onValueChange={(v) => setThreadType(v as 'direct' | 'group' | 'job')}
+                onValueChange={(v) =>
+                  setThreadType(v as 'direct' | 'group' | 'job')
+                }
               >
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
                   <SelectValue />
@@ -1474,7 +1572,10 @@ export function MessagesPageContent(props: Props) {
               </Select>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="new-chat-title" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="new-chat-title"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Title (optional)
               </Label>
               <Input
@@ -1487,7 +1588,9 @@ export function MessagesPageContent(props: Props) {
             </div>
             {threadType === 'job' ? (
               <div className="space-y-1.5">
-                <Label className="text-[var(--workspace-shell-text-muted)]">Job</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Job
+                </Label>
                 {props.jobOptions.length > 0 ? (
                   <Select value={jobId || undefined} onValueChange={setJobId}>
                     <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">
@@ -1512,7 +1615,10 @@ export function MessagesPageContent(props: Props) {
               </div>
             ) : null}
             <div className="space-y-1.5">
-              <Label htmlFor="new-chat-members" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="new-chat-members"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Team members
               </Label>
               <SearchableMultiSelect
@@ -1527,7 +1633,10 @@ export function MessagesPageContent(props: Props) {
             </div>
             {props.canMessageClients ? (
               <div className="space-y-1.5">
-                <Label htmlFor="new-chat-clients" className="text-[var(--workspace-shell-text-muted)]">
+                <Label
+                  htmlFor="new-chat-clients"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
                   Clients
                 </Label>
                 <SearchableMultiSelect
@@ -1559,7 +1668,8 @@ export function MessagesPageContent(props: Props) {
           </DialogHeader>
           <div className="space-y-3">
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Linking makes this chat appear in that job&apos;s Messages tab for participants.
+              Linking makes this chat appear in that job&apos;s Messages tab for
+              participants.
             </p>
             <Select value={linkJobId || undefined} onValueChange={setLinkJobId}>
               <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]">

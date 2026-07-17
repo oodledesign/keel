@@ -1,5 +1,7 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import Link from 'next/link';
 
 import { ExternalLink, Pencil } from 'lucide-react';
@@ -101,6 +103,17 @@ export function WebsiteDetailContent({
   const clientHref = website.linkedClientId
     ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${website.linkedClientId}`
     : null;
+  const [activeTab, setActiveTab] = useState<WebsitePlanningTab>(
+    planningTab ?? 'overview',
+  );
+
+  useEffect(() => {
+    if (planningTab) {
+      setActiveTab(planningTab);
+    }
+  }, [planningTab]);
+
+  const showWebsiteMeta = activeTab === 'overview';
 
   return (
     <SiteStudioAccessProvider enabled={siteStudioEnabled}>
@@ -167,6 +180,7 @@ export function WebsiteDetailContent({
           siteStudio={siteStudio}
           canEdit={canEditWebsites}
           initialTab={planningTab ?? 'overview'}
+          onTabChange={setActiveTab}
           linkedJobTitle={linkedJobTitle}
           clientName={website.clientOrgName}
           clientHref={clientHref}
@@ -174,75 +188,79 @@ export function WebsiteDetailContent({
           approvals={approvals}
         />
 
-        <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-          <CardHeader>
-            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-              Overview
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <DetailField
-              label="Domain"
-              value={website.domain}
-              href={liveHref}
-            />
-            <DetailField
-              label="Staging URL"
-              value={website.stagingUrl}
-              href={stagingHref}
-            />
-            <DetailField
-              label="Client org"
-              value={website.clientOrgName}
-              href={clientHref}
-            />
-            <DetailField
-              label="Launched"
-              value={formatWebsiteDate(website.launchedAt)}
-            />
-            <DetailField
-              label="CMS admin URL"
-              value={website.cmsAdminUrl}
-              href={cmsHref}
-            />
-          </CardContent>
-        </Card>
+        {showWebsiteMeta ? (
+          <>
+            <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+              <CardHeader>
+                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                  Overview
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <DetailField
+                  label="Domain"
+                  value={website.domain}
+                  href={liveHref}
+                />
+                <DetailField
+                  label="Staging URL"
+                  value={website.stagingUrl}
+                  href={stagingHref}
+                />
+                <DetailField
+                  label="Client org"
+                  value={website.clientOrgName}
+                  href={clientHref}
+                />
+                <DetailField
+                  label="Launched"
+                  value={formatWebsiteDate(website.launchedAt)}
+                />
+                <DetailField
+                  label="CMS admin URL"
+                  value={website.cmsAdminUrl}
+                  href={cmsHref}
+                />
+              </CardContent>
+            </Card>
 
-        <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-          <CardHeader>
-            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-              Technical details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <DetailField
-              label="Stack"
-              value={website.stack.replace('-', ' + ')}
-            />
-            <DetailField
-              label="Vercel project ID"
-              value={website.vercelProjectId}
-            />
-            <DetailField
-              label="GitHub repo"
-              value={website.githubRepoUrl}
-              href={website.githubRepoUrl}
-            />
-            <DetailField
-              label="Supabase schema"
-              value={website.supabaseSchema}
-            />
-            <DetailField
-              label="Umami website ID"
-              value={website.umamiWebsiteId}
-            />
-            <DetailField
-              label="Umami share URL"
-              value={website.umamiShareUrl}
-              href={website.umamiShareUrl}
-            />
-          </CardContent>
-        </Card>
+            <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+              <CardHeader>
+                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                  Technical details
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-4 md:grid-cols-2">
+                <DetailField
+                  label="Stack"
+                  value={website.stack.replace('-', ' + ')}
+                />
+                <DetailField
+                  label="Vercel project ID"
+                  value={website.vercelProjectId}
+                />
+                <DetailField
+                  label="GitHub repo"
+                  value={website.githubRepoUrl}
+                  href={website.githubRepoUrl}
+                />
+                <DetailField
+                  label="Supabase schema"
+                  value={website.supabaseSchema}
+                />
+                <DetailField
+                  label="Umami website ID"
+                  value={website.umamiWebsiteId}
+                />
+                <DetailField
+                  label="Umami share URL"
+                  value={website.umamiShareUrl}
+                  href={website.umamiShareUrl}
+                />
+              </CardContent>
+            </Card>
+          </>
+        ) : null}
 
         {(website.notes || website.hostingNotes) && (
           <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
@@ -274,25 +292,27 @@ export function WebsiteDetailContent({
               ) : null}
             </CardContent>
           </Card>
-        )}
+        ) : null}
 
-        <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-          <CardHeader>
-            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-              Timestamps
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-2">
-            <DetailField
-              label="Created"
-              value={formatWebsiteDate(website.createdAt)}
-            />
-            <DetailField
-              label="Updated"
-              value={formatWebsiteDate(website.updatedAt)}
-            />
-          </CardContent>
-        </Card>
+        {showWebsiteMeta ? (
+          <Card className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+            <CardHeader>
+              <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                Timestamps
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-2">
+              <DetailField
+                label="Created"
+                value={formatWebsiteDate(website.createdAt)}
+              />
+              <DetailField
+                label="Updated"
+                value={formatWebsiteDate(website.updatedAt)}
+              />
+            </CardContent>
+          </Card>
+        ) : null}
       </div>
     </SiteStudioAccessProvider>
   );

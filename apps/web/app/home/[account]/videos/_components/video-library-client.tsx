@@ -1,10 +1,10 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
-import Link from 'next/link';
-import { useRouter } from 'next/navigation';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { Grid3X3, List, Plus, Search, SlidersHorizontal } from 'lucide-react';
 
@@ -19,8 +19,8 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
-import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import pathsConfig from '~/config/paths.config';
+import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
 import type {
   VideoFolderRow,
@@ -30,8 +30,8 @@ import type {
   VideoViewMode,
 } from '~/lib/videos/types';
 
-import { FolderSidebar } from './folder-sidebar';
 import { CreateFolderDialog } from './create-folder-dialog';
+import { FolderSidebar } from './folder-sidebar';
 import { MoveToFolderDialog } from './move-to-folder-dialog';
 import { VideoCard } from './video-card';
 import { VideoListRow } from './video-list-row';
@@ -197,7 +197,8 @@ export function VideoLibraryClient(props: {
     try {
       const res = await fetch(`/api/videos/${video.id}/player-config`);
       const json = await res.json();
-      if (!json.ok) throw new Error(json.error?.message ?? 'Failed to load config');
+      if (!json.ok)
+        throw new Error(json.error?.message ?? 'Failed to load config');
 
       await navigator.clipboard.writeText(json.data.embedIframe);
       toast.success('Embed code copied');
@@ -318,25 +319,25 @@ export function VideoLibraryClient(props: {
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-4 px-4 lg:px-0">
         <div className="text-muted-foreground flex flex-wrap items-center gap-1 text-sm">
-            <button
-              type="button"
-              className="hover:text-[var(--workspace-shell-text)]"
-              onClick={() => setSelectedFolderId(null)}
-            >
-              All videos
-            </button>
-            {breadcrumb.map((folder) => (
-              <span key={folder.id} className="inline-flex items-center gap-1">
-                <span>/</span>
-                <button
-                  type="button"
-                  className="hover:text-[var(--workspace-shell-text)]"
-                  onClick={() => setSelectedFolderId(folder.id)}
-                >
-                  {folder.name}
-                </button>
-              </span>
-            ))}
+          <button
+            type="button"
+            className="hover:text-[var(--workspace-shell-text)]"
+            onClick={() => setSelectedFolderId(null)}
+          >
+            All videos
+          </button>
+          {breadcrumb.map((folder) => (
+            <span key={folder.id} className="inline-flex items-center gap-1">
+              <span>/</span>
+              <button
+                type="button"
+                className="hover:text-[var(--workspace-shell-text)]"
+                onClick={() => setSelectedFolderId(folder.id)}
+              >
+                {folder.name}
+              </button>
+            </span>
+          ))}
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
@@ -359,7 +360,7 @@ export function VideoLibraryClient(props: {
 
       <div className="flex flex-wrap items-center gap-3 px-4 lg:px-0">
         <div className="relative min-w-[12rem] flex-1">
-          <Search className="text-muted-foreground absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2" />
+          <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
           <Input
             value={search}
             onChange={(event) => setSearch(event.target.value)}
@@ -409,7 +410,10 @@ export function VideoLibraryClient(props: {
           </SelectContent>
         </Select>
 
-        <Select value={sort} onValueChange={(value) => setSort(value as VideoSort)}>
+        <Select
+          value={sort}
+          onValueChange={(value) => setSort(value as VideoSort)}
+        >
           <SelectTrigger className="w-[10rem]">
             <SelectValue placeholder="Sort" />
           </SelectTrigger>

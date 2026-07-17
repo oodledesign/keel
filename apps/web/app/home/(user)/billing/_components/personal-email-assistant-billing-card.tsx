@@ -61,7 +61,9 @@ export function PersonalEmailAssistantBillingCard(props: {
         <CardHeader>
           <div className="flex items-center justify-between gap-3">
             <div>
-              <CardTitle className="text-base">{EMAIL_ASSISTANT.name}</CardTitle>
+              <CardTitle className="text-base">
+                {EMAIL_ASSISTANT.name}
+              </CardTitle>
               <CardDescription>{EMAIL_ASSISTANT.description}</CardDescription>
             </div>
             <Badge variant="outline" className="gap-1">
@@ -79,16 +81,20 @@ export function PersonalEmailAssistantBillingCard(props: {
   }
 
   return (
-    <Card className={props.highlighted ? 'ring-2 ring-[var(--ozer-accent)]' : undefined}>
+    <Card
+      className={
+        props.highlighted ? 'ring-2 ring-[var(--ozer-accent)]' : undefined
+      }
+    >
       <CardHeader>
         <CardTitle className="text-base">{EMAIL_ASSISTANT.name}</CardTitle>
         <CardDescription>{EMAIL_ASSISTANT.description}</CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
         <p className="text-muted-foreground text-sm">
-          From £{EMAIL_ASSISTANT.monthlyPriceGbp}/month on your personal account.
-          Gmail sync, AI action items, and draft replies — not included in the free
-          personal tier.
+          From £{EMAIL_ASSISTANT.monthlyPriceGbp}/month on your personal
+          account. Gmail sync, AI action items, and draft replies — not included
+          in the free personal tier.
         </p>
 
         <PlanPicker
@@ -105,10 +111,11 @@ export function PersonalEmailAssistantBillingCard(props: {
                 payload: { planId },
               });
 
-              const { checkoutToken } = await createPersonalAccountCheckoutSession({
-                planId,
-                productId,
-              });
+              const { checkoutToken } =
+                await createPersonalAccountCheckoutSession({
+                  planId,
+                  productId,
+                });
 
               setCheckoutToken(checkoutToken);
             });

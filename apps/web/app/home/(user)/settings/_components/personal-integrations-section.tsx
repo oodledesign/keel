@@ -1,7 +1,8 @@
 'use client';
 
+import { type ReactNode, useState, useTransition } from 'react';
+
 import Link from 'next/link';
-import { useState, useTransition, type ReactNode } from 'react';
 
 import { Calendar, ExternalLink, Loader2, Mail, Unplug } from 'lucide-react';
 
@@ -11,11 +12,11 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 
-import type { PersonalIntegrationsData } from '../_lib/server/personal-integrations.loader';
 import {
   disconnectGmailFromIntegrationsAction,
   disconnectGoogleCalendarAction,
 } from '../_lib/server/personal-integrations-actions';
+import type { PersonalIntegrationsData } from '../_lib/server/personal-integrations.loader';
 
 type Props = {
   data: PersonalIntegrationsData;
@@ -102,7 +103,9 @@ function IntegrationRow({
               </p>
             ) : null}
             {connectDisabledReason ? (
-              <p className="mt-2 text-xs text-amber-100/90">{connectDisabledReason}</p>
+              <p className="mt-2 text-xs text-amber-100/90">
+                {connectDisabledReason}
+              </p>
             ) : null}
           </div>
         </div>
@@ -158,9 +161,9 @@ function IntegrationRow({
 
 export function PersonalIntegrationsSection({ data }: Props) {
   const [pending, startTransition] = useTransition();
-  const [disconnecting, setDisconnecting] = useState<'calendar' | 'gmail' | null>(
-    null,
-  );
+  const [disconnecting, setDisconnecting] = useState<
+    'calendar' | 'gmail' | null
+  >(null);
 
   const settingsReturnPath = encodeURIComponent(
     pathsConfig.app.personalAccountIntegrationsSettings,

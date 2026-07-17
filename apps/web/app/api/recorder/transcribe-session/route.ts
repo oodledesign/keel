@@ -36,10 +36,7 @@ export async function POST(request: Request) {
   const summary = await loadRecorderUsageSummary(client, auth.user_id);
 
   try {
-    const session = await createSonioxTranscribeSession(
-      auth.user_id,
-      summary,
-    );
+    const session = await createSonioxTranscribeSession(auth.user_id, summary);
     return NextResponse.json(session);
   } catch (error) {
     if (error instanceof SonioxTranscribeSessionError) {
@@ -66,7 +63,10 @@ export async function POST(request: Request) {
     if (error instanceof SonioxApiError) {
       return NextResponse.json(
         { error: error.message, provider: 'soniox' },
-        { status: error.status >= 400 && error.status < 600 ? error.status : 502 },
+        {
+          status:
+            error.status >= 400 && error.status < 600 ? error.status : 502,
+        },
       );
     }
 

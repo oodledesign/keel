@@ -78,11 +78,7 @@ export function plannerTaskSubtitle(task: PlannerTask): string {
   const assignment = plannerTaskAssignmentLabel(task);
   const workspace = task.workspace.trim();
 
-  if (
-    workspace &&
-    workspace !== 'Personal' &&
-    workspace !== assignment
-  ) {
+  if (workspace && workspace !== 'Personal' && workspace !== assignment) {
     parts.push(workspace);
   }
 
@@ -114,7 +110,12 @@ export function plannerTaskAssignmentLabel(task: PlannerTask): string | null {
   const client = task.clientName?.trim();
   const project = task.project?.trim();
 
-  if (client && project && !isGenericProjectName(project) && project !== client) {
+  if (
+    client &&
+    project &&
+    !isGenericProjectName(project) &&
+    project !== client
+  ) {
     return `${client} · ${project}`;
   }
   if (client) {

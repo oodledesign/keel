@@ -77,7 +77,9 @@ export function CalendarEventsSection({
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Could not load calendar');
+        setError(
+          err instanceof Error ? err.message : 'Could not load calendar',
+        );
         onEventsChange([]);
         onSelectedEventIdsChange(new Set());
       })
@@ -112,7 +114,9 @@ export function CalendarEventsSection({
             Events are treated as fixed blocks.
           </p>
         </div>
-        {loading ? <Loader2 className="h-4 w-4 animate-spin text-[var(--workspace-shell-text)]/45" /> : null}
+        {loading ? (
+          <Loader2 className="h-4 w-4 animate-spin text-[var(--workspace-shell-text)]/45" />
+        ) : null}
       </div>
 
       {!configured ? (
@@ -126,7 +130,10 @@ export function CalendarEventsSection({
       ) : loading ? (
         <div className="space-y-2">
           {Array.from({ length: 3 }).map((_, i) => (
-            <div key={i} className="h-12 animate-pulse rounded-lg bg-[var(--workspace-shell-sidebar-accent)]" />
+            <div
+              key={i}
+              className="h-12 animate-pulse rounded-lg bg-[var(--workspace-shell-sidebar-accent)]"
+            />
           ))}
         </div>
       ) : events.length === 0 ? (
@@ -149,7 +156,9 @@ export function CalendarEventsSection({
                 <span className="block font-mono text-xs text-sky-300/90">
                   {timeRange(event)}
                 </span>
-                <span className="block truncate text-[var(--workspace-shell-text)]">{event.title}</span>
+                <span className="block truncate text-[var(--workspace-shell-text)]">
+                  {event.title}
+                </span>
                 <span className="block truncate text-xs text-[var(--workspace-shell-text)]/40">
                   {event.calendar}
                 </span>

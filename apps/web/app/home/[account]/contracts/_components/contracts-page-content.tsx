@@ -8,20 +8,15 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { FileSignature, PlusCircle, RefreshCw, Search } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { If } from '@kit/ui/if';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@kit/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
-import { If } from '@kit/ui/if';
 
 import pathsConfig from '~/config/paths.config';
-import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 
 import { getErrorMessage } from '../_lib/error-message';
@@ -86,7 +81,9 @@ export function ContractsPageContent({
   const [clientFilter, setClientFilter] = useState('');
   const [creating, setCreating] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
-  const [clientOptions, setClientOptions] = useState<{ id: string; display_name: string | null }[]>([]);
+  const [clientOptions, setClientOptions] = useState<
+    { id: string; display_name: string | null }[]
+  >([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const pageSize = 20;
@@ -110,7 +107,9 @@ export function ContractsPageContent({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setClientOptions((list ?? []) as { id: string; display_name: string | null }[]);
+        setClientOptions(
+          (list ?? []) as { id: string; display_name: string | null }[],
+        );
       })
       .catch(() => setClientOptions([]));
   }, [accountId]);
@@ -166,7 +165,10 @@ export function ContractsPageContent({
         : Array.isArray((raw as { data?: unknown })?.data)
           ? (raw as { data: unknown[] }).data
           : [];
-      const options = (list ?? []) as { id: string; display_name: string | null }[];
+      const options = (list ?? []) as {
+        id: string;
+        display_name: string | null;
+      }[];
       setClientOptions(options);
       if (options.length > 0) setSelectedClientId(options[0]!.id);
     } catch (error) {
@@ -182,9 +184,12 @@ export function ContractsPageContent({
     void openCreateSheet();
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
-    router.replace(nextParams.toString() ? `${pathname}?${nextParams}` : pathname, {
-      scroll: false,
-    });
+    router.replace(
+      nextParams.toString() ? `${pathname}?${nextParams}` : pathname,
+      {
+        scroll: false,
+      },
+    );
   }, [canEditContracts, openCreateSheet, pathname, router, searchParams]);
 
   const handleCreateContract = async () => {
@@ -194,7 +199,10 @@ export function ContractsPageContent({
     }
     setCreating(true);
     try {
-      const contract = await createContract({ accountId, client_id: selectedClientId });
+      const contract = await createContract({
+        accountId,
+        client_id: selectedClientId,
+      });
       if (contract?.id) {
         setCreateSheetOpen(false);
         router.push(
@@ -210,7 +218,10 @@ export function ContractsPageContent({
     }
   };
 
-  const editPathBase = pathsConfig.app.accountContractEdit.replace('[account]', accountSlug);
+  const editPathBase = pathsConfig.app.accountContractEdit.replace(
+    '[account]',
+    accountSlug,
+  );
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
     { key: 'unsigned', label: 'Unsigned', count: counts.unsigned },
@@ -221,7 +232,9 @@ export function ContractsPageContent({
   if (!canViewContracts) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-8">
-        <p className="text-[var(--workspace-shell-text-muted)]">You don&apos;t have access to contracts in this account.</p>
+        <p className="text-[var(--workspace-shell-text-muted)]">
+          You don&apos;t have access to contracts in this account.
+        </p>
       </div>
     );
   }
@@ -251,7 +264,11 @@ export function ContractsPageContent({
             ))}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchContracts()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchContracts()}
+            >
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
@@ -269,8 +286,8 @@ export function ContractsPageContent({
         </div>
 
         <div className="flex flex-wrap items-end gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <div className="relative min-w-[220px] flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <div className="relative max-w-sm min-w-[220px] flex-1">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <Input
               placeholder="Search title or client..."
               value={search}
@@ -280,13 +297,20 @@ export function ContractsPageContent({
           </div>
           <div className="min-w-[200px]">
             <ClientCombobox
-              clients={clientOptions.length ? clientOptions : [{ id: '', display_name: 'All clients' }]}
+              clients={
+                clientOptions.length
+                  ? clientOptions
+                  : [{ id: '', display_name: 'All clients' }]
+              }
               value={clientFilter}
               onValueChange={setClientFilter}
               loading={false}
               placeholder="Filter by client"
               emptyMessage="No clients"
-              addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+              addClientHref={pathsConfig.app.accountClients.replace(
+                '[account]',
+                accountSlug,
+              )}
             />
           </div>
           {(search || clientFilter) && (
@@ -315,18 +339,21 @@ export function ContractsPageContent({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="text-[var(--workspace-shell-text-muted)]">
-                  <th className="pb-2 pr-4">Title</th>
-                  <th className="pb-2 pr-4">Client</th>
-                  <th className="pb-2 pr-4">Created</th>
-                  <th className="pb-2 pr-4">Sent</th>
-                  <th className="pb-2 pr-4">Total</th>
-                  <th className="pb-2 pr-4">Status</th>
-                  <th className="pb-2 w-10" />
+                  <th className="pr-4 pb-2">Title</th>
+                  <th className="pr-4 pb-2">Client</th>
+                  <th className="pr-4 pb-2">Created</th>
+                  <th className="pr-4 pb-2">Sent</th>
+                  <th className="pr-4 pb-2">Total</th>
+                  <th className="pr-4 pb-2">Status</th>
+                  <th className="w-10 pb-2" />
                 </tr>
               </thead>
               <tbody>
                 {contracts.map((row) => (
-                  <tr key={row.id} className="border-t border-[color:var(--workspace-shell-border)] hover:bg-white/3">
+                  <tr
+                    key={row.id}
+                    className="border-t border-[color:var(--workspace-shell-border)] hover:bg-white/3"
+                  >
                     <td className="py-3 pr-4">
                       <Link
                         href={editPathBase.replace('[id]', row.id)}
@@ -335,11 +362,20 @@ export function ContractsPageContent({
                         {row.title?.trim() || 'Agreement'}
                       </Link>
                     </td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{row.clients?.display_name ?? '—'}</td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(row.created_at)}</td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(row.sent_at)}</td>
                     <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
-                      {formatPence(row.total_pence, row.currency?.toUpperCase() ?? 'GBP')}
+                      {row.clients?.display_name ?? '—'}
+                    </td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {formatDate(row.created_at)}
+                    </td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {formatDate(row.sent_at)}
+                    </td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {formatPence(
+                        row.total_pence,
+                        row.currency?.toUpperCase() ?? 'GBP',
+                      )}
                     </td>
                     <td className="py-3 pr-4">
                       <ContractStatusBadge
@@ -370,10 +406,20 @@ export function ContractsPageContent({
                 Page {page} of {totalPages} ({total} contracts)
               </span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
                   Previous
                 </Button>
-                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
                   Next
                 </Button>
               </div>
@@ -397,7 +443,10 @@ export function ContractsPageContent({
                 loading={clientsLoading}
                 placeholder="Select client"
                 emptyMessage="No clients"
-                addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+                addClientHref={pathsConfig.app.accountClients.replace(
+                  '[account]',
+                  accountSlug,
+                )}
               />
             </div>
             <Button

@@ -1,19 +1,20 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
 
-import { PageOptimizePanel } from './page-optimize-panel';
+import Link from 'next/link';
 
+import { PAGESPEED_PRIORITY_LABELS } from '~/lib/rankly-pages/recommendations';
+import { scoreTone } from '~/lib/rankly-pages/score';
 import type { RanklyPageDetail } from '~/lib/rankly-pages/types';
 import {
   PAGE_RECOMMENDATION_CATEGORY_LABELS,
   PAGE_SCORE_LABELS,
 } from '~/lib/rankly-pages/types';
-import { PAGESPEED_PRIORITY_LABELS } from '~/lib/rankly-pages/recommendations';
-import { scoreTone } from '~/lib/rankly-pages/score';
 import { pageDisplayPath } from '~/lib/rankly-pages/url';
 import { SITE_CRAWL_ISSUE_LABELS } from '~/lib/site-crawl/types';
+
+import { PageOptimizePanel } from './page-optimize-panel';
 
 const PRIORITY_COLOURS = {
   high: 'bg-red-500/20 text-red-200',
@@ -39,16 +40,15 @@ function formatMs(ms: number | null | undefined): string {
   return `${Math.round(ms)}ms`;
 }
 
-function ScoreBreakdownCard(props: {
-  label: string;
-  score: number | null;
-}) {
+function ScoreBreakdownCard(props: { label: string; score: number | null }) {
   return (
     <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-      <p className="text-muted-foreground text-xs uppercase tracking-wide">
+      <p className="text-muted-foreground text-xs tracking-wide uppercase">
         {props.label}
       </p>
-      <p className={`mt-2 text-3xl font-semibold tabular-nums ${scoreTone(props.score)}`}>
+      <p
+        className={`mt-2 text-3xl font-semibold tabular-nums ${scoreTone(props.score)}`}
+      >
         {formatScore(props.score)}
       </p>
     </div>
@@ -87,8 +87,10 @@ function RecommendationRow(props: {
       </button>
 
       {expanded ? (
-        <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] px-3 pb-3 pt-2">
-          <p className="text-muted-foreground text-sm leading-relaxed">{rec.detail}</p>
+        <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] px-3 pt-2 pb-3">
+          <p className="text-muted-foreground text-sm leading-relaxed">
+            {rec.detail}
+          </p>
           {rec.action ? (
             <p className="rounded-md border border-[var(--ozer-accent)]/20 bg-[var(--ozer-accent)]/5 px-3 py-2 text-sm text-[var(--ozer-accent)]">
               {rec.action}
@@ -107,8 +109,8 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
       <section className="space-y-2">
         <h2 className="text-sm font-medium">On-page data</h2>
         <p className="text-muted-foreground text-sm">
-          No crawl data for this URL yet. Run a site crawl to populate title, meta, and
-          technical checks.
+          No crawl data for this URL yet. Run a site crawl to populate title,
+          meta, and technical checks.
         </p>
       </section>
     );
@@ -126,7 +128,9 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-[10px] uppercase">Meta description</p>
+          <p className="text-muted-foreground text-[10px] uppercase">
+            Meta description
+          </p>
           <p className="mt-1 text-sm">{crawl.meta_description || '—'}</p>
           <p className="text-muted-foreground mt-1 text-xs">
             {crawl.meta_description.length} characters
@@ -140,7 +144,9 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-[10px] uppercase">Technical</p>
+          <p className="text-muted-foreground text-[10px] uppercase">
+            Technical
+          </p>
           <p className="mt-1 text-sm">
             HTTP {crawl.status_code}
             {crawl.indexable ? ' · Indexable' : ' · Noindex'}
@@ -153,7 +159,9 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
 
       {(crawl.schema_types ?? []).length > 0 ? (
         <div>
-          <p className="text-muted-foreground mb-2 text-xs uppercase">Schema types</p>
+          <p className="text-muted-foreground mb-2 text-xs uppercase">
+            Schema types
+          </p>
           <div className="flex flex-wrap gap-1">
             {crawl.schema_types.map((type) => (
               <span
@@ -169,7 +177,9 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
 
       {crawl.issues.length > 0 ? (
         <div>
-          <p className="text-muted-foreground mb-2 text-xs uppercase">Crawl issues</p>
+          <p className="text-muted-foreground mb-2 text-xs uppercase">
+            Crawl issues
+          </p>
           <ul className="space-y-1 text-sm">
             {crawl.issues.map((issue) => (
               <li
@@ -179,7 +189,10 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
                 <span className="font-medium text-red-200">
                   {SITE_CRAWL_ISSUE_LABELS[issue.code]}
                 </span>
-                <span className="text-muted-foreground"> — {issue.message}</span>
+                <span className="text-muted-foreground">
+                  {' '}
+                  — {issue.message}
+                </span>
               </li>
             ))}
           </ul>
@@ -303,20 +316,28 @@ export function RanklyPageDetailView(props: {
         </div>
 
         <div className="text-right">
-          <p className="text-muted-foreground text-xs uppercase">Overall score</p>
+          <p className="text-muted-foreground text-xs uppercase">
+            Overall score
+          </p>
           <p
             className={`text-4xl font-semibold tabular-nums ${scoreTone(page.scores.overall)}`}
           >
             {formatScore(page.scores.overall)}
             {page.scores.overall != null ? (
-              <span className="text-muted-foreground text-lg font-normal"> /100</span>
+              <span className="text-muted-foreground text-lg font-normal">
+                {' '}
+                /100
+              </span>
             ) : null}
           </p>
         </div>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-        <ScoreBreakdownCard label={PAGE_SCORE_LABELS.onPage} score={page.scores.onPage} />
+        <ScoreBreakdownCard
+          label={PAGE_SCORE_LABELS.onPage}
+          score={page.scores.onPage}
+        />
         <ScoreBreakdownCard
           label={PAGE_SCORE_LABELS.performance}
           score={page.scores.performance}
@@ -325,12 +346,18 @@ export function RanklyPageDetailView(props: {
           label={PAGE_SCORE_LABELS.technical}
           score={page.scores.technical}
         />
-        <ScoreBreakdownCard label={PAGE_SCORE_LABELS.schema} score={page.scores.schema} />
+        <ScoreBreakdownCard
+          label={PAGE_SCORE_LABELS.schema}
+          score={page.scores.schema}
+        />
       </div>
 
       <CrawlDataSection page={page} />
 
-      <PagespeedSection page={page} pagespeedDetailHref={props.pagespeedDetailHref} />
+      <PagespeedSection
+        page={page}
+        pagespeedDetailHref={props.pagespeedDetailHref}
+      />
 
       <section className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
         <h2 className="text-sm font-medium">URL optimization</h2>
@@ -347,7 +374,8 @@ export function RanklyPageDetailView(props: {
           <h2 className="text-sm font-medium">Recommendations</h2>
           <p className="text-muted-foreground text-xs">
             {page.recommendations.length} item
-            {page.recommendations.length === 1 ? '' : 's'} — specific to this page
+            {page.recommendations.length === 1 ? '' : 's'} — specific to this
+            page
           </p>
         </div>
 

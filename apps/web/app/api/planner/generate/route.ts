@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';

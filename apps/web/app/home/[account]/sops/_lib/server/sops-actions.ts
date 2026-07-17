@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
@@ -8,12 +9,12 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { extractSopPlaybookFromText } from '~/lib/ai/sop-import';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
   defaultPeriodLabel,
   defaultRunTitle,
   getSopsDb,
 } from '~/lib/sops/types';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 const RecurrenceSchema = z.enum(['monthly', 'weekly', 'project', 'ad_hoc']);
 
@@ -147,12 +148,13 @@ export const startSopRunAction = enhanceAction(
 
     if (stepsErr) throw stepsErr;
     if (!templateSteps?.length) {
-      throw new Error('Add at least one step to this playbook before starting a run.');
+      throw new Error(
+        'Add at least one step to this playbook before starting a run.',
+      );
     }
 
     const title =
-      data.title?.trim() ||
-      defaultRunTitle(pb.title, pb.recurrence);
+      data.title?.trim() || defaultRunTitle(pb.title, pb.recurrence);
     const periodLabel =
       data.periodLabel?.trim() || defaultPeriodLabel(pb.recurrence);
 
@@ -180,12 +182,14 @@ export const startSopRunAction = enhanceAction(
     const runId = (run as { id: string }).id;
 
     const { error: stateErr } = await db.from('run_step_states').insert(
-      (templateSteps as Array<{
-        id: string;
-        position: number;
-        title: string;
-        body_md: string | null;
-      }>).map((step) => ({
+      (
+        templateSteps as Array<{
+          id: string;
+          position: number;
+          title: string;
+          body_md: string | null;
+        }>
+      ).map((step) => ({
         run_id: runId,
         playbook_step_id: step.id,
         position: step.position,

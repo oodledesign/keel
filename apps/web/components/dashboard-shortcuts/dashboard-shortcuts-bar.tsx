@@ -11,8 +11,8 @@ import { cn } from '@kit/ui/utils';
 
 import { HapticLink } from '~/components/haptic-link';
 import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
-import { dismissNotice, isNoticeDismissed } from '~/lib/dismissible-notice';
 import type { ResolvedShortcut } from '~/lib/dashboard-shortcuts/types';
+import { dismissNotice, isNoticeDismissed } from '~/lib/dismissible-notice';
 import { coerceMobileNavIconKey } from '~/lib/mobile-nav/nav-icon-keys';
 
 type Props = {
@@ -55,7 +55,7 @@ export function DashboardShortcutsBar({
       <div className="flex items-center justify-between gap-3">
         <p
           className={cn(
-            'font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]',
+            'font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase',
             compact ? 'text-[10px]' : 'text-xs',
           )}
         >
@@ -102,7 +102,9 @@ export function DashboardShortcutsBar({
                   </Avatar>
                 ) : (
                   <MobileNavTabIcon
-                    iconKey={coerceMobileNavIconKey(shortcut.iconKey) ?? 'workspace'}
+                    iconKey={
+                      coerceMobileNavIconKey(shortcut.iconKey) ?? 'workspace'
+                    }
                     href={shortcut.href}
                     className="h-4 w-4 text-[var(--ozer-accent)]"
                   />
@@ -118,7 +120,10 @@ export function DashboardShortcutsBar({
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             No shortcuts yet.{' '}
             {settingsHref ? (
-              <Link href={settingsHref} className="text-[var(--ozer-accent-muted)] hover:underline">
+              <Link
+                href={settingsHref}
+                className="text-[var(--ozer-accent-muted)] hover:underline"
+              >
                 Add some in settings
               </Link>
             ) : null}

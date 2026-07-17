@@ -5,21 +5,21 @@ import { z } from 'zod';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
-import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
+import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
+import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
+import { queueBrainIndexSource } from '~/lib/brain/sync';
 import {
-  assertRecorderSyncAllowed,
   RecorderUsageLimitError,
+  assertRecorderSyncAllowed,
   recordRecorderSync,
 } from '~/lib/recorder/access';
-import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { resolveMeetingCalendarMetadata } from '~/lib/recorder/calendar-metadata';
 import { queueMeetingSummaryGeneration } from '~/lib/recorder/meeting-summary';
-import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
+  type TranscriptSegment,
   parseTranscriptContent,
   serializeTranscriptSegments,
-  type TranscriptSegment,
 } from '~/lib/recorder/transcript-speakers';
 
 export const runtime = 'nodejs';
@@ -87,7 +87,9 @@ async function assertDealBelongsToAccount(dealId: string, accountId: string) {
 }
 
 export async function POST(request: Request) {
-  const token = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  const token = await authenticateRecorderRequest(request, {
+    touchLastUsed: true,
+  });
   if (token instanceof NextResponse) {
     return token;
   }
@@ -169,7 +171,10 @@ export async function POST(request: Request) {
     return badRequest('client_id or deal_id is required');
   }
 
-  if (clientId && !(await assertClientBelongsToAccount(clientId, targetAccountId))) {
+  if (
+    clientId &&
+    !(await assertClientBelongsToAccount(clientId, targetAccountId))
+  ) {
     return badRequest('Invalid client_id for this workspace');
   }
 

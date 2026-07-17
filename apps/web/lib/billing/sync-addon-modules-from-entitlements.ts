@@ -63,7 +63,11 @@ export async function syncAddonModulesFromEntitlements(
 
   const activeKeys = new Set<string>();
   for (const row of entitlements ?? []) {
-    if (isEntitlementActive(row as { entitlement_key: string; expires_at: string | null })) {
+    if (
+      isEntitlementActive(
+        row as { entitlement_key: string; expires_at: string | null },
+      )
+    ) {
       activeKeys.add((row as { entitlement_key: string }).entitlement_key);
     }
   }

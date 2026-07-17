@@ -13,7 +13,10 @@ export function projectDomainToHomepageUrl(domain: string): string {
   return `https://${trimmed.replace(/^\/+/, '').replace(/\/+$/, '')}`;
 }
 
-export function normalizePagespeedUrl(input: string, projectDomain: string): string {
+export function normalizePagespeedUrl(
+  input: string,
+  projectDomain: string,
+): string {
   const raw = input.trim();
   if (!raw) {
     throw new Error('URL is required');

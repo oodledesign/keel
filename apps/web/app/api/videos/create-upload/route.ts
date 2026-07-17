@@ -1,17 +1,17 @@
 import { type NextRequest } from 'next/server';
+
 import { z } from 'zod';
 
 import { createBunnyStreamClient } from '@kit/bunny';
 
 import { assertVideoCreateAllowed } from '~/lib/billing/entitlements';
-
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { requireVideoAccountAccess } from '~/lib/videos/server/videos-access';
 import {
   getBunnyCdnHostname,
   resolveAccountBunnyApiKey,
   resolveAccountBunnyLibraryId,
 } from '~/lib/videos/server/videos-data';
-import { requireVideoAccountAccess } from '~/lib/videos/server/videos-access';
 
 export const runtime = 'nodejs';
 
@@ -61,7 +61,10 @@ export async function POST(request: NextRequest) {
 
     const libraryId =
       parsed.data.libraryId?.trim() ||
-      (await resolveAccountBunnyLibraryId(access.client, parsed.data.accountId));
+      (await resolveAccountBunnyLibraryId(
+        access.client,
+        parsed.data.accountId,
+      ));
     const apiKey = await resolveAccountBunnyApiKey(
       access.client,
       parsed.data.accountId,
@@ -91,7 +94,11 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (error || !row) {
-      return jsonErr('DB_ERROR', error?.message ?? 'Failed to create video', 500);
+      return jsonErr(
+        'DB_ERROR',
+        error?.message ?? 'Failed to create video',
+        500,
+      );
     }
 
     return jsonOk({

@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
+import { Loader2, Plus } from 'lucide-react';
+
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
@@ -22,18 +24,16 @@ import {
 } from '@kit/ui/select';
 import { cn } from '@kit/ui/utils';
 
-import { Plus, Loader2 } from 'lucide-react';
-
 import {
   PIPELINE_WORKSPACE_BUSINESS_PREFIX,
   pickDefaultPipelineTargetId,
 } from '~/home/(user)/_lib/pipeline-constants';
-import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
-import { createDeal } from '../actions';
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
+import { createDeal } from '../actions';
 
 type ClientOption = { id: string; display_name: string | null };
 
@@ -152,7 +152,8 @@ export function AddDealDialog({
     }
 
     const resolvedBusinessId =
-      businessId || pickDefaultPipelineTargetId(businesses, { workspaceScoped });
+      businessId ||
+      pickDefaultPipelineTargetId(businesses, { workspaceScoped });
 
     if (!resolvedBusinessId) {
       setError(
@@ -203,7 +204,9 @@ export function AddDealDialog({
       setStage('lead');
       setMode('lead');
       setClientId('');
-      setBusinessId(pickDefaultPipelineTargetId(businesses, { workspaceScoped }));
+      setBusinessId(
+        pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
+      );
       formRef.current?.reset();
     });
   }
@@ -256,7 +259,9 @@ export function AddDealDialog({
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           {mode === 'client' ? (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Client *</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Client *
+              </Label>
               <ClientCombobox
                 clients={clients}
                 value={clientId}
@@ -268,7 +273,10 @@ export function AddDealDialog({
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="contactName" className="text-[var(--workspace-shell-text-muted)]">
+                <Label
+                  htmlFor="contactName"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
                   Contact name *
                 </Label>
                 <Input
@@ -279,7 +287,10 @@ export function AddDealDialog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="companyName" className="text-[var(--workspace-shell-text-muted)]">
+                <Label
+                  htmlFor="companyName"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
                   Company
                 </Label>
                 <Input
@@ -292,10 +303,14 @@ export function AddDealDialog({
             </div>
           )}
 
-          <div className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}>
+          <div
+            className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}
+          >
             {showAssignField ? (
               <div className="space-y-2">
-                <Label className="text-[var(--workspace-shell-text-muted)]">Workspace *</Label>
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Workspace *
+                </Label>
                 <Select value={businessId} onValueChange={setBusinessId}>
                   <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                     <SelectValue placeholder="Select workspace" />
@@ -319,7 +334,9 @@ export function AddDealDialog({
               </div>
             ) : null}
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Stage</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Stage
+              </Label>
               <Select value={stage} onValueChange={setStage}>
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -336,7 +353,10 @@ export function AddDealDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="value" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="value"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Value (£)
             </Label>
             <Input
@@ -352,7 +372,10 @@ export function AddDealDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label htmlFor="nextAction" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="nextAction"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Short description / next action
               </Label>
               <Input
@@ -363,7 +386,10 @@ export function AddDealDialog({
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="nextActionDate" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="nextActionDate"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Action date
               </Label>
               <Input

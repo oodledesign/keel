@@ -47,15 +47,13 @@ export async function createSonioxTemporaryApiKey(
     }),
   });
 
-  const payload = (await response.json().catch(() => null)) as
-    | {
-        api_key?: string;
-        expires_at?: string;
-        error_type?: string;
-        message?: string;
-        error_message?: string;
-      }
-    | null;
+  const payload = (await response.json().catch(() => null)) as {
+    api_key?: string;
+    expires_at?: string;
+    error_type?: string;
+    message?: string;
+    error_message?: string;
+  } | null;
 
   if (!response.ok) {
     throw new SonioxApiError(

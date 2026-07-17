@@ -5,13 +5,13 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 
 import {
-  emptyWebsiteStyleSystem,
-  normalizeWebsiteBrief,
   type WebsiteBrief,
   type WebsitePortalShareScope,
   type WebsiteSitemapPage,
   type WebsiteStyleSystem,
   type WebsiteWireframePage,
+  emptyWebsiteStyleSystem,
+  normalizeWebsiteBrief,
   wireframesForClientShare,
 } from '~/lib/websites/planning-types';
 import { migrateSitemapPages } from '~/lib/websites/sitemap-document';
@@ -164,8 +164,10 @@ class ClientPortalService {
       .limit(1)
       .maybeSingle();
 
-    return ((data as { ticket_number?: number | null } | null)?.ticket_number ??
-      0) + 1;
+    return (
+      ((data as { ticket_number?: number | null } | null)?.ticket_number ?? 0) +
+      1
+    );
   }
 
   private mapWebsite(row: Record<string, unknown>): PortalWebsite {
@@ -238,38 +240,42 @@ class ClientPortalService {
   async getOverview(clientOrgId: string): Promise<PortalOverviewData> {
     await this.ensureMember(clientOrgId);
 
-    const [websiteResult, ticketCountResult, subscriptionResult, noticesResult] =
-      await Promise.all([
-        this.db
-          .from('websites')
-          .select(
-            'id, name, domain, status, stack, cms_admin_url, portal_share_scope, sitemap, wireframes, business_id',
-          )
-          .eq('client_org_id', clientOrgId)
-          .order('created_at', { ascending: true })
-          .limit(1)
-          .maybeSingle(),
-        this.db
-          .from('support_tickets')
-          .select('id', { count: 'exact', head: true })
-          .eq('client_org_id', clientOrgId)
-          .in('status', ['open', 'in-progress', 'waiting']),
-        this.db
-          .from('client_subscriptions')
-          .select(
-            'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link',
-          )
-          .eq('client_org_id', clientOrgId)
-          .order('created_at', { ascending: false })
-          .limit(1)
-          .maybeSingle(),
-        this.db
-          .from('client_portal_items')
-          .select('id, title, content, item_type, created_at')
-          .eq('client_org_id', clientOrgId)
-          .eq('is_visible', true)
-          .order('created_at', { ascending: false }),
-      ]);
+    const [
+      websiteResult,
+      ticketCountResult,
+      subscriptionResult,
+      noticesResult,
+    ] = await Promise.all([
+      this.db
+        .from('websites')
+        .select(
+          'id, name, domain, status, stack, cms_admin_url, portal_share_scope, sitemap, wireframes, business_id',
+        )
+        .eq('client_org_id', clientOrgId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle(),
+      this.db
+        .from('support_tickets')
+        .select('id', { count: 'exact', head: true })
+        .eq('client_org_id', clientOrgId)
+        .in('status', ['open', 'in-progress', 'waiting']),
+      this.db
+        .from('client_subscriptions')
+        .select(
+          'id, plan_name, monthly_amount, currency, status, next_billing_date, stripe_payment_link',
+        )
+        .eq('client_org_id', clientOrgId)
+        .order('created_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      this.db
+        .from('client_portal_items')
+        .select('id, title, content, item_type, created_at')
+        .eq('client_org_id', clientOrgId)
+        .eq('is_visible', true)
+        .order('created_at', { ascending: false }),
+    ]);
 
     const websiteRow = websiteResult.data as Record<string, unknown> | null;
 
@@ -289,15 +295,15 @@ class ClientPortalService {
               subscriptionResult.data.stripe_payment_link ?? null,
           }
         : null,
-      notices: ((noticesResult.data ?? []) as Array<Record<string, unknown>>).map(
-        (row) => ({
-          id: String(row.id),
-          title: String(row.title ?? 'Notice'),
-          content: String(row.content ?? ''),
-          itemType: (row.item_type as string | null) ?? null,
-          createdAt: String(row.created_at),
-        }),
-      ),
+      notices: (
+        (noticesResult.data ?? []) as Array<Record<string, unknown>>
+      ).map((row) => ({
+        id: String(row.id),
+        title: String(row.title ?? 'Notice'),
+        content: String(row.content ?? ''),
+        itemType: (row.item_type as string | null) ?? null,
+        createdAt: String(row.created_at),
+      })),
     };
   }
 
@@ -438,7 +444,9 @@ class ClientPortalService {
     }));
   }
 
-  async createTicket(input: CreatePortalTicketInput): Promise<PortalTicketDetail> {
+  async createTicket(
+    input: CreatePortalTicketInput,
+  ): Promise<PortalTicketDetail> {
     const user = await this.ensureMember(input.clientOrgId);
     const ticketNumber = await this.allocateTicketNumber(input.accountId);
 
@@ -540,8 +548,7 @@ class ClientPortalService {
     const subscription = subscriptionResult.data
       ? {
           id: subscriptionResult.data.id,
-          planName:
-            subscriptionResult.data.plan_name?.trim() || 'Subscription',
+          planName: subscriptionResult.data.plan_name?.trim() || 'Subscription',
           monthlyAmount: subscriptionResult.data.monthly_amount ?? null,
           currency: subscriptionResult.data.currency ?? null,
           status: subscriptionResult.data.status ?? null,

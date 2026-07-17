@@ -1,13 +1,12 @@
 import { notFound, redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
-import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { getDefaultAccountPath } from '~/home/[account]/_lib/role-access';
+import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import {
   configValuesFromRow,
   loadPresetById,
@@ -22,7 +21,9 @@ type PresetDetailPageProps = {
 
 export const generateMetadata = async () => ({ title: 'Edit preset' });
 
-export default async function PresetDetailPage({ params }: PresetDetailPageProps) {
+export default async function PresetDetailPage({
+  params,
+}: PresetDetailPageProps) {
   const { account, presetId } = await params;
   const workspace = await loadTeamWorkspace(account);
   redirectIfSpaceNotIn(workspace, account, ['work']);

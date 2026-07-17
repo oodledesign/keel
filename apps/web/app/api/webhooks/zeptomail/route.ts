@@ -28,8 +28,7 @@ export async function POST(req: NextRequest) {
   const eventName = eventNames[0]?.toLowerCase() ?? '';
 
   for (const message of messages) {
-    const emailInfo =
-      (message['email_info'] as Record<string, unknown>) ?? {};
+    const emailInfo = (message['email_info'] as Record<string, unknown>) ?? {};
     const eventData =
       (message['event_data'] as Array<Record<string, unknown>>) ?? [];
     const subject = (emailInfo['subject'] as string) ?? null;
@@ -41,12 +40,10 @@ export async function POST(req: NextRequest) {
     const primaryRecipient = toList[0]?.email_address?.address?.toLowerCase();
 
     if (eventName === 'hardbounce') {
-      const recipient =
-        extractBouncedRecipient(eventData) ?? primaryRecipient;
+      const recipient = extractBouncedRecipient(eventData) ?? primaryRecipient;
       if (recipient) await suppress(recipient, 'hard_bounce', message);
     } else if (eventName === 'softbounce') {
-      const recipient =
-        extractBouncedRecipient(eventData) ?? primaryRecipient;
+      const recipient = extractBouncedRecipient(eventData) ?? primaryRecipient;
       if (recipient) await suppressSoft(recipient, message);
     } else if (
       ['complaint', 'feedback', 'feedbackloop', 'spam'].includes(eventName)
@@ -128,10 +125,9 @@ async function suppress(
   raw: unknown,
 ) {
   const supabase = getSupabaseServerAdminClient();
-  await supabase.from('email_suppressions').upsert(
-    { email, reason, raw_notification: raw },
-    { onConflict: 'email' },
-  );
+  await supabase
+    .from('email_suppressions')
+    .upsert({ email, reason, raw_notification: raw }, { onConflict: 'email' });
 }
 
 async function suppressSoft(email: string, raw: unknown) {

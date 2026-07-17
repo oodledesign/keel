@@ -5,7 +5,10 @@ import { PageBody } from '@kit/ui/page';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../../../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../../../_lib/role-access';
 import { isWorkNavModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';

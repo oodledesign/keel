@@ -1,34 +1,34 @@
 import 'server-only';
 
-import { randomUUID, createHmac, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomUUID, timingSafeEqual } from 'node:crypto';
 
-import { htmlToPlainText } from '~/lib/email/html-to-plain-text';
-import {
-  getTransactionalEmailSender,
-  sendTransactionalEmail,
-} from '~/lib/email/zeptomail-client';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { insertPlatformEmailLog } from '@kit/supabase/platform-email-log';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
   prepareCampaignHtmlForDelivery,
   wrapCampaignHtmlForEmailClients,
 } from '~/lib/admin-email/campaign-html';
 import { personalizeCampaignMergeTags } from '~/lib/email-templates/marketing-campaign-shell';
+import { htmlToPlainText } from '~/lib/email/html-to-plain-text';
+import {
+  getTransactionalEmailSender,
+  sendTransactionalEmail,
+} from '~/lib/email/zeptomail-client';
 
 import {
   CUSTOM_LIST_KEY_PREFIX,
+  type CustomContactListRow,
   EMAIL_RECIPIENT_LISTS,
+  type EmailCampaignRow,
+  type EmailRecipientList,
   RECIPIENT_LIST_DESCRIPTIONS,
   RECIPIENT_LIST_LABELS,
+  type RecipientListMember,
+  type RecipientListSummary,
   customListKey,
   isCustomListKey,
   parseCustomListId,
-  type CustomContactListRow,
-  type EmailCampaignRow,
-  type EmailRecipientList,
-  type RecipientListMember,
-  type RecipientListSummary,
 } from './recipient-lists';
 
 export {
@@ -116,7 +116,11 @@ function firstNameFromAuthUser(user: AuthUser): string | null {
 export function parseManualEmails(input: string | string[] | null | undefined) {
   const values = Array.isArray(input) ? input : (input ?? '').split(/[\n,;]/);
 
-  return [...new Set(values.map(normalizeEmail).filter((email) => /\S+@\S+\.\S+/.test(email)))];
+  return [
+    ...new Set(
+      values.map(normalizeEmail).filter((email) => /\S+@\S+\.\S+/.test(email)),
+    ),
+  ];
 }
 
 export function encodeUnsubscribeToken(email: string) {
@@ -142,8 +146,7 @@ function getPublicBaseUrl() {
 
 function getAppBaseUrl() {
   return (
-    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') ??
-    getPublicBaseUrl()
+    process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/+$/, '') ?? getPublicBaseUrl()
   );
 }
 
@@ -405,13 +408,15 @@ function normalizeTier(value: string) {
   return '';
 }
 
-export async function resolveCampaignRecipients(campaign: Pick<
-  EmailCampaignRow,
-  | 'recipient_list'
-  | 'contact_list_id'
-  | 'manual_recipient_emails'
-  | 'custom_recipient_ids'
->) {
+export async function resolveCampaignRecipients(
+  campaign: Pick<
+    EmailCampaignRow,
+    | 'recipient_list'
+    | 'contact_list_id'
+    | 'manual_recipient_emails'
+    | 'custom_recipient_ids'
+  >,
+) {
   const admin = getAdminClient();
   const unsubscribed = await getUnsubscribedEmails(admin);
   let recipients: CampaignRecipient[] = [];
@@ -424,7 +429,10 @@ export async function resolveCampaignRecipients(campaign: Pick<
         .filter((email): email is string => Boolean(email))
         .map(normalizeEmail),
     );
-    const exclusions = await loadSystemListExclusions(admin, 'pre_signup_contacts');
+    const exclusions = await loadSystemListExclusions(
+      admin,
+      'pre_signup_contacts',
+    );
 
     const { data, error } = await admin
       .from('email_contacts')
@@ -514,7 +522,12 @@ export async function resolveCampaignRecipients(campaign: Pick<
       }>
     )
       .map((row) => row.email_contacts)
-      .filter((contact) => contact != null && Boolean(contact.email) && contact.subscribed !== false)
+      .filter(
+        (contact) =>
+          contact != null &&
+          Boolean(contact.email) &&
+          contact.subscribed !== false,
+      )
       .map((contact) => ({
         email: contact!.email,
         firstName: contact!.first_name,
@@ -543,9 +556,14 @@ export async function resolveCampaignRecipients(campaign: Pick<
         case 'business_owners':
           return businessOwnerIds.has(user.id);
         case 'beta_users':
-          return Boolean(user.created_at && new Date(user.created_at) < BETA_CUTOFF);
+          return Boolean(
+            user.created_at && new Date(user.created_at) < BETA_CUTOFF,
+          );
         case 'inactive':
-          return !user.last_sign_in_at || new Date(user.last_sign_in_at).getTime() < thirtyDaysAgo;
+          return (
+            !user.last_sign_in_at ||
+            new Date(user.last_sign_in_at).getTime() < thirtyDaysAgo
+          );
         case 'no_subscription':
           return !tierByUser.has(user.id);
         case 'custom':
@@ -598,11 +616,15 @@ async function loadSystemListExclusions(
   }
 
   return new Set(
-    ((data ?? []) as Array<{ contact_id: string }>).map((row) => row.contact_id),
+    ((data ?? []) as Array<{ contact_id: string }>).map(
+      (row) => row.contact_id,
+    ),
   );
 }
 
-async function loadAllSystemListExclusions(admin: ReturnType<typeof getAdminClient>) {
+async function loadAllSystemListExclusions(
+  admin: ReturnType<typeof getAdminClient>,
+) {
   const { data, error } = await admin
     .from('email_contact_list_exclusions')
     .select('contact_id, list_key');
@@ -620,7 +642,10 @@ async function loadAllSystemListExclusions(admin: ReturnType<typeof getAdminClie
     contact_id: string;
     list_key: string;
   }>) {
-    if (row.list_key === 'pre_signup_contacts' || row.list_key === 'beta_contacts') {
+    if (
+      row.list_key === 'pre_signup_contacts' ||
+      row.list_key === 'beta_contacts'
+    ) {
       byList[row.list_key].add(row.contact_id);
     }
   }
@@ -628,7 +653,9 @@ async function loadAllSystemListExclusions(admin: ReturnType<typeof getAdminClie
   return byList;
 }
 
-export async function loadCustomContactLists(): Promise<CustomContactListRow[]> {
+export async function loadCustomContactLists(): Promise<
+  CustomContactListRow[]
+> {
   const admin = getAdminClient();
   const { data, error } = await admin
     .from('email_contact_lists')
@@ -810,7 +837,10 @@ export async function buildRecipientListMembership() {
       }
     }
 
-    if (contact.source === 'beta' && !exclusions.beta_contacts.has(contact.id)) {
+    if (
+      contact.source === 'beta' &&
+      !exclusions.beta_contacts.has(contact.id)
+    ) {
       membership.beta_contacts.push(member);
     }
   }
@@ -835,7 +865,8 @@ export async function loadRecipientListsOverview(params?: {
       label: RECIPIENT_LIST_LABELS[list],
       description: RECIPIENT_LIST_DESCRIPTIONS[list],
       count: membership[list].length,
-      campaignSpecific: list === 'manual' || list === 'custom' || list === 'contact_list',
+      campaignSpecific:
+        list === 'manual' || list === 'custom' || list === 'contact_list',
       editable: list === 'pre_signup_contacts' || list === 'beta_contacts',
     })),
     ...customLists.map((customList) => {
@@ -856,8 +887,7 @@ export async function loadRecipientListsOverview(params?: {
   ];
 
   const selectedList =
-    params?.list &&
-    summaries.some((summary) => summary.list === params.list)
+    params?.list && summaries.some((summary) => summary.list === params.list)
       ? params.list
       : 'all_users';
 
@@ -873,13 +903,15 @@ export async function loadRecipientListsOverview(params?: {
   };
 }
 
-export async function estimateCampaignRecipients(params: Pick<
-  EmailCampaignRow,
-  | 'recipient_list'
-  | 'contact_list_id'
-  | 'manual_recipient_emails'
-  | 'custom_recipient_ids'
->) {
+export async function estimateCampaignRecipients(
+  params: Pick<
+    EmailCampaignRow,
+    | 'recipient_list'
+    | 'contact_list_id'
+    | 'manual_recipient_emails'
+    | 'custom_recipient_ids'
+  >,
+) {
   const recipients = await resolveCampaignRecipients(params);
   return recipients.length;
 }
@@ -1253,7 +1285,9 @@ export async function markOpen(metricId: string) {
   await admin
     .from('email_campaign_metrics')
     .update({
-      opened_at: (data as { opened_at: string | null }).opened_at ?? new Date().toISOString(),
+      opened_at:
+        (data as { opened_at: string | null }).opened_at ??
+        new Date().toISOString(),
       open_count: ((data as { open_count: number | null }).open_count ?? 0) + 1,
     })
     .eq('id', metricId);
@@ -1274,13 +1308,19 @@ export async function markClick(metricId: string) {
   await admin
     .from('email_campaign_metrics')
     .update({
-      clicked_at: (data as { clicked_at: string | null }).clicked_at ?? new Date().toISOString(),
-      click_count: ((data as { click_count: number | null }).click_count ?? 0) + 1,
+      clicked_at:
+        (data as { clicked_at: string | null }).clicked_at ??
+        new Date().toISOString(),
+      click_count:
+        ((data as { click_count: number | null }).click_count ?? 0) + 1,
     })
     .eq('id', metricId);
 }
 
-export async function unsubscribeEmail(email: string, reason = 'unsubscribe_page') {
+export async function unsubscribeEmail(
+  email: string,
+  reason = 'unsubscribe_page',
+) {
   const admin = getAdminClient();
   const normalized = normalizeEmail(email);
 

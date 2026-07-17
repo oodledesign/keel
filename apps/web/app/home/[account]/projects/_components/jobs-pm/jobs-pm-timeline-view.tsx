@@ -2,8 +2,12 @@
 
 import Link from 'next/link';
 
-import { formatTimelineRange, getProjectGroupId, PHASE_CELL } from './jobs-pm.constants';
 import type { JobsPmRow } from './jobs-pm-main-table';
+import {
+  PHASE_CELL,
+  formatTimelineRange,
+  getProjectGroupId,
+} from './jobs-pm.constants';
 
 export function JobsPmTimelineView({
   jobs,
@@ -42,7 +46,9 @@ export function JobsPmTimelineView({
                 style={{ backgroundColor: phase.bg }}
               />
               <div className="min-w-0 flex-1">
-                <p className="font-medium text-[var(--workspace-shell-text)]">{job.title}</p>
+                <p className="font-medium text-[var(--workspace-shell-text)]">
+                  {job.title}
+                </p>
                 <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                   {job.clients?.display_name ?? 'No client'}
                 </p>
@@ -62,7 +68,7 @@ export function JobsPmTimelineView({
 
         {undated.length > 0 && (
           <div className="pt-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+            <p className="mb-2 text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               No dates set
             </p>
             <div className="space-y-2">

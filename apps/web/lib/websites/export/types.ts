@@ -5,12 +5,12 @@ import type {
   WebsiteWireframePage,
 } from '../planning-types';
 import {
-  toLegacyFlatSeoFields,
   type LegacyFlatSeoFields,
+  toLegacyFlatSeoFields,
 } from '../seo-legacy-flat';
 import {
-  normalizeWebsiteSeoPageSeo,
   type WebsiteSeoPageSeo,
+  normalizeWebsiteSeoPageSeo,
 } from '../seo-types';
 
 export type WebsiteExportFile = {

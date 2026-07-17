@@ -38,9 +38,27 @@ const TABS: { id: Tab; label: string; Icon: typeof CalendarDays }[] = [
 ];
 
 const PLACEHOLDER_TASKS = [
-  { id: '1', title: 'Grocery shop — midweek top-up', category: 'Shopping', dueDate: 'Wed', done: false },
-  { id: '2', title: 'Book dentist for kids', category: 'Health', dueDate: 'This week', done: false },
-  { id: '3', title: 'Kids swimming — pack bags', category: 'Activities', dueDate: 'Today', done: true },
+  {
+    id: '1',
+    title: 'Grocery shop — midweek top-up',
+    category: 'Shopping',
+    dueDate: 'Wed',
+    done: false,
+  },
+  {
+    id: '2',
+    title: 'Book dentist for kids',
+    category: 'Health',
+    dueDate: 'This week',
+    done: false,
+  },
+  {
+    id: '3',
+    title: 'Kids swimming — pack bags',
+    category: 'Activities',
+    dueDate: 'Today',
+    done: true,
+  },
 ];
 
 type Props = {
@@ -63,7 +81,7 @@ export function FamilyPageClient({
   const recipeCount = initialData.recipes.length;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-transparent px-4 pb-12 pt-6 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 bg-transparent px-4 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       {!compactHeader ? (
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
@@ -124,52 +142,52 @@ export function FamilyPageClient({
           />
 
           {showHouseholdTasks ? (
-          <section>
-            <h2 className="mb-3 text-sm font-semibold text-[var(--workspace-shell-text-muted)]">
-              Household tasks
-            </h2>
-            <div className="space-y-2">
-              {PLACEHOLDER_TASKS.map((task) => (
-                <div
-                  key={task.id}
-                  className="flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3"
-                >
-                  <span className="mt-0.5 shrink-0">
-                    {task.done ? (
-                      <CheckCircle2 className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
-                    ) : (
-                      <Circle className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
-                    )}
-                  </span>
-                  <div className="min-w-0 flex-1">
-                    <p
-                      className={cn(
-                        'text-sm font-medium',
-                        task.done
-                          ? 'text-[var(--workspace-shell-text-muted)] line-through'
-                          : 'text-[var(--workspace-shell-text)]',
+            <section>
+              <h2 className="mb-3 text-sm font-semibold text-[var(--workspace-shell-text-muted)]">
+                Household tasks
+              </h2>
+              <div className="space-y-2">
+                {PLACEHOLDER_TASKS.map((task) => (
+                  <div
+                    key={task.id}
+                    className="flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3"
+                  >
+                    <span className="mt-0.5 shrink-0">
+                      {task.done ? (
+                        <CheckCircle2 className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
+                      ) : (
+                        <Circle className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
                       )}
-                    >
-                      {task.title}
-                    </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                      <span className="flex items-center gap-1.5">
-                        <span
-                          className="inline-block h-2 w-2 rounded-full"
-                          style={{ backgroundColor: ACCENT }}
-                        />
-                        {task.category}
-                      </span>
-                      <span className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        {task.dueDate}
-                      </span>
+                    </span>
+                    <div className="min-w-0 flex-1">
+                      <p
+                        className={cn(
+                          'text-sm font-medium',
+                          task.done
+                            ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                            : 'text-[var(--workspace-shell-text)]',
+                        )}
+                      >
+                        {task.title}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                        <span className="flex items-center gap-1.5">
+                          <span
+                            className="inline-block h-2 w-2 rounded-full"
+                            style={{ backgroundColor: ACCENT }}
+                          />
+                          {task.category}
+                        </span>
+                        <span className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          {task.dueDate}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
-              ))}
-            </div>
-          </section>
+                ))}
+              </div>
+            </section>
           ) : null}
         </div>
       ) : null}

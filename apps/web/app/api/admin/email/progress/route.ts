@@ -12,7 +12,10 @@ export async function GET(request: Request) {
   const campaignId = url.searchParams.get('campaignId');
 
   if (!campaignId) {
-    return NextResponse.json({ error: 'campaignId is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'campaignId is required' },
+      { status: 400 },
+    );
   }
 
   const progress = await getCampaignProgress(campaignId);

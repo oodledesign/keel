@@ -1,6 +1,10 @@
 import 'server-only';
 
-import type { SiteCrawlIssue, SiteCrawlIssueCode, SiteCrawlIssueSummary } from './types';
+import type {
+  SiteCrawlIssue,
+  SiteCrawlIssueCode,
+  SiteCrawlIssueSummary,
+} from './types';
 
 export function detectPageIssues(input: {
   statusCode: number;
@@ -28,10 +32,16 @@ export function detectPageIssues(input: {
     issues.push({ code: 'missing_title', message: 'Missing title tag' });
   } else {
     if (input.title.length > 60) {
-      issues.push({ code: 'title_too_long', message: 'Title exceeds 60 characters' });
+      issues.push({
+        code: 'title_too_long',
+        message: 'Title exceeds 60 characters',
+      });
     }
     if (input.title.length < 30) {
-      issues.push({ code: 'title_too_short', message: 'Title under 30 characters' });
+      issues.push({
+        code: 'title_too_short',
+        message: 'Title under 30 characters',
+      });
     }
   }
 
@@ -50,11 +60,17 @@ export function detectPageIssues(input: {
   if (input.h1Count === 0) {
     issues.push({ code: 'missing_h1', message: 'Missing H1' });
   } else if (input.h1Count > 1) {
-    issues.push({ code: 'multiple_h1', message: `${input.h1Count} H1 tags found` });
+    issues.push({
+      code: 'multiple_h1',
+      message: `${input.h1Count} H1 tags found`,
+    });
   }
 
   if (!input.canonical.trim() && input.statusCode === 200) {
-    issues.push({ code: 'missing_canonical', message: 'Missing canonical URL' });
+    issues.push({
+      code: 'missing_canonical',
+      message: 'Missing canonical URL',
+    });
   }
 
   if (!input.indexable) {
@@ -105,7 +121,10 @@ export function applyDuplicateIssues(
     const issues = [...page.issues];
     const titleKey = page.title.trim().toLowerCase();
     if (titleKey && (titleCounts.get(titleKey) ?? 0) > 1) {
-      issues.push({ code: 'duplicate_title', message: 'Duplicate title on other pages' });
+      issues.push({
+        code: 'duplicate_title',
+        message: 'Duplicate title on other pages',
+      });
     }
 
     const metaKey = page.meta_description.trim().toLowerCase();

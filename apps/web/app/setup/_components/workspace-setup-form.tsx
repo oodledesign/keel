@@ -4,31 +4,25 @@ import { useState, useTransition } from 'react';
 
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
-import {
-  Briefcase,
-  Building2,
-  Heart,
-  UsersRound,
-} from 'lucide-react';
+import { Briefcase, Building2, Heart, UsersRound } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
+import pathsConfig from '~/config/paths.config';
+import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
-import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
-
-import pathsConfig from '~/config/paths.config';
-
 import {
-  completeWorkspaceSetup,
-  type WorkspaceSetupSelection,
-} from '../_lib/server/workspace-setup.actions';
-import {
-  formatGbp,
   MARKETING_WORKSPACE_PLANS,
   type SetupIntent,
+  formatGbp,
 } from '~/lib/billing/pricing-marketing';
+
+import {
+  type WorkspaceSetupSelection,
+  completeWorkspaceSetup,
+} from '../_lib/server/workspace-setup.actions';
 
 type DraftWorkspace = {
   id: string;
@@ -80,7 +74,10 @@ function communityCardBlurb() {
   return `${price}shared schedule, tasks and notes`;
 }
 
-function newDraft(profile: WorkspaceProfile, propertyMode = false): DraftWorkspace {
+function newDraft(
+  profile: WorkspaceProfile,
+  propertyMode = false,
+): DraftWorkspace {
   const resolved: WorkspaceProfile =
     profile === 'work_design' && propertyMode ? 'work_property' : profile;
   return {
@@ -146,9 +143,7 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
   };
 
   const setName = (id: string, name: string) => {
-    setDrafts((prev) =>
-      prev.map((d) => (d.id === id ? { ...d, name } : d)),
-    );
+    setDrafts((prev) => prev.map((d) => (d.id === id ? { ...d, name } : d)));
   };
 
   const setBusinessProperty = (id: string, propertyMode: boolean) => {
@@ -162,9 +157,11 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
           ...d,
           propertyMode,
           profile,
-          name: d.name === DEFAULT_NAMES.work_design || d.name === DEFAULT_NAMES.work_property
-            ? DEFAULT_NAMES[profile]
-            : d.name,
+          name:
+            d.name === DEFAULT_NAMES.work_design ||
+            d.name === DEFAULT_NAMES.work_property
+              ? DEFAULT_NAMES[profile]
+              : d.name,
         };
       }),
     );
@@ -258,7 +255,8 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
       <div className="space-y-4">
         {drafts.map((draft) => {
           const isBusiness =
-            draft.profile === 'work_design' || draft.profile === 'work_property';
+            draft.profile === 'work_design' ||
+            draft.profile === 'work_property';
           const color = workspaceColorForSpaceType(
             spaceTypeFromProfile(draft.profile),
           );
@@ -294,7 +292,10 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                 </span>
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-2">
-                    <Icon className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" aria-hidden />
+                    <Icon
+                      className="h-4 w-4 text-[var(--workspace-shell-text-muted)]"
+                      aria-hidden
+                    />
                     <span className="text-[15px] font-semibold text-[var(--workspace-shell-text)]">
                       {isBusiness
                         ? 'Business'
@@ -369,7 +370,7 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                       ) : null}
                     </div>
                   ) : null}
-                  <label className="block text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                  <label className="block text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                     Workspace name
                     <input
                       value={draft.name}

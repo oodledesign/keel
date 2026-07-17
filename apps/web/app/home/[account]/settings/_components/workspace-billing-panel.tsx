@@ -6,27 +6,27 @@ import {
   CurrentLifetimeOrderCard,
   CurrentSubscriptionCard,
 } from '@kit/billing-gateway/components';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Alert, AlertDescription, AlertTitle } from '@kit/ui/alert';
 import { If } from '@kit/ui/if';
 import { Trans } from '@kit/ui/trans';
 
 import billingConfig from '~/config/billing.config';
+import { loadTeamAccountBillingPage } from '~/home/[account]/_lib/server/team-account-billing-page.loader';
+import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { OzerAddonCheckoutSection } from '~/home/[account]/billing/_components/ozer-addon-checkout-section';
 import { OzerWorkspaceCheckoutForm } from '~/home/[account]/billing/_components/ozer-workspace-checkout-form';
 import { createBillingPortalSession } from '~/home/[account]/billing/_lib/server/server-actions';
-import { loadTeamAccountBillingPage } from '~/home/[account]/_lib/server/team-account-billing-page.loader';
-import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
+import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
 import { hasBusinessLiteEntitlement } from '~/lib/billing/business-lite';
+import { checkAccountAccess } from '~/lib/billing/check-account-access';
 import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
-import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
 import { PaymentRecoveryCard } from '../../_components/payment-recovery-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
-import { checkAccountAccess } from '~/lib/billing/check-account-access';
-import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
+import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
+import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
 
 type WorkspaceBillingPanelProps = {
   accountSlug: string;
@@ -97,8 +97,7 @@ export async function WorkspaceBillingPanel({
 
   const accessState = await checkAccountAccess(billingClient, accountId);
   const paymentUpdated = searchParams.payment_updated === '1';
-  const recovered =
-    paymentUpdated && accessState.status === 'active';
+  const recovered = paymentUpdated && accessState.status === 'active';
   const showPaymentRecovery =
     canManageBilling &&
     (recovered ||
@@ -107,15 +106,15 @@ export async function WorkspaceBillingPanel({
 
   const subscriptionIsWorkspacePlan = Boolean(
     subscriptionProductPlan &&
-      !subscriptionProductPlan.product.id.startsWith('ozer-addon-') &&
-      !subscriptionProductPlan.product.id.startsWith('ozer-ai-credits-'),
+    !subscriptionProductPlan.product.id.startsWith('ozer-addon-') &&
+    !subscriptionProductPlan.product.id.startsWith('ozer-ai-credits-'),
   );
 
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-base font-semibold">Billing</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
+        <p className="text-muted-foreground mt-1 text-sm">
           Workspace plan, Signatures, AI credits, and Stripe billing portal.
         </p>
       </div>
@@ -161,7 +160,9 @@ export async function WorkspaceBillingPanel({
           />
         </If>
 
-        <If condition={!showPlanCheckout && !canManageBilling && !hasBillingData}>
+        <If
+          condition={!showPlanCheckout && !canManageBilling && !hasBillingData}
+        >
           <CannotManageBillingAlert />
         </If>
 
@@ -180,7 +181,9 @@ export async function WorkspaceBillingPanel({
           canManageBilling={canManageBilling}
         />
 
-        {subscription && subscriptionIsWorkspacePlan && subscriptionProductPlan ? (
+        {subscription &&
+        subscriptionIsWorkspacePlan &&
+        subscriptionProductPlan ? (
           <CurrentSubscriptionCard
             subscription={{
               ...subscription,

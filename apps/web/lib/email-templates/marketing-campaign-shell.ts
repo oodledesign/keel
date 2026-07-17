@@ -1,4 +1,7 @@
-import { getAppSiteOrigin, getMarketingSiteOrigin } from '~/lib/app-host-routing';
+import {
+  getAppSiteOrigin,
+  getMarketingSiteOrigin,
+} from '~/lib/app-host-routing';
 
 const appOrigin = getAppSiteOrigin();
 const marketingOrigin = getMarketingSiteOrigin();
@@ -47,8 +50,7 @@ export function renderMarketingCampaignShell(options: ShellOptions) {
   const ctaHtml = options.ctaHtml ?? '';
 
   const footerNote =
-    options.footerNote ??
-    `You&apos;re receiving this from ${productName}.`;
+    options.footerNote ?? `You&apos;re receiving this from ${productName}.`;
 
   return `<!DOCTYPE html>
 <html lang="en">

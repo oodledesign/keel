@@ -93,22 +93,19 @@ export function findValidDropStart(
   const duration = block.endMinutes - block.startMinutes;
   const { dayStart, dayEnd } = getDayBounds(blocks);
   const snapped = snapToQuarterHour(proposedStartMinutes);
-  const clamped = Math.max(
-    dayStart,
-    Math.min(snapped, dayEnd - duration),
-  );
+  const clamped = Math.max(dayStart, Math.min(snapped, dayEnd - duration));
 
-  if (
-    canPlaceBlock(blocks, blockId, clamped, clamped + duration).ok
-  ) {
+  if (canPlaceBlock(blocks, blockId, clamped, clamped + duration).ok) {
     return clamped;
   }
 
-  for (let delta = QUARTER_HOUR_MINUTES; delta <= 8 * 60; delta += QUARTER_HOUR_MINUTES) {
+  for (
+    let delta = QUARTER_HOUR_MINUTES;
+    delta <= 8 * 60;
+    delta += QUARTER_HOUR_MINUTES
+  ) {
     for (const candidate of [clamped - delta, clamped + delta]) {
-      if (
-        canPlaceBlock(blocks, blockId, candidate, candidate + duration).ok
-      ) {
+      if (canPlaceBlock(blocks, blockId, candidate, candidate + duration).ok) {
         return candidate;
       }
     }

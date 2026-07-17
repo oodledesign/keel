@@ -19,7 +19,11 @@ function normalizeEmail(email: string) {
   return email.trim().toLowerCase();
 }
 
-export function authRateLimitKey(scope: string, email: string, request: Request) {
+export function authRateLimitKey(
+  scope: string,
+  email: string,
+  request: Request,
+) {
   const ip = clientIpFromRequest(request);
   return `${scope}:${normalizeEmail(email)}:${ip}`;
 }

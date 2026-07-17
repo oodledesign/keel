@@ -111,7 +111,8 @@ function personDetailsBlock(input: {
 }) {
   const showLegalName =
     Boolean(input.nickname?.trim()) &&
-    input.fullName.trim().toLowerCase() !== input.personName.trim().toLowerCase();
+    input.fullName.trim().toLowerCase() !==
+      input.personName.trim().toLowerCase();
 
   const lastMet =
     input.lastCatchupOn && input.daysSinceLastCatchup != null
@@ -363,8 +364,7 @@ async function loadReminderCandidates(
 
     const personName = p.nickname?.trim() || p.full_name;
     const lastCatchup =
-      p.last_catchup_on ??
-      (p.created_at ? p.created_at.slice(0, 10) : null);
+      p.last_catchup_on ?? (p.created_at ? p.created_at.slice(0, 10) : null);
     const daysSinceLastCatchup = lastCatchup
       ? daysBetween(lastCatchup, today)
       : null;

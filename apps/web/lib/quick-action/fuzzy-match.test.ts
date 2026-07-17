@@ -42,7 +42,9 @@ describe('fuzzyMatchWorkspaceBySlugOrName', () => {
   });
 
   it('matches name case-insensitively', () => {
-    expect(fuzzyMatchWorkspaceBySlugOrName('Arcanum', workspaces)?.id).toBe('b');
+    expect(fuzzyMatchWorkspaceBySlugOrName('Arcanum', workspaces)?.id).toBe(
+      'b',
+    );
   });
 });
 

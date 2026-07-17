@@ -1,6 +1,5 @@
-import { notFound } from 'next/navigation';
-
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -22,7 +21,8 @@ async function getContractByToken(token: string) {
     .maybeSingle();
 
   if (error || !contract) return null;
-  if (contract.status === 'cancelled' || contract.status === 'draft') return null;
+  if (contract.status === 'cancelled' || contract.status === 'draft')
+    return null;
 
   const clientPromise = contract.client_id
     ? client
@@ -60,7 +60,9 @@ async function getContractByToken(token: string) {
   } as Record<string, unknown>;
 }
 
-export default async function PortalContractPage({ params }: PortalContractPageProps) {
+export default async function PortalContractPage({
+  params,
+}: PortalContractPageProps) {
   const { token } = await params;
   if (!token) notFound();
 
@@ -76,7 +78,10 @@ export default async function PortalContractPage({ params }: PortalContractPageP
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link href="/" className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+        <Link
+          href="/"
+          className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        >
           ← Back to home
         </Link>
       </div>

@@ -1,8 +1,10 @@
 'use client';
 
+import { useState } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
+
 import {
   Copy,
   Loader2,
@@ -229,9 +231,11 @@ export function PresetsLibraryClient(props: {
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
-                    <h3 className="truncate text-sm font-medium">{preset.name}</h3>
+                    <h3 className="truncate text-sm font-medium">
+                      {preset.name}
+                    </h3>
                     {preset.isDefault ? (
-                      <span className="inline-flex items-center gap-1 rounded bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--ozer-accent)]">
+                      <span className="inline-flex items-center gap-1 rounded bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-medium tracking-wide text-[var(--ozer-accent)] uppercase">
                         <Star className="h-3 w-3" />
                         Default
                       </span>
@@ -242,7 +246,11 @@ export function PresetsLibraryClient(props: {
 
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8 shrink-0"
+                    >
                       <MoreHorizontal className="h-4 w-4" />
                     </Button>
                   </DropdownMenuTrigger>
@@ -250,12 +258,16 @@ export function PresetsLibraryClient(props: {
                     <DropdownMenuItem asChild>
                       <Link href={presetEditPath(preset.id)}>Edit</Link>
                     </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => void duplicatePreset(preset.id)}>
+                    <DropdownMenuItem
+                      onClick={() => void duplicatePreset(preset.id)}
+                    >
                       <Copy className="mr-2 h-3.5 w-3.5" />
                       Duplicate
                     </DropdownMenuItem>
                     {!preset.isDefault ? (
-                      <DropdownMenuItem onClick={() => void setDefault(preset.id)}>
+                      <DropdownMenuItem
+                        onClick={() => void setDefault(preset.id)}
+                      >
                         <Star className="mr-2 h-3.5 w-3.5" />
                         Set as account default
                       </DropdownMenuItem>
@@ -317,7 +329,11 @@ export function PresetsLibraryClient(props: {
           </div>
 
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setCreateOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setCreateOpen(false)}
+            >
               Cancel
             </Button>
             <Button

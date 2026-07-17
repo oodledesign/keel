@@ -47,12 +47,16 @@ export function PortalSharedItemView({
   token: string;
 }) {
   const isImage =
-    item.mimeType?.startsWith('image/') && item.fileUrl && item.kind === 'uploaded';
+    item.mimeType?.startsWith('image/') &&
+    item.fileUrl &&
+    item.kind === 'uploaded';
 
   return (
     <article className="space-y-4">
       {!embed ? (
-        <p className="text-xs text-[var(--workspace-shell-text-muted)]">Shared {item.type === 'note' ? 'note' : 'file'}</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Shared {item.type === 'note' ? 'note' : 'file'}
+        </p>
       ) : null}
       <header className="space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-4">
         <div className="flex flex-wrap items-center gap-2">
@@ -60,14 +64,18 @@ export function PortalSharedItemView({
             {categoryLabel(item.category)}
           </span>
           {item.updatedAt ? (
-            <span className="text-xs text-[var(--workspace-shell-text-muted)]">{formatDate(item.updatedAt)}</span>
+            <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {formatDate(item.updatedAt)}
+            </span>
           ) : null}
         </div>
-        <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">{item.title}</h1>
+        <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
+          {item.title}
+        </h1>
       </header>
 
       {item.type === 'note' ? (
-        <div className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--workspace-shell-text)]">
+        <div className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text)]">
           {item.content || 'No content.'}
         </div>
       ) : item.kind === 'uploaded' ? (
@@ -81,14 +89,24 @@ export function PortalSharedItemView({
             />
           ) : null}
           {item.fileUrl ? (
-            <Button asChild className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]">
-              <a href={item.fileUrl} download target="_blank" rel="noopener noreferrer">
+            <Button
+              asChild
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+            >
+              <a
+                href={item.fileUrl}
+                download
+                target="_blank"
+                rel="noopener noreferrer"
+              >
                 <Download className="mr-2 h-4 w-4" />
                 Download {item.mimeType ?? 'file'}
               </a>
             </Button>
           ) : (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">Download link unavailable.</p>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Download link unavailable.
+            </p>
           )}
         </div>
       ) : (

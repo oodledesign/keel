@@ -8,7 +8,11 @@ const TEXT_SIZE_COOKIE = 'accessibility_text_size';
 const DYSLEXIA_FONT_COOKIE = 'accessibility_dyslexia_font';
 const ENHANCED_FOCUS_COOKIE = 'accessibility_enhanced_focus';
 const VALID = ['small', 'standard', 'large'] as const;
-const TEXT_SIZE_CLASSES = ['text-size-small', 'text-size-standard', 'text-size-large'] as const;
+const TEXT_SIZE_CLASSES = [
+  'text-size-small',
+  'text-size-standard',
+  'text-size-large',
+] as const;
 const DYSLEXIA_ATTR = 'data-dyslexia-font';
 const ENHANCED_FOCUS_ATTR = 'data-enhanced-focus';
 
@@ -42,17 +46,21 @@ function getEnhancedFocusFromCookie(): boolean {
   return raw === '1' || raw === 'true';
 }
 
-function applyAccessibility(prefs?: {
-  textSize: 'small' | 'standard' | 'large';
-  dyslexiaFont: boolean;
-  enhancedFocus: boolean;
-} | null) {
+function applyAccessibility(
+  prefs?: {
+    textSize: 'small' | 'standard' | 'large';
+    dyslexiaFont: boolean;
+    enhancedFocus: boolean;
+  } | null,
+) {
   const root = document.documentElement;
   const textSizeClass = prefs
     ? `text-size-${prefs.textSize}`
     : getTextSizeClassFromCookie();
   const dyslexia = prefs ? prefs.dyslexiaFont : getDyslexiaEnabledFromCookie();
-  const enhancedFocus = prefs ? prefs.enhancedFocus : getEnhancedFocusFromCookie();
+  const enhancedFocus = prefs
+    ? prefs.enhancedFocus
+    : getEnhancedFocusFromCookie();
   TEXT_SIZE_CLASSES.forEach((c) => root.classList.remove(c));
   root.classList.add(textSizeClass);
   if (dyslexia) root.setAttribute(DYSLEXIA_ATTR, 'true');
@@ -65,7 +73,13 @@ export const ACCESSIBILITY_UPDATED_EVENT = 'accessibility-updated';
 
 export function TextSizeSync() {
   useEffect(() => {
-    const apply = (prefs?: { textSize: 'small' | 'standard' | 'large'; dyslexiaFont: boolean; enhancedFocus: boolean } | null) => {
+    const apply = (
+      prefs?: {
+        textSize: 'small' | 'standard' | 'large';
+        dyslexiaFont: boolean;
+        enhancedFocus: boolean;
+      } | null,
+    ) => {
       applyAccessibility(prefs ?? null);
     };
     apply(null);

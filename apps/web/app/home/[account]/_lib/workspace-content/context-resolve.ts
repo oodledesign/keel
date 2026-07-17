@@ -79,7 +79,9 @@ export function resolveNoteContext(row: RawNoteRow): NoteContextLink | null {
 
 export function parseTags(raw: unknown): string[] {
   if (Array.isArray(raw)) {
-    return raw.filter((t): t is string => typeof t === 'string' && t.trim().length > 0);
+    return raw.filter(
+      (t): t is string => typeof t === 'string' && t.trim().length > 0,
+    );
   }
   return [];
 }

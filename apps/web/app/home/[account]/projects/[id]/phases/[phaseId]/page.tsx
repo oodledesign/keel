@@ -1,11 +1,11 @@
 import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { websitePlanningTabForPhase } from '~/lib/websites/website-design-template';
 
 import { TeamAccountLayoutPageHeader } from '../../../../_components/team-account-layout-page-header';
 import { isWorkModuleEnabled } from '../../../../_lib/server/account-modules';
@@ -14,15 +14,14 @@ import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../../../_lib/server/workspace-route-guard';
-import { PhaseDetailContent } from '../../../_components/phase-detail/phase-detail-content';
-import type { PhaseNote } from '../../../_components/phase-detail/phase-notes-panel';
-import type { PhaseRecord } from '../../../_components/phase-detail/phase-meta-panel';
-import { createJobsService } from '../../../_lib/server/jobs.service';
-import { loadJobsPageData } from '../../../_lib/server/jobs-page.loader';
-import { createProjectPhasesService } from '../../../_lib/server/project-phases.service';
 import { createWebsitePlanningService } from '../../../../websites/_lib/server/website-planning.service';
-import { websitePlanningTabForPhase } from '~/lib/websites/website-design-template';
+import { PhaseDetailContent } from '../../../_components/phase-detail/phase-detail-content';
+import type { PhaseRecord } from '../../../_components/phase-detail/phase-meta-panel';
+import type { PhaseNote } from '../../../_components/phase-detail/phase-notes-panel';
 import type { JobBoardTask } from '../../../_lib/schema/project-phases.schema';
+import { loadJobsPageData } from '../../../_lib/server/jobs-page.loader';
+import { createJobsService } from '../../../_lib/server/jobs.service';
+import { createProjectPhasesService } from '../../../_lib/server/project-phases.service';
 
 interface JobPhasePageProps {
   params: Promise<{ account: string; id: string; phaseId: string }>;
@@ -36,7 +35,8 @@ async function JobPhasePage({ params }: JobPhasePageProps) {
     notFound();
   }
 
-  const { accountId, canViewJobs, canEditJobs } = await loadJobsPageData(accountSlug);
+  const { accountId, canViewJobs, canEditJobs } =
+    await loadJobsPageData(accountSlug);
   if (!canViewJobs) notFound();
 
   const client = getSupabaseServerClient();

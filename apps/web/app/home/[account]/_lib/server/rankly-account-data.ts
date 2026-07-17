@@ -4,14 +4,15 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { createClientsService } from '../../clients/_lib/server/clients.service';
-import { createWebsitesService } from '../../websites/_lib/server/websites.service';
-import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import type { RanklyClientImportOption } from '~/lib/rankly/client-import';
 import {
   buildRanklyClientImportOptions,
   buildRanklyImportSeedForClient,
 } from '~/lib/rankly/client-import';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
+
+import { createClientsService } from '../../clients/_lib/server/clients.service';
+import { createWebsitesService } from '../../websites/_lib/server/websites.service';
 
 export type { RanklyClientImportOption };
 
@@ -190,10 +191,7 @@ export const loadRanklyProjectForTeam = cache(
 );
 
 export const loadRanklyKeywordsForProject = cache(
-  async (
-    projectId: string,
-    accountId: string,
-  ): Promise<RanklyKeywordRow[]> => {
+  async (projectId: string, accountId: string): Promise<RanklyKeywordRow[]> => {
     const project = await loadRanklyProjectForTeam(projectId, accountId);
     if (!project) {
       return [];

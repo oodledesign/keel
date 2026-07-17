@@ -31,7 +31,10 @@ function formatMoney(pence: number, currency = 'gbp') {
   }).format(pence / 100);
 }
 
-export function renderSmartFields(template: string, ctx: SmartFieldContext): string {
+export function renderSmartFields(
+  template: string,
+  ctx: SmartFieldContext,
+): string {
   const clientFirst =
     ctx.client?.first_name?.trim() ||
     ctx.proposal?.recipient_name?.trim()?.split(' ')[0] ||
@@ -98,4 +101,5 @@ Your agreement is ready to review and sign. Please open the link below when you 
 
 Thank you.`;
 
-export const DEFAULT_CONTRACT_EMAIL_SIGNATURE = DEFAULT_PROPOSAL_EMAIL_SIGNATURE;
+export const DEFAULT_CONTRACT_EMAIL_SIGNATURE =
+  DEFAULT_PROPOSAL_EMAIL_SIGNATURE;

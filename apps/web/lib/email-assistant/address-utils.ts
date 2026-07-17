@@ -1,4 +1,6 @@
-export function extractEmailAddress(value: string | null | undefined): string | null {
+export function extractEmailAddress(
+  value: string | null | undefined,
+): string | null {
   if (!value?.trim()) {
     return null;
   }

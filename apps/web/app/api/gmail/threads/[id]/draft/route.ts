@@ -1,10 +1,10 @@
 import { draft } from '@kit/email-assistant';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import { buildThreadText } from '~/lib/email-assistant/thread-text';
-import { resolveEmailAssistantSignature } from '~/lib/email-assistant/resolve-signature';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { resolveEmailAssistantSignature } from '~/lib/email-assistant/resolve-signature';
+import { buildThreadText } from '~/lib/email-assistant/thread-text';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -60,7 +60,9 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   const ownerEmail =
-    (connection as { google_email?: string | null } | null)?.google_email?.trim() ||
+    (
+      connection as { google_email?: string | null } | null
+    )?.google_email?.trim() ||
     auth.user.email?.trim() ||
     (account as { email?: string | null } | null)?.email?.trim() ||
     '';
@@ -76,7 +78,9 @@ export async function POST(_request: Request, context: RouteContext) {
   const ownerName =
     (account as { name?: string | null } | null)?.name?.trim() ||
     (() => {
-      const meta = auth.user.user_metadata as Record<string, unknown> | undefined;
+      const meta = auth.user.user_metadata as
+        | Record<string, unknown>
+        | undefined;
       for (const key of ['full_name', 'name'] as const) {
         const value = meta?.[key];
         if (typeof value === 'string' && value.trim()) {
@@ -102,7 +106,11 @@ export async function POST(_request: Request, context: RouteContext) {
   const threadText = buildThreadText(messages ?? []);
 
   if (!threadText.trim()) {
-    return jsonErr('EMPTY_THREAD', 'Thread has no message content to reply to', 400);
+    return jsonErr(
+      'EMPTY_THREAD',
+      'Thread has no message content to reply to',
+      400,
+    );
   }
 
   const signature = await resolveEmailAssistantSignature(

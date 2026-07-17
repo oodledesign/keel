@@ -71,9 +71,7 @@ export function MealPreferencesPanel({
     setList: (next: string[]) => void,
   ) {
     setList(
-      list.includes(value)
-        ? list.filter((v) => v !== value)
-        : [...list, value],
+      list.includes(value) ? list.filter((v) => v !== value) : [...list, value],
     );
   }
 
@@ -160,7 +158,9 @@ export function MealPreferencesPanel({
       </div>
 
       <div className={cn(panelClass, 'p-5')}>
-        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Priorities</h3>
+        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+          Priorities
+        </h3>
         <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
           What matters most when the planner suggests meals.
         </p>
@@ -190,7 +190,9 @@ export function MealPreferencesPanel({
       <div className={cn(panelClass, 'p-5')}>
         <div className="flex items-center justify-between">
           <div>
-            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Household size</h3>
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Household size
+            </h3>
             <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               How many people you usually cook for.
             </p>
@@ -233,7 +235,7 @@ export function MealPreferencesPanel({
             {dislikes.map((item) => (
               <span
                 key={item}
-                className="flex items-center gap-1 rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-xs capitalize text-[var(--workspace-shell-text)]"
+                className="flex items-center gap-1 rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-xs text-[var(--workspace-shell-text)] capitalize"
               >
                 {item}
                 <button
@@ -269,7 +271,10 @@ export function MealPreferencesPanel({
       </div>
 
       <div className={cn(panelClass, 'p-5')}>
-        <Label htmlFor="pref-notes" className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+        <Label
+          htmlFor="pref-notes"
+          className="text-sm font-semibold text-[var(--workspace-shell-text)]"
+        >
           Notes for the planner
         </Label>
         <Textarea

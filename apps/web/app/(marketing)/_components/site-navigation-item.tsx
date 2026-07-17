@@ -6,7 +6,10 @@ import { usePathname } from 'next/navigation';
 import { NavigationMenuItem } from '@kit/ui/navigation-menu';
 import { cn, isRouteActive } from '@kit/ui/utils';
 
-import { marketingNavLink, marketingNavLinkActive } from '~/lib/marketing/marketing-ui';
+import {
+  marketingNavLink,
+  marketingNavLinkActive,
+} from '~/lib/marketing/marketing-ui';
 
 export function SiteNavigationItem({
   path,

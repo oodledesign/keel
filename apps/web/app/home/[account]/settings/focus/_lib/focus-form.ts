@@ -1,8 +1,9 @@
-import {
-  WorkspaceFocusSettingsSchema,
-  type WorkspaceFocusSettings,
-} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 import type { z } from 'zod';
+
+import {
+  type WorkspaceFocusSettings,
+  WorkspaceFocusSettingsSchema,
+} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 
 export type FocusFormValues = z.infer<typeof WorkspaceFocusSettingsSchema>;
 
@@ -72,7 +73,8 @@ export const OOO_TRIGGER_OPTIONS = [
   {
     value: 'always' as const,
     label: 'Always',
-    description: 'Reply to every incoming message while OOO replies are enabled',
+    description:
+      'Reply to every incoming message while OOO replies are enabled',
   },
 ];
 
@@ -153,7 +155,8 @@ export function formatFocusTimeOptions(): string[] {
 
 export function formatTimezoneLabel(timeZone: string): string {
   const city =
-    timeZone.split('/').pop()?.replace(/_/g, ' ') ?? timeZone.replace(/_/g, ' ');
+    timeZone.split('/').pop()?.replace(/_/g, ' ') ??
+    timeZone.replace(/_/g, ' ');
 
   const offset =
     new Intl.DateTimeFormat('en-GB', {
@@ -230,9 +233,7 @@ export function oooTriggerReasonLabel(
     case 'holiday_only':
       return 'Holiday mode';
     case 'outside_hours_or_holiday':
-      return state.isHolidayModeActive
-        ? 'Holiday mode'
-        : 'Outside work hours';
+      return state.isHolidayModeActive ? 'Holiday mode' : 'Outside work hours';
     case 'outside_hours_and_holiday':
       return 'Outside work hours and holiday mode';
     case 'always':

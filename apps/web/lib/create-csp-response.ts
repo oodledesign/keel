@@ -14,7 +14,10 @@ const LOCAL_ALT =
   SUPABASE_URL.replace('127.0.0.1', 'localhost') !== SUPABASE_URL
     ? SUPABASE_URL.replace('127.0.0.1', 'localhost')
     : SUPABASE_URL.replace('localhost', '127.0.0.1');
-const WEBSOCKET_ALT = LOCAL_ALT.replace('https://', 'ws://').replace('http://', 'ws://');
+const WEBSOCKET_ALT = LOCAL_ALT.replace('https://', 'ws://').replace(
+  'http://',
+  'ws://',
+);
 
 // disabled to allow loading images from Supabase Storage
 const CROSS_ORIGIN_EMBEDDER_POLICY = false;

@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { ArrowLeft, Send } from 'lucide-react';
@@ -27,9 +28,9 @@ import type {
 } from '~/lib/admin-email/recipient-lists';
 import {
   MARKETING_CAMPAIGN_TEMPLATES,
+  type MarketingCampaignTemplateId,
   getMarketingCampaignTemplate,
   isEditableHtmlTemplate,
-  type MarketingCampaignTemplateId,
 } from '~/lib/email-templates/marketing-campaign-templates';
 import { renderMarketingTemplate } from '~/lib/email-templates/marketing-templates';
 
@@ -129,7 +130,9 @@ export function CampaignComposer({
     { heading: 'Feature three', body: 'Short update or news item.' },
   ]);
   const [blankHtml, setBlankHtml] = useState(campaign?.html_body ?? '');
-  const [plainTextBody, setPlainTextBody] = useState(campaign?.plain_text_body ?? '');
+  const [plainTextBody, setPlainTextBody] = useState(
+    campaign?.plain_text_body ?? '',
+  );
   const [htmlTemplateSeed, setHtmlTemplateSeed] = useState<string | null>(
     campaign?.template_id && isEditableHtmlTemplate(campaign.template_id)
       ? campaign.template_id
@@ -180,7 +183,8 @@ export function CampaignComposer({
     }
 
     const hasSavedHtml =
-      campaign?.template_id === templateId && Boolean(campaign.html_body?.trim());
+      campaign?.template_id === templateId &&
+      Boolean(campaign.html_body?.trim());
 
     setBlankHtml(hasSavedHtml ? campaign!.html_body! : template.render());
 
@@ -205,7 +209,8 @@ export function CampaignComposer({
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
           recipientList,
-          contactListId: recipientList === 'contact_list' ? contactListId : null,
+          contactListId:
+            recipientList === 'contact_list' ? contactListId : null,
           manualRecipientEmails: manualEmails,
           customRecipientIds,
         }),
@@ -231,11 +236,12 @@ export function CampaignComposer({
       previewText,
       htmlBody: html,
       plainTextBody,
-      templateId: isEditableHtmlTemplate(templateId) || templateId === 'blank'
-        ? templateId === 'blank'
-          ? null
-          : templateId
-        : templateId,
+      templateId:
+        isEditableHtmlTemplate(templateId) || templateId === 'blank'
+          ? templateId === 'blank'
+            ? null
+            : templateId
+          : templateId,
       recipientList,
       contactListId: recipientList === 'contact_list' ? contactListId : null,
       manualRecipientEmails: manualEmails,
@@ -249,7 +255,11 @@ export function CampaignComposer({
     startTransition(async () => {
       try {
         const id = await save();
-        setProgress({ status: 'sending', sent_count: 0, total_recipients: estimate ?? 0 });
+        setProgress({
+          status: 'sending',
+          sent_count: 0,
+          total_recipients: estimate ?? 0,
+        });
 
         const sendPromise = fetch('/api/admin/email/send', {
           method: 'POST',
@@ -258,7 +268,9 @@ export function CampaignComposer({
         });
 
         const poll = window.setInterval(async () => {
-          const response = await fetch(`/api/admin/email/progress?campaignId=${id}`);
+          const response = await fetch(
+            `/api/admin/email/progress?campaignId=${id}`,
+          );
           if (response.ok) {
             const data = await response.json();
             setProgress(data);
@@ -275,11 +287,17 @@ export function CampaignComposer({
           throw new Error(data?.error ?? 'Failed to send campaign');
         }
         const data = await response.json();
-        setProgress({ status: 'sent', sent_count: data.sent, total_recipients: data.total });
+        setProgress({
+          status: 'sent',
+          sent_count: data.sent,
+          total_recipients: data.total,
+        });
         toast.success('Campaign sent');
         router.push(`/admin/email-marketing/${id}`);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to send campaign');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to send campaign',
+        );
       }
     });
   };
@@ -310,9 +328,13 @@ export function CampaignComposer({
           throw new Error(data?.error ?? 'Failed to send test email');
         }
 
-        toast.success(prefix === 'Copy' ? `Copy sent to ${to}` : `Test sent to ${to}`);
+        toast.success(
+          prefix === 'Copy' ? `Copy sent to ${to}` : `Test sent to ${to}`,
+        );
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to send test email');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to send test email',
+        );
       }
     });
   };
@@ -333,8 +355,12 @@ export function CampaignComposer({
             <ArrowLeft className="mr-2 h-4 w-4" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">Campaign composer</h1>
-          <p className="text-[var(--workspace-shell-text-muted)]">Create branded HTML campaigns and send them via SES.</p>
+          <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">
+            Campaign composer
+          </h1>
+          <p className="text-[var(--workspace-shell-text-muted)]">
+            Create branded HTML campaigns and send them via SES.
+          </p>
         </div>
         <div className="flex flex-wrap items-end gap-2">
           <Button
@@ -351,7 +377,9 @@ export function CampaignComposer({
             Save draft
           </Button>
           <div className="min-w-[220px] space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Send a copy to</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Send a copy to
+            </Label>
             <Input
               value={testEmail}
               onChange={(event) => setTestEmail(event.target.value)}
@@ -375,7 +403,11 @@ export function CampaignComposer({
           >
             Send a copy
           </Button>
-          <Button disabled={isPending} className="bg-[#57C87F] text-[#09111F] hover:bg-[#97D9AA]" onClick={handleSend}>
+          <Button
+            disabled={isPending}
+            className="bg-[#57C87F] text-[#09111F] hover:bg-[#97D9AA]"
+            onClick={handleSend}
+          >
             <Send className="mr-2 h-4 w-4" />
             Send campaign
           </Button>
@@ -391,7 +423,10 @@ export function CampaignComposer({
                 {progress.sent_count}/{progress.total_recipients} sent
               </span>
             </div>
-            <Progress value={progressValue} className="bg-[var(--workspace-shell-sidebar-accent)]" />
+            <Progress
+              value={progressValue}
+              className="bg-[var(--workspace-shell-sidebar-accent)]"
+            />
           </CardContent>
         </Card>
       ) : null}
@@ -399,15 +434,31 @@ export function CampaignComposer({
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(420px,0.9fr)]">
         <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardHeader>
-            <CardTitle className="text-[var(--workspace-shell-text)]">Campaign settings</CardTitle>
+            <CardTitle className="text-[var(--workspace-shell-text)]">
+              Campaign settings
+            </CardTitle>
           </CardHeader>
           <CardContent className="space-y-5">
-            <InputField label="Title (internal)" value={title} onChange={setTitle} />
-            <InputField label="Subject line" value={subject} onChange={setSubject} />
-            <InputField label="Preview text" value={previewText} onChange={setPreviewText} />
+            <InputField
+              label="Title (internal)"
+              value={title}
+              onChange={setTitle}
+            />
+            <InputField
+              label="Subject line"
+              value={subject}
+              onChange={setSubject}
+            />
+            <InputField
+              label="Preview text"
+              value={previewText}
+              onChange={setPreviewText}
+            />
 
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text)]">Recipient list</Label>
+              <Label className="text-[var(--workspace-shell-text)]">
+                Recipient list
+              </Label>
               <Select
                 value={recipientList}
                 onValueChange={(value) => {
@@ -456,13 +507,16 @@ export function CampaignComposer({
                 </Select>
               ) : null}
               <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                Estimated recipients: {estimate === null ? 'Calculating…' : estimate}
+                Estimated recipients:{' '}
+                {estimate === null ? 'Calculating…' : estimate}
               </p>
             </div>
 
             {recipientList === 'manual' ? (
               <div className="space-y-2">
-                <Label className="text-[var(--workspace-shell-text)]">Manual addresses</Label>
+                <Label className="text-[var(--workspace-shell-text)]">
+                  Manual addresses
+                </Label>
                 <Textarea
                   value={manualEmails}
                   onChange={(event) => setManualEmails(event.target.value)}
@@ -474,10 +528,15 @@ export function CampaignComposer({
 
             {recipientList === 'custom' ? (
               <div className="space-y-2">
-                <Label className="text-[var(--workspace-shell-text)]">Custom users</Label>
+                <Label className="text-[var(--workspace-shell-text)]">
+                  Custom users
+                </Label>
                 <div className="max-h-48 space-y-2 overflow-auto rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
                   {customUsers.map((user) => (
-                    <label key={user.id} className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <label
+                      key={user.id}
+                      className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]"
+                    >
                       <input
                         type="checkbox"
                         checked={customRecipientIds.includes(user.id)}
@@ -497,7 +556,9 @@ export function CampaignComposer({
             ) : null}
 
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text)]">Template</Label>
+              <Label className="text-[var(--workspace-shell-text)]">
+                Template
+              </Label>
               <Select
                 value={templateId}
                 onValueChange={(value) => {
@@ -511,11 +572,13 @@ export function CampaignComposer({
                 <SelectContent>
                   <SelectItem value="announcement">Announcement</SelectItem>
                   <SelectItem value="newsletter">Newsletter</SelectItem>
-                  {Object.entries(MARKETING_CAMPAIGN_TEMPLATES).map(([id, template]) => (
-                    <SelectItem key={id} value={id}>
-                      {template.label}
-                    </SelectItem>
-                  ))}
+                  {Object.entries(MARKETING_CAMPAIGN_TEMPLATES).map(
+                    ([id, template]) => (
+                      <SelectItem key={id} value={id}>
+                        {template.label}
+                      </SelectItem>
+                    ),
+                  )}
                   <SelectItem value="blank">Blank HTML</SelectItem>
                 </SelectContent>
               </Select>
@@ -524,7 +587,9 @@ export function CampaignComposer({
             {templateId === 'blank' || isEditableHtmlTemplate(templateId) ? (
               <div className="space-y-2">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Label className="text-[var(--workspace-shell-text)]">HTML body</Label>
+                  <Label className="text-[var(--workspace-shell-text)]">
+                    HTML body
+                  </Label>
                   {isEditableHtmlTemplate(templateId) ? (
                     <Button
                       type="button"
@@ -532,7 +597,8 @@ export function CampaignComposer({
                       size="sm"
                       className="border-[color:var(--workspace-shell-border)]"
                       onClick={() => {
-                        const template = getMarketingCampaignTemplate(templateId);
+                        const template =
+                          getMarketingCampaignTemplate(templateId);
                         if (!template) return;
                         setBlankHtml(template.render());
                         toast.success('Template reset to default HTML');
@@ -543,8 +609,12 @@ export function CampaignComposer({
                   ) : null}
                 </div>
                 <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  Spark-safe table layout with inline styles. Copy-ready files also live in{' '}
-                  <code className="rounded bg-black/30 px-1 py-0.5">public/email-previews/</code>.
+                  Spark-safe table layout with inline styles. Copy-ready files
+                  also live in{' '}
+                  <code className="rounded bg-black/30 px-1 py-0.5">
+                    public/email-previews/
+                  </code>
+                  .
                 </p>
                 {isEditableHtmlTemplate(templateId) ? (
                   <p className="text-xs text-[var(--workspace-shell-text-muted)]">
@@ -578,7 +648,9 @@ export function CampaignComposer({
             )}
 
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text)]">Plain text fallback (optional)</Label>
+              <Label className="text-[var(--workspace-shell-text)]">
+                Plain text fallback (optional)
+              </Label>
               <Textarea
                 value={plainTextBody}
                 onChange={(event) => setPlainTextBody(event.target.value)}
@@ -590,7 +662,9 @@ export function CampaignComposer({
 
         <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardHeader>
-            <CardTitle className="text-[var(--workspace-shell-text)]">Live preview</CardTitle>
+            <CardTitle className="text-[var(--workspace-shell-text)]">
+              Live preview
+            </CardTitle>
           </CardHeader>
           <CardContent>
             <iframe
@@ -645,37 +719,76 @@ function TemplateFields(props: {
 }) {
   return (
     <div className="space-y-4">
-      <InputField label="Heading" value={props.heading} onChange={props.setHeading} />
-      <InputField label="Subheading" value={props.subheading} onChange={props.setSubheading} />
+      <InputField
+        label="Heading"
+        value={props.heading}
+        onChange={props.setHeading}
+      />
+      <InputField
+        label="Subheading"
+        value={props.subheading}
+        onChange={props.setSubheading}
+      />
       {props.templateId === 'announcement' ? (
-        <InputField label="Hero image URL (optional)" value={props.heroImageUrl} onChange={props.setHeroImageUrl} />
+        <InputField
+          label="Hero image URL (optional)"
+          value={props.heroImageUrl}
+          onChange={props.setHeroImageUrl}
+        />
       ) : null}
       <div className="space-y-2">
         <Label className="text-[var(--workspace-shell-text)]">Body</Label>
-        <Textarea value={props.body} onChange={(event) => props.setBody(event.target.value)} className="min-h-40 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]" />
+        <Textarea
+          value={props.body}
+          onChange={(event) => props.setBody(event.target.value)}
+          className="min-h-40 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+        />
       </div>
       {props.templateId === 'newsletter' ? (
         <div className="space-y-3">
-          <Label className="text-[var(--workspace-shell-text)]">Feature/news blocks</Label>
+          <Label className="text-[var(--workspace-shell-text)]">
+            Feature/news blocks
+          </Label>
           {props.features.map((feature, index) => (
-            <div key={index} className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
-              <Input value={feature.heading} onChange={(event) => {
-                const next = [...props.features];
-                next[index] = { ...feature, heading: event.target.value };
-                props.setFeatures(next);
-              }} className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]" placeholder={`Feature ${index + 1} heading`} />
-              <Textarea value={feature.body} onChange={(event) => {
-                const next = [...props.features];
-                next[index] = { ...feature, body: event.target.value };
-                props.setFeatures(next);
-              }} className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]" placeholder="Short paragraph" />
+            <div
+              key={index}
+              className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3"
+            >
+              <Input
+                value={feature.heading}
+                onChange={(event) => {
+                  const next = [...props.features];
+                  next[index] = { ...feature, heading: event.target.value };
+                  props.setFeatures(next);
+                }}
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                placeholder={`Feature ${index + 1} heading`}
+              />
+              <Textarea
+                value={feature.body}
+                onChange={(event) => {
+                  const next = [...props.features];
+                  next[index] = { ...feature, body: event.target.value };
+                  props.setFeatures(next);
+                }}
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                placeholder="Short paragraph"
+              />
             </div>
           ))}
         </div>
       ) : null}
       <div className="grid gap-3 md:grid-cols-2">
-        <InputField label="CTA label" value={props.ctaLabel} onChange={props.setCtaLabel} />
-        <InputField label="CTA URL" value={props.ctaUrl} onChange={props.setCtaUrl} />
+        <InputField
+          label="CTA label"
+          value={props.ctaLabel}
+          onChange={props.setCtaLabel}
+        />
+        <InputField
+          label="CTA URL"
+          value={props.ctaUrl}
+          onChange={props.setCtaUrl}
+        />
       </div>
     </div>
   );

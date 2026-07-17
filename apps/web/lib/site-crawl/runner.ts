@@ -6,25 +6,24 @@ import { delay } from '~/lib/clusters/utils';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import {
+  SITE_CRAWL_JOB_STALE_MINUTES,
+  SITE_CRAWL_MAX_ACTIVE_JOBS,
+  SITE_CRAWL_WORKER_STALL_MINUTES,
+} from './config';
+import {
   getSiteCrawlJob,
   insertSiteCrawlPage,
-  loadAllPagesForJob,
-  loadCrawledUrlsForJob,
   listActiveSiteCrawlJobs,
   listStalledSiteCrawlJobs,
+  loadAllPagesForJob,
+  loadCrawledUrlsForJob,
   updateSiteCrawlJob,
   updateSiteCrawlPageIssues,
 } from './db';
 import { fetchAndParsePage } from './fetch-page';
 import { applyDuplicateIssues, summariseIssues } from './issues';
-import {
-  RUN_TIME_BUDGET_MS,
-} from './trigger-run';
-import {
-  SITE_CRAWL_JOB_STALE_MINUTES,
-  SITE_CRAWL_MAX_ACTIVE_JOBS,
-  SITE_CRAWL_WORKER_STALL_MINUTES,
-} from './config';
+import { RUN_TIME_BUDGET_MS } from './trigger-run';
+
 const PAGES_PER_BATCH = 20;
 const CRAWL_DELAY_MS = 150;
 
@@ -165,7 +164,7 @@ export async function runSiteCrawlJob(
 
     const domain = String(project.domain);
     const crawled = await loadCrawledUrlsForJob(jobId);
-    let pending = [...job.pending_urls];
+    const pending = [...job.pending_urls];
     let urlsCrawled = job.urls_crawled;
     let processedThisRun = 0;
 

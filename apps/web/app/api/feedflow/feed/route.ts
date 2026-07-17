@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
 import { createFeedflowAdminClient } from '~/lib/feedflow/admin';
@@ -61,8 +62,7 @@ export async function GET(request: NextRequest) {
     const limit = Math.min(30, widget.post_count ?? 9);
     const sliced = posts.slice(0, limit);
 
-    const plat =
-      social?.platform ?? social?.provider ?? platform;
+    const plat = social?.platform ?? social?.provider ?? platform;
 
     return NextResponse.json(
       {

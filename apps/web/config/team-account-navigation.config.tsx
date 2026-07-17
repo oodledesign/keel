@@ -2,6 +2,7 @@ import {
   Briefcase,
   Building2,
   Calendar,
+  CheckSquare,
   ClipboardList,
   CreditCard,
   FileText,
@@ -10,15 +11,12 @@ import {
   Settings,
   ShoppingCart,
   StickyNote,
-  CheckSquare,
   Users,
   UtensilsCrossed,
 } from 'lucide-react';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
 
-import featureFlagsConfig from '~/config/feature-flags.config';
-import pathsConfig from '~/config/paths.config';
 import {
   buildCommunitySettingsChildren,
   buildCommunitySpaceNavChildren,
@@ -27,18 +25,20 @@ import {
   buildFamilySettingsChildren,
   buildFamilySpaceNavChildren,
 } from '~/config/family-account-navigation.config';
+import featureFlagsConfig from '~/config/feature-flags.config';
+import pathsConfig from '~/config/paths.config';
 import {
   buildPropertySettingsChildren,
   buildPropertySpaceNavChildren,
 } from '~/config/property-account-navigation.config';
 import {
+  type WorkNavCounts,
   buildWorkSettingsChildren,
   buildWorkSpaceNavChildren,
-  type WorkNavCounts,
 } from '~/config/work-account-navigation.config';
+import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
-import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 
 const iconClasses = 'w-4';
 
@@ -103,16 +103,19 @@ const getRoutes = (
           : profile === 'community'
             ? buildCommunitySettingsChildren(account, access)
             : [
-          ...(access.canViewSettings
-            ? [
-                {
-                  label: 'Workspace settings',
-                  path: createPath(pathsConfig.app.accountSettings, account),
-                  Icon: <Settings className={iconClasses} />,
-                },
-              ]
-            : []),
-        ];
+                ...(access.canViewSettings
+                  ? [
+                      {
+                        label: 'Workspace settings',
+                        path: createPath(
+                          pathsConfig.app.accountSettings,
+                          account,
+                        ),
+                        Icon: <Settings className={iconClasses} />,
+                      },
+                    ]
+                  : []),
+              ];
 
   const routes: Array<{
     label: string;

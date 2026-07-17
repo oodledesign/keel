@@ -10,18 +10,18 @@ import { Menu, Settings, X } from 'lucide-react';
 import { Trans } from '@kit/ui/trans';
 import { cn } from '@kit/ui/utils';
 
-import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
 import { HapticButton, HapticLink } from '~/components/haptic-link';
+import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
+import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
 import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import { WorkspaceMobileBackButton } from '~/components/workspace-shell/workspace-mobile-back-button';
-import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
-import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import { navHrefPathname } from '~/lib/dashboard-shortcuts/personal-home-url';
 import {
   MOBILE_FLOATING_CHROME_PB,
   MOBILE_FLOATING_CHROME_PX,
 } from '~/lib/mobile-nav/mobile-floating-chrome';
-import { navHrefPathname } from '~/lib/dashboard-shortcuts/personal-home-url';
-import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 
 export type MobileNavLink = {
   path: string;
@@ -91,7 +91,9 @@ export function WorkspaceMobileMenu({
         aria-hidden={!open}
       >
         <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">Menu</p>
+          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">
+            Menu
+          </p>
           <HapticButton
             type="button"
             aria-label="Close menu"
@@ -176,7 +178,8 @@ type WorkspaceMobileBottomNavProps = {
 };
 
 const MOBILE_NAV_ICON_CLASS = 'h-[21px] w-[21px]';
-const MOBILE_NAV_BTN_CLASS = 'flex h-10 w-10 items-center justify-center rounded-full transition-colors';
+const MOBILE_NAV_BTN_CLASS =
+  'flex h-10 w-10 items-center justify-center rounded-full transition-colors';
 
 export function WorkspaceMobileBottomNav({
   homePath,

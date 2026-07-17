@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { type FormEvent, useState } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
@@ -15,12 +15,14 @@ const ITEMS = [
   {
     id: 'property',
     title: 'Property workspace',
-    description: 'Tenants, maintenance, and portfolio money for small landlords.',
+    description:
+      'Tenants, maintenance, and portfolio money for small landlords.',
   },
   {
     id: 'community',
     title: 'Community workspace',
-    description: 'Rotas, schedules, and tasks for clubs, teams, and homegroups.',
+    description:
+      'Rotas, schedules, and tasks for clubs, teams, and homegroups.',
   },
   {
     id: 'rankly',
@@ -43,9 +45,9 @@ const ALL_INTERESTS = ITEMS.map((item) => item.id);
 export function ComingSoon() {
   const [email, setEmail] = useState('');
   const [interests, setInterests] = useState<Interest[]>([...ALL_INTERESTS]);
-  const [status, setStatus] = useState<'idle' | 'loading' | 'success' | 'error'>(
-    'idle',
-  );
+  const [status, setStatus] = useState<
+    'idle' | 'loading' | 'success' | 'error'
+  >('idle');
   const [message, setMessage] = useState('');
 
   const toggleInterest = (interest: Interest) => {
@@ -84,7 +86,9 @@ export function ComingSoon() {
     }
 
     setStatus('success');
-    setMessage(payload.message ?? "You're on the list — we'll email you at launch.");
+    setMessage(
+      payload.message ?? "You're on the list — we'll email you at launch.",
+    );
     setEmail('');
   };
 
@@ -102,8 +106,8 @@ export function ComingSoon() {
           Growing with you
         </h2>
         <p className={cn('mt-3 text-base leading-relaxed', marketingMutedText)}>
-          Ozer will do more than run the studio. These workspaces and apps are in
-          development — leave your email and be first in when they launch.
+          Ozer will do more than run the studio. These workspaces and apps are
+          in development — leave your email and be first in when they launch.
         </p>
       </div>
 
@@ -114,11 +118,13 @@ export function ComingSoon() {
               <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
                 {item.title}
               </h3>
-              <span className="shrink-0 rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.08em] text-[var(--ozer-coral-600)]">
+              <span className="shrink-0 rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-[10px] font-semibold tracking-[0.08em] text-[var(--ozer-coral-600)] uppercase">
                 Coming soon
               </span>
             </div>
-            <p className={cn('mt-2 text-sm leading-relaxed', marketingMutedText)}>
+            <p
+              className={cn('mt-2 text-sm leading-relaxed', marketingMutedText)}
+            >
               {item.description}
             </p>
           </article>
@@ -143,7 +149,7 @@ export function ComingSoon() {
             value={email}
             onChange={(event) => setEmail(event.target.value)}
             placeholder="you@example.com"
-            className="min-h-11 flex-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 text-sm text-[var(--workspace-shell-text)] outline-none transition focus:border-[var(--ozer-accent)]"
+            className="min-h-11 flex-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 text-sm text-[var(--workspace-shell-text)] transition outline-none focus:border-[var(--ozer-accent)]"
           />
           <Button
             type="submit"

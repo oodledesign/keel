@@ -5,12 +5,12 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
 import {
+  type WorkspaceProfile,
   businessTypeForProfile,
   spaceTypeForProfile,
-  type WorkspaceProfile,
 } from '~/home/[account]/_lib/server/workspace-profile';
-import pathsConfig from '~/config/paths.config';
 import { requiredEntitlementForProfile } from '~/lib/billing/ozer-plan-catalog';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -141,7 +141,9 @@ export async function completeWorkspaceSetup(
       return { error: error.message };
     }
 
-    const createdSlug = (account as { slug?: string | null } | null)?.slug?.trim();
+    const createdSlug = (
+      account as { slug?: string | null } | null
+    )?.slug?.trim();
     if (!firstTeamSlug && createdSlug) {
       firstTeamSlug = createdSlug;
     }

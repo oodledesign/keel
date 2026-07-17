@@ -132,10 +132,7 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
         <AuthErrorAlert error={verifyMutation.error ?? signInMutation.error} />
 
         <p className="text-muted-foreground text-center text-sm">
-          <Trans
-            i18nKey="common:otp.codeSentToEmail"
-            values={{ email }}
-          />
+          <Trans i18nKey="common:otp.codeSentToEmail" values={{ email }} />
         </p>
 
         <FormField
@@ -174,11 +171,7 @@ export function OtpSignInContainer(props: OtpSignInContainerProps) {
         />
 
         <div className="flex w-full flex-col gap-y-2">
-          <Button
-            type="submit"
-            disabled={isBusy}
-            data-test="otp-verify-button"
-          >
+          <Button type="submit" disabled={isBusy} data-test="otp-verify-button">
             {verifyMutation.isPending ? (
               <>
                 <Spinner className="mr-2 h-4 w-4" />

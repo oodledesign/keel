@@ -7,7 +7,10 @@ import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
 import { buildFreeAgentAuthUrl } from '~/lib/integrations/freeagent/oauth';
 
 function financesPath(accountSlug: string, query?: Record<string, string>) {
-  const base = pathsConfig.app.accountFinances.replace('[account]', accountSlug);
+  const base = pathsConfig.app.accountFinances.replace(
+    '[account]',
+    accountSlug,
+  );
   if (!query || Object.keys(query).length === 0) return base;
   const params = new URLSearchParams(query);
   return `${base}?${params.toString()}`;
@@ -54,7 +57,10 @@ export async function GET(request: Request) {
   const returnTo = url.searchParams.get('returnTo')?.trim();
   const returnPath =
     returnTo === 'settings'
-      ? pathsConfig.app.accountFinancesSettings.replace('[account]', accountSlug)
+      ? pathsConfig.app.accountFinancesSettings.replace(
+          '[account]',
+          accountSlug,
+        )
       : pathsConfig.app.accountFinances.replace('[account]', accountSlug);
 
   try {

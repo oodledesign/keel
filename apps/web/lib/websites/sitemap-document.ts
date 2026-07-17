@@ -7,16 +7,15 @@
  *
  * Always upgrade lazily via migrateSitemapDocument — never a SQL data migration.
  */
-
 import {
-  createPlanningId,
+  WEBSITE_SITEMAP_SCHEMA_VERSION,
   type WebsitePlanningStatus,
   type WebsiteSectionType,
+  type WebsiteSitemapDocument,
   type WebsiteSitemapPage,
   type WebsiteSitemapSection,
   type WebsiteSitemapSymbol,
-  type WebsiteSitemapDocument,
-  WEBSITE_SITEMAP_SCHEMA_VERSION,
+  createPlanningId,
 } from './planning-types';
 
 const SECTION_TYPES = new Set<WebsiteSectionType>([
@@ -36,13 +35,15 @@ const STATUSES = new Set<WebsitePlanningStatus>([
 ]);
 
 function asSectionType(value: unknown): WebsiteSectionType {
-  return typeof value === 'string' && SECTION_TYPES.has(value as WebsiteSectionType)
+  return typeof value === 'string' &&
+    SECTION_TYPES.has(value as WebsiteSectionType)
     ? (value as WebsiteSectionType)
     : 'other';
 }
 
 function asStatus(value: unknown): WebsitePlanningStatus {
-  return typeof value === 'string' && STATUSES.has(value as WebsitePlanningStatus)
+  return typeof value === 'string' &&
+    STATUSES.has(value as WebsitePlanningStatus)
     ? (value as WebsitePlanningStatus)
     : 'draft';
 }

@@ -1,12 +1,8 @@
 import 'server-only';
 
-import { dfsPost } from './client';
 import type { ClusterKeyword, KeywordIntent } from '../clusters/types';
-import {
-  countryToLocationCode,
-  deduplicateBy,
-  delay,
-} from '../clusters/utils';
+import { countryToLocationCode, deduplicateBy, delay } from '../clusters/utils';
+import { dfsPost } from './client';
 
 function parseIntent(raw: unknown): KeywordIntent {
   const value = String(raw ?? 'informational').toLowerCase();
@@ -20,7 +16,9 @@ function parseIntent(raw: unknown): KeywordIntent {
   return 'informational';
 }
 
-function parseKeywordItem(item: Record<string, unknown>): ClusterKeyword | null {
+function parseKeywordItem(
+  item: Record<string, unknown>,
+): ClusterKeyword | null {
   const keyword =
     (item.keyword as string | undefined) ??
     (item.keyword_data as { keyword?: string } | undefined)?.keyword;
@@ -189,7 +187,9 @@ export async function fetchKeywordOverviewMetrics(
     if (batch.length === 0) continue;
 
     const json = await dfsPost<{
-      tasks?: Array<{ result?: Array<{ items?: Array<Record<string, unknown>> }> }>;
+      tasks?: Array<{
+        result?: Array<{ items?: Array<Record<string, unknown>> }>;
+      }>;
     }>('/dataforseo_labs/google/keyword_overview/live', [
       {
         keywords: batch,

@@ -1,4 +1,5 @@
 import React from 'react';
+
 import Link from 'next/link';
 
 import { ArrowRight, CheckCircle2 } from 'lucide-react';
@@ -90,7 +91,7 @@ export function FeaturesSection({
         <div className="grid gap-12 lg:grid-cols-2 lg:gap-16">
           {/* Left column */}
           <div className="flex flex-col justify-center">
-            <h2 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white lg:text-4xl">
+            <h2 className="mb-4 text-3xl font-bold text-gray-900 lg:text-4xl dark:text-white">
               {heading}
             </h2>
             <p className="mb-8 text-lg text-gray-600 dark:text-gray-400">

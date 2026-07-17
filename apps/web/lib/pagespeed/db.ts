@@ -6,9 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { computeNextRankCheckAt } from '~/lib/rank-tracking/types';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
-import {
-  projectDomainToHomepageUrl,
-} from './domain';
+import { projectDomainToHomepageUrl } from './domain';
 import type {
   PagespeedCheckJobRow,
   PagespeedHistoryPoint,
@@ -47,7 +45,8 @@ function mapResultRow(
     fcpMs: row.fcp_ms != null ? Number(row.fcp_ms) : null,
     cls: row.cls != null ? Number(row.cls) : null,
     tbtMs: row.tbt_ms != null ? Number(row.tbt_ms) : null,
-    speedIndexMs: row.speed_index_ms != null ? Number(row.speed_index_ms) : null,
+    speedIndexMs:
+      row.speed_index_ms != null ? Number(row.speed_index_ms) : null,
     fetchedAt: row.fetched_at,
     errorMsg: row.error_msg,
     recommendations,
@@ -600,7 +599,8 @@ export async function loadProjectsDueForPagespeed(limit = 5): Promise<
 
   return (projects ?? []).slice(0, limit).map((project) => ({
     projectId: project.id as string,
-    refreshInterval: project.pagespeed_refresh_interval as PagespeedRefreshInterval,
+    refreshInterval:
+      project.pagespeed_refresh_interval as PagespeedRefreshInterval,
   }));
 }
 

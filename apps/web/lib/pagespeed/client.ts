@@ -7,7 +7,8 @@ import type {
   ParsedPagespeedResult,
 } from './types';
 
-const PSI_BASE = 'https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed';
+const PSI_BASE =
+  'https://pagespeedonline.googleapis.com/pagespeedonline/v5/runPagespeed';
 
 function getApiKey(): string {
   const key =
@@ -111,7 +112,9 @@ export async function fetchPagespeedInsights(input: {
 
   if (!res.ok) {
     const text = await res.text();
-    throw new Error(`PageSpeed Insights failed (${res.status}): ${text.slice(0, 300)}`);
+    throw new Error(
+      `PageSpeed Insights failed (${res.status}): ${text.slice(0, 300)}`,
+    );
   }
 
   const json = (await res.json()) as Record<string, unknown>;

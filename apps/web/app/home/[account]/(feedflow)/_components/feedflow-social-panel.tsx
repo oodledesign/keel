@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -43,7 +44,11 @@ export function FeedflowSocialPanel(props: {
   );
 
   const disconnect = async (socialAccountId: string) => {
-    if (!globalThis.confirm('Remove this connection? Widgets using it may stop working.')) {
+    if (
+      !globalThis.confirm(
+        'Remove this connection? Widgets using it may stop working.',
+      )
+    ) {
       return;
     }
     setDeletingId(socialAccountId);
@@ -74,8 +79,8 @@ export function FeedflowSocialPanel(props: {
           </Button>
         ) : (
           <p className="text-muted-foreground text-sm">
-            Instagram: set INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET, INSTAGRAM_REDIRECT_URI
-            (callback must be{' '}
+            Instagram: set INSTAGRAM_APP_ID, INSTAGRAM_APP_SECRET,
+            INSTAGRAM_REDIRECT_URI (callback must be{' '}
             <code className="text-xs">
               …/api/feedflow/auth/instagram/callback
             </code>
@@ -90,7 +95,8 @@ export function FeedflowSocialPanel(props: {
           </Button>
         ) : (
           <p className="text-muted-foreground text-sm">
-            TikTok: set TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET, TIKTOK_REDIRECT_URI.
+            TikTok: set TIKTOK_CLIENT_KEY, TIKTOK_CLIENT_SECRET,
+            TIKTOK_REDIRECT_URI.
           </p>
         )}
         {props.googleConfigured ? (
@@ -109,7 +115,7 @@ export function FeedflowSocialPanel(props: {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[36rem] text-left text-sm">
-            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
               <tr>
                 <th className="px-4 py-3">Platform</th>
                 <th className="px-4 py-3">Provider</th>
@@ -129,7 +135,7 @@ export function FeedflowSocialPanel(props: {
                   <td className="px-4 py-3 font-mono text-xs">
                     {row.external_account_id}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="text-muted-foreground px-4 py-3">
                     {row.last_refreshed_at
                       ? new Date(row.last_refreshed_at).toLocaleString()
                       : '—'}

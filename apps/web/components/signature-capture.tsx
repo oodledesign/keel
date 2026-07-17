@@ -77,7 +77,8 @@ export function SignatureCapture({
       const reader = new FileReader();
       reader.onload = () => {
         const data = typeof reader.result === 'string' ? reader.result : '';
-        if (data) onConfirm({ signature_type: 'uploaded', signature_data: data });
+        if (data)
+          onConfirm({ signature_type: 'uploaded', signature_data: data });
       };
       reader.readAsDataURL(file);
     },
@@ -105,11 +106,17 @@ export function SignatureCapture({
         <TabsContent value="typed" className="mt-4 space-y-3">
           <div>
             <Label>Type your name</Label>
-            <Input value={typedName} onChange={(e) => setTypedName(e.target.value)} />
+            <Input
+              value={typedName}
+              onChange={(e) => setTypedName(e.target.value)}
+            />
           </div>
           {typedName.trim() ? (
             <div className="rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] px-4 py-6 text-center">
-              <p className="font-serif text-3xl text-[#0f172a]" style={{ fontFamily: 'Georgia, serif' }}>
+              <p
+                className="font-serif text-3xl text-[#0f172a]"
+                style={{ fontFamily: 'Georgia, serif' }}
+              >
                 {typedName}
               </p>
             </div>
@@ -118,7 +125,10 @@ export function SignatureCapture({
             disabled={!typedName.trim() || loading}
             className="bg-[var(--ozer-accent)] text-[#09111F]"
             onClick={() =>
-              onConfirm({ signature_type: 'typed', signature_data: typedName.trim() })
+              onConfirm({
+                signature_type: 'typed',
+                signature_data: typedName.trim(),
+              })
             }
           >
             {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
@@ -131,7 +141,7 @@ export function SignatureCapture({
             ref={canvasRef}
             width={480}
             height={160}
-            className="w-full rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] touch-none"
+            className="w-full touch-none rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)]"
             onPointerDown={startDraw}
             onPointerMove={draw}
             onPointerUp={endDraw}
@@ -146,7 +156,8 @@ export function SignatureCapture({
               className="bg-[var(--ozer-accent)] text-[#09111F]"
               onClick={() => {
                 const data = getDrawnDataUrl();
-                if (data) onConfirm({ signature_type: 'drawn', signature_data: data });
+                if (data)
+                  onConfirm({ signature_type: 'drawn', signature_data: data });
               }}
             >
               Confirm signature
@@ -155,7 +166,7 @@ export function SignatureCapture({
         </TabsContent>
 
         <TabsContent value="upload" className="mt-4 space-y-3">
-          <p className="text-sm text-muted-foreground">JPG, PNG, GIF, or BMP</p>
+          <p className="text-muted-foreground text-sm">JPG, PNG, GIF, or BMP</p>
           <Input
             type="file"
             accept="image/jpeg,image/png,image/gif,image/bmp"
@@ -198,7 +209,10 @@ export function SignatureDisplay({
   return (
     <div className="space-y-1">
       {type === 'typed' ? (
-        <p className="font-serif text-2xl text-[#0f172a]" style={{ fontFamily: 'Georgia, serif' }}>
+        <p
+          className="font-serif text-2xl text-[#0f172a]"
+          style={{ fontFamily: 'Georgia, serif' }}
+        >
           {data}
         </p>
       ) : (

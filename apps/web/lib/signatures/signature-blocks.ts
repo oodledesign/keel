@@ -392,7 +392,9 @@ export function paletteForBackground(
   };
 }
 
-function serializeBackgroundAttr(background?: SignatureBackground | null): string {
+function serializeBackgroundAttr(
+  background?: SignatureBackground | null,
+): string {
   const bg = resolveSignatureBackground(background);
   if (bg.mode === 'none') {
     return '';
@@ -526,10 +528,7 @@ function blockInnerHtml(
 }
 
 function blockOpenComment(block: SignatureBlock): string {
-  const attrs = [
-    `id="${block.id}"`,
-    `type="${block.type}"`,
-  ];
+  const attrs = [`id="${block.id}"`, `type="${block.type}"`];
 
   if (block.type === 'custom_text') {
     attrs.push(`text="${escapeHtml(block.text ?? '')}"`);

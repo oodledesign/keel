@@ -5,8 +5,8 @@ import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import { projectDisplayName } from '~/lib/finance/transaction-links';
+import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 
 export const loadProjectFinanceAction = enhanceAction(
   async (input) => {
@@ -43,13 +43,19 @@ export const loadProjectFinanceAction = enhanceAction(
       })),
     );
 
-    const linkedCount = (transactions ?? []).filter((tx) => !tx.is_transfer).length;
-    const transferCount = (transactions ?? []).filter((tx) => tx.is_transfer).length;
+    const linkedCount = (transactions ?? []).filter(
+      (tx) => !tx.is_transfer,
+    ).length;
+    const transferCount = (transactions ?? []).filter(
+      (tx) => tx.is_transfer,
+    ).length;
 
     return {
       project: {
         id: project.id as string,
-        label: projectDisplayName(project as { title?: string | null; name?: string | null }),
+        label: projectDisplayName(
+          project as { title?: string | null; name?: string | null },
+        ),
         valuePence: (project.value_pence as number | null) ?? null,
         costPence: (project.cost_pence as number | null) ?? null,
       },

@@ -4,9 +4,11 @@ import { useContext } from 'react';
 
 import Link from 'next/link';
 
+import { If } from '@kit/ui/if';
 import {
   Sidebar,
   SidebarContent,
+  SidebarContext,
   SidebarFooter,
   SidebarHeader,
   SidebarMenu,
@@ -14,10 +16,7 @@ import {
   SidebarMenuItem,
   SidebarNavigation,
   SidebarTrigger,
-  SidebarContext,
 } from '@kit/ui/shadcn-sidebar';
-
-import { If } from '@kit/ui/if';
 import { cn } from '@kit/ui/utils';
 
 import { OzerSidebarLogo } from '~/components/workspace-shell/ozer-sidebar-logo';
@@ -27,19 +26,18 @@ import {
 } from '~/components/workspace-shell/workspace-accounts-selector';
 import { workspaceSidebarClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import featureFlagsConfig from '~/config/feature-flags.config';
-import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
-import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
 import {
+  PersonalSettingsIcon,
   buildPersonalHomeNavRoutes,
   parsePersonalAccountNavigationConfig,
   personalAccountNavigationConfig,
   personalAccountSettingsPath,
-  PersonalSettingsIcon,
 } from '~/config/personal-account-navigation.config';
+import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
+import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
 
 import type { UserWorkspace } from '../_lib/server/load-user-workspace';
-
 import { PersonalWorkspaceNav } from './personal-workspace-nav';
 
 interface HomeSidebarProps {
@@ -58,7 +56,9 @@ export function HomeSidebar(props: HomeSidebarProps) {
   const { workspace, user } = props.workspace;
   const collapsible = personalAccountNavigationConfig.sidebarCollapsedStyle;
   const sharedWorkspaces = props.sharedWorkspaces ?? [];
-  const switcherAccounts = buildPersonalSwitcherAccounts(props.switcherAccounts);
+  const switcherAccounts = buildPersonalSwitcherAccounts(
+    props.switcherAccounts,
+  );
 
   const sidebarNavConfig = parsePersonalAccountNavigationConfig(
     buildPersonalHomeNavRoutes(),

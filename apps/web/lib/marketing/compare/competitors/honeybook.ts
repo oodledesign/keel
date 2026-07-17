@@ -1,5 +1,8 @@
 import { OZER_TEAM_OF_FOUR } from '~/lib/marketing/compare/ozer-baseline';
-import type { ComparisonConfig, SourcedValue } from '~/lib/marketing/compare/types';
+import type {
+  ComparisonConfig,
+  SourcedValue,
+} from '~/lib/marketing/compare/types';
 
 function c<T>(
   value: T,
@@ -139,7 +142,11 @@ export const honeybookComparison: ComparisonConfig = {
         note: 'Replace with live fee schedule × your volume',
       },
     ],
-    competitorTotalGbp: c(1704, 'https://www.honeybook.com/pricing', '2026-07-04'),
+    competitorTotalGbp: c(
+      1704,
+      'https://www.honeybook.com/pricing',
+      '2026-07-04',
+    ),
     ozerLines: [
       {
         label: 'Business Team annual (up to 5 members)',

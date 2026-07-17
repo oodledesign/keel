@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -15,10 +16,11 @@ import {
   DialogTrigger,
 } from '@kit/ui/dialog';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import type { KeywordIntent } from '~/lib/clusters/types';
 import { formatUsdCost } from '~/lib/rank-tracking/cost';
 import type {
   KeywordRankSnapshot,
@@ -27,10 +29,9 @@ import type {
   RankTrackingSettings,
 } from '~/lib/rank-tracking/types';
 import { RANK_REFRESH_INTERVAL_LABELS } from '~/lib/rank-tracking/types';
-import type { KeywordIntent } from '~/lib/clusters/types';
 
-import { parseKeywordLines } from '../../_lib/parse-keyword-lines';
 import type { RanklyKeywordRow } from '../../../_lib/server/rankly-account-data';
+import { parseKeywordLines } from '../../_lib/parse-keyword-lines';
 import {
   addRanklyKeywordsBulk,
   deleteRanklyKeyword,
@@ -102,7 +103,9 @@ function IntentBadge({ intent }: { intent: string | null | undefined }) {
 
   const key = intent as KeywordIntent;
   const label = INTENT_LABELS[key] ?? intent;
-  const style = INTENT_STYLES[key] ?? 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground';
+  const style =
+    INTENT_STYLES[key] ??
+    'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground';
 
   return (
     <span
@@ -146,7 +149,11 @@ function compareNullableNumber(
   return direction === 'asc' ? a - b : b - a;
 }
 
-function compareStrings(a: string, b: string, direction: SortDirection): number {
+function compareStrings(
+  a: string,
+  b: string,
+  direction: SortDirection,
+): number {
   const result = a.localeCompare(b, undefined, { sensitivity: 'base' });
   return direction === 'asc' ? result : -result;
 }
@@ -181,7 +188,7 @@ function SortableHeader(props: {
       <button
         type="button"
         onClick={() => props.onSort(props.column)}
-        className={`inline-flex w-full items-center gap-1 font-medium uppercase tracking-wide transition-colors hover:text-[var(--workspace-shell-text)] ${alignClass} ${active ? 'text-[var(--workspace-shell-text)]' : ''}`}
+        className={`inline-flex w-full items-center gap-1 font-medium tracking-wide uppercase transition-colors hover:text-[var(--workspace-shell-text)] ${alignClass} ${active ? 'text-[var(--workspace-shell-text)]' : ''}`}
       >
         {props.label}
         <span className="text-[10px] tabular-nums opacity-80">
@@ -211,7 +218,8 @@ export function RankTrackingPanel(props: {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const [activeJobId, setActiveJobId] = useState<string | null>(
     props.latestJob &&
-      (props.latestJob.status === 'pending' || props.latestJob.status === 'running')
+      (props.latestJob.status === 'pending' ||
+        props.latestJob.status === 'running')
       ? props.latestJob.id
       : null,
   );
@@ -262,7 +270,9 @@ export function RankTrackingPanel(props: {
     [props.snapshots],
   );
 
-  const primarySnapshot = (keywordId: string): KeywordRankSnapshot | undefined => {
+  const primarySnapshot = (
+    keywordId: string,
+  ): KeywordRankSnapshot | undefined => {
     const desktop = snapshotByKeywordDevice.get(`${keywordId}:desktop`);
     if (desktop) return desktop;
     return snapshotByKeywordDevice.get(`${keywordId}:mobile`);
@@ -323,7 +333,9 @@ export function RankTrackingPanel(props: {
             : [String(keyword.device ?? 'desktop')];
 
         return devices.map((device, deviceIndex) => {
-          const snapshot = snapshotByKeywordDevice.get(`${keyword.id}:${device}`);
+          const snapshot = snapshotByKeywordDevice.get(
+            `${keyword.id}:${device}`,
+          );
           return { keyword, device, snapshot, showRemove: deviceIndex === 0 };
         });
       }),
@@ -405,9 +417,13 @@ export function RankTrackingPanel(props: {
       });
 
       if (result.added === 0) {
-        toast.message('No new keywords added — all were already on this project');
+        toast.message(
+          'No new keywords added — all were already on this project',
+        );
       } else {
-        toast.success(`Added ${result.added} keyword${result.added === 1 ? '' : 's'}`);
+        toast.success(
+          `Added ${result.added} keyword${result.added === 1 ? '' : 's'}`,
+        );
         void fetchKeywordMetrics({ silent: true });
       }
 
@@ -487,7 +503,9 @@ export function RankTrackingPanel(props: {
           rankRefreshInterval: interval,
         }),
       });
-      const json = (await res.json()) as ApiResponse<{ settings: RankTrackingSettings }>;
+      const json = (await res.json()) as ApiResponse<{
+        settings: RankTrackingSettings;
+      }>;
       if (!json.ok) throw new Error(json.error.message);
       toast.success('Refresh schedule updated');
       router.refresh();
@@ -516,7 +534,9 @@ export function RankTrackingPanel(props: {
           trackMobile,
         }),
       });
-      const json = (await res.json()) as ApiResponse<{ settings: RankTrackingSettings }>;
+      const json = (await res.json()) as ApiResponse<{
+        settings: RankTrackingSettings;
+      }>;
       if (!json.ok) throw new Error(json.error.message);
       toast.success('Device tracking updated');
       router.refresh();
@@ -540,16 +560,20 @@ export function RankTrackingPanel(props: {
             <select
               id="rank-refresh-interval"
               value={interval}
-              onChange={(e) => setInterval(e.target.value as RankRefreshInterval)}
+              onChange={(e) =>
+                setInterval(e.target.value as RankRefreshInterval)
+              }
               className="border-input bg-background flex h-10 w-full max-w-xs rounded-md border px-3 py-2 text-sm"
             >
-              {(Object.keys(RANK_REFRESH_INTERVAL_LABELS) as RankRefreshInterval[]).map(
-                (value) => (
-                  <option key={value} value={value}>
-                    {RANK_REFRESH_INTERVAL_LABELS[value]}
-                  </option>
-                ),
-              )}
+              {(
+                Object.keys(
+                  RANK_REFRESH_INTERVAL_LABELS,
+                ) as RankRefreshInterval[]
+              ).map((value) => (
+                <option key={value} value={value}>
+                  {RANK_REFRESH_INTERVAL_LABELS[value]}
+                </option>
+              ))}
             </select>
             <p className="text-muted-foreground text-xs">
               {props.settings?.lastRankCheckAt
@@ -567,14 +591,18 @@ export function RankTrackingPanel(props: {
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={trackDesktop}
-                  onCheckedChange={(checked) => setTrackDesktop(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setTrackDesktop(checked === true)
+                  }
                 />
                 Desktop
               </label>
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={trackMobile}
-                  onCheckedChange={(checked) => setTrackMobile(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setTrackMobile(checked === true)
+                  }
                 />
                 Mobile
               </label>
@@ -589,8 +617,8 @@ export function RankTrackingPanel(props: {
               </Button>
             </div>
             <p className="text-muted-foreground text-xs">
-              Each enabled device doubles API cost and check time. Turn off mobile
-              if you only need desktop rankings.
+              Each enabled device doubles API cost and check time. Turn off
+              mobile if you only need desktop rankings.
             </p>
           </div>
         </div>
@@ -609,7 +637,10 @@ export function RankTrackingPanel(props: {
               </DialogHeader>
               <form onSubmit={addKeywords} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="new-keywords" className="text-[var(--workspace-shell-text-muted)]">
+                  <Label
+                    htmlFor="new-keywords"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
                     Keywords
                   </Label>
                   <Textarea
@@ -651,14 +682,18 @@ export function RankTrackingPanel(props: {
           <Button
             type="button"
             variant="outline"
-            disabled={savingInterval || interval === props.settings?.rankRefreshInterval}
+            disabled={
+              savingInterval || interval === props.settings?.rankRefreshInterval
+            }
             onClick={saveInterval}
           >
             {savingInterval ? 'Saving…' : 'Save schedule'}
           </Button>
           <Button
             type="button"
-            disabled={refreshing || Boolean(activeJobId) || props.keywordCount === 0}
+            disabled={
+              refreshing || Boolean(activeJobId) || props.keywordCount === 0
+            }
             onClick={refreshRanks}
           >
             {refreshing ? 'Starting…' : 'Refresh ranks now'}
@@ -667,7 +702,9 @@ export function RankTrackingPanel(props: {
             type="button"
             variant="outline"
             disabled={loadingMetrics || props.keywordCount === 0}
-            onClick={() => fetchKeywordMetrics({ force: keywordsNeedingMetrics === 0 })}
+            onClick={() =>
+              fetchKeywordMetrics({ force: keywordsNeedingMetrics === 0 })
+            }
           >
             {loadingMetrics
               ? 'Loading…'
@@ -681,7 +718,9 @@ export function RankTrackingPanel(props: {
       <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
         <p className="text-muted-foreground">
           Manual refresh est.{' '}
-          <strong className="text-[var(--workspace-shell-text)]">{formatUsdCost(props.estimatedCostUsd)}</strong>{' '}
+          <strong className="text-[var(--workspace-shell-text)]">
+            {formatUsdCost(props.estimatedCostUsd)}
+          </strong>{' '}
           DataForSEO API spend for {props.keywordCount} keyword
           {props.keywordCount === 1 ? '' : 's'}
           {deviceCostLabel}.
@@ -689,13 +728,15 @@ export function RankTrackingPanel(props: {
         {props.latestJob?.status === 'done' ? (
           <p className="text-muted-foreground mt-1 text-xs">
             Last run: {formatUsdCost(Number(props.latestJob.api_cost_usd))} ·{' '}
-            {props.latestJob.tasks_completed}/{props.latestJob.tasks_total} lookups
+            {props.latestJob.tasks_completed}/{props.latestJob.tasks_total}{' '}
+            lookups
           </p>
         ) : null}
         {keywordsNeedingMetrics > 0 ? (
           <p className="text-muted-foreground mt-1 text-xs">
-            {keywordsNeedingMetrics} keyword{keywordsNeedingMetrics === 1 ? '' : 's'}{' '}
-            missing volume & intent — click Load insights to fetch from DataForSEO.
+            {keywordsNeedingMetrics} keyword
+            {keywordsNeedingMetrics === 1 ? '' : 's'} missing volume & intent —
+            click Load insights to fetch from DataForSEO.
           </p>
         ) : null}
       </div>
@@ -709,12 +750,13 @@ export function RankTrackingPanel(props: {
 
       {displayRows.length === 0 ? (
         <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
-          No keywords yet. Click Add keywords, then refresh ranks to pull positions from Google.
+          No keywords yet. Click Add keywords, then refresh ranks to pull
+          positions from Google.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[62rem] text-left text-sm">
-            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
               <tr>
                 <SortableHeader
                   label="Keyword"
@@ -792,16 +834,18 @@ export function RankTrackingPanel(props: {
                     className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                   >
                     <td className="px-4 py-3">{keyword.keyword}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
                       {showRemove ? formatVolume(keyword.search_volume) : ''}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
                       {showRemove ? formatKd(keyword.keyword_difficulty) : ''}
                     </td>
                     <td className="px-4 py-3">
-                      {showRemove ? <IntentBadge intent={keyword.intent} /> : null}
+                      {showRemove ? (
+                        <IntentBadge intent={keyword.intent} />
+                      ) : null}
                     </td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">
+                    <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
                       {showRemove ? formatCpc(keyword.cpc) : ''}
                     </td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">
@@ -813,19 +857,21 @@ export function RankTrackingPanel(props: {
                           ? 'px-4 py-3 text-right text-[var(--ozer-accent)] tabular-nums'
                           : change?.startsWith('▼')
                             ? 'px-4 py-3 text-right text-red-400 tabular-nums'
-                            : 'px-4 py-3 text-right text-muted-foreground'
+                            : 'text-muted-foreground px-4 py-3 text-right'
                       }
                     >
                       {change ?? '—'}
                     </td>
                     <td
-                      className="px-4 py-3 text-right tabular-nums text-muted-foreground"
+                      className="text-muted-foreground px-4 py-3 text-right tabular-nums"
                       title={snapshot?.rankDate ?? undefined}
                     >
                       {formatRankDate(snapshot?.rankDate)}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{device}</td>
-                    <td className="max-w-[14rem] truncate px-4 py-3 text-muted-foreground">
+                    <td className="text-muted-foreground px-4 py-3">
+                      {device}
+                    </td>
+                    <td className="text-muted-foreground max-w-[14rem] truncate px-4 py-3">
                       {snapshot?.rankingUrl ? (
                         <a
                           href={snapshot.rankingUrl}

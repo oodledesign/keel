@@ -1,12 +1,12 @@
 import {
   BILLING_TRIAL_DAYS,
+  type BillingPlanPrice,
+  PRICING_LAST_VERIFIED,
   formatGbp,
   getBillingProductPrice,
   listBusinessWorkspacePrices,
-  PRICING_LAST_VERIFIED,
   translationLine,
   trialLabel,
-  type BillingPlanPrice,
 } from '~/lib/billing/billing-config-prices';
 
 export { PRICING_LAST_VERIFIED, BILLING_TRIAL_DAYS };
@@ -19,13 +19,41 @@ export type ReplacedTool = {
 
 /** Typical UK monthly costs for tools Ozer consolidates (illustrative market rates). */
 export const REPLACED_STACK: ReplacedTool[] = [
-  { category: 'Project management', typicalMonthlyGbp: 48, note: 'e.g. 4 seats on a common PM tool' },
-  { category: 'CRM / pipeline', typicalMonthlyGbp: 45, note: 'entry CRM for a small team' },
-  { category: 'Invoicing', typicalMonthlyGbp: 20, note: 'standalone invoicing SaaS' },
-  { category: 'Client portal', typicalMonthlyGbp: 29, note: 'portal or client-flow tool' },
-  { category: 'Meeting notes', typicalMonthlyGbp: 20, note: 'AI meeting note subscription' },
-  { category: 'Time tracking', typicalMonthlyGbp: 12, note: 'automatic desktop time tracker per seat' },
-  { category: 'Scheduling / tasks', typicalMonthlyGbp: 12, note: 'shared task or calendar layer' },
+  {
+    category: 'Project management',
+    typicalMonthlyGbp: 48,
+    note: 'e.g. 4 seats on a common PM tool',
+  },
+  {
+    category: 'CRM / pipeline',
+    typicalMonthlyGbp: 45,
+    note: 'entry CRM for a small team',
+  },
+  {
+    category: 'Invoicing',
+    typicalMonthlyGbp: 20,
+    note: 'standalone invoicing SaaS',
+  },
+  {
+    category: 'Client portal',
+    typicalMonthlyGbp: 29,
+    note: 'portal or client-flow tool',
+  },
+  {
+    category: 'Meeting notes',
+    typicalMonthlyGbp: 20,
+    note: 'AI meeting note subscription',
+  },
+  {
+    category: 'Time tracking',
+    typicalMonthlyGbp: 12,
+    note: 'automatic desktop time tracker per seat',
+  },
+  {
+    category: 'Scheduling / tasks',
+    typicalMonthlyGbp: 12,
+    note: 'shared task or calendar layer',
+  },
 ];
 
 export function replacedStackMonthlyTotal(): number {
@@ -46,7 +74,9 @@ export function businessTierCards(): Array<
     const higher = tiers.slice(index + 1);
     const excludes =
       higher.length === 0
-        ? ['Nothing above this tier — contact us if you need more than 15 members.']
+        ? [
+            'Nothing above this tier — contact us if you need more than 15 members.',
+          ]
         : [
             ...higher.flatMap((h) =>
               h.features.filter(
@@ -80,7 +110,9 @@ export function annualCostForTeamSize(teamSize: number): {
   monthlyGbp: number;
   yearlyGbp: number;
 } {
-  const tiers = listBusinessWorkspacePrices().filter((p) => p.monthlyPriceGbp > 0);
+  const tiers = listBusinessWorkspacePrices().filter(
+    (p) => p.monthlyPriceGbp > 0,
+  );
   const plan =
     tiers.find(
       (p) => p.maxTeamMembers != null && p.maxTeamMembers >= teamSize,

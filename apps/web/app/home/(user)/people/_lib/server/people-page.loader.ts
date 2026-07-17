@@ -8,14 +8,15 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
-  createPeopleService,
   type PersonListItem,
   type PersonProfile,
+  createPeopleService,
 } from './people.service';
 
-function resolveViewerName(
-  user: { email?: string | null; user_metadata?: Record<string, unknown> },
-) {
+function resolveViewerName(user: {
+  email?: string | null;
+  user_metadata?: Record<string, unknown>;
+}) {
   const meta = user.user_metadata ?? {};
   const displayName =
     (typeof meta.display_name === 'string' && meta.display_name.trim()) ||
@@ -55,25 +56,27 @@ export type PersonProfilePageData = {
   person: PersonProfile;
 };
 
-export const loadPeopleListPageData = cache(async (): Promise<PeopleListPageData> => {
-  const client = getSupabaseServerClient();
-  const user = await requireUserInServerComponent();
-  const api = createAccountsApi(client);
-  const workspace = await api.getAccountWorkspace();
-  const service = createPeopleService(client);
-  const people = await service.listPeople(user.id);
+export const loadPeopleListPageData = cache(
+  async (): Promise<PeopleListPageData> => {
+    const client = getSupabaseServerClient();
+    const user = await requireUserInServerComponent();
+    const api = createAccountsApi(client);
+    const workspace = await api.getAccountWorkspace();
+    const service = createPeopleService(client);
+    const people = await service.listPeople(user.id);
 
-  return {
-    people,
-    viewer: {
-      name: resolveViewerName(user),
-      avatarUrl: resolveViewerAvatar(
-        workspace as { picture_url?: string | null },
-        user,
-      ),
-    },
-  };
-});
+    return {
+      people,
+      viewer: {
+        name: resolveViewerName(user),
+        avatarUrl: resolveViewerAvatar(
+          workspace as { picture_url?: string | null },
+          user,
+        ),
+      },
+    };
+  },
+);
 
 export const loadPersonProfilePageData = cache(
   async (personId: string): Promise<PersonProfilePageData | null> => {

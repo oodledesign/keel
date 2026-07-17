@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
+
 import { LifeBuoy, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -18,8 +19,11 @@ import {
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
+import type {
+  TicketPriority,
+  TicketStatus,
+} from '../_lib/schema/support-tickets.schema';
 import type { SupportTicket } from '../_lib/server/support-tickets.service';
-import type { TicketPriority, TicketStatus } from '../_lib/schema/support-tickets.schema';
 import {
   TicketPriorityBadge,
   TicketStatusBadge,
@@ -78,7 +82,9 @@ export function SupportTicketsPageContent({
     <div className="space-y-6 px-4 lg:px-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">Support</h1>
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+            Support
+          </h1>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
             {filteredTickets.length}{' '}
             {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
@@ -137,9 +143,12 @@ export function SupportTicketsPageContent({
         <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <LifeBuoy className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
-            <p className="font-medium text-[var(--workspace-shell-text)]">No support tickets yet</p>
+            <p className="font-medium text-[var(--workspace-shell-text)]">
+              No support tickets yet
+            </p>
             <p className="mt-1 max-w-md text-sm text-[var(--workspace-shell-text)]/50">
-              Track client issues, assign team members, and keep conversations in one place.
+              Track client issues, assign team members, and keep conversations
+              in one place.
             </p>
             <Button asChild className={`mt-4 ${workspaceBtnPrimaryMd}`}>
               <Link href={newHref}>
@@ -153,7 +162,7 @@ export function SupportTicketsPageContent({
         <div className="overflow-hidden rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-[var(--workspace-shell-text)]/40">
+              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text)]/40 uppercase">
                 <tr>
                   <th className="px-4 py-3 font-medium">Ticket</th>
                   <th className="px-4 py-3 font-medium">Title</th>

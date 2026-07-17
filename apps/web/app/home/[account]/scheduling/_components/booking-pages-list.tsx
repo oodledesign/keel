@@ -17,6 +17,13 @@ import {
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -31,16 +38,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@kit/ui/dialog';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -288,7 +288,9 @@ export function BookingPagesList({
                         {page.isActive ? 'Active' : 'Inactive'}
                       </Badge>
                     </div>
-                    <p className={`mt-1 truncate text-sm ${workspaceTextMuted}`}>
+                    <p
+                      className={`mt-1 truncate text-sm ${workspaceTextMuted}`}
+                    >
                       {url}
                     </p>
                     <p className={`mt-2 text-xs ${workspaceTextMuted}`}>

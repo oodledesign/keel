@@ -13,6 +13,7 @@ import {
 import { PageBody, PageHeader } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
+
 import {
   formatMoneyMinor,
   loadAdminBillingAnalytics,
@@ -40,10 +41,7 @@ async function AdminBillingPage() {
             value={formatMoneyMinor(data.estimatedMrrMinor, data.currency)}
             hint="From active & trialing line items"
           />
-          <MetricCard
-            title="Active"
-            value={String(data.activeSubscriptions)}
-          />
+          <MetricCard title="Active" value={String(data.activeSubscriptions)} />
           <MetricCard
             title="Trialing"
             value={String(data.trialingSubscriptions)}
@@ -58,7 +56,9 @@ async function AdminBillingPage() {
         <Card>
           <CardHeader>
             <CardTitle className="text-base">Status breakdown</CardTitle>
-            <CardDescription>All platform workspace subscriptions</CardDescription>
+            <CardDescription>
+              All platform workspace subscriptions
+            </CardDescription>
           </CardHeader>
           <CardContent className="flex flex-wrap gap-2">
             {data.statusBreakdown.map((row) => (
@@ -72,7 +72,9 @@ async function AdminBillingPage() {
         <section className="space-y-3">
           <h2 className="text-sm font-semibold">Past due — needs attention</h2>
           {data.pastDue.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No past-due subscriptions.</p>
+            <p className="text-muted-foreground text-sm">
+              No past-due subscriptions.
+            </p>
           ) : (
             <ul className="divide-y rounded-lg border">
               {data.pastDue.map((row) => (
@@ -93,7 +95,12 @@ async function AdminBillingPage() {
                     </p>
                   </div>
                   <Button asChild size="sm" variant="outline">
-                    <Link href={pathsConfig.app.accountBilling.replace('[account]', row.accountSlug)}>
+                    <Link
+                      href={pathsConfig.app.accountBilling.replace(
+                        '[account]',
+                        row.accountSlug,
+                      )}
+                    >
                       Billing
                     </Link>
                   </Button>
@@ -108,7 +115,9 @@ async function AdminBillingPage() {
             Cancelled in the last 30 days ({data.cancelledLast30Days})
           </h2>
           {data.recentlyCancelled.length === 0 ? (
-            <p className="text-muted-foreground text-sm">No recent cancellations.</p>
+            <p className="text-muted-foreground text-sm">
+              No recent cancellations.
+            </p>
           ) : (
             <ul className="divide-y rounded-lg border">
               {data.recentlyCancelled.map((row) => (
@@ -134,7 +143,11 @@ function MetricCard(props: {
   variant?: 'default' | 'warning';
 }) {
   return (
-    <Card className={props.variant === 'warning' ? 'border-amber-500/40' : undefined}>
+    <Card
+      className={
+        props.variant === 'warning' ? 'border-amber-500/40' : undefined
+      }
+    >
       <CardHeader className="pb-2">
         <CardTitle className="text-sm font-medium">{props.title}</CardTitle>
       </CardHeader>

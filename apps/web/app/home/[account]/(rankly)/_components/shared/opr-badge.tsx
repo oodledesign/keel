@@ -6,11 +6,7 @@ type OprBadgeProps = {
   showLabel?: boolean;
 };
 
-export function OprBadge({
-  score,
-  decimal,
-  showLabel = true,
-}: OprBadgeProps) {
+export function OprBadge({ score, decimal, showLabel = true }: OprBadgeProps) {
   const colour =
     score >= 7
       ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'

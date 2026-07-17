@@ -26,7 +26,9 @@ export async function exchangeInstagramCode(code: string): Promise<{
 }> {
   const cfg = getOptionalInstagram();
   if (!cfg) throw new Error('Instagram is not configured');
-  const url = new URL(`https://graph.facebook.com/${FB_VERSION}/oauth/access_token`);
+  const url = new URL(
+    `https://graph.facebook.com/${FB_VERSION}/oauth/access_token`,
+  );
   url.searchParams.set('client_id', cfg.appId);
   url.searchParams.set('client_secret', cfg.appSecret);
   url.searchParams.set('redirect_uri', cfg.redirectUri);
@@ -49,7 +51,9 @@ export async function exchangeLongLivedInstagram(shortLived: string): Promise<{
 }> {
   const cfg = getOptionalInstagram();
   if (!cfg) throw new Error('Instagram is not configured');
-  const url = new URL(`https://graph.facebook.com/${FB_VERSION}/oauth/access_token`);
+  const url = new URL(
+    `https://graph.facebook.com/${FB_VERSION}/oauth/access_token`,
+  );
   url.searchParams.set('grant_type', 'fb_exchange_token');
   url.searchParams.set('client_id', cfg.appId);
   url.searchParams.set('client_secret', cfg.appSecret);
@@ -61,9 +65,14 @@ export async function exchangeLongLivedInstagram(shortLived: string): Promise<{
     error?: { message: string };
   };
   if (!res.ok || !data.access_token) {
-    throw new Error(data.error?.message ?? 'Instagram long-lived exchange failed');
+    throw new Error(
+      data.error?.message ?? 'Instagram long-lived exchange failed',
+    );
   }
-  return { accessToken: data.access_token, expiresIn: data.expires_in ?? 60 * 24 * 3600 };
+  return {
+    accessToken: data.access_token,
+    expiresIn: data.expires_in ?? 60 * 24 * 3600,
+  };
 }
 
 type IgPage = {
@@ -74,9 +83,16 @@ type IgPage = {
 
 export async function fetchInstagramBusinessAccount(
   userAccessToken: string,
-): Promise<{ igUserId: string; username: string | null; pageAccessToken: string }> {
+): Promise<{
+  igUserId: string;
+  username: string | null;
+  pageAccessToken: string;
+}> {
   const url = new URL(`https://graph.facebook.com/${FB_VERSION}/me/accounts`);
-  url.searchParams.set('fields', 'instagram_business_account{id,username},access_token');
+  url.searchParams.set(
+    'fields',
+    'instagram_business_account{id,username},access_token',
+  );
   url.searchParams.set('access_token', userAccessToken);
   const res = await fetch(url.toString());
   const data = (await res.json()) as {
@@ -85,7 +101,8 @@ export async function fetchInstagramBusinessAccount(
   };
   if (!res.ok || !data.data?.length) {
     throw new Error(
-      data.error?.message ?? 'No Facebook pages / Instagram business account found',
+      data.error?.message ??
+        'No Facebook pages / Instagram business account found',
     );
   }
   const page =
@@ -122,7 +139,10 @@ export async function refreshInstagramLongLived(accessToken: string): Promise<{
   if (!res.ok || !data.access_token) {
     throw new Error(data.error?.message ?? 'Instagram token refresh failed');
   }
-  return { accessToken: data.access_token, expiresIn: data.expires_in ?? 60 * 24 * 3600 };
+  return {
+    accessToken: data.access_token,
+    expiresIn: data.expires_in ?? 60 * 24 * 3600,
+  };
 }
 
 export type IgMediaItem = {
@@ -142,7 +162,9 @@ export async function fetchInstagramMedia(
 ): Promise<IgMediaItem[]> {
   const fields =
     'id,caption,media_type,media_url,thumbnail_url,permalink,timestamp';
-  const url = new URL(`https://graph.facebook.com/${FB_VERSION}/${igUserId}/media`);
+  const url = new URL(
+    `https://graph.facebook.com/${FB_VERSION}/${igUserId}/media`,
+  );
   url.searchParams.set('fields', fields);
   url.searchParams.set('limit', String(limit));
   url.searchParams.set('access_token', accessToken);

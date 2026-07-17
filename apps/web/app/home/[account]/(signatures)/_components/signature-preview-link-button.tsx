@@ -35,6 +35,7 @@ export function SignaturePreviewLinkButton({
         accountId,
         templateId,
         staffId,
+        view: 'preview',
       });
       setUrl(result.url);
       return result.url;

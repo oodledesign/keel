@@ -3,41 +3,38 @@
 import { revalidatePath } from 'next/cache';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
-import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
-import { userIsAccountMember } from '~/lib/rankly/account-membership';
-
-import {
-  addRanklyKeywordActionSchema,
-  addRanklyKeywordsBulkActionSchema,
-  addPagespeedPageActionSchema,
-  createRanklyProjectActionSchema,
-  deletePagespeedPageActionSchema,
-  deleteRanklyKeywordActionSchema,
-  deleteRanklyProjectActionSchema,
-} from '../schema/rankly-module.schema';
-import { computeNextRankCheckAt } from '~/lib/rank-tracking/types';
 import {
   countPagespeedPages,
+  deletePagespeedPage,
   ensureHomepagePage,
   insertPagespeedPage,
-  deletePagespeedPage,
 } from '~/lib/pagespeed/db';
 import {
   normalizePagespeedUrl,
   pageLabelFromUrl,
 } from '~/lib/pagespeed/domain';
 import { MAX_PAGESPEED_PAGES_PER_PROJECT } from '~/lib/pagespeed/types';
+import { computeNextRankCheckAt } from '~/lib/rank-tracking/types';
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
-function workPath(
-  template: string,
-  accountSlug: string,
-  suffix = '',
-): string {
+import {
+  addPagespeedPageActionSchema,
+  addRanklyKeywordActionSchema,
+  addRanklyKeywordsBulkActionSchema,
+  createRanklyProjectActionSchema,
+  deletePagespeedPageActionSchema,
+  deleteRanklyKeywordActionSchema,
+  deleteRanklyProjectActionSchema,
+} from '../schema/rankly-module.schema';
+
+function workPath(template: string, accountSlug: string, suffix = ''): string {
   return template.replace('[account]', accountSlug) + suffix;
 }
 
@@ -123,7 +120,10 @@ export const createRanklyProject = enhanceAction(
       user.id,
     );
 
-    const { data: created, error } = await supabaseCustomSchema(client, 'rankly')
+    const { data: created, error } = await supabaseCustomSchema(
+      client,
+      'rankly',
+    )
       .from('projects')
       .insert({
         account_id: input.accountId,
@@ -158,8 +158,12 @@ export const createRanklyProject = enhanceAction(
       domain: input.domain,
     });
 
-    revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountRanklyDashboard, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountRanklyProjects, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountRanklyDashboard, accountSlug),
+    );
     if (input.clientId) {
       revalidatePath(
         workPath(pathsConfig.app.accountClients, accountSlug) +
@@ -202,8 +206,12 @@ export const deleteRanklyProject = enhanceAction(
       throw new Error(error.message);
     }
 
-    revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountRanklyDashboard, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountRanklyProjects, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountRanklyDashboard, accountSlug),
+    );
     revalidateRanklyProjectPaths(accountSlug, input.projectId);
     return { ok: true as const };
   },
@@ -245,7 +253,9 @@ export const addRanklyKeyword = enhanceAction(
     }
 
     revalidateRanklyProjectPaths(accountSlug, input.projectId);
-    revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountRanklyProjects, accountSlug),
+    );
     return { ok: true as const };
   },
   { schema: addRanklyKeywordActionSchema },
@@ -325,7 +335,9 @@ export const addRanklyKeywordsBulk = enhanceAction(
     }
 
     revalidateRanklyProjectPaths(accountSlug, input.projectId);
-    revalidatePath(workPath(pathsConfig.app.accountRanklyProjects, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountRanklyProjects, accountSlug),
+    );
 
     return {
       ok: true as const,
@@ -408,9 +420,7 @@ export const addPagespeedPage = enhanceAction(
     }
 
     const url = normalizePagespeedUrl(input.url, String(project.domain));
-    const label =
-      input.label?.trim() ||
-      pageLabelFromUrl(url, false);
+    const label = input.label?.trim() || pageLabelFromUrl(url, false);
 
     await insertPagespeedPage({
       projectId: input.projectId,

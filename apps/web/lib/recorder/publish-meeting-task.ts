@@ -70,9 +70,7 @@ function buildTaskNotes(
 ): string | null {
   const parts = [
     description?.trim() || null,
-    sourceExcerpt?.trim()
-      ? `Meeting excerpt: "${sourceExcerpt.trim()}"`
-      : null,
+    sourceExcerpt?.trim() ? `Meeting excerpt: "${sourceExcerpt.trim()}"` : null,
   ].filter(Boolean);
 
   return parts.length > 0 ? parts.join('\n\n') : null;
@@ -144,8 +142,7 @@ export async function publishMeetingTaskToPlanner(
       ? input.description
       : item.suggested_description;
   const dueDateWasExplicit = input.dueDate !== undefined;
-  let dueDate =
-    dueDateWasExplicit ? input.dueDate : item.suggested_due_date;
+  let dueDate = dueDateWasExplicit ? input.dueDate : item.suggested_due_date;
   if (dueDate && !dueDateWasExplicit) {
     dueDate = snapDueDateYmd(dueDate, scheduling);
   }
@@ -182,12 +179,13 @@ export async function publishMeetingTaskToPlanner(
   }
 
   if (taskResult.error || !taskResult.data) {
-    throw new Error(taskResult.error?.message ?? 'Could not create planner task');
+    throw new Error(
+      taskResult.error?.message ?? 'Could not create planner task',
+    );
   }
 
   const plannerTaskId = (taskResult.data as { id: string }).id;
-  const status =
-    input.publishSource === 'auto' ? 'auto_published' : 'approved';
+  const status = input.publishSource === 'auto' ? 'auto_published' : 'approved';
 
   const { error: updateError } = await client
     .from('meeting_action_items')

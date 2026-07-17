@@ -1,5 +1,6 @@
-import type { PhaseStatus } from '../../_lib/schema/project-phases.schema';
 import { ozerColors } from '~/lib/ozer/design-tokens';
+
+import type { PhaseStatus } from '../../_lib/schema/project-phases.schema';
 
 export const DEFAULT_DELIVERY_PHASES = [
   { name: 'Discovery', colour: ozerColors.info },
@@ -17,7 +18,8 @@ export const PHASE_STATUS_LABELS: Record<PhaseStatus, string> = {
 };
 
 export const PHASE_STATUS_STYLES: Record<PhaseStatus, string> = {
-  not_started: 'bg-[var(--workspace-shell-panel-hover)]/40 text-[var(--workspace-shell-text-muted)]',
+  not_started:
+    'bg-[var(--workspace-shell-panel-hover)]/40 text-[var(--workspace-shell-text-muted)]',
   in_progress: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
   blocked: 'bg-red-500/20 text-red-400',
   complete: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
@@ -34,9 +36,11 @@ export const TASK_STATUS_LABELS: Record<string, string> = {
 export const TASK_STATUS_STYLES: Record<string, string> = {
   todo: 'bg-[var(--workspace-shell-panel-hover)]/50 text-[var(--workspace-shell-text-muted)]',
   in_progress: 'bg-[var(--ozer-info)]/15 text-[var(--ozer-info)]',
-  client_review: 'bg-[var(--ozer-coral-alpha-15)] text-[var(--ozer-accent-muted)]',
+  client_review:
+    'bg-[var(--ozer-coral-alpha-15)] text-[var(--ozer-accent-muted)]',
   done: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
-  cancelled: 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]',
+  cancelled:
+    'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]',
 };
 
 export const PRIORITY_DOT: Record<string, string> = {

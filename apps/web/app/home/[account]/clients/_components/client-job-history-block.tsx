@@ -2,12 +2,13 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { Briefcase } from 'lucide-react';
 import Link from 'next/link';
 
-import { getJobHistory } from '../_lib/server/server-actions';
+import { Briefcase } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
+
+import { getJobHistory } from '../_lib/server/server-actions';
 
 const STATUS_LABELS: Record<string, string> = {
   pending: 'Pending',
@@ -59,9 +60,13 @@ export function ClientJobHistoryBlock({
 
   return (
     <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
-      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Projects</h3>
+      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+        Projects
+      </h3>
       {loading ? (
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Loading…
+        </p>
       ) : jobs.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No projects linked to this client yet.

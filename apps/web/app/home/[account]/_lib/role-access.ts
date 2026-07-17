@@ -11,7 +11,10 @@ export type TeamAccountAccess = ReturnType<typeof getTeamAccountAccess>;
 
 export function getTeamAccountAccess(input?: TeamAccountAccessInput) {
   const permissions = new Set(input?.permissions ?? []);
-  const role = normalizeRole(input?.role ?? null, input?.companyRole ?? input?.company_role ?? null);
+  const role = normalizeRole(
+    input?.role ?? null,
+    input?.companyRole ?? input?.company_role ?? null,
+  );
   const companyRole = input?.companyRole ?? input?.company_role ?? null;
 
   const isOwner = role === 'owner';
@@ -82,8 +85,7 @@ export function getTeamAccountAccess(input?: TeamAccountAccessInput) {
   const canCreateJob = isOwner || isAdmin || isStaff;
   const canCreateClient = canEditClients;
   const canCreateInvoice = canEditInvoices;
-  const canUseQuickCreate =
-    canCreateJob || canCreateClient || canCreateInvoice;
+  const canUseQuickCreate = canCreateJob || canCreateClient || canCreateInvoice;
 
   return {
     role,
@@ -120,10 +122,7 @@ export function getTeamAccountAccess(input?: TeamAccountAccessInput) {
   };
 }
 
-function normalizeRole(
-  role: string | null,
-  companyRole: string | null,
-) {
+function normalizeRole(role: string | null, companyRole: string | null) {
   if (role) {
     return role;
   }

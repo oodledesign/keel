@@ -1,8 +1,9 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { streamProposalHtml } from '~/lib/ai/proposal-generate';
 

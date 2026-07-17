@@ -1,8 +1,8 @@
 import { Suspense, use } from 'react';
 
+import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
-import { isRedirectError } from 'next/dist/client/components/redirect-error';
 
 import { z } from 'zod';
 
@@ -14,37 +14,37 @@ import { AppLogo } from '~/components/app-logo';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
 import pathsConfig from '~/config/paths.config';
-import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
-import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 import { personalAccountNavigationConfig } from '~/config/personal-account-navigation.config';
-import { withI18n } from '~/lib/i18n/with-i18n';
-
-import { HomeMenuNavigation } from './_components/home-menu-navigation';
-import { HomeMobileNavigation } from './_components/home-mobile-navigation';
-import { PersonalHomeMobileChrome } from './_components/personal-home-mobile-chrome';
-import { HomeSidebar } from './_components/home-sidebar';
-import { loadUserWorkspace } from './_lib/server/load-user-workspace';
-import { loadPersonalSidebarWorkspaces } from './_lib/server/personal-sidebar-workspaces.loader';
-import { flattenPersonalNavLinks } from './_lib/flatten-personal-nav-links';
 import {
   buildPersonalHomeNavRoutes,
   parsePersonalAccountNavigationConfig,
 } from '~/config/personal-account-navigation.config';
-import { enrichPersonalShortcutsWithWorkspaceAvatars } from '~/lib/dashboard-shortcuts/enrich-workspace-shortcut-avatars';
 import type { WorkspaceAccountRow } from '~/home/_lib/server/workspace-scope';
-import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
-import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
-import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
-import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
+import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
+import { enrichPersonalShortcutsWithWorkspaceAvatars } from '~/lib/dashboard-shortcuts/enrich-workspace-shortcut-avatars';
 import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
+import { withI18n } from '~/lib/i18n/with-i18n';
+import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { buildPersonalShellMetadata } from '~/lib/seo/app-shell-metadata';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
   userRequiresWorkspaceSetup,
   workspaceSetupPath,
 } from '~/lib/server/workspace-setup-guard';
+import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
+import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
+import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
+
+import { HomeMenuNavigation } from './_components/home-menu-navigation';
+import { HomeMobileNavigation } from './_components/home-mobile-navigation';
+import { HomeSidebar } from './_components/home-sidebar';
+import { PersonalHomeMobileChrome } from './_components/personal-home-mobile-chrome';
 import { PersonalHomeShellAdornmentsSuspense } from './_components/personal-home-shell-adornments-suspense';
+import { flattenPersonalNavLinks } from './_lib/flatten-personal-nav-links';
+import { loadUserWorkspace } from './_lib/server/load-user-workspace';
+import { loadPersonalSidebarWorkspaces } from './_lib/server/personal-sidebar-workspaces.loader';
 
 export const generateMetadata = async () => buildPersonalShellMetadata();
 
@@ -82,11 +82,15 @@ async function SidebarLayout({
     ReturnType<typeof loadWorkspaceSwitcherAccounts>
   > = [];
   let client: Awaited<
-    ReturnType<(typeof import('@kit/supabase/server-client'))['getSupabaseServerClient']>
+    ReturnType<
+      (typeof import('@kit/supabase/server-client'))['getSupabaseServerClient']
+    >
   > | null = null;
 
   try {
-    client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+    client = (
+      await import('@kit/supabase/server-client')
+    ).getSupabaseServerClient();
     [workspace, sharedWorkspaces, switcherAccounts] = await Promise.all([
       loadUserWorkspace(),
       loadPersonalSidebarWorkspaces(),
@@ -129,7 +133,9 @@ async function SidebarLayout({
   );
 
   const renderShell = (params: {
-    mobileNavShortcuts: Awaited<ReturnType<typeof loadPersonalMobileNavShortcuts>>;
+    mobileNavShortcuts: Awaited<
+      ReturnType<typeof loadPersonalMobileNavShortcuts>
+    >;
     focusSettingsByAccountId: Record<string, WorkspaceFocusInput>;
   }) => {
     const bottomNavTabs = resolveMobileBottomNavTabs({

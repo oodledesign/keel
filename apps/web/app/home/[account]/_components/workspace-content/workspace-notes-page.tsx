@@ -30,6 +30,8 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
 import {
   Select,
   SelectContent,
@@ -37,28 +39,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Input } from '@kit/ui/input';
-import { Label } from '@kit/ui/label';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@kit/ui/sheet';
-import { Textarea } from '@kit/ui/textarea';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
-import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
-import { workspaceBtnPrimaryMd, workspaceCardHover, workspaceFilterActive, workspaceSuccessBadgeBorder } from '~/lib/workspace-ui';
+import {
+  workspaceBtnPrimaryMd,
+  workspaceCardHover,
+  workspaceFilterActive,
+  workspaceSuccessBadgeBorder,
+} from '~/lib/workspace-ui';
+
+import {
+  docContentPreview,
+  previewContent,
+} from '../../_lib/workspace-content/context-resolve';
 import {
   deleteWorkspaceDocAction,
   getWorkspaceDocDownloadUrlAction,
   registerUploadedWorkspaceDocAction,
   updateWorkspaceDocMetadataAction,
 } from '../../_lib/workspace-content/docs-actions';
+import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import { generateFinancialYearOptions } from '../../_lib/workspace-content/financial-year';
-import { docContentPreview, previewContent } from '../../_lib/workspace-content/context-resolve';
 import {
   deleteWorkspaceNoteAction,
   saveWorkspaceNoteAction,
@@ -72,7 +76,10 @@ import type {
   NoteListItem,
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
-import { DOC_TYPE_LABELS, DOC_TYPE_OPTIONS } from '../../_lib/workspace-content/types';
+import {
+  DOC_TYPE_LABELS,
+  DOC_TYPE_OPTIONS,
+} from '../../_lib/workspace-content/types';
 import { CategoryBadge, CategorySelect } from './category-select';
 import { LinkToSelect, type LinkValue } from './link-to-select';
 import { PublicSharingSection } from './public-sharing-section';
@@ -123,10 +130,7 @@ function linkFromItem(item: NoteListItem | DocListItem): LinkValue {
   return null;
 }
 
-function matchesListFilter(
-  item: UnifiedItem,
-  listFilter: ListFilter,
-) {
+function matchesListFilter(item: UnifiedItem, listFilter: ListFilter) {
   if (listFilter === 'notes' && item.kind !== 'note') return false;
   if (listFilter === 'files' && item.kind !== 'file') return false;
   if (listFilter === 'pinned' && !item.data.isPinned) return false;
@@ -216,7 +220,10 @@ export function WorkspaceNotesPage({
     [linkOptions],
   );
 
-  const financialYearOptions = useMemo(() => generateFinancialYearOptions(), []);
+  const financialYearOptions = useMemo(
+    () => generateFinancialYearOptions(),
+    [],
+  );
 
   const deleteNote = (noteId: string) => {
     if (!confirm('Delete this note?')) return;
@@ -274,7 +281,14 @@ export function WorkspaceNotesPage({
           new Date(b.data.updatedAt).getTime() -
           new Date(a.data.updatedAt).getTime(),
       );
-  }, [notes, docs, listFilter, hideFilters, showProjectLinked, propertyFilterId]);
+  }, [
+    notes,
+    docs,
+    listFilter,
+    hideFilters,
+    showProjectLinked,
+    propertyFilterId,
+  ]);
 
   if (!tableAvailable && !docsTableAvailable) {
     return (
@@ -288,7 +302,9 @@ export function WorkspaceNotesPage({
   const filterBtn = (active: boolean) =>
     cn(
       'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors duration-200 ease-[cubic-bezier(0.23,1,0.32,1)]',
-      active ? workspaceFilterActive : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+      active
+        ? workspaceFilterActive
+        : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
     );
 
   return (
@@ -321,7 +337,8 @@ export function WorkspaceNotesPage({
                   variant="outline"
                   className={cn(
                     'border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-                    !showProjectLinked && 'border-[var(--ozer-accent)]/30 text-[var(--ozer-accent-muted)]',
+                    !showProjectLinked &&
+                      'border-[var(--ozer-accent)]/30 text-[var(--ozer-accent-muted)]',
                   )}
                 >
                   <ListFilter className="mr-1.5 h-4 w-4" />
@@ -347,7 +364,10 @@ export function WorkspaceNotesPage({
               </DropdownMenuContent>
             </DropdownMenu>
             {propertyOptions.length > 0 ? (
-              <Select value={propertyFilterId} onValueChange={setPropertyFilterId}>
+              <Select
+                value={propertyFilterId}
+                onValueChange={setPropertyFilterId}
+              >
                 <SelectTrigger className="h-8 w-[180px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="All properties" />
                 </SelectTrigger>
@@ -368,11 +388,7 @@ export function WorkspaceNotesPage({
         {canEdit ? (
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                size="sm"
-                className={workspaceBtnPrimaryMd}
-              >
+              <Button type="button" size="sm" className={workspaceBtnPrimaryMd}>
                 <Plus className="mr-1.5 h-4 w-4" />
                 New
                 <ChevronDown className="ml-1 h-4 w-4 opacity-80" />
@@ -398,7 +414,9 @@ export function WorkspaceNotesPage({
       </div>
 
       {unified.length === 0 ? (
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Nothing matches this filter.</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Nothing matches this filter.
+        </p>
       ) : (
         <ul className="space-y-3">
           {unified.map((item) =>
@@ -407,7 +425,11 @@ export function WorkspaceNotesPage({
                 <button
                   type="button"
                   onClick={() => openEditNote(item.data)}
-                  className={cn(panelClass, 'w-full p-4 text-left', workspaceCardHover)}
+                  className={cn(
+                    panelClass,
+                    'w-full p-4 text-left',
+                    workspaceCardHover,
+                  )}
                 >
                   <NoteListRow
                     note={item.data}
@@ -522,12 +544,22 @@ function NoteListRow({
           {showPin && note.isPinned ? (
             <Pin className="h-3.5 w-3.5 shrink-0 text-amber-400" />
           ) : null}
-          <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text-muted)]">Note</Badge>
-          <CategoryBadge category={note.category} customCategories={customCategories} />
+          <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text-muted)]">
+            Note
+          </Badge>
+          <CategoryBadge
+            category={note.category}
+            customCategories={customCategories}
+          />
           {note.isPublic ? (
-            <Globe className="h-3.5 w-3.5 text-[var(--ozer-accent-muted)]" aria-label="Public" />
+            <Globe
+              className="h-3.5 w-3.5 text-[var(--ozer-accent-muted)]"
+              aria-label="Public"
+            />
           ) : null}
-          <h3 className="truncate font-medium text-[var(--workspace-shell-text)]">{note.title}</h3>
+          <h3 className="truncate font-medium text-[var(--workspace-shell-text)]">
+            {note.title}
+          </h3>
         </div>
         <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">
           {previewContent(note.content, 100) || 'No content yet'}
@@ -626,12 +658,19 @@ function FileListRow({
         <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
-            <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text-muted)]">File</Badge>
+            <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text-muted)]">
+              File
+            </Badge>
             <CategoryBadge category={doc.category} />
             {doc.isPublic ? (
-              <Globe className="h-3.5 w-3.5 text-[var(--ozer-accent-muted)]" aria-label="Public" />
+              <Globe
+                className="h-3.5 w-3.5 text-[var(--ozer-accent-muted)]"
+                aria-label="Public"
+              />
             ) : null}
-            <span className="font-medium text-[var(--workspace-shell-text)]">{doc.title}</span>
+            <span className="font-medium text-[var(--workspace-shell-text)]">
+              {doc.title}
+            </span>
           </div>
           <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {doc.kind === 'uploaded'
@@ -649,7 +688,9 @@ function FileListRow({
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-xs text-[var(--workspace-shell-text-muted)]">{formatDate(doc.updatedAt)}</span>
+        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {formatDate(doc.updatedAt)}
+        </span>
         {canDelete ? (
           <Button
             type="button"
@@ -722,7 +763,7 @@ function NoteFormSheet({
   );
   const [tags, setTags] = useState<string[]>(note?.tags ?? []);
   const [link, setLink] = useState<LinkValue>(
-    note ? linkFromItem(note) : defaultLink ?? null,
+    note ? linkFromItem(note) : (defaultLink ?? null),
   );
   const [savedNoteId, setSavedNoteId] = useState<string | undefined>(note?.id);
 
@@ -733,7 +774,7 @@ function NoteFormSheet({
       setIsPinned(note?.isPinned ?? false);
       setCategory(note?.category ?? 'idea');
       setTags(note?.tags ?? []);
-      setLink(note ? linkFromItem(note) : defaultLink ?? null);
+      setLink(note ? linkFromItem(note) : (defaultLink ?? null));
       setSavedNoteId(note?.id);
     }
   }, [open, note, defaultLink]);
@@ -783,11 +824,15 @@ function NoteFormSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-[var(--workspace-shell-text)]">{title}</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">
+            {title}
+          </SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Title (optional)</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Title (optional)
+            </Label>
             <Input
               value={noteTitle}
               onChange={(e) => setNoteTitle(e.target.value)}
@@ -801,7 +846,9 @@ function NoteFormSheet({
             customCategories={customCategories}
           />
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Content</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Content
+            </Label>
             <Textarea
               value={content}
               onChange={(e) => setContent(e.target.value)}
@@ -811,7 +858,9 @@ function NoteFormSheet({
           </div>
           {linkOptions.length > 0 ? (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Link to</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Link to
+              </Label>
               <LinkToSelect
                 options={linkOptions}
                 value={link}
@@ -820,7 +869,9 @@ function NoteFormSheet({
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Tags</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Tags
+            </Label>
             <TagsInput tags={tags} onChange={setTags} disabled={pending} />
           </div>
           <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -934,8 +985,7 @@ function UploadFileSheet({
           accountSlug,
           title: title || file.name,
           docType,
-          financialYear:
-            financialYear === '__none__' ? null : financialYear,
+          financialYear: financialYear === '__none__' ? null : financialYear,
           category,
           tags,
           link,
@@ -955,11 +1005,15 @@ function UploadFileSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-[var(--workspace-shell-text)]">Upload file</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">
+            Upload file
+          </SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">File</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              File
+            </Label>
             <input
               ref={fileRef}
               type="file"
@@ -984,7 +1038,9 @@ function UploadFileSheet({
             </Button>
           </div>
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Title
+            </Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -992,8 +1048,13 @@ function UploadFileSheet({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Document type</Label>
-            <Select value={docType} onValueChange={(value) => setDocType(value as DocTypeOption)}>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Document type
+            </Label>
+            <Select
+              value={docType}
+              onValueChange={(value) => setDocType(value as DocTypeOption)}
+            >
               <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
@@ -1007,7 +1068,9 @@ function UploadFileSheet({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Financial year</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Financial year
+            </Label>
             <Select value={financialYear} onValueChange={setFinancialYear}>
               <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                 <SelectValue placeholder="None" />
@@ -1029,7 +1092,9 @@ function UploadFileSheet({
           />
           {linkOptions.length > 0 ? (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Link to</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Link to
+              </Label>
               <LinkToSelect
                 options={linkOptions}
                 value={link}
@@ -1038,7 +1103,9 @@ function UploadFileSheet({
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Tags</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Tags
+            </Label>
             <TagsInput tags={tags} onChange={setTags} disabled={pending} />
           </div>
           <Button
@@ -1161,11 +1228,15 @@ function FileDetailSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-[var(--workspace-shell-text)]">Edit file</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">
+            Edit file
+          </SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Title
+            </Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
@@ -1174,7 +1245,9 @@ function FileDetailSheet({
             />
           </div>
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Document type</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Document type
+            </Label>
             <Select
               value={docType}
               onValueChange={(value) => setDocType(value as DocTypeOption)}
@@ -1193,7 +1266,9 @@ function FileDetailSheet({
             </Select>
           </div>
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Financial year</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Financial year
+            </Label>
             <Select
               value={financialYear}
               onValueChange={setFinancialYear}
@@ -1219,7 +1294,9 @@ function FileDetailSheet({
           />
           {linkOptions.length > 0 ? (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Link to</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Link to
+              </Label>
               <LinkToSelect
                 options={linkOptions}
                 value={link}
@@ -1229,8 +1306,14 @@ function FileDetailSheet({
             </div>
           ) : null}
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Tags</Label>
-            <TagsInput tags={tags} onChange={setTags} disabled={!canEdit || pending} />
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Tags
+            </Label>
+            <TagsInput
+              tags={tags}
+              onChange={setTags}
+              disabled={!canEdit || pending}
+            />
           </div>
           {doc.kind === 'uploaded' ? (
             <>
@@ -1249,7 +1332,7 @@ function FileDetailSheet({
               </Button>
             </>
           ) : (
-            <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text-muted)]">
+            <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
               {doc.content || 'No content'}
             </p>
           )}

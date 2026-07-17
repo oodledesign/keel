@@ -4,11 +4,13 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { buildProposalPdf } from '~/home/[account]/proposals/_lib/server/proposal-pdf';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
-import { buildProposalPdf } from '~/home/[account]/proposals/_lib/server/proposal-pdf';
-
-async function buildPayload(proposal: Record<string, unknown>, accountId: string) {
+async function buildPayload(
+  proposal: Record<string, unknown>,
+  accountId: string,
+) {
   const client = getSupabaseServerAdminClient();
   const [{ data: clientRow }, brand, { data: account }] = await Promise.all([
     proposal.client_id
@@ -54,7 +56,10 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     if (proposalError || !proposal) {
-      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Proposal not found' },
+        { status: 404 },
+      );
     }
 
     const payload = await buildPayload(proposal, proposal.account_id);
@@ -85,7 +90,10 @@ export async function GET(request: Request) {
       .eq('id', proposalId)
       .single();
     if (invError || !proposal) {
-      return NextResponse.json({ error: 'Proposal not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Proposal not found' },
+        { status: 404 },
+      );
     }
 
     const payload = await buildPayload(proposal, proposal.account_id);
@@ -102,5 +110,8 @@ export async function GET(request: Request) {
     });
   }
 
-  return NextResponse.json({ error: 'Provide token or proposalId' }, { status: 400 });
+  return NextResponse.json(
+    { error: 'Provide token or proposalId' },
+    { status: 400 },
+  );
 }

@@ -8,7 +8,8 @@ type Role = string;
 const roles: Record<string, string> = {
   owner: '',
   admin: '',
-  staff: 'bg-blue-50 hover:bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:hover:bg-blue-500/10',
+  staff:
+    'bg-blue-50 hover:bg-blue-50 text-blue-500 dark:bg-blue-500/10 dark:hover:bg-blue-500/10',
   contractor:
     'bg-amber-50 hover:bg-amber-50 text-amber-600 dark:bg-amber-500/10 dark:hover:bg-amber-500/10',
   client: 'bg-muted hover:bg-muted text-muted-foreground',

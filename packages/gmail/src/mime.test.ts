@@ -88,7 +88,9 @@ describe('gmail mime', () => {
           {
             mimeType: 'text/html',
             body: {
-              data: Buffer.from('<p>HTML body</p>', 'utf8').toString('base64url'),
+              data: Buffer.from('<p>HTML body</p>', 'utf8').toString(
+                'base64url',
+              ),
             },
           },
         ],

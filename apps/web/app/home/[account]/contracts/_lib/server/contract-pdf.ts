@@ -66,7 +66,9 @@ function htmlToPlainText(html: string): string {
     .trim();
 }
 
-function parseDataUrl(dataUrl: string): { mime: string; bytes: Uint8Array } | null {
+function parseDataUrl(
+  dataUrl: string,
+): { mime: string; bytes: Uint8Array } | null {
   const match = /^data:([^;]+);base64,(.+)$/.exec(dataUrl);
   if (!match) return null;
   try {
@@ -187,10 +189,7 @@ async function drawSignatureBlock(params: {
   return cursorY;
 }
 
-function wrapText(
-  text: string,
-  maxChars: number,
-): string[] {
+function wrapText(text: string, maxChars: number): string[] {
   const lines: string[] = [];
   const paragraphs = text.split('\n');
 
@@ -219,7 +218,9 @@ function wrapText(
   return lines;
 }
 
-export async function buildContractPdf(contract: ContractForPdf): Promise<Uint8Array> {
+export async function buildContractPdf(
+  contract: ContractForPdf,
+): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -246,17 +247,23 @@ export async function buildContractPdf(contract: ContractForPdf): Promise<Uint8A
 
   drawLine(contract.title, 18, true);
   drawLine(`Status: ${contract.status}`, 10);
-  drawLine(`Total: ${formatPence(contract.total_pence, contract.currency)}`, 10);
+  drawLine(
+    `Total: ${formatPence(contract.total_pence, contract.currency)}`,
+    10,
+  );
   y -= 8;
 
   if (contract.client) {
     drawLine('Client', 12, true);
     const name =
       contract.client.display_name ??
-      ([contract.client.first_name, contract.client.last_name].filter(Boolean).join(' ') ||
+      ([contract.client.first_name, contract.client.last_name]
+        .filter(Boolean)
+        .join(' ') ||
         '—');
     drawLine(name, 10);
-    if (contract.client.company_name) drawLine(contract.client.company_name, 10);
+    if (contract.client.company_name)
+      drawLine(contract.client.company_name, 10);
     if (contract.client.email) drawLine(contract.client.email, 10);
     y -= 8;
   }

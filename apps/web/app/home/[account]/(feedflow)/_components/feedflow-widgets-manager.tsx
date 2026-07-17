@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -106,7 +107,10 @@ export function FeedflowWidgetsManager(props: {
             placeholder="Homepage feed"
           />
         </div>
-        <Button type="submit" disabled={busy || props.socialAccounts.length === 0}>
+        <Button
+          type="submit"
+          disabled={busy || props.socialAccounts.length === 0}
+        >
           {busy ? 'Creating…' : 'Create widget'}
         </Button>
       </form>
@@ -114,7 +118,7 @@ export function FeedflowWidgetsManager(props: {
       {props.widgets.length > 0 ? (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[32rem] text-left text-sm">
-            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Embed key</th>

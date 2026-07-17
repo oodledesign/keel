@@ -1,10 +1,11 @@
 import { type NextRequest } from 'next/server';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import { loadProjectsDueForPagespeed } from '~/lib/pagespeed/db';
 import { triggerPagespeedRun } from '~/lib/pagespeed/trigger-run';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
 export const maxDuration = 60;

@@ -60,23 +60,23 @@ export async function saveDraftToGmail(input: {
 
   const [{ data: thread }, { data: connection }, { data: settings }] =
     await Promise.all([
-    admin
-      .from('email_threads')
-      .select('id, gmail_thread_id, subject')
-      .eq('id', draftRecord.thread_id)
-      .eq('user_id', input.userId)
-      .maybeSingle(),
-    admin
-      .from('google_connections')
-      .select('google_email')
-      .eq('user_id', input.userId)
-      .maybeSingle(),
-    admin
-      .from('email_assistant_settings')
-      .select('signature, signature_is_html')
-      .eq('user_id', input.userId)
-      .maybeSingle(),
-  ]);
+      admin
+        .from('email_threads')
+        .select('id, gmail_thread_id, subject')
+        .eq('id', draftRecord.thread_id)
+        .eq('user_id', input.userId)
+        .maybeSingle(),
+      admin
+        .from('google_connections')
+        .select('google_email')
+        .eq('user_id', input.userId)
+        .maybeSingle(),
+      admin
+        .from('email_assistant_settings')
+        .select('signature, signature_is_html')
+        .eq('user_id', input.userId)
+        .maybeSingle(),
+    ]);
 
   if (!thread) {
     throw new Error('Thread not found');

@@ -6,33 +6,86 @@ export type ActivityAppIconInfo = {
   background: string;
 };
 
-const BUNDLE_HOSTS: Array<{ match: string; host: string; background: string }> = [
-  { match: 'com.google.chrome', host: 'google.com', background: '#4285F4' },
-  { match: 'com.brave.browser', host: 'brave.com', background: '#FB542B' },
-  { match: 'com.microsoft.edgemac', host: 'microsoft.com', background: '#0078D4' },
-  { match: 'org.mozilla.firefox', host: 'mozilla.org', background: '#FF7139' },
-  { match: 'com.apple.safari', host: 'apple.com', background: '#0A84FF' },
-  { match: 'com.todesktop.cursor', host: 'cursor.com', background: '#6B4FBB' },
-  { match: 'com.microsoft.vscode', host: 'code.visualstudio.com', background: '#007ACC' },
-  { match: 'com.figma.desktop', host: 'figma.com', background: '#A259FF' },
-  { match: 'com.adobe.illustrator', host: 'adobe.com', background: '#FF9A00' },
-  { match: 'com.adobe.photoshop', host: 'adobe.com', background: '#31A8FF' },
-  { match: 'com.microsoft.word', host: 'microsoft.com', background: '#2B579A' },
-  { match: 'com.microsoft.excel', host: 'microsoft.com', background: '#217346' },
-  { match: 'com.microsoft.powerpoint', host: 'microsoft.com', background: '#D24726' },
-  { match: 'com.microsoft.teams', host: 'teams.microsoft.com', background: '#6264A7' },
-  { match: 'com.microsoft.outlook', host: 'outlook.com', background: '#0078D4' },
-  { match: 'com.apple.mail', host: 'apple.com', background: '#0A84FF' },
-  { match: 'com.readdle.sparkdesktop', host: 'sparkmailapp.com', background: '#FF4F00' },
-  { match: 'com.tinyspeck.slackmacgap', host: 'slack.com', background: '#4A154B' },
-  { match: 'com.hnc.discord', host: 'discord.com', background: '#5865F2' },
-  { match: 'com.notion.id', host: 'notion.so', background: '#000000' },
-  { match: 'com.linear', host: 'linear.app', background: '#5E6AD2' },
-  { match: 'com.zoom.xos', host: 'zoom.us', background: '#2D8CFF' },
-  { match: 'us.zoom.xos', host: 'zoom.us', background: '#2D8CFF' },
-];
+const BUNDLE_HOSTS: Array<{ match: string; host: string; background: string }> =
+  [
+    { match: 'com.google.chrome', host: 'google.com', background: '#4285F4' },
+    { match: 'com.brave.browser', host: 'brave.com', background: '#FB542B' },
+    {
+      match: 'com.microsoft.edgemac',
+      host: 'microsoft.com',
+      background: '#0078D4',
+    },
+    {
+      match: 'org.mozilla.firefox',
+      host: 'mozilla.org',
+      background: '#FF7139',
+    },
+    { match: 'com.apple.safari', host: 'apple.com', background: '#0A84FF' },
+    {
+      match: 'com.todesktop.cursor',
+      host: 'cursor.com',
+      background: '#6B4FBB',
+    },
+    {
+      match: 'com.microsoft.vscode',
+      host: 'code.visualstudio.com',
+      background: '#007ACC',
+    },
+    { match: 'com.figma.desktop', host: 'figma.com', background: '#A259FF' },
+    {
+      match: 'com.adobe.illustrator',
+      host: 'adobe.com',
+      background: '#FF9A00',
+    },
+    { match: 'com.adobe.photoshop', host: 'adobe.com', background: '#31A8FF' },
+    {
+      match: 'com.microsoft.word',
+      host: 'microsoft.com',
+      background: '#2B579A',
+    },
+    {
+      match: 'com.microsoft.excel',
+      host: 'microsoft.com',
+      background: '#217346',
+    },
+    {
+      match: 'com.microsoft.powerpoint',
+      host: 'microsoft.com',
+      background: '#D24726',
+    },
+    {
+      match: 'com.microsoft.teams',
+      host: 'teams.microsoft.com',
+      background: '#6264A7',
+    },
+    {
+      match: 'com.microsoft.outlook',
+      host: 'outlook.com',
+      background: '#0078D4',
+    },
+    { match: 'com.apple.mail', host: 'apple.com', background: '#0A84FF' },
+    {
+      match: 'com.readdle.sparkdesktop',
+      host: 'sparkmailapp.com',
+      background: '#FF4F00',
+    },
+    {
+      match: 'com.tinyspeck.slackmacgap',
+      host: 'slack.com',
+      background: '#4A154B',
+    },
+    { match: 'com.hnc.discord', host: 'discord.com', background: '#5865F2' },
+    { match: 'com.notion.id', host: 'notion.so', background: '#000000' },
+    { match: 'com.linear', host: 'linear.app', background: '#5E6AD2' },
+    { match: 'com.zoom.xos', host: 'zoom.us', background: '#2D8CFF' },
+    { match: 'us.zoom.xos', host: 'zoom.us', background: '#2D8CFF' },
+  ];
 
-const APP_NAME_HOSTS: Array<{ match: string; host: string; background: string }> = [
+const APP_NAME_HOSTS: Array<{
+  match: string;
+  host: string;
+  background: string;
+}> = [
   { match: 'chrome', host: 'google.com', background: '#4285F4' },
   { match: 'cursor', host: 'cursor.com', background: '#6B4FBB' },
   { match: 'figma', host: 'figma.com', background: '#A259FF' },
@@ -44,7 +97,11 @@ const APP_NAME_HOSTS: Array<{ match: string; host: string; background: string }>
   { match: 'outlook', host: 'outlook.com', background: '#0078D4' },
   { match: 'mail', host: 'apple.com', background: '#0A84FF' },
   { match: 'safari', host: 'apple.com', background: '#0A84FF' },
-  { match: 'visual studio code', host: 'code.visualstudio.com', background: '#007ACC' },
+  {
+    match: 'visual studio code',
+    host: 'code.visualstudio.com',
+    background: '#007ACC',
+  },
 ];
 
 function faviconUrl(host: string) {

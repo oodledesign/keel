@@ -2,6 +2,8 @@ import 'server-only';
 
 import { redirect } from 'next/navigation';
 
+import pathsConfig from '~/config/paths.config';
+
 import { getTeamAccountAccess } from '../../../_lib/role-access';
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -9,7 +11,6 @@ import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
-import pathsConfig from '~/config/paths.config';
 
 export async function loadJobsPageData(accountSlug: string) {
   const workspace = await loadTeamWorkspace(accountSlug);

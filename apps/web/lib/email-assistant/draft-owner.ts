@@ -19,12 +19,18 @@ export async function resolveDraftOwnerContext(
         .select('google_email')
         .eq('user_id', userId)
         .maybeSingle(),
-      admin.from('accounts').select('name, email').eq('id', userId).maybeSingle(),
+      admin
+        .from('accounts')
+        .select('name, email')
+        .eq('id', userId)
+        .maybeSingle(),
       admin.auth.admin.getUserById(userId),
     ]);
 
   const ownerEmail =
-    (connection as { google_email?: string | null } | null)?.google_email?.trim() ||
+    (
+      connection as { google_email?: string | null } | null
+    )?.google_email?.trim() ||
     authUser?.user?.email?.trim() ||
     (account as { email?: string | null } | null)?.email?.trim() ||
     '';
@@ -37,7 +43,8 @@ export async function resolveDraftOwnerContext(
     | Record<string, unknown>
     | undefined;
 
-  let displayName = (account as { name?: string | null } | null)?.name?.trim() || null;
+  let displayName =
+    (account as { name?: string | null } | null)?.name?.trim() || null;
 
   if (!displayName && meta) {
     for (const key of ['full_name', 'name'] as const) {

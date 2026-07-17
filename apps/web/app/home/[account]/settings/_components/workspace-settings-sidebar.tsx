@@ -8,9 +8,9 @@ import { CalendarOff, type LucideIcon } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import {
-  isWorkspaceSettingsNavActive,
   type WorkspaceSettingsNavIcon,
   type WorkspaceSettingsNavItem,
+  isWorkspaceSettingsNavActive,
 } from '../_lib/workspace-settings-nav';
 
 const NAV_ICONS: Record<WorkspaceSettingsNavIcon, LucideIcon> = {
@@ -33,10 +33,7 @@ export function WorkspaceSettingsSidebar({
   }
 
   return (
-    <nav
-      aria-label="Workspace settings"
-      className="w-full shrink-0 lg:w-52"
-    >
+    <nav aria-label="Workspace settings" className="w-full shrink-0 lg:w-52">
       <ul className="flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:overflow-visible lg:pb-0">
         {items.map((item) => {
           const active = isWorkspaceSettingsNavActive(

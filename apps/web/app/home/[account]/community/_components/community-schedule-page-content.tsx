@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, useTransition } from 'react';
+
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
@@ -32,18 +33,17 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
-import { WorkspaceRichTextEditor } from '~/components/workspace-rich-text';
-
-import { createCommunityMeetup } from '../_lib/server/community-schedule.actions';
 import type {
   GroupMemberOption,
   MeetupListRow,
   MeetupSeriesOption,
   MeetupTemplate,
 } from '../_lib/community-schedule.types';
+import { createCommunityMeetup } from '../_lib/server/community-schedule.actions';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
@@ -163,10 +163,20 @@ export function CommunitySchedulePageContent({
         </Button>
       </div>
 
-      <MeetupSection title="Coming up" rows={upcoming} accountSlug={accountSlug} emptyMessage="No upcoming meetups yet. Schedule your next group session." />
+      <MeetupSection
+        title="Coming up"
+        rows={upcoming}
+        accountSlug={accountSlug}
+        emptyMessage="No upcoming meetups yet. Schedule your next group session."
+      />
 
       {past.length > 0 ? (
-        <MeetupSection title="Past meetups" rows={past} accountSlug={accountSlug} muted />
+        <MeetupSection
+          title="Past meetups"
+          rows={past}
+          accountSlug={accountSlug}
+          muted
+        />
       ) : null}
 
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
@@ -227,7 +237,11 @@ export function CommunitySchedulePageContent({
                 <Label>Series</Label>
                 <Select value={seriesId} onValueChange={setSeriesId}>
                   <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
-                    <SelectValue placeholder={series.length ? 'Choose series' : 'No series yet'} />
+                    <SelectValue
+                      placeholder={
+                        series.length ? 'Choose series' : 'No series yet'
+                      }
+                    />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectItem value="none">Standalone meetup</SelectItem>
@@ -286,7 +300,11 @@ export function CommunitySchedulePageContent({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending} className={workspaceBtnPrimaryMd}>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className={workspaceBtnPrimaryMd}
+              >
                 {isPending ? 'Creating…' : 'Create meetup'}
               </Button>
             </DialogFooter>
@@ -313,12 +331,14 @@ function MeetupSection({
   return (
     <section className={panelClass}>
       <div className="border-b border-[color:var(--workspace-shell-border)] px-5 py-4">
-        <h3 className="text-sm font-semibold uppercase tracking-wide text-amber-200/80">
+        <h3 className="text-sm font-semibold tracking-wide text-amber-200/80 uppercase">
           {title}
         </h3>
       </div>
       {rows.length === 0 ? (
-        <p className="px-5 py-8 text-sm text-[var(--workspace-shell-text)]/50">{emptyMessage}</p>
+        <p className="px-5 py-8 text-sm text-[var(--workspace-shell-text)]/50">
+          {emptyMessage}
+        </p>
       ) : (
         <ul className="divide-y divide-white/6">
           {rows.map((row) => (
@@ -329,7 +349,9 @@ function MeetupSection({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium text-[var(--workspace-shell-text)]">{row.title}</p>
+                    <p className="font-medium text-[var(--workspace-shell-text)]">
+                      {row.title}
+                    </p>
                     {row.seriesName ? (
                       <Badge
                         variant="outline"

@@ -9,8 +9,8 @@ import { toast } from '@kit/ui/sonner';
 
 import { SimpleMarkdownEditor } from '~/components/simple-markdown-editor';
 
-import { savePhasePageDoc } from '../../_lib/server/server-actions';
 import { getErrorMessage } from '../../_lib/error-message';
+import { savePhasePageDoc } from '../../_lib/server/server-actions';
 
 export function PhasePageEditor({
   accountId,
@@ -34,7 +34,9 @@ export function PhasePageEditor({
   onOpenAi?: () => void;
 }) {
   const [content, setContent] = useState(initialContent);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const [saveState, setSaveState] = useState<
+    'idle' | 'saving' | 'saved' | 'error'
+  >('idle');
   const [, startTransition] = useTransition();
   const lastSaved = useRef(initialContent);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -92,7 +94,9 @@ export function PhasePageEditor({
     <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-5">
       <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Phase page</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Phase page
+          </h2>
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {canEdit
               ? saveState === 'saving'

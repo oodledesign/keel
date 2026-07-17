@@ -10,13 +10,13 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import { Input } from '@kit/ui/input';
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import { Input } from '@kit/ui/input';
 
 export function JobsPmToolbar({
   search,
@@ -52,8 +52,8 @@ export function JobsPmToolbar({
         </Button>
       )}
 
-      <div className="relative min-w-[180px] flex-1 max-w-xs">
-        <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+      <div className="relative max-w-xs min-w-[180px] flex-1">
+        <Search className="pointer-events-none absolute top-1/2 left-2.5 h-3.5 w-3.5 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
         <Input
           value={search}
           onChange={(e) => onSearchChange(e.target.value)}
@@ -73,7 +73,9 @@ export function JobsPmToolbar({
             <button
               type="button"
               className={`inline-flex h-8 items-center gap-1.5 rounded-md px-2.5 text-xs text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] ${
-                priorityFilter ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]' : ''
+                priorityFilter
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : ''
               }`}
             >
               <Filter className="h-3.5 w-3.5" />

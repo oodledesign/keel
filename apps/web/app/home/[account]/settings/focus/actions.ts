@@ -10,18 +10,18 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
+  type VacationSyncResult,
   getGmailVacationSettings,
   hasGmailVacationScope,
   loadGoogleConnectionMeta,
   setGmailVacationOff,
   setGmailVacationOn,
-  type VacationSyncResult,
 } from '~/lib/gmail/vacation-responder';
 
 import {
-  WorkspaceFocusSettingsSchema,
   type GmailVacationStatus,
   type WorkspaceFocusSettings,
+  WorkspaceFocusSettingsSchema,
 } from './_lib/focus-settings.schema';
 
 type WorkspaceFocusSettingsRow = {
@@ -52,7 +52,9 @@ function formatTimeForClient(value: string | null | undefined): string {
   return value.slice(0, 5);
 }
 
-function mapRowToSettings(row: WorkspaceFocusSettingsRow): WorkspaceFocusSettings {
+function mapRowToSettings(
+  row: WorkspaceFocusSettingsRow,
+): WorkspaceFocusSettings {
   return {
     id: row.id,
     account_id: row.account_id,
@@ -116,8 +118,7 @@ export async function upsertWorkspaceFocusSettings(
   const parsed = WorkspaceFocusSettingsSchema.safeParse(data);
 
   if (!parsed.success) {
-    const message =
-      parsed.error.issues[0]?.message ?? 'Invalid focus settings';
+    const message = parsed.error.issues[0]?.message ?? 'Invalid focus settings';
     return { success: false, error: message };
   }
 
@@ -139,7 +140,8 @@ export async function upsertWorkspaceFocusSettings(
     .maybeSingle();
 
   const previousHolidayEnabled = Boolean(
-    (existing as { holiday_mode_enabled?: boolean } | null)?.holiday_mode_enabled,
+    (existing as { holiday_mode_enabled?: boolean } | null)
+      ?.holiday_mode_enabled,
   );
 
   const { error } = await client.from('workspace_focus_settings').upsert(
@@ -247,7 +249,10 @@ export async function autoDisableHolidayMode(accountId: string): Promise<void> {
 
   const gmailSync = await setGmailVacationOff(userId);
   if (!gmailSync.success) {
-    console.error('[focus] autoDisableHolidayMode Gmail sync:', gmailSync.error);
+    console.error(
+      '[focus] autoDisableHolidayMode Gmail sync:',
+      gmailSync.error,
+    );
   }
 
   await revalidateFocusSettingsPage(accountId);
@@ -267,9 +272,7 @@ async function assertAuthenticatedUserId(
 
 function buildHolidayGmailSubject(label: string): string {
   const trimmed = label.trim();
-  return trimmed
-    ? `Out of Office — ${trimmed}`
-    : 'Out of Office — Holiday';
+  return trimmed ? `Out of Office — ${trimmed}` : 'Out of Office — Holiday';
 }
 
 function buildHolidayGmailMessage(
@@ -286,10 +289,7 @@ function buildHolidayGmailMessage(
     settings.ooo_message.trim() ||
     "I'm currently away and will reply when I'm back.";
 
-  if (
-    settings.ooo_include_return_date &&
-    settings.holiday_mode_until
-  ) {
+  if (settings.ooo_include_return_date && settings.holiday_mode_until) {
     const returnDate = format(
       new Date(settings.holiday_mode_until),
       'EEEE, MMMM d, yyyy',

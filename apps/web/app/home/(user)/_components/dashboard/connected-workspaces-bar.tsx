@@ -14,7 +14,11 @@ type Props = {
   settingsHref: string;
 };
 
-export function ConnectedWorkspacesBar({ cards, includeWorkspaceTasks, settingsHref }: Props) {
+export function ConnectedWorkspacesBar({
+  cards,
+  includeWorkspaceTasks,
+  settingsHref,
+}: Props) {
   if (cards.length === 0) return null;
 
   const tasksBase = `${pathsConfig.app.home}/tasks`;
@@ -75,7 +79,7 @@ export function ConnectedWorkspacesBar({ cards, includeWorkspaceTasks, settingsH
               </Link>
               <Link
                 href={tasksHref}
-                className="rounded-md px-1.5 py-0.5 text-[10px] font-medium tabular-nums text-[var(--workspace-shell-text)]/50 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--ozer-accent)]"
+                className="rounded-md px-1.5 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text)]/50 tabular-nums transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--ozer-accent)]"
                 title={`${openCount} open tasks in ${card.name}`}
               >
                 {openCount} tasks

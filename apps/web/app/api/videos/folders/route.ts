@@ -1,4 +1,5 @@
 import { type NextRequest } from 'next/server';
+
 import { z } from 'zod';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';

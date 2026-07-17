@@ -15,22 +15,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
-import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
+import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
+import type {
+  WebsiteStack,
+  WebsiteStatus,
+} from '../_lib/schema/websites.schema';
+import { createWebsite, updateWebsite } from '../_lib/server/server-actions';
 import type { Website } from '../_lib/server/websites.service';
-import type { WebsiteStack, WebsiteStatus } from '../_lib/schema/websites.schema';
-import {
-  createWebsite,
-  updateWebsite,
-} from '../_lib/server/server-actions';
 
 type ClientOption = {
   id: string;
@@ -92,9 +92,7 @@ export function WebsiteForm({
     supabase_schema: website?.supabaseSchema ?? '',
     notes: website?.notes ?? '',
     hosting_notes: website?.hostingNotes ?? '',
-    launched_at: website?.launchedAt
-      ? website.launchedAt.slice(0, 10)
-      : '',
+    launched_at: website?.launchedAt ? website.launchedAt.slice(0, 10) : '',
   });
 
   const [createDeliveryProject, setCreateDeliveryProject] = useState(
@@ -141,9 +139,7 @@ export function WebsiteForm({
       .then((result) => {
         setJobs(
           (result.data ?? []).map((row) => {
-            const id = String(
-              (row as { id?: unknown }).id ?? '',
-            );
+            const id = String((row as { id?: unknown }).id ?? '');
             return {
               id,
               label: deliveryProjectTitle(row) || 'Untitled project',
@@ -569,7 +565,11 @@ export function WebsiteForm({
       </section>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={isPending} className={workspaceBtnPrimaryMd}>
+        <Button
+          type="submit"
+          disabled={isPending}
+          className={workspaceBtnPrimaryMd}
+        >
           {isPending
             ? 'Saving…'
             : mode === 'create'

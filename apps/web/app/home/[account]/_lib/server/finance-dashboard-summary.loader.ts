@@ -2,9 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import {
-  aggregateTransactionsByMonth,
-} from '~/lib/date-range/analytics-date-range';
+import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 
 import type { DashboardFinanceMonth } from './dashboard-page.loader';
@@ -17,10 +15,12 @@ export type FinanceDashboardSummary = {
   financeTrend: DashboardFinanceMonth[];
 };
 
-function isFinanceTableMissing(error: {
-  message?: string;
-  code?: string;
-} | null): boolean {
+function isFinanceTableMissing(
+  error: {
+    message?: string;
+    code?: string;
+  } | null,
+): boolean {
   if (!error) return false;
   const m = (error.message ?? '').toLowerCase();
   return (

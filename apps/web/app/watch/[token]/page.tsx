@@ -16,8 +16,7 @@ export async function generateMetadata({ params }: PublicWatchPageProps) {
   }
 
   const description =
-    data.video.description?.trim() ||
-    `Watch ${data.video.title}`;
+    data.video.description?.trim() || `Watch ${data.video.title}`;
 
   return {
     title: data.video.title,
@@ -39,7 +38,9 @@ export async function generateMetadata({ params }: PublicWatchPageProps) {
   };
 }
 
-export default async function PublicWatchPage({ params }: PublicWatchPageProps) {
+export default async function PublicWatchPage({
+  params,
+}: PublicWatchPageProps) {
   const { token } = await params;
   const data = await loadPublicVideoByToken(token);
 
@@ -60,7 +61,7 @@ export default async function PublicWatchPage({ params }: PublicWatchPageProps) 
     <main className="min-h-screen bg-[#0a0f14] text-[var(--workspace-shell-text)]">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-8 sm:px-6">
         <header className="mb-6 space-y-2">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">
             Hosted video
           </p>
           <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">

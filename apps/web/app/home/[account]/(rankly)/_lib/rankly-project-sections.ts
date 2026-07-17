@@ -64,7 +64,8 @@ export const RANKLY_PROJECT_SECTIONS: RanklyProjectSection[] = [
     icon: ScanSearch,
     pathKey: 'siteCrawler',
     dashboardTitle: 'Site Crawler',
-    dashboardBody: 'Internal crawl for broken links, metadata issues, and duplicates.',
+    dashboardBody:
+      'Internal crawl for broken links, metadata issues, and duplicates.',
   },
   {
     id: 'pages',
@@ -72,7 +73,8 @@ export const RANKLY_PROJECT_SECTIONS: RanklyProjectSection[] = [
     icon: LayoutList,
     pathKey: 'pages',
     dashboardTitle: 'Pages',
-    dashboardBody: 'Unified page scores and page-specific recommendations from crawl and PageSpeed data.',
+    dashboardBody:
+      'Unified page scores and page-specific recommendations from crawl and PageSpeed data.',
   },
   {
     id: 'pagespeed',

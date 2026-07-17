@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { authenticateRecorderRequest, recorderServiceUnavailable } from '~/lib/api-tokens/recorder-auth';
+import {
+  authenticateRecorderRequest,
+  recorderServiceUnavailable,
+} from '~/lib/api-tokens/recorder-auth';
 import { getRecorderCalendarEvent } from '~/lib/integrations/google-calendar/events';
 
 export const runtime = 'nodejs';
@@ -29,7 +32,9 @@ async function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
 }
 
 export async function GET(request: Request) {
-  const auth = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  const auth = await authenticateRecorderRequest(request, {
+    touchLastUsed: true,
+  });
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -53,7 +58,8 @@ export async function GET(request: Request) {
   } catch (err) {
     const message =
       err instanceof Error ? err.message : 'Could not load calendar event';
-    const isTimeout = message.includes('timeout') || message.includes('Timeout');
+    const isTimeout =
+      message.includes('timeout') || message.includes('Timeout');
     return NextResponse.json(
       { error: message },
       {

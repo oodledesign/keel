@@ -1,12 +1,12 @@
 'use client';
 
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useRef,
   useState,
   useSyncExternalStore,
-  type ReactNode,
 } from 'react';
 
 import { useRouter } from 'next/navigation';
@@ -17,12 +17,12 @@ import { cn } from '@kit/ui/utils';
 
 import { triggerHapticFeedback } from '~/lib/haptics';
 import { MOBILE_FLOATING_CHROME_SCROLL_PB } from '~/lib/mobile-nav/mobile-floating-chrome';
-import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
-import { WorkspaceMobileScrollArea } from '~/lib/pwa/workspace-mobile-scroll-area';
 import {
   isPullToRefreshEnabled,
   subscribePullToRefreshContext,
 } from '~/lib/pwa/pull-to-refresh-context';
+import { WorkspaceMobileScrollArea } from '~/lib/pwa/workspace-mobile-scroll-area';
+import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 
 const PULL_THRESHOLD = 72;
 const MAX_PULL = 112;
@@ -186,7 +186,10 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       const target = event.target;
 
       if (
-        !(target instanceof HTMLTextAreaElement || target instanceof HTMLInputElement)
+        !(
+          target instanceof HTMLTextAreaElement ||
+          target instanceof HTMLInputElement
+        )
       ) {
         return;
       }
@@ -205,7 +208,11 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
   const showSpinner = enabled && (pullDistance > 8 || refreshing);
 
   if (!enabled) {
-    return <WorkspaceMobileScrollArea className={className}>{children}</WorkspaceMobileScrollArea>;
+    return (
+      <WorkspaceMobileScrollArea className={className}>
+        {children}
+      </WorkspaceMobileScrollArea>
+    );
   }
 
   return (
@@ -239,7 +246,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]"
+        className="min-h-0 flex-1 [touch-action:pan-y] overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       >
         <div
           className={cn(

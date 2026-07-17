@@ -74,8 +74,8 @@ export async function getAccountCreditsLimit(
     }
 
     const items =
-      (subscription as { items?: Array<{ variant_id?: string | null }> }).items ??
-      [];
+      (subscription as { items?: Array<{ variant_id?: string | null }> })
+        .items ?? [];
 
     for (const item of items) {
       const variantId = item.variant_id;
@@ -104,8 +104,8 @@ export async function syncAccountCreditLimit(
     .maybeSingle();
 
   const previous =
-    (balance as { credits_monthly_limit?: number } | null)?.credits_monthly_limit ??
-    DEFAULT_CREDITS;
+    (balance as { credits_monthly_limit?: number } | null)
+      ?.credits_monthly_limit ?? DEFAULT_CREDITS;
 
   if (previous === nextLimit) {
     return { previous, current: nextLimit, changed: false };

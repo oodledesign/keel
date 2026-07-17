@@ -47,11 +47,7 @@ export async function sendWebPush(
     throw new Error('VAPID keys are not configured');
   }
 
-  webpush.setVapidDetails(
-    config.subject,
-    config.publicKey,
-    config.privateKey,
-  );
+  webpush.setVapidDetails(config.subject, config.publicKey, config.privateKey);
 
   try {
     await webpush.sendNotification(

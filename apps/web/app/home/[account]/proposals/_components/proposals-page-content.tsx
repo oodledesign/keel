@@ -5,7 +5,13 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import { FileText, PlusCircle, RefreshCw, Search, Sparkles } from 'lucide-react';
+import {
+  FileText,
+  PlusCircle,
+  RefreshCw,
+  Search,
+  Sparkles,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -15,26 +21,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@kit/ui/dialog';
+import { If } from '@kit/ui/if';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@kit/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
-import { If } from '@kit/ui/if';
 
 import pathsConfig from '~/config/paths.config';
-import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
-import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
-import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
-import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
 import {
   listNotesAndFilesForContextAction,
   loadNotesAndFilesContentAction,
 } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
+import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
+import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_lib/server/server-actions';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -125,7 +126,9 @@ export function ProposalsPageContent({
   const [creating, setCreating] = useState(false);
   const [createSheetOpen, setCreateSheetOpen] = useState(false);
   const [createMode, setCreateMode] = useState<'client' | 'deal'>('client');
-  const [clientOptions, setClientOptions] = useState<{ id: string; display_name: string | null }[]>([]);
+  const [clientOptions, setClientOptions] = useState<
+    { id: string; display_name: string | null }[]
+  >([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
   const [selectedDealId, setSelectedDealId] = useState('');
@@ -134,8 +137,12 @@ export function ProposalsPageContent({
   const [aiMode, setAiMode] = useState<'client' | 'deal'>('client');
   const [aiClientId, setAiClientId] = useState('');
   const [aiDealId, setAiDealId] = useState('');
-  const [aiTranscripts, setAiTranscripts] = useState<Array<{ id: string; title: string; content: string }>>([]);
-  const [aiSelectedTranscriptIds, setAiSelectedTranscriptIds] = useState<string[]>([]);
+  const [aiTranscripts, setAiTranscripts] = useState<
+    Array<{ id: string; title: string; content: string }>
+  >([]);
+  const [aiSelectedTranscriptIds, setAiSelectedTranscriptIds] = useState<
+    string[]
+  >([]);
   const [aiNotesFiles, setAiNotesFiles] = useState<
     Array<{
       id: string;
@@ -145,8 +152,12 @@ export function ProposalsPageContent({
       preview: string;
     }>
   >([]);
-  const [aiSelectedNotesFileKeys, setAiSelectedNotesFileKeys] = useState<string[]>([]);
-  const [aiReferenceProposals, setAiReferenceProposals] = useState<Array<{ id: string; title: string | null }>>([]);
+  const [aiSelectedNotesFileKeys, setAiSelectedNotesFileKeys] = useState<
+    string[]
+  >([]);
+  const [aiReferenceProposals, setAiReferenceProposals] = useState<
+    Array<{ id: string; title: string | null }>
+  >([]);
   const [aiReferenceProposalId, setAiReferenceProposalId] = useState('');
   const [aiGenerating, setAiGenerating] = useState(false);
   const [aiLoadingData, setAiLoadingData] = useState(false);
@@ -211,7 +222,9 @@ export function ProposalsPageContent({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setClientOptions((list ?? []) as { id: string; display_name: string | null }[]);
+        setClientOptions(
+          (list ?? []) as { id: string; display_name: string | null }[],
+        );
       })
       .catch(() => setClientOptions([]));
   }, [accountId]);
@@ -230,7 +243,10 @@ export function ProposalsPageContent({
         : Array.isArray((raw as { data?: unknown })?.data)
           ? (raw as { data: unknown[] }).data
           : [];
-      const options = (list ?? []) as { id: string; display_name: string | null }[];
+      const options = (list ?? []) as {
+        id: string;
+        display_name: string | null;
+      }[];
       setClientOptions(options);
       if (options.length > 0) setSelectedClientId(options[0]!.id);
       if (deals.length > 0) setSelectedDealId(deals[0]!.id);
@@ -325,12 +341,17 @@ export function ProposalsPageContent({
         : Array.isArray((raw as { data?: unknown })?.data)
           ? (raw as { data: unknown[] }).data
           : [];
-      const options = (list ?? []) as { id: string; display_name: string | null }[];
+      const options = (list ?? []) as {
+        id: string;
+        display_name: string | null;
+      }[];
       setClientOptions(options);
       if (options.length > 0) setAiClientId(options[0]!.id);
       if (deals.length > 0) setAiDealId(deals[0]!.id);
 
-      const proposalRows = ((proposalsResult as { data?: unknown })?.data ?? proposalsResult ?? []) as ProposalRow[];
+      const proposalRows = ((proposalsResult as { data?: unknown })?.data ??
+        proposalsResult ??
+        []) as ProposalRow[];
       setAiReferenceProposals(
         proposalRows.map((p) => ({ id: p.id, title: p.title })),
       );
@@ -346,7 +367,11 @@ export function ProposalsPageContent({
     const clientId = createMode === 'client' ? selectedClientId : undefined;
     const dealId = createMode === 'deal' ? selectedDealId : undefined;
     if (!clientId && !dealId) {
-      toast.error(createMode === 'client' ? 'Please select a client' : 'Please select a lead');
+      toast.error(
+        createMode === 'client'
+          ? 'Please select a client'
+          : 'Please select a lead',
+      );
       return;
     }
 
@@ -358,7 +383,9 @@ export function ProposalsPageContent({
         client_id: clientId ?? null,
         deal_id: dealId ?? null,
         recipient_name: deal?.contactName || null,
-        title: deal ? `Proposal for ${deal.contactName || deal.companyName || 'lead'}` : undefined,
+        title: deal
+          ? `Proposal for ${deal.contactName || deal.companyName || 'lead'}`
+          : undefined,
       });
       if (proposal?.id) {
         setCreateSheetOpen(false);
@@ -383,7 +410,10 @@ export function ProposalsPageContent({
       toast.error('Select a client or lead');
       return;
     }
-    if (aiSelectedTranscriptIds.length === 0 && aiSelectedNotesFileKeys.length === 0) {
+    if (
+      aiSelectedTranscriptIds.length === 0 &&
+      aiSelectedNotesFileKeys.length === 0
+    ) {
       toast.error('Select at least one transcript or note/file');
       return;
     }
@@ -402,8 +432,12 @@ export function ProposalsPageContent({
     try {
       let referenceProposalHtml: string | null = null;
       if (aiReferenceProposalId) {
-        const ref = await getProposal({ accountId, proposalId: aiReferenceProposalId });
-        referenceProposalHtml = (ref as { content_html?: string | null })?.content_html ?? null;
+        const ref = await getProposal({
+          accountId,
+          proposalId: aiReferenceProposalId,
+        });
+        referenceProposalHtml =
+          (ref as { content_html?: string | null })?.content_html ?? null;
       }
 
       const transcripts = aiTranscripts
@@ -411,11 +445,16 @@ export function ProposalsPageContent({
         .map((t) => ({ title: t.title, content: t.content }));
 
       const selectedRefs = aiNotesFiles
-        .filter((item) => aiSelectedNotesFileKeys.includes(`${item.type}:${item.id}`))
+        .filter((item) =>
+          aiSelectedNotesFileKeys.includes(`${item.type}:${item.id}`),
+        )
         .map((item) => ({ type: item.type, id: item.id, title: item.title }));
 
-      let contextNotes: Array<{ title: string; content: string; type: 'note' | 'file' }> =
-        [];
+      let contextNotes: Array<{
+        title: string;
+        content: string;
+        type: 'note' | 'file';
+      }> = [];
       if (selectedRefs.length > 0) {
         const loaded = await loadNotesAndFilesContentAction({
           accountId,
@@ -498,7 +537,10 @@ export function ProposalsPageContent({
     }
   };
 
-  const editPathBase = pathsConfig.app.accountProposalEdit.replace('[account]', accountSlug);
+  const editPathBase = pathsConfig.app.accountProposalEdit.replace(
+    '[account]',
+    accountSlug,
+  );
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
     { key: 'unapproved', label: 'Unapproved', count: counts.unapproved },
@@ -509,7 +551,9 @@ export function ProposalsPageContent({
   if (!canViewProposals) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-8">
-        <p className="text-[var(--workspace-shell-text-muted)]">You don&apos;t have access to proposals in this account.</p>
+        <p className="text-[var(--workspace-shell-text-muted)]">
+          You don&apos;t have access to proposals in this account.
+        </p>
       </div>
     );
   }
@@ -539,12 +583,20 @@ export function ProposalsPageContent({
             ))}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchProposals()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchProposals()}
+            >
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
             <If condition={canEditProposals}>
-              <Button variant="outline" size="sm" onClick={() => void openAiDialog()}>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void openAiDialog()}
+              >
                 <Sparkles className="mr-2 h-4 w-4" />
                 AI generate
               </Button>
@@ -561,8 +613,8 @@ export function ProposalsPageContent({
         </div>
 
         <div className="flex flex-wrap items-end gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <div className="relative min-w-[220px] flex-1 max-w-sm">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <div className="relative max-w-sm min-w-[220px] flex-1">
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <Input
               placeholder="Search title or recipient..."
               value={search}
@@ -589,18 +641,21 @@ export function ProposalsPageContent({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="text-[var(--workspace-shell-text-muted)]">
-                  <th className="pb-2 pr-4">Title</th>
-                  <th className="pb-2 pr-4">Recipient</th>
-                  <th className="pb-2 pr-4">Sent</th>
-                  <th className="pb-2 pr-4">Expires</th>
-                  <th className="pb-2 pr-4">Total</th>
-                  <th className="pb-2 pr-4">Status</th>
-                  <th className="pb-2 w-10" />
+                  <th className="pr-4 pb-2">Title</th>
+                  <th className="pr-4 pb-2">Recipient</th>
+                  <th className="pr-4 pb-2">Sent</th>
+                  <th className="pr-4 pb-2">Expires</th>
+                  <th className="pr-4 pb-2">Total</th>
+                  <th className="pr-4 pb-2">Status</th>
+                  <th className="w-10 pb-2" />
                 </tr>
               </thead>
               <tbody>
                 {proposals.map((row) => (
-                  <tr key={row.id} className="border-t border-[color:var(--workspace-shell-border)] hover:bg-white/3">
+                  <tr
+                    key={row.id}
+                    className="border-t border-[color:var(--workspace-shell-border)] hover:bg-white/3"
+                  >
                     <td className="py-3 pr-4">
                       <Link
                         href={editPathBase.replace('[id]', row.id)}
@@ -609,9 +664,15 @@ export function ProposalsPageContent({
                         {row.title?.trim() || 'Untitled proposal'}
                       </Link>
                     </td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{recipientLabel(row)}</td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(row.sent_at)}</td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(row.expires_at)}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {recipientLabel(row)}
+                    </td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {formatDate(row.sent_at)}
+                    </td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {formatDate(row.expires_at)}
+                    </td>
                     <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
                       {row.total_pence != null
                         ? formatPence(row.total_pence, row.currency ?? 'GBP')
@@ -641,7 +702,12 @@ export function ProposalsPageContent({
                 Page {page} of {totalPages} ({total} proposals)
               </span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
                   Previous
                 </Button>
                 <Button
@@ -669,7 +735,9 @@ export function ProposalsPageContent({
                 type="button"
                 onClick={() => setCreateMode('client')}
                 className={`rounded-full px-3 py-1.5 font-medium ${
-                  createMode === 'client' ? 'bg-[var(--ozer-accent)] text-[#09111F]' : 'text-[var(--workspace-shell-text-muted)]'
+                  createMode === 'client'
+                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                    : 'text-[var(--workspace-shell-text-muted)]'
                 }`}
               >
                 Client
@@ -678,7 +746,9 @@ export function ProposalsPageContent({
                 type="button"
                 onClick={() => setCreateMode('deal')}
                 className={`rounded-full px-3 py-1.5 font-medium ${
-                  createMode === 'deal' ? 'bg-[var(--ozer-accent)] text-[#09111F]' : 'text-[var(--workspace-shell-text-muted)]'
+                  createMode === 'deal'
+                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                    : 'text-[var(--workspace-shell-text-muted)]'
                 }`}
               >
                 Lead
@@ -695,7 +765,10 @@ export function ProposalsPageContent({
                   loading={clientsLoading}
                   placeholder="Select client"
                   emptyMessage="No clients"
-                  addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+                  addClientHref={pathsConfig.app.accountClients.replace(
+                    '[account]',
+                    accountSlug,
+                  )}
                 />
               </div>
             ) : (
@@ -709,7 +782,8 @@ export function ProposalsPageContent({
                   <option value="">Select lead</option>
                   {deals.map((deal) => (
                     <option key={deal.id} value={deal.id}>
-                      {deal.contactName || deal.companyName || 'Lead'} — {formatPence(Math.round(deal.value * 100))}
+                      {deal.contactName || deal.companyName || 'Lead'} —{' '}
+                      {formatPence(Math.round(deal.value * 100))}
                     </option>
                   ))}
                 </select>
@@ -736,7 +810,7 @@ export function ProposalsPageContent({
             <DialogTitle>Generate proposal with AI</DialogTitle>
           </DialogHeader>
           {aiLoadingData ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <p className="text-muted-foreground text-sm">Loading…</p>
           ) : (
             <div className="space-y-4">
               <div className="inline-flex gap-1 rounded-full border p-1 text-xs">
@@ -744,7 +818,9 @@ export function ProposalsPageContent({
                   type="button"
                   onClick={() => setAiMode('client')}
                   className={`rounded-full px-3 py-1.5 font-medium ${
-                    aiMode === 'client' ? 'bg-primary text-primary-foreground' : ''
+                    aiMode === 'client'
+                      ? 'bg-primary text-primary-foreground'
+                      : ''
                   }`}
                 >
                   Client
@@ -753,7 +829,9 @@ export function ProposalsPageContent({
                   type="button"
                   onClick={() => setAiMode('deal')}
                   className={`rounded-full px-3 py-1.5 font-medium ${
-                    aiMode === 'deal' ? 'bg-primary text-primary-foreground' : ''
+                    aiMode === 'deal'
+                      ? 'bg-primary text-primary-foreground'
+                      : ''
                   }`}
                 >
                   Lead
@@ -770,7 +848,10 @@ export function ProposalsPageContent({
                     loading={false}
                     placeholder="Select client"
                     emptyMessage="No clients"
-                    addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+                    addClientHref={pathsConfig.app.accountClients.replace(
+                      '[account]',
+                      accountSlug,
+                    )}
                   />
                 </div>
               ) : (
@@ -794,11 +875,16 @@ export function ProposalsPageContent({
               <div>
                 <Label>Transcripts</Label>
                 {aiTranscripts.length === 0 ? (
-                  <p className="mt-2 text-sm text-muted-foreground">No transcripts saved yet.</p>
+                  <p className="text-muted-foreground mt-2 text-sm">
+                    No transcripts saved yet.
+                  </p>
                 ) : (
                   <div className="mt-2 max-h-40 space-y-2 overflow-y-auto rounded-md border p-3">
                     {aiTranscripts.map((t) => (
-                      <label key={t.id} className="flex items-start gap-2 text-sm">
+                      <label
+                        key={t.id}
+                        className="flex items-start gap-2 text-sm"
+                      >
                         <Checkbox
                           checked={aiSelectedTranscriptIds.includes(t.id)}
                           onCheckedChange={(checked) => {
@@ -819,7 +905,7 @@ export function ProposalsPageContent({
               <div>
                 <Label>Notes and files</Label>
                 {aiNotesFiles.length === 0 ? (
-                  <p className="mt-2 text-sm text-muted-foreground">
+                  <p className="text-muted-foreground mt-2 text-sm">
                     No notes or files linked to this client yet.
                   </p>
                 ) : (
@@ -827,7 +913,10 @@ export function ProposalsPageContent({
                     {aiNotesFiles.map((item) => {
                       const key = `${item.type}:${item.id}`;
                       return (
-                        <label key={key} className="flex items-start gap-2 text-sm">
+                        <label
+                          key={key}
+                          className="flex items-start gap-2 text-sm"
+                        >
                           <Checkbox
                             checked={aiSelectedNotesFileKeys.includes(key)}
                             onCheckedChange={(checked) => {
@@ -877,9 +966,11 @@ export function ProposalsPageContent({
               </Button>
 
               {aiStreamPreview ? (
-                <div className="max-h-48 overflow-y-auto rounded-md border bg-muted/30 p-3 text-xs text-muted-foreground">
-                  <p className="mb-2 font-medium text-foreground">Preview</p>
-                  <pre className="whitespace-pre-wrap break-words">{aiStreamPreview.slice(0, 4000)}</pre>
+                <div className="bg-muted/30 text-muted-foreground max-h-48 overflow-y-auto rounded-md border p-3 text-xs">
+                  <p className="text-foreground mb-2 font-medium">Preview</p>
+                  <pre className="break-words whitespace-pre-wrap">
+                    {aiStreamPreview.slice(0, 4000)}
+                  </pre>
                 </div>
               ) : null}
             </div>

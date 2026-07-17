@@ -5,10 +5,7 @@
 
 export const WEBSITE_STYLE_TOKENS_SCHEMA_VERSION = '1.0' as const;
 
-export type WebsiteStyleSpacingDensity =
-  | 'compact'
-  | 'comfortable'
-  | 'spacious';
+export type WebsiteStyleSpacingDensity = 'compact' | 'comfortable' | 'spacious';
 
 export type WebsiteStyleButtonStyle = 'pill' | 'rounded' | 'square';
 
@@ -131,7 +128,11 @@ type LegacyStyleTokens = {
   secondary?: string;
   headingFont?: string;
   bodyFont?: string;
-  typeScale?: 'compact' | 'regular' | 'display' | WebsiteStyleTypography['typeScale'];
+  typeScale?:
+    | 'compact'
+    | 'regular'
+    | 'display'
+    | WebsiteStyleTypography['typeScale'];
   radius?: 'sharp' | 'soft' | 'round' | WebsiteStyleRadiusScale;
   spacingDensity?: 'tight' | 'regular' | 'airy' | WebsiteStyleSpacingDensity;
   photographyDirection?: string;
@@ -218,7 +219,9 @@ export function normalizeWebsiteStyleTokens(
 
   if (raw.colors && typeof raw.colors === 'object') {
     const neutrals = Array.isArray(raw.colors.neutrals)
-      ? raw.colors.neutrals.filter((item) => typeof item === 'string').slice(0, 7)
+      ? raw.colors.neutrals
+          .filter((item) => typeof item === 'string')
+          .slice(0, 7)
       : empty.colors.neutrals;
     while (neutrals.length < 5) {
       neutrals.push(empty.colors.neutrals[neutrals.length] ?? '#888888');
@@ -306,7 +309,9 @@ export function normalizeWebsiteStyleTokens(
   };
 }
 
-export function normalizeWebsiteStyleSystem(input: unknown): WebsiteStyleSystem {
+export function normalizeWebsiteStyleSystem(
+  input: unknown,
+): WebsiteStyleSystem {
   const empty = emptyWebsiteStyleSystem();
   if (!input || typeof input !== 'object') return empty;
 

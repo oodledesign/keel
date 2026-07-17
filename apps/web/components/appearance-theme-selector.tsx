@@ -2,8 +2,8 @@
 
 import { useTheme } from 'next-themes';
 
-import { Label } from '@kit/ui/label';
 import { Button } from '@kit/ui/button';
+import { Label } from '@kit/ui/label';
 
 const THEME_OPTIONS = [
   { value: 'light', label: 'Light' },
@@ -25,7 +25,10 @@ export function AppearanceThemeSelector() {
         <p className="text-muted-foreground text-sm">
           Choose light or dark mode. System follows your device setting.
           {resolvedTheme ? (
-            <span className="text-muted-foreground/80"> Currently {resolvedTheme}.</span>
+            <span className="text-muted-foreground/80">
+              {' '}
+              Currently {resolvedTheme}.
+            </span>
           ) : null}
         </p>
       </div>

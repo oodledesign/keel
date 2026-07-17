@@ -5,17 +5,19 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
-import type { Database } from '~/lib/database.types';
-
-import { queueBrainDeleteSource, queueBrainIndexSource } from '~/lib/brain/sync';
 import {
+  queueBrainDeleteSource,
+  queueBrainIndexSource,
+} from '~/lib/brain/sync';
+import type { Database } from '~/lib/database.types';
+import {
+  type SpeakerBinding,
+  type SpeakerMappings,
+  type TranscriptSegment,
   normalizeSpeakerMappings,
   parseTranscriptContent,
   resolveTranscriptSegments,
   serializeResolvedTranscriptSegments,
-  type SpeakerBinding,
-  type SpeakerMappings,
-  type TranscriptSegment,
 } from '~/lib/recorder/transcript-speakers';
 
 export type MeetingCalendarAttendee = {
@@ -122,13 +124,15 @@ function normalizeEmbeddedRow<T>(value: T | T[] | null | undefined): T | null {
   return value;
 }
 
-function clientDisplayName(row: {
-  display_name?: string | null;
-  company_name?: string | null;
-  first_name?: string | null;
-  last_name?: string | null;
-  name?: string | null;
-} | null) {
+function clientDisplayName(
+  row: {
+    display_name?: string | null;
+    company_name?: string | null;
+    first_name?: string | null;
+    last_name?: string | null;
+    name?: string | null;
+  } | null,
+) {
   if (!row) return null;
   const named =
     row.display_name?.trim() ||
@@ -475,7 +479,9 @@ class MeetingTranscriptsService {
       query = query.eq('project_id', input.projectId);
     }
 
-    const { data, error } = await query.order('created_at', { ascending: false });
+    const { data, error } = await query.order('created_at', {
+      ascending: false,
+    });
 
     if (error) throw new Error(error.message);
     return ((data ?? []) as MeetingTranscriptRow[]).map(mapMeetingTranscript);
@@ -517,7 +523,10 @@ class MeetingTranscriptsService {
     }
 
     if (projectId) {
-      const project = await this.assertProjectInAccount(input.accountId, projectId);
+      const project = await this.assertProjectInAccount(
+        input.accountId,
+        projectId,
+      );
       if (clientId && project.client_id && project.client_id !== clientId) {
         throw new Error('Client does not match this project');
       }
@@ -595,7 +604,9 @@ class MeetingTranscriptsService {
         ? input.clientId?.trim() || null
         : existing.clientId;
     const nextDealId =
-      input.dealId !== undefined ? input.dealId?.trim() || null : existing.dealId;
+      input.dealId !== undefined
+        ? input.dealId?.trim() || null
+        : existing.dealId;
 
     if (input.clientId !== undefined || input.dealId !== undefined) {
       if (!nextClientId && !nextDealId) {
@@ -665,10 +676,11 @@ class MeetingTranscriptsService {
         throw new Error('Transcript cannot be empty');
       }
 
-      const { clients, contacts, members } = await this.loadSpeakerResolutionData(
-        input.accountId,
-        existing.speakerMappings,
-      );
+      const { clients, contacts, members } =
+        await this.loadSpeakerResolutionData(
+          input.accountId,
+          existing.speakerMappings,
+        );
 
       payload.speaker_segments = segments;
       payload.content = serializeResolvedTranscriptSegments(
@@ -686,7 +698,9 @@ class MeetingTranscriptsService {
 
       const parsed = parseTranscriptContent(content);
       payload.content = content;
-      payload.speaker_segments = parsed.hasSpeakerLabels ? parsed.segments : null;
+      payload.speaker_segments = parsed.hasSpeakerLabels
+        ? parsed.segments
+        : null;
       if (!parsed.hasSpeakerLabels) {
         payload.speaker_mappings = {};
       }
@@ -773,21 +787,32 @@ class MeetingTranscriptsService {
     const clientIds = [
       ...new Set(
         Object.values(mappings)
-          .filter((binding): binding is Extract<SpeakerBinding, { type: 'client' }> => binding.type === 'client')
+          .filter(
+            (binding): binding is Extract<SpeakerBinding, { type: 'client' }> =>
+              binding.type === 'client',
+          )
           .map((binding) => binding.clientId),
       ),
     ];
     const contactIds = [
       ...new Set(
         Object.values(mappings)
-          .filter((binding): binding is Extract<SpeakerBinding, { type: 'contact' }> => binding.type === 'contact')
+          .filter(
+            (
+              binding,
+            ): binding is Extract<SpeakerBinding, { type: 'contact' }> =>
+              binding.type === 'contact',
+          )
           .map((binding) => binding.contactId),
       ),
     ];
     const memberUserIds = [
       ...new Set(
         Object.values(mappings)
-          .filter((binding): binding is Extract<SpeakerBinding, { type: 'member' }> => binding.type === 'member')
+          .filter(
+            (binding): binding is Extract<SpeakerBinding, { type: 'member' }> =>
+              binding.type === 'member',
+          )
           .map((binding) => binding.userId),
       ),
     ];
@@ -806,7 +831,10 @@ class MeetingTranscriptsService {
         const name =
           (row as { display_name?: string | null }).display_name?.trim() ||
           (row as { company_name?: string | null }).company_name?.trim() ||
-          [(row as { first_name?: string | null }).first_name, (row as { last_name?: string | null }).last_name]
+          [
+            (row as { first_name?: string | null }).first_name,
+            (row as { last_name?: string | null }).last_name,
+          ]
             .filter(Boolean)
             .join(' ')
             .trim() ||
@@ -844,7 +872,9 @@ class MeetingTranscriptsService {
 
       const resolvedUserIds = (data ?? [])
         .map((row: { user_id?: string }) => row.user_id)
-        .filter((userId: string | undefined): userId is string => Boolean(userId));
+        .filter((userId: string | undefined): userId is string =>
+          Boolean(userId),
+        );
 
       if (resolvedUserIds.length > 0) {
         const { data: personalAccounts, error: accountsError } = await this.db
@@ -864,9 +894,7 @@ class MeetingTranscriptsService {
           members.push({
             userId,
             name:
-              account?.name?.trim() ||
-              account?.email?.trim() ||
-              'Team member',
+              account?.name?.trim() || account?.email?.trim() || 'Team member',
           });
         }
       }

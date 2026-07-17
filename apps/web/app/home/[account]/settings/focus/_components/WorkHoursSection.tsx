@@ -35,10 +35,10 @@ import { cn } from '@kit/ui/utils';
 
 import {
   FOCUS_TIMEZONE_OPTIONS,
+  type FocusFormValues,
+  WORK_DAY_CHIPS,
   formatFocusTimeOptions,
   formatTimezoneLabel,
-  WORK_DAY_CHIPS,
-  type FocusFormValues,
 } from '../_lib/focus-form';
 
 type WorkHoursSectionProps = {
@@ -53,7 +53,9 @@ export function WorkHoursSection({ form }: WorkHoursSectionProps) {
   return (
     <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
       <div className="space-y-1">
-        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Work hours</h2>
+        <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+          Work hours
+        </h2>
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Activity outside these hours can be silenced for this workspace.
         </p>
@@ -65,7 +67,9 @@ export function WorkHoursSection({ form }: WorkHoursSectionProps) {
           name="work_days"
           render={({ field }) => (
             <FormItem>
-              <FormLabel className="text-[var(--workspace-shell-text-muted)]">Work days</FormLabel>
+              <FormLabel className="text-[var(--workspace-shell-text-muted)]">
+                Work days
+              </FormLabel>
               <FormControl>
                 <div
                   role="group"
@@ -81,7 +85,7 @@ export function WorkHoursSection({ form }: WorkHoursSectionProps) {
                         type="button"
                         aria-pressed={active}
                         className={cn(
-                          'min-w-[3rem] rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]',
+                          'min-w-[3rem] rounded-full border px-3 py-1.5 text-sm font-medium transition-colors focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none',
                           active
                             ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
                             : 'border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text-muted)] hover:border-[color:var(--workspace-shell-border)] hover:text-[var(--workspace-shell-text)]',
@@ -89,9 +93,7 @@ export function WorkHoursSection({ form }: WorkHoursSectionProps) {
                         onClick={() => {
                           const next = active
                             ? field.value.filter((value) => value !== day.value)
-                            : [...field.value, day.value].sort(
-                                (a, b) => a - b,
-                              );
+                            : [...field.value, day.value].sort((a, b) => a - b);
 
                           field.onChange(next);
                         }}
@@ -113,7 +115,9 @@ export function WorkHoursSection({ form }: WorkHoursSectionProps) {
             name="work_start_time"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[var(--workspace-shell-text-muted)]">From</FormLabel>
+                <FormLabel className="text-[var(--workspace-shell-text-muted)]">
+                  From
+                </FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-[var(--workspace-shell-text)]">
@@ -138,7 +142,9 @@ export function WorkHoursSection({ form }: WorkHoursSectionProps) {
             name="work_end_time"
             render={({ field }) => (
               <FormItem>
-                <FormLabel className="text-[var(--workspace-shell-text-muted)]">To</FormLabel>
+                <FormLabel className="text-[var(--workspace-shell-text-muted)]">
+                  To
+                </FormLabel>
                 <Select value={field.value} onValueChange={field.onChange}>
                   <FormControl>
                     <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-[var(--workspace-shell-text)]">
@@ -164,7 +170,9 @@ export function WorkHoursSection({ form }: WorkHoursSectionProps) {
           name="timezone"
           render={({ field }) => (
             <FormItem className="flex flex-col">
-              <FormLabel className="text-[var(--workspace-shell-text-muted)]">Timezone</FormLabel>
+              <FormLabel className="text-[var(--workspace-shell-text-muted)]">
+                Timezone
+              </FormLabel>
               <Popover open={timezoneOpen} onOpenChange={setTimezoneOpen}>
                 <PopoverTrigger asChild>
                   <FormControl>

@@ -102,11 +102,7 @@ export function NotificationsPopover({
     }
 
     return activeNotifications;
-  }, [
-    activeNotifications,
-    silencedNotifications,
-    showSilencedNotifications,
-  ]);
+  }, [activeNotifications, silencedNotifications, showSilencedNotifications]);
 
   const badgeCount = activeNotifications.length;
 
@@ -203,7 +199,11 @@ export function NotificationsPopover({
         sideOffset={10}
       >
         <div className={'flex items-center justify-between gap-3 px-3 py-2'}>
-          <div className={'text-sm font-semibold text-[var(--workspace-shell-text)]'}>
+          <div
+            className={
+              'text-sm font-semibold text-[var(--workspace-shell-text)]'
+            }
+          >
             {t('common:notifications')}
           </div>
           <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
@@ -218,7 +218,11 @@ export function NotificationsPopover({
         <Separator className="bg-[color:var(--workspace-shell-border)]" />
 
         <If condition={!visibleNotifications.length}>
-          <div className={'px-3 py-3 text-sm text-[var(--workspace-shell-text-muted)]'}>
+          <div
+            className={
+              'px-3 py-3 text-sm text-[var(--workspace-shell-text-muted)]'
+            }
+          >
             {t('common:noNotifications')}
           </div>
         </If>
@@ -229,7 +233,7 @@ export function NotificationsPopover({
           }
         >
           {showSilencedNotifications && silencedNotifications.length > 0 ? (
-            <div className="px-3 py-2 text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+            <div className="px-3 py-2 text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               While you were away
             </div>
           ) : null}
@@ -264,7 +268,8 @@ export function NotificationsPopover({
                 key={notification.id.toString()}
                 className={cn(
                   'flex min-h-18 flex-col items-start justify-center gap-y-1 px-3 py-2',
-                  isSilenced && 'bg-[var(--workspace-shell-sidebar-accent)] opacity-70',
+                  isSilenced &&
+                    'bg-[var(--workspace-shell-sidebar-accent)] opacity-70',
                 )}
                 onClick={() => {
                   if (onClick) {
@@ -291,7 +296,11 @@ export function NotificationsPopover({
                         </If>
                       </div>
 
-                      <span className={'text-xs text-[var(--workspace-shell-text-muted)]'}>
+                      <span
+                        className={
+                          'text-xs text-[var(--workspace-shell-text-muted)]'
+                        }
+                      >
                         {timeAgo(notification.created_at)}
                       </span>
                     </div>

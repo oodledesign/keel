@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  useEffect,
-  useRef,
-  useState,
-  type ReactNode,
-} from 'react';
+import { type ReactNode, useEffect, useRef, useState } from 'react';
 
 import {
   ChevronDown,
@@ -116,7 +111,7 @@ export function WireframePageViewer({
         <div className="flex items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] px-2 py-2">
           {sidebarOpen ? (
             <div className="min-w-0 px-1">
-              <p className="truncate text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+              <p className="truncate text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 Sections
               </p>
               <p className="truncate text-sm font-medium text-[var(--ozer-plum-900)]">
@@ -181,7 +176,7 @@ export function WireframePageViewer({
                         onClick={() => scrollToSection(section.id)}
                         className="flex w-full items-start gap-2 text-left"
                       >
-                        <span className="mt-0.5 text-[10px] font-semibold tabular-nums text-[var(--workspace-shell-text-muted)]">
+                        <span className="mt-0.5 text-[10px] font-semibold text-[var(--workspace-shell-text-muted)] tabular-nums">
                           {String(index + 1).padStart(2, '0')}
                         </span>
                         <span className="min-w-0 flex-1 text-sm font-semibold text-[var(--ozer-plum-900)]">
@@ -222,7 +217,7 @@ export function WireframePageViewer({
 
                       {clientFeedbackMode ? (
                         <div className="mt-2 space-y-1">
-                          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                          <p className="text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                             Your comment
                           </p>
                           {canEditClientComments ? (
@@ -243,14 +238,14 @@ export function WireframePageViewer({
                               {section.clientComment}
                             </p>
                           ) : (
-                            <p className="text-xs italic text-[var(--workspace-shell-text-muted)]">
+                            <p className="text-xs text-[var(--workspace-shell-text-muted)] italic">
                               No comment yet
                             </p>
                           )}
                         </div>
                       ) : (
                         <div className="mt-2 space-y-1">
-                          <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                          <p className="text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                             Notes
                           </p>
                           {canEditNotes ? (
@@ -258,10 +253,7 @@ export function WireframePageViewer({
                               value={section.notes ?? ''}
                               rows={2}
                               onChange={(event) =>
-                                onNotesChange?.(
-                                  section.id,
-                                  event.target.value,
-                                )
+                                onNotesChange?.(section.id, event.target.value)
                               }
                               placeholder="Internal notes…"
                               className="min-h-[4rem] border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] text-xs text-[var(--ozer-plum-900)]"
@@ -271,13 +263,13 @@ export function WireframePageViewer({
                               {section.notes}
                             </p>
                           ) : (
-                            <p className="text-xs italic text-[var(--workspace-shell-text-muted)]">
+                            <p className="text-xs text-[var(--workspace-shell-text-muted)] italic">
                               No notes
                             </p>
                           )}
                           {section.clientComment ? (
                             <div className="mt-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-cream-50)] px-2.5 py-2">
-                              <p className="text-[11px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                              <p className="text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                                 Client comment
                               </p>
                               <p className="mt-1 text-xs leading-relaxed text-[var(--ozer-plum-900)]">
@@ -357,7 +349,7 @@ export function WireframePageViewer({
                   className={cn(
                     'scroll-mt-4 border-b border-[color:var(--workspace-shell-border)]/40 last:border-b-0',
                     section.id === activeSectionId &&
-                      'ring-1 ring-inset ring-[var(--ozer-accent)]/25',
+                      'ring-1 ring-[var(--ozer-accent)]/25 ring-inset',
                   )}
                   onClick={() => setActiveSectionId(section.id)}
                 >

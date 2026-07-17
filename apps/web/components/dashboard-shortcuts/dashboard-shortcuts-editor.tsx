@@ -16,7 +16,10 @@ import { cn } from '@kit/ui/utils';
 
 import { searchShortcutCatalogAction } from '~/lib/dashboard-shortcuts/dashboard-shortcuts.actions';
 import { catalogItemHref } from '~/lib/dashboard-shortcuts/resolve-href';
-import type { ShortcutCatalogItem, StoredShortcut } from '~/lib/dashboard-shortcuts/types';
+import type {
+  ShortcutCatalogItem,
+  StoredShortcut,
+} from '~/lib/dashboard-shortcuts/types';
 import { catalogItemKey } from '~/lib/dashboard-shortcuts/types';
 import { resolveNavIconKey } from '~/lib/mobile-nav/nav-icon-keys';
 
@@ -106,7 +109,8 @@ export function DashboardShortcutsEditor({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          {helperText ?? `Pin up to ${maxShortcuts} quick links on your dashboard.`}
+          {helperText ??
+            `Pin up to ${maxShortcuts} quick links on your dashboard.`}
         </p>
         <Button
           type="button"
@@ -172,7 +176,7 @@ export function DashboardShortcutsEditor({
           </DialogHeader>
 
           <div className="relative">
-            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <Input
               autoFocus
               value={query}
@@ -184,9 +188,13 @@ export function DashboardShortcutsEditor({
 
           <div className="max-h-[50vh] overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)]">
             {pending && results.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">Searching…</p>
+              <p className="px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
+                Searching…
+              </p>
             ) : results.length === 0 ? (
-              <p className="px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">No matches.</p>
+              <p className="px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
+                No matches.
+              </p>
             ) : (
               <ul className="divide-y divide-white/[0.06]">
                 {results.map((item) => {

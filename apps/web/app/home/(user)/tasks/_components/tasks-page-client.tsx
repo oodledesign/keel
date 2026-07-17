@@ -9,9 +9,8 @@ import {
   useTransition,
 } from 'react';
 
-import { useRouter } from 'next/navigation';
-
 import dynamic from 'next/dynamic';
+import { useRouter } from 'next/navigation';
 
 import {
   AlertTriangle,
@@ -29,11 +28,9 @@ import {
   Users,
 } from 'lucide-react';
 
-import { Button } from '@kit/ui/button';
 import { Avatar, AvatarFallback } from '@kit/ui/avatar';
+import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
-import { cn } from '@kit/ui/utils';
-import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -46,11 +43,18 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import { cn } from '@kit/ui/utils';
 
-import { compareYmd, parseDueDateParts, toIsoDateString } from '../../../_lib/due-date-ymd';
-import type { TasksPageTask } from '../../_lib/server/tasks.loader';
-import { updateTask } from '../../_lib/actions/task-actions';
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+
+import {
+  compareYmd,
+  parseDueDateParts,
+  toIsoDateString,
+} from '../../../_lib/due-date-ymd';
 import { AddTaskDialog } from '../../_components/dashboard/add-task-dialog';
+import { updateTask } from '../../_lib/actions/task-actions';
+import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { InlineAddTaskRow } from './inline-add-task-row';
 import { InlineTaskTitle } from './tasks-inline-task-title';
 
@@ -134,7 +138,9 @@ function ClientCell({
   compact?: boolean;
 }) {
   if (!name?.trim()) {
-    return compact ? null : <span className="inline-block min-h-6 shrink-0" aria-hidden />;
+    return compact ? null : (
+      <span className="inline-block min-h-6 shrink-0" aria-hidden />
+    );
   }
 
   const initial = (name.trim()[0] ?? '?').toUpperCase();
@@ -160,7 +166,9 @@ function ClientCell({
           {initial}
         </AvatarFallback>
       </Avatar>
-      <span className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{name}</span>
+      <span className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+        {name}
+      </span>
     </span>
   );
 }
@@ -317,7 +325,10 @@ function InlineDueDate({
           )}
           aria-label="Set due date"
         >
-          <CalendarDays className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4" aria-hidden />
+          <CalendarDays
+            className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
+            aria-hidden
+          />
           <span>Add date</span>
         </button>
       </span>
@@ -374,15 +385,23 @@ function InlineDueDate({
             align === 'end' && 'justify-end',
             pending && 'opacity-60',
           )}
-          title={overdue ? `Overdue · ${dueDateLabel}` : dueDateLabel || 'Set due date'}
-          aria-label={dueDateLabel ? `Edit due date ${dueDateLabel}` : 'Set due date'}
+          title={
+            overdue
+              ? `Overdue · ${dueDateLabel}`
+              : dueDateLabel || 'Set due date'
+          }
+          aria-label={
+            dueDateLabel ? `Edit due date ${dueDateLabel}` : 'Set due date'
+          }
         >
           {dueDateLabel ? (
             <>
               <CalendarDays
                 className={cn(
                   'h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4',
-                  overdue ? 'text-rose-400' : 'text-[var(--workspace-shell-text-muted)]',
+                  overdue
+                    ? 'text-rose-400'
+                    : 'text-[var(--workspace-shell-text-muted)]',
                 )}
                 aria-hidden
               />
@@ -455,14 +474,18 @@ function DueDateCell({
           <CalendarDays
             className={cn(
               'h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4',
-              overdue ? 'text-rose-400' : 'text-[var(--workspace-shell-text-muted)]',
+              overdue
+                ? 'text-rose-400'
+                : 'text-[var(--workspace-shell-text-muted)]',
             )}
             aria-hidden
           />
           <span
             className={cn(
               'truncate text-[11px] tabular-nums sm:text-xs',
-              overdue ? 'font-medium text-rose-400' : 'text-[var(--workspace-shell-text-muted)]',
+              overdue
+                ? 'font-medium text-rose-400'
+                : 'text-[var(--workspace-shell-text-muted)]',
             )}
           >
             {dueDateLabel}
@@ -567,28 +590,24 @@ function isHighPriority(task: TasksPageTask): boolean {
   return task.priority === 'urgent' || task.priority === 'high';
 }
 
-function PriorityGroupHeader({
-  variant,
-}: {
-  variant: 'high' | 'rest';
-}) {
+function PriorityGroupHeader({ variant }: { variant: 'high' | 'rest' }) {
   const isHigh = variant === 'high';
   return (
     <div
       className={cn(
-        'flex items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2 text-[11px] font-semibold uppercase tracking-wide',
+        'flex items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2 text-[11px] font-semibold tracking-wide uppercase',
         isHigh
           ? 'bg-amber-500/[0.07] text-amber-400/95'
           : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
       )}
     >
-      {isHigh ? (
-        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
-      ) : null}
+      {isHigh ? <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> : null}
       <span
         className={cn(
           'h-2 w-2 shrink-0 rounded-full',
-          isHigh ? 'bg-amber-400' : 'bg-[var(--workspace-shell-panel-hover)]/70',
+          isHigh
+            ? 'bg-amber-400'
+            : 'bg-[var(--workspace-shell-panel-hover)]/70',
         )}
         aria-hidden
       />
@@ -717,7 +736,9 @@ function TasksByClientList({
             className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]"
           >
             <div className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2.5">
-              <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{group.label}</p>
+              <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                {group.label}
+              </p>
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {group.tasks.length} task{group.tasks.length === 1 ? '' : 's'}
               </p>
@@ -872,12 +893,17 @@ function TasksFilterMenu(props: {
         >
           <SlidersHorizontal className="h-4 w-4" />
           {hasActiveFilters ? (
-            <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-[var(--ozer-accent)]" />
+            <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-[var(--ozer-accent)]" />
           ) : null}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className={cn('w-56', dropdownContentClass)}>
-        <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">Due date</DropdownMenuLabel>
+      <DropdownMenuContent
+        align="end"
+        className={cn('w-56', dropdownContentClass)}
+      >
+        <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Due date
+        </DropdownMenuLabel>
         <DropdownMenuRadioGroup
           value={props.dueDateFilter}
           onValueChange={(value) =>
@@ -905,7 +931,9 @@ function TasksFilterMenu(props: {
         {props.showStatusFilter ? (
           <>
             <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
-            <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">Status</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Status
+            </DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={props.statusFilter}
               onValueChange={(value) =>
@@ -931,7 +959,9 @@ function TasksFilterMenu(props: {
         {props.showContextFilter ? (
           <>
             <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
-            <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">Scope</DropdownMenuLabel>
+            <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Scope
+            </DropdownMenuLabel>
             <DropdownMenuRadioGroup
               value={props.contextFilter}
               onValueChange={(value) =>
@@ -951,7 +981,8 @@ function TasksFilterMenu(props: {
           </>
         ) : null}
 
-        {props.showWorkspaceFilter && props.workspaceFilterOptions.length > 0 ? (
+        {props.showWorkspaceFilter &&
+        props.workspaceFilterOptions.length > 0 ? (
           <>
             <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
             {inlineSubmenus ? (
@@ -963,10 +994,16 @@ function TasksFilterMenu(props: {
                   value={props.workspaceFilter}
                   onValueChange={props.onWorkspaceFilterChange}
                 >
-                  <DropdownMenuRadioItem value="all" className={dropdownRadioItemClass}>
+                  <DropdownMenuRadioItem
+                    value="all"
+                    className={dropdownRadioItemClass}
+                  >
                     All workspaces
                   </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="personal" className={dropdownRadioItemClass}>
+                  <DropdownMenuRadioItem
+                    value="personal"
+                    className={dropdownRadioItemClass}
+                  >
                     Personal only
                   </DropdownMenuRadioItem>
                   {props.workspaceFilterOptions.map((ws) =>
@@ -996,10 +1033,16 @@ function TasksFilterMenu(props: {
                     value={props.workspaceFilter}
                     onValueChange={props.onWorkspaceFilterChange}
                   >
-                    <DropdownMenuRadioItem value="all" className={dropdownRadioItemClass}>
+                    <DropdownMenuRadioItem
+                      value="all"
+                      className={dropdownRadioItemClass}
+                    >
                       All workspaces
                     </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="personal" className={dropdownRadioItemClass}>
+                    <DropdownMenuRadioItem
+                      value="personal"
+                      className={dropdownRadioItemClass}
+                    >
                       Personal only
                     </DropdownMenuRadioItem>
                     {props.workspaceFilterOptions.map((ws) =>
@@ -1032,10 +1075,16 @@ function TasksFilterMenu(props: {
                   value={props.clientFilter}
                   onValueChange={props.onClientFilterChange}
                 >
-                  <DropdownMenuRadioItem value="all" className={dropdownRadioItemClass}>
+                  <DropdownMenuRadioItem
+                    value="all"
+                    className={dropdownRadioItemClass}
+                  >
                     All clients
                   </DropdownMenuRadioItem>
-                  <DropdownMenuRadioItem value="__none__" className={dropdownRadioItemClass}>
+                  <DropdownMenuRadioItem
+                    value="__none__"
+                    className={dropdownRadioItemClass}
+                  >
                     No client
                   </DropdownMenuRadioItem>
                   {props.clientOptions.map(([id, name]) => (
@@ -1063,10 +1112,16 @@ function TasksFilterMenu(props: {
                     value={props.clientFilter}
                     onValueChange={props.onClientFilterChange}
                   >
-                    <DropdownMenuRadioItem value="all" className={dropdownRadioItemClass}>
+                    <DropdownMenuRadioItem
+                      value="all"
+                      className={dropdownRadioItemClass}
+                    >
                       All clients
                     </DropdownMenuRadioItem>
-                    <DropdownMenuRadioItem value="__none__" className={dropdownRadioItemClass}>
+                    <DropdownMenuRadioItem
+                      value="__none__"
+                      className={dropdownRadioItemClass}
+                    >
                       No client
                     </DropdownMenuRadioItem>
                     {props.clientOptions.map(([id, name]) => (
@@ -1119,8 +1174,13 @@ function TasksViewMenu(props: {
           <CurrentIcon className="h-4 w-4" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className={cn('w-44', dropdownContentClass)}>
-        <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">View</DropdownMenuLabel>
+      <DropdownMenuContent
+        align="end"
+        className={cn('w-44', dropdownContentClass)}
+      >
+        <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">
+          View
+        </DropdownMenuLabel>
         {views.map(({ value, label, icon: Icon }) => (
           <button
             key={value}
@@ -1128,7 +1188,9 @@ function TasksViewMenu(props: {
             onClick={() => props.onViewChange(value)}
             className={cn(
               'flex w-full items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden hover:bg-[var(--workspace-shell-sidebar-accent)]',
-              props.view === value ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)]',
+              props.view === value
+                ? 'text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)]',
             )}
           >
             <Icon className="h-4 w-4 shrink-0" />
@@ -1168,11 +1230,7 @@ export function TasksPageClient({
   const [tasks, setTasks] = useState<TasksPageTask[]>(initialTasks);
   const [view, setView] = useState<TaskViewMode>('list');
   const [filter, setFilter] = useState<'all' | 'work' | 'life'>(() =>
-    variant === 'workspace'
-      ? 'work'
-      : includeWorkspaceTasks
-        ? 'all'
-        : 'life',
+    variant === 'workspace' ? 'work' : includeWorkspaceTasks ? 'all' : 'life',
   );
   const [workspaceFilter, setWorkspaceFilter] = useState<string>(
     initialWorkspaceFilter,
@@ -1246,11 +1304,7 @@ export function TasksPageClient({
 
   const matchesBaseFilters = useCallback(
     (t: TasksPageTask) => {
-      if (
-        variant !== 'workspace' &&
-        filter !== 'all' &&
-        t.context !== filter
-      ) {
+      if (variant !== 'workspace' && filter !== 'all' && t.context !== filter) {
         return false;
       }
       if (variant === 'personal' && workspaceFilter !== 'all') {
@@ -1282,13 +1336,22 @@ export function TasksPageClient({
       }
       return true;
     },
-    [variant, filter, workspaceFilter, clientFilter, search, dueDateFilter, todayKey],
+    [
+      variant,
+      filter,
+      workspaceFilter,
+      clientFilter,
+      search,
+      dueDateFilter,
+      todayKey,
+    ],
   );
 
   const filteredForList = useMemo(() => {
     return tasks.filter((t) => {
       if (statusFilter === 'active' && t.status === 'completed') return false;
-      if (statusFilter === 'completed' && t.status !== 'completed') return false;
+      if (statusFilter === 'completed' && t.status !== 'completed')
+        return false;
       return matchesBaseFilters(t);
     });
   }, [tasks, statusFilter, matchesBaseFilters]);
@@ -1339,7 +1402,7 @@ export function TasksPageClient({
       const label =
         key === '__unassigned__'
           ? 'Unassigned'
-          : (t.clientName?.trim() || 'Client');
+          : t.clientName?.trim() || 'Client';
       const existing = map.get(key);
       if (existing) {
         existing.tasks.push(t);
@@ -1356,9 +1419,7 @@ export function TasksPageClient({
 
   const showWorkspaceTag = variant === 'personal';
   const inlineClientId =
-    clientFilter !== 'all' && clientFilter !== '__none__'
-      ? clientFilter
-      : null;
+    clientFilter !== 'all' && clientFilter !== '__none__' ? clientFilter : null;
 
   const activeCount = useMemo(
     () => tasks.filter((t) => t.status !== 'completed').length,
@@ -1424,24 +1485,31 @@ export function TasksPageClient({
   })();
 
   return (
-    <div className={cn(workspacePageMainClassName, 'min-h-0 text-[var(--workspace-shell-text)]')}>
+    <div
+      className={cn(
+        workspacePageMainClassName,
+        'min-h-0 text-[var(--workspace-shell-text)]',
+      )}
+    >
       <div className="flex flex-col gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
             Tasks
           </h1>
-          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{headerSubtitle}</p>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+            {headerSubtitle}
+          </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="relative min-w-0 flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+            <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search tasks..."
-              className="h-10 w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] pl-10 pr-4 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none"
+              className="h-10 w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] pr-4 pl-10 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:outline-none"
             />
           </div>
 
@@ -1508,10 +1576,10 @@ export function TasksPageClient({
           ) : (
             <div className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
               <PriorityGroupedTaskList
-                  urgent={urgent}
-                  rest={rest}
-                  statusFilter={statusFilter}
-                  handlers={taskRowHandlers}
+                urgent={urgent}
+                rest={rest}
+                statusFilter={statusFilter}
+                handlers={taskRowHandlers}
                 inlineClientId={inlineClientId}
               />
             </div>
@@ -1589,21 +1657,16 @@ function TaskRow({
   const openEdit = () => setEditOpen(true);
 
   return (
-    <div
-      className={cn(
-        'relative',
-        !isRoot && 'pl-6 sm:pl-8',
-      )}
-    >
+    <div className={cn('relative', !isRoot && 'pl-6 sm:pl-8')}>
       {!isRoot ? (
         <>
           <span
             aria-hidden
-            className="absolute bottom-0 left-3 top-0 w-px bg-white/[0.12] sm:left-4"
+            className="absolute top-0 bottom-0 left-3 w-px bg-white/[0.12] sm:left-4"
           />
           <span
             aria-hidden
-            className="absolute left-3 top-1/2 h-px w-3 bg-white/[0.16] sm:left-4 sm:w-4"
+            className="absolute top-1/2 left-3 h-px w-3 bg-white/[0.16] sm:left-4 sm:w-4"
           />
         </>
       ) : null}
@@ -1620,7 +1683,7 @@ function TaskRow({
         className={cn(
           rowGrid,
           overdue &&
-            'border-l-[3px] border-l-rose-500 bg-rose-500/[0.07] ring-1 ring-inset ring-rose-400/20 hover:bg-rose-500/[0.09]',
+            'border-l-[3px] border-l-rose-500 bg-rose-500/[0.07] ring-1 ring-rose-400/20 ring-inset hover:bg-rose-500/[0.09]',
           !overdue && 'hover:bg-white/[0.035]',
           !isRoot && !overdue && 'bg-transparent hover:bg-white/[0.025]',
           'relative cursor-pointer border-b border-[color:var(--workspace-shell-border)] transition-colors',
@@ -1649,7 +1712,7 @@ function TaskRow({
           {isRoot && subCount > 0 ? (
             <div className="mt-0.5 flex items-center gap-0.5">
               <span
-                className="text-[10px] font-normal tabular-nums text-[var(--workspace-shell-text-muted)]"
+                className="text-[10px] font-normal text-[var(--workspace-shell-text-muted)] tabular-nums"
                 title="Subtasks completed / total"
               >
                 {doneSubCount}/{subCount}

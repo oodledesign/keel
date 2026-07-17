@@ -42,8 +42,7 @@ export const generateMetadata = async ({ params }: DocumentationPageProps) => {
   return buildMarketingMetadata({
     title: branded.length <= 60 ? branded : `${title.slice(0, 52)} — Ozer`,
     description:
-      description ||
-      `${title} — documentation for the Ozer Workspace OS.`,
+      description || `${title} — documentation for the Ozer Workspace OS.`,
     path: `/docs/${slug}`,
     ogType: 'default',
   });

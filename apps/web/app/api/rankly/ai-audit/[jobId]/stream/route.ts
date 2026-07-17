@@ -1,11 +1,12 @@
 import { type NextRequest } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadReportByJobId } from '~/lib/ai-audit/db';
-import { createJobSseResponse } from '~/lib/rankly/create-job-sse-response';
 import { jsonErr } from '~/lib/rankly/api-response';
+import { createJobSseResponse } from '~/lib/rankly/create-job-sse-response';
 import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 

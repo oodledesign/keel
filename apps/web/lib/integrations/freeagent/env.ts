@@ -12,7 +12,9 @@ export function getFreeAgentEnv() {
     );
   }
   if (!siteUrl) {
-    throw new Error('NEXT_PUBLIC_SITE_URL must be configured for FreeAgent OAuth');
+    throw new Error(
+      'NEXT_PUBLIC_SITE_URL must be configured for FreeAgent OAuth',
+    );
   }
 
   const apiBase = sandbox
@@ -31,6 +33,6 @@ export function getFreeAgentEnv() {
 export function isFreeAgentConfigured() {
   return Boolean(
     process.env.FREEAGENT_CLIENT_ID?.trim() &&
-      process.env.FREEAGENT_CLIENT_SECRET?.trim(),
+    process.env.FREEAGENT_CLIENT_SECRET?.trim(),
   );
 }

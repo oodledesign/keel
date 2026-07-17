@@ -27,16 +27,17 @@ import {
   type EmailContactImportMappingValue,
 } from '../_lib/email-contact-import.schema';
 import {
+  type ImportEmailContactsResult,
   importBetaUsersFromCsv,
   importContactsFromCsv,
   suggestBetaUserImportMappings,
   suggestContactImportMappings,
-  type ImportEmailContactsResult,
 } from '../_lib/server/email-marketing.actions';
 
 function asToastText(value: unknown, fallback = ''): string {
   if (typeof value === 'string') return value;
-  if (typeof value === 'number' || typeof value === 'boolean') return String(value);
+  if (typeof value === 'number' || typeof value === 'boolean')
+    return String(value);
   if (value instanceof Error) return value.message || fallback;
   return fallback || 'Something went wrong';
 }
@@ -56,7 +57,9 @@ function sanitizeMapping(
   return out;
 }
 
-function sanitizeRows(rows: Record<string, string>[]): Record<string, string>[] {
+function sanitizeRows(
+  rows: Record<string, string>[],
+): Record<string, string>[] {
   return rows.map((row) => {
     const out: Record<string, string> = {};
     for (const [key, value] of Object.entries(row)) {
@@ -67,7 +70,9 @@ function sanitizeRows(rows: Record<string, string>[]): Record<string, string>[] 
   });
 }
 
-function cloneImportResult(result: ImportEmailContactsResult): ImportEmailContactsResult {
+function cloneImportResult(
+  result: ImportEmailContactsResult,
+): ImportEmailContactsResult {
   try {
     if (typeof structuredClone === 'function') {
       return structuredClone(result);
@@ -78,16 +83,18 @@ function cloneImportResult(result: ImportEmailContactsResult): ImportEmailContac
   return JSON.parse(JSON.stringify(result)) as ImportEmailContactsResult;
 }
 
-const MAPPING_OPTIONS: { value: EmailContactImportMappingValue; labelKey: string }[] =
-  [
-    { value: '__skip__', labelKey: 'clientImportDontImport' },
-    { value: 'first_name', labelKey: 'clientImportFieldFirstName' },
-    { value: 'last_name', labelKey: 'clientImportFieldLastName' },
-    { value: 'email', labelKey: 'clientImportFieldEmail' },
-    { value: 'trade', labelKey: 'emailContactImportFieldTrade' },
-    { value: 'notes', labelKey: 'clientImportFieldNotes' },
-    { value: 'subscribed', labelKey: 'emailContactImportFieldSubscribed' },
-  ];
+const MAPPING_OPTIONS: {
+  value: EmailContactImportMappingValue;
+  labelKey: string;
+}[] = [
+  { value: '__skip__', labelKey: 'clientImportDontImport' },
+  { value: 'first_name', labelKey: 'clientImportFieldFirstName' },
+  { value: 'last_name', labelKey: 'clientImportFieldLastName' },
+  { value: 'email', labelKey: 'clientImportFieldEmail' },
+  { value: 'trade', labelKey: 'emailContactImportFieldTrade' },
+  { value: 'notes', labelKey: 'clientImportFieldNotes' },
+  { value: 'subscribed', labelKey: 'emailContactImportFieldSubscribed' },
+];
 
 function normalizeRow(row: Record<string, unknown>): Record<string, string> {
   const out: Record<string, string> = {};
@@ -98,14 +105,20 @@ function normalizeRow(row: Record<string, unknown>): Record<string, string> {
   return out;
 }
 
-function initialMapping(headers: string[]): Record<string, EmailContactImportMappingValue> {
-  return Object.fromEntries(headers.map((header) => [header, '__skip__' as const]));
+function initialMapping(
+  headers: string[],
+): Record<string, EmailContactImportMappingValue> {
+  return Object.fromEntries(
+    headers.map((header) => [header, '__skip__' as const]),
+  );
 }
 
 function mappingIssue(
   mapping: Record<string, EmailContactImportMappingValue>,
 ): 'duplicate' | 'identity' | null {
-  const targets = Object.values(mapping).filter((target) => target !== '__skip__');
+  const targets = Object.values(mapping).filter(
+    (target) => target !== '__skip__',
+  );
   const counts = new Map<string, number>();
   for (const target of targets) {
     counts.set(target, (counts.get(target) ?? 0) + 1);
@@ -187,7 +200,8 @@ export function EmailContactImportFlow({
       skipEmptyLines: 'greedy',
       transformHeader: (header) => String(header ?? '').trim(),
       complete: (res) => {
-        const errs = res.errors?.filter((error) => error.type !== 'Quotes') ?? [];
+        const errs =
+          res.errors?.filter((error) => error.type !== 'Quotes') ?? [];
         if (errs.length > 0) {
           setParseError(asToastText(t('clientImportInvalidCsv')));
           return;
@@ -201,7 +215,9 @@ export function EmailContactImportFlow({
         }
         const rows = (res.data ?? [])
           .map((row) => normalizeRow(row as Record<string, unknown>))
-          .filter((row) => fields.some((field) => (row[field] ?? '').trim() !== ''));
+          .filter((row) =>
+            fields.some((field) => (row[field] ?? '').trim() !== ''),
+          );
 
         setHeaders(fields);
         setAllRows(rows);
@@ -246,7 +262,10 @@ export function EmailContactImportFlow({
       const badges = new Set<string>();
       for (const header of headers) {
         const suggestion = res.suggestions[header];
-        if (suggestion && EMAIL_CONTACT_IMPORT_FIELD_KEYS.includes(suggestion)) {
+        if (
+          suggestion &&
+          EMAIL_CONTACT_IMPORT_FIELD_KEYS.includes(suggestion)
+        ) {
           next[header] = suggestion;
           badges.add(header);
         }
@@ -260,7 +279,10 @@ export function EmailContactImportFlow({
     }
   };
 
-  const updateMapping = (header: string, value: EmailContactImportMappingValue) => {
+  const updateMapping = (
+    header: string,
+    value: EmailContactImportMappingValue,
+  ) => {
     setMapping((current) => ({ ...current, [header]: value }));
     setAiSuggestedHeaders((previous) => {
       const next = new Set(previous);
@@ -272,17 +294,18 @@ export function EmailContactImportFlow({
   const runImport = async () => {
     setImporting(true);
     try {
-      const res = await importMode === 'beta_users'
-        ? await importBetaUsersFromCsv({
-            mapping: sanitizeMapping(mapping),
-            rows: sanitizeRows(allRows),
-          })
-        : await importContactsFromCsv({
-            mapping: sanitizeMapping(mapping),
-            rows: sanitizeRows(allRows),
-            source: contactSource,
-            customListId: customListId ?? undefined,
-          });
+      const res =
+        (await importMode) === 'beta_users'
+          ? await importBetaUsersFromCsv({
+              mapping: sanitizeMapping(mapping),
+              rows: sanitizeRows(allRows),
+            })
+          : await importContactsFromCsv({
+              mapping: sanitizeMapping(mapping),
+              rows: sanitizeRows(allRows),
+              source: contactSource,
+              customListId: customListId ?? undefined,
+            });
       setResult(cloneImportResult(res as ImportEmailContactsResult));
       setStep(3);
       toast.success(
@@ -295,7 +318,10 @@ export function EmailContactImportFlow({
       onImported?.();
     } catch (error) {
       toast.error(
-        asToastText(error instanceof Error ? error.message : null, 'Import failed'),
+        asToastText(
+          error instanceof Error ? error.message : null,
+          'Import failed',
+        ),
       );
     } finally {
       setImporting(false);
@@ -321,14 +347,18 @@ export function EmailContactImportFlow({
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
-      <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">{stepDescription}</p>
+      <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">
+        {stepDescription}
+      </p>
 
       <div className="min-h-0 flex-1 overflow-y-auto pr-1">
         {step === 0 && (
           <div className="space-y-4">
             <label className="flex cursor-pointer flex-col items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 px-6 py-10 transition hover:border-emerald-600/50 hover:bg-[var(--workspace-shell-panel)]/60">
               <Upload className="mb-2 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
-              <span className="text-sm text-[var(--workspace-shell-text-muted)]">{t('clientImportUploadHint')}</span>
+              <span className="text-sm text-[var(--workspace-shell-text-muted)]">
+                {t('clientImportUploadHint')}
+              </span>
               <input
                 type="file"
                 accept=".csv"
@@ -340,10 +370,16 @@ export function EmailContactImportFlow({
             {headers.length > 0 && (
               <>
                 <div className="flex flex-wrap gap-4 text-sm text-[var(--workspace-shell-text-muted)]">
-                  <span>{t('clientImportColumns', { count: headers.length })}</span>
-                  <span>{t('clientImportRows', { count: allRows.length })}</span>
+                  <span>
+                    {t('clientImportColumns', { count: headers.length })}
+                  </span>
+                  <span>
+                    {t('clientImportRows', { count: allRows.length })}
+                  </span>
                 </div>
-                <p className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">{t('clientImportPreview')}</p>
+                <p className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+                  {t('clientImportPreview')}
+                </p>
                 <div className="overflow-x-auto rounded-md border border-[color:var(--workspace-shell-border)]">
                   <table className="w-full min-w-[480px] text-left text-xs text-[var(--workspace-shell-text)]">
                     <thead className="bg-[var(--workspace-shell-panel)]/80 text-[var(--workspace-shell-text-muted)]">
@@ -362,7 +398,10 @@ export function EmailContactImportFlow({
                           className="border-t border-[color:var(--workspace-shell-border)] odd:bg-[var(--workspace-shell-panel)]/40"
                         >
                           {headers.map((header) => (
-                            <td key={header} className="max-w-[200px] truncate px-2 py-1.5">
+                            <td
+                              key={header}
+                              className="max-w-[200px] truncate px-2 py-1.5"
+                            >
                               {row[header] ?? ''}
                             </td>
                           ))}
@@ -392,32 +431,49 @@ export function EmailContactImportFlow({
                 ) : (
                   <Sparkles className="mr-2 h-4 w-4 text-amber-400" />
                 )}
-                {aiLoading ? t('clientImportAiMapping') : t('clientImportMapWithAi')}
+                {aiLoading
+                  ? t('clientImportAiMapping')
+                  : t('clientImportMapWithAi')}
               </Button>
             </div>
             {issue === 'duplicate' && (
-              <p className="text-sm text-amber-400">{t('clientImportMappingInvalid')}</p>
+              <p className="text-sm text-amber-400">
+                {t('clientImportMappingInvalid')}
+              </p>
             )}
             {issue === 'identity' && (
-              <p className="text-sm text-amber-400">{t('clientImportMappingInvalid')}</p>
+              <p className="text-sm text-amber-400">
+                {t('clientImportMappingInvalid')}
+              </p>
             )}
             {!mappingOk && !issue && (
-              <p className="text-sm text-amber-400">{t('clientImportMappingRequiredHint')}</p>
+              <p className="text-sm text-amber-400">
+                {t('clientImportMappingRequiredHint')}
+              </p>
             )}
             <div className="overflow-x-auto rounded-md border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[520px] text-left text-sm">
                 <thead className="bg-[var(--workspace-shell-panel)]/80 text-xs text-[var(--workspace-shell-text-muted)]">
                   <tr>
-                    <th className="px-3 py-2 font-medium">{t('clientImportCsvColumn')}</th>
-                    <th className="px-3 py-2 font-medium">{t('clientImportTradewaysField')}</th>
+                    <th className="px-3 py-2 font-medium">
+                      {t('clientImportCsvColumn')}
+                    </th>
+                    <th className="px-3 py-2 font-medium">
+                      {t('clientImportTradewaysField')}
+                    </th>
                   </tr>
                 </thead>
                 <tbody>
                   {headers.map((header) => (
-                    <tr key={header} className="border-t border-[color:var(--workspace-shell-border)] odd:bg-[var(--workspace-shell-panel)]/30">
+                    <tr
+                      key={header}
+                      className="border-t border-[color:var(--workspace-shell-border)] odd:bg-[var(--workspace-shell-panel)]/30"
+                    >
                       <td className="px-3 py-2 align-middle">
                         <div className="flex flex-wrap items-center gap-2">
-                          <span className="text-[var(--workspace-shell-text)]">{header}</span>
+                          <span className="text-[var(--workspace-shell-text)]">
+                            {header}
+                          </span>
                           {aiSuggestedHeaders.has(header) && (
                             <Badge
                               variant="secondary"
@@ -435,7 +491,8 @@ export function EmailContactImportFlow({
                           onChange={(event) =>
                             updateMapping(
                               header,
-                              event.target.value as EmailContactImportMappingValue,
+                              event.target
+                                .value as EmailContactImportMappingValue,
                             )
                           }
                         >
@@ -463,12 +520,16 @@ export function EmailContactImportFlow({
                 missing: missingCount,
               })}
             </p>
-            <p className="text-[var(--workspace-shell-text-muted)]">{t('clientImportDuplicateEmailHint')}</p>
+            <p className="text-[var(--workspace-shell-text-muted)]">
+              {t('clientImportDuplicateEmailHint')}
+            </p>
             {importMode === 'beta_users' ? (
               <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3">
                 <Checkbox
                   checked={markPrepaid}
-                  onCheckedChange={(checked) => setMarkPrepaid(checked === true)}
+                  onCheckedChange={(checked) =>
+                    setMarkPrepaid(checked === true)
+                  }
                   className="mt-0.5"
                 />
                 <span>
@@ -476,8 +537,8 @@ export function EmailContactImportFlow({
                     Mark all as paid £1 (prepaid beta)
                   </span>
                   <span className="mt-1 block text-[var(--workspace-shell-text-muted)]">
-                    Skips checkout on signup. Dashboard access opens 8 June 2026 for
-                    three months.
+                    Skips checkout on signup. Dashboard access opens 8 June 2026
+                    for three months.
                   </span>
                 </span>
               </label>
@@ -487,7 +548,9 @@ export function EmailContactImportFlow({
                 .filter(([, value]) => value !== '__skip__')
                 .map(([column, field]) => (
                   <li key={column}>
-                    <span className="text-[var(--workspace-shell-text)]">{column}</span>
+                    <span className="text-[var(--workspace-shell-text)]">
+                      {column}
+                    </span>
                     {' → '}
                     <span className="text-emerald-300">{field}</span>
                   </li>
@@ -506,13 +569,19 @@ export function EmailContactImportFlow({
             {result.skipped.length > 0 && (
               <div className="max-h-48 overflow-y-auto rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-2 text-xs text-[var(--workspace-shell-text-muted)]">
                 {result.skipped.slice(0, 50).map((skipped) => (
-                  <div key={`${skipped.rowNumber}-${skipped.reason}`} className="py-0.5">
-                    Row {skipped.rowNumber}: {skipReasonLabel(skipped.reason, t)}
+                  <div
+                    key={`${skipped.rowNumber}-${skipped.reason}`}
+                    className="py-0.5"
+                  >
+                    Row {skipped.rowNumber}:{' '}
+                    {skipReasonLabel(skipped.reason, t)}
                     {skipped.detail ? ` — ${skipped.detail}` : ''}
                   </div>
                 ))}
                 {result.skipped.length > 50 && (
-                  <p className="pt-1 text-[var(--workspace-shell-text-muted)]">…and {result.skipped.length - 50} more</p>
+                  <p className="pt-1 text-[var(--workspace-shell-text-muted)]">
+                    …and {result.skipped.length - 50} more
+                  </p>
                 )}
               </div>
             )}
@@ -550,7 +619,9 @@ export function EmailContactImportFlow({
               className="bg-emerald-600 hover:bg-emerald-500"
               disabled={!mappingOk}
               title={
-                !mappingOk ? asToastText(t('clientImportMappingRequiredHint')) : undefined
+                !mappingOk
+                  ? asToastText(t('clientImportMappingRequiredHint'))
+                  : undefined
               }
               onClick={() => setStep(2)}
             >
@@ -617,7 +688,9 @@ export function EmailContactImportDialog({
 }: EmailContactImportDialogProps) {
   const { t } = useTranslation('account');
   const title =
-    importMode === 'beta_users' ? 'Import beta users' : t('emailContactImportTitle');
+    importMode === 'beta_users'
+      ? 'Import beta users'
+      : t('emailContactImportTitle');
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

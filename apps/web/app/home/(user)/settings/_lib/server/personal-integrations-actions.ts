@@ -5,9 +5,8 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-
 import { disconnectGmailConnection } from '~/home/(user)/email/_lib/actions/email-assistant-actions';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 function revalidateIntegrationSurfaces() {
   revalidatePath(pathsConfig.app.personalAccountIntegrationsSettings, 'page');

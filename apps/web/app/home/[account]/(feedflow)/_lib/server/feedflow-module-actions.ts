@@ -2,9 +2,10 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { nanoid } from 'nanoid';
+
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-import { nanoid } from 'nanoid';
 
 import pathsConfig from '~/config/paths.config';
 import { assertFeedflowWriteAccess } from '~/lib/feedflow/assert-feedflow-write';
@@ -58,8 +59,12 @@ export const createFeedflowWidget = enhanceAction(
       throw new Error(error.message);
     }
 
-    revalidatePath(workPath(pathsConfig.app.accountFeedflowWidgets, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountFeedflowReviews, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountFeedflowWidgets, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountFeedflowReviews, accountSlug),
+    );
     return { ok: true as const, embedKey: data?.embed_key as string };
   },
   { schema: createFeedflowWidgetActionSchema },
@@ -85,8 +90,12 @@ export const deleteFeedflowSocialAccount = enhanceAction(
     revalidatePath(
       workPath(pathsConfig.app.accountFeedflowSocialAccounts, accountSlug),
     );
-    revalidatePath(workPath(pathsConfig.app.accountFeedflowReviews, accountSlug));
-    revalidatePath(workPath(pathsConfig.app.accountFeedflowWidgets, accountSlug));
+    revalidatePath(
+      workPath(pathsConfig.app.accountFeedflowReviews, accountSlug),
+    );
+    revalidatePath(
+      workPath(pathsConfig.app.accountFeedflowWidgets, accountSlug),
+    );
     return { ok: true as const };
   },
   { schema: deleteFeedflowSocialAccountActionSchema },

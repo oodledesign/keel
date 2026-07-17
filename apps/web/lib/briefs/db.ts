@@ -123,7 +123,9 @@ export async function loadBriefForUser(
   return brief as ContentBriefRow;
 }
 
-export async function loadBriefByJobId(jobId: string): Promise<ContentBriefRow | null> {
+export async function loadBriefByJobId(
+  jobId: string,
+): Promise<ContentBriefRow | null> {
   const { data, error } = await ranklyAdmin()
     .from('content_briefs')
     .select('*')

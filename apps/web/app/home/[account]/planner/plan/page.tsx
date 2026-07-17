@@ -2,15 +2,15 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import pathsConfig from '~/config/paths.config';
+import { PlannerPageClient } from '~/home/(user)/planner/_components/PlannerPageClient';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   assertWorkspacePlannerAccess,
   loadWorkspacePlannerPageData,
 } from '~/lib/planner/load-planner-data';
-import pathsConfig from '~/config/paths.config';
 
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
-import { PlannerPageClient } from '~/home/(user)/planner/_components/PlannerPageClient';
 
 interface WorkspacePlannerPlanPageProps {
   params: Promise<{ account: string }>;
@@ -19,7 +19,9 @@ interface WorkspacePlannerPlanPageProps {
 export const dynamic = 'force-dynamic';
 export const metadata = { title: 'Planner' };
 
-async function WorkspacePlannerPlanPage({ params }: WorkspacePlannerPlanPageProps) {
+async function WorkspacePlannerPlanPage({
+  params,
+}: WorkspacePlannerPlanPageProps) {
   const accountSlug = (await params).account;
 
   try {

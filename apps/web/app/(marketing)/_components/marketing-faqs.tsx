@@ -61,12 +61,15 @@ export function MarketingFaqs({
             className={cn(
               'text-left text-base font-medium hover:no-underline [&>svg]:text-[var(--workspace-shell-text-muted)] dark:[&>svg]:text-[var(--ozer-text-on-dark-muted)]',
               styles.trigger,
-              tone === 'dark' && '[&>svg]:text-[var(--ozer-text-on-dark-muted)]',
+              tone === 'dark' &&
+                '[&>svg]:text-[var(--ozer-text-on-dark-muted)]',
             )}
           >
             {faq.question}
           </AccordionTrigger>
-          <AccordionContent className={cn('text-sm leading-relaxed', styles.content)}>
+          <AccordionContent
+            className={cn('text-sm leading-relaxed', styles.content)}
+          >
             {faq.answer}
           </AccordionContent>
         </AccordionItem>

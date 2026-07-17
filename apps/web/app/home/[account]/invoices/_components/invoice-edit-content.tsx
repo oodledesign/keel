@@ -31,8 +31,8 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
-import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
+import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -158,7 +158,8 @@ export function InvoiceEditContent({
   );
 
   const subtotalPence = useMemo(
-    () => items.reduce((sum, row) => sum + row.quantity * row.unit_price_pence, 0),
+    () =>
+      items.reduce((sum, row) => sum + row.quantity * row.unit_price_pence, 0),
     [items],
   );
 
@@ -174,7 +175,9 @@ export function InvoiceEditContent({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setClients((list ?? []) as { id: string; display_name: string | null }[]);
+        setClients(
+          (list ?? []) as { id: string; display_name: string | null }[],
+        );
       })
       .catch((err) => {
         setClientsError(
@@ -261,7 +264,8 @@ export function InvoiceEditContent({
         description: row.description.trim() || 'Item',
         quantity: Math.max(0, row.quantity),
         unit_price_pence: Math.max(0, row.unit_price_pence),
-        total_pence: Math.max(0, row.quantity) * Math.max(0, row.unit_price_pence),
+        total_pence:
+          Math.max(0, row.quantity) * Math.max(0, row.unit_price_pence),
       }));
       await upsertInvoiceItems({
         accountId,
@@ -293,8 +297,7 @@ export function InvoiceEditContent({
       return;
     }
     const email = sendEmail.trim();
-    const valid =
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    const valid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
     if (!valid) {
       toast.error('Please enter a valid email address');
       return;
@@ -329,8 +332,7 @@ export function InvoiceEditContent({
   const isCancelled = invoice.status === 'cancelled';
   const canCreatePaymentLink =
     invoice.status === 'sent' && canEditInvoices && !isPaid;
-  const canCancelInvoice =
-    canManageInvoiceStatus && invoice.status === 'sent';
+  const canCancelInvoice = canManageInvoiceStatus && invoice.status === 'sent';
   const canMarkPaidManually =
     canManageInvoiceStatus && invoice.status === 'sent';
 
@@ -395,7 +397,9 @@ export function InvoiceEditContent({
         return;
       }
 
-      setStatusActionLoading(status === 'cancelled' ? 'cancelled' : paymentMethod ?? null);
+      setStatusActionLoading(
+        status === 'cancelled' ? 'cancelled' : (paymentMethod ?? null),
+      );
 
       try {
         await setInvoiceStatus({
@@ -426,7 +430,12 @@ export function InvoiceEditContent({
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <Button variant="ghost" size="sm" asChild className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+        <Button
+          variant="ghost"
+          size="sm"
+          asChild
+          className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        >
           <Link href={invoicesPath}>
             <ArrowLeft className="mr-1 h-4 w-4" />
             Back to invoices
@@ -493,7 +502,9 @@ export function InvoiceEditContent({
                 onClick={() => void handleStatusChange('cancelled')}
                 className="border-red-500/40 text-red-300 hover:bg-red-500/10"
               >
-                {statusActionLoading === 'cancelled' ? 'Cancelling…' : 'Cancel invoice'}
+                {statusActionLoading === 'cancelled'
+                  ? 'Cancelling…'
+                  : 'Cancel invoice'}
               </Button>
             )}
             {canMarkPaidManually && (
@@ -537,7 +548,9 @@ export function InvoiceEditContent({
       <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
         <div className="grid gap-6 md:grid-cols-2">
           <div>
-            <h2 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Invoice</h2>
+            <h2 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+              Invoice
+            </h2>
             <p className="mt-1 text-xl font-semibold text-[var(--workspace-shell-text)]">
               {invoice.invoice_number}
             </p>
@@ -561,7 +574,9 @@ export function InvoiceEditContent({
 
         <div className="mt-6 grid gap-4 sm:grid-cols-2">
           <div>
-            <Label className="text-[var(--workspace-shell-text-muted)]">Client</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Client
+            </Label>
             <div className="mt-1">
               <ClientCombobox
                 clients={clients}
@@ -581,7 +596,10 @@ export function InvoiceEditContent({
             )}
           </div>
           <div>
-            <Label htmlFor="due_at" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="due_at"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Due date
             </Label>
             <Input
@@ -596,7 +614,10 @@ export function InvoiceEditContent({
         </div>
 
         <div className="mt-4">
-          <Label htmlFor="notes" className="text-[var(--workspace-shell-text-muted)]">
+          <Label
+            htmlFor="notes"
+            className="text-[var(--workspace-shell-text-muted)]"
+          >
             Notes (optional)
           </Label>
           <textarea
@@ -613,12 +634,18 @@ export function InvoiceEditContent({
         {/* Bill to (read-only from client) */}
         {invoice.client && (
           <div className="mt-6 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Bill to</h3>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+              Bill to
+            </h3>
             <p className="mt-1 font-medium text-[var(--workspace-shell-text)]">
               {(invoice.client as ClientInfo).display_name ??
-                ([(invoice.client as ClientInfo).first_name, (invoice.client as ClientInfo).last_name]
+                ([
+                  (invoice.client as ClientInfo).first_name,
+                  (invoice.client as ClientInfo).last_name,
+                ]
                   .filter(Boolean)
-                  .join(' ') || 'Unnamed')}
+                  .join(' ') ||
+                  'Unnamed')}
             </p>
             {(invoice.client as ClientInfo).company_name && (
               <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -636,7 +663,9 @@ export function InvoiceEditContent({
         {/* Line items */}
         <div className="mt-6">
           <div className="flex items-center justify-between">
-            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Line items</h3>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+              Line items
+            </h3>
             {canModifyInvoice && (
               <Button
                 type="button"
@@ -654,15 +683,13 @@ export function InvoiceEditContent({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="border-b border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
-                  <th className="pb-2 pr-2 font-medium">Description</th>
-                  <th className="w-40 pb-2 pr-2 font-medium">Job</th>
-                  <th className="w-24 pb-2 pr-2 font-medium text-right">
-                    Qty
-                  </th>
-                  <th className="w-32 pb-2 pr-2 font-medium text-right">
+                  <th className="pr-2 pb-2 font-medium">Description</th>
+                  <th className="w-40 pr-2 pb-2 font-medium">Job</th>
+                  <th className="w-24 pr-2 pb-2 text-right font-medium">Qty</th>
+                  <th className="w-32 pr-2 pb-2 text-right font-medium">
                     Unit price
                   </th>
-                  <th className="w-28 pb-2 pr-2 font-medium text-right">
+                  <th className="w-28 pr-2 pb-2 text-right font-medium">
                     Total
                   </th>
                   {canModifyInvoice && <th className="w-10 pb-2"></th>}
@@ -801,7 +828,10 @@ export function InvoiceEditContent({
             </AlertDialogDescription>
           </AlertDialogHeader>
           <div className="py-4">
-            <Label htmlFor="send_email" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="send_email"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Send to email
             </Label>
             <Input

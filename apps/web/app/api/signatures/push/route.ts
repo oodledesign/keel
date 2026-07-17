@@ -1,13 +1,15 @@
 import { type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { assertAccountAdmin } from '~/lib/signatures/account-access';
-import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
+import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 import { pushSignatureToStaff } from '~/lib/signatures/signatures-provider';
 
 const bodySchema = z.object({
@@ -61,10 +63,6 @@ export async function POST(request: NextRequest) {
     const result = await pushSignatureToStaff(parsed.data.staffId);
     return jsonOk(result);
   } catch (e) {
-    return jsonErr(
-      'UNKNOWN',
-      e instanceof Error ? e.message : 'Error',
-      500,
-    );
+    return jsonErr('UNKNOWN', e instanceof Error ? e.message : 'Error', 500);
   }
 }

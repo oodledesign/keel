@@ -1,11 +1,6 @@
 import { z } from 'zod';
 
-export const MEAL_TYPES = [
-  'breakfast',
-  'lunch',
-  'dinner',
-  'snack',
-] as const;
+export const MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'] as const;
 export type MealType = (typeof MEAL_TYPES)[number];
 
 export const RECIPE_MEAL_TYPES = [...MEAL_TYPES, 'any'] as const;

@@ -257,8 +257,7 @@ export function ClientForm({
             </p>
           ) : (
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              A company with people linked as contacts (primary, finance,
-              etc.).
+              A company with people linked as contacts (primary, finance, etc.).
             </p>
           )}
         </div>

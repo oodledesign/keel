@@ -4,15 +4,22 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { CheckCircle2, Circle, Clock, Loader2, Pencil, Plus } from 'lucide-react';
+import {
+  CheckCircle2,
+  Circle,
+  Clock,
+  Loader2,
+  Pencil,
+  Plus,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogFooter,
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -93,7 +100,9 @@ export function ClientTasksBlock({
   return (
     <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
       <div className="flex items-center justify-between">
-        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Tasks</h3>
+        <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+          Tasks
+        </h3>
         {canEditClients && (
           <Button
             variant="ghost"
@@ -107,7 +116,9 @@ export function ClientTasksBlock({
         )}
       </div>
       {loading ? (
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Loading…
+        </p>
       ) : tasks.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No tasks linked to this client yet.
@@ -164,7 +175,10 @@ export function ClientTasksBlock({
       )}
       {tasks.length > 0 && (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          <Link href={tasksHref} className="underline hover:text-[var(--workspace-shell-text-muted)]">
+          <Link
+            href={tasksHref}
+            className="underline hover:text-[var(--workspace-shell-text-muted)]"
+          >
             View all tasks →
           </Link>
         </p>
@@ -263,7 +277,10 @@ function AddTaskForClientDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="task-title" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="task-title"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Title *
             </Label>
             <Input
@@ -276,7 +293,9 @@ function AddTaskForClientDialog({
           </div>
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Priority
+              </Label>
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -291,7 +310,10 @@ function AddTaskForClientDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="task-due" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="task-due"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Due date
               </Label>
               <Input
@@ -303,9 +325,7 @@ function AddTaskForClientDialog({
               />
             </div>
           </div>
-          {error && (
-            <p className="text-sm text-rose-400">{error}</p>
-          )}
+          {error && <p className="text-sm text-rose-400">{error}</p>}
           <DialogFooter>
             <Button
               type="button"

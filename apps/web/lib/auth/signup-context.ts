@@ -3,13 +3,13 @@ import 'server-only';
 import { getSafeRedirectPath } from '@kit/shared/utils';
 
 import pathsConfig from '~/config/paths.config';
+import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import { getBillingProductPrice } from '~/lib/billing/billing-config-prices';
 import {
   MARKETING_FREE_TIER,
   type SetupIntent,
   parseSetupIntent,
 } from '~/lib/billing/pricing-marketing';
-import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
 export type SignupContext = {
   heading: string;
@@ -79,11 +79,7 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
   }
 
   // Empty setup path = personal-only intent from /start
-  if (
-    !intent.profile &&
-    !intent.productId &&
-    !intent.planId
-  ) {
+  if (!intent.profile && !intent.productId && !intent.planId) {
     return {
       heading: 'Create your free personal account',
       subheading:
@@ -189,7 +185,10 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
   };
 }
 
-export function buildAuthLinkWithNext(basePath: string, next: string | undefined) {
+export function buildAuthLinkWithNext(
+  basePath: string,
+  next: string | undefined,
+) {
   if (!next?.trim()) return basePath;
   const safe = getSafeRedirectPath(next, pathsConfig.app.home);
   return `${basePath}?next=${encodeURIComponent(safe)}`;

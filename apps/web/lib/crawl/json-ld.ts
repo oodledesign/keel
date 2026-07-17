@@ -25,7 +25,9 @@ function collectTypes(item: Record<string, unknown>, types: Set<string>) {
   }
 }
 
-function expandJsonLdItems(parsed: Record<string, unknown>): Record<string, unknown>[] {
+function expandJsonLdItems(
+  parsed: Record<string, unknown>,
+): Record<string, unknown>[] {
   const graph = parsed['@graph'];
   if (Array.isArray(graph)) {
     return graph.filter(
@@ -78,7 +80,9 @@ export function extractPageJsonLd($: CheerioAPI): PageJsonLd {
 export function getObjectSchemaTypes(item: Record<string, unknown>): string[] {
   const typeValue = item['@type'];
   if (Array.isArray(typeValue)) {
-    return typeValue.map((entry) => normaliseSchemaType(String(entry))).filter(Boolean);
+    return typeValue
+      .map((entry) => normaliseSchemaType(String(entry)))
+      .filter(Boolean);
   }
   if (typeValue) {
     return [normaliseSchemaType(String(typeValue))];

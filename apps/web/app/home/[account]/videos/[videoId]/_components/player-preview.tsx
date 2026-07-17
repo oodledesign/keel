@@ -24,12 +24,7 @@ export function PlayerPreview(props: {
   const debouncedConfig = useDebouncedValue(props.config, 500);
 
   const embedUrl = useMemo(
-    () =>
-      buildEmbedUrl(
-        props.libraryId,
-        props.bunnyVideoId,
-        debouncedConfig,
-      ),
+    () => buildEmbedUrl(props.libraryId, props.bunnyVideoId, debouncedConfig),
     [props.libraryId, props.bunnyVideoId, debouncedConfig],
   );
 
@@ -51,10 +46,7 @@ export function PlayerPreview(props: {
         className="mx-auto w-full overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/40"
         style={{ maxWidth }}
       >
-        <div
-          className="relative w-full"
-          style={{ aspectRatio: ratio }}
-        >
+        <div className="relative w-full" style={{ aspectRatio: ratio }}>
           <iframe
             key={embedUrl}
             src={embedUrl}

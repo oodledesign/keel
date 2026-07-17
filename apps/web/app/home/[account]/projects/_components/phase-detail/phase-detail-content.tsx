@@ -6,19 +6,20 @@ import Link from 'next/link';
 
 import { ArrowLeft } from 'lucide-react';
 
-import pathsConfig from '~/config/paths.config';
-import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { cn } from '@kit/ui/utils';
+
+import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import pathsConfig from '~/config/paths.config';
+import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
 
 import { AskBrainLink } from '../../../brain/_components/ask-brain-link';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
 import { ProjectAiGenerateDialog } from '../job-project/project-ai-generate-dialog';
 import { PhaseMetaPanel, type PhaseRecord } from './phase-meta-panel';
-import { PhaseNotesPanel, type PhaseNote } from './phase-notes-panel';
+import { type PhaseNote, PhaseNotesPanel } from './phase-notes-panel';
 import { PhasePageEditor } from './phase-page-editor';
 import { PhasePlanningLinks } from './phase-planning-links';
 import { PhaseTasksPanel } from './phase-tasks-panel';
-import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
 
 export function PhaseDetailContent({
   accountSlug,

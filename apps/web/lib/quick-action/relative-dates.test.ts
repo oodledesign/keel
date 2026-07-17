@@ -7,11 +7,15 @@ const wednesday = new Date(2026, 5, 10, 12, 0, 0, 0);
 describe('parseRelativeDueDatePhrase', () => {
   it('parses today and tomorrow', () => {
     expect(parseRelativeDueDatePhrase('today', wednesday)).toBe('2026-06-10');
-    expect(parseRelativeDueDatePhrase('tomorrow', wednesday)).toBe('2026-06-11');
+    expect(parseRelativeDueDatePhrase('tomorrow', wednesday)).toBe(
+      '2026-06-11',
+    );
   });
 
   it('parses end of week as Sunday', () => {
-    expect(parseRelativeDueDatePhrase('this week', wednesday)).toBe('2026-06-14');
+    expect(parseRelativeDueDatePhrase('this week', wednesday)).toBe(
+      '2026-06-14',
+    );
   });
 
   it('parses weekday names', () => {

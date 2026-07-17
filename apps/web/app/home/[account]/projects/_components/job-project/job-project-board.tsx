@@ -6,14 +6,14 @@ import Link from 'next/link';
 
 import {
   DndContext,
+  type DragEndEvent,
   DragOverlay,
+  type DragStartEvent,
   PointerSensor,
   closestCorners,
   useDroppable,
   useSensor,
   useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -29,10 +29,6 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 
-import {
-  createJobTask,
-  moveTask,
-} from '../../_lib/server/server-actions';
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
   JobBoardResult,
@@ -40,6 +36,7 @@ import type {
   PhaseListItem,
   PhaseTemplateListItem,
 } from '../../_lib/schema/project-phases.schema';
+import { createJobTask, moveTask } from '../../_lib/server/server-actions';
 import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
@@ -85,10 +82,12 @@ function TaskCard({
           title={task.priority}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium leading-snug text-[var(--workspace-shell-text)]">{task.title}</p>
+          <p className="text-sm leading-snug font-medium text-[var(--workspace-shell-text)]">
+            {task.title}
+          </p>
           <div className="mt-2 flex flex-wrap items-center gap-2">
             <span
-              className={`rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide ${
+              className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
                 TASK_STATUS_STYLES[task.status] ?? TASK_STATUS_STYLES.todo
               }`}
             >
@@ -120,8 +119,14 @@ function SortableTaskCard({
   memberLookup: MemberLookup;
   disabled: boolean;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id, disabled });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: task.id, disabled });
 
   return (
     <div
@@ -185,7 +190,9 @@ function PhaseColumn({
     <div
       ref={setNodeRef}
       className={`flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border bg-[var(--workspace-shell-panel)]/80 ${
-        isOver ? 'border-[var(--ozer-accent)]/50' : 'border-[color:var(--workspace-shell-border)]/80'
+        isOver
+          ? 'border-[var(--ozer-accent)]/50'
+          : 'border-[color:var(--workspace-shell-border)]/80'
       }`}
       style={{ borderTopWidth: 3, borderTopColor: colour }}
     >
@@ -213,11 +220,16 @@ function PhaseColumn({
             </p>
           </Link>
         ) : (
-          <h3 className="text-sm font-semibold text-[var(--workspace-shell-text-muted)]">Unassigned</h3>
+          <h3 className="text-sm font-semibold text-[var(--workspace-shell-text-muted)]">
+            Unassigned
+          </h3>
         )}
       </div>
 
-      <SortableContext items={tasks.map((t) => t.id)} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={tasks.map((t) => t.id)}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="flex min-h-[120px] flex-1 flex-col gap-2 p-2">
           {tasks.map((task) => (
             <SortableTaskCard
@@ -296,7 +308,12 @@ export function JobProjectBoard({
   jobId: string;
   board: JobBoardResult;
   canEditJobs: boolean;
-  members: { user_id: string; name: string | null; email: string | null; picture_url?: string | null }[];
+  members: {
+    user_id: string;
+    name: string | null;
+    email: string | null;
+    picture_url?: string | null;
+  }[];
   onBoardChange: (board: JobBoardResult) => void;
   onSeedDefaultPhases: () => void;
   onApplyTemplate: (templateId: string) => void;
@@ -382,8 +399,12 @@ export function JobProjectBoard({
       if (sourceKey === targetKey && activeId === overId) return;
 
       const next = { ...tasksByPhase };
-      const sourceList = [...(next[sourceKey] ?? [])].filter((t) => t.id !== activeId);
-      let targetList = [...(next[targetKey] ?? [])].filter((t) => t.id !== activeId);
+      const sourceList = [...(next[sourceKey] ?? [])].filter(
+        (t) => t.id !== activeId,
+      );
+      let targetList = [...(next[targetKey] ?? [])].filter(
+        (t) => t.id !== activeId,
+      );
 
       const moved: JobBoardTask = {
         ...activeTaskRow,
@@ -391,7 +412,11 @@ export function JobProjectBoard({
         job_id: jobId,
       };
 
-      if (overId !== targetKey && overId !== UNPHASED_KEY && overId !== activeId) {
+      if (
+        overId !== targetKey &&
+        overId !== UNPHASED_KEY &&
+        overId !== activeId
+      ) {
         const overIndex = targetList.findIndex((t) => t.id === overId);
         if (overIndex >= 0) targetList.splice(overIndex, 0, moved);
         else targetList.push(moved);
@@ -459,7 +484,15 @@ export function JobProjectBoard({
         }
       });
     },
-    [accountId, accountSlug, board, jobId, onBoardChange, startTransition, tasksByPhase],
+    [
+      accountId,
+      accountSlug,
+      board,
+      jobId,
+      onBoardChange,
+      startTransition,
+      tasksByPhase,
+    ],
   );
 
   if (phases.length === 0) {
@@ -520,33 +553,33 @@ export function JobProjectBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex w-max gap-3 overflow-x-auto pb-4 pt-1">
-            {phases.map((phase) => (
-              <SortablePhaseColumn
-                key={phase.id}
-                phase={phase}
-                tasks={tasksByPhase[phase.id] ?? []}
-                accountSlug={accountSlug}
-                jobId={jobId}
-                canEditJobs={canEditJobs}
-                memberLookup={memberLookup}
-                onAddTask={handleAddTask}
-                addingTask={addingTask}
-              />
-            ))}
-            {unphasedTasks.length > 0 && (
-              <PhaseColumn
-                phase={null}
-                tasks={unphasedTasks}
-                accountSlug={accountSlug}
-                jobId={jobId}
-                canEditJobs={canEditJobs}
-                memberLookup={memberLookup}
-                onAddTask={handleAddTask}
-                addingTask={addingTask}
-              />
-            )}
-          </div>
+        <div className="flex w-max gap-3 overflow-x-auto pt-1 pb-4">
+          {phases.map((phase) => (
+            <SortablePhaseColumn
+              key={phase.id}
+              phase={phase}
+              tasks={tasksByPhase[phase.id] ?? []}
+              accountSlug={accountSlug}
+              jobId={jobId}
+              canEditJobs={canEditJobs}
+              memberLookup={memberLookup}
+              onAddTask={handleAddTask}
+              addingTask={addingTask}
+            />
+          ))}
+          {unphasedTasks.length > 0 && (
+            <PhaseColumn
+              phase={null}
+              tasks={unphasedTasks}
+              accountSlug={accountSlug}
+              jobId={jobId}
+              canEditJobs={canEditJobs}
+              memberLookup={memberLookup}
+              onAddTask={handleAddTask}
+              addingTask={addingTask}
+            />
+          )}
+        </div>
 
         <DragOverlay dropAnimation={null}>
           {activeTask ? (

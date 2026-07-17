@@ -1,4 +1,5 @@
 import React from 'react';
+
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -6,6 +7,7 @@ import { ArrowRightIcon, Check } from 'lucide-react';
 
 import { cn } from '../../lib/utils';
 import { Button } from '../../shadcn/button';
+
 // Brand config import removed - using direct colors for now
 
 interface LandingHeroProps {
@@ -45,14 +47,14 @@ export function LandingHero({
   return (
     <section
       className={cn(
-        'relative overflow-hidden bg-white px-4 py-20 dark:bg-[#0D1421] lg:px-8 lg:py-32',
+        'relative overflow-hidden bg-white px-4 py-20 lg:px-8 lg:py-32 dark:bg-[#0D1421]',
         className,
       )}
     >
       {/* Dark mode: large icon above gradient */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="hidden dark:block">
-          <div className="absolute -right-32 -top-20 opacity-30 lg:opacity-40">
+          <div className="absolute -top-20 -right-32 opacity-30 lg:opacity-40">
             <Image
               src={HERO_ICON_BG}
               alt=""
@@ -66,13 +68,13 @@ export function LandingHero({
           <div className="absolute inset-0 bg-gradient-to-br from-[#57C87F]/20 via-transparent to-emerald-500/15" />
           <div className="absolute -top-40 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-[#57C87F]/25 blur-[100px]" />
           <div className="absolute -bottom-40 -left-24 h-80 w-80 rounded-full bg-emerald-500/20 blur-[80px]" />
-          <div className="absolute -bottom-32 -right-24 h-80 w-80 rounded-full bg-teal-500/15 blur-[80px]" />
+          <div className="absolute -right-24 -bottom-32 h-80 w-80 rounded-full bg-teal-500/15 blur-[80px]" />
         </div>
       </div>
 
-      <div className="container relative z-10 mx-auto">
+      <div className="relative z-10 container mx-auto">
         <div className="mx-auto max-w-4xl text-center">
-          <h1 className="mb-6 text-4xl font-bold leading-tight tracking-tight text-[#3D4E5D] dark:text-white lg:text-6xl">
+          <h1 className="mb-6 text-4xl leading-tight font-bold tracking-tight text-[#3D4E5D] lg:text-6xl dark:text-white">
             {typeof headline === 'string' && highlightedText ? (
               <>
                 {headline.split(highlightedText).map((part, i, arr) => (
@@ -90,7 +92,7 @@ export function LandingHero({
           </h1>
 
           {subtitle && (
-            <p className="mb-10 text-lg text-gray-700 dark:text-gray-300 lg:text-xl">
+            <p className="mb-10 text-lg text-gray-700 lg:text-xl dark:text-gray-300">
               {subtitle}
             </p>
           )}
@@ -104,7 +106,9 @@ export function LandingHero({
                 >
                   <Link href={primaryCta.href}>
                     {primaryCta.label}
-                    {primaryCtaShowArrow && <ArrowRightIcon className="ml-2 h-4 w-4" />}
+                    {primaryCtaShowArrow && (
+                      <ArrowRightIcon className="ml-2 h-4 w-4" />
+                    )}
                   </Link>
                 </Button>
               )}
@@ -122,10 +126,13 @@ export function LandingHero({
           )}
 
           {disclaimerItems && disclaimerItems.length > 0 ? (
-            <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm text-gray-500 dark:text-gray-400 sm:gap-x-8">
+            <ul className="flex flex-wrap items-center justify-center gap-x-6 gap-y-1 text-sm text-gray-500 sm:gap-x-8 dark:text-gray-400">
               {disclaimerItems.map((item, i) => (
                 <li key={i} className="flex items-center gap-2">
-                  <Check className="h-4 w-4 shrink-0 text-[#57C87F]" aria-hidden />
+                  <Check
+                    className="h-4 w-4 shrink-0 text-[#57C87F]"
+                    aria-hidden
+                  />
                   <span>{item}</span>
                 </li>
               ))}

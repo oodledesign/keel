@@ -76,26 +76,27 @@ export function ConnectedAccountsPanel({
   conferencing,
 }: Props) {
   const [pending, startTransition] = useTransition();
-  const [selections, setSelections] = useState<Record<string, AccountSelection>>(
-    () =>
-      Object.fromEntries(
-        google.accounts.map((account) => [
-          account.connectionId,
-          {
-            busyCalendarIds:
-              account.busyCalendarIds.length > 0
-                ? account.busyCalendarIds
-                : google.calendars
-                    .filter(
-                      (calendar) =>
-                        calendar.connectionId === account.connectionId &&
-                        calendar.selected,
-                    )
-                    .map((calendar) => calendar.id),
-            personalCalendarIds: account.personalCalendarIds,
-          },
-        ]),
-      ),
+  const [selections, setSelections] = useState<
+    Record<string, AccountSelection>
+  >(() =>
+    Object.fromEntries(
+      google.accounts.map((account) => [
+        account.connectionId,
+        {
+          busyCalendarIds:
+            account.busyCalendarIds.length > 0
+              ? account.busyCalendarIds
+              : google.calendars
+                  .filter(
+                    (calendar) =>
+                      calendar.connectionId === account.connectionId &&
+                      calendar.selected,
+                  )
+                  .map((calendar) => calendar.id),
+          personalCalendarIds: account.personalCalendarIds,
+        },
+      ]),
+    ),
   );
 
   const zoomConnection = conferencing.find((item) => item.provider === 'zoom');
@@ -374,13 +375,17 @@ export function ConnectedAccountsPanel({
       </div>
 
       {google.connected ? (
-        <section className={`space-y-5 rounded-2xl border p-5 ${workspacePanelBorder}`}>
+        <section
+          className={`space-y-5 rounded-2xl border p-5 ${workspacePanelBorder}`}
+        >
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <h2 className="text-sm font-semibold">Google accounts & availability</h2>
+              <h2 className="text-sm font-semibold">
+                Google accounts & availability
+              </h2>
               <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
-                Add your personal Google login as a second account. Booking slots
-                avoid busy time across every connected account.
+                Add your personal Google login as a second account. Booking
+                slots avoid busy time across every connected account.
               </p>
             </div>
             {canEdit ? (
@@ -405,7 +410,8 @@ export function ConnectedAccountsPanel({
                 busyCalendarIds: [],
                 personalCalendarIds: [],
               };
-              const calendars = calendarsByAccount.get(account.connectionId) ?? [];
+              const calendars =
+                calendarsByAccount.get(account.connectionId) ?? [];
 
               return (
                 <div
@@ -417,13 +423,16 @@ export function ConnectedAccountsPanel({
                       <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
                         {account.email ?? 'Google account'}
                         {account.isPrimary ? (
-                          <span className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}>
+                          <span
+                            className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}
+                          >
                             Primary for Meet links
                           </span>
                         ) : null}
                       </p>
                       <p className={`mt-0.5 text-xs ${workspaceTextMuted}`}>
-                        Tick calendars from this inbox that should block booking slots.
+                        Tick calendars from this inbox that should block booking
+                        slots.
                       </p>
                     </div>
                     {canEdit ? (
@@ -448,7 +457,9 @@ export function ConnectedAccountsPanel({
                   ) : (
                     <div className="mt-3 space-y-2">
                       {calendars.map((calendar) => {
-                        const busy = selection.busyCalendarIds.includes(calendar.id);
+                        const busy = selection.busyCalendarIds.includes(
+                          calendar.id,
+                        );
                         const personal = selection.personalCalendarIds.includes(
                           calendar.id,
                         );

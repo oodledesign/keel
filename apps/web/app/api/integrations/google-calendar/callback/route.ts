@@ -1,18 +1,18 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  loadGoogleCalendarConnections,
+  saveGoogleCalendarConnection,
+} from '~/lib/integrations/google-calendar/connection';
 import {
   exchangeGoogleCalendarCode,
   fetchGoogleAccountIdentity,
   stateReturnPath,
   verifyGoogleCalendarState,
 } from '~/lib/integrations/google-calendar/oauth';
-import {
-  loadGoogleCalendarConnections,
-  saveGoogleCalendarConnection,
-} from '~/lib/integrations/google-calendar/connection';
 
 export const dynamic = 'force-dynamic';
 

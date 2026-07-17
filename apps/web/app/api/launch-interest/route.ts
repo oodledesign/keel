@@ -46,7 +46,10 @@ function normaliseInterests(input: unknown): LaunchInterest[] {
   }
 
   const selected = input.filter((item): item is LaunchInterest => {
-    return typeof item === 'string' && VALID_INTERESTS.includes(item as LaunchInterest);
+    return (
+      typeof item === 'string' &&
+      VALID_INTERESTS.includes(item as LaunchInterest)
+    );
   });
 
   return selected.length ? selected : DEFAULT_INTERESTS;
@@ -77,7 +80,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const client = getSupabaseServerAdminClient() as unknown as LaunchInterestClient;
+  const client =
+    getSupabaseServerAdminClient() as unknown as LaunchInterestClient;
 
   const { count, error: countError } = await client
     .from('launch_interest')

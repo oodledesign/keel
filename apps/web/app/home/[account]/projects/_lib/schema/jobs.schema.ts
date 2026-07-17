@@ -14,9 +14,7 @@ const optionalNullableString = z.string().nullable().optional();
 const optionalInt = z.number().int().optional();
 const optionalNullableInt = z.number().int().nullable().optional();
 const optionalDate = z.coerce.date().optional();
-const optionalNullableDate = z
-  .union([z.coerce.date(), z.null()])
-  .optional();
+const optionalNullableDate = z.union([z.coerce.date(), z.null()]).optional();
 
 // --- List jobs ---
 export const ListJobsSchema = z
@@ -129,7 +127,9 @@ export type UpdateJobInput = z.infer<typeof UpdateJobSchema>;
 export type DeleteJobInput = z.infer<typeof DeleteJobSchema>;
 export type ListJobAssignmentsInput = z.infer<typeof ListJobAssignmentsSchema>;
 export type AddJobAssignmentInput = z.infer<typeof AddJobAssignmentSchema>;
-export type RemoveJobAssignmentInput = z.infer<typeof RemoveJobAssignmentSchema>;
+export type RemoveJobAssignmentInput = z.infer<
+  typeof RemoveJobAssignmentSchema
+>;
 export type ListJobNotesInput = z.infer<typeof ListJobNotesSchema>;
 export type AddJobNoteInput = z.infer<typeof AddJobNoteSchema>;
 export type DeleteJobNoteInput = z.infer<typeof DeleteJobNoteSchema>;

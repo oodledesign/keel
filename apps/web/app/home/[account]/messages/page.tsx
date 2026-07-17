@@ -5,13 +5,16 @@ import { Trans } from '@kit/ui/trans';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import { isWorkNavModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { MessagesPageContent } from './_components/messages-page-content';
-import { assertMessagesSchemaAvailable } from './_lib/server/messages-schema';
 import { loadMessagesPageData } from './_lib/server/messages-page.loader';
+import { assertMessagesSchemaAvailable } from './_lib/server/messages-schema';
 
 interface MessagesPageProps {
   params: Promise<{ account: string }>;
@@ -69,7 +72,7 @@ async function MessagesPage({ params }: MessagesPageProps) {
         account={accountSlug}
       />
 
-      <div className="flex flex-1 flex-col bg-[var(--workspace-shell-canvas)] px-2 pb-4 pt-2 md:px-4 md:pb-6 md:pt-4">
+      <div className="flex flex-1 flex-col bg-[var(--workspace-shell-canvas)] px-2 pt-2 pb-4 md:px-4 md:pt-4 md:pb-6">
         <MessagesPageContent
           accountId={data.accountId}
           accountSlug={data.accountSlug}

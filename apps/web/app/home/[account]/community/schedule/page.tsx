@@ -5,18 +5,21 @@ import { PageBody } from '@kit/ui/page';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../../_lib/role-access';
+import { isAccountModuleEnabled } from '../../_lib/server/account-modules';
+import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 import { CommunityMemberNotesPanel } from '../_components/community-member-notes-panel';
 import { CommunitySchedulePageContent } from '../_components/community-schedule-page-content';
 import { CommunitySeriesPanel } from '../_components/community-series-panel';
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
-import { isAccountModuleEnabled } from '../../_lib/server/account-modules';
 import {
   loadCommunityMemberNotes,
   loadCommunitySchedulePage,
 } from '../_lib/server/community-schedule.loader';
-import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 
 interface CommunitySchedulePageProps {
   params: Promise<{ account: string }>;
@@ -85,7 +88,9 @@ async function CommunitySchedulePage({ params }: CommunitySchedulePageProps) {
             />
           </div>
         ) : (
-          <p className="text-sm text-[var(--workspace-shell-text)]/60">Workspace not found.</p>
+          <p className="text-sm text-[var(--workspace-shell-text)]/60">
+            Workspace not found.
+          </p>
         )}
       </PageBody>
     </>

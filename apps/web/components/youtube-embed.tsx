@@ -8,7 +8,11 @@ type YoutubeEmbedProps = {
   className?: string;
 };
 
-export function YoutubeEmbed({ url, title = 'YouTube video', className }: YoutubeEmbedProps) {
+export function YoutubeEmbed({
+  url,
+  title = 'YouTube video',
+  className,
+}: YoutubeEmbedProps) {
   const embedSrc = youtubeEmbedUrl(url);
   const id = youtubeVideoId(url);
 

@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -22,32 +28,30 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@kit/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { useFormFieldScrollPassthroughRefs } from '~/lib/scroll-passthrough';
 
 import { CategorySelect } from '../../_components/workspace-content/category-select';
-import { LinkToSelect, type LinkValue } from '../../_components/workspace-content/link-to-select';
+import {
+  LinkToSelect,
+  type LinkValue,
+} from '../../_components/workspace-content/link-to-select';
 import { PublicSharingSection } from '../../_components/workspace-content/public-sharing-section';
 import { TagsInput } from '../../_components/workspace-content/tags-input';
+import {
+  saveWorkspaceNoteAction,
+  syncWorkspaceNoteBrainIndexAction,
+} from '../../_lib/workspace-content/notes-actions';
 import type {
   CustomNoteCategory,
   LinkOption,
   NoteFileCategory,
 } from '../../_lib/workspace-content/types';
-import {
-  saveWorkspaceNoteAction,
-  syncWorkspaceNoteBrainIndexAction,
-} from '../../_lib/workspace-content/notes-actions';
-import { useFormFieldScrollPassthroughRefs } from '~/lib/scroll-passthrough';
-
 import { NoteMarkdownToolbar } from './note-markdown-toolbar';
 
 type NoteEditorProps = {
@@ -100,10 +104,12 @@ export function NoteEditor({
   const [category, setCategory] = useState(note.category);
   const [tags, setTags] = useState(note.tags);
   const [link, setLink] = useState<LinkValue>(linkFromNote(note));
-  const [customCategories, setCustomCategories] = useState(initialCustomCategories);
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>(
-    'idle',
+  const [customCategories, setCustomCategories] = useState(
+    initialCustomCategories,
   );
+  const [saveState, setSaveState] = useState<
+    'idle' | 'saving' | 'saved' | 'error'
+  >('idle');
 
   const saveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const brainIndexTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -350,7 +356,9 @@ export function NoteEditor({
           <span
             className={cn(
               'min-w-[4.5rem] truncate text-xs',
-              saveState === 'error' ? 'text-red-400' : 'text-[var(--workspace-shell-text-muted)]',
+              saveState === 'error'
+                ? 'text-red-400'
+                : 'text-[var(--workspace-shell-text-muted)]',
             )}
             aria-live="polite"
           >
@@ -361,7 +369,11 @@ export function NoteEditor({
         <div className="flex shrink-0 items-center gap-0.5">
           <Popover>
             <PopoverTrigger asChild>
-              <button type="button" className={toolbarBtn()} aria-label="Category">
+              <button
+                type="button"
+                className={toolbarBtn()}
+                aria-label="Category"
+              >
                 <FolderKanban className="h-4 w-4" />
               </button>
             </PopoverTrigger>
@@ -462,7 +474,10 @@ export function NoteEditor({
                 />
               </div>
               {note.clientName ? (
-                <DropdownMenuItem disabled className="text-[var(--workspace-shell-text-muted)]">
+                <DropdownMenuItem
+                  disabled
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
                   <Users className="mr-2 h-4 w-4" />
                   Client: {note.clientName}
                 </DropdownMenuItem>
@@ -478,7 +493,10 @@ export function NoteEditor({
                 Copy link
               </DropdownMenuItem>
               {note.isPublic ? (
-                <DropdownMenuItem disabled className="text-[var(--ozer-accent-muted)]">
+                <DropdownMenuItem
+                  disabled
+                  className="text-[var(--ozer-accent-muted)]"
+                >
                   <Globe className="mr-2 h-4 w-4" />
                   Live link enabled
                 </DropdownMenuItem>
@@ -502,7 +520,7 @@ export function NoteEditor({
         placeholder="Untitled"
         rows={1}
         aria-label="Note title"
-        className="w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pb-2 pt-4 font-heading text-[1.75rem] font-bold leading-tight tracking-tight text-[var(--workspace-shell-text)] shadow-none focus-visible:ring-0 touch-pan-y sm:px-6 lg:px-10 lg:text-3xl xl:px-14"
+        className="font-heading w-full touch-pan-y resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pt-4 pb-2 text-[1.75rem] leading-tight font-bold tracking-tight text-[var(--workspace-shell-text)] shadow-none focus-visible:ring-0 sm:px-6 lg:px-10 lg:text-3xl xl:px-14"
         spellCheck
       />
 
@@ -519,7 +537,7 @@ export function NoteEditor({
         placeholder="Start writing…"
         rows={12}
         aria-label="Note content"
-        className="min-h-[50vh] w-full resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pb-4 pt-1 text-base leading-relaxed text-[var(--workspace-shell-text)] shadow-none focus-visible:ring-0 touch-pan-y sm:px-6 lg:px-10 lg:text-[15px] xl:px-14"
+        className="min-h-[50vh] w-full touch-pan-y resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pt-1 pb-4 text-base leading-relaxed text-[var(--workspace-shell-text)] shadow-none focus-visible:ring-0 sm:px-6 lg:px-10 lg:text-[15px] xl:px-14"
         spellCheck
       />
     </div>

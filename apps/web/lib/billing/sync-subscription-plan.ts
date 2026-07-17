@@ -4,8 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { UpsertSubscriptionParams } from '@kit/billing/types';
 
-import { findPlanByStripePriceId } from './ozer-plan-catalog';
 import { markBusinessUpgradedFromLite } from './business-lite';
+import { findPlanByStripePriceId } from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import { syncFullBusinessModules } from './sync-workspace-modules-from-plan';
 
@@ -40,7 +40,10 @@ export async function syncKeelPlanFromSubscription(
     });
 
     if (hadWorkspacePlan) {
-      await admin.from('account_plan_limits').delete().eq('account_id', accountId);
+      await admin
+        .from('account_plan_limits')
+        .delete()
+        .eq('account_id', accountId);
     } else {
       const hadVideosAddon = items.some((item) => {
         const plan = findPlanByStripePriceId(item.variant_id);

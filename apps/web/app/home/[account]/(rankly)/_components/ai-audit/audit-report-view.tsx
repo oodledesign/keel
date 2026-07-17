@@ -1,21 +1,22 @@
 'use client';
 
-import Link from 'next/link';
 import { useCallback, useState } from 'react';
+
+import Link from 'next/link';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
+import { AuditCitationLayerPanel } from '~/home/[account]/(rankly)/_components/brand-visibility-layers';
+import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
-  DIMENSION_LABELS,
   type AuditDimension,
   type AuditPriority,
   type AuditRecommendationRow,
   type AuditReportRow,
+  DIMENSION_LABELS,
 } from '~/lib/ai-audit/types';
 import { analyzeCrawlAccess } from '~/lib/crawl/access-summary';
-import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
-import { AuditCitationLayerPanel } from '~/home/[account]/(rankly)/_components/brand-visibility-layers';
 
 import { CrawlAccessBanner } from '../crawl-access-banner';
 import { BacklinkBar, BacklinkSourceNote } from '../shared/backlink-bar';
@@ -55,13 +56,13 @@ function DimensionScoreCard({
     <div
       className={`rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/30 p-4 ring-1 ${scoreRing(score)}`}
     >
-      <div className="mb-2 flex items-center gap-2 text-xs uppercase tracking-wide text-muted-foreground">
+      <div className="text-muted-foreground mb-2 flex items-center gap-2 text-xs tracking-wide uppercase">
         <span>{icons[dimension]}</span>
         {label}
       </div>
       <div className={`text-3xl font-bold ${scoreColour(score)}`}>
         {score ?? '—'}
-        <span className="text-lg font-normal text-muted-foreground">/100</span>
+        <span className="text-muted-foreground text-lg font-normal">/100</span>
       </div>
     </div>
   );
@@ -119,7 +120,7 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
           {rec.dimension}
         </span>
         {rec.is_quick_win ? (
-          <span className="rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-xs uppercase text-cyan-200">
+          <span className="rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-xs text-cyan-200 uppercase">
             Quick win
           </span>
         ) : null}
@@ -128,12 +129,14 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
         >
           {rec.priority}
         </span>
-        <span className="text-muted-foreground text-sm">{expanded ? '▲' : '▼'}</span>
+        <span className="text-muted-foreground text-sm">
+          {expanded ? '▲' : '▼'}
+        </span>
       </button>
 
       {expanded ? (
-        <div className="space-y-4 border-t border-[color:var(--workspace-shell-border)] px-4 pb-4 pt-4">
-          <p className="text-sm text-muted-foreground">{rec.description}</p>
+        <div className="space-y-4 border-t border-[color:var(--workspace-shell-border)] px-4 pt-4 pb-4">
+          <p className="text-muted-foreground text-sm">{rec.description}</p>
 
           {!snippet ? (
             <Button
@@ -147,7 +150,7 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
             </Button>
           ) : (
             <div className="rounded-md bg-black/40 p-3">
-              <pre className="overflow-x-auto whitespace-pre-wrap text-xs text-emerald-300">
+              <pre className="overflow-x-auto text-xs whitespace-pre-wrap text-emerald-300">
                 {snippet}
               </pre>
               <Button
@@ -166,12 +169,13 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
           )}
 
           <div className="space-y-1 rounded-md bg-black/30 p-3 text-sm">
-            <p className="text-xs uppercase tracking-wide text-muted-foreground">
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">
               Projected impact
             </p>
             {rec.outcome ? (
               <p>
-                <span className="text-muted-foreground">Outcome:</span> {rec.outcome}
+                <span className="text-muted-foreground">Outcome:</span>{' '}
+                {rec.outcome}
               </p>
             ) : null}
             {rec.why ? (
@@ -181,21 +185,24 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
             ) : null}
             {rec.magnitude ? (
               <p>
-                <span className="text-muted-foreground">Magnitude:</span> {rec.magnitude}
+                <span className="text-muted-foreground">Magnitude:</span>{' '}
+                {rec.magnitude}
               </p>
             ) : null}
           </div>
 
           {rec.example_urls?.length ? (
             <div>
-              <p className="mb-1 text-xs uppercase text-muted-foreground">Example URLs</p>
+              <p className="text-muted-foreground mb-1 text-xs uppercase">
+                Example URLs
+              </p>
               {rec.example_urls.map((url) => (
                 <a
                   key={url}
                   href={url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="block text-sm text-primary hover:underline"
+                  className="text-primary block text-sm hover:underline"
                 >
                   {url}
                 </a>
@@ -218,9 +225,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
     report.referring_domains ?? 0,
     ...competingBrandsOpr.map(
       (brand) =>
-        brand.referring_domains ??
-        competitorBacklinks[brand.domain] ??
-        0,
+        brand.referring_domains ?? competitorBacklinks[brand.domain] ?? 0,
     ),
     1,
   );
@@ -244,7 +249,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
         ) : null}
         {report.referring_domains != null ? (
           <div className="min-w-[200px] flex-1 space-y-1">
-            <p className="text-xs text-muted-foreground">Referring domains</p>
+            <p className="text-muted-foreground text-xs">Referring domains</p>
             <BacklinkBar
               domain={report.target_domain}
               referringDomains={report.referring_domains}
@@ -258,7 +263,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
 
   const competingBrandsPanel =
     competingBrandsOpr.length > 0 ? (
-      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-2">
+      <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-4">
         <p className="text-sm font-medium">Competing brands cited instead</p>
         <ul className="space-y-3 text-sm">
           {competingBrandsOpr.map((brand) => {
@@ -289,7 +294,9 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
     const genericPlatforms = platforms.filter(
       (platform) => (platform.promptLayer ?? 'generic') === 'generic',
     );
-    const citedCount = genericPlatforms.filter((p) => p.domainCitedInAny).length;
+    const citedCount = genericPlatforms.filter(
+      (p) => p.domainCitedInAny,
+    ).length;
     const platformCount = genericPlatforms.length || platforms.length;
 
     return (
@@ -311,9 +318,9 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
         {competingBrandsPanel}
 
         {report.referring_domains != null && report.referring_domains > 0 ? (
-          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 space-y-2">
+          <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-4">
             <p className="text-sm font-medium">Top referring domains</p>
-            <ul className="space-y-1 text-sm text-muted-foreground">
+            <ul className="text-muted-foreground space-y-1 text-sm">
               {(report.top_referring_domains ?? []).slice(0, 10).map((row) => (
                 <li
                   key={row.domain}
@@ -362,15 +369,17 @@ export function AuditReportView({
   report: AuditReportRow;
   recommendations: AuditRecommendationRow[];
 }) {
-  const [priorityFilter, setPriorityFilter] = useState<
-    'all' | AuditPriority
-  >('all');
+  const [priorityFilter, setPriorityFilter] = useState<'all' | AuditPriority>(
+    'all',
+  );
   const [categoryFilter, setCategoryFilter] = useState<AuditDimension | null>(
     null,
   );
 
   const filtered = recommendations
-    .filter((rec) => priorityFilter === 'all' || rec.priority === priorityFilter)
+    .filter(
+      (rec) => priorityFilter === 'all' || rec.priority === priorityFilter,
+    )
     .filter((rec) => !categoryFilter || rec.dimension === categoryFilter);
 
   const downloadExport = useCallback(() => {
@@ -383,9 +392,11 @@ export function AuditReportView({
     <div className="space-y-8">
       <header className="space-y-2">
         <h2 className="text-xl font-semibold">{report.target_domain}</h2>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-muted-foreground text-sm">
           Overall score:{' '}
-          <span className={`font-semibold ${scoreColour(report.overall_score)}`}>
+          <span
+            className={`font-semibold ${scoreColour(report.overall_score)}`}
+          >
             {report.overall_score ?? '—'}/100
           </span>{' '}
           · {new Date(report.created_at).toLocaleDateString()}
@@ -394,7 +405,9 @@ export function AuditReportView({
           ) : null}
         </p>
         {report.executive_summary ? (
-          <p className="text-sm text-muted-foreground">{report.executive_summary}</p>
+          <p className="text-muted-foreground text-sm">
+            {report.executive_summary}
+          </p>
         ) : null}
       </header>
 
@@ -434,7 +447,7 @@ export function AuditReportView({
             className={`rounded px-3 py-1.5 text-xs font-medium uppercase ${
               priorityFilter === filter
                 ? 'bg-primary text-primary-foreground'
-                : 'bg-black/30 text-muted-foreground'
+                : 'text-muted-foreground bg-black/30'
             }`}
           >
             {filter}
@@ -451,14 +464,19 @@ export function AuditReportView({
               className={`rounded px-3 py-1.5 text-xs font-medium uppercase ${
                 categoryFilter === cat
                   ? 'bg-primary text-primary-foreground'
-                  : 'bg-black/30 text-muted-foreground'
+                  : 'text-muted-foreground bg-black/30'
               }`}
             >
               {cat}
             </button>
           ))}
         </div>
-        <Button type="button" variant="outline" size="sm" onClick={downloadExport}>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={downloadExport}
+        >
           Export report
         </Button>
       </div>
@@ -497,7 +515,7 @@ export function AuditReportList({
           >
             <div>
               <p className="font-medium">{report.target_domain}</p>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 {report.overall_score ?? '—'}/100 ·{' '}
                 {new Date(report.created_at).toLocaleDateString()}
               </p>

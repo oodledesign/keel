@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -42,17 +43,22 @@ import {
   formatUkDateTimeMedium,
 } from '~/lib/format/uk-datetime';
 
+import { EMAIL_CONTACT_TRADE_OPTIONS } from '../_lib/email-contact-constants';
+import {
+  type EditableRecipientList,
+  defaultContactSourceForList,
+  isEditableRecipientList,
+  isExcludableSystemList,
+} from '../_lib/recipient-list-constants';
 import {
   createContactList,
-  deleteContactList,
   deleteContact,
+  deleteContactList,
   removeContactFromRecipientList,
   removeUnsubscribe,
   setContactSubscribed,
   upsertContact,
 } from '../_lib/server/email-marketing.actions';
-import { CampaignRowActions } from './campaign-row-actions';
-import { EmailContactImportDialog } from './email-contact-import-flow';
 import type {
   CampaignListRow,
   EmailContactRow,
@@ -60,14 +66,8 @@ import type {
   RecipientListMember,
   RecipientListSummary,
 } from '../_lib/server/email-marketing.loader';
-
-import { EMAIL_CONTACT_TRADE_OPTIONS } from '../_lib/email-contact-constants';
-import {
-  isEditableRecipientList,
-  isExcludableSystemList,
-  defaultContactSourceForList,
-  type EditableRecipientList,
-} from '../_lib/recipient-list-constants';
+import { CampaignRowActions } from './campaign-row-actions';
+import { EmailContactImportDialog } from './email-contact-import-flow';
 
 const tabs = [
   ['campaigns', 'Campaigns'],
@@ -78,9 +78,12 @@ const tabs = [
 ] as const;
 
 function statusClass(status: string) {
-  if (status === 'sent') return 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200';
-  if (status === 'sending') return 'border-sky-400/40 bg-sky-500/10 text-sky-200';
-  if (status === 'cancelled') return 'border-[color:var(--workspace-shell-border)]/40 bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]';
+  if (status === 'sent')
+    return 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200';
+  if (status === 'sending')
+    return 'border-sky-400/40 bg-sky-500/10 text-sky-200';
+  if (status === 'cancelled')
+    return 'border-[color:var(--workspace-shell-border)]/40 bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]';
   return 'border-amber-400/40 bg-amber-500/10 text-amber-200';
 }
 
@@ -112,18 +115,26 @@ export function EmailMarketingDashboard({
     query: string;
   };
 }) {
-  const currentTab = tabs.some(([id]) => id === activeTab) ? activeTab : 'campaigns';
+  const currentTab = tabs.some(([id]) => id === activeTab)
+    ? activeTab
+    : 'campaigns';
 
   return (
     <div className="space-y-6">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">Email marketing</h1>
+          <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">
+            Email marketing
+          </h1>
           <p className="text-[var(--workspace-shell-text-muted)]">
-            Compose branded campaigns, manage pre-signup contacts, and review metrics.
+            Compose branded campaigns, manage pre-signup contacts, and review
+            metrics.
           </p>
         </div>
-        <Button asChild className="bg-[#57C87F] text-[#09111F] hover:bg-[#97D9AA]">
+        <Button
+          asChild
+          className="bg-[#57C87F] text-[#09111F] hover:bg-[#97D9AA]"
+        >
           <Link href="/admin/email-marketing/new">
             <Plus className="mr-2 h-4 w-4" />
             New campaign
@@ -147,7 +158,9 @@ export function EmailMarketingDashboard({
         ))}
       </div>
 
-      {currentTab === 'campaigns' ? <CampaignsTab campaigns={campaigns} /> : null}
+      {currentTab === 'campaigns' ? (
+        <CampaignsTab campaigns={campaigns} />
+      ) : null}
       {currentTab === 'lists' && listsData ? (
         <ListsTab
           summaries={listsData.summaries}
@@ -159,7 +172,9 @@ export function EmailMarketingDashboard({
         <ContactsTab contacts={contacts} filters={contactFilters} />
       ) : null}
       {currentTab === 'templates' ? <TemplatesTab /> : null}
-      {currentTab === 'unsubscribes' ? <UnsubscribesTab rows={unsubscribes} /> : null}
+      {currentTab === 'unsubscribes' ? (
+        <UnsubscribesTab rows={unsubscribes} />
+      ) : null}
     </div>
   );
 }
@@ -171,29 +186,56 @@ function CampaignsTab({ campaigns }: { campaigns: CampaignListRow[] }) {
         <Table>
           <TableHeader>
             <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Title</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Status</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Recipient list</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Sent</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Open rate</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Click rate</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Created</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Title
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Status
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Recipient list
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Sent
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Open rate
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Click rate
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Created
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {campaigns.length === 0 ? (
               <TableRow className="border-[color:var(--workspace-shell-border)]">
-                <TableCell colSpan={8} className="py-10 text-center text-[var(--workspace-shell-text-muted)]">
+                <TableCell
+                  colSpan={8}
+                  className="py-10 text-center text-[var(--workspace-shell-text-muted)]"
+                >
                   No campaigns yet.
                 </TableCell>
               </TableRow>
             ) : (
               campaigns.map((campaign) => (
-                <TableRow key={campaign.id} className="border-[color:var(--workspace-shell-border)]">
-                  <TableCell className="font-medium text-[var(--workspace-shell-text)]">{campaign.title}</TableCell>
+                <TableRow
+                  key={campaign.id}
+                  className="border-[color:var(--workspace-shell-border)]"
+                >
+                  <TableCell className="font-medium text-[var(--workspace-shell-text)]">
+                    {campaign.title}
+                  </TableCell>
                   <TableCell>
-                    <Badge variant="outline" className={statusClass(campaign.status)}>
+                    <Badge
+                      variant="outline"
+                      className={statusClass(campaign.status)}
+                    >
                       {campaign.status}
                     </Badge>
                   </TableCell>
@@ -203,13 +245,20 @@ function CampaignsTab({ campaigns }: { campaigns: CampaignListRow[] }) {
                   <TableCell className="text-[var(--workspace-shell-text-muted)]">
                     {campaign.sent_count}/{campaign.total_recipients}
                   </TableCell>
-                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{campaign.open_rate}%</TableCell>
-                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{campaign.click_rate}%</TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                    {campaign.open_rate}%
+                  </TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                    {campaign.click_rate}%
+                  </TableCell>
                   <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                     {formatUkDateMedium(campaign.created_at)}
                   </TableCell>
                   <TableCell>
-                    <CampaignRowActions campaignId={campaign.id} status={campaign.status} />
+                    <CampaignRowActions
+                      campaignId={campaign.id}
+                      status={campaign.status}
+                    />
                   </TableCell>
                 </TableRow>
               ))
@@ -240,14 +289,15 @@ function ListsTab({
     summaries.find((summary) => summary.list === filters.list) ?? summaries[0];
   const editable = selected?.editable ?? false;
   const customListId = selected?.customListId ?? null;
-  const editableList = selected && isEditableRecipientList(selected.list)
-    ? (selected.list as EditableRecipientList)
-    : null;
+  const editableList =
+    selected && isEditableRecipientList(selected.list)
+      ? (selected.list as EditableRecipientList)
+      : null;
   const contactSource = editableList
     ? defaultContactSourceForList(editableList)
     : 'imported';
   const removeFromListMessage = isExcludableSystemList(selected?.list ?? '')
-    ? 'Remove from this list? The contact stays in Contacts — they just won\'t receive campaigns sent to this list.'
+    ? "Remove from this list? The contact stays in Contacts — they just won't receive campaigns sent to this list."
     : 'Remove from this list? The contact stays in Contacts.';
 
   const pushFilters = (updates: Partial<typeof filters>) => {
@@ -262,7 +312,9 @@ function ListsTab({
     <div className="grid gap-4 xl:grid-cols-[320px_1fr]">
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader className="flex flex-row items-center justify-between gap-2 pb-3">
-          <CardTitle className="text-base text-[var(--workspace-shell-text)]">Audience lists</CardTitle>
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+            Audience lists
+          </CardTitle>
           <Button
             type="button"
             size="sm"
@@ -289,7 +341,9 @@ function ListsTab({
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
-                    <p className="font-medium text-[var(--workspace-shell-text)]">{summary.label}</p>
+                    <p className="font-medium text-[var(--workspace-shell-text)]">
+                      {summary.label}
+                    </p>
                     <p className="mt-1 text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
                       {summary.description}
                       {summary.editable ? (
@@ -407,9 +461,15 @@ function ListsTab({
         {selected?.campaignSpecific ? (
           <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
             <CardContent className="py-10 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-              Choose <span className="text-[var(--workspace-shell-text)]">Manual addresses</span> or{' '}
-              <span className="text-[var(--workspace-shell-text)]">Custom users</span> when composing a
-              campaign to define who receives that send.
+              Choose{' '}
+              <span className="text-[var(--workspace-shell-text)]">
+                Manual addresses
+              </span>{' '}
+              or{' '}
+              <span className="text-[var(--workspace-shell-text)]">
+                Custom users
+              </span>{' '}
+              when composing a campaign to define who receives that send.
             </CardContent>
           </Card>
         ) : (
@@ -418,13 +478,25 @@ function ListsTab({
               <Table>
                 <TableHeader>
                   <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
-                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Name</TableHead>
-                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Email</TableHead>
-                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Type</TableHead>
-                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Tier / trade</TableHead>
-                    <TableHead className="text-[var(--workspace-shell-text-muted)]">Last sign-in</TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                      Name
+                    </TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                      Email
+                    </TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                      Type
+                    </TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                      Tier / trade
+                    </TableHead>
+                    <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                      Last sign-in
+                    </TableHead>
                     {editable ? (
-                      <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
+                      <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                        Actions
+                      </TableHead>
                     ) : null}
                   </TableRow>
                 </TableHeader>
@@ -449,14 +521,16 @@ function ListsTab({
                         <TableCell className="text-[var(--workspace-shell-text)]">
                           {member.name ?? '—'}
                         </TableCell>
-                        <TableCell className="text-[var(--workspace-shell-text-muted)]">{member.email}</TableCell>
+                        <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                          {member.email}
+                        </TableCell>
                         <TableCell className="text-[var(--workspace-shell-text-muted)]">
                           {member.kind === 'contact' ? 'Contact' : 'User'}
                         </TableCell>
                         <TableCell className="text-[var(--workspace-shell-text-muted)]">
                           {member.tier
                             ? member.tier.replace(/_/g, ' ')
-                            : member.trade ?? '—'}
+                            : (member.trade ?? '—')}
                         </TableCell>
                         <TableCell className="text-[var(--workspace-shell-text-muted)]">
                           {member.lastSignInAt
@@ -465,13 +539,17 @@ function ListsTab({
                               ? '—'
                               : 'Never'}
                         </TableCell>
-                        {editable && member.kind === 'contact' && member.contactId ? (
+                        {editable &&
+                        member.kind === 'contact' &&
+                        member.contactId ? (
                           <TableCell className="space-x-2 whitespace-nowrap">
                             <ContactDialog
                               member={member}
                               defaultSource={contactSource}
                               fixedSource={
-                                editableList === 'beta_contacts' ? 'beta' : undefined
+                                editableList === 'beta_contacts'
+                                  ? 'beta'
+                                  : undefined
                               }
                               triggerIcon={<Pencil className="h-4 w-4" />}
                             />
@@ -507,7 +585,9 @@ function ListsTab({
                             </Button>
                           </TableCell>
                         ) : editable ? (
-                          <TableCell className="text-[var(--workspace-shell-text-muted)]">—</TableCell>
+                          <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                            —
+                          </TableCell>
                         ) : null}
                       </TableRow>
                     ))
@@ -531,7 +611,9 @@ function ListsTab({
               onChange={setNewListName}
             />
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text)]">Description (optional)</Label>
+              <Label className="text-[var(--workspace-shell-text)]">
+                Description (optional)
+              </Label>
               <Textarea
                 value={newListDescription}
                 onChange={(event) => setNewListDescription(event.target.value)}
@@ -595,7 +677,14 @@ function ContactsTab({
   };
 
   const exportCsv = () => {
-    const header = ['first_name', 'last_name', 'email', 'trade', 'source', 'subscribed'];
+    const header = [
+      'first_name',
+      'last_name',
+      'email',
+      'trade',
+      'source',
+      'subscribed',
+    ];
     const rows = contacts.map((contact) =>
       [
         contact.first_name,
@@ -635,7 +724,11 @@ function ContactsTab({
           onOpenChange={setImportOpen}
           onImported={() => router.refresh()}
         />
-        <Button variant="outline" className="border-[color:var(--workspace-shell-border)]" onClick={exportCsv}>
+        <Button
+          variant="outline"
+          className="border-[color:var(--workspace-shell-border)]"
+          onClick={exportCsv}
+        >
           <Download className="mr-2 h-4 w-4" />
           Export all
         </Button>
@@ -646,11 +739,15 @@ function ContactsTab({
           defaultValue={filters.query}
           placeholder="Search name or email"
           className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
-          onChange={(event) => pushFilters({ query: event.target.value.trim() })}
+          onChange={(event) =>
+            pushFilters({ query: event.target.value.trim() })
+          }
         />
         <Select
           value={filters.trade || '__all__'}
-          onValueChange={(trade) => pushFilters({ trade: trade === '__all__' ? '' : trade })}
+          onValueChange={(trade) =>
+            pushFilters({ trade: trade === '__all__' ? '' : trade })
+          }
         >
           <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="Trade" />
@@ -658,13 +755,17 @@ function ContactsTab({
           <SelectContent>
             <SelectItem value="__all__">All trades</SelectItem>
             {EMAIL_CONTACT_TRADE_OPTIONS.map((trade) => (
-              <SelectItem key={trade} value={trade}>{trade}</SelectItem>
+              <SelectItem key={trade} value={trade}>
+                {trade}
+              </SelectItem>
             ))}
           </SelectContent>
         </Select>
         <Select
           value={filters.source || '__all__'}
-          onValueChange={(source) => pushFilters({ source: source === '__all__' ? '' : source })}
+          onValueChange={(source) =>
+            pushFilters({ source: source === '__all__' ? '' : source })
+          }
         >
           <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
             <SelectValue placeholder="Source" />
@@ -684,29 +785,55 @@ function ContactsTab({
           <Table>
             <TableHeader>
               <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Name</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Email</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Trade</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Source</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Subscribed</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Added</TableHead>
-                <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Name
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Email
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Trade
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Source
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Subscribed
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Added
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Actions
+                </TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {contacts.map((contact) => (
-                <TableRow key={contact.id} className="border-[color:var(--workspace-shell-border)]">
+                <TableRow
+                  key={contact.id}
+                  className="border-[color:var(--workspace-shell-border)]"
+                >
                   <TableCell className="text-[var(--workspace-shell-text)]">
                     {contact.first_name} {contact.last_name}
                     {contact.has_signed_up ? (
-                      <Badge variant="outline" className="ml-2 border-emerald-400/40 text-emerald-200">
+                      <Badge
+                        variant="outline"
+                        className="ml-2 border-emerald-400/40 text-emerald-200"
+                      >
                         signed up
                       </Badge>
                     ) : null}
                   </TableCell>
-                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{contact.email}</TableCell>
-                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{contact.trade ?? '—'}</TableCell>
-                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{contact.source ?? 'manual'}</TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                    {contact.email}
+                  </TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                    {contact.trade ?? '—'}
+                  </TableCell>
+                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                    {contact.source ?? 'manual'}
+                  </TableCell>
                   <TableCell>
                     <Switch
                       checked={contact.subscribed}
@@ -829,29 +956,59 @@ function ContactDialog({
           <DialogTitle>{editing ? 'Edit contact' : 'Add contact'}</DialogTitle>
         </DialogHeader>
         <div className="grid gap-3">
-          <InputField label="First name" value={form.firstName} onChange={(firstName) => setForm((prev) => ({ ...prev, firstName }))} />
-          <InputField label="Last name" value={form.lastName} onChange={(lastName) => setForm((prev) => ({ ...prev, lastName }))} />
-          <InputField label="Email" value={form.email} onChange={(email) => setForm((prev) => ({ ...prev, email }))} />
+          <InputField
+            label="First name"
+            value={form.firstName}
+            onChange={(firstName) =>
+              setForm((prev) => ({ ...prev, firstName }))
+            }
+          />
+          <InputField
+            label="Last name"
+            value={form.lastName}
+            onChange={(lastName) => setForm((prev) => ({ ...prev, lastName }))}
+          />
+          <InputField
+            label="Email"
+            value={form.email}
+            onChange={(email) => setForm((prev) => ({ ...prev, email }))}
+          />
           <div className="space-y-2">
             <Label>Trade</Label>
-            <Select value={form.trade || 'Other'} onValueChange={(trade) => setForm((prev) => ({ ...prev, trade }))}>
+            <Select
+              value={form.trade || 'Other'}
+              onValueChange={(trade) => setForm((prev) => ({ ...prev, trade }))}
+            >
               <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {EMAIL_CONTACT_TRADE_OPTIONS.map((trade) => (
-                  <SelectItem key={trade} value={trade}>{trade}</SelectItem>
+                  <SelectItem key={trade} value={trade}>
+                    {trade}
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>
           </div>
           <div className="space-y-2">
             <Label>Notes</Label>
-            <Textarea value={form.notes} onChange={(event) => setForm((prev) => ({ ...prev, notes: event.target.value }))} className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]" />
+            <Textarea
+              value={form.notes}
+              onChange={(event) =>
+                setForm((prev) => ({ ...prev, notes: event.target.value }))
+              }
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+            />
           </div>
           <div className="flex items-center justify-between">
             <Label>Subscribed</Label>
-            <Switch checked={form.subscribed} onCheckedChange={(subscribed) => setForm((prev) => ({ ...prev, subscribed }))} />
+            <Switch
+              checked={form.subscribed}
+              onCheckedChange={(subscribed) =>
+                setForm((prev) => ({ ...prev, subscribed }))
+              }
+            />
           </div>
           <Button
             disabled={isPending}
@@ -874,7 +1031,11 @@ function ContactDialog({
                   setOpen(false);
                   router.refresh();
                 } catch (error) {
-                  toast.error(error instanceof Error ? error.message : 'Failed to save contact');
+                  toast.error(
+                    error instanceof Error
+                      ? error.message
+                      : 'Failed to save contact',
+                  );
                 }
               })
             }
@@ -913,24 +1074,30 @@ function TemplatesTab() {
     <div className="grid gap-4 lg:grid-cols-2">
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-[var(--workspace-shell-text)]">Announcement</CardTitle>
+          <CardTitle className="text-[var(--workspace-shell-text)]">
+            Announcement
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <AnnouncementTemplatePreview />
           <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
-            Large hero heading, optional image, rich body copy, and one primary CTA.
+            Large hero heading, optional image, rich body copy, and one primary
+            CTA.
           </p>
         </CardContent>
       </Card>
 
       <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <CardHeader>
-          <CardTitle className="text-[var(--workspace-shell-text)]">Newsletter</CardTitle>
+          <CardTitle className="text-[var(--workspace-shell-text)]">
+            Newsletter
+          </CardTitle>
         </CardHeader>
         <CardContent>
           <NewsletterTemplatePreview />
           <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
-            Slim header, intro copy, up to three feature/news blocks, and one CTA.
+            Slim header, intro copy, up to three feature/news blocks, and one
+            CTA.
           </p>
         </CardContent>
       </Card>
@@ -945,7 +1112,7 @@ function AnnouncementTemplatePreview() {
         Tradeways
       </div>
       <div className="relative h-28 bg-gradient-to-br from-[#1A3A2E]/25 via-[#4CC68A]/20 to-[#1A3A2E]/10">
-        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-medium uppercase tracking-[0.18em] text-[#1A3A2E]/55">
+        <div className="absolute inset-0 flex items-center justify-center text-[11px] font-medium tracking-[0.18em] text-[#1A3A2E]/55 uppercase">
           Hero image
         </div>
       </div>
@@ -1011,20 +1178,35 @@ function UnsubscribesTab({ rows }: { rows: EmailUnsubscribeRow[] }) {
         <Table>
           <TableHeader>
             <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Email</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Unsubscribed</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Reason</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Email
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Unsubscribed
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Reason
+              </TableHead>
+              <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                Actions
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {rows.map((row) => (
-              <TableRow key={row.id} className="border-[color:var(--workspace-shell-border)]">
-                <TableCell className="text-[var(--workspace-shell-text)]">{row.email}</TableCell>
+              <TableRow
+                key={row.id}
+                className="border-[color:var(--workspace-shell-border)]"
+              >
+                <TableCell className="text-[var(--workspace-shell-text)]">
+                  {row.email}
+                </TableCell>
                 <TableCell className="text-[var(--workspace-shell-text-muted)]">
                   {formatUkDateTimeMedium(row.unsubscribed_at)}
                 </TableCell>
-                <TableCell className="text-[var(--workspace-shell-text-muted)]">{row.reason ?? '—'}</TableCell>
+                <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                  {row.reason ?? '—'}
+                </TableCell>
                 <TableCell>
                   <Button
                     disabled={isPending}

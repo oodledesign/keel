@@ -2,11 +2,7 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import {
-  deleteSourceChunks,
-  indexAccount,
-  indexSource,
-} from './indexer';
+import { deleteSourceChunks, indexAccount, indexSource } from './indexer';
 import type { BrainSourceType } from './paths';
 
 export function queueBrainIndexSource(

@@ -1,8 +1,8 @@
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
-import { PageBody } from '@kit/ui/page';
 import { Button } from '@kit/ui/button';
+import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -64,7 +64,8 @@ async function PlatformSupportTicketPage({
           />
         ) : (
           <p className="text-muted-foreground text-sm">
-            This ticket is {ticket.status}. Open a new ticket if you need more help.
+            This ticket is {ticket.status}. Open a new ticket if you need more
+            help.
           </p>
         )}
       </PageBody>

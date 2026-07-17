@@ -2,8 +2,8 @@ import type { NextRequest, NextResponse } from 'next/server';
 
 import type { Session, User } from '@supabase/supabase-js';
 
-import { createMiddlewareClient } from '@kit/supabase/middleware-client';
 import { getSupabaseAuthCookieOptions } from '@kit/supabase/get-supabase-auth-cookie-options';
+import { createMiddlewareClient } from '@kit/supabase/middleware-client';
 import type { JWTUserData } from '@kit/supabase/types';
 
 import {
@@ -41,7 +41,11 @@ async function getUserWithBackoff(
 ) {
   let lastError: unknown;
 
-  for (let attempt = 0; attempt < AUTH_GET_USER_RETRY_DELAYS_MS.length; attempt++) {
+  for (
+    let attempt = 0;
+    attempt < AUTH_GET_USER_RETRY_DELAYS_MS.length;
+    attempt++
+  ) {
     const delayMs = AUTH_GET_USER_RETRY_DELAYS_MS[attempt] ?? 0;
     if (delayMs > 0) {
       await sleep(delayMs);
@@ -69,7 +73,8 @@ async function getUserWithBackoff(
 async function readSessionFromLocalClaims(
   supabase: ReturnType<typeof createMiddlewareClient>,
 ): Promise<Session | null> {
-  const { data: claimsData, error: claimsError } = await supabase.auth.getClaims();
+  const { data: claimsData, error: claimsError } =
+    await supabase.auth.getClaims();
   if (claimsError || !claimsData?.claims) {
     return null;
   }
@@ -109,7 +114,9 @@ function setSuppressGetSessionWarning(
 }
 
 function hasSupabaseAuthCookies(request: NextRequest): boolean {
-  return request.cookies.getAll().some((cookie) => AUTH_COOKIE_RE.test(cookie.name));
+  return request.cookies
+    .getAll()
+    .some((cookie) => AUTH_COOKIE_RE.test(cookie.name));
 }
 
 function readStoredSessionExpiry(request: NextRequest): number | null {
@@ -135,7 +142,10 @@ function readStoredSessionExpiry(request: NextRequest): number | null {
   }
 }
 
-function clearSupabaseAuthCookies(request: NextRequest, response: NextResponse) {
+function clearSupabaseAuthCookies(
+  request: NextRequest,
+  response: NextResponse,
+) {
   const sharedOptions = getSupabaseAuthCookieOptions();
   const domain = sharedOptions?.domain;
 

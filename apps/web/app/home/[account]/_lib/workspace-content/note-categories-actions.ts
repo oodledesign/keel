@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
@@ -20,10 +21,7 @@ function slugifyCategoryLabel(label: string): string {
   return slug || 'custom';
 }
 
-function revalidateCategoryPaths(
-  accountSlug: string,
-  personalScope?: boolean,
-) {
+function revalidateCategoryPaths(accountSlug: string, personalScope?: boolean) {
   if (personalScope) {
     revalidatePath(pathsConfig.app.personalNotes);
     return;

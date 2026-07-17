@@ -34,10 +34,7 @@ export async function reconcileAccountBillingFromSubscriptions(
     ]);
 
   if (error) {
-    console.error(
-      '[account-billing] reconcile list failed:',
-      error.message,
-    );
+    console.error('[account-billing] reconcile list failed:', error.message);
     return { synced: 0 };
   }
 

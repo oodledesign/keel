@@ -99,7 +99,12 @@ async function SignUpPage({ searchParams }: SignUpPageProps) {
           />
 
           <div className="flex justify-center">
-            <Button asChild variant="link" size="sm" className="text-[var(--workspace-shell-text-muted)]">
+            <Button
+              asChild
+              variant="link"
+              size="sm"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               <Link
                 href={buildAuthLinkWithNext(pathsConfig.auth.signIn, next)}
                 prefetch={true}

@@ -4,9 +4,10 @@ import { cache } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
 import pathsConfig from '~/config/paths.config';
 import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 /**
  * True when the user still needs the initial /setup flow.
@@ -63,7 +64,10 @@ export const userRequiresWorkspaceSetup = cache(
       .maybeSingle();
 
     if (businessError) {
-      console.error('[workspace-setup-guard] businesses:', businessError.message);
+      console.error(
+        '[workspace-setup-guard] businesses:',
+        businessError.message,
+      );
       return true;
     }
 

@@ -40,10 +40,7 @@ export function UpdatePaymentMethodButton({
         type="submit"
         size={size}
         variant={variant}
-        className={cn(
-          variant === 'default' && 'ozer-gradient-btn',
-          className,
-        )}
+        className={cn(variant === 'default' && 'ozer-gradient-btn', className)}
       >
         <CreditCard className="mr-2 h-4 w-4" aria-hidden />
         {label}

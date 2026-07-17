@@ -30,14 +30,18 @@ function stateSecret() {
     );
   }
 
-  return createHmac('sha256', tokenKey)
-    // keep legacy salt string — changing breaks in-flight OAuth state
-    .update('keel-starling-oauth-state-v1')
-    .digest('hex');
+  return (
+    createHmac('sha256', tokenKey)
+      // keep legacy salt string — changing breaks in-flight OAuth state
+      .update('keel-starling-oauth-state-v1')
+      .digest('hex')
+  );
 }
 
 function signPayload(payload: string) {
-  return createHmac('sha256', stateSecret()).update(payload).digest('base64url');
+  return createHmac('sha256', stateSecret())
+    .update(payload)
+    .digest('base64url');
 }
 
 export function signStarlingOAuthState(
@@ -52,7 +56,9 @@ export function signStarlingOAuthState(
   return `${body}.${sig}`;
 }
 
-export function verifyStarlingOAuthState(token: string): StarlingOAuthStatePayload {
+export function verifyStarlingOAuthState(
+  token: string,
+): StarlingOAuthStatePayload {
   const [body, sig] = token.split('.');
   if (!body || !sig) throw new Error('Invalid OAuth state');
 

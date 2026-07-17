@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 
+import { scoreTone } from '~/lib/rankly-pages/score';
 import type { RanklyPageSummary } from '~/lib/rankly-pages/types';
 import { PAGE_SCORE_LABELS } from '~/lib/rankly-pages/types';
-import { scoreTone } from '~/lib/rankly-pages/score';
 import { pageDisplayPath } from '~/lib/rankly-pages/url';
 
 import { ranklyPagesDetailPath } from '../../_lib/rankly-project-paths';
@@ -24,8 +24,12 @@ function formatDate(iso: string | null | undefined): string | null {
 function ScoreMini(props: { label: string; score: number | null }) {
   return (
     <div className="text-center">
-      <p className="text-muted-foreground text-[10px] uppercase">{props.label}</p>
-      <p className={`text-sm font-medium tabular-nums ${scoreTone(props.score)}`}>
+      <p className="text-muted-foreground text-[10px] uppercase">
+        {props.label}
+      </p>
+      <p
+        className={`text-sm font-medium tabular-nums ${scoreTone(props.score)}`}
+      >
         {formatScore(props.score)}
       </p>
     </div>
@@ -37,8 +41,8 @@ function DataSourceBadge(props: { label: string; active: boolean }) {
     <span
       className={
         props.active
-          ? 'inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] uppercase text-[var(--workspace-shell-text)]/90'
-          : 'inline-flex rounded-full border border-[color:var(--workspace-shell-border)] px-2 py-0.5 text-[10px] uppercase text-muted-foreground/60'
+          ? 'inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] text-[var(--workspace-shell-text)]/90 uppercase'
+          : 'text-muted-foreground/60 inline-flex rounded-full border border-[color:var(--workspace-shell-border)] px-2 py-0.5 text-[10px] uppercase'
       }
     >
       {props.label}
@@ -88,27 +92,17 @@ function PageRow(props: {
       </td>
       <td className="hidden px-4 py-3 lg:table-cell">
         <div className="grid grid-cols-4 gap-2">
-          <ScoreMini
-            label="SEO"
-            score={props.page.scores.onPage}
-          />
-          <ScoreMini
-            label="Perf"
-            score={props.page.scores.performance}
-          />
-          <ScoreMini
-            label="Tech"
-            score={props.page.scores.technical}
-          />
-          <ScoreMini
-            label="Schema"
-            score={props.page.scores.schema}
-          />
+          <ScoreMini label="SEO" score={props.page.scores.onPage} />
+          <ScoreMini label="Perf" score={props.page.scores.performance} />
+          <ScoreMini label="Tech" score={props.page.scores.technical} />
+          <ScoreMini label="Schema" score={props.page.scores.schema} />
         </div>
       </td>
       <td className="px-4 py-3 text-right tabular-nums">
         {props.page.recommendationCount > 0 ? (
-          <span className="text-amber-300">{props.page.recommendationCount}</span>
+          <span className="text-amber-300">
+            {props.page.recommendationCount}
+          </span>
         ) : (
           <span className="text-muted-foreground">0</span>
         )}
@@ -119,7 +113,7 @@ function PageRow(props: {
           <DataSourceBadge label="PSI" active={props.page.hasPagespeedData} />
         </div>
       </td>
-      <td className="hidden px-4 py-3 text-xs text-muted-foreground xl:table-cell">
+      <td className="text-muted-foreground hidden px-4 py-3 text-xs xl:table-cell">
         {formatDate(props.page.lastUpdatedAt) ?? '—'}
       </td>
     </tr>
@@ -142,8 +136,10 @@ export function RanklyPagesPanel(props: {
   const avgScore =
     scoredPages.length > 0
       ? Math.round(
-          scoredPages.reduce((sum, page) => sum + (page.scores.overall ?? 0), 0) /
-            scoredPages.length,
+          scoredPages.reduce(
+            (sum, page) => sum + (page.scores.overall ?? 0),
+            0,
+          ) / scoredPages.length,
         )
       : null;
 
@@ -152,11 +148,17 @@ export function RanklyPagesPanel(props: {
       <div className="space-y-4">
         <p className="text-muted-foreground text-sm">
           No page data yet. Run a{' '}
-          <Link href={props.siteCrawlerHref} className="text-[var(--ozer-accent)] underline-offset-4 hover:underline">
+          <Link
+            href={props.siteCrawlerHref}
+            className="text-[var(--ozer-accent)] underline-offset-4 hover:underline"
+          >
             site crawl
           </Link>{' '}
           or add URLs in{' '}
-          <Link href={props.pagespeedHref} className="text-[var(--ozer-accent)] underline-offset-4 hover:underline">
+          <Link
+            href={props.pagespeedHref}
+            className="text-[var(--ozer-accent)] underline-offset-4 hover:underline"
+          >
             PageSpeed
           </Link>{' '}
           to build your page inventory.
@@ -169,7 +171,7 @@ export function RanklyPagesPanel(props: {
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">
             Pages with data
           </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
@@ -177,44 +179,61 @@ export function RanklyPagesPanel(props: {
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">
             Average score
           </p>
-          <p className={`mt-1 text-2xl font-semibold tabular-nums ${scoreTone(avgScore)}`}>
+          <p
+            className={`mt-1 text-2xl font-semibold tabular-nums ${scoreTone(avgScore)}`}
+          >
             {formatScore(avgScore)}
             {avgScore != null ? (
-              <span className="text-muted-foreground text-sm font-normal"> /100</span>
+              <span className="text-muted-foreground text-sm font-normal">
+                {' '}
+                /100
+              </span>
             ) : null}
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-xs uppercase tracking-wide">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">
             Data sources
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
-            <DataSourceBadge label="Site crawl" active={props.meta.crawlJobDone} />
-            <DataSourceBadge label="PageSpeed" active={props.meta.hasPagespeed} />
+            <DataSourceBadge
+              label="Site crawl"
+              active={props.meta.crawlJobDone}
+            />
+            <DataSourceBadge
+              label="PageSpeed"
+              active={props.meta.hasPagespeed}
+            />
           </div>
         </div>
       </div>
 
       <p className="text-muted-foreground text-xs leading-relaxed">
-        Scores combine on-page SEO (40%), performance (35%), technical health (15%), and
-        structured data (10%) from your latest crawl and PageSpeed scans. Recommendations
-        on each page are tailored to that URL&apos;s actual title, meta, headings, and
-        Lighthouse metrics.
+        Scores combine on-page SEO (40%), performance (35%), technical health
+        (15%), and structured data (10%) from your latest crawl and PageSpeed
+        scans. Recommendations on each page are tailored to that URL&apos;s
+        actual title, meta, headings, and Lighthouse metrics.
       </p>
 
       <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
         <table className="w-full min-w-[720px] text-sm">
-          <thead className="bg-black/30 text-left text-xs uppercase tracking-wide text-muted-foreground">
+          <thead className="text-muted-foreground bg-black/30 text-left text-xs tracking-wide uppercase">
             <tr>
               <th className="px-4 py-3 font-medium">Page</th>
               <th className="px-4 py-3 text-center font-medium">Score</th>
-              <th className="hidden px-4 py-3 font-medium lg:table-cell">Breakdown</th>
+              <th className="hidden px-4 py-3 font-medium lg:table-cell">
+                Breakdown
+              </th>
               <th className="px-4 py-3 text-right font-medium">Fixes</th>
-              <th className="hidden px-4 py-3 font-medium sm:table-cell">Sources</th>
-              <th className="hidden px-4 py-3 font-medium xl:table-cell">Updated</th>
+              <th className="hidden px-4 py-3 font-medium sm:table-cell">
+                Sources
+              </th>
+              <th className="hidden px-4 py-3 font-medium xl:table-cell">
+                Updated
+              </th>
             </tr>
           </thead>
           <tbody>

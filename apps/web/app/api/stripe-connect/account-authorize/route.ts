@@ -20,14 +20,20 @@ export async function GET(request: Request) {
   const accountId = searchParams.get('accountId');
 
   if (!accountId) {
-    return NextResponse.json({ error: 'accountId is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'accountId is required' },
+      { status: 400 },
+    );
   }
 
   const client = getSupabaseServerClient();
   const { data: user } = await requireUser(client);
 
   if (!user) {
-    return NextResponse.json({ error: 'Authentication required' }, { status: 401 });
+    return NextResponse.json(
+      { error: 'Authentication required' },
+      { status: 401 },
+    );
   }
 
   const { data: membership } = await client
@@ -37,7 +43,10 @@ export async function GET(request: Request) {
     .eq('user_id', user.id)
     .maybeSingle();
 
-  if (membership?.account_role !== 'owner' && membership?.account_role !== 'admin') {
+  if (
+    membership?.account_role !== 'owner' &&
+    membership?.account_role !== 'admin'
+  ) {
     return NextResponse.json(
       { error: 'Only owners and admins can connect Stripe' },
       { status: 403 },

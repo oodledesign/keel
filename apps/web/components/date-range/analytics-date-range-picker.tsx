@@ -20,14 +20,14 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import {
-  DEFAULT_DATE_RANGE,
-  formatDateRangeLabel,
-  resolveAnalyticsDateRange,
   type AnalyticsDatePreset,
+  DEFAULT_DATE_RANGE,
   type DateRangeSelection,
   type LastSubPreset,
   type LastUnit,
   type PeriodSubPreset,
+  formatDateRangeLabel,
+  resolveAnalyticsDateRange,
 } from '~/lib/date-range/analytics-date-range';
 
 type SidebarView = 'main' | 'last' | 'period';
@@ -77,7 +77,11 @@ export function AnalyticsDateRangePicker({
 }: {
   fromIso: string;
   toIso: string;
-  onApply: (fromIso: string, toIso: string, selection: DateRangeSelection) => void;
+  onApply: (
+    fromIso: string,
+    toIso: string,
+    selection: DateRangeSelection,
+  ) => void;
   isLoading?: boolean;
   className?: string;
 }) {
@@ -100,7 +104,10 @@ export function AnalyticsDateRangePicker({
     [fromIso, toIso],
   );
 
-  const draftResolved = useMemo(() => resolveAnalyticsDateRange(draft), [draft]);
+  const draftResolved = useMemo(
+    () => resolveAnalyticsDateRange(draft),
+    [draft],
+  );
 
   const footerLabel = useMemo(() => {
     const fmt = new Intl.DateTimeFormat('en-GB', {
@@ -207,7 +214,7 @@ export function AnalyticsDateRangePicker({
         className="w-auto max-w-[calc(100vw-2rem)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-xl"
       >
         <div className="flex flex-col md:flex-row">
-          <aside className="w-full border-b border-[color:var(--workspace-shell-border)] md:w-52 md:border-b-0 md:border-r">
+          <aside className="w-full border-b border-[color:var(--workspace-shell-border)] md:w-52 md:border-r md:border-b-0">
             {view !== 'main' ? (
               <button
                 type="button"
@@ -236,14 +243,18 @@ export function AnalyticsDateRangePicker({
                 <SidebarItem
                   active={draft.preset === 'last'}
                   onClick={() => setView('last')}
-                  trailing={<ChevronDown className="h-4 w-4 -rotate-90 opacity-50" />}
+                  trailing={
+                    <ChevronDown className="h-4 w-4 -rotate-90 opacity-50" />
+                  }
                 >
                   Last
                 </SidebarItem>
                 <SidebarItem
                   active={draft.preset === 'period_to_date'}
                   onClick={() => setView('period')}
-                  trailing={<ChevronDown className="h-4 w-4 -rotate-90 opacity-50" />}
+                  trailing={
+                    <ChevronDown className="h-4 w-4 -rotate-90 opacity-50" />
+                  }
                 >
                   Period to date
                 </SidebarItem>
@@ -309,7 +320,9 @@ export function AnalyticsDateRangePicker({
           <div className="flex min-w-0 flex-1 flex-col">
             {draft.preset === 'last' && !draft.lastSubPreset ? (
               <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-                <span className="text-sm text-[var(--workspace-shell-text-muted)]">Last</span>
+                <span className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  Last
+                </span>
                 <Input
                   type="number"
                   min={1}
@@ -363,8 +376,8 @@ export function AnalyticsDateRangePicker({
             {draft.preset === 'last' && draft.lastSubPreset ? (
               <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
                 <p className="text-sm text-[var(--workspace-shell-text)]">
-                  {LAST_PRESETS.find((p) => p.id === draft.lastSubPreset)?.label ??
-                    'Last'}
+                  {LAST_PRESETS.find((p) => p.id === draft.lastSubPreset)
+                    ?.label ?? 'Last'}
                 </p>
                 <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
                   <Checkbox
@@ -421,7 +434,9 @@ export function AnalyticsDateRangePicker({
             </div>
 
             <div className="flex items-center justify-between gap-3 border-t border-[color:var(--workspace-shell-border)] px-4 py-3">
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">{footerLabel}</p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                {footerLabel}
+              </p>
               <div className="flex gap-2">
                 <Button
                   type="button"
@@ -485,4 +500,8 @@ function SidebarItem({
   );
 }
 
-export { DEFAULT_DATE_RANGE, type DateRangeSelection, type AnalyticsDatePreset };
+export {
+  DEFAULT_DATE_RANGE,
+  type DateRangeSelection,
+  type AnalyticsDatePreset,
+};

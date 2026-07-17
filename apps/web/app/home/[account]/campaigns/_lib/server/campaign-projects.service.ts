@@ -3,24 +3,24 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
-import type { Database } from '~/lib/database.types';
 import {
-  normalizeFieldValue,
-  slugifyFieldKey,
   type CampaignProject,
   type CampaignProjectDetail,
   type ProjectFieldDefinition,
   type ProjectFieldType,
   type ProjectFieldValue,
+  normalizeFieldValue,
+  slugifyFieldKey,
 } from '~/lib/campaign-projects/types';
 import {
   WEBSITE_REVAMP_CAMPAIGN_FIELDS,
   WEBSITE_REVAMP_CAMPAIGN_NAME,
   WEBSITE_REVAMP_IMPORT_CLIENTS,
 } from '~/lib/campaign-projects/website-revamp-template';
+import type { Database } from '~/lib/database.types';
 
 import type {
   AddClientToCampaignInput,
@@ -54,7 +54,9 @@ type ValueRow = {
 
 function mapField(row: FieldRow): ProjectFieldDefinition {
   const options =
-    row.options && typeof row.options === 'object' && !Array.isArray(row.options)
+    row.options &&
+    typeof row.options === 'object' &&
+    !Array.isArray(row.options)
       ? (row.options as { choices?: string[] })
       : {};
   return {
@@ -77,7 +79,9 @@ function parseStoredValues(
   const byId = Object.fromEntries(fields.map((field) => [field.id, field]));
   const result: Record<string, ProjectFieldValue> = {};
 
-  for (const [fieldId, value] of Object.entries(raw as Record<string, unknown>)) {
+  for (const [fieldId, value] of Object.entries(
+    raw as Record<string, unknown>,
+  )) {
     const field = byId[fieldId];
     if (!field) continue;
     result[fieldId] = normalizeFieldValue(field.fieldType, value);
@@ -86,7 +90,9 @@ function parseStoredValues(
   return result;
 }
 
-export function createCampaignProjectsService(client: SupabaseClient<Database>) {
+export function createCampaignProjectsService(
+  client: SupabaseClient<Database>,
+) {
   return new CampaignProjectsService(client);
 }
 
@@ -128,7 +134,9 @@ class CampaignProjectsService {
     throw new Error(msg);
   }
 
-  async listProjects(params: ListCampaignProjectsInput): Promise<CampaignProject[]> {
+  async listProjects(
+    params: ListCampaignProjectsInput,
+  ): Promise<CampaignProject[]> {
     await this.ensureUser();
 
     const { data: projects, error } = await this.db
@@ -176,7 +184,9 @@ class CampaignProjectsService {
     );
   }
 
-  async getProject(params: GetCampaignProjectInput): Promise<CampaignProjectDetail> {
+  async getProject(
+    params: GetCampaignProjectInput,
+  ): Promise<CampaignProjectDetail> {
     await this.ensureUser();
 
     const { data: project, error } = await this.db
@@ -219,7 +229,9 @@ class CampaignProjectsService {
       valuesByClient.set(row.client_id, parseStoredValues(row.values, fields));
     }
 
-    const websiteUrlField = fields.find((field) => field.fieldKey === 'website_url');
+    const websiteUrlField = fields.find(
+      (field) => field.fieldKey === 'website_url',
+    );
 
     const rows = (clientsResult.data ?? []).map(
       (client: {
@@ -255,7 +267,9 @@ class CampaignProjectsService {
     };
   }
 
-  async createProject(input: CreateCampaignProjectInput): Promise<CampaignProjectDetail> {
+  async createProject(
+    input: CreateCampaignProjectInput,
+  ): Promise<CampaignProjectDetail> {
     await this.ensurePermission(input.accountId);
 
     const { data: project, error } = await this.adminDb
@@ -299,7 +313,9 @@ class CampaignProjectsService {
     if (error) this.throwErr(error);
   }
 
-  async createField(input: CreateProjectFieldInput): Promise<ProjectFieldDefinition> {
+  async createField(
+    input: CreateProjectFieldInput,
+  ): Promise<ProjectFieldDefinition> {
     await this.ensurePermission(input.accountId);
 
     const existing = await this.db
@@ -309,7 +325,8 @@ class CampaignProjectsService {
       .order('sort_order', { ascending: false })
       .limit(1);
 
-    const nextSort = ((existing.data?.[0]?.sort_order as number | undefined) ?? -1) + 1;
+    const nextSort =
+      ((existing.data?.[0]?.sort_order as number | undefined) ?? -1) + 1;
     let fieldKey = input.fieldKey ?? slugifyFieldKey(input.label);
 
     const { data: taken } = await this.db
@@ -319,7 +336,9 @@ class CampaignProjectsService {
       .like('field_key', `${fieldKey}%`);
 
     const keys = new Set(
-      ((taken ?? []) as Array<{ field_key: string }>).map((row) => row.field_key),
+      ((taken ?? []) as Array<{ field_key: string }>).map(
+        (row) => row.field_key,
+      ),
     );
     if (keys.has(fieldKey)) {
       let suffix = 2;
@@ -345,7 +364,9 @@ class CampaignProjectsService {
     return mapField(data as FieldRow);
   }
 
-  async updateField(input: UpdateProjectFieldInput): Promise<ProjectFieldDefinition> {
+  async updateField(
+    input: UpdateProjectFieldInput,
+  ): Promise<ProjectFieldDefinition> {
     await this.ensurePermission(input.accountId);
 
     const payload: Record<string, unknown> = {};
@@ -378,7 +399,9 @@ class CampaignProjectsService {
     if (error) this.throwErr(error);
   }
 
-  async reorderFields(input: ReorderProjectFieldsInput): Promise<ProjectFieldDefinition[]> {
+  async reorderFields(
+    input: ReorderProjectFieldsInput,
+  ): Promise<ProjectFieldDefinition[]> {
     await this.ensurePermission(input.accountId);
 
     await Promise.all(
@@ -443,7 +466,9 @@ class CampaignProjectsService {
     if (error) this.throwErr(error);
   }
 
-  async updateClientFieldValue(input: UpdateClientFieldValueInput): Promise<void> {
+  async updateClientFieldValue(
+    input: UpdateClientFieldValueInput,
+  ): Promise<void> {
     await this.ensurePermission(input.accountId);
 
     const { data: field, error: fieldError } = await this.db
@@ -475,20 +500,24 @@ class CampaignProjectsService {
       [input.fieldId]: normalized,
     };
 
-    const { error } = await this.adminDb.from('project_client_field_values').upsert(
-      {
-        account_id: input.accountId,
-        project_id: input.projectId,
-        client_id: input.clientId,
-        values: nextValues,
-      },
-      { onConflict: 'project_id,client_id' },
-    );
+    const { error } = await this.adminDb
+      .from('project_client_field_values')
+      .upsert(
+        {
+          account_id: input.accountId,
+          project_id: input.projectId,
+          client_id: input.clientId,
+          values: nextValues,
+        },
+        { onConflict: 'project_id,client_id' },
+      );
 
     if (error) this.throwErr(error);
   }
 
-  async importWebsiteRevampCampaign(accountId: string): Promise<CampaignProjectDetail> {
+  async importWebsiteRevampCampaign(
+    accountId: string,
+  ): Promise<CampaignProjectDetail> {
     await this.ensurePermission(accountId);
 
     const { data: existing } = await this.db
@@ -512,7 +541,9 @@ class CampaignProjectsService {
     }
 
     const detail = await this.getProject({ accountId, projectId });
-    const websiteUrlField = detail.fields.find((field) => field.fieldKey === 'website_url');
+    const websiteUrlField = detail.fields.find(
+      (field) => field.fieldKey === 'website_url',
+    );
 
     for (const row of WEBSITE_REVAMP_IMPORT_CLIENTS) {
       const { data: existingClient } = await this.db
@@ -567,7 +598,9 @@ class CampaignProjectsService {
       .eq('project_id', projectId);
 
     const existingKeys = new Set(
-      ((existing ?? []) as Array<{ field_key: string }>).map((row) => row.field_key),
+      ((existing ?? []) as Array<{ field_key: string }>).map(
+        (row) => row.field_key,
+      ),
     );
 
     const toInsert = WEBSITE_REVAMP_CAMPAIGN_FIELDS.filter(

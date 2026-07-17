@@ -2,8 +2,8 @@
 
 import { revalidatePath } from 'next/cache';
 
-import { suggestActivityAssignments } from '~/lib/ai/activity-assignment-suggest';
 import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
+import { suggestActivityAssignments } from '~/lib/ai/activity-assignment-suggest';
 
 import {
   bulkUpdateActivityBlocksAction,
@@ -29,7 +29,9 @@ export async function suggestActivityAssignmentsAction(
   }>;
   error?: string;
 }> {
-  const blockIds = [...new Set(input.blockIds.map((id) => id.trim()).filter(Boolean))];
+  const blockIds = [
+    ...new Set(input.blockIds.map((id) => id.trim()).filter(Boolean)),
+  ];
 
   if (blockIds.length === 0) {
     return { success: false, error: 'No activity blocks selected' };
@@ -164,18 +166,18 @@ export async function applyActivitySuggestionsAction(input: {
     const rulesCreated = new Set<string>();
 
     for (const suggestion of applicable) {
-      const sample = (samples ?? []).find((row) => row.id === suggestion.blockId);
+      const sample = (samples ?? []).find(
+        (row) => row.id === suggestion.blockId,
+      );
       if (!sample) {
         continue;
       }
 
       let ruleKey: string | null = null;
-      let rule:
-        | {
-            matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
-            matchValue: string;
-          }
-        | null = null;
+      let rule: {
+        matchType: 'domain' | 'app_name' | 'title_contains' | 'url_path';
+        matchValue: string;
+      } | null = null;
 
       if (sample.domain) {
         rule = {
@@ -188,9 +190,7 @@ export async function applyActivitySuggestionsAction(input: {
           const parsed = new URL(String(sample.url));
           const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
           const path =
-            parsed.pathname === '/'
-              ? ''
-              : parsed.pathname.replace(/\/$/, '');
+            parsed.pathname === '/' ? '' : parsed.pathname.replace(/\/$/, '');
           const normalized = `${host}${path}`;
           if (normalized.includes('/')) {
             rule = {

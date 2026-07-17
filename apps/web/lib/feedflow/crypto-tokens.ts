@@ -1,4 +1,9 @@
-import { createCipheriv, createDecipheriv, randomBytes, scryptSync } from 'crypto';
+import {
+  createCipheriv,
+  createDecipheriv,
+  randomBytes,
+  scryptSync,
+} from 'crypto';
 
 import { getFeedflowServerEnv } from '~/lib/feedflow/env';
 
@@ -38,5 +43,7 @@ export function decryptSecret(payload: string): string {
   const data = buf.subarray(IV_LEN + TAG_LEN);
   const decipher = createDecipheriv(ALGO, key, iv);
   decipher.setAuthTag(tag);
-  return Buffer.concat([decipher.update(data), decipher.final()]).toString('utf8');
+  return Buffer.concat([decipher.update(data), decipher.final()]).toString(
+    'utf8',
+  );
 }

@@ -13,7 +13,9 @@ export type StoredShortcut = z.infer<typeof StoredShortcutSchema>;
 
 export const StoredShortcutsArraySchema = z.array(StoredShortcutSchema).max(12);
 
-export const MobileNavShortcutsArraySchema = z.array(StoredShortcutSchema).max(3);
+export const MobileNavShortcutsArraySchema = z
+  .array(StoredShortcutSchema)
+  .max(3);
 
 export type ShortcutCatalogItem = {
   catalogId: string;
@@ -42,7 +44,9 @@ export type DefaultLandingPreference = {
   workspaceSlug: string | null;
 };
 
-export function catalogItemKey(item: Pick<ShortcutCatalogItem, 'catalogId' | 'params'>) {
+export function catalogItemKey(
+  item: Pick<ShortcutCatalogItem, 'catalogId' | 'params'>,
+) {
   return `${item.catalogId}::${JSON.stringify(item.params)}`;
 }
 

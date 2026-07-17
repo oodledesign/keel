@@ -1,8 +1,9 @@
 'use client';
 
+import { useState } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -96,7 +97,7 @@ export function RanklyProjectsManager(props: {
       {props.projects.length > 0 ? (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[40rem] text-left text-sm">
-            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Domain</th>
@@ -114,15 +115,15 @@ export function RanklyProjectsManager(props: {
                   <td className="px-4 py-3">
                     <Link
                       href={projectHref(props.accountSlug, project.id)}
-                      className="font-medium text-primary underline-offset-4 hover:underline"
+                      className="text-primary font-medium underline-offset-4 hover:underline"
                     >
                       {project.name}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="text-muted-foreground px-4 py-3">
                     {project.domain}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="text-muted-foreground px-4 py-3">
                     {project.client_id
                       ? (props.clientLabels[project.client_id] ?? '—')
                       : '—'}

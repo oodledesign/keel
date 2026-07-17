@@ -2,7 +2,10 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { authenticateRecorderRequest, recorderServiceUnavailable } from '~/lib/api-tokens/recorder-auth';
+import {
+  authenticateRecorderRequest,
+  recorderServiceUnavailable,
+} from '~/lib/api-tokens/recorder-auth';
 import { loadRecorderUsageSummary } from '~/lib/recorder/access';
 
 export const runtime = 'nodejs';
@@ -10,7 +13,9 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 15;
 
 export async function GET(request: Request) {
-  const auth = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  const auth = await authenticateRecorderRequest(request, {
+    touchLastUsed: true,
+  });
   if (auth instanceof NextResponse) {
     return auth;
   }

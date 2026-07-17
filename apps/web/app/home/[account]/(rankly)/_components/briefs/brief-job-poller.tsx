@@ -1,12 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { BRIEF_STATUS_LABELS } from '~/lib/briefs/types';
 
-import { RanklyJobProgress } from '../rankly-job-progress';
 import { useRanklyJobProgress } from '../../_lib/use-rankly-job-progress';
+import { RanklyJobProgress } from '../rankly-job-progress';
 
 type BriefJob = {
   id: string;
@@ -80,7 +81,7 @@ export function BriefJobPoller({
   }, [briefsPath, job, router]);
 
   if (!job) {
-    return <p className="text-sm text-muted-foreground">Loading job status…</p>;
+    return <p className="text-muted-foreground text-sm">Loading job status…</p>;
   }
 
   if (job.status === 'error') {
@@ -98,11 +99,8 @@ export function BriefJobPoller({
   }
 
   const label = BRIEF_STATUS_LABELS[job.status] ?? job.status;
-  const detail = job.target_keyword
-    ? `Keyword: ${job.target_keyword}`
-    : null;
-  const meta =
-    job.credits_used != null ? `~${job.credits_used} credits` : null;
+  const detail = job.target_keyword ? `Keyword: ${job.target_keyword}` : null;
+  const meta = job.credits_used != null ? `~${job.credits_used} credits` : null;
 
   return (
     <RanklyJobProgress

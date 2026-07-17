@@ -4,11 +4,11 @@ import { useMemo } from 'react';
 
 import {
   DndContext,
+  type DragEndEvent,
   PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -17,12 +17,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import {
-  GripVertical,
-  LayoutTemplate,
-  Plus,
-  Trash2,
-} from 'lucide-react';
+import { GripVertical, LayoutTemplate, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
@@ -33,17 +28,17 @@ import { cn } from '@kit/ui/utils';
 import {
   DEFAULT_SIGNATURE_BACKGROUND,
   SIGNATURE_BLOCK_LIBRARY,
+  type SignatureBackgroundMode,
+  type SignatureBlock,
+  type SignatureBlockType,
+  type SignatureBuilderDocument,
+  type SignatureLayout,
   canAddSignatureBlock,
   createMinimalSignatureDocument,
   createSignatureBlock,
   getSignatureBlockDefinition,
   normalizeHexColor,
   resolveSignatureBackground,
-  type SignatureBackgroundMode,
-  type SignatureBlock,
-  type SignatureBlockType,
-  type SignatureBuilderDocument,
-  type SignatureLayout,
 } from '~/lib/signatures/signature-blocks';
 
 function SortableBlockRow({
@@ -57,8 +52,14 @@ function SortableBlockRow({
   onTextChange: (text: string) => void;
   onIncludeCredentialsChange: (include: boolean) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: block.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: block.id });
   const definition = getSignatureBlockDefinition(block.type);
 
   return (
@@ -177,7 +178,7 @@ export function SignatureVisualEditor({
             <LayoutTemplate className="h-4 w-4 text-[#39AEB3]" />
             <h3 className="text-sm font-medium">Custom HTML template</h3>
           </div>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-muted-foreground text-sm">
             This template was written in HTML, so the visual builder can&apos;t
             edit it safely. Start a visual layout to drag and drop blocks — this
             replaces the current HTML.
@@ -205,7 +206,10 @@ export function SignatureVisualEditor({
         color:
           mode === 'none'
             ? background.color
-            : normalizeHexColor(background.color, DEFAULT_SIGNATURE_BACKGROUND.color),
+            : normalizeHexColor(
+                background.color,
+                DEFAULT_SIGNATURE_BACKGROUND.color,
+              ),
         colorEnd: normalizeHexColor(
           background.colorEnd ?? background.color,
           DEFAULT_SIGNATURE_BACKGROUND.colorEnd ?? background.color,
@@ -243,7 +247,9 @@ export function SignatureVisualEditor({
       return;
     }
 
-    const oldIndex = document.blocks.findIndex((block) => block.id === active.id);
+    const oldIndex = document.blocks.findIndex(
+      (block) => block.id === active.id,
+    );
     const newIndex = document.blocks.findIndex((block) => block.id === over.id);
     if (oldIndex < 0 || newIndex < 0) {
       return;
@@ -282,7 +288,10 @@ export function SignatureVisualEditor({
     });
   };
 
-  const updateIncludeCredentials = (id: string, includeCredentials: boolean) => {
+  const updateIncludeCredentials = (
+    id: string,
+    includeCredentials: boolean,
+  ) => {
     onChange({
       ...document,
       blocks: document.blocks.map((block) => {
@@ -337,7 +346,7 @@ export function SignatureVisualEditor({
             Stacked
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Drag blocks to reorder. Transparent layouts stay dark-mode friendly
           (mid-grey text, underlined links). A filled canvas forces colours so
           light and dark inboxes look the same.
@@ -449,7 +458,7 @@ export function SignatureVisualEditor({
               }}
               aria-hidden
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               Text and link colours are chosen automatically for contrast, and
               marked so clients should not invert them in dark mode. Gradients
               fall back to the start colour in Outlook desktop.
@@ -473,7 +482,7 @@ export function SignatureVisualEditor({
         </div>
 
         {document.blocks.length === 0 ? (
-          <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-6 text-center text-sm text-muted-foreground">
+          <p className="text-muted-foreground rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-6 text-center text-sm">
             No blocks yet — add one below.
           </p>
         ) : (
@@ -507,7 +516,7 @@ export function SignatureVisualEditor({
       <div className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
         <div>
           <h3 className="text-sm font-medium">Add a block</h3>
-          <p className="mt-1 text-xs text-muted-foreground">
+          <p className="text-muted-foreground mt-1 text-xs">
             Click to append. Most fields can only appear once.
           </p>
         </div>
@@ -526,7 +535,7 @@ export function SignatureVisualEditor({
             </Button>
           ))}
           {availableBlocks.length === 0 ? (
-            <p className="text-xs text-muted-foreground">
+            <p className="text-muted-foreground text-xs">
               All single-use blocks are already in the layout.
             </p>
           ) : null}

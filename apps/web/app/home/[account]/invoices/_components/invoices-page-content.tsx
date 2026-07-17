@@ -14,17 +14,18 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@kit/ui/dialog';
+import { If } from '@kit/ui/if';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
-import { If } from '@kit/ui/if';
 
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 
-import { formatPence } from '../_lib/invoice-totals';
 import { getErrorMessage } from '../_lib/error-message';
+import { formatPence } from '../_lib/invoice-totals';
+import type { ListInvoicesInput } from '../_lib/schema/invoices.schema';
 import {
   createInvoice,
   getInvoiceSummaryAction,
@@ -33,7 +34,6 @@ import {
   listRecurringSeriesAction,
   updateRecurringSeriesStatusAction,
 } from '../_lib/server/server-actions';
-import type { ListInvoicesInput } from '../_lib/schema/invoices.schema';
 import { InvoiceRowMenu } from './invoice-row-menu';
 import { InvoiceStatusBadge } from './invoice-status-badge';
 import { InvoicesIncomeSummary } from './invoices-income-summary';
@@ -95,15 +95,19 @@ export function InvoicesPageContent({
   const searchParams = useSearchParams();
   const [tab, setTab] = useState<TabKey>('unpaid');
   const [invoices, setInvoices] = useState<InvoiceRow[]>(initialInvoices ?? []);
-  const [recurring, setRecurring] = useState<Array<Record<string, unknown>>>([]);
+  const [recurring, setRecurring] = useState<Array<Record<string, unknown>>>(
+    [],
+  );
   const [total, setTotal] = useState(initialTotal ?? 0);
   const [counts, setCounts] = useState(
     initialCounts ?? { draft: 0, unpaid: 0, all: 0, recurring: 0 },
   );
-  const [summary, setSummary] = useState<
-    Awaited<ReturnType<typeof getInvoiceSummaryAction>> | null
-  >(initialSummary ?? null);
-  const [summaryPeriod, setSummaryPeriod] = useState<'month_to_date' | 'last_30_days' | 'last_90_days'>('month_to_date');
+  const [summary, setSummary] = useState<Awaited<
+    ReturnType<typeof getInvoiceSummaryAction>
+  > | null>(initialSummary ?? null);
+  const [summaryPeriod, setSummaryPeriod] = useState<
+    'month_to_date' | 'last_30_days' | 'last_90_days'
+  >('month_to_date');
   const [loading, setLoading] = useState(initialInvoices === undefined);
   const skipInitialFetchRef = useRef(initialInvoices !== undefined);
   const [search, setSearch] = useState('');
@@ -142,14 +146,19 @@ export function InvoicesPageContent({
           : Array.isArray((raw as { data?: unknown })?.data)
             ? (raw as { data: unknown[] }).data
             : [];
-        setClientOptions((list ?? []) as { id: string; display_name: string | null }[]);
+        setClientOptions(
+          (list ?? []) as { id: string; display_name: string | null }[],
+        );
       })
       .catch(() => setClientOptions([]));
   }, [accountId, initialClients]);
 
   const fetchSummary = useCallback(async () => {
     try {
-      const result = await getInvoiceSummaryAction({ accountId, period: summaryPeriod });
+      const result = await getInvoiceSummaryAction({
+        accountId,
+        period: summaryPeriod,
+      });
       setSummary(result as typeof summary);
     } catch {
       setSummary(null);
@@ -173,12 +182,13 @@ export function InvoicesPageContent({
 
     setLoading(true);
     try {
-      const statusMap: Record<TabKey, ListInvoicesInput['status'] | undefined> = {
-        unpaid: 'unpaid',
-        draft: 'draft',
-        all: 'all',
-        recurring: undefined,
-      };
+      const statusMap: Record<TabKey, ListInvoicesInput['status'] | undefined> =
+        {
+          unpaid: 'unpaid',
+          draft: 'draft',
+          all: 'all',
+          recurring: undefined,
+        };
       const result = await listInvoices({
         accountId,
         page,
@@ -218,7 +228,11 @@ export function InvoicesPageContent({
   }, [fetchInvoices, fetchCounts, tab, page, searchDebounced, clientFilter]);
 
   useEffect(() => {
-    if (skipInitialFetchRef.current && summaryPeriod === 'month_to_date' && initialSummary) {
+    if (
+      skipInitialFetchRef.current &&
+      summaryPeriod === 'month_to_date' &&
+      initialSummary
+    ) {
       return;
     }
 
@@ -242,7 +256,10 @@ export function InvoicesPageContent({
         : Array.isArray((raw as { data?: unknown })?.data)
           ? (raw as { data: unknown[] }).data
           : [];
-      const options = (list ?? []) as { id: string; display_name: string | null }[];
+      const options = (list ?? []) as {
+        id: string;
+        display_name: string | null;
+      }[];
       setClientOptions(options);
       if (options.length > 0) setSelectedClientId(options[0]!.id);
     } catch (error) {
@@ -258,9 +275,12 @@ export function InvoicesPageContent({
     void openCreateDialog();
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
-    router.replace(nextParams.toString() ? `${pathname}?${nextParams}` : pathname, {
-      scroll: false,
-    });
+    router.replace(
+      nextParams.toString() ? `${pathname}?${nextParams}` : pathname,
+      {
+        scroll: false,
+      },
+    );
   }, [canEditInvoices, openCreateDialog, pathname, router, searchParams]);
 
   const handleCreateInvoice = async () => {
@@ -270,7 +290,10 @@ export function InvoicesPageContent({
     }
     setCreating(true);
     try {
-      const invoice = await createInvoice({ accountId, client_id: selectedClientId });
+      const invoice = await createInvoice({
+        accountId,
+        client_id: selectedClientId,
+      });
       if (invoice?.id) {
         setCreateDialogOpen(false);
         router.push(
@@ -286,7 +309,10 @@ export function InvoicesPageContent({
     }
   };
 
-  const editPathBase = pathsConfig.app.accountInvoiceEdit.replace('[account]', accountSlug);
+  const editPathBase = pathsConfig.app.accountInvoiceEdit.replace(
+    '[account]',
+    accountSlug,
+  );
   const totalPages = Math.max(1, Math.ceil(total / pageSize));
   const tabs: Array<{ key: TabKey; label: string; count?: number }> = [
     { key: 'unpaid', label: 'Unpaid', count: counts.unpaid },
@@ -298,7 +324,9 @@ export function InvoicesPageContent({
   if (!canViewInvoices) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center p-8">
-        <p className="text-[var(--workspace-shell-text-muted)]">You don&apos;t have access to invoices in this account.</p>
+        <p className="text-[var(--workspace-shell-text-muted)]">
+          You don&apos;t have access to invoices in this account.
+        </p>
       </div>
     );
   }
@@ -334,7 +362,11 @@ export function InvoicesPageContent({
             ))}
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={() => void fetchInvoices()}>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => void fetchInvoices()}
+            >
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>
@@ -353,8 +385,8 @@ export function InvoicesPageContent({
 
         {tab !== 'recurring' ? (
           <div className="flex flex-wrap items-end gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-            <div className="relative min-w-[220px] flex-1 max-w-sm">
-              <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+            <div className="relative max-w-sm min-w-[220px] flex-1">
+              <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
               <Input
                 placeholder="Search invoice number..."
                 value={search}
@@ -364,13 +396,20 @@ export function InvoicesPageContent({
             </div>
             <div className="min-w-[200px]">
               <ClientCombobox
-                clients={clientOptions.length ? clientOptions : [{ id: '', display_name: 'All clients' }]}
+                clients={
+                  clientOptions.length
+                    ? clientOptions
+                    : [{ id: '', display_name: 'All clients' }]
+                }
                 value={clientFilter}
                 onValueChange={setClientFilter}
                 loading={false}
                 placeholder="Filter by client"
                 emptyMessage="No clients"
-                addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+                addClientHref={pathsConfig.app.accountClients.replace(
+                  '[account]',
+                  accountSlug,
+                )}
               />
             </div>
             {(search || clientFilter) && (
@@ -395,30 +434,46 @@ export function InvoicesPageContent({
             recurring.length === 0 ? (
               <div className="py-12 text-center text-[var(--workspace-shell-text-muted)]">
                 <Repeat className="mx-auto mb-3 h-10 w-10 opacity-50" />
-                No recurring series yet. Create one from an invoice via Make recurring.
+                No recurring series yet. Create one from an invoice via Make
+                recurring.
               </div>
             ) : (
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="text-[var(--workspace-shell-text-muted)]">
-                    <th className="pb-2 pr-4">Title</th>
-                    <th className="pb-2 pr-4">Client</th>
-                    <th className="pb-2 pr-4">Frequency</th>
-                    <th className="pb-2 pr-4">Next issue</th>
-                    <th className="pb-2 pr-4">Status</th>
+                    <th className="pr-4 pb-2">Title</th>
+                    <th className="pr-4 pb-2">Client</th>
+                    <th className="pr-4 pb-2">Frequency</th>
+                    <th className="pr-4 pb-2">Next issue</th>
+                    <th className="pr-4 pb-2">Status</th>
                     <th className="pb-2" />
                   </tr>
                 </thead>
                 <tbody>
                   {recurring.map((series) => (
-                    <tr key={String(series.id)} className="border-t border-[color:var(--workspace-shell-border)]">
-                      <td className="py-3 pr-4 text-[var(--workspace-shell-text)]">{String(series.title ?? '—')}</td>
-                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
-                        {(series.clients as { display_name?: string | null } | null)?.display_name ?? '—'}
+                    <tr
+                      key={String(series.id)}
+                      className="border-t border-[color:var(--workspace-shell-border)]"
+                    >
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text)]">
+                        {String(series.title ?? '—')}
                       </td>
-                      <td className="py-3 pr-4 capitalize text-[var(--workspace-shell-text-muted)]">{String(series.frequency ?? '')}</td>
-                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(String(series.next_issue_at ?? ''))}</td>
-                      <td className="py-3 pr-4 capitalize text-[var(--workspace-shell-text-muted)]">{String(series.status ?? '')}</td>
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                        {(
+                          series.clients as {
+                            display_name?: string | null;
+                          } | null
+                        )?.display_name ?? '—'}
+                      </td>
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)] capitalize">
+                        {String(series.frequency ?? '')}
+                      </td>
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                        {formatDate(String(series.next_issue_at ?? ''))}
+                      </td>
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)] capitalize">
+                        {String(series.status ?? '')}
+                      </td>
                       <td className="py-3">
                         {canEditInvoices && series.status === 'active' ? (
                           <Button
@@ -477,34 +532,52 @@ export function InvoicesPageContent({
             <table className="w-full text-left text-sm">
               <thead>
                 <tr className="text-[var(--workspace-shell-text-muted)]">
-                  <th className="pb-2 pr-4 w-8" />
-                  <th className="pb-2 pr-4">Recipient</th>
-                  <th className="pb-2 pr-4">Invoice no</th>
-                  <th className="pb-2 pr-4">Issued on</th>
-                  <th className="pb-2 pr-4">Due on</th>
-                  <th className="pb-2 pr-4">Total</th>
-                  <th className="pb-2 pr-4">Status</th>
-                  <th className="pb-2 w-10" />
+                  <th className="w-8 pr-4 pb-2" />
+                  <th className="pr-4 pb-2">Recipient</th>
+                  <th className="pr-4 pb-2">Invoice no</th>
+                  <th className="pr-4 pb-2">Issued on</th>
+                  <th className="pr-4 pb-2">Due on</th>
+                  <th className="pr-4 pb-2">Total</th>
+                  <th className="pr-4 pb-2">Status</th>
+                  <th className="w-10 pb-2" />
                 </tr>
               </thead>
               <tbody>
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className="border-t border-[color:var(--workspace-shell-border)] hover:bg-white/3">
+                  <tr
+                    key={inv.id}
+                    className="border-t border-[color:var(--workspace-shell-border)] hover:bg-white/3"
+                  >
                     <td className="py-3 pr-2">
-                      <input type="checkbox" className="rounded border-[color:var(--workspace-shell-border)]" aria-label="Select invoice" />
+                      <input
+                        type="checkbox"
+                        className="rounded border-[color:var(--workspace-shell-border)]"
+                        aria-label="Select invoice"
+                      />
                     </td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{inv.clients?.display_name ?? '—'}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {inv.clients?.display_name ?? '—'}
+                    </td>
                     <td className="py-3 pr-4">
-                      <Link href={editPathBase.replace('[id]', inv.id)} className="font-medium text-[var(--workspace-shell-text)] hover:underline">
+                      <Link
+                        href={editPathBase.replace('[id]', inv.id)}
+                        className="font-medium text-[var(--workspace-shell-text)] hover:underline"
+                      >
                         {inv.invoice_number}
                         {inv.recurring_series_id ? (
                           <Repeat className="ml-1 inline h-3.5 w-3.5 text-[var(--workspace-shell-text-muted)]" />
                         ) : null}
                       </Link>
                     </td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(inv.issued_at)}</td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatDate(inv.due_at)}</td>
-                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">{formatPence(inv.total_pence)}</td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {formatDate(inv.issued_at)}
+                    </td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {formatDate(inv.due_at)}
+                    </td>
+                    <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                      {formatPence(inv.total_pence)}
+                    </td>
                     <td className="py-3 pr-4">
                       <InvoiceStatusBadge
                         status={inv.status}
@@ -535,10 +608,20 @@ export function InvoicesPageContent({
                 Page {page} of {totalPages} ({total} invoices)
               </span>
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" disabled={page <= 1} onClick={() => setPage((p) => p - 1)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                >
                   Previous
                 </Button>
-                <Button variant="outline" size="sm" disabled={page >= totalPages} onClick={() => setPage((p) => p + 1)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                >
                   Next
                 </Button>
               </div>
@@ -562,7 +645,10 @@ export function InvoicesPageContent({
                 loading={clientsLoading}
                 placeholder="Select client"
                 emptyMessage="No clients"
-                addClientHref={pathsConfig.app.accountClients.replace('[account]', accountSlug)}
+                addClientHref={pathsConfig.app.accountClients.replace(
+                  '[account]',
+                  accountSlug,
+                )}
               />
             </div>
             <Button

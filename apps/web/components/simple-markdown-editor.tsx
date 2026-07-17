@@ -231,11 +231,15 @@ export function SimpleMarkdownEditor({
         onSelect={updateSelectionToolbar}
         onBlur={() =>
           setTimeout(
-            () => setSelectionToolbar((current) => ({ ...current, visible: false })),
+            () =>
+              setSelectionToolbar((current) => ({
+                ...current,
+                visible: false,
+              })),
             150,
           )
         }
-        className="w-full resize-y rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 px-3 py-2.5 text-sm leading-relaxed text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]"
+        className="w-full resize-y rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 px-3 py-2.5 text-sm leading-relaxed text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none"
       />
     </div>
   );

@@ -1,9 +1,11 @@
 import { type NextRequest } from 'next/server';
+
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { playerConfigBodySchema } from '~/lib/videos/player-config-schema';
 import {
   configValuesFromRow,
   deletePreset,
@@ -13,7 +15,6 @@ import {
   updatePreset,
 } from '~/lib/videos/server/player-config-data';
 import { requireVideoAccountAccess } from '~/lib/videos/server/videos-access';
-import { playerConfigBodySchema } from '~/lib/videos/player-config-schema';
 
 export const runtime = 'nodejs';
 
@@ -37,9 +38,7 @@ async function requirePresetAccess(presetId: string) {
   return { error: null, client: access.client, preset };
 }
 
-function normalizeConfigInput(
-  parsed: z.infer<typeof playerConfigBodySchema>,
-) {
+function normalizeConfigInput(parsed: z.infer<typeof playerConfigBodySchema>) {
   return {
     name: parsed.name ?? 'Default',
     autoplay: parsed.autoplay,
@@ -133,7 +132,12 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const parsed = playerConfigBodySchema.safeParse(body);
     if (!parsed.success) {
-      return jsonErr('VALIDATION', 'Invalid config', 400, parsed.error.flatten());
+      return jsonErr(
+        'VALIDATION',
+        'Invalid config',
+        400,
+        parsed.error.flatten(),
+      );
     }
 
     const saved = await updatePreset(
@@ -177,9 +181,8 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
     await deletePreset(result.client, presetId);
 
     const accountId = result.preset!.account_id as string;
-    const { loadAccountVideoSettings } = await import(
-      '~/lib/videos/server/player-config-data'
-    );
+    const { loadAccountVideoSettings } =
+      await import('~/lib/videos/server/player-config-data');
     const settings = await loadAccountVideoSettings(result.client, accountId);
     if (settings.default_player_preset_id === presetId) {
       await updateAccountVideoSettings(result.client, accountId, {

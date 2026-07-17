@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { normaliseOverviewDomain } from '~/lib/site-overview/domain';
 import { countryToLocationCode } from '~/lib/clusters/utils';
-import { dfsPost, type DfsResponse } from '~/lib/dataforseo/client';
+import { type DfsResponse, dfsPost } from '~/lib/dataforseo/client';
+import { normaliseOverviewDomain } from '~/lib/site-overview/domain';
 
 import { extractApiCost } from './cost';
 
@@ -26,7 +26,9 @@ function domainMatchesUrl(domain: string, url: string): boolean {
   }
 }
 
-function parseSerpItems(result: Record<string, unknown> | undefined): Array<Record<string, unknown>> {
+function parseSerpItems(
+  result: Record<string, unknown> | undefined,
+): Array<Record<string, unknown>> {
   const items = result?.items;
   return Array.isArray(items) ? (items as Array<Record<string, unknown>>) : [];
 }
@@ -34,7 +36,10 @@ function parseSerpItems(result: Record<string, unknown> | undefined): Array<Reco
 export function parseKeywordRankFromSerp(
   items: Array<Record<string, unknown>>,
   targetDomain: string,
-): Pick<SerpRankResult, 'position' | 'rankingUrl' | 'aiOverviewPresent' | 'serpFeatures'> {
+): Pick<
+  SerpRankResult,
+  'position' | 'rankingUrl' | 'aiOverviewPresent' | 'serpFeatures'
+> {
   const serpFeatures = items
     .map((item) => String(item.type ?? ''))
     .filter((type) => type && type !== 'organic');
@@ -82,16 +87,19 @@ export async function fetchKeywordRanksBatch(input: {
   const keyword = input.keywords[0]!;
   const locationCode = countryToLocationCode(input.countryCode);
 
-  const json = await dfsPost<DfsResponse>('/serp/google/organic/live/advanced', [
-    {
-      keyword,
-      location_code: locationCode,
-      language_code: 'en',
-      device: input.device,
-      os: input.device === 'mobile' ? 'android' : 'windows',
-      depth: input.depth ?? 100,
-    },
-  ]);
+  const json = await dfsPost<DfsResponse>(
+    '/serp/google/organic/live/advanced',
+    [
+      {
+        keyword,
+        location_code: locationCode,
+        language_code: 'en',
+        device: input.device,
+        os: input.device === 'mobile' ? 'android' : 'windows',
+        depth: input.depth ?? 100,
+      },
+    ],
+  );
   const apiCostUsd = extractApiCost(json);
   const results: SerpRankResult[] = [];
 
@@ -238,8 +246,8 @@ export async function fetchAllKeywordRanks(input: {
   const rows: Array<SerpRankResult & { keywordId: string }> = [];
   let apiCostUsd = 0;
 
-  const { tasksCompleted, sessionApiCostUsd } = await fetchKeywordRanksFromTasks(
-    {
+  const { tasksCompleted, sessionApiCostUsd } =
+    await fetchKeywordRanksFromTasks({
       tasks,
       startIndex: 0,
       targetDomain: input.targetDomain,
@@ -253,8 +261,7 @@ export async function fetchAllKeywordRanks(input: {
           apiCostUsd: batch.sessionApiCostUsd,
         });
       },
-    },
-  );
+    });
 
   return {
     rows,

@@ -4,10 +4,9 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
 import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-
-import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
 
 export const loadPersonalSidebarWorkspaces = cache(
   async (): Promise<PersonalNavWorkspace[]> => {

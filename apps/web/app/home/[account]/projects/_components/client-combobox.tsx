@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { Check, ChevronsUpDown } from 'lucide-react';
 
+import { Button } from '@kit/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -13,6 +14,7 @@ import {
   CommandList,
 } from '@kit/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
+import { cn } from '@kit/ui/utils';
 
 import {
   workspaceComboboxInputClass,
@@ -20,8 +22,6 @@ import {
   workspaceComboboxListClass,
   workspaceComboboxPopoverClass,
 } from '~/components/workspace-shell/workspace-combobox-styles';
-import { Button } from '@kit/ui/button';
-import { cn } from '@kit/ui/utils';
 
 export type ClientOption = { id: string; display_name: string | null };
 
@@ -50,7 +50,7 @@ export function ClientCombobox({
     () => (value ? clients.find((c) => c.id === value) : null),
     [clients, value],
   );
-  const displayValue = selected ? selected.display_name ?? selected.id : null;
+  const displayValue = selected ? (selected.display_name ?? selected.id) : null;
 
   return (
     <div className="space-y-1.5">
@@ -67,7 +67,7 @@ export function ClientCombobox({
               !displayValue && 'text-[var(--workspace-shell-text-muted)]',
             )}
           >
-            {loading ? 'Loading…' : displayValue ?? placeholder}
+            {loading ? 'Loading…' : (displayValue ?? placeholder)}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
@@ -91,7 +91,12 @@ export function ClientCombobox({
                     'text-[var(--workspace-shell-text-muted)]',
                   )}
                 >
-                  <Check className={cn('mr-2 h-4 w-4', !value ? 'opacity-100' : 'opacity-0')} />
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      !value ? 'opacity-100' : 'opacity-0',
+                    )}
+                  />
                   None
                 </CommandItem>
                 {clients.map((c) => {
@@ -106,7 +111,12 @@ export function ClientCombobox({
                       }}
                       className={workspaceComboboxItemClass}
                     >
-                      <Check className={cn('mr-2 h-4 w-4', value === c.id ? 'opacity-100' : 'opacity-0')} />
+                      <Check
+                        className={cn(
+                          'mr-2 h-4 w-4',
+                          value === c.id ? 'opacity-100' : 'opacity-0',
+                        )}
+                      />
                       {label}
                     </CommandItem>
                   );
@@ -119,7 +129,10 @@ export function ClientCombobox({
       {!loading && clients.length === 0 && addClientHref && (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No clients in this account yet.{' '}
-          <a href={addClientHref} className="text-[var(--workspace-shell-text-muted)] underline hover:text-[var(--workspace-shell-text)]">
+          <a
+            href={addClientHref}
+            className="text-[var(--workspace-shell-text-muted)] underline hover:text-[var(--workspace-shell-text)]"
+          >
             Add a client
           </a>
         </p>

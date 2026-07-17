@@ -1,14 +1,17 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type SignatureAsset,
   filterSignatureAssetsForStaff,
   firstAwardBadgeUrl,
   renderSignatureAwardBadgesHtml,
   renderSignatureCustomTextHtml,
-  type SignatureAsset,
 } from './signature-assets-resolve';
 
-function asset(partial: Partial<SignatureAsset> & Pick<SignatureAsset, 'id' | 'kind' | 'scope'>): SignatureAsset {
+function asset(
+  partial: Partial<SignatureAsset> &
+    Pick<SignatureAsset, 'id' | 'kind' | 'scope'>,
+): SignatureAsset {
   return {
     account_id: 'acc',
     department: null,

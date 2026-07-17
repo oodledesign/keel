@@ -1,4 +1,5 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -37,7 +38,10 @@ export async function POST(request: NextRequest) {
   const parsed = syncSchema.safeParse(await request.json());
   if (!parsed.success) {
     return NextResponse.json(
-      { error: 'Invalid calendar sync request', details: parsed.error.flatten() },
+      {
+        error: 'Invalid calendar sync request',
+        details: parsed.error.flatten(),
+      },
       { status: 400 },
     );
   }

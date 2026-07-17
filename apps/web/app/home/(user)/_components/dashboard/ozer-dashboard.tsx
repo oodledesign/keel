@@ -4,16 +4,22 @@ import { useMemo } from 'react';
 
 import Link from 'next/link';
 
-import { ArrowRight, Cake, CalendarClock, MessageSquare, StickyNote, Users } from 'lucide-react';
+import {
+  ArrowRight,
+  Cake,
+  CalendarClock,
+  MessageSquare,
+  StickyNote,
+  Users,
+} from 'lucide-react';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 
-import { NoteAssignmentLabels } from '~/home/[account]/_components/note-assignment-labels';
-import { buildBrainChatUrl } from '~/lib/brain/build-brain-chat-url';
-
 import { DashboardShortcutsBar } from '~/components/dashboard-shortcuts/dashboard-shortcuts-bar';
 import pathsConfig from '~/config/paths.config';
+import { NoteAssignmentLabels } from '~/home/[account]/_components/note-assignment-labels';
+import { buildBrainChatUrl } from '~/lib/brain/build-brain-chat-url';
 
 import type {
   OzerDashboardData,
@@ -23,9 +29,8 @@ import type {
   PersonalRecentNote,
   WorkspaceOverviewCard,
 } from '../../_lib/server/ozer-dashboard.loader';
-
-import { PersonalDashboardTaskRow } from './personal-dashboard-task-row';
 import { ConnectedWorkspacesBar } from './connected-workspaces-bar';
+import { PersonalDashboardTaskRow } from './personal-dashboard-task-row';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -48,7 +53,7 @@ export function OzerDashboard({ data }: Props) {
   const greeting = useMemo(() => getGreeting(), []);
 
   return (
-    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-x-hidden px-4 pb-12 pt-6 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
+    <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-x-hidden px-4 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       <header className="space-y-4">
         <DashboardShortcutsBar
           shortcuts={data.dashboardShortcuts}
@@ -58,13 +63,12 @@ export function OzerDashboard({ data }: Props) {
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
             {greeting}, {data.userName}
           </h1>
-          <p className="mt-1 text-sm font-normal text-[var(--workspace-shell-text)]/60">{data.dateLabel}</p>
+          <p className="mt-1 text-sm font-normal text-[var(--workspace-shell-text)]/60">
+            {data.dateLabel}
+          </p>
         </div>
         {data.brainWorkspaceSlug ? (
-          <Button
-            asChild
-            className="ozer-gradient-btn w-full sm:w-auto"
-          >
+          <Button asChild className="ozer-gradient-btn w-full sm:w-auto">
             <Link href={buildBrainChatUrl(data.brainWorkspaceSlug)}>
               <MessageSquare className="mr-2 h-4 w-4" />
               Ask Second Brain
@@ -80,7 +84,10 @@ export function OzerDashboard({ data }: Props) {
         >
           <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:snap-none md:grid-cols-2 md:overflow-visible lg:grid-cols-3 [&::-webkit-scrollbar]:hidden">
             {data.recentNotes.map((note) => (
-              <RecentNoteCard key={`${note.workspaceSlug}-${note.id}`} note={note} />
+              <RecentNoteCard
+                key={`${note.workspaceSlug}-${note.id}`}
+                note={note}
+              />
             ))}
           </div>
         </DashboardSection>
@@ -133,15 +140,15 @@ export function OzerDashboard({ data }: Props) {
 
         <div className="min-w-0">
           <DashboardSection title="My Day">
-          {data.myDayEvents.length > 0 ? (
-            <div className={`${panelClass} divide-y divide-white/[0.06]`}>
-              {data.myDayEvents.map((event) => (
-                <CalendarEventRow key={event.id} event={event} />
-              ))}
-            </div>
-          ) : (
-            <EmptyPanel message="No events on your calendar today." />
-          )}
+            {data.myDayEvents.length > 0 ? (
+              <div className={`${panelClass} divide-y divide-white/[0.06]`}>
+                {data.myDayEvents.map((event) => (
+                  <CalendarEventRow key={event.id} event={event} />
+                ))}
+              </div>
+            ) : (
+              <EmptyPanel message="No events on your calendar today." />
+            )}
           </DashboardSection>
         </div>
       </div>
@@ -182,7 +189,9 @@ function DashboardSection(
             {props.title}
           </h2>
           {props.subtitle ? (
-            <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">{props.subtitle}</p>
+            <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+              {props.subtitle}
+            </p>
           ) : null}
         </div>
         {props.action ? <div className="shrink-0">{props.action}</div> : null}
@@ -237,11 +246,11 @@ function TaskPreviewSection({
   );
 }
 
-function EmptyPanel(
-  props: React.PropsWithChildren<{ message: string }>,
-) {
+function EmptyPanel(props: React.PropsWithChildren<{ message: string }>) {
   return (
-    <div className={`${panelClass} px-4 py-8 text-center text-sm text-[var(--workspace-shell-text)]/50`}>
+    <div
+      className={`${panelClass} px-4 py-8 text-center text-sm text-[var(--workspace-shell-text)]/50`}
+    >
       {props.message}
       {props.children}
     </div>
@@ -251,11 +260,13 @@ function EmptyPanel(
 function CalendarEventRow(props: { event: PersonalCalendarEvent }) {
   return (
     <div className="flex min-w-0 items-start gap-3 px-4 py-3">
-      <span className="w-14 shrink-0 text-sm font-medium tabular-nums text-[var(--ozer-accent)]">
+      <span className="w-14 shrink-0 text-sm font-medium text-[var(--ozer-accent)] tabular-nums">
         {props.event.timeLabel || '—'}
       </span>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">{props.event.title}</p>
+        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+          {props.event.title}
+        </p>
         <span className="mt-1 inline-flex items-center gap-1.5 text-[11px] text-[var(--workspace-shell-text)]/60">
           <span
             className="h-2 w-2 rounded-full"
@@ -288,7 +299,9 @@ function PeopleUpcomingRow(props: { item: PersonalPeopleUpcomingItem }) {
         <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
           {props.item.name}
         </p>
-        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">{props.item.label}</p>
+        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+          {props.item.label}
+        </p>
       </div>
       <ArrowRight className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
     </Link>
@@ -312,7 +325,7 @@ function WorkspaceOverviewCardView(props: { card: WorkspaceOverviewCard }) {
                 key={stat.label}
                 className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 py-2"
               >
-                <dt className="flex items-center gap-2 text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
+                <dt className="flex items-center gap-2 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
                   {isPipeline ? (
                     <Avatar className="h-5 w-5 rounded-md">
                       <AvatarImage src={card.pictureUrl ?? undefined} alt="" />

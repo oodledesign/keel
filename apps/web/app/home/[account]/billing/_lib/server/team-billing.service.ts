@@ -187,11 +187,17 @@ class TeamBillingService {
         `Error creating the checkout session`,
       );
 
-      if (error instanceof Error && error.message.startsWith('Product not found')) {
+      if (
+        error instanceof Error &&
+        error.message.startsWith('Product not found')
+      ) {
         throw error;
       }
 
-      if (error instanceof Error && error.message.startsWith('Plan not found')) {
+      if (
+        error instanceof Error &&
+        error.message.startsWith('Plan not found')
+      ) {
         throw error;
       }
 

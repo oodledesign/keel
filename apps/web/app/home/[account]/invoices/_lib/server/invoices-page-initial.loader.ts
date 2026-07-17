@@ -3,10 +3,8 @@ import 'server-only';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
-import {
-  getInvoiceSummary,
-  getInvoiceTabCounts,
-} from './invoice-v2.server';
+
+import { getInvoiceSummary, getInvoiceTabCounts } from './invoice-v2.server';
 import { createInvoicesService } from './invoices.service';
 
 export type InvoicesPageInitialData = {

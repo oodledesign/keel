@@ -149,7 +149,8 @@ export function mergeBlockGoogleIds(
     pushedByPlanner?: boolean;
   },
 ): EditablePlanBlock {
-  const pushedByPlanner = patch.pushedByPlanner ?? block.pushedByPlanner ?? false;
+  const pushedByPlanner =
+    patch.pushedByPlanner ?? block.pushedByPlanner ?? false;
 
   return {
     ...block,

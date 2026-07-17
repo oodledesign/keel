@@ -24,8 +24,7 @@ export const SITE_BLOCK_LAYOUT_PRESETS = [
   'footer',
 ] as const;
 
-export type SiteBlockLayoutPreset =
-  (typeof SITE_BLOCK_LAYOUT_PRESETS)[number];
+export type SiteBlockLayoutPreset = (typeof SITE_BLOCK_LAYOUT_PRESETS)[number];
 
 /** Puck component type names (PascalCase). */
 export const SITE_BLOCK_TYPES = [
@@ -77,40 +76,44 @@ export const LAYOUT_PRESET_TO_BLOCK: Record<
   footer: 'Footer',
 };
 
-export const BLOCK_TO_LAYOUT_PRESET: Record<SiteBlockType, SiteBlockLayoutPreset> =
-  Object.fromEntries(
-    Object.entries(LAYOUT_PRESET_TO_BLOCK).map(([preset, block]) => [
-      block,
-      preset,
-    ]),
-  ) as Record<SiteBlockType, SiteBlockLayoutPreset>;
+export const BLOCK_TO_LAYOUT_PRESET: Record<
+  SiteBlockType,
+  SiteBlockLayoutPreset
+> = Object.fromEntries(
+  Object.entries(LAYOUT_PRESET_TO_BLOCK).map(([preset, block]) => [
+    block,
+    preset,
+  ]),
+) as Record<SiteBlockType, SiteBlockLayoutPreset>;
 
 /** Legacy section-library keys → layoutPreset. */
-export const LEGACY_LIBRARY_KEY_TO_PRESET: Record<string, SiteBlockLayoutPreset> =
-  {
-    'nav-standard': 'header',
-    'hero-split': 'hero-split',
-    'hero-centered': 'hero-centered',
-    'hero-form': 'hero-form',
-    'logo-cloud': 'logo-cloud',
-    'features-grid': 'feature-grid',
-    'services-cards': 'feature-grid',
-    'split-content': 'feature-alternating',
-    'process-steps': 'feature-alternating',
-    'stats-band': 'stats-bar',
-    'testimonials-cards': 'testimonials',
-    'case-studies': 'feature-grid',
-    'team-grid': 'team-grid',
-    'pricing-table': 'pricing-table',
-    'faq-accordion': 'faq-accordion',
-    'cta-band': 'cta-band',
-    'contact-form': 'contact-form',
-    'map-locations': 'map-section',
-    'blog-grid': 'blog-grid',
-    gallery: 'gallery-grid',
-    'video-feature': 'content-prose',
-    'footer-standard': 'footer',
-  };
+export const LEGACY_LIBRARY_KEY_TO_PRESET: Record<
+  string,
+  SiteBlockLayoutPreset
+> = {
+  'nav-standard': 'header',
+  'hero-split': 'hero-split',
+  'hero-centered': 'hero-centered',
+  'hero-form': 'hero-form',
+  'logo-cloud': 'logo-cloud',
+  'features-grid': 'feature-grid',
+  'services-cards': 'feature-grid',
+  'split-content': 'feature-alternating',
+  'process-steps': 'feature-alternating',
+  'stats-band': 'stats-bar',
+  'testimonials-cards': 'testimonials',
+  'case-studies': 'feature-grid',
+  'team-grid': 'team-grid',
+  'pricing-table': 'pricing-table',
+  'faq-accordion': 'faq-accordion',
+  'cta-band': 'cta-band',
+  'contact-form': 'contact-form',
+  'map-locations': 'map-section',
+  'blog-grid': 'blog-grid',
+  gallery: 'gallery-grid',
+  'video-feature': 'content-prose',
+  'footer-standard': 'footer',
+};
 
 export function resolveLayoutPreset(input: {
   layoutPreset?: string | null;

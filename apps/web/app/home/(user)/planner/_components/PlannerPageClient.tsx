@@ -4,38 +4,38 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { toast } from '@kit/ui/sonner';
 
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
+  type PlanDocument,
   attachGoogleEventIdsToPlan,
   flattenPlanBlocks,
   parsePlanDocument,
   serializePlanDocument,
-  type PlanDocument,
 } from '~/lib/planner/plan-blocks';
 import {
   applySyncMappingsToDocument,
   blocksForCalendarSync,
   planGainedGoogleIds,
 } from '~/lib/planner/plan-calendar-sync';
-import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
 import {
   plannerScopeKey,
   saveStoredPlan,
   toLocalDateYmd,
 } from '~/lib/planner/plan-storage';
-import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
 
-import { PlannerInputPanel } from './PlannerInputPanel';
 import { PlanOutputPanel } from './PlanOutputPanel';
+import { PlannerInputPanel } from './PlannerInputPanel';
 import { PlannerViewTabs } from './PlannerViewTabs';
 import { SopSuggestionsStrip } from './SopSuggestionsStrip';
 import {
-  plannerTaskToPayload,
   type PlannerGeneratePayload,
   type PlannerPageClientProps,
   type PlannerPreferences,
   type PlanningMode,
+  plannerTaskToPayload,
 } from './planner-types';
 
 const defaultPreferences: PlannerPreferences = {
@@ -77,7 +77,8 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
   const [selectedCalendarEventIds, setSelectedCalendarEventIds] = useState<
     Set<string>
   >(new Set());
-  const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(allTaskIds);
+  const [selectedTaskIds, setSelectedTaskIds] =
+    useState<Set<string>>(allTaskIds);
   const [planMarkdown, setPlanMarkdown] = useState(
     initialData.savedPlanMarkdown ?? '',
   );
@@ -219,7 +220,9 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
 
   const syncBlockToGoogle = useCallback(
     async (document: PlanDocument, blockId: string) => {
-      const block = flattenPlanBlocks(document).find((item) => item.id === blockId);
+      const block = flattenPlanBlocks(document).find(
+        (item) => item.id === blockId,
+      );
       if (!block?.googleEventId) {
         return null;
       }
@@ -233,14 +236,19 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
       }
 
       try {
-        const result = await syncPlannerCalendarBlocks({ date: dateIso, blocks });
+        const result = await syncPlannerCalendarBlocks({
+          date: dateIso,
+          blocks,
+        });
         if (result.errors.length > 0) {
           toast.message('Google Calendar could not update one or more events');
         }
         return applySyncMappingsToDocument(document, result.mappings);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : 'Could not update Google Calendar',
+          err instanceof Error
+            ? err.message
+            : 'Could not update Google Calendar',
         );
         return null;
       }
@@ -324,7 +332,9 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
         }
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not generate plan');
+      toast.error(
+        err instanceof Error ? err.message : 'Could not generate plan',
+      );
     } finally {
       setIsGenerating(false);
     }

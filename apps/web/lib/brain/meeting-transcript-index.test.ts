@@ -36,7 +36,8 @@ describe('buildMeetingTranscriptIndexText', () => {
   it('indexes summary and action items when transcript body is empty', () => {
     const text = buildMeetingTranscriptIndexText({
       title: 'Strategy sync',
-      content: '(Transcript text not stored — see summary and action items below.)',
+      content:
+        '(Transcript text not stored — see summary and action items below.)',
       summaryText: 'Agreed to launch in March.',
       actionItems: [{ suggested_title: 'Confirm launch date' }],
     });
@@ -49,13 +50,16 @@ describe('buildMeetingTranscriptIndexText', () => {
 
 describe('meetingTranscriptIndexUpdatedAt', () => {
   it('uses the latest timestamp from transcript, summary, and action items', () => {
-    const updatedAt = meetingTranscriptIndexUpdatedAt('2026-06-01T10:00:00.000Z', {
-      summaryText: 'Summary',
-      attendeeEmails: [],
-      summaryGeneratedAt: '2026-06-02T10:00:00.000Z',
-      actionItems: [],
-      latestActionItemAt: '2026-06-03T10:00:00.000Z',
-    });
+    const updatedAt = meetingTranscriptIndexUpdatedAt(
+      '2026-06-01T10:00:00.000Z',
+      {
+        summaryText: 'Summary',
+        attendeeEmails: [],
+        summaryGeneratedAt: '2026-06-02T10:00:00.000Z',
+        actionItems: [],
+        latestActionItemAt: '2026-06-03T10:00:00.000Z',
+      },
+    );
 
     expect(updatedAt).toBe('2026-06-03T10:00:00.000Z');
   });

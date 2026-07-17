@@ -17,7 +17,8 @@ export default createBillingSchema({
     {
       id: 'ozer-community',
       name: 'Community',
-      description: 'Groups, schedules, and shared tasks for clubs and homegroups',
+      description:
+        'Groups, schedules, and shared tasks for clubs and homegroups',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
       plans: [
@@ -497,7 +498,8 @@ export default createBillingSchema({
     {
       id: 'ozer-addon-rankly',
       name: 'Rankly',
-      description: 'SEO rankings, PageSpeed scheduling, AI insights, and keyword research',
+      description:
+        'SEO rankings, PageSpeed scheduling, AI insights, and keyword research',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
       plans: [

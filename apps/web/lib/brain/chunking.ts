@@ -22,7 +22,10 @@ export function splitIntoChunks(
   const normalized = text.replace(/\r\n/g, '\n').trim();
   if (!normalized) return [];
 
-  const paragraphs = normalized.split(/\n{2,}/).map((p) => p.trim()).filter(Boolean);
+  const paragraphs = normalized
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   const chunks: string[] = [];
   let buffer = '';
 
@@ -75,7 +78,11 @@ export function splitIntoChunks(
 
   if (buffer) flush();
 
-  return chunks.length > 0 ? chunks : countWords(normalized) >= 20 ? [normalized] : [];
+  return chunks.length > 0
+    ? chunks
+    : countWords(normalized) >= 20
+      ? [normalized]
+      : [];
 }
 
 export function estimateTokens(text: string): number {

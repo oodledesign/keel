@@ -1,12 +1,11 @@
 import { NextResponse } from 'next/server';
 
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
-import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { isMissingColumnError } from '~/home/[account]/_lib/server/supabase-errors';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 export const runtime = 'nodejs';
 
@@ -128,14 +127,23 @@ export async function POST(request: Request) {
     const file = formData.get('file');
 
     if (typeof accountId !== 'string' || !accountId.trim()) {
-      return NextResponse.json({ error: 'accountId is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'accountId is required' },
+        { status: 400 },
+      );
     }
 
     if (typeof clientId !== 'string' || !clientId.trim()) {
-      return NextResponse.json({ error: 'clientId is required' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'clientId is required' },
+        { status: 400 },
+      );
     }
 
-    const canEdit = await ensureClientsEditPermission(user.id, accountId.trim());
+    const canEdit = await ensureClientsEditPermission(
+      user.id,
+      accountId.trim(),
+    );
     if (!canEdit) {
       return NextResponse.json({ error: 'Permission denied' }, { status: 403 });
     }
@@ -175,7 +183,10 @@ export async function POST(request: Request) {
         .eq('account_id', clientRow.account_id);
 
       if (updateError) {
-        return NextResponse.json({ error: updateError.message }, { status: 500 });
+        return NextResponse.json(
+          { error: updateError.message },
+          { status: 500 },
+        );
       }
 
       return NextResponse.json({ pictureUrl: null });

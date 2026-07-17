@@ -9,10 +9,10 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import {
-  distinctTranscriptSpeakers,
   type SpeakerBinding,
   type SpeakerMappings,
   type TranscriptSegment,
+  distinctTranscriptSpeakers,
 } from '~/lib/recorder/transcript-speakers';
 
 import { updateMeetingTranscriptSpeakerMappings } from '../../meeting-transcripts/_lib/server/server-actions';
@@ -77,7 +77,10 @@ export function MeetingSpeakerLabelsEditor({
     return null;
   }
 
-  const updateMapping = (speakerKey: string, binding: SpeakerBinding | null) => {
+  const updateMapping = (
+    speakerKey: string,
+    binding: SpeakerBinding | null,
+  ) => {
     setMappings((current) => {
       const next = { ...current };
       if (!binding) {
@@ -93,7 +96,9 @@ export function MeetingSpeakerLabelsEditor({
   const handleContactCreated = (contact: SpeakerPickerContact) => {
     setContacts((current) => {
       if (current.some((row) => row.id === contact.id)) return current;
-      const next = [...current, contact].sort((a, b) => a.name.localeCompare(b.name));
+      const next = [...current, contact].sort((a, b) =>
+        a.name.localeCompare(b.name),
+      );
       onContactsChange?.(next);
       return next;
     });
@@ -114,7 +119,9 @@ export function MeetingSpeakerLabelsEditor({
         onSaved();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Failed to save speaker labels',
+          error instanceof Error
+            ? error.message
+            : 'Failed to save speaker labels',
         );
       }
     });
@@ -124,7 +131,9 @@ export function MeetingSpeakerLabelsEditor({
     <section className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-sm">
       <div className="mb-4 flex items-center gap-2">
         <Users className="h-4 w-4 text-[var(--ozer-accent)]" />
-        <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Speaker labels</h2>
+        <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+          Speaker labels
+        </h2>
       </div>
       <p className="mb-4 text-sm text-[var(--workspace-shell-text-muted)]">
         Assign speakers to team members, clients, contacts, or a custom name.
@@ -134,7 +143,9 @@ export function MeetingSpeakerLabelsEditor({
       <div className="space-y-4">
         {speakers.map((speakerKey) => (
           <div key={speakerKey} className="space-y-2">
-            <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Was: {speakerKey}</Label>
+            <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Was: {speakerKey}
+            </Label>
             <SpeakerLabelPicker
               accountId={accountId}
               binding={mappings[speakerKey] ?? null}

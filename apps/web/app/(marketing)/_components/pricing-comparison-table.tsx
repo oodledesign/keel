@@ -3,6 +3,7 @@
 import { useState } from 'react';
 
 import Link from 'next/link';
+
 import { Check, ChevronDown, Minus } from 'lucide-react';
 
 import {
@@ -12,19 +13,18 @@ import {
 } from '@kit/ui/collapsible';
 import { cn } from '@kit/ui/utils';
 
+import {
+  marketingBodyText,
+  marketingBtnOutline,
+  marketingFeatureCard,
+  marketingMutedText,
+} from '~/lib/marketing/marketing-ui';
 import type {
   PricingComparisonGroup,
   PricingComparisonPlanColumn,
   PricingFeatureCell,
   SegmentPricingComparison,
 } from '~/lib/marketing/pricing-comparison';
-
-import {
-  marketingBtnOutline,
-  marketingBodyText,
-  marketingFeatureCard,
-  marketingMutedText,
-} from '~/lib/marketing/marketing-ui';
 
 type PricingComparisonTableProps = {
   comparison: SegmentPricingComparison;
@@ -43,7 +43,10 @@ export function PricingComparisonTable({
         <CollapsibleTrigger asChild>
           <button
             type="button"
-            className={cn(marketingBtnOutline, 'inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium')}
+            className={cn(
+              marketingBtnOutline,
+              'inline-flex items-center gap-2 px-5 py-2.5 text-sm font-medium',
+            )}
             aria-expanded={open}
           >
             {open ? 'Hide feature comparison' : 'Compare plans in detail'}
@@ -58,7 +61,7 @@ export function PricingComparisonTable({
         </CollapsibleTrigger>
       </div>
 
-      <CollapsibleContent className="mt-8 data-[state=closed]:animate-out data-[state=open]:animate-in">
+      <CollapsibleContent className="data-[state=closed]:animate-out data-[state=open]:animate-in mt-8">
         <ComparisonTable
           planColumns={comparison.planColumns}
           groups={comparison.groups}
@@ -75,14 +78,22 @@ function ComparisonTable(props: {
   const { planColumns, groups } = props;
 
   return (
-    <div className={cn('overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)]', marketingFeatureCard)}>
+    <div
+      className={cn(
+        'overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)]',
+        marketingFeatureCard,
+      )}
+    >
       <div className="overflow-x-auto">
         <table className="w-full min-w-[640px] border-collapse text-left text-sm">
           <thead>
             <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60">
               <th
                 scope="col"
-                className={cn('sticky left-0 z-10 min-w-[200px] bg-[var(--workspace-shell-panel)] px-4 py-4 text-xs font-medium uppercase tracking-[0.1em]', marketingMutedText)}
+                className={cn(
+                  'sticky left-0 z-10 min-w-[200px] bg-[var(--workspace-shell-panel)] px-4 py-4 text-xs font-medium tracking-[0.1em] uppercase',
+                  marketingMutedText,
+                )}
               >
                 Feature
               </th>
@@ -92,7 +103,8 @@ function ComparisonTable(props: {
                   scope="col"
                   className={cn(
                     'min-w-[108px] px-4 py-4 text-center text-sm font-semibold text-[var(--workspace-shell-text)]',
-                    column.highlighted && 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
+                    column.highlighted &&
+                      'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
                   )}
                 >
                   {column.label}
@@ -127,7 +139,7 @@ function GroupRows(props: {
         <th
           scope="colgroup"
           colSpan={planColumns.length + 1}
-          className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ozer-accent)]"
+          className="px-4 py-3 text-left text-xs font-semibold tracking-[0.12em] text-[var(--ozer-accent)] uppercase"
         >
           {group.title}
         </th>
@@ -139,7 +151,10 @@ function GroupRows(props: {
         >
           <th
             scope="row"
-            className={cn('sticky left-0 z-10 bg-[var(--workspace-shell-panel)] px-4 py-3.5 font-normal', marketingBodyText)}
+            className={cn(
+              'sticky left-0 z-10 bg-[var(--workspace-shell-panel)] px-4 py-3.5 font-normal',
+              marketingBodyText,
+            )}
           >
             {row.href ? (
               <Link
@@ -180,7 +195,10 @@ function FeatureCell(props: { value: PricingFeatureCell }) {
   if (value === true) {
     return (
       <span className="inline-flex items-center justify-center">
-        <Check className="h-4 w-4 text-[var(--ozer-accent)]" aria-label="Included" />
+        <Check
+          className="h-4 w-4 text-[var(--ozer-accent)]"
+          aria-label="Included"
+        />
       </span>
     );
   }
@@ -188,16 +206,25 @@ function FeatureCell(props: { value: PricingFeatureCell }) {
   if (value === false) {
     return (
       <span className="inline-flex items-center justify-center">
-        <Minus className="h-4 w-4 text-[var(--workspace-shell-text-muted)]/40" aria-label="Not included" />
+        <Minus
+          className="h-4 w-4 text-[var(--workspace-shell-text-muted)]/40"
+          aria-label="Not included"
+        />
       </span>
     );
   }
 
   if (value === 'add-on') {
     return (
-      <span className={cn('text-xs font-medium', marketingBodyText)}>Add-on</span>
+      <span className={cn('text-xs font-medium', marketingBodyText)}>
+        Add-on
+      </span>
     );
   }
 
-  return <span className="text-sm font-medium text-[var(--workspace-shell-text)]">{value}</span>;
+  return (
+    <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
+      {value}
+    </span>
+  );
 }

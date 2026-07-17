@@ -2,11 +2,12 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import pathsConfig from '~/config/paths.config';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
-import pathsConfig from '~/config/paths.config';
-
-export type DunningNotificationType = 'payment_reminder_3d' | 'payment_reminder_7d';
+export type DunningNotificationType =
+  | 'payment_reminder_3d'
+  | 'payment_reminder_7d';
 
 type DunningCandidate = {
   subscriptionId: string;
@@ -120,7 +121,9 @@ async function loadDunningCandidates(
   const results: DunningCandidate[] = [];
 
   for (const sub of subs) {
-    const updatedAt = new Date((sub as { updated_at: string }).updated_at).getTime();
+    const updatedAt = new Date(
+      (sub as { updated_at: string }).updated_at,
+    ).getTime();
     const daysPastDue = Math.floor((now - updatedAt) / MS_DAY);
 
     let notificationType: DunningNotificationType | null = null;
@@ -132,9 +135,11 @@ async function loadDunningCandidates(
 
     if (!notificationType) continue;
 
-    const account = (sub as {
-      accounts: { id: string; name: string | null; slug: string | null };
-    }).accounts;
+    const account = (
+      sub as {
+        accounts: { id: string; name: string | null; slug: string | null };
+      }
+    ).accounts;
     const accountId = (sub as { account_id: string }).account_id;
     const slug = account.slug;
     if (!slug) continue;
@@ -172,7 +177,8 @@ async function loadWorkspaceOwnerEmail(
   const userId = (membership as { user_id?: string } | null)?.user_id;
   if (!userId) return null;
 
-  const { data: userResult, error } = await admin.auth.admin.getUserById(userId);
+  const { data: userResult, error } =
+    await admin.auth.admin.getUserById(userId);
   if (error || !userResult.user?.email) return null;
 
   return userResult.user.email;

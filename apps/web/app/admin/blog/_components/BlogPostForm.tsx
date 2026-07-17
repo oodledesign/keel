@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -15,19 +16,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
-import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 
-import type { BlogAuthorOption } from '../_lib/load-blog-author-options';
 import {
+  type BlogPostFormData,
   createBlogPost,
   publishBlogPost,
   unpublishBlogPost,
   updateBlogPost,
-  type BlogPostFormData,
 } from '../_actions';
+import type { BlogAuthorOption } from '../_lib/load-blog-author-options';
 
 type BlogPostRecord = {
   id?: string;
@@ -61,13 +61,7 @@ function slugify(value: string) {
     .replace(/-+/g, '-');
 }
 
-function CharacterCounter({
-  value,
-  max,
-}: {
-  value: string;
-  max: number;
-}) {
+function CharacterCounter({ value, max }: { value: string; max: number }) {
   return (
     <p className="text-muted-foreground text-right text-xs">
       {value.length}/{max}
@@ -167,7 +161,9 @@ export function BlogPostForm({
         toast.success('Post created');
         router.push(`/admin/blog/${id}/edit`);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to save post');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to save post',
+        );
       }
     });
   };
@@ -187,7 +183,9 @@ export function BlogPostForm({
         router.refresh();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Failed to update publish status',
+          error instanceof Error
+            ? error.message
+            : 'Failed to update publish status',
         );
       }
     });
@@ -312,7 +310,9 @@ export function BlogPostForm({
                 updateField('secondary_keywords', event.target.value)
               }
             />
-            <p className="text-muted-foreground text-xs">Separate with commas</p>
+            <p className="text-muted-foreground text-xs">
+              Separate with commas
+            </p>
           </div>
 
           <div className="space-y-2">
@@ -385,7 +385,9 @@ export function BlogPostForm({
                 <SelectValue placeholder="Select a super admin" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="none">Manual author (no profile photo)</SelectItem>
+                <SelectItem value="none">
+                  Manual author (no profile photo)
+                </SelectItem>
                 {authorOptions.map((option) => (
                   <SelectItem key={option.userId} value={option.userId}>
                     {option.name}
@@ -395,7 +397,8 @@ export function BlogPostForm({
               </SelectContent>
             </Select>
             <p className="text-muted-foreground text-xs">
-              Links the post to a super admin account and syncs their profile photo on save.
+              Links the post to a super admin account and syncs their profile
+              photo on save.
             </p>
           </div>
 
@@ -423,7 +426,9 @@ export function BlogPostForm({
             <Input
               id="author_name"
               value={form.author_name}
-              onChange={(event) => updateField('author_name', event.target.value)}
+              onChange={(event) =>
+                updateField('author_name', event.target.value)
+              }
             />
           </div>
 
@@ -432,7 +437,9 @@ export function BlogPostForm({
             <Input
               id="author_url"
               value={form.author_url}
-              onChange={(event) => updateField('author_url', event.target.value)}
+              onChange={(event) =>
+                updateField('author_url', event.target.value)
+              }
             />
           </div>
 
@@ -442,7 +449,9 @@ export function BlogPostForm({
               id="author_bio"
               rows={4}
               value={form.author_bio}
-              onChange={(event) => updateField('author_bio', event.target.value)}
+              onChange={(event) =>
+                updateField('author_bio', event.target.value)
+              }
               placeholder="Short bio shown on the post and in Article schema for E-E-A-T."
             />
             <CharacterCounter value={form.author_bio} max={280} />

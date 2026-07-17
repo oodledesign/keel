@@ -28,17 +28,18 @@ import {
 import { Input } from '@kit/ui/input';
 import { cn } from '@kit/ui/utils';
 
-import { updateTask } from '~/home/(user)/_lib/actions/task-actions';
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
+import { updateTask } from '~/home/(user)/_lib/actions/task-actions';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
-import { PlannerClientAvatar, PlannerClientPill } from './planner-client-pill';
 import type {
   PlannerProjectNode,
   PlannerScope,
   PlannerTask,
   PlannerWorkspaceNode,
 } from '~/lib/planner/types';
+
+import { PlannerClientAvatar, PlannerClientPill } from './planner-client-pill';
 
 type Props = {
   taskTree: PlannerWorkspaceNode[];
@@ -86,7 +87,10 @@ function filterPlannerTaskTree(
           taskCount: project.tasks.length,
         }));
 
-      const taskCount = projects.reduce((sum, project) => sum + project.taskCount, 0);
+      const taskCount = projects.reduce(
+        (sum, project) => sum + project.taskCount,
+        0,
+      );
       return { ...workspace, projects, taskCount };
     })
     .filter((workspace) => workspace.taskCount > 0);
@@ -133,7 +137,10 @@ export function TaskSelectorTree({
             {!includeWorkspaceTasks ? (
               <>
                 {' '}
-                <Link href={settingsHref} className="text-[var(--workspace-shell-accent-text)] hover:underline">
+                <Link
+                  href={settingsHref}
+                  className="text-[var(--workspace-shell-accent-text)] hover:underline"
+                >
                   Workspace tasks off
                 </Link>
               </>
@@ -189,7 +196,7 @@ export function TaskSelectorTree({
 
       {taskTree.length > 0 ? (
         <div className="relative">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
             type="search"
             value={searchQuery}
@@ -203,7 +210,9 @@ export function TaskSelectorTree({
 
       {taskTree.length === 0 ? (
         <div className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center">
-          <p className="text-sm text-[var(--workspace-shell-text)]/55">No open tasks found.</p>
+          <p className="text-sm text-[var(--workspace-shell-text)]/55">
+            No open tasks found.
+          </p>
           <Button
             type="button"
             size="sm"
@@ -222,7 +231,7 @@ export function TaskSelectorTree({
           </p>
         </div>
       ) : (
-        <div className="max-h-[min(60vh,640px)] divide-y divide-white/8 overflow-y-auto overscroll-contain pr-1 touch-pan-y">
+        <div className="max-h-[min(60vh,640px)] touch-pan-y divide-y divide-white/8 overflow-y-auto overscroll-contain pr-1">
           {filteredTree.map((workspace) => (
             <WorkspaceNode
               key={workspace.id}
@@ -275,7 +284,7 @@ function WorkspaceNode({
           </span>
         </CollapsibleTrigger>
       </div>
-      <CollapsibleContent className="space-y-3 pb-2 pl-6 pt-2">
+      <CollapsibleContent className="space-y-3 pt-2 pb-2 pl-6">
         {workspace.projects.map((project) => (
           <ProjectNode
             key={project.id}
@@ -318,13 +327,13 @@ function ProjectNode({
             onCheckedChange={(value) => toggle(ids, Boolean(value))}
             className="border-[color:var(--workspace-shell-border)]"
           />
-          <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left text-[11px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
+          <CollapsibleTrigger className="flex flex-1 items-center gap-2 text-left text-[11px] font-semibold tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
             {open ? (
               <ChevronDown className="h-3.5 w-3.5" />
             ) : (
               <ChevronRight className="h-3.5 w-3.5" />
             )}
-            <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate normal-case tracking-normal text-[var(--workspace-shell-text)]/70">
+            <span className="flex min-w-0 flex-1 items-center gap-1.5 truncate tracking-normal text-[var(--workspace-shell-text)]/70 normal-case">
               {isClientFolder ? (
                 <PlannerClientAvatar
                   name={project.name}
@@ -336,11 +345,15 @@ function ProjectNode({
               ) : null}
               <span className="truncate">{project.name}</span>
             </span>
-            <span className="ml-auto text-[var(--workspace-shell-text)]/35">{project.taskCount}</span>
+            <span className="ml-auto text-[var(--workspace-shell-text)]/35">
+              {project.taskCount}
+            </span>
           </CollapsibleTrigger>
         </div>
       ) : null}
-      <CollapsibleContent className={cn('space-y-0.5', !isGeneral && 'mt-1 pl-6')}>
+      <CollapsibleContent
+        className={cn('space-y-0.5', !isGeneral && 'mt-1 pl-6')}
+      >
         {project.tasks.map((task) => (
           <TaskRow
             key={task.id}
@@ -400,7 +413,9 @@ function TaskRow({
           onClick={() => setEditOpen(true)}
         >
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="leading-snug text-[var(--workspace-shell-text)]/90">{task.title}</span>
+            <span className="leading-snug text-[var(--workspace-shell-text)]/90">
+              {task.title}
+            </span>
             {clientName ? (
               <PlannerClientPill
                 name={clientName}
@@ -412,7 +427,10 @@ function TaskRow({
           <span className="mt-1 flex flex-wrap items-center gap-1.5">
             <Badge
               variant="outline"
-              className={cn('h-5 gap-1 px-1.5 text-[10px]', priorityClass[task.priority])}
+              className={cn(
+                'h-5 gap-1 px-1.5 text-[10px]',
+                priorityClass[task.priority],
+              )}
             >
               <Flag className="h-3 w-3" />
               {task.priority}

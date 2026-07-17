@@ -5,6 +5,7 @@ import { Suspense, useState } from 'react';
 import { usePathname } from 'next/navigation';
 
 import type { Provider, UserIdentity } from '@supabase/supabase-js';
+
 import { CheckCircle2, Mail } from 'lucide-react';
 
 import { useLinkIdentityWithProvider } from '@kit/supabase/hooks/use-link-identity-with-provider';

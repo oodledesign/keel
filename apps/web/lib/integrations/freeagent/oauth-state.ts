@@ -30,14 +30,18 @@ function stateSecret() {
     );
   }
 
-  return createHmac('sha256', tokenKey)
-    // keep legacy salt string — changing breaks in-flight OAuth state
-    .update('keel-freeagent-oauth-state-v1')
-    .digest('hex');
+  return (
+    createHmac('sha256', tokenKey)
+      // keep legacy salt string — changing breaks in-flight OAuth state
+      .update('keel-freeagent-oauth-state-v1')
+      .digest('hex')
+  );
 }
 
 function signPayload(payload: string) {
-  return createHmac('sha256', stateSecret()).update(payload).digest('base64url');
+  return createHmac('sha256', stateSecret())
+    .update(payload)
+    .digest('base64url');
 }
 
 export function signFreeAgentOAuthState(
@@ -52,7 +56,9 @@ export function signFreeAgentOAuthState(
   return `${body}.${sig}`;
 }
 
-export function verifyFreeAgentOAuthState(token: string): FreeAgentOAuthStatePayload {
+export function verifyFreeAgentOAuthState(
+  token: string,
+): FreeAgentOAuthStatePayload {
   const [body, sig] = token.split('.');
   if (!body || !sig) throw new Error('Invalid OAuth state');
 

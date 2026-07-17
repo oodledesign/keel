@@ -5,8 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { UpsertOrderParams } from '@kit/billing/types';
 import { getLogger } from '@kit/shared/logger';
 
-import { findAiCreditPackByPriceId } from '~/lib/billing/ai-credit-packs';
 import { syncAccountCreditLimit } from '~/lib/ai/tiers';
+import { findAiCreditPackByPriceId } from '~/lib/billing/ai-credit-packs';
 
 /**
  * After a one-time Checkout completes, map Stripe price → credit pack and
@@ -26,7 +26,12 @@ export async function fulfillAiCreditPackOrder(
 
   if (order.status !== 'succeeded') {
     logger.info(
-      { name: 'ai.credits.purchase', accountId, sessionId, status: order.status },
+      {
+        name: 'ai.credits.purchase',
+        accountId,
+        sessionId,
+        status: order.status,
+      },
       'Skipping AI credit grant — order not succeeded',
     );
     return { granted: false, credits: 0 };
@@ -59,7 +64,12 @@ export async function fulfillAiCreditPackOrder(
 
   if (error) {
     logger.error(
-      { name: 'ai.credits.purchase', accountId, sessionId, error: error.message },
+      {
+        name: 'ai.credits.purchase',
+        accountId,
+        sessionId,
+        error: error.message,
+      },
       'Failed to grant AI credit purchase',
     );
     throw new Error(error.message);
@@ -98,10 +108,7 @@ export async function fulfillAiCreditPackFromSubscription(
     return { granted: false, credits: 0 };
   }
 
-  if (
-    subscription.status !== 'active' &&
-    subscription.status !== 'trialing'
-  ) {
+  if (subscription.status !== 'active' && subscription.status !== 'trialing') {
     return { granted: false, credits: 0 };
   }
 

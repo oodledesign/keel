@@ -8,12 +8,12 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import type { PlanDocument } from '~/lib/planner/plan-blocks';
 import {
   applySyncMappingsToDocument,
   blocksForCalendarSync,
   hasSyncableBlocks,
 } from '~/lib/planner/plan-calendar-sync';
-import type { PlanDocument } from '~/lib/planner/plan-blocks';
 import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -56,8 +56,12 @@ export function PlannerSyncCalendarButton({
       return;
     }
 
-    const createCount = syncBlocks.filter((block) => !block.googleEventId).length;
-    const updateCount = syncBlocks.filter((block) => block.googleEventId).length;
+    const createCount = syncBlocks.filter(
+      (block) => !block.googleEventId,
+    ).length;
+    const updateCount = syncBlocks.filter(
+      (block) => block.googleEventId,
+    ).length;
 
     const summary = [
       createCount > 0

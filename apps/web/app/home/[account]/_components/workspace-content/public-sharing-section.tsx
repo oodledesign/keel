@@ -6,8 +6,8 @@ import { Copy, Globe, Link2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import {
   getWorkspaceItemPublicLinkAction,
@@ -90,7 +90,9 @@ export function PublicSharingSection({
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
           <Globe className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
-          <Label className="text-[var(--workspace-shell-text)]">Public link</Label>
+          <Label className="text-[var(--workspace-shell-text)]">
+            Public link
+          </Label>
         </div>
         <Switch
           checked={isPublic}

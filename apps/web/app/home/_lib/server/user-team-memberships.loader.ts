@@ -46,10 +46,7 @@ export const loadUserTeamMemberships = cache(
 
     type Row = {
       onboarding_completed?: boolean | null;
-      account:
-        | UserTeamMembershipAccount
-        | UserTeamMembershipAccount[]
-        | null;
+      account: UserTeamMembershipAccount | UserTeamMembershipAccount[] | null;
     };
 
     const out: UserTeamMembershipAccount[] = [];

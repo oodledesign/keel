@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
+
 import { usePathname } from 'next/navigation';
 
 import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';

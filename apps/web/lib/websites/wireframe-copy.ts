@@ -1,12 +1,12 @@
 import {
-  createPlanningId,
   type WebsiteWireframeCopy,
   type WebsiteWireframeCopyItem,
   type WebsiteWireframeSection,
+  createPlanningId,
 } from './planning-types';
 import {
-  findSectionLibraryEntry,
   type WebsiteSectionLibraryEntry,
+  findSectionLibraryEntry,
 } from './section-library';
 
 export type WireframeSlotKind =
@@ -70,7 +70,11 @@ export const WIREFRAME_COPY_SPECS: Record<string, WireframeLibraryCopySpec> = {
   'hero-split': {
     slots: [
       slot('eyebrow', 'label', ''),
-      slot('headline', 'heading', 'Independent expertise that delivers outcomes'),
+      slot(
+        'headline',
+        'heading',
+        'Independent expertise that delivers outcomes',
+      ),
       slot(
         'subheadline',
         'body',
@@ -275,7 +279,11 @@ export const WIREFRAME_COPY_SPECS: Record<string, WireframeLibraryCopySpec> = {
 const GENERIC_SPEC: WireframeLibraryCopySpec = {
   slots: [
     slot('heading', 'heading', 'Section heading'),
-    slot('body', 'body', 'Describe the layout intent and key copy for this block.'),
+    slot(
+      'body',
+      'body',
+      'Describe the layout intent and key copy for this block.',
+    ),
     slot('cta', 'button', 'CTA label'),
   ],
 };

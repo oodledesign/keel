@@ -4,10 +4,7 @@ import { useMemo, useState } from 'react';
 
 import { Check, ChevronsUpDown, Plus, X } from 'lucide-react';
 
-import {
-  workspaceComboboxListClass,
-  workspaceComboboxPopoverClass,
-} from '~/components/workspace-shell/workspace-combobox-styles';
+import { Button } from '@kit/ui/button';
 import {
   Command,
   CommandEmpty,
@@ -18,17 +15,28 @@ import {
 } from '@kit/ui/command';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Button } from '@kit/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import {
+  workspaceComboboxListClass,
+  workspaceComboboxPopoverClass,
+} from '~/components/workspace-shell/workspace-combobox-styles';
 import { createWorkspaceContact } from '~/home/[account]/clients/_lib/server/server-actions';
 import type { SpeakerBinding } from '~/lib/recorder/transcript-speakers';
 
 export type SpeakerPickerClient = { id: string; name: string };
-export type SpeakerPickerContact = { id: string; name: string; email?: string | null };
-export type SpeakerPickerMember = { userId: string; name: string; email?: string | null };
+export type SpeakerPickerContact = {
+  id: string;
+  name: string;
+  email?: string | null;
+};
+export type SpeakerPickerMember = {
+  userId: string;
+  name: string;
+  email?: string | null;
+};
 
 type AssignMode = 'custom' | 'client' | 'contact' | 'team';
 
@@ -55,10 +63,14 @@ function bindingLabel(
   if (!binding) return null;
   if (binding.type === 'custom') return binding.name;
   if (binding.type === 'client') {
-    return clients.find((client) => client.id === binding.clientId)?.name ?? null;
+    return (
+      clients.find((client) => client.id === binding.clientId)?.name ?? null
+    );
   }
   if (binding.type === 'contact') {
-    return contacts.find((contact) => contact.id === binding.contactId)?.name ?? null;
+    return (
+      contacts.find((contact) => contact.id === binding.contactId)?.name ?? null
+    );
   }
   const member = members.find((row) => row.userId === binding.userId);
   if (!member) return null;
@@ -131,7 +143,9 @@ function SearchableSelect({
                   />
                   <span>{option.label}</span>
                   {option.hint ? (
-                    <span className="ml-2 truncate text-xs text-[var(--workspace-shell-text-muted)]">{option.hint}</span>
+                    <span className="ml-2 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                      {option.hint}
+                    </span>
                   ) : null}
                 </CommandItem>
               ))}
@@ -261,7 +275,9 @@ export function SpeakerLabelPicker({
       setNewContactEmail('');
       toast.success('Contact created');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to create contact');
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to create contact',
+      );
     } finally {
       setCreatingContact(false);
     }
@@ -271,7 +287,9 @@ export function SpeakerLabelPicker({
     return (
       <div className="flex items-center gap-2">
         <div className="min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2">
-          <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">{linkedLabel}</p>
+          <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+            {linkedLabel}
+          </p>
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {binding?.type === 'client'
               ? 'Client'
@@ -300,23 +318,25 @@ export function SpeakerLabelPicker({
   return (
     <div className="space-y-3">
       <div className="flex rounded-md border border-[color:var(--workspace-shell-border)] p-0.5 text-xs">
-        {(['custom', 'team', 'client', 'contact'] as AssignMode[]).map((option) => (
-          <button
-            key={option}
-            type="button"
-            disabled={disabled || (option === 'team' && members.length === 0)}
-            onClick={() => setMode(option)}
-            className={cn(
-              'flex-1 rounded px-2 py-1.5 capitalize transition',
-              mode === option
-                ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              option === 'team' && members.length === 0 && 'opacity-50',
-            )}
-          >
-            {option === 'team' ? 'Team' : option}
-          </button>
-        ))}
+        {(['custom', 'team', 'client', 'contact'] as AssignMode[]).map(
+          (option) => (
+            <button
+              key={option}
+              type="button"
+              disabled={disabled || (option === 'team' && members.length === 0)}
+              onClick={() => setMode(option)}
+              className={cn(
+                'flex-1 rounded px-2 py-1.5 capitalize transition',
+                mode === option
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                option === 'team' && members.length === 0 && 'opacity-50',
+              )}
+            >
+              {option === 'team' ? 'Team' : option}
+            </button>
+          ),
+        )}
       </div>
 
       {mode === 'custom' ? (
@@ -356,7 +376,10 @@ export function SpeakerLabelPicker({
 
       {mode === 'client' ? (
         <SearchableSelect
-          options={clients.map((client) => ({ id: client.id, label: client.name }))}
+          options={clients.map((client) => ({
+            id: client.id,
+            label: client.name,
+          }))}
           value={selectedClientId}
           placeholder="Select client"
           emptyMessage="No clients found"
@@ -400,7 +423,9 @@ export function SpeakerLabelPicker({
           {showCreateContact ? (
             <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
               <div>
-                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Name</Label>
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Name
+                </Label>
                 <Input
                   value={newContactName}
                   onChange={(event) => setNewContactName(event.target.value)}
@@ -409,7 +434,9 @@ export function SpeakerLabelPicker({
                 />
               </div>
               <div>
-                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Email</Label>
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Email
+                </Label>
                 <Input
                   type="email"
                   value={newContactEmail}

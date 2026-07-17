@@ -15,23 +15,23 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import {
+  type EditablePlanBlock,
+  type PlanDocument,
   flattenPlanBlocks,
   resolveEditablePlanBlocks,
   setPlanBlockDuration,
   updatePlanBlock,
-  type EditablePlanBlock,
-  type PlanDocument,
 } from '~/lib/planner/plan-blocks';
+import { toLocalDateYmd } from '~/lib/planner/plan-storage';
 import {
+  MIN_BLOCK_MINUTES,
+  canPlaceBlock,
   findValidDropStart,
   findValidDuration,
   getDayBounds,
-  MIN_BLOCK_MINUTES,
   minutesFromPointerY,
   snapToQuarterHour,
-  canPlaceBlock,
 } from '~/lib/planner/schedule-constraints';
-import { toLocalDateYmd } from '~/lib/planner/plan-storage';
 
 const PX_PER_MINUTE = 1.25;
 const DURATION_OPTIONS = [15, 30, 45, 60, 75, 90, 105, 120];
@@ -70,7 +70,10 @@ type Props = {
 function formatClock(minutes: number) {
   const date = new Date();
   date.setHours(Math.floor(minutes / 60), minutes % 60, 0, 0);
-  return date.toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit' });
+  return date.toLocaleTimeString('en-GB', {
+    hour: 'numeric',
+    minute: '2-digit',
+  });
 }
 
 function blockStatus(
@@ -127,7 +130,7 @@ export function DayScheduleEditor({
       return a.renderEndMinutes - b.renderEndMinutes;
     });
 
-    const groups: typeof sorted[] = [];
+    const groups: (typeof sorted)[] = [];
     let currentGroup: typeof sorted = [];
     let currentGroupEnd = -1;
 
@@ -261,7 +264,11 @@ export function DayScheduleEditor({
         return;
       }
 
-      const nextDocument = setPlanBlockDuration(document, blockId, validDuration);
+      const nextDocument = setPlanBlockDuration(
+        document,
+        blockId,
+        validDuration,
+      );
       await persistAndMaybeSync(nextDocument, blockId);
     },
     [blocks, document, persistAndMaybeSync],
@@ -287,12 +294,14 @@ export function DayScheduleEditor({
 
       if (activeDrag.kind === 'move') {
         const duration = activeDrag.originEnd - activeDrag.originStart;
-        const delta = pointerMinutes - minutesFromPointerY(
-          activeDrag.pointerStartY,
-          rect.top,
-          PX_PER_MINUTE,
-          dayStart,
-        );
+        const delta =
+          pointerMinutes -
+          minutesFromPointerY(
+            activeDrag.pointerStartY,
+            rect.top,
+            PX_PER_MINUTE,
+            dayStart,
+          );
         const proposedStart = snapToQuarterHour(activeDrag.originStart + delta);
         const validStart = findValidDropStart(
           blocks,
@@ -316,9 +325,7 @@ export function DayScheduleEditor({
         activeDrag.originStart,
         proposedEnd,
       );
-      const validEnd = validation.ok
-        ? proposedEnd
-        : activeDrag.originEnd;
+      const validEnd = validation.ok ? proposedEnd : activeDrag.originEnd;
       setPreview({
         blockId: activeDrag.blockId,
         startMinutes: activeDrag.originStart,
@@ -380,7 +387,8 @@ export function DayScheduleEditor({
     <div className="space-y-2">
       <div className="flex items-center justify-between gap-3 text-xs text-[var(--workspace-shell-text)]/45">
         <p>
-          Drag blocks to reschedule. Linked events sync to Google Calendar automatically.
+          Drag blocks to reschedule. Linked events sync to Google Calendar
+          automatically.
         </p>
         {isSaving ? (
           <span className="inline-flex items-center gap-1.5 text-[var(--ozer-accent-muted)]">
@@ -398,12 +406,12 @@ export function DayScheduleEditor({
             aria-hidden
           >
             <div className="flex w-14 shrink-0 justify-end pr-1.5">
-              <span className="rounded-md bg-[var(--ozer-accent)] px-1.5 py-0.5 text-[9px] font-semibold tabular-nums text-white shadow-sm">
+              <span className="rounded-md bg-[var(--ozer-accent)] px-1.5 py-0.5 text-[9px] font-semibold text-white tabular-nums shadow-sm">
                 {nowLine.label}
               </span>
             </div>
             <div className="relative h-[2px] min-w-0 flex-1 bg-[var(--ozer-accent)]">
-              <span className="absolute -left-1 top-1/2 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[var(--ozer-accent)] ring-2 ring-[var(--workspace-shell-panel)]" />
+              <span className="absolute top-1/2 -left-1 h-2.5 w-2.5 -translate-y-1/2 rounded-full bg-[var(--ozer-accent)] ring-2 ring-[var(--workspace-shell-panel)]" />
             </div>
           </div>
         ) : null}
@@ -416,7 +424,7 @@ export function DayScheduleEditor({
             {hourMarks.map((minute) => (
               <div
                 key={minute}
-                className="absolute right-2 -translate-y-1/2 text-[10px] tabular-nums text-[var(--workspace-shell-text)]/35"
+                className="absolute right-2 -translate-y-1/2 text-[10px] text-[var(--workspace-shell-text)]/35 tabular-nums"
                 style={{ top: (minute - dayStart) * PX_PER_MINUTE }}
               >
                 {formatClock(minute)}
@@ -475,8 +483,7 @@ export function DayScheduleEditor({
                       : block.isBreak
                         ? 'border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]'
                         : 'border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)]',
-                    status === 'current' &&
-                      'ring-1 ring-[#FF5C34]/40',
+                    status === 'current' && 'ring-1 ring-[#FF5C34]/40',
                     status === 'past' && 'opacity-50',
                     dragState?.blockId === block.id && 'z-20 opacity-90',
                     !block.movable && 'cursor-default',
@@ -492,7 +499,9 @@ export function DayScheduleEditor({
                           aria-label={`Move ${block.title}`}
                           onPointerDown={(event) => {
                             event.preventDefault();
-                            event.currentTarget.setPointerCapture(event.pointerId);
+                            event.currentTarget.setPointerCapture(
+                              event.pointerId,
+                            );
                             setDragState({
                               blockId: block.id,
                               kind: 'move',
@@ -525,14 +534,15 @@ export function DayScheduleEditor({
                           className={cn(
                             'truncate text-xs font-medium',
                             block.isBreak
-                              ? 'italic text-[var(--workspace-shell-text)]/45'
+                              ? 'text-[var(--workspace-shell-text)]/45 italic'
                               : 'text-[var(--workspace-shell-text)]',
                           )}
                         >
                           {block.title}
                         </p>
-                        <p className="text-[10px] tabular-nums text-[var(--workspace-shell-text)]/40">
-                          {formatClock(startMinutes)} – {formatClock(endMinutes)}
+                        <p className="text-[10px] text-[var(--workspace-shell-text)]/40 tabular-nums">
+                          {formatClock(startMinutes)} –{' '}
+                          {formatClock(endMinutes)}
                         </p>
                       </div>
 
@@ -565,7 +575,9 @@ export function DayScheduleEditor({
                         onPointerDown={(event) => {
                           event.preventDefault();
                           event.stopPropagation();
-                          event.currentTarget.setPointerCapture(event.pointerId);
+                          event.currentTarget.setPointerCapture(
+                            event.pointerId,
+                          );
                           setDragState({
                             blockId: block.id,
                             kind: 'resize',

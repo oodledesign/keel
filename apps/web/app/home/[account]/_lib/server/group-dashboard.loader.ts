@@ -91,15 +91,15 @@ export const loadGroupDashboardData = cache(
       role?: string | null;
       avatar_url?: string | null;
     };
-    const members: GroupMember[] = ((membersResult.data ?? []) as MemberRpcRow[]).map(
-      (m) => ({
-        id: m.id ?? '',
-        displayName: m.display_name?.trim() || m.email || 'Member',
-        email: m.email ?? null,
-        role: m.role ?? 'member',
-        avatarUrl: m.avatar_url ?? null,
-      }),
-    );
+    const members: GroupMember[] = (
+      (membersResult.data ?? []) as MemberRpcRow[]
+    ).map((m) => ({
+      id: m.id ?? '',
+      displayName: m.display_name?.trim() || m.email || 'Member',
+      email: m.email ?? null,
+      role: m.role ?? 'member',
+      avatarUrl: m.avatar_url ?? null,
+    }));
 
     // Recent tasks (last 20, all projects in this account)
     const projectIds = projectRows.map((p) => p.id);
@@ -114,22 +114,28 @@ export const loadGroupDashboardData = cache(
         .order('due_date', { ascending: true, nullsLast: true })
         .limit(20);
 
-      const projectNameMap = new Map(projectRows.map((p) => [p.id, p.name ?? 'Project']));
+      const projectNameMap = new Map(
+        projectRows.map((p) => [p.id, p.name ?? 'Project']),
+      );
 
-      recentTasks = ((taskRows ?? []) as Array<{
-        id: string;
-        title?: string | null;
-        status?: string | null;
-        priority?: string | null;
-        due_date?: string | null;
-        project_id?: string | null;
-      }>).map((t) => ({
+      recentTasks = (
+        (taskRows ?? []) as Array<{
+          id: string;
+          title?: string | null;
+          status?: string | null;
+          priority?: string | null;
+          due_date?: string | null;
+          project_id?: string | null;
+        }>
+      ).map((t) => ({
         id: t.id,
         title: t.title ?? 'Untitled',
         status: t.status ?? 'todo',
         priority: t.priority ?? 'medium',
         dueDate: toIsoDateString(t.due_date),
-        projectName: t.project_id ? (projectNameMap.get(t.project_id) ?? null) : null,
+        projectName: t.project_id
+          ? (projectNameMap.get(t.project_id) ?? null)
+          : null,
       }));
     }
 

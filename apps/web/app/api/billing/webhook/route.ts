@@ -1,32 +1,32 @@
 import { after } from 'next/server';
 
-import { getBillingEventHandlerService } from '@kit/billing-gateway';
+import type Stripe from 'stripe';
+
 import { getPlanTypesMap } from '@kit/billing';
+import { getBillingEventHandlerService } from '@kit/billing-gateway';
+import type {
+  UpsertOrderParams,
+  UpsertSubscriptionParams,
+} from '@kit/billing/types';
 import { enhanceRouteHandler } from '@kit/next/routes';
 import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import billingConfig from '~/config/billing.config';
 import {
-  fulfillAiCreditPackOrder,
+  applyAccountBillingTransition,
+  mapStripeSubscriptionStatus,
+} from '~/lib/billing/account-billing-lifecycle';
+import { flushBillingEmailJobs } from '~/lib/billing/billing-email-outbox';
+import {
   fulfillAiCreditPackFromSubscription,
+  fulfillAiCreditPackOrder,
 } from '~/lib/billing/fulfill-ai-credit-pack';
 import {
   handleBillingLifecycleStripeEvent,
   isBillingLifecycleStripeEvent,
 } from '~/lib/billing/handle-billing-lifecycle-event';
-import {
-  applyAccountBillingTransition,
-  mapStripeSubscriptionStatus,
-} from '~/lib/billing/account-billing-lifecycle';
-import { flushBillingEmailJobs } from '~/lib/billing/billing-email-outbox';
 import { syncKeelPlanFromSubscription } from '~/lib/billing/sync-subscription-plan';
-
-import type {
-  UpsertOrderParams,
-  UpsertSubscriptionParams,
-} from '@kit/billing/types';
-import type Stripe from 'stripe';
 
 /**
  * @description Handle the webhooks from Stripe related to checkouts + Ozer billing lifecycle
@@ -97,15 +97,15 @@ export const POST = enhanceRouteHandler(
         onCheckoutSessionCompleted: async (payload) => {
           if ('target_order_id' in payload) {
             const admin = getSupabaseServerAdminClient();
-            await fulfillAiCreditPackOrder(
-              admin,
-              payload as UpsertOrderParams,
-            );
+            await fulfillAiCreditPackOrder(admin, payload as UpsertOrderParams);
             return;
           }
           const subscription = payload as UpsertSubscriptionParams;
           await syncPlan(subscription);
-          await syncLifecycleFromSubscription(subscription, 'checkout.completed');
+          await syncLifecycleFromSubscription(
+            subscription,
+            'checkout.completed',
+          );
         },
         onPaymentSucceeded: async (sessionId) => {
           const admin = getSupabaseServerAdminClient();

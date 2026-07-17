@@ -21,13 +21,13 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 
-import { updateJobTask } from '../../_lib/server/server-actions';
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
   JobBoardResult,
   JobBoardTask,
   PhaseListItem,
 } from '../../_lib/schema/project-phases.schema';
+import { updateJobTask } from '../../_lib/server/server-actions';
 import {
   PRIORITY_DOT,
   TASK_STATUS_LABELS,
@@ -82,8 +82,12 @@ function TaskRow({
             jobId,
             taskId: task.id,
             title: updates.title,
-            status: updates.status as (typeof TASK_STATUSES)[number] | undefined,
-            priority: updates.priority as (typeof PRIORITIES)[number] | undefined,
+            status: updates.status as
+              | (typeof TASK_STATUSES)[number]
+              | undefined,
+            priority: updates.priority as
+              | (typeof PRIORITIES)[number]
+              | undefined,
             dueDate:
               updates.due_date === undefined
                 ? undefined
@@ -117,7 +121,9 @@ function TaskRow({
             }}
           />
         ) : (
-          <span className="truncate text-sm text-[var(--workspace-shell-text)]">{task.title}</span>
+          <span className="truncate text-sm text-[var(--workspace-shell-text)]">
+            {task.title}
+          </span>
         )}
       </div>
 
@@ -171,7 +177,7 @@ function TaskRow({
             value={task.priority}
             onValueChange={(priority) => patch({ priority })}
           >
-            <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs capitalize text-[var(--workspace-shell-text)]">
+            <SelectTrigger className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs text-[var(--workspace-shell-text)] capitalize">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -183,7 +189,9 @@ function TaskRow({
             </SelectContent>
           </Select>
         ) : (
-          <span className="text-xs capitalize text-[var(--workspace-shell-text-muted)]">{task.priority}</span>
+          <span className="text-xs text-[var(--workspace-shell-text-muted)] capitalize">
+            {task.priority}
+          </span>
         )}
       </div>
     </div>
@@ -223,7 +231,11 @@ function PhaseGroup({
   );
 
   return (
-    <Collapsible open={open} onOpenChange={setOpen} className="rounded-xl border border-[color:var(--workspace-shell-border)]">
+    <Collapsible
+      open={open}
+      onOpenChange={setOpen}
+      className="rounded-xl border border-[color:var(--workspace-shell-border)]"
+    >
       <CollapsibleTrigger className="flex w-full items-center justify-between gap-3 px-4 py-3 text-left hover:bg-[var(--workspace-control-surface)]/40">
         <div className="min-w-0">
           {phase ? (
@@ -236,24 +248,30 @@ function PhaseGroup({
               {phase.name}
             </Link>
           ) : (
-            <span className="text-sm font-semibold text-[var(--workspace-shell-text-muted)]">Unassigned</span>
+            <span className="text-sm font-semibold text-[var(--workspace-shell-text-muted)]">
+              Unassigned
+            </span>
           )}
           <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {tasks.length} task{tasks.length !== 1 ? 's' : ''}
             {phase ? ` · ${phase.progressPct}% done` : ''}
           </p>
         </div>
-        <span className="text-xs text-[var(--workspace-shell-text-muted)]">{open ? 'Hide' : 'Show'}</span>
+        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {open ? 'Hide' : 'Show'}
+        </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="px-4 pb-2">
-        <div className="hidden border-b border-[color:var(--workspace-shell-border)] pb-2 text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)] sm:grid sm:grid-cols-[1fr_140px_120px_100px] sm:gap-3">
+        <div className="hidden border-b border-[color:var(--workspace-shell-border)] pb-2 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase sm:grid sm:grid-cols-[1fr_140px_120px_100px] sm:gap-3">
           <span>Task</span>
           <span>Status</span>
           <span>Due</span>
           <span>Priority</span>
         </div>
         {tasks.length === 0 ? (
-          <p className="py-4 text-sm text-[var(--workspace-shell-text-muted)]">No tasks in this phase.</p>
+          <p className="py-4 text-sm text-[var(--workspace-shell-text-muted)]">
+            No tasks in this phase.
+          </p>
         ) : (
           tasks.map((task) => (
             <TaskRow

@@ -27,13 +27,7 @@ export {
 
 export { ZoomConferencingProvider } from './zoom/provider';
 export { TeamsConferencingProvider } from './teams/provider';
-export {
-  getOptionalZoomOAuthEnv,
-  getZoomOAuthEnv,
-} from './zoom/env';
-export {
-  getOptionalTeamsOAuthEnv,
-  getTeamsOAuthEnv,
-} from './teams/env';
+export { getOptionalZoomOAuthEnv, getZoomOAuthEnv } from './zoom/env';
+export { getOptionalTeamsOAuthEnv, getTeamsOAuthEnv } from './teams/env';
 export { refreshZoomAccessToken } from './zoom/refresh';
 export { refreshTeamsAccessToken } from './teams/refresh';

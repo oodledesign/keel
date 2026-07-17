@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+
 import Image from 'next/image';
 
 import { cn } from '../../lib/utils';
@@ -29,7 +30,7 @@ export function CommandCenter({
     <section className={cn('py-16 lg:py-24', className)}>
       <div className="container mx-auto">
         <div className="mb-12 text-center">
-          <h2 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white lg:text-4xl">
+          <h2 className="mb-4 text-3xl font-bold text-gray-900 lg:text-4xl dark:text-white">
             {heading}
           </h2>
           {subheading && (
@@ -50,7 +51,7 @@ export function CommandCenter({
                   className={cn(
                     'px-6 py-3 text-sm font-medium transition-colors',
                     activeTab === i
-                      ? 'border-b-2 border-[#57C87F] text-[#57C87F] bg-white dark:bg-gray-900 dark:text-[#57C87F]'
+                      ? 'border-b-2 border-[#57C87F] bg-white text-[#57C87F] dark:bg-gray-900 dark:text-[#57C87F]'
                       : 'text-gray-600 hover:text-gray-900 dark:text-gray-400 dark:hover:text-white',
                   )}
                 >

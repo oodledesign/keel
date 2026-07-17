@@ -2,12 +2,15 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
-import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
-import { withI18n } from '~/lib/i18n/with-i18n';
 import { loadTasksForTeamAccount } from '~/home/(user)/_lib/server/tasks.loader';
 import { TasksPageClient } from '~/home/(user)/tasks/_components/tasks-page-client';
+import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
+import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { getDefaultAccountPath, getTeamAccountAccess } from '../../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../../_lib/role-access';
 import { getSpaceTypeFromAccount } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 

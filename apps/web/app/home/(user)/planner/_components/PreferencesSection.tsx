@@ -12,10 +12,7 @@ import { Label } from '@kit/ui/label';
 import { RadioGroup, RadioGroupItem } from '@kit/ui/radio-group';
 import { Textarea } from '@kit/ui/textarea';
 
-import type {
-  DeepWorkPreference,
-  PlannerPreferences,
-} from './planner-types';
+import type { DeepWorkPreference, PlannerPreferences } from './planner-types';
 
 type Props = {
   preferences: PlannerPreferences;
@@ -86,16 +83,21 @@ export function PreferencesSection({
               }
               className="grid grid-cols-3 gap-2"
             >
-              {([
-                ['morning', 'Morning'],
-                ['afternoon', 'Afternoon'],
-                ['none', 'No preference'],
-              ] as const).map(([value, label]) => (
+              {(
+                [
+                  ['morning', 'Morning'],
+                  ['afternoon', 'Afternoon'],
+                  ['none', 'No preference'],
+                ] as const
+              ).map(([value, label]) => (
                 <label
                   key={value}
                   className="flex cursor-pointer items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 text-xs text-[var(--workspace-shell-text)]/75"
                 >
-                  <RadioGroupItem value={value} className="border-[color:var(--workspace-shell-border)]0" />
+                  <RadioGroupItem
+                    value={value}
+                    className="border-[color:var(--workspace-shell-border)]0"
+                  />
                   {label}
                 </label>
               ))}

@@ -1,8 +1,11 @@
 import { z } from 'zod';
 
 import {
-  createPlanningId,
-  slugifyPageTitle,
+  LEGACY_LIBRARY_KEY_TO_PRESET,
+  SITE_BLOCK_LAYOUT_PRESETS,
+} from '@kit/site-blocks-core/mapping';
+
+import {
   type WebsiteLayoutPreset,
   type WebsitePageType,
   type WebsitePlanningStatus,
@@ -12,13 +15,11 @@ import {
   type WebsiteWireframeCopy,
   type WebsiteWireframeLayout,
   type WebsiteWireframeSection,
+  createPlanningId,
+  slugifyPageTitle,
 } from './planning-types';
 import { findSectionLibraryEntry } from './section-library';
 import { ensureWireframeCopy } from './wireframe-copy';
-import {
-  LEGACY_LIBRARY_KEY_TO_PRESET,
-  SITE_BLOCK_LAYOUT_PRESETS,
-} from '@kit/site-blocks-core/mapping';
 
 const PAGE_TYPES = new Set<WebsitePageType>([
   'home',
@@ -137,9 +138,7 @@ function asLayout(value: string | undefined): WebsiteWireframeLayout | null {
     : null;
 }
 
-function formatCopyOutline(
-  outline: AiWireframeSection['copyOutline'],
-): string {
+function formatCopyOutline(outline: AiWireframeSection['copyOutline']): string {
   if (!outline) return '';
   if (typeof outline === 'string') return outline.slice(0, 10000);
 
@@ -233,10 +232,7 @@ export function materialiseAiSitemapPages(
       };
     });
 
-  const allForParents = [
-    ...(options?.existingPages ?? []),
-    ...newPages,
-  ];
+  const allForParents = [...(options?.existingPages ?? []), ...newPages];
   const bySlug = new Map(allForParents.map((page) => [page.slug, page.id]));
 
   return newPages.map((page) => {
@@ -267,41 +263,39 @@ export function materialiseAiWireframeSections(params: {
           sitemapSection.title.trim().toLowerCase(),
       ) ?? rawSections[index];
 
-        const library = findSectionLibraryEntry(match?.libraryKey ?? null);
-        const layoutFromAi =
-          asLayout(match?.layoutPreset) ?? asLayout(match?.layout);
-        const presetCandidate = match?.layoutPreset?.trim();
-        const layoutPreset: WebsiteLayoutPreset | null =
-          (presetCandidate &&
-          (SITE_BLOCK_LAYOUT_PRESETS as readonly string[]).includes(
-            presetCandidate,
-          )
-            ? (presetCandidate as WebsiteLayoutPreset)
-            : null) ??
-          (library?.key
-            ? (LEGACY_LIBRARY_KEY_TO_PRESET[library.key] ?? null)
-            : null) ??
-          existingBySitemapSectionId?.get(sitemapSection.id)?.layoutPreset ??
-          null;
+    const library = findSectionLibraryEntry(match?.libraryKey ?? null);
+    const layoutFromAi =
+      asLayout(match?.layoutPreset) ?? asLayout(match?.layout);
+    const presetCandidate = match?.layoutPreset?.trim();
+    const layoutPreset: WebsiteLayoutPreset | null =
+      (presetCandidate &&
+      (SITE_BLOCK_LAYOUT_PRESETS as readonly string[]).includes(presetCandidate)
+        ? (presetCandidate as WebsiteLayoutPreset)
+        : null) ??
+      (library?.key
+        ? (LEGACY_LIBRARY_KEY_TO_PRESET[library.key] ?? null)
+        : null) ??
+      existingBySitemapSectionId?.get(sitemapSection.id)?.layoutPreset ??
+      null;
 
-        const existing = existingBySitemapSectionId?.get(sitemapSection.id);
+    const existing = existingBySitemapSectionId?.get(sitemapSection.id);
 
-        const section: WebsiteWireframeSection = {
-          id: existing?.id ?? createPlanningId(),
-          sitemapSectionId: sitemapSection.id,
-          title: String(match?.title ?? sitemapSection.title).slice(0, 200),
-          layout: layoutFromAi ?? library?.layout ?? existing?.layout ?? 'full',
-          libraryKey: library?.key ?? existing?.libraryKey ?? null,
-          layoutPreset,
-          copyOutline: formatCopyOutline(match?.copyOutline),
-          contentNotes: String(
-            match?.contentNotes ??
-              existing?.contentNotes ??
-              sitemapSection.description,
-          ).slice(0, 10000),
-          copy: existing?.copy,
-          clientComment: existing?.clientComment,
-        };
+    const section: WebsiteWireframeSection = {
+      id: existing?.id ?? createPlanningId(),
+      sitemapSectionId: sitemapSection.id,
+      title: String(match?.title ?? sitemapSection.title).slice(0, 200),
+      layout: layoutFromAi ?? library?.layout ?? existing?.layout ?? 'full',
+      libraryKey: library?.key ?? existing?.libraryKey ?? null,
+      layoutPreset,
+      copyOutline: formatCopyOutline(match?.copyOutline),
+      contentNotes: String(
+        match?.contentNotes ??
+          existing?.contentNotes ??
+          sitemapSection.description,
+      ).slice(0, 10000),
+      copy: existing?.copy,
+      clientComment: existing?.clientComment,
+    };
 
     const seeded = ensureWireframeCopy(section);
     const outlineSlots = outlineToSlots(match?.copyOutline);

@@ -65,11 +65,11 @@ export async function loadWorkspaceLinkOptions(
   if (profile === 'work_design') {
     const [projectsRes, deliveryProjectsRes, clientsRes, tasksRes] =
       await Promise.all([
-      loadProjects,
-      loadDeliveryProjects,
-      loadClients,
-      loadTasks,
-    ]);
+        loadProjects,
+        loadDeliveryProjects,
+        loadClients,
+        loadTasks,
+      ]);
 
     return {
       projects: (projectsRes.data ?? []).map((p) => ({
@@ -87,7 +87,7 @@ export async function loadWorkspaceLinkOptions(
         id: c.id as string,
         label:
           (c.display_name as string | null)?.trim() ||
-          [(c.first_name as string), (c.last_name as string)]
+          [c.first_name as string, c.last_name as string]
             .filter(Boolean)
             .join(' ') ||
           (c.company_name as string | null)?.trim() ||

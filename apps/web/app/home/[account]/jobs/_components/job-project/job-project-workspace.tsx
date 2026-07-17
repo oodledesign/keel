@@ -41,6 +41,11 @@ import { toast } from '@kit/ui/sonner';
 
 import { buildBrainChatUrl } from '~/lib/brain/build-brain-chat-url';
 
+import { getErrorMessage } from '../../_lib/error-message';
+import type {
+  JobBoardResult,
+  PhaseTemplateListItem,
+} from '../../_lib/schema/project-phases.schema';
 import {
   addJobAssignment,
   applyPhaseTemplate,
@@ -48,11 +53,6 @@ import {
   listJobBoard,
   listPhaseTemplates,
 } from '../../_lib/server/server-actions';
-import { getErrorMessage } from '../../_lib/error-message';
-import type {
-  JobBoardResult,
-  PhaseTemplateListItem,
-} from '../../_lib/schema/project-phases.schema';
 import { JobProjectBoard } from './job-project-board';
 import { JobProjectHeader } from './job-project-header';
 import { JobProjectList } from './job-project-list';
@@ -210,14 +210,7 @@ export function JobProjectWorkspace({
         }
       });
     },
-    [
-      accountId,
-      accountSlug,
-      jobId,
-      loadBoard,
-      phaseTemplates,
-      startTransition,
-    ],
+    [accountId, accountSlug, jobId, loadBoard, phaseTemplates, startTransition],
   );
 
   const handleSeedDefaultPhases = useCallback(() => {
@@ -270,11 +263,7 @@ export function JobProjectWorkspace({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3">
       <JobProjectHeader
-        board={
-          board
-            ? { progressPct: board.progressPct }
-            : { progressPct: 0 }
-        }
+        board={board ? { progressPct: board.progressPct } : { progressPct: 0 }}
       />
 
       <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] pb-3">

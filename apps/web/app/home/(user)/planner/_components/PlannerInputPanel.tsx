@@ -6,19 +6,16 @@ import { CalendarCheck2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
-import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
-
 import type { PlannerWorkspaceNode } from '~/lib/planner/types';
 import type { PlannerScope } from '~/lib/planner/types';
+import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
+
 import { CalendarEventsSection } from './CalendarEventsSection';
 import { PlanningModeToggle } from './PlanningModeToggle';
 import { PreferencesSection } from './PreferencesSection';
 import { TaskSelectorTree } from './TaskSelectorTree';
-import type {
-  PlannerPreferences,
-  PlanningMode,
-} from './planner-types';
+import type { PlannerPreferences, PlanningMode } from './planner-types';
 
 type Props = {
   mode: PlanningMode;

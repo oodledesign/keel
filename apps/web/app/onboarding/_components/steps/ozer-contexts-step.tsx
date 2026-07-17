@@ -30,7 +30,8 @@ const options = [
   {
     key: 'use_ozer_for_work' as const,
     title: 'Work',
-    description: 'Jobs, clients, quotes, and billing for your trade or business.',
+    description:
+      'Jobs, clients, quotes, and billing for your trade or business.',
     Icon: Briefcase,
   },
   {
@@ -90,8 +91,8 @@ export function OzerContextsStep({
           How do you want to use Ozer?
         </h2>
         <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-          Not everyone is here for work — pick anything that fits. You can change
-          this anytime in Settings.
+          Not everyone is here for work — pick anything that fits. You can
+          change this anytime in Settings.
         </p>
       </div>
 

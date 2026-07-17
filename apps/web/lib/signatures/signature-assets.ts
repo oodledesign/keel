@@ -5,12 +5,12 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import {
+  type SignatureAsset,
+  type SignatureAssetStaffContext,
   filterSignatureAssetsForStaff,
   firstAwardBadgeUrl,
   renderSignatureAwardBadgesHtml,
   renderSignatureCustomTextHtml,
-  type SignatureAsset,
-  type SignatureAssetStaffContext,
 } from './signature-assets-resolve';
 
 export type {

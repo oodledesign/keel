@@ -1,6 +1,7 @@
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import { getBrainIndexStats } from '~/lib/brain/indexer';
 import { isVoyageConfigured } from '~/lib/brain/voyage';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { getTeamAccountAccess } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';

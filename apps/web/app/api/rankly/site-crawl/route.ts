@@ -1,23 +1,28 @@
 import { type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import {
   loadLatestSiteCrawlJob,
   loadSiteCrawlPages,
 } from '~/lib/site-crawl/db';
+import { projectDomainToStartUrl } from '~/lib/site-crawl/domain';
+import { seedSiteCrawlJob } from '~/lib/site-crawl/runner';
+import {
+  triggerSiteCrawlRun,
+  triggerSiteCrawlRunDebounced,
+} from '~/lib/site-crawl/trigger-run';
 import {
   DEFAULT_SITE_CRAWL_URL_LIMIT,
   SITE_CRAWL_URL_LIMIT_OPTIONS,
 } from '~/lib/site-crawl/types';
-import { projectDomainToStartUrl } from '~/lib/site-crawl/domain';
-import { seedSiteCrawlJob } from '~/lib/site-crawl/runner';
-import { triggerSiteCrawlRun, triggerSiteCrawlRunDebounced } from '~/lib/site-crawl/trigger-run';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import { userIsAccountMember } from '~/lib/rankly/account-membership';
-import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -55,8 +60,8 @@ async function assertProjectAccess(
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
 
-    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
-    if (addonDenied) return addonDenied;
+  const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+  if (addonDenied) return addonDenied;
 
   const { data: project } = await supabaseCustomSchema(client, 'rankly')
     .from('projects')
@@ -89,7 +94,12 @@ export async function GET(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return jsonErr('VALIDATION', 'Invalid query', 400, parsed.error.flatten());
+      return jsonErr(
+        'VALIDATION',
+        'Invalid query',
+        400,
+        parsed.error.flatten(),
+      );
     }
 
     const access = await assertProjectAccess(

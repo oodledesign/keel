@@ -30,7 +30,10 @@ export function extractAgencyPortalSlug(hostname: string): string | null {
   return null;
 }
 
-export function buildAgencyPortalRewritePath(slug: string, pathname: string): string {
+export function buildAgencyPortalRewritePath(
+  slug: string,
+  pathname: string,
+): string {
   const portalPrefix = `/portal/${slug}`;
 
   if (pathname === portalPrefix || pathname.startsWith(`${portalPrefix}/`)) {

@@ -15,9 +15,7 @@ export async function generateMetadata({ params }: Props) {
   const { personId } = await params;
   const data = await loadPersonProfilePageData(personId);
   const name =
-    data?.person.nickname?.trim() ||
-    data?.person.full_name ||
-    'Person';
+    data?.person.nickname?.trim() || data?.person.full_name || 'Person';
   return { title: `${name} — People` };
 }
 

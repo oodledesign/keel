@@ -207,7 +207,8 @@ Produce the pack a developer (or you + Cursor) builds from **the same day**.
       colour: '#FF5C34',
       is_milestone: true,
       planning_tab: 'build',
-      description: 'Implement from the export pack — visual references, not text-only prompts.',
+      description:
+        'Implement from the export pack — visual references, not text-only prompts.',
       page_content: `# Build
 
 ## Prerequisites

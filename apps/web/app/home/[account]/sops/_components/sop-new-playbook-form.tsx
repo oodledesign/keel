@@ -17,8 +17,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
 import type { SopImportDraft } from '~/lib/ai/sop-import';
@@ -54,11 +54,12 @@ export function SopNewPlaybookForm({
   const [recurrence, setRecurrence] = useState<
     'monthly' | 'weekly' | 'project' | 'ad_hoc'
   >('monthly');
-  const [steps, setSteps] = useState<StepDraft[]>([
-    { title: '', body_md: '' },
-  ]);
+  const [steps, setSteps] = useState<StepDraft[]>([{ title: '', body_md: '' }]);
 
-  const libraryPath = pathsConfig.app.accountSops.replace('[account]', accountSlug);
+  const libraryPath = pathsConfig.app.accountSops.replace(
+    '[account]',
+    accountSlug,
+  );
 
   function applyDraft(draft: SopImportDraft) {
     setTitle(draft.title);
@@ -160,7 +161,8 @@ export function SopNewPlaybookForm({
             </h2>
             <p className="text-muted-foreground mt-1 text-sm">
               Drop in a Google Doc export, Notion page, email thread, or bullet
-              list. AI will turn it into ordered steps you can edit before saving.
+              list. AI will turn it into ordered steps you can edit before
+              saving.
             </p>
           </div>
           <Textarea
@@ -212,9 +214,7 @@ export function SopNewPlaybookForm({
             <Label>Typical cadence</Label>
             <Select
               value={recurrence}
-              onValueChange={(v) =>
-                setRecurrence(v as typeof recurrence)
-              }
+              onValueChange={(v) => setRecurrence(v as typeof recurrence)}
             >
               <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                 <SelectValue />

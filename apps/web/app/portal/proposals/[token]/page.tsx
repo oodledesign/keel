@@ -1,6 +1,5 @@
-import { notFound } from 'next/navigation';
-
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -25,27 +24,28 @@ async function getProposalByToken(token: string) {
     return null;
   }
 
-  const [{ data: comments }, { data: clientData }, { data: dealData }] = await Promise.all([
-    client
-      .from('proposal_comments')
-      .select('id, author_name, body, created_at')
-      .eq('proposal_id', proposal.id)
-      .order('created_at', { ascending: true }),
-    proposal.client_id
-      ? client
-          .from('clients')
-          .select('display_name, first_name, last_name, company_name, email')
-          .eq('id', proposal.client_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    proposal.deal_id
-      ? client
-          .from('pipeline_deals')
-          .select('contact_name, company_name, name')
-          .eq('id', proposal.deal_id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-  ]);
+  const [{ data: comments }, { data: clientData }, { data: dealData }] =
+    await Promise.all([
+      client
+        .from('proposal_comments')
+        .select('id, author_name, body, created_at')
+        .eq('proposal_id', proposal.id)
+        .order('created_at', { ascending: true }),
+      proposal.client_id
+        ? client
+            .from('clients')
+            .select('display_name, first_name, last_name, company_name, email')
+            .eq('id', proposal.client_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      proposal.deal_id
+        ? client
+            .from('pipeline_deals')
+            .select('contact_name, company_name, name')
+            .eq('id', proposal.deal_id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
   return {
     ...proposal,
@@ -55,7 +55,9 @@ async function getProposalByToken(token: string) {
   } as Record<string, unknown>;
 }
 
-export default async function PortalProposalPage({ params }: PortalProposalPageProps) {
+export default async function PortalProposalPage({
+  params,
+}: PortalProposalPageProps) {
   const { token } = await params;
   if (!token) notFound();
 
@@ -72,7 +74,10 @@ export default async function PortalProposalPage({ params }: PortalProposalPageP
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link href="/" className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+        <Link
+          href="/"
+          className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        >
           ← Back to home
         </Link>
       </div>

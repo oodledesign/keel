@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import { RefreshCw, Sparkles, Undo2, X } from 'lucide-react';
 
+import { LEGACY_LIBRARY_KEY_TO_PRESET } from '@kit/site-blocks-core/mapping';
 import { Button } from '@kit/ui/button';
 import {
   Select,
@@ -16,26 +17,25 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import {
+  WEBSITE_LAYOUT_PRESET_OPTIONS,
   type WebsiteLayoutPreset,
   type WebsiteSitemapPage,
   type WebsiteWireframeCopy,
   type WebsiteWireframeLayout,
   type WebsiteWireframePage,
   type WebsiteWireframeSection,
-  WEBSITE_LAYOUT_PRESET_OPTIONS,
   createPlanningId,
 } from '~/lib/websites/planning-types';
+import type { WireframePageProposal } from '~/lib/websites/site-studio-ai-types';
 import {
   SITE_STUDIO_AI_CREDITS,
   siteStudioCreditLabel,
 } from '~/lib/websites/site-studio-credits';
-import type { WireframePageProposal } from '~/lib/websites/site-studio-ai-types';
 import {
   createDefaultWireframeCopy,
   ensureWireframeCopy,
   libraryEntryLabel,
 } from '~/lib/websites/wireframe-copy';
-import { LEGACY_LIBRARY_KEY_TO_PRESET } from '@kit/site-blocks-core/mapping';
 
 import { saveWebsiteWireframes } from '../_lib/server/planning-actions';
 import {
@@ -251,7 +251,9 @@ function SectionLibraryControl({
           className="h-7 justify-start px-1 text-[11px]"
           disabled={regenerating}
           onClick={onRegenerate}
-          title={siteStudioCreditLabel(SITE_STUDIO_AI_CREDITS.wireframeGenerate)}
+          title={siteStudioCreditLabel(
+            SITE_STUDIO_AI_CREDITS.wireframeGenerate,
+          )}
         >
           <Sparkles className="mr-1 h-3 w-3" />
           {regenerating
@@ -290,9 +292,9 @@ export function WebsiteWireframeEditor({
   const [isGenerating, startGenerating] = useTransition();
   const [, startTransition] = useTransition();
   const [proposal, setProposal] = useState<WireframePageProposal | null>(null);
-  const [undoSnapshot, setUndoSnapshot] = useState<WebsiteWireframePage[] | null>(
-    null,
-  );
+  const [undoSnapshot, setUndoSnapshot] = useState<
+    WebsiteWireframePage[] | null
+  >(null);
   const [regeneratingSectionId, setRegeneratingSectionId] = useState<
     string | null
   >(null);
@@ -610,7 +612,7 @@ export function WebsiteWireframeEditor({
                   </span>
                 </p>
                 {section.copyOutline ? (
-                  <p className="mt-0.5 whitespace-pre-line text-xs text-[var(--workspace-shell-text)]">
+                  <p className="mt-0.5 text-xs whitespace-pre-line text-[var(--workspace-shell-text)]">
                     {section.copyOutline}
                   </p>
                 ) : null}

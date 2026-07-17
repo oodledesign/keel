@@ -72,8 +72,9 @@ ${pages.map((page) => `  ${page.url}: "${page.title}"`).join('\n')}
 
 META DESCRIPTION AUDIT:
 ${pages
-  .map((page) =>
-    `  ${page.url}: ${page.metaDesc ? `"${page.metaDesc.slice(0, 80)}…"` : 'MISSING'}`,
+  .map(
+    (page) =>
+      `  ${page.url}: ${page.metaDesc ? `"${page.metaDesc.slice(0, 80)}…"` : 'MISSING'}`,
   )
   .join('\n')}
 

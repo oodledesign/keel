@@ -3,12 +3,12 @@ import { notFound } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
-import { RanklyProjectNav } from '../../../_components/rankly-project-nav';
 import { TeamAccountLayoutPageHeader } from '../../../../_components/team-account-layout-page-header';
 import { loadRanklyProjectForTeam } from '../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../../_lib/work-account-path';
+import { RanklyProjectNav } from '../../../_components/rankly-project-nav';
 
 type RanklyProjectLayoutProps = {
   children: React.ReactNode;
@@ -32,7 +32,10 @@ export default async function RanklyProjectLayout({
     notFound();
   }
 
-  const projectsHref = workAccountPath(workPaths.accountRanklyProjects, account);
+  const projectsHref = workAccountPath(
+    workPaths.accountRanklyProjects,
+    account,
+  );
 
   return (
     <>
@@ -50,7 +53,9 @@ export default async function RanklyProjectLayout({
         </Link>
         <div className="flex flex-col gap-8 lg:flex-row lg:items-start">
           <RanklyProjectNav account={account} projectId={projectId} />
-          <div className="min-w-0 flex-1 space-y-8 px-4 lg:px-0">{children}</div>
+          <div className="min-w-0 flex-1 space-y-8 px-4 lg:px-0">
+            {children}
+          </div>
         </div>
       </PageBody>
     </>

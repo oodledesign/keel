@@ -1,9 +1,15 @@
 import { type NextRequest } from 'next/server';
+
 import { z } from 'zod';
 
 import { createBunnyStreamClient } from '@kit/bunny';
 
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { buildIframeEmbedCode } from '~/lib/videos/embed';
+import {
+  playerConfigBodySchema,
+  savePresetBodySchema,
+} from '~/lib/videos/player-config-schema';
 import {
   configValuesFromRow,
   loadAccountPresets,
@@ -13,11 +19,6 @@ import {
 } from '~/lib/videos/server/player-config-data';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 import { getBunnyCdnHostname } from '~/lib/videos/server/videos-data';
-import {
-  playerConfigBodySchema,
-  savePresetBodySchema,
-} from '~/lib/videos/player-config-schema';
-import { buildIframeEmbedCode } from '~/lib/videos/embed';
 
 export const runtime = 'nodejs';
 
@@ -25,9 +26,7 @@ type RouteContext = {
   params: Promise<{ videoId: string }>;
 };
 
-function normalizeConfigInput(
-  parsed: z.infer<typeof playerConfigBodySchema>,
-) {
+function normalizeConfigInput(parsed: z.infer<typeof playerConfigBodySchema>) {
   return {
     name: parsed.name ?? 'Default',
     autoplay: parsed.autoplay,
@@ -45,7 +44,8 @@ function normalizeConfigInput(
     show_captions_button: parsed.show_captions_button,
     primary_color: parsed.primary_color,
     show_bunny_watermark: parsed.show_bunny_watermark,
-    custom_logo_url: parsed.custom_logo_url === '' ? null : (parsed.custom_logo_url ?? null),
+    custom_logo_url:
+      parsed.custom_logo_url === '' ? null : (parsed.custom_logo_url ?? null),
     logo_position: parsed.logo_position,
     enable_captions: parsed.enable_captions,
     default_caption_language: parsed.default_caption_language,
@@ -57,10 +57,7 @@ function normalizeConfigInput(
   };
 }
 
-export async function GET(
-  _request: NextRequest,
-  context: RouteContext,
-) {
+export async function GET(_request: NextRequest, context: RouteContext) {
   try {
     const { videoId } = await context.params;
     const access = await requireVideoById(videoId);
@@ -159,7 +156,12 @@ export async function PUT(request: NextRequest, context: RouteContext) {
 
     const parsed = playerConfigBodySchema.safeParse(body);
     if (!parsed.success) {
-      return jsonErr('VALIDATION', 'Invalid config', 400, parsed.error.flatten());
+      return jsonErr(
+        'VALIDATION',
+        'Invalid config',
+        400,
+        parsed.error.flatten(),
+      );
     }
 
     const saved = await upsertVideoPlayerConfig(

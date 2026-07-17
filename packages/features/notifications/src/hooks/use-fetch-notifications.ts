@@ -1,7 +1,8 @@
 import { useEffect } from 'react';
 
-import { useQuery } from '@tanstack/react-query';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { useQuery } from '@tanstack/react-query';
 
 import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 
@@ -114,17 +115,13 @@ function useFetchInitialNotifications(props: {
       const rows = (data ?? []) as Notification[];
 
       if (!user) {
-        return props.includeMuted
-          ? rows
-          : rows.filter((row) => !row.muted);
+        return props.includeMuted ? rows : rows.filter((row) => !row.muted);
       }
 
       const mutedIds = await loadMutedNotificationIds(client, user.id, rows);
       const merged = withUserMutes(rows, mutedIds);
 
-      return props.includeMuted
-        ? merged
-        : merged.filter((row) => !row.muted);
+      return props.includeMuted ? merged : merged.filter((row) => !row.muted);
     },
     refetchOnMount: true,
     refetchOnWindowFocus: true,

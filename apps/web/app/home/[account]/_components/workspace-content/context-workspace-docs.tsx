@@ -1,6 +1,9 @@
 'use client';
 
-import type { DocListItem, LinkOption } from '../../_lib/workspace-content/types';
+import type {
+  DocListItem,
+  LinkOption,
+} from '../../_lib/workspace-content/types';
 import type { LinkValue } from './link-to-select';
 import { WorkspaceDocsPage } from './workspace-docs-page';
 

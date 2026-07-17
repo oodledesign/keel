@@ -6,9 +6,9 @@ import { Loader2, Mail, Unplug } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -66,10 +66,15 @@ function SettingToggle({
   return (
     <div className="flex items-start justify-between gap-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-4">
       <div className="space-y-1">
-        <Label htmlFor={id} className="text-sm font-medium text-[var(--workspace-shell-text)]">
+        <Label
+          htmlFor={id}
+          className="text-sm font-medium text-[var(--workspace-shell-text)]"
+        >
           {label}
         </Label>
-        <p className="text-xs text-[var(--workspace-shell-text-muted)]">{description}</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {description}
+        </p>
       </div>
       <Switch
         id={id}
@@ -168,12 +173,16 @@ export function EmailSettingsCard({
     <section className={panelClass}>
       <div className="flex items-start justify-between gap-3">
         <div>
-          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Settings</h2>
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+            Settings
+          </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Connect Gmail and tune how drafts are written.
           </p>
         </div>
-        <p className="text-xs text-[var(--workspace-shell-text-muted)]">Last sync: {formatSyncedAt(lastSyncedAt)}</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Last sync: {formatSyncedAt(lastSyncedAt)}
+        </p>
       </div>
 
       <div className="mt-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-4">
@@ -184,8 +193,12 @@ export function EmailSettingsCard({
                 <Mail className="h-4 w-4" />
               </div>
               <div>
-                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Gmail connected</p>
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">{connectedEmail}</p>
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Gmail connected
+                </p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  {connectedEmail}
+                </p>
               </div>
             </div>
             <Button
@@ -211,7 +224,9 @@ export function EmailSettingsCard({
         ) : (
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Connect Gmail</p>
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Connect Gmail
+              </p>
               <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                 Sync your inbox and save drafts back to Gmail.
               </p>
@@ -258,7 +273,10 @@ export function EmailSettingsCard({
 
       <div className="mt-5 space-y-4">
         <div className="space-y-2">
-          <Label htmlFor="email-style-notes" className="text-[var(--workspace-shell-text-muted)]">
+          <Label
+            htmlFor="email-style-notes"
+            className="text-[var(--workspace-shell-text-muted)]"
+          >
             Writing style notes
           </Label>
           <Textarea

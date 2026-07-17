@@ -5,8 +5,7 @@ const easeOut = 'ease-[cubic-bezier(0.23,1,0.32,1)]';
 export const workspaceBtnPrimary =
   'bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]';
 
-export const workspaceBtnPress =
-  `transition-transform duration-[160ms] ${easeOut} active:scale-[0.97]`;
+export const workspaceBtnPress = `transition-transform duration-[160ms] ${easeOut} active:scale-[0.97]`;
 
 export const workspaceBtnPrimaryMd = `inline-flex h-9 items-center gap-2 rounded-xl px-4 text-sm font-medium shadow-sm transition-colors disabled:opacity-50 ${workspaceBtnPrimary} ${workspaceBtnPress}`;
 

@@ -1,4 +1,7 @@
-import type { VideoPlayerConfigValues, PlayerPreload } from './player-config-types';
+import type {
+  PlayerPreload,
+  VideoPlayerConfigValues,
+} from './player-config-types';
 
 const EMBED_BASE = 'https://iframe.mediadelivery.net/embed';
 
@@ -44,10 +47,16 @@ export function buildEmbedUrl(
   url.searchParams.set('autoplay', config.autoplay ? 'true' : 'false');
   url.searchParams.set('loop', config.loop ? 'true' : 'false');
   url.searchParams.set('muted', config.muted ? 'true' : 'false');
-  url.searchParams.set('preload', mapPreloadForBunnyEmbed(config.preload) ? 'true' : 'false');
+  url.searchParams.set(
+    'preload',
+    mapPreloadForBunnyEmbed(config.preload) ? 'true' : 'false',
+  );
   url.searchParams.set('responsive', config.responsive ? 'true' : 'false');
   url.searchParams.set('controls', config.show_controls ? 'true' : 'false');
-  url.searchParams.set('playButton', config.show_play_button ? 'true' : 'false');
+  url.searchParams.set(
+    'playButton',
+    config.show_play_button ? 'true' : 'false',
+  );
   url.searchParams.set('captions', config.enable_captions ? 'true' : 'false');
 
   if (config.enable_captions && config.default_caption_language) {

@@ -7,6 +7,10 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { Database } from '~/lib/database.types';
 
+import {
+  isMissingRelationError,
+  logMissingRelation,
+} from '../../../_lib/server/supabase-errors';
 import type {
   AddJobEventAssignmentInput,
   CreateJobEventInput,
@@ -19,7 +23,6 @@ import type {
   SetJobEventAssignmentsInput,
   UpdateJobEventInput,
 } from '../schema/job-events.schema';
-import { isMissingRelationError, logMissingRelation } from '../../../_lib/server/supabase-errors';
 
 type AccountRole = 'owner' | 'admin' | 'staff' | 'contractor' | 'client' | null;
 
@@ -27,7 +30,6 @@ export function createJobEventsService(client: SupabaseClient<Database>) {
   return new JobEventsService(client);
 }
 
- 
 class JobEventsService {
   constructor(private readonly client: SupabaseClient<Database>) {}
 
@@ -38,7 +40,10 @@ class JobEventsService {
   private throwErr(err: unknown, fallback = 'Something went wrong'): never {
     if (err instanceof Error) throw err;
     const msg =
-      err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+      err &&
+      typeof err === 'object' &&
+      'message' in err &&
+      typeof (err as { message: unknown }).message === 'string'
         ? (err as { message: string }).message
         : fallback;
     throw new Error(msg);
@@ -62,7 +67,10 @@ class JobEventsService {
     return (data?.account_role as AccountRole) ?? null;
   }
 
-  private async ensureUserAndPermission(accountId: string, permission: 'jobs.view' | 'jobs.edit') {
+  private async ensureUserAndPermission(
+    accountId: string,
+    permission: 'jobs.view' | 'jobs.edit',
+  ) {
     const user = await this.ensureUser();
     const api = createTeamAccountsApi(this.client);
     const hasPermission = await api.hasPermission({
@@ -74,7 +82,10 @@ class JobEventsService {
     return user;
   }
 
-  private async isAssignedToJob(accountId: string, jobId: string): Promise<boolean> {
+  private async isAssignedToJob(
+    accountId: string,
+    jobId: string,
+  ): Promise<boolean> {
     const user = await this.ensureUser();
     const { data, error } = await this.db
       .from('job_assignments')
@@ -87,7 +98,10 @@ class JobEventsService {
     return !!data;
   }
 
-  private async isAssignedToEvent(accountId: string, eventId: string): Promise<boolean> {
+  private async isAssignedToEvent(
+    accountId: string,
+    eventId: string,
+  ): Promise<boolean> {
     const user = await this.ensureUser();
     const { data, error } = await this.db
       .from('job_event_assignments')
@@ -103,8 +117,10 @@ class JobEventsService {
   /** Contractor can only update prep_notes and outcome_notes. */
   private contractorNotesOnlyPayload(payload: Record<string, unknown>) {
     const allowed: Record<string, unknown> = {};
-    if (payload.prep_notes !== undefined) allowed.prep_notes = payload.prep_notes;
-    if (payload.outcome_notes !== undefined) allowed.outcome_notes = payload.outcome_notes;
+    if (payload.prep_notes !== undefined)
+      allowed.prep_notes = payload.prep_notes;
+    if (payload.outcome_notes !== undefined)
+      allowed.outcome_notes = payload.outcome_notes;
     return allowed;
   }
 
@@ -147,7 +163,10 @@ class JobEventsService {
   }
 
   async createJobEvent(input: CreateJobEventInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'jobs.edit',
+    );
 
     const { data, error } = await this.db
       .from('job_events')
@@ -175,11 +194,20 @@ class JobEventsService {
 
   async updateJobEvent(input: UpdateJobEventInput) {
     await this.ensureUser();
-    const existing = await this.getJobEvent({ accountId: input.accountId, eventId: input.eventId });
+    const existing = await this.getJobEvent({
+      accountId: input.accountId,
+      eventId: input.eventId,
+    });
     const role = await this.getMembershipRole(input.accountId);
     const hasEdit = role === 'owner' || role === 'admin' || role === 'staff';
-    const assignedToJob = await this.isAssignedToJob(input.accountId, existing.job_id);
-    const assignedToEvent = await this.isAssignedToEvent(input.accountId, input.eventId);
+    const assignedToJob = await this.isAssignedToJob(
+      input.accountId,
+      existing.job_id,
+    );
+    const assignedToEvent = await this.isAssignedToEvent(
+      input.accountId,
+      input.eventId,
+    );
 
     if (!hasEdit && !assignedToJob && !assignedToEvent) {
       throw new Error('Permission denied');
@@ -188,17 +216,28 @@ class JobEventsService {
     const payload: Record<string, unknown> = {};
     if (input.title !== undefined) payload.title = input.title;
     if (input.event_type !== undefined) payload.event_type = input.event_type;
-    if (input.scheduled_start_at !== undefined) payload.scheduled_start_at = input.scheduled_start_at;
-    if (input.scheduled_end_at !== undefined) payload.scheduled_end_at = input.scheduled_end_at;
+    if (input.scheduled_start_at !== undefined)
+      payload.scheduled_start_at = input.scheduled_start_at;
+    if (input.scheduled_end_at !== undefined)
+      payload.scheduled_end_at = input.scheduled_end_at;
     if (input.location !== undefined) payload.location = input.location;
     if (input.prep_notes !== undefined) payload.prep_notes = input.prep_notes;
-    if (input.outcome_notes !== undefined) payload.outcome_notes = input.outcome_notes;
-    if (input.follow_up_required !== undefined) payload.follow_up_required = input.follow_up_required;
-    if (input.follow_up_at !== undefined) payload.follow_up_at = input.follow_up_at;
+    if (input.outcome_notes !== undefined)
+      payload.outcome_notes = input.outcome_notes;
+    if (input.follow_up_required !== undefined)
+      payload.follow_up_required = input.follow_up_required;
+    if (input.follow_up_at !== undefined)
+      payload.follow_up_at = input.follow_up_at;
     if (input.client_id !== undefined) payload.client_id = input.client_id;
 
-    const toApply = hasEdit ? payload : this.contractorNotesOnlyPayload(payload);
-    if (Object.keys(toApply).length === 0) return this.getJobEvent({ accountId: input.accountId, eventId: input.eventId });
+    const toApply = hasEdit
+      ? payload
+      : this.contractorNotesOnlyPayload(payload);
+    if (Object.keys(toApply).length === 0)
+      return this.getJobEvent({
+        accountId: input.accountId,
+        eventId: input.eventId,
+      });
 
     const { data, error } = await this.db
       .from('job_events')
@@ -245,7 +284,9 @@ class JobEventsService {
   }
 
   /** All assignments for all events of a job (for list view). */
-  async listJobEventAssignmentsForJob(params: ListJobEventAssignmentsForJobInput) {
+  async listJobEventAssignmentsForJob(
+    params: ListJobEventAssignmentsForJobInput,
+  ) {
     await this.ensureUser();
 
     const eventIdsResult = await this.db
@@ -256,7 +297,10 @@ class JobEventsService {
 
     if (eventIdsResult.error) {
       if (isMissingRelationError(eventIdsResult.error)) {
-        logMissingRelation('jobEvents.listJobEventAssignmentsForJob.job_events', eventIdsResult.error);
+        logMissingRelation(
+          'jobEvents.listJobEventAssignmentsForJob.job_events',
+          eventIdsResult.error,
+        );
         return [];
       }
       this.throwErr(eventIdsResult.error);
@@ -274,12 +318,19 @@ class JobEventsService {
 
     if (error) {
       if (isMissingRelationError(error)) {
-        logMissingRelation('jobEvents.listJobEventAssignmentsForJob.assignments', error);
+        logMissingRelation(
+          'jobEvents.listJobEventAssignmentsForJob.assignments',
+          error,
+        );
         return [];
       }
       this.throwErr(error);
     }
-    return (data ?? []) as { job_event_id: string; user_id: string; role_on_event: string | null }[];
+    return (data ?? []) as {
+      job_event_id: string;
+      user_id: string;
+      role_on_event: string | null;
+    }[];
   }
 
   async addJobEventAssignment(input: AddJobEventAssignmentInput) {
@@ -343,7 +394,10 @@ class JobEventsService {
       role_on_event: a.role_on_event ?? null,
     }));
 
-    const { data, error } = await this.db.from('job_event_assignments').insert(rows).select();
+    const { data, error } = await this.db
+      .from('job_event_assignments')
+      .insert(rows)
+      .select();
     if (error) this.throwErr(error);
     return data ?? [];
   }

@@ -49,7 +49,7 @@ export default async function SignaturesTemplatesPage({
       </div>
 
       {templates.length === 0 ? (
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-sm text-muted-foreground">
+        <div className="text-muted-foreground rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-sm">
           No templates yet. Create a default template to get started.
         </div>
       ) : (
@@ -76,8 +76,9 @@ export default async function SignaturesTemplatesPage({
       )}
 
       {!previewStaff && templates.length > 0 ? (
-        <p className="mt-4 text-xs text-muted-foreground">
-          Sync at least one staff member to see live HTML previews on these cards.
+        <p className="text-muted-foreground mt-4 text-xs">
+          Sync at least one staff member to see live HTML previews on these
+          cards.
         </p>
       ) : null}
     </ModuleDataSection>

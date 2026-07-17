@@ -117,7 +117,11 @@ export function PlannerRemindersToggle({ className }: Props) {
             className="h-8 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-xs text-[var(--workspace-shell-text)] outline-none"
           >
             {[5, 10, 15, 30].map((value) => (
-              <option key={value} value={value} className="bg-[var(--ozer-surface-panel)]">
+              <option
+                key={value}
+                value={value}
+                className="bg-[var(--ozer-surface-panel)]"
+              >
                 {value} min
               </option>
             ))}

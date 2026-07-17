@@ -1,4 +1,5 @@
 import { type NextRequest } from 'next/server';
+
 import { z } from 'zod';
 
 import { createBunnyStreamClient } from '@kit/bunny';
@@ -39,7 +40,8 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 
     const patch: Record<string, unknown> = {};
     if (parsed.data.title != null) patch.title = parsed.data.title;
-    if (parsed.data.folderId !== undefined) patch.folder_id = parsed.data.folderId;
+    if (parsed.data.folderId !== undefined)
+      patch.folder_id = parsed.data.folderId;
 
     const { data, error } = await access.client
       .from('videos')
@@ -89,7 +91,10 @@ export async function DELETE(_request: NextRequest, context: RouteContext) {
       console.error('[videos] bunny delete failed', bunnyError);
     }
 
-    const { error } = await access.client.from('videos').delete().eq('id', videoId);
+    const { error } = await access.client
+      .from('videos')
+      .delete()
+      .eq('id', videoId);
     if (error) {
       return jsonErr('DB_ERROR', error.message, 500);
     }

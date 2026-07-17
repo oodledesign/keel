@@ -1,6 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
@@ -10,10 +11,7 @@ import pathsConfig from '~/config/paths.config';
 
 import { workAccountPath } from '../work-account-path';
 
-function revalidateNotesSurfaces(
-  accountSlug: string,
-  personalScope?: boolean,
-) {
+function revalidateNotesSurfaces(accountSlug: string, personalScope?: boolean) {
   if (personalScope) {
     revalidatePath(pathsConfig.app.personalNotes);
     revalidatePath(pathsConfig.app.home);

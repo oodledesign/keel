@@ -5,11 +5,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { isSuperAdmin } from '@kit/admin';
 
 import {
-  accessLevelFromBillingStatus,
-  accountAllowsCapability,
   type AccountAccessCapability,
   type AccountAccessLevel,
   type AccountWriteCapability,
+  accessLevelFromBillingStatus,
+  accountAllowsCapability,
 } from './account-access-matrix';
 import { loadAccountBilling } from './account-billing-lifecycle';
 import type {
@@ -158,7 +158,5 @@ export async function requireAccountWriteAccess(
 
 /** True when operators may enter the workspace shell (full or restricted). */
 export function canEnterWorkspace(access: AccountAccessResult): boolean {
-  return (
-    access.level === 'full_access' || access.level === 'restricted_access'
-  );
+  return access.level === 'full_access' || access.level === 'restricted_access';
 }

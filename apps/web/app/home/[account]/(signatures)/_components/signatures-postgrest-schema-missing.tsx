@@ -1,8 +1,6 @@
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 
-import {
-  SignaturesPostgrestSchemaMissingCard,
-} from './signatures-postgrest-schema-missing-card';
+import { SignaturesPostgrestSchemaMissingCard } from './signatures-postgrest-schema-missing-card';
 
 export async function SignaturesPostgrestSchemaMissing() {
   const i18n = await createI18nServerInstance();

@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useEffect, useMemo, useRef, useState } from 'react';
+
+import Link from 'next/link';
 
 import { ArrowRight } from 'lucide-react';
 
@@ -9,13 +10,13 @@ import { useAppEvents } from '@kit/shared/events';
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
+import { listBillingProductPlanPrices } from '~/lib/billing/billing-config-prices';
+import { catalogPlansForAddonProduct } from '~/lib/billing/ozer-plan-catalog';
 import {
   MARKETING_WORKSPACE_PLANS,
   buildPricingSignupUrl,
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
-import { listBillingProductPlanPrices } from '~/lib/billing/billing-config-prices';
-import { catalogPlansForAddonProduct } from '~/lib/billing/ozer-plan-catalog';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -58,8 +59,7 @@ type PlanRecommenderEvents = {
   'plan_recommender.recommendation': { recommendation: string };
 };
 
-const SETUP_CALL_HREF =
-  'mailto:info@ozer.so?subject=Signatures%20setup%20call';
+const SETUP_CALL_HREF = 'mailto:info@ozer.so?subject=Signatures%20setup%20call';
 
 const intentOptions: Array<Option<IntentAnswer>> = [
   { value: 'signatures', label: 'Just email signatures for my team' },
@@ -206,14 +206,14 @@ export function PlanRecommender() {
       aria-labelledby="plan-recommender-heading"
     >
       <div className="mx-auto max-w-3xl text-center">
-        <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--ozer-coral-600)]">
+        <p className="text-sm font-semibold tracking-[0.12em] text-[var(--ozer-coral-600)] uppercase">
           Plan finder
         </p>
         <h2
           id="plan-recommender-heading"
           ref={headingRef}
           tabIndex={-1}
-          className="mt-2 font-heading text-2xl font-semibold text-[var(--workspace-shell-text)] outline-none md:text-3xl"
+          className="font-heading mt-2 text-2xl font-semibold text-[var(--workspace-shell-text)] outline-none md:text-3xl"
         >
           Not sure which plan? Answer three quick questions.
         </h2>
@@ -372,10 +372,10 @@ function RecommendationCard({
           today and add a business workspace whenever you&apos;re ready.
         </p>
       ) : null}
-      <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--ozer-coral-600)]">
+      <p className="text-sm font-semibold tracking-[0.12em] text-[var(--ozer-coral-600)] uppercase">
         Recommended
       </p>
-      <h3 className="mt-2 font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]">
+      <h3 className="font-heading mt-2 text-2xl font-semibold text-[var(--workspace-shell-text)]">
         {recommendation.title}
       </h3>
       {recommendation.monthlyPriceGbp == null ? (
@@ -452,8 +452,12 @@ function buildRecommendation(
       title: signaturesOnly
         ? 'Business Lite (free) + Signatures custom'
         : `${businessPlan?.name ?? 'Business Scale'} + Signatures custom`,
-      monthlyPriceGbp: signaturesOnly ? 0 : (businessPlan?.monthlyPriceGbp ?? null),
-      yearlyPriceGbp: signaturesOnly ? 0 : (businessPlan?.yearlyPriceGbp ?? null),
+      monthlyPriceGbp: signaturesOnly
+        ? 0
+        : (businessPlan?.monthlyPriceGbp ?? null),
+      yearlyPriceGbp: signaturesOnly
+        ? 0
+        : (businessPlan?.yearlyPriceGbp ?? null),
       why: signaturesOnly
         ? 'Business Lite keeps the workspace free forever while we set a custom flat Signatures tier for your mailbox count.'
         : `${businessPlan?.name ?? 'Business Scale'} covers your team workspace, and we will sort a custom flat Signatures tier for your mailbox count.`,

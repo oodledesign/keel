@@ -5,7 +5,10 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { resolveWorkspaceProfile, workspaceTypeLabel } from '~/home/[account]/_lib/workspace-profile';
+import {
+  resolveWorkspaceProfile,
+  workspaceTypeLabel,
+} from '~/home/[account]/_lib/workspace-profile';
 import { findPlanByStripePriceId } from '~/lib/billing/ozer-plan-catalog';
 import { requiredEntitlementForProfile } from '~/lib/billing/ozer-plan-catalog';
 
@@ -127,7 +130,8 @@ export const loadUserSubscriptionsHub = cache(
       let planLabel: string | null = null;
       if (activeSub?.variantId) {
         const plan = findPlanByStripePriceId(activeSub.variantId);
-        planLabel = plan?.productId.replace('keel-', '').replace(/-/g, ' ') ?? null;
+        planLabel =
+          plan?.productId.replace('keel-', '').replace(/-/g, ' ') ?? null;
       } else if (accountEntitlements.includes('workspace_business_lite')) {
         planLabel = 'Business Lite';
       }
@@ -150,7 +154,7 @@ export const loadUserSubscriptionsHub = cache(
         workspaceLabel: workspaceTypeLabel(profile),
         subscriptionStatus: isFreeWorkspace
           ? 'free'
-          : activeSub?.status ?? (hasEntitlement ? 'active' : null),
+          : (activeSub?.status ?? (hasEntitlement ? 'active' : null)),
         planLabel: isFreeWorkspace ? 'Free' : planLabel,
         addons,
         billingPath: pathsConfig.app.accountBilling.replace(

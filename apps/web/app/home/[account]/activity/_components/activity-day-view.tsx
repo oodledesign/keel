@@ -1,12 +1,15 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
+
+import { ChevronDown, ChevronRight } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
 import type { ActivityPageData } from '~/home/[account]/activity/_lib/server/activity-page.loader';
 import { blockContextLabel } from '~/lib/activity/activity-app-context';
 import {
+  type ActivityAppGroup,
   type ActivityBlockListRow,
   aggregateActivityByApp,
   aggregateActivityByClient,
@@ -83,6 +86,7 @@ function MemoryFeedItem({
   accountId,
   accountSlug,
   onUpdated,
+  nested = false,
 }: {
   block: ActivityBlockListRow;
   showMember: boolean;
@@ -92,17 +96,27 @@ function MemoryFeedItem({
   accountId: string;
   accountSlug: string;
   onUpdated: (block: ActivityBlockListRow) => void;
+  nested?: boolean;
 }) {
   const context = blockContextLabel(block);
 
   return (
     <article
       className={cn(
-        'flex gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 transition-colors hover:bg-[var(--workspace-control-surface)]/20',
+        'flex gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3 transition-colors hover:bg-[var(--workspace-control-surface)]/20',
+        nested
+          ? 'border-transparent bg-[var(--workspace-control-surface)]/15'
+          : 'bg-[var(--workspace-shell-panel)]',
         block.isExcluded && 'opacity-50',
       )}
     >
-      <ActivityAppIcon block={block} size="md" className="mt-0.5" />
+      {nested ? (
+        <span className="mt-1 w-4 shrink-0 text-center text-xs text-[var(--workspace-shell-text-muted)]">
+          ↳
+        </span>
+      ) : (
+        <ActivityAppIcon block={block} size="md" className="mt-0.5" />
+      )}
       <div className="min-w-0 flex-1 space-y-2">
         <div className="flex flex-wrap items-start justify-between gap-2">
           <div className="min-w-0">
@@ -112,10 +126,16 @@ function MemoryFeedItem({
             >
               {context}
             </p>
-            <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
-              {block.appName}
-              {showMember && block.userName ? ` · ${block.userName}` : ''}
-            </p>
+            {!nested ? (
+              <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                {block.appName}
+                {showMember && block.userName ? ` · ${block.userName}` : ''}
+              </p>
+            ) : showMember && block.userName ? (
+              <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                {block.userName}
+              </p>
+            ) : null}
           </div>
           <div className="shrink-0 text-right">
             <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
@@ -140,6 +160,121 @@ function MemoryFeedItem({
         />
       </div>
     </article>
+  );
+}
+
+function MemoryAppGroup({
+  appGroup,
+  expanded,
+  onToggle,
+  showMember,
+  canEdit,
+  projects,
+  clients,
+  accountId,
+  accountSlug,
+  onUpdated,
+}: {
+  appGroup: ActivityAppGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  showMember: boolean;
+  canEdit: boolean;
+  projects: ActivityPageData['projects'];
+  clients: ActivityPageData['clients'];
+  accountId: string;
+  accountSlug: string;
+  onUpdated: (block: ActivityBlockListRow) => void;
+}) {
+  const representativeBlock = appGroup.blocks[0]!;
+  const primaryLabel = appGroup.domainLabel ?? appGroup.appName;
+  const sessionLabel = `${appGroup.blocks.length} session${appGroup.blocks.length === 1 ? '' : 's'}`;
+  const sortedBlocks = useMemo(
+    () =>
+      [...appGroup.blocks].sort((left, right) =>
+        right.startedAt.localeCompare(left.startedAt),
+      ),
+    [appGroup.blocks],
+  );
+  const isSingleBlock = appGroup.blocks.length === 1;
+
+  if (isSingleBlock) {
+    return (
+      <MemoryFeedItem
+        block={representativeBlock}
+        showMember={showMember}
+        canEdit={canEdit}
+        projects={projects}
+        clients={clients}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        onUpdated={onUpdated}
+      />
+    );
+  }
+
+  return (
+    <section className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+      <button
+        type="button"
+        className="flex w-full items-center gap-3 px-3 py-3 text-left transition-colors hover:bg-[var(--workspace-control-surface)]/30"
+        onClick={onToggle}
+      >
+        {expanded ? (
+          <ChevronDown className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+        ) : (
+          <ChevronRight className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+        )}
+        <ActivityAppIcon block={representativeBlock} size="md" />
+        <div className="min-w-0 flex-1">
+          <p
+            className="truncate text-sm font-semibold text-[var(--workspace-shell-text)]"
+            title={primaryLabel}
+          >
+            {primaryLabel}
+          </p>
+          {appGroup.domainLabel ? (
+            <p
+              className="truncate text-xs text-[var(--workspace-shell-text-muted)]"
+              title={appGroup.appName}
+            >
+              {appGroup.appName}
+            </p>
+          ) : (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {sessionLabel}
+            </p>
+          )}
+        </div>
+        <div className="shrink-0 text-right">
+          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            {formatDuration(appGroup.totalDurationSeconds)}
+          </p>
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)]">
+            {sessionLabel}
+          </p>
+        </div>
+      </button>
+
+      {expanded ? (
+        <div className="space-y-1 border-t border-[color:var(--workspace-shell-border)] px-2 py-2">
+          {sortedBlocks.map((block) => (
+            <MemoryFeedItem
+              key={block.id}
+              block={block}
+              showMember={showMember}
+              canEdit={canEdit}
+              projects={projects}
+              clients={clients}
+              accountId={accountId}
+              accountSlug={accountSlug}
+              onUpdated={onUpdated}
+              nested
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
   );
 }
 
@@ -179,13 +314,24 @@ export function ActivityDayView({
         .sort((left, right) => left.startedAt.localeCompare(right.startedAt)),
     [dayBlocks],
   );
-  const memoryFeed = useMemo(
-    () =>
-      [...dayBlocks].sort((left, right) =>
-        right.startedAt.localeCompare(left.startedAt),
-      ),
-    [dayBlocks],
+  const appGroups = useMemo(() => groupBlocksByApp(dayBlocks), [dayBlocks]);
+  const [collapsedApps, setCollapsedApps] = useState<Set<string>>(
+    () => new Set(),
   );
+
+  function toggleAppGroup(appKey: string) {
+    setCollapsedApps((current) => {
+      const next = new Set(current);
+
+      if (next.has(appKey)) {
+        next.delete(appKey);
+      } else {
+        next.add(appKey);
+      }
+
+      return next;
+    });
+  }
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
@@ -252,7 +398,8 @@ export function ActivityDayView({
               </p>
             </div>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              {dayBlocks.length} session{dayBlocks.length === 1 ? '' : 's'}
+              {dayBlocks.length} session{dayBlocks.length === 1 ? '' : 's'} ·{' '}
+              {appGroups.length} app{appGroups.length === 1 ? '' : 's'}
             </p>
           </header>
 
@@ -266,7 +413,7 @@ export function ActivityDayView({
           </div>
 
           <div className="flex-1 overflow-y-auto px-4 py-4">
-            {memoryFeed.length === 0 ? (
+            {appGroups.length === 0 ? (
               <div className="flex h-full min-h-[16rem] flex-col items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 text-center">
                 <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
                   No time logged
@@ -278,10 +425,12 @@ export function ActivityDayView({
               </div>
             ) : (
               <div className="space-y-2">
-                {memoryFeed.map((block) => (
-                  <MemoryFeedItem
-                    key={block.id}
-                    block={block}
+                {appGroups.map((appGroup) => (
+                  <MemoryAppGroup
+                    key={appGroup.appKey}
+                    appGroup={appGroup}
+                    expanded={!collapsedApps.has(appGroup.appKey)}
+                    onToggle={() => toggleAppGroup(appGroup.appKey)}
                     showMember={showMember}
                     canEdit={canEdit}
                     projects={projects}

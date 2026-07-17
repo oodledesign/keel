@@ -2,7 +2,10 @@ import 'server-only';
 
 import { redirect } from 'next/navigation';
 
-import { getOptionalTeamsOAuthEnv, getOptionalZoomOAuthEnv } from '@kit/scheduling/conferencing';
+import {
+  getOptionalTeamsOAuthEnv,
+  getOptionalZoomOAuthEnv,
+} from '@kit/scheduling/conferencing';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';

@@ -4,9 +4,9 @@ import { z } from 'zod';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
 
-import { assertAccountMember } from '../module-access';
-import { fuzzyMatchByName } from '../fuzzy-match';
 import type { QuickActionContext } from '../context';
+import { fuzzyMatchByName } from '../fuzzy-match';
+import { assertAccountMember } from '../module-access';
 
 const listAssignmentsSchema = z.object({
   account_id: z.string().uuid(),
@@ -95,5 +95,8 @@ export async function handleListWorkspaceAssignmentsTool(
   ctx: QuickActionContext,
   input: unknown,
 ) {
-  return listWorkspaceAssignments(ctx, input as z.infer<typeof listAssignmentsSchema>);
+  return listWorkspaceAssignments(
+    ctx,
+    input as z.infer<typeof listAssignmentsSchema>,
+  );
 }

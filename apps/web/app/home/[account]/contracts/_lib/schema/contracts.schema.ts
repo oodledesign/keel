@@ -35,7 +35,15 @@ export const ListContractsSchema = z.object({
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
   query: optionalString,
   status: z
-    .enum(['unsigned', 'draft', 'ready_to_sign', 'sent', 'signed', 'cancelled', 'all'])
+    .enum([
+      'unsigned',
+      'draft',
+      'ready_to_sign',
+      'sent',
+      'signed',
+      'cancelled',
+      'all',
+    ])
     .optional(),
   clientId: z.string().uuid().optional(),
   dealId: z.string().uuid().optional(),
@@ -156,8 +164,12 @@ export type DeleteContractInput = z.infer<typeof DeleteContractSchema>;
 export type SendContractInput = z.infer<typeof SendContractSchema>;
 export type SignAuthorInput = z.infer<typeof SignAuthorSchema>;
 export type SignRecipientInput = z.infer<typeof SignRecipientSchema>;
-export type GetContractForPortalInput = z.infer<typeof GetContractForPortalSchema>;
-export type GetContractPortalLinkInput = z.infer<typeof GetContractPortalLinkSchema>;
+export type GetContractForPortalInput = z.infer<
+  typeof GetContractForPortalSchema
+>;
+export type GetContractPortalLinkInput = z.infer<
+  typeof GetContractPortalLinkSchema
+>;
 export type SetContractStatusInput = z.infer<typeof SetContractStatusSchema>;
 export type GenerateInvoicesFromPaymentPlanInput = z.infer<
   typeof GenerateInvoicesFromPaymentPlanSchema

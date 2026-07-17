@@ -15,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import {
   workspaceBtnPrimaryMd,
@@ -263,7 +263,9 @@ export function AvailabilityEditor({
         </div>
       </aside>
 
-      <section className={`space-y-5 rounded-2xl border p-5 ${workspacePanelBorder}`}>
+      <section
+        className={`space-y-5 rounded-2xl border p-5 ${workspacePanelBorder}`}
+      >
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold">

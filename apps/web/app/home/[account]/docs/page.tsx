@@ -7,7 +7,9 @@ interface DocsRedirectPageProps {
 }
 
 /** Legacy docs route — unified under Notes and files. */
-export default async function DocsRedirectPage({ params }: DocsRedirectPageProps) {
+export default async function DocsRedirectPage({
+  params,
+}: DocsRedirectPageProps) {
   const { account } = await params;
   redirect(pathsConfig.app.accountNotes.replace('[account]', account));
 }

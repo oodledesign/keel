@@ -16,16 +16,13 @@ export async function userCanAccessProject(
   const { data: project, error } = await supabaseCustomSchema(
     supabase,
     'rankly',
-  ).from('projects')
+  )
+    .from('projects')
     .select('account_id')
     .eq('id', projectId)
     .maybeSingle();
 
   if (error || !project?.account_id) return false;
 
-  return userIsAccountMember(
-    supabase,
-    userId,
-    project.account_id as string,
-  );
+  return userIsAccountMember(supabase, userId, project.account_id as string);
 }

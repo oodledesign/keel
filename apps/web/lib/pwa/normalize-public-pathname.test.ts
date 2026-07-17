@@ -8,7 +8,9 @@ import {
 describe('normalizePublicPathname', () => {
   it('maps internal home routes to public app routes', () => {
     expect(normalizePublicPathname('/home/oodle')).toBe('/app/oodle');
-    expect(normalizePublicPathname('/home/oodle/tasks')).toBe('/app/oodle/tasks');
+    expect(normalizePublicPathname('/home/oodle/tasks')).toBe(
+      '/app/oodle/tasks',
+    );
     expect(normalizePublicPathname('/home')).toBe('/app');
   });
 

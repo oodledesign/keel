@@ -3,14 +3,17 @@ import 'server-only';
 import type { QuickActionContext } from '../context';
 import type { ProposedQuickAction } from '../types';
 import {
+  handleListWorkspaceAssignmentsTool,
+  listWorkspaceAssignmentsToolDefinition,
+} from './list-assignments';
+import {
   handleListRanklyProjectsTool,
   listRanklyProjectsToolDefinition,
 } from './list-rankly-projects';
 import {
-  handleListWorkspaceAssignmentsTool,
-  listWorkspaceAssignmentsToolDefinition,
-} from './list-assignments';
-import { handleListWorkspacesTool, listWorkspacesToolDefinition } from './list-workspaces';
+  handleListWorkspacesTool,
+  listWorkspacesToolDefinition,
+} from './list-workspaces';
 import {
   handleProposeCreateTaskTool,
   proposeCreateTaskToolDefinition,
@@ -47,11 +50,17 @@ export async function runQuickActionTool(
       return { result: await handleListRanklyProjectsTool(ctx, input) };
     case 'propose_create_task': {
       const proposed = await handleProposeCreateTaskTool(ctx, input);
-      return { result: { status: 'proposed', preview: proposed.preview }, proposedAction: proposed };
+      return {
+        result: { status: 'proposed', preview: proposed.preview },
+        proposedAction: proposed,
+      };
     }
     case 'propose_pagespeed_scan': {
       const proposed = await handleProposePagespeedTool(ctx, input);
-      return { result: { status: 'proposed', preview: proposed.preview }, proposedAction: proposed };
+      return {
+        result: { status: 'proposed', preview: proposed.preview },
+        proposedAction: proposed,
+      };
     }
     default:
       throw new Error(`Unknown tool: ${name}`);

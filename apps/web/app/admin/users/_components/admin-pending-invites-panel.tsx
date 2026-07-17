@@ -12,7 +12,10 @@ import {
   revokeAdminUserInviteAction,
 } from '~/lib/admin/user-invites.actions';
 import type { AdminUserInviteRow } from '~/lib/admin/user-invites.schema';
-import { parseAdminUserInviteAccessConfig, summarizeAccessConfig } from '~/lib/admin/user-invites.schema';
+import {
+  parseAdminUserInviteAccessConfig,
+  summarizeAccessConfig,
+} from '~/lib/admin/user-invites.schema';
 
 export function AdminPendingInvitesPanel(props: {
   invites: AdminUserInviteRow[];

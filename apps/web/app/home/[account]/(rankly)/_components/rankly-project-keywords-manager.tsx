@@ -1,17 +1,18 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useMemo, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
-import { parseKeywordLines } from '../_lib/parse-keyword-lines';
 import type { RanklyKeywordRow } from '../../_lib/server/rankly-account-data';
+import { parseKeywordLines } from '../_lib/parse-keyword-lines';
 import {
   addRanklyKeywordsBulk,
   deleteRanklyKeyword,
@@ -57,7 +58,9 @@ export function RanklyProjectKeywordsManager(props: {
       });
 
       if (result.added === 0) {
-        toast.message('No new keywords added — all were already on this project');
+        toast.message(
+          'No new keywords added — all were already on this project',
+        );
       } else if (result.skipped > 0) {
         toast.success(
           `Added ${result.added} keyword${result.added === 1 ? '' : 's'} (${result.skipped} duplicate${result.skipped === 1 ? '' : 's'} skipped)`,
@@ -116,7 +119,11 @@ export function RanklyProjectKeywordsManager(props: {
           </p>
         </div>
         <Button type="submit" disabled={busy || parsedCount === 0}>
-          {busy ? 'Adding…' : parsedCount > 1 ? `Add ${parsedCount} keywords` : 'Add keywords'}
+          {busy
+            ? 'Adding…'
+            : parsedCount > 1
+              ? `Add ${parsedCount} keywords`
+              : 'Add keywords'}
         </Button>
       </form>
 
@@ -127,7 +134,7 @@ export function RanklyProjectKeywordsManager(props: {
       ) : (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[28rem] text-left text-sm">
-            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+            <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
               <tr>
                 <th className="px-4 py-3">Keyword</th>
                 <th className="px-4 py-3">Engine</th>
@@ -142,10 +149,12 @@ export function RanklyProjectKeywordsManager(props: {
                   className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                 >
                   <td className="px-4 py-3">{k.keyword}</td>
-                  <td className="px-4 py-3 text-muted-foreground">
+                  <td className="text-muted-foreground px-4 py-3">
                     {k.search_engine}
                   </td>
-                  <td className="px-4 py-3 text-muted-foreground">{k.device}</td>
+                  <td className="text-muted-foreground px-4 py-3">
+                    {k.device}
+                  </td>
                   <td className="px-4 py-3 text-right">
                     <Button
                       type="button"

@@ -19,7 +19,9 @@ const SaveBodySchema = z.object({
 });
 
 export async function GET(request: Request) {
-  const auth = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  const auth = await authenticateRecorderRequest(request, {
+    touchLastUsed: true,
+  });
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -35,13 +37,18 @@ export async function GET(request: Request) {
     });
     return NextResponse.json({ items });
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to load dictation history';
+    const message =
+      error instanceof Error
+        ? error.message
+        : 'Failed to load dictation history';
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 
 export async function POST(request: Request) {
-  const auth = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  const auth = await authenticateRecorderRequest(request, {
+    touchLastUsed: true,
+  });
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -55,7 +62,10 @@ export async function POST(request: Request) {
 
   const parsed = SaveBodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      { status: 400 },
+    );
   }
 
   try {
@@ -69,7 +79,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to save dictation';
+    const message =
+      error instanceof Error ? error.message : 'Failed to save dictation';
     const status = message.includes('not a member') ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }

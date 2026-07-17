@@ -128,7 +128,9 @@ export async function syncStarlingToOzer(
   const client = clientFromConnection(db, connection as ConnectionRow);
   const accounts = await client.listAccounts();
 
-  const fromDate = incrementalSyncFromDate(connection.last_sync_at as string | null);
+  const fromDate = incrementalSyncFromDate(
+    connection.last_sync_at as string | null,
+  );
   const toDate = new Date();
   const minTimestamp = fromDate.toISOString();
   const maxTimestamp = toDate.toISOString();

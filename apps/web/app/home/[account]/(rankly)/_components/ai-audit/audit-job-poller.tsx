@@ -1,12 +1,13 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { AUDIT_STATUS_LABELS } from '~/lib/ai-audit/types';
 
-import { RanklyJobProgress } from '../rankly-job-progress';
 import { useRanklyJobProgress } from '../../_lib/use-rankly-job-progress';
+import { RanklyJobProgress } from '../rankly-job-progress';
 
 type AuditJob = {
   id: string;
@@ -74,7 +75,9 @@ export function AuditJobPoller({
   }, [auditPath, job, router]);
 
   if (!job) {
-    return <p className="text-sm text-muted-foreground">Loading audit status…</p>;
+    return (
+      <p className="text-muted-foreground text-sm">Loading audit status…</p>
+    );
   }
 
   if (job.status === 'error') {
@@ -86,7 +89,9 @@ export function AuditJobPoller({
   }
 
   if (job.status === 'done') {
-    return <p className="text-sm text-emerald-400">Audit complete — redirecting…</p>;
+    return (
+      <p className="text-sm text-emerald-400">Audit complete — redirecting…</p>
+    );
   }
 
   const label = AUDIT_STATUS_LABELS[job.status] ?? job.status;

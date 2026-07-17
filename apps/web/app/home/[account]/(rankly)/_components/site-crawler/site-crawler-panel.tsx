@@ -14,6 +14,7 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { analyzeCrawlAccess } from '~/lib/crawl/access-summary';
 import type {
   SiteCrawlIssueCode,
   SiteCrawlIssueSummary,
@@ -24,7 +25,6 @@ import {
   SITE_CRAWL_ISSUE_LABELS,
   SITE_CRAWL_URL_LIMIT_OPTIONS,
 } from '~/lib/site-crawl/types';
-import { analyzeCrawlAccess } from '~/lib/crawl/access-summary';
 
 import { CrawlAccessBanner } from '../crawl-access-banner';
 import { SiteCrawlJobPoller } from './site-crawl-job-poller';
@@ -76,7 +76,7 @@ function SchemaDetailDialog(props: {
       <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <DialogHeader>
           <DialogTitle>Structured data</DialogTitle>
-          <DialogDescription className="break-all font-mono text-xs">
+          <DialogDescription className="font-mono text-xs break-all">
             {props.page?.url}
           </DialogDescription>
         </DialogHeader>
@@ -101,7 +101,9 @@ function SchemaDetailDialog(props: {
             ))}
           </div>
         ) : (
-          <p className="text-muted-foreground text-sm">No JSON-LD found on this page.</p>
+          <p className="text-muted-foreground text-sm">
+            No JSON-LD found on this page.
+          </p>
         )}
 
         {objects.length > 0 ? (
@@ -121,14 +123,10 @@ function SchemaDetailDialog(props: {
   );
 }
 
-function SummaryCard(props: {
-  label: string;
-  value: number;
-  hint?: string;
-}) {
+function SummaryCard(props: { label: string; value: number; hint?: string }) {
   return (
     <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-      <p className="text-muted-foreground text-xs uppercase tracking-wide">
+      <p className="text-muted-foreground text-xs tracking-wide uppercase">
         {props.label}
       </p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{props.value}</p>
@@ -161,8 +159,7 @@ export function SiteCrawlerPanel(props: {
       : null,
   );
 
-  const summary: SiteCrawlIssueSummary =
-    props.latestJob?.issue_summary ?? {};
+  const summary: SiteCrawlIssueSummary = props.latestJob?.issue_summary ?? {};
 
   const filteredPages = useMemo(() => {
     if (issueFilter === 'all') return props.pages;
@@ -310,7 +307,7 @@ export function SiteCrawlerPanel(props: {
                 className={
                   issueFilter === 'all'
                     ? 'rounded-full bg-[var(--ozer-accent-subtle)] px-3 py-1 text-xs text-[var(--ozer-accent)]'
-                    : 'rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-xs text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)]'
+                    : 'text-muted-foreground rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-xs hover:bg-[var(--workspace-shell-sidebar-accent)]'
                 }
               >
                 All pages ({props.pages.length})
@@ -323,7 +320,7 @@ export function SiteCrawlerPanel(props: {
                   className={
                     issueFilter === code
                       ? 'rounded-full bg-[var(--ozer-accent-subtle)] px-3 py-1 text-xs text-[var(--ozer-accent)]'
-                      : 'rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-xs text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)]'
+                      : 'text-muted-foreground rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-xs hover:bg-[var(--workspace-shell-sidebar-accent)]'
                   }
                 >
                   {SITE_CRAWL_ISSUE_LABELS[code]} ({count})
@@ -334,7 +331,7 @@ export function SiteCrawlerPanel(props: {
 
           <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
             <table className="w-full min-w-[64rem] text-left text-sm">
-              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+              <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
                 <tr>
                   <th className="px-4 py-3">URL</th>
                   <th className="px-4 py-3">Status</th>
@@ -360,66 +357,32 @@ export function SiteCrawlerPanel(props: {
                     const schemaTypes = page.schema_types ?? [];
 
                     return (
-                    <tr
-                      key={page.id}
-                      className="border-b border-[color:var(--workspace-shell-border)] align-top last:border-0"
-                    >
-                      <td className="max-w-xs px-4 py-3">
-                        <p className="truncate font-mono text-xs">{page.url}</p>
-                      </td>
-                      <td
-                        className={`px-4 py-3 tabular-nums ${statusTone(page.status_code)}`}
+                      <tr
+                        key={page.id}
+                        className="border-b border-[color:var(--workspace-shell-border)] align-top last:border-0"
                       >
-                        {page.status_code || '—'}
-                      </td>
-                      <td className="max-w-xs px-4 py-3">
-                        <p className="truncate">{page.title || '—'}</p>
-                      </td>
-                      <td className="max-w-[10rem] truncate px-4 py-3">
-                        {page.h1 || '—'}
-                      </td>
-                      <td className="max-w-[14rem] px-4 py-3">
-                        {schemaTypes.length === 0 ? (
-                          <div className="space-y-2">
-                            <span className="text-muted-foreground text-xs">—</span>
-                            {page.issues.some((issue) =>
-                              [
-                                'malformed_schema',
-                                'missing_schema',
-                                'schema_missing_type',
-                                'schema_incomplete',
-                              ].includes(issue.code),
-                            ) ? (
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-7 px-2 text-xs"
-                                onClick={() => setSchemaPage(page)}
-                              >
-                                View schema issues
-                              </Button>
-                            ) : null}
-                          </div>
-                        ) : (
-                          <div className="space-y-2">
-                            <div className="flex flex-wrap gap-1">
-                              {schemaTypes.slice(0, 3).map((type) => (
-                                <SchemaTypeBadge key={type} type={type} />
-                              ))}
-                              {schemaTypes.length > 3 ? (
-                                <span className="text-muted-foreground text-xs">
-                                  +{schemaTypes.length - 3}
-                                </span>
-                              ) : null}
-                            </div>
-                            <Button
-                              type="button"
-                              variant="ghost"
-                              size="sm"
-                              className="h-7 px-2 text-xs"
-                              onClick={() => setSchemaPage(page)}
-                            >
+                        <td className="max-w-xs px-4 py-3">
+                          <p className="truncate font-mono text-xs">
+                            {page.url}
+                          </p>
+                        </td>
+                        <td
+                          className={`px-4 py-3 tabular-nums ${statusTone(page.status_code)}`}
+                        >
+                          {page.status_code || '—'}
+                        </td>
+                        <td className="max-w-xs px-4 py-3">
+                          <p className="truncate">{page.title || '—'}</p>
+                        </td>
+                        <td className="max-w-[10rem] truncate px-4 py-3">
+                          {page.h1 || '—'}
+                        </td>
+                        <td className="max-w-[14rem] px-4 py-3">
+                          {schemaTypes.length === 0 ? (
+                            <div className="space-y-2">
+                              <span className="text-muted-foreground text-xs">
+                                —
+                              </span>
                               {page.issues.some((issue) =>
                                 [
                                   'malformed_schema',
@@ -427,28 +390,71 @@ export function SiteCrawlerPanel(props: {
                                   'schema_missing_type',
                                   'schema_incomplete',
                                 ].includes(issue.code),
-                              )
-                                ? 'View issues & JSON-LD'
-                                : 'View JSON-LD'}
-                            </Button>
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 tabular-nums text-muted-foreground">
-                        {page.word_count.toLocaleString()}
-                      </td>
-                      <td className="px-4 py-3">
-                        <div className="flex flex-wrap gap-1">
-                          {page.issues.length === 0 ? (
-                            <span className="text-muted-foreground text-xs">—</span>
+                              ) ? (
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  className="h-7 px-2 text-xs"
+                                  onClick={() => setSchemaPage(page)}
+                                >
+                                  View schema issues
+                                </Button>
+                              ) : null}
+                            </div>
                           ) : (
-                            page.issues.map((issue) => (
-                              <IssueBadge key={`${page.id}-${issue.code}`} code={issue.code} />
-                            ))
+                            <div className="space-y-2">
+                              <div className="flex flex-wrap gap-1">
+                                {schemaTypes.slice(0, 3).map((type) => (
+                                  <SchemaTypeBadge key={type} type={type} />
+                                ))}
+                                {schemaTypes.length > 3 ? (
+                                  <span className="text-muted-foreground text-xs">
+                                    +{schemaTypes.length - 3}
+                                  </span>
+                                ) : null}
+                              </div>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => setSchemaPage(page)}
+                              >
+                                {page.issues.some((issue) =>
+                                  [
+                                    'malformed_schema',
+                                    'missing_schema',
+                                    'schema_missing_type',
+                                    'schema_incomplete',
+                                  ].includes(issue.code),
+                                )
+                                  ? 'View issues & JSON-LD'
+                                  : 'View JSON-LD'}
+                              </Button>
+                            </div>
                           )}
-                        </div>
-                      </td>
-                    </tr>
+                        </td>
+                        <td className="text-muted-foreground px-4 py-3 tabular-nums">
+                          {page.word_count.toLocaleString()}
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex flex-wrap gap-1">
+                            {page.issues.length === 0 ? (
+                              <span className="text-muted-foreground text-xs">
+                                —
+                              </span>
+                            ) : (
+                              page.issues.map((issue) => (
+                                <IssueBadge
+                                  key={`${page.id}-${issue.code}`}
+                                  code={issue.code}
+                                />
+                              ))
+                            )}
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })
                 )}
@@ -465,7 +471,10 @@ export function SiteCrawlerPanel(props: {
           />
 
           <p className="text-muted-foreground text-xs">
-            Last crawl {new Date(props.latestJob.finished_at ?? props.latestJob.created_at).toLocaleString()}
+            Last crawl{' '}
+            {new Date(
+              props.latestJob.finished_at ?? props.latestJob.created_at,
+            ).toLocaleString()}
             {' · '}
             {props.domain}
           </p>
@@ -473,7 +482,8 @@ export function SiteCrawlerPanel(props: {
       ) : !activeJobId ? (
         <p className="text-muted-foreground rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm">
           Crawl {props.domain} to find broken links, missing titles, duplicate
-          meta tags, and other on-page SEO issues — up to {urlLimit.toLocaleString()} internal URLs.
+          meta tags, and other on-page SEO issues — up to{' '}
+          {urlLimit.toLocaleString()} internal URLs.
         </p>
       ) : null}
     </div>

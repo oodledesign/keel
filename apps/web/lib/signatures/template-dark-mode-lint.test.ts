@@ -58,4 +58,3 @@ describe('lintSignatureTemplateHtml', () => {
     expect(issues.filter((issue) => issue.severity === 'warn')).toHaveLength(0);
   });
 });
-

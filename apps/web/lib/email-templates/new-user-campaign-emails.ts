@@ -18,7 +18,10 @@ function renderOnboardingShell(params: {
     preheader: params.preheader,
     heroTitle: params.heroTitle,
     heroSubtitle: params.heroSubtitle,
-    ctaHtml: renderPrimaryCta('Continue setup', MARKETING_EMAIL_URLS.onboarding),
+    ctaHtml: renderPrimaryCta(
+      'Continue setup',
+      MARKETING_EMAIL_URLS.onboarding,
+    ),
     bodyHtml: params.bodyHtml,
   });
 }

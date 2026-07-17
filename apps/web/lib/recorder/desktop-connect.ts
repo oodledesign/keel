@@ -10,7 +10,9 @@ import { getPersonalAccountId } from '~/lib/recorder/personal-account';
 const DESKTOP_CONNECT_SCHEME = 'keelassistant';
 const CODE_TTL_MS = 2 * 60 * 1000;
 
-function connectCodesTable(admin: ReturnType<typeof getSupabaseServerAdminClient>) {
+function connectCodesTable(
+  admin: ReturnType<typeof getSupabaseServerAdminClient>,
+) {
   return admin.from('recorder_connect_codes');
 }
 

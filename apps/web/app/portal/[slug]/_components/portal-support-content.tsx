@@ -15,17 +15,20 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
 
+import type { PortalTicketPriority } from '../_lib/schema/portal.schema';
 import type {
   PortalTicketDetail,
   PortalTicketMessage,
 } from '../_lib/server/client-portal.service';
-import type { PortalTicketPriority } from '../_lib/schema/portal.schema';
-import { addPortalTicketMessage, createPortalTicket } from '../_lib/server/server-actions';
+import {
+  addPortalTicketMessage,
+  createPortalTicket,
+} from '../_lib/server/server-actions';
 import {
   PortalTicketPriorityBadge,
   PortalTicketStatusBadge,
@@ -82,7 +85,10 @@ export function PortalSupportDetailContent({
 
   return (
     <div className="space-y-6">
-      <Link href={listHref} className="text-sm text-[var(--ozer-text-on-light-muted)] hover:text-[var(--ozer-text-on-light)]">
+      <Link
+        href={listHref}
+        className="text-sm text-[var(--ozer-text-on-light-muted)] hover:text-[var(--ozer-text-on-light)]"
+      >
         ← Back to support
       </Link>
 
@@ -94,7 +100,9 @@ export function PortalSupportDetailContent({
           <PortalTicketStatusBadge status={ticket.status} />
           <PortalTicketPriorityBadge priority={ticket.priority} />
         </div>
-        <h1 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">{ticket.title}</h1>
+        <h1 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
+          {ticket.title}
+        </h1>
         <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
           Opened {formatPortalDate(ticket.createdAt)}
         </p>
@@ -102,12 +110,16 @@ export function PortalSupportDetailContent({
 
       <div className="rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-4 py-3">
-          <h2 className="text-sm font-semibold text-[var(--ozer-text-on-light)]">Conversation</h2>
+          <h2 className="text-sm font-semibold text-[var(--ozer-text-on-light)]">
+            Conversation
+          </h2>
         </div>
 
         <div className="max-h-[480px] space-y-3 overflow-y-auto px-4 py-4">
           {messages.length === 0 ? (
-            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">No messages yet.</p>
+            <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+              No messages yet.
+            </p>
           ) : (
             messages.map((message) => (
               <div
@@ -120,7 +132,7 @@ export function PortalSupportDetailContent({
                   </span>
                   <span>{formatPortalDate(message.createdAt)}</span>
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-slate-800">
+                <p className="text-sm whitespace-pre-wrap text-slate-800">
                   {message.message}
                 </p>
               </div>

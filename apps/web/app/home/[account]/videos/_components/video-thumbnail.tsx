@@ -15,8 +15,7 @@ export function VideoThumbnail({
   alt: string;
   className?: string;
 }) {
-  const urls =
-    candidates.length > 0 ? candidates : [VIDEO_THUMB_PLACEHOLDER];
+  const urls = candidates.length > 0 ? candidates : [VIDEO_THUMB_PLACEHOLDER];
   const [index, setIndex] = useState(0);
   const src = urls[Math.min(index, urls.length - 1)]!;
 

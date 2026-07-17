@@ -50,11 +50,23 @@ export const JOB_STATUS_CELL: Record<
   JobStatus,
   { label: string; bg: string; text: string }
 > = {
-  pending: { label: "Haven't started", bg: ozerStatusColors.pending, text: onDark },
-  in_progress: { label: 'On track', bg: ozerStatusColors.inProgress, text: onDark },
+  pending: {
+    label: "Haven't started",
+    bg: ozerStatusColors.pending,
+    text: onDark,
+  },
+  in_progress: {
+    label: 'On track',
+    bg: ozerStatusColors.inProgress,
+    text: onDark,
+  },
   on_hold: { label: 'On hold', bg: ozerStatusColors.onHold, text: onLight },
   completed: { label: 'Done', bg: ozerStatusColors.completed, text: onDark },
-  cancelled: { label: 'Cancelled', bg: ozerStatusColors.cancelled, text: onDark },
+  cancelled: {
+    label: 'Cancelled',
+    bg: ozerStatusColors.cancelled,
+    text: onDark,
+  },
 };
 
 export const PRIORITY_CELL: Record<
@@ -73,8 +85,16 @@ export const PHASE_CELL: Record<
 > = {
   upcoming: { label: 'Upcoming', bg: '#ff5ac4', text: onDark },
   ongoing: { label: 'Ongoing', bg: ozerStatusColors.onHold, text: onLight },
-  completed: { label: 'Completed', bg: ozerStatusColors.completed, text: onDark },
-  cancelled: { label: 'Cancelled', bg: ozerStatusColors.cancelled, text: onDark },
+  completed: {
+    label: 'Completed',
+    bg: ozerStatusColors.completed,
+    text: onDark,
+  },
+  cancelled: {
+    label: 'Cancelled',
+    bg: ozerStatusColors.cancelled,
+    text: onDark,
+  },
 };
 
 export function getProjectGroupId(status: string): ProjectGroupId {

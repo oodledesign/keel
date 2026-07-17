@@ -90,7 +90,9 @@ export function resolveSectionDateYmd(
 }
 
 /** Offsets from the week anchor's local date to each weekday in the same Mon–Sun week. */
-export function weekDayOffsetsForAnchor(weekAnchorIso: string): Record<string, number> {
+export function weekDayOffsetsForAnchor(
+  weekAnchorIso: string,
+): Record<string, number> {
   const anchor = parsePlanDateAnchor(weekAnchorIso);
   const anchorYmd = toLocalDateYmdFromAnchor(anchor);
   const offsets: Record<string, number> = {};

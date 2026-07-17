@@ -39,8 +39,7 @@ export function AdminAuditTable(props: {
 const columns: ColumnDef<AdminAuditRow>[] = [
   {
     header: 'When',
-    cell: ({ row }) =>
-      new Date(row.original.createdAt).toLocaleString('en-GB'),
+    cell: ({ row }) => new Date(row.original.createdAt).toLocaleString('en-GB'),
   },
   {
     header: 'Action',

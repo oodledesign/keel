@@ -1,14 +1,16 @@
 import { type NextRequest } from 'next/server';
 import { after } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { runPageOptimizeJob } from '~/lib/page-optimize/runner';
 import { PAGE_OPTIMIZE_CREDITS_ESTIMATE } from '~/lib/page-optimize/types';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
@@ -35,8 +37,8 @@ async function assertProjectAccess(
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
 
-    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
-    if (addonDenied) return addonDenied;
+  const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+  if (addonDenied) return addonDenied;
 
   const { data: project } = await supabaseCustomSchema(client, 'rankly')
     .from('projects')

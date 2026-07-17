@@ -1,8 +1,8 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import { redirect } from 'next/navigation';
 import { cookies } from 'next/headers';
+import { redirect } from 'next/navigation';
 
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
@@ -12,8 +12,8 @@ import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
-  getMaxStepForPersona,
   type CompanyRole,
+  getMaxStepForPersona,
 } from '../onboarding-steps.config';
 
 const ACCESSIBILITY_TEXT_SIZE_COOKIE = 'accessibility_text_size';
@@ -38,7 +38,9 @@ export async function getAccessibilityPreferencesForSync(): Promise<Accessibilit
 
   const { data: row } = await client
     .from('user_settings')
-    .select('accessibility_text_size, accessibility_dyslexia_font, accessibility_enhanced_focus')
+    .select(
+      'accessibility_text_size, accessibility_dyslexia_font, accessibility_enhanced_focus',
+    )
     .eq('user_id', result.data.id)
     .maybeSingle();
 
@@ -158,7 +160,8 @@ export async function upsertUserSettings(settings: {
   if (settings.first_name !== undefined || settings.last_name !== undefined) {
     const first = (settings.first_name ?? '').trim();
     const last = (settings.last_name ?? '').trim();
-    const displayName = [first, last].filter(Boolean).join(' ').trim() || first || null;
+    const displayName =
+      [first, last].filter(Boolean).join(' ').trim() || first || null;
     if (displayName) {
       await client
         .from('accounts')
@@ -176,28 +179,40 @@ export async function upsertUserSettings(settings: {
       : null;
   if (store) {
     if (settings.accessibility_text_size !== undefined) {
-      store.set(ACCESSIBILITY_TEXT_SIZE_COOKIE, settings.accessibility_text_size, {
-        path: '/',
-        maxAge: COOKIE_MAX_AGE,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      });
+      store.set(
+        ACCESSIBILITY_TEXT_SIZE_COOKIE,
+        settings.accessibility_text_size,
+        {
+          path: '/',
+          maxAge: COOKIE_MAX_AGE,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        },
+      );
     }
     if (settings.accessibility_dyslexia_font !== undefined) {
-      store.set(ACCESSIBILITY_DYSLEXIA_FONT_COOKIE, settings.accessibility_dyslexia_font ? '1' : '0', {
-        path: '/',
-        maxAge: COOKIE_MAX_AGE,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      });
+      store.set(
+        ACCESSIBILITY_DYSLEXIA_FONT_COOKIE,
+        settings.accessibility_dyslexia_font ? '1' : '0',
+        {
+          path: '/',
+          maxAge: COOKIE_MAX_AGE,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        },
+      );
     }
     if (settings.accessibility_enhanced_focus !== undefined) {
-      store.set(ACCESSIBILITY_ENHANCED_FOCUS_COOKIE, settings.accessibility_enhanced_focus ? '1' : '0', {
-        path: '/',
-        maxAge: COOKIE_MAX_AGE,
-        sameSite: 'lax',
-        secure: process.env.NODE_ENV === 'production',
-      });
+      store.set(
+        ACCESSIBILITY_ENHANCED_FOCUS_COOKIE,
+        settings.accessibility_enhanced_focus ? '1' : '0',
+        {
+          path: '/',
+          maxAge: COOKIE_MAX_AGE,
+          sameSite: 'lax',
+          secure: process.env.NODE_ENV === 'production',
+        },
+      );
     }
   }
 
@@ -303,4 +318,3 @@ export async function deleteTeamAccountFromOnboarding(
   revalidatePath(pathsConfig.app.home);
   redirect(pathsConfig.app.home);
 }
-

@@ -3,13 +3,14 @@
 import { useEffect, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
+
 import { toast } from '@kit/ui/sonner';
 
+import type { StepDef } from '../../_lib/onboarding-steps.config';
 import {
   updateMembershipTradeRole,
   updateOnboardingStep,
 } from '../../_lib/server/onboarding.actions';
-import type { StepDef } from '../../_lib/onboarding-steps.config';
 import { PrimaryButton } from '../primary-button';
 import { SelectionCard } from '../selection-card';
 

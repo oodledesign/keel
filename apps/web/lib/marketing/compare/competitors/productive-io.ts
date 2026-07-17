@@ -1,5 +1,8 @@
 import { OZER_TEAM_OF_FOUR } from '~/lib/marketing/compare/ozer-baseline';
-import type { ComparisonConfig, SourcedValue } from '~/lib/marketing/compare/types';
+import type {
+  ComparisonConfig,
+  SourcedValue,
+} from '~/lib/marketing/compare/types';
 
 function c<T>(
   value: T,

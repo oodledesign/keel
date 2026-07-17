@@ -4,15 +4,15 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { Button } from '@kit/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
-  resolveSpeakerLabel,
   type SpeakerBinding,
   type SpeakerMappings,
   type TranscriptSegment,
+  resolveSpeakerLabel,
 } from '~/lib/recorder/transcript-speakers';
 
 import { saveSpeakerMappings } from './meeting-speaker-labels-editor';
@@ -87,7 +87,7 @@ function SpeakerAssignPopover({
           disabled={disabled}
           className={cn(
             'text-left text-xs font-semibold text-[var(--ozer-accent)]',
-            'rounded px-1 -mx-1 transition hover:bg-[var(--workspace-shell-sidebar-accent)] hover:underline',
+            '-mx-1 rounded px-1 transition hover:bg-[var(--workspace-shell-sidebar-accent)] hover:underline',
           )}
         >
           {resolveSpeakerLabel(
@@ -95,7 +95,10 @@ function SpeakerAssignPopover({
             mappings,
             clients,
             contacts,
-            members.map((member) => ({ userId: member.userId, name: member.name })),
+            members.map((member) => ({
+              userId: member.userId,
+              name: member.name,
+            })),
           )}
         </button>
       </PopoverTrigger>
@@ -103,7 +106,9 @@ function SpeakerAssignPopover({
         className="w-80 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4"
         align="start"
       >
-        <p className="mb-3 text-xs text-[var(--workspace-shell-text-muted)]">Assign: {speakerKey}</p>
+        <p className="mb-3 text-xs text-[var(--workspace-shell-text-muted)]">
+          Assign: {speakerKey}
+        </p>
         <SpeakerLabelPicker
           accountId={accountId}
           binding={draft}
@@ -117,7 +122,9 @@ function SpeakerAssignPopover({
             onContactsChange(
               contacts.some((row) => row.id === contact.id)
                 ? contacts
-                : [...contacts, contact].sort((a, b) => a.name.localeCompare(b.name)),
+                : [...contacts, contact].sort((a, b) =>
+                    a.name.localeCompare(b.name),
+                  ),
             );
             setDraft({ type: 'contact', contactId: contact.id });
           }}
@@ -175,7 +182,10 @@ export function MeetingTranscriptSegments({
   }));
   const visibleSegments = draftSegments ?? segments;
 
-  const persistMapping = (speakerKey: string, binding: SpeakerBinding | null) => {
+  const persistMapping = (
+    speakerKey: string,
+    binding: SpeakerBinding | null,
+  ) => {
     const next: SpeakerMappings = { ...mappings };
     if (!binding) {
       delete next[speakerKey];
@@ -195,7 +205,9 @@ export function MeetingTranscriptSegments({
         toast.success('Speaker updated');
         onSaved();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to update speaker');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to update speaker',
+        );
       }
     });
   };
@@ -248,7 +260,7 @@ export function MeetingTranscriptSegments({
                 className="mt-1 min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm text-[var(--workspace-shell-text)]"
               />
             ) : (
-              <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
+              <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
                 {segment.text}
               </p>
             )}

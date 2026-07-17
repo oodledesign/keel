@@ -31,7 +31,11 @@ export function resolveMeetingParticipants(
   mappings: SpeakerMappings,
   clients: MeetingParticipantLookupClient[],
   contacts: MeetingParticipantLookupContact[],
-  members: Array<{ userId: string; name: string; pictureUrl?: string | null }> = [],
+  members: Array<{
+    userId: string;
+    name: string;
+    pictureUrl?: string | null;
+  }> = [],
 ): MeetingParticipant[] {
   const byKey = new Map<string, MeetingParticipant>();
 

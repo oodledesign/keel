@@ -10,7 +10,9 @@ import { triggerHapticFeedback } from '~/lib/haptics';
  */
 export function MobileTapHaptics() {
   useEffect(() => {
-    const coarsePointer = window.matchMedia('(hover: none) and (pointer: coarse)');
+    const coarsePointer = window.matchMedia(
+      '(hover: none) and (pointer: coarse)',
+    );
     if (!coarsePointer.matches) return;
 
     const onPointerUp = (event: PointerEvent) => {
@@ -28,7 +30,8 @@ export function MobileTapHaptics() {
     };
 
     document.addEventListener('pointerup', onPointerUp, { capture: true });
-    return () => document.removeEventListener('pointerup', onPointerUp, { capture: true });
+    return () =>
+      document.removeEventListener('pointerup', onPointerUp, { capture: true });
   }, []);
 
   return null;

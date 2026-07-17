@@ -4,17 +4,16 @@ import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Label } from '@kit/ui/label';
-
-import { ACCESSIBILITY_UPDATED_EVENT } from '~/components/text-size-sync';
-import { AppearanceThemeSelector } from '~/components/appearance-theme-selector';
-import { Switch } from '@kit/ui/switch';
-import { toast } from '@kit/ui/sonner';
-
-import { upsertUserSettings } from '../../../../../onboarding/_lib/server/onboarding.actions';
-
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader } from '@kit/ui/card';
+import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
+
+import { AppearanceThemeSelector } from '~/components/appearance-theme-selector';
+import { ACCESSIBILITY_UPDATED_EVENT } from '~/components/text-size-sync';
+
+import { upsertUserSettings } from '../../../../../onboarding/_lib/server/onboarding.actions';
 
 const TEXT_SIZES = [
   { value: 'small', label: 'Small' },
@@ -37,12 +36,21 @@ export function AccessibilitySettingsForm({
 }) {
   const router = useRouter();
   const [textSize, setTextSize] = useState<'small' | 'standard' | 'large'>(
-    (initial.accessibility_text_size as 'small' | 'standard' | 'large') ?? 'standard',
+    (initial.accessibility_text_size as 'small' | 'standard' | 'large') ??
+      'standard',
   );
-  const [highContrast, setHighContrast] = useState(initial.accessibility_high_contrast ?? false);
-  const [simplifiedMode, setSimplifiedMode] = useState(initial.accessibility_simplified_mode ?? true);
-  const [enhancedFocus, setEnhancedFocus] = useState(initial.accessibility_enhanced_focus ?? false);
-  const [dyslexiaFont, setDyslexiaFont] = useState(initial.accessibility_dyslexia_font ?? false);
+  const [highContrast, setHighContrast] = useState(
+    initial.accessibility_high_contrast ?? false,
+  );
+  const [simplifiedMode, setSimplifiedMode] = useState(
+    initial.accessibility_simplified_mode ?? true,
+  );
+  const [enhancedFocus, setEnhancedFocus] = useState(
+    initial.accessibility_enhanced_focus ?? false,
+  );
+  const [dyslexiaFont, setDyslexiaFont] = useState(
+    initial.accessibility_dyslexia_font ?? false,
+  );
   const [loading, setLoading] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -114,30 +122,52 @@ export function AccessibilitySettingsForm({
             <div className="flex items-center justify-between gap-4">
               <div>
                 <Label className="text-base font-medium">High contrast</Label>
-                <p className="text-muted-foreground text-sm">Increase contrast for readability.</p>
+                <p className="text-muted-foreground text-sm">
+                  Increase contrast for readability.
+                </p>
               </div>
-              <Switch checked={highContrast} onCheckedChange={setHighContrast} />
+              <Switch
+                checked={highContrast}
+                onCheckedChange={setHighContrast}
+              />
             </div>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <Label className="text-base font-medium">Simplified mode</Label>
-                <p className="text-muted-foreground text-sm">Reduce visual clutter.</p>
+                <p className="text-muted-foreground text-sm">
+                  Reduce visual clutter.
+                </p>
               </div>
-              <Switch checked={simplifiedMode} onCheckedChange={setSimplifiedMode} />
+              <Switch
+                checked={simplifiedMode}
+                onCheckedChange={setSimplifiedMode}
+              />
             </div>
             <div className="flex items-center justify-between gap-4">
               <div>
                 <Label className="text-base font-medium">Enhanced focus</Label>
-                <p className="text-muted-foreground text-sm">Highlight focused elements.</p>
+                <p className="text-muted-foreground text-sm">
+                  Highlight focused elements.
+                </p>
               </div>
-              <Switch checked={enhancedFocus} onCheckedChange={setEnhancedFocus} />
+              <Switch
+                checked={enhancedFocus}
+                onCheckedChange={setEnhancedFocus}
+              />
             </div>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <Label className="text-base font-medium">Dyslexia-friendly font</Label>
-                <p className="text-muted-foreground text-sm">Use a more readable font.</p>
+                <Label className="text-base font-medium">
+                  Dyslexia-friendly font
+                </Label>
+                <p className="text-muted-foreground text-sm">
+                  Use a more readable font.
+                </p>
               </div>
-              <Switch checked={dyslexiaFont} onCheckedChange={setDyslexiaFont} />
+              <Switch
+                checked={dyslexiaFont}
+                onCheckedChange={setDyslexiaFont}
+              />
             </div>
           </div>
         </CardContent>

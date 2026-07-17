@@ -41,7 +41,11 @@ export async function loadPlatformEmailLog(params: {
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
 
-  let query = (client as unknown as { from: (table: string) => ReturnType<typeof client.from> })
+  let query = (
+    client as unknown as {
+      from: (table: string) => ReturnType<typeof client.from>;
+    }
+  )
     .from('platform_email_log')
     .select(
       `
@@ -123,12 +127,16 @@ export async function loadPlatformEmailLog(params: {
   };
 }
 
-export async function loadGroupedCampaignEmailLog(): Promise<GroupedEmailLogCampaignRow[]> {
+export async function loadGroupedCampaignEmailLog(): Promise<
+  GroupedEmailLogCampaignRow[]
+> {
   await requireSuperAdmin();
   const client = getSupabaseServerClient();
 
   const { data, error } = await (
-    client as unknown as { from: (table: string) => ReturnType<typeof client.from> }
+    client as unknown as {
+      from: (table: string) => ReturnType<typeof client.from>;
+    }
   )
     .from('email_campaigns')
     .select('id, title, recipient_list, sent_count, sent_at, created_at')
@@ -139,14 +147,16 @@ export async function loadGroupedCampaignEmailLog(): Promise<GroupedEmailLogCamp
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as unknown as Array<{
-    id: string;
-    title: string;
-    recipient_list: string;
-    sent_count: number | null;
-    sent_at: string | null;
-    created_at: string;
-  }>).map((row) => ({
+  return (
+    (data ?? []) as unknown as Array<{
+      id: string;
+      title: string;
+      recipient_list: string;
+      sent_count: number | null;
+      sent_at: string | null;
+      created_at: string;
+    }>
+  ).map((row) => ({
     id: row.id,
     title: row.title,
     recipient_list: row.recipient_list,
@@ -171,5 +181,9 @@ export async function loadEmailLogBusinessOptions(): Promise<
     throw new Error(error.message);
   }
 
-  return (data ?? []) as Array<{ id: string; name: string | null; slug: string | null }>;
+  return (data ?? []) as Array<{
+    id: string;
+    name: string | null;
+    slug: string | null;
+  }>;
 }

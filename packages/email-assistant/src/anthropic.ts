@@ -12,8 +12,7 @@ function getAnthropicConfig() {
     );
   }
 
-  const model =
-    process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
+  const model = process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
 
   return { apiKey, model };
 }
@@ -50,7 +49,9 @@ export async function callAnthropicText(input: {
     content?: Array<{ type: string; text?: string }>;
   };
 
-  const text = body.content?.find((block) => block.type === 'text')?.text?.trim();
+  const text = body.content
+    ?.find((block) => block.type === 'text')
+    ?.text?.trim();
 
   if (!text) {
     throw new Error('Empty response from Anthropic');

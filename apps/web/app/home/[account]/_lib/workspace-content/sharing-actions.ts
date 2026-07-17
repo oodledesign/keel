@@ -1,8 +1,8 @@
 'use server';
 
-import { randomBytes } from 'crypto';
-
 import { revalidatePath } from 'next/cache';
+
+import { randomBytes } from 'crypto';
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
@@ -50,8 +50,7 @@ export const setWorkspaceItemPublicAction = enhanceAction(
 
     revalidateNotesAndFilesPaths(data.accountSlug);
 
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
+    const origin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
     const publicUrl =
       data.isPublic && publicToken
         ? `${origin}/portal/shared/${encodeURIComponent(publicToken)}`
@@ -92,8 +91,7 @@ export const getWorkspaceItemPublicLinkAction = enhanceAction(
     }
 
     const token = row.public_token as string;
-    const origin =
-      process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
+    const origin = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
     return {
       publicToken: token,
       publicUrl: `${origin}/portal/shared/${encodeURIComponent(token)}`,
@@ -110,8 +108,14 @@ export const getWorkspaceItemPublicLinkAction = enhanceAction(
 );
 
 function revalidateNotesAndFilesPaths(accountSlug: string) {
-  const notesBase = pathsConfig.app.accountNotes.replace('[account]', accountSlug);
-  const docsBase = pathsConfig.app.accountDocs.replace('[account]', accountSlug);
+  const notesBase = pathsConfig.app.accountNotes.replace(
+    '[account]',
+    accountSlug,
+  );
+  const docsBase = pathsConfig.app.accountDocs.replace(
+    '[account]',
+    accountSlug,
+  );
   revalidatePath(notesBase);
   revalidatePath(docsBase);
   revalidatePath(`/home/${accountSlug}`);

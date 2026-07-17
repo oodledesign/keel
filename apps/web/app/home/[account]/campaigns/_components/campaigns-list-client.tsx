@@ -77,7 +77,9 @@ export function CampaignsListClient({
         router.push(detailPath(project.id));
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to create campaign');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to create campaign',
+        );
       }
     });
   };
@@ -85,7 +87,10 @@ export function CampaignsListClient({
   const handleImportWebsiteRevamp = () => {
     startTransition(async () => {
       try {
-        const project = await importWebsiteRevampCampaign({ accountId, accountSlug });
+        const project = await importWebsiteRevampCampaign({
+          accountId,
+          accountSlug,
+        });
         toast.success('Website Revamp Campaign imported');
         router.push(detailPath(project.id));
         router.refresh();
@@ -99,7 +104,9 @@ export function CampaignsListClient({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">Campaign trackers</h1>
+          <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+            Campaign trackers
+          </h1>
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             Spreadsheet-style project boards with custom columns per campaign.
           </p>
@@ -133,9 +140,12 @@ export function CampaignsListClient({
       {projects.length === 0 ? (
         <div className="rounded-2xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-6 py-14 text-center">
           <Table2 className="mx-auto h-10 w-10 text-[var(--workspace-shell-text-muted)]" />
-          <p className="mt-4 text-[var(--workspace-shell-text)]">No campaign trackers yet</p>
+          <p className="mt-4 text-[var(--workspace-shell-text)]">
+            No campaign trackers yet
+          </p>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Create a campaign or import the Website Revamp template for Thistleleaf.
+            Create a campaign or import the Website Revamp template for
+            Thistleleaf.
           </p>
         </div>
       ) : (
@@ -146,9 +156,12 @@ export function CampaignsListClient({
               href={detailPath(project.id)}
               className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)] transition hover:border-[color:var(--workspace-shell-border)]"
             >
-              <p className="font-semibold text-[var(--workspace-shell-text)]">{project.name}</p>
+              <p className="font-semibold text-[var(--workspace-shell-text)]">
+                {project.name}
+              </p>
               <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
-                {project.clientCount} client{project.clientCount === 1 ? '' : 's'}
+                {project.clientCount} client
+                {project.clientCount === 1 ? '' : 's'}
               </p>
             </Link>
           ))}
@@ -165,7 +178,9 @@ export function CampaignsListClient({
           </DialogHeader>
           <div className="space-y-4">
             <div>
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Name</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Name
+              </Label>
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
@@ -174,7 +189,9 @@ export function CampaignsListClient({
               />
             </div>
             <div>
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Template</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Template
+              </Label>
               <Select
                 value={template}
                 onValueChange={(value) =>
@@ -185,8 +202,12 @@ export function CampaignsListClient({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                  <SelectItem value="blank">Blank (add your own columns)</SelectItem>
-                  <SelectItem value="website_revamp">Website revamp campaign</SelectItem>
+                  <SelectItem value="blank">
+                    Blank (add your own columns)
+                  </SelectItem>
+                  <SelectItem value="website_revamp">
+                    Website revamp campaign
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>

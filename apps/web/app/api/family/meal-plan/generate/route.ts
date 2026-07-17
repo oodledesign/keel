@@ -1,15 +1,16 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { generateMealPlan } from '~/lib/ai/meal-plan-generate';
-import { chunkDates } from '~/home/(user)/life/family/_lib/server/family-meal.dates';
-import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import type {
   MealPreferencesRow,
   RecipeRow,
 } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
+import { chunkDates } from '~/home/(user)/life/family/_lib/server/family-meal.dates';
+import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
+import { generateMealPlan } from '~/lib/ai/meal-plan-generate';
 
 export const dynamic = 'force-dynamic';
 
@@ -109,7 +110,10 @@ export async function POST(request: NextRequest) {
   const targetDateSet = new Set(parsed.data.dates);
   const existingMeals = (existingEntryData ?? [])
     .map((row) => {
-      const date = String((row as { plan_date: string }).plan_date).slice(0, 10);
+      const date = String((row as { plan_date: string }).plan_date).slice(
+        0,
+        10,
+      );
       const title = String((row as { title?: string }).title ?? '').trim();
       return { date, title };
     })

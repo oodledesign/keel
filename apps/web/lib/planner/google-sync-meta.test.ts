@@ -1,9 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import {
-  googleSyncMetaParts,
-  parseGoogleSyncMeta,
-} from './google-sync-meta';
+import { googleSyncMetaParts, parseGoogleSyncMeta } from './google-sync-meta';
 import {
   attachGoogleEventIdsToPlan,
   parsePlanDocument,
@@ -52,7 +49,9 @@ describe('attachGoogleEventIdsToPlan', () => {
     const eventStart = new Date(dateIso);
     eventStart.setHours(9, 0, 0, 0);
 
-    const doc = parsePlanDocument('9am–10am · 📅 Team stand-up\n10am–11am · Deep work');
+    const doc = parsePlanDocument(
+      '9am–10am · 📅 Team stand-up\n10am–11am · Deep work',
+    );
 
     const linked = attachGoogleEventIdsToPlan(
       doc,

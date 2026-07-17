@@ -1,9 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import dynamic from 'next/dynamic';
-
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
@@ -35,23 +41,37 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@kit/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
 import {
   AnalyticsDateRangePicker,
   type DateRangeSelection,
 } from '~/components/date-range/analytics-date-range-picker';
-import { resolveAnalyticsDateRange } from '~/lib/date-range/analytics-date-range';
-import { buildFinanceChartSeries, isDailyFinanceChartRange } from '~/lib/finance/build-finance-chart-series';
+import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import { resolveAnalyticsDateRange } from '~/lib/date-range/analytics-date-range';
+import {
+  buildFinanceChartSeries,
+  isDailyFinanceChartRange,
+} from '~/lib/finance/build-finance-chart-series';
+
+import { FINANCE_TRANSACTION_PAGE_SIZES } from '../_lib/finance-transaction-pagination';
+import {
+  applySuggestedCategoriesAction,
+  categorizeFinanceTransactionAction,
+  createManualTransactionAction,
+  importCsvTransactionsAction,
+  loadFinancesDashboardAction,
+  setFinanceTransactionLinksAction,
+  setFinanceTransferAction,
+  suggestCsvMappingAction,
+  suggestTransactionCategoriesAction,
+  syncFreeAgentAction,
+  syncFreeAgentHistoryChunkAction,
+} from '../_lib/server/finances-actions';
+import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
 
 const FinanceNetLineChart = dynamic(
   () =>
@@ -68,22 +88,6 @@ const FinanceTrendBarChart = dynamic(
     ),
   { ssr: false },
 );
-
-import {
-  applySuggestedCategoriesAction,
-  categorizeFinanceTransactionAction,
-  createManualTransactionAction,
-  importCsvTransactionsAction,
-  loadFinancesDashboardAction,
-  setFinanceTransactionLinksAction,
-  setFinanceTransferAction,
-  suggestCsvMappingAction,
-  suggestTransactionCategoriesAction,
-  syncFreeAgentAction,
-  syncFreeAgentHistoryChunkAction,
-} from '../_lib/server/finances-actions';
-import { FINANCE_TRANSACTION_PAGE_SIZES } from '../_lib/finance-transaction-pagination';
-import { FinancesDashboardSkeleton } from './finances-dashboard-skeleton';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -114,7 +118,9 @@ function parseCsv(text: string): { headers: string[]; rows: string[][] } {
   const lines = text.split(/\r?\n/).filter((l) => l.trim());
   if (lines.length < 2) return { headers: [], rows: [] };
 
-  const headers = lines[0]!.split(',').map((h) => h.trim().replace(/^"|"$/g, ''));
+  const headers = lines[0]!
+    .split(',')
+    .map((h) => h.trim().replace(/^"|"$/g, ''));
   const rows = lines.slice(1).map((line) => {
     const parts: string[] = [];
     let cur = '';
@@ -151,7 +157,8 @@ export function FinancesPageContent({
   const [dateFrom, setDateFrom] = useState(initialDateRange().from);
   const [dateTo, setDateTo] = useState(initialDateRange().to);
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState<(typeof FINANCE_TRANSACTION_PAGE_SIZES)[number]>(50);
+  const [pageSize, setPageSize] =
+    useState<(typeof FINANCE_TRANSACTION_PAGE_SIZES)[number]>(50);
   const [searchInput, setSearchInput] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [importOpen, setImportOpen] = useState(false);
@@ -247,8 +254,7 @@ export function FinancesPageContent({
   }, [accountId, accountSlug, refresh, router, searchParams]);
 
   const chartData = useMemo(
-    () =>
-      buildFinanceChartSeries(data?.summaryRows ?? [], dateFrom, dateTo),
+    () => buildFinanceChartSeries(data?.summaryRows ?? [], dateFrom, dateTo),
     [data?.summaryRows, dateFrom, dateTo],
   );
 
@@ -288,8 +294,7 @@ export function FinancesPageContent({
     }
     const values = [...months.values()];
     if (!values.length) return null;
-    const avgIncome =
-      values.reduce((s, v) => s + v.income, 0) / values.length;
+    const avgIncome = values.reduce((s, v) => s + v.income, 0) / values.length;
     const avgExpense =
       values.reduce((s, v) => s + v.expense, 0) / values.length;
     return {
@@ -344,7 +349,9 @@ export function FinancesPageContent({
         await refresh({ background: true });
         toast.success('Client / project updated');
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Could not update links');
+        toast.error(
+          err instanceof Error ? err.message : 'Could not update links',
+        );
       }
     });
   };
@@ -452,7 +459,9 @@ export function FinancesPageContent({
             return;
           }
 
-          const wideRange = resolveAnalyticsDateRange(FINANCES_DEFAULT_DATE_RANGE);
+          const wideRange = resolveAnalyticsDateRange(
+            FINANCES_DEFAULT_DATE_RANGE,
+          );
           setDateFrom(wideRange.fromIso);
           setDateTo(wideRange.toIso);
           setPage(1);
@@ -567,7 +576,9 @@ export function FinancesPageContent({
         <FinancesDashboardSkeleton />
       ) : loadFailed ? (
         <div className={cn(panelClass, 'p-6 text-center')}>
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Could not load finance data.</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            Could not load finance data.
+          </p>
           <Button
             type="button"
             variant="outline"
@@ -607,8 +618,8 @@ export function FinancesPageContent({
 
           {data.summary.transferPence > 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              {formatPence(data.summary.transferPence)} in internal transfers excluded
-              from income and expenses.
+              {formatPence(data.summary.transferPence)} in internal transfers
+              excluded from income and expenses.
             </p>
           ) : null}
 
@@ -756,7 +767,9 @@ function FinancesPageMenu({
         </DropdownMenuItem>
         {freeAgentConnected ? (
           <DropdownMenuItem disabled={pending} onClick={onSyncFreeAgent}>
-            <RefreshCw className={cn('mr-2 h-4 w-4', pending && 'animate-spin')} />
+            <RefreshCw
+              className={cn('mr-2 h-4 w-4', pending && 'animate-spin')}
+            />
             Sync FreeAgent
           </DropdownMenuItem>
         ) : (
@@ -813,7 +826,9 @@ function TransactionsPanel({
   search: string;
   onSearchChange: (search: string) => void;
   onPageChange: (page: number) => void;
-  onPageSizeChange: (pageSize: (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number]) => void;
+  onPageSizeChange: (
+    pageSize: (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number],
+  ) => void;
   onSuggestCategories: () => void;
   onApplySuggestions: () => void;
   onCategorize: (transactionId: string, categoryId: string | null) => void;
@@ -835,7 +850,9 @@ function TransactionsPanel({
   return (
     <div className={cn(panelClass, 'overflow-hidden')}>
       <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-        <h3 className="font-medium text-[var(--workspace-shell-text)]">Transactions</h3>
+        <h3 className="font-medium text-[var(--workspace-shell-text)]">
+          Transactions
+        </h3>
         <div className="flex flex-wrap items-center gap-2">
           {uncategorizedCount > 0 ? (
             <>
@@ -882,11 +899,18 @@ function TransactionsPanel({
                 className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
               >
                 <DropdownMenuItem disabled={pending} onClick={onSyncFreeAgent}>
-                  <RefreshCw className={cn('mr-2 h-4 w-4', pending && 'animate-spin')} />
+                  <RefreshCw
+                    className={cn('mr-2 h-4 w-4', pending && 'animate-spin')}
+                  />
                   Sync FreeAgent
                 </DropdownMenuItem>
-                <DropdownMenuItem disabled={pending} onClick={onSyncFreeAgentHistory}>
-                  <RefreshCw className={cn('mr-2 h-4 w-4', pending && 'animate-spin')} />
+                <DropdownMenuItem
+                  disabled={pending}
+                  onClick={onSyncFreeAgentHistory}
+                >
+                  <RefreshCw
+                    className={cn('mr-2 h-4 w-4', pending && 'animate-spin')}
+                  />
                   Sync all FreeAgent history
                 </DropdownMenuItem>
               </DropdownMenuContent>
@@ -895,8 +919,8 @@ function TransactionsPanel({
         </div>
       </div>
       <div className="flex flex-wrap items-center gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-        <div className="relative min-w-[220px] flex-1 max-w-sm">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+        <div className="relative max-w-sm min-w-[220px] flex-1">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
             placeholder="Search description..."
             value={search}
@@ -942,7 +966,9 @@ function TransactionsPanel({
               {data.transactions.map((tx) => {
                 const pence = tx.amount_pence as number;
                 const isTransfer = Boolean(tx.is_transfer);
-                const cat = data.categories.find((c) => c.id === tx.category_id);
+                const cat = data.categories.find(
+                  (c) => c.id === tx.category_id,
+                );
                 const suggestion = suggestionMap.get(tx.id as string);
                 const suggestedCat = suggestion?.categoryId
                   ? data.categories.find((c) => c.id === suggestion.categoryId)
@@ -951,17 +977,20 @@ function TransactionsPanel({
                 const txProjectId = (tx.project_id as string | null) ?? null;
                 const projectOptions = (data.projects ?? []).filter(
                   (project) =>
-                    !txClientId || !project.client_id || project.client_id === txClientId,
+                    !txClientId ||
+                    !project.client_id ||
+                    project.client_id === txClientId,
                 );
                 return (
                   <tr
                     key={tx.id as string}
                     className={cn(
                       'border-b border-[color:var(--workspace-shell-border)]',
-                      isTransfer && 'bg-[var(--workspace-shell-sidebar-accent)]',
+                      isTransfer &&
+                        'bg-[var(--workspace-shell-sidebar-accent)]',
                     )}
                   >
-                    <td className="whitespace-nowrap px-4 py-2 text-[var(--workspace-shell-text-muted)]">
+                    <td className="px-4 py-2 whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                       {String(tx.transaction_date)}
                     </td>
                     <td className="max-w-xs truncate px-4 py-2 text-[var(--workspace-shell-text)]">
@@ -969,13 +998,15 @@ function TransactionsPanel({
                       {suggestedCat && !tx.category_id && !isTransfer ? (
                         <span className="mt-1 block text-xs text-[var(--ozer-accent-muted)]">
                           AI suggests: {String(suggestedCat.name)}
-                          {suggestion?.confidence ? ` (${suggestion.confidence})` : ''}
+                          {suggestion?.confidence
+                            ? ` (${suggestion.confidence})`
+                            : ''}
                         </span>
                       ) : null}
                     </td>
                     <td
                       className={cn(
-                        'whitespace-nowrap px-4 py-2 font-medium',
+                        'px-4 py-2 font-medium whitespace-nowrap',
                         isTransfer
                           ? 'text-[var(--workspace-shell-text-muted)]'
                           : pence >= 0
@@ -998,7 +1029,9 @@ function TransactionsPanel({
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="normal">Income / expense</SelectItem>
+                          <SelectItem value="normal">
+                            Income / expense
+                          </SelectItem>
                           <SelectItem value="transfer">Transfer</SelectItem>
                         </SelectContent>
                       </Select>
@@ -1017,7 +1050,10 @@ function TransactionsPanel({
                         <SelectContent>
                           <SelectItem value="none">Uncategorised</SelectItem>
                           {(data.categories ?? []).map((c) => (
-                            <SelectItem key={c.id as string} value={c.id as string}>
+                            <SelectItem
+                              key={c.id as string}
+                              value={c.id as string}
+                            >
                               {String(c.name)}
                             </SelectItem>
                           ))}
@@ -1034,13 +1070,19 @@ function TransactionsPanel({
                           const nextClientId = v === 'none' ? null : v;
                           const nextProjectId =
                             txProjectId &&
-                            (data.projects ?? []).find((p) => p.id === txProjectId)
-                              ?.client_id &&
-                            (data.projects ?? []).find((p) => p.id === txProjectId)
-                              ?.client_id !== nextClientId
+                            (data.projects ?? []).find(
+                              (p) => p.id === txProjectId,
+                            )?.client_id &&
+                            (data.projects ?? []).find(
+                              (p) => p.id === txProjectId,
+                            )?.client_id !== nextClientId
                               ? null
                               : txProjectId;
-                          onSetLinks(tx.id as string, nextClientId, nextProjectId);
+                          onSetLinks(
+                            tx.id as string,
+                            nextClientId,
+                            nextProjectId,
+                          );
                         }}
                         disabled={pending}
                       >
@@ -1068,7 +1110,9 @@ function TransactionsPanel({
                             onSetLinks(tx.id as string, txClientId, null);
                             return;
                           }
-                          const project = (data.projects ?? []).find((p) => p.id === v);
+                          const project = (data.projects ?? []).find(
+                            (p) => p.id === v,
+                          );
                           onSetLinks(
                             tx.id as string,
                             project?.client_id ?? txClientId,
@@ -1090,7 +1134,7 @@ function TransactionsPanel({
                         </SelectContent>
                       </Select>
                     </td>
-                    <td className="px-4 py-2 text-xs capitalize text-[var(--workspace-shell-text-muted)]">
+                    <td className="px-4 py-2 text-xs text-[var(--workspace-shell-text-muted)] capitalize">
                       {String(tx.source)}
                       {tx.sync_status === 'push_failed' ? ' · sync failed' : ''}
                     </td>
@@ -1112,7 +1156,11 @@ function TransactionsPanel({
             <Select
               value={String(pageSize)}
               onValueChange={(value) =>
-                onPageSizeChange(Number(value) as (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number])
+                onPageSizeChange(
+                  Number(
+                    value,
+                  ) as (typeof FINANCE_TRANSACTION_PAGE_SIZES)[number],
+                )
               }
             >
               <SelectTrigger className="h-8 w-[110px] border-[color:var(--workspace-shell-border)] bg-transparent text-xs">
@@ -1136,7 +1184,7 @@ function TransactionsPanel({
             >
               Previous
             </Button>
-            <span className="text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+            <span className="text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
               Page {page} of {totalPages}
             </span>
             <Button
@@ -1214,7 +1262,10 @@ function CsvImportSheet({
         toast.error('Could not parse CSV');
         return;
       }
-      const suggestion = await suggestCsvMappingAction({ headers, sampleRows: rows });
+      const suggestion = await suggestCsvMappingAction({
+        headers,
+        sampleRows: rows,
+      });
       setMappingPreview(JSON.stringify(suggestion.mapping, null, 2));
     });
   };
@@ -1224,7 +1275,10 @@ function CsvImportSheet({
     startTransition(async () => {
       const text = await file.text();
       const { headers, rows } = parseCsv(text);
-      const suggestion = await suggestCsvMappingAction({ headers, sampleRows: rows });
+      const suggestion = await suggestCsvMappingAction({
+        headers,
+        sampleRows: rows,
+      });
       try {
         const result = await importCsvTransactionsAction({
           accountId,
@@ -1259,7 +1313,9 @@ function CsvImportSheet({
           />
           {mappingPreview ? (
             <div>
-              <Label className="text-[var(--workspace-shell-text-muted)]">AI column mapping</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                AI column mapping
+              </Label>
               <pre className="mt-2 max-h-40 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3 text-xs text-[var(--workspace-shell-text-muted)]">
                 {mappingPreview}
               </pre>
@@ -1338,7 +1394,10 @@ function ManualTransactionSheet({
         <div className="mt-6 space-y-4">
           <div>
             <Label>Type</Label>
-            <Select value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
+            <Select
+              value={kind}
+              onValueChange={(v) => setKind(v as typeof kind)}
+            >
               <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)]">
                 <SelectValue />
               </SelectTrigger>

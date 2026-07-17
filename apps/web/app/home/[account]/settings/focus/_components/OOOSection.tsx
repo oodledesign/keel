@@ -29,10 +29,10 @@ import type { WorkspaceFocusSettings } from '~/home/[account]/settings/focus/_li
 import useWorkspaceFocus from '~/lib/hooks/use-workspace-focus';
 
 import {
+  type FocusFormValues,
   OOO_TRIGGER_OPTIONS,
   oooTriggerReasonLabel,
   toWorkspaceFocusPreview,
-  type FocusFormValues,
 } from '../_lib/focus-form';
 
 type OOOSectionProps = {
@@ -98,7 +98,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
           <div className="overflow-hidden">
             <div className="space-y-6 pt-1">
               <div className="space-y-3">
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   When to send
                 </p>
                 <FormField
@@ -218,7 +218,9 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
               <Collapsible open={moreOpen} onOpenChange={setMoreOpen}>
                 <CollapsibleTrigger className="flex w-full items-center justify-between rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/20 px-4 py-3 text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--workspace-shell-text)]">
                   More options
-                  <span className="text-[var(--workspace-shell-text-muted)]">{moreOpen ? '▴' : '▾'}</span>
+                  <span className="text-[var(--workspace-shell-text-muted)]">
+                    {moreOpen ? '▴' : '▾'}
+                  </span>
                 </CollapsibleTrigger>
                 <CollapsibleContent className="space-y-4 pt-4">
                   <FormField
@@ -314,7 +316,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                     : 'border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/20',
                 )}
               >
-                <p className="text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   Preview — message that would send right now
                 </p>
                 {focusState.isOOOActive ? (

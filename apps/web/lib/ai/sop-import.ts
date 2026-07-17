@@ -89,7 +89,9 @@ Rules:
   const result = SopImportSchema.safeParse(parsed);
 
   if (!result.success) {
-    throw new Error('AI returned an invalid SOP structure. Try again or add steps manually.');
+    throw new Error(
+      'AI returned an invalid SOP structure. Try again or add steps manually.',
+    );
   }
 
   return {

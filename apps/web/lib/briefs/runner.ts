@@ -6,6 +6,7 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import { synthesiseBrief } from './claude-synthesiser';
 import { scrapeTopCompetitors } from './competitor-scrape';
+import { getBriefJob, saveBrief, updateBriefJobStatus } from './db';
 import {
   enrichCompetitors,
   fetchCompetitors,
@@ -14,6 +15,7 @@ import {
   pickBestTopic,
 } from './domain-analysis';
 import { buildInternalLinkCandidates } from './internal-links';
+import { loadProjectBriefSettings } from './project-settings';
 import {
   countryCodeToLocation,
   fetchAiOverview,
@@ -24,17 +26,11 @@ import {
 import { classifyTemplate } from './template-classifier';
 import { estimateTraffic } from './traffic-potential';
 import {
-  estimateBriefCredits,
   type CompetitorWithOpr,
   type DomainKeyword,
   type KeywordGap,
+  estimateBriefCredits,
 } from './types';
-import {
-  getBriefJob,
-  saveBrief,
-  updateBriefJobStatus,
-} from './db';
-import { loadProjectBriefSettings } from './project-settings';
 
 function ranklyAdmin() {
   return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
@@ -56,16 +52,24 @@ export async function runBriefJob(jobId: string): Promise<void> {
     let targetKeyword = job.target_keyword?.trim() || null;
     let topicReasoning: string | null = null;
 
-    const skipDomainSteps =
-      job.mode === 'quick' || Boolean(job.spoke_id);
+    const skipDomainSteps = job.mode === 'quick' || Boolean(job.spoke_id);
 
     if (!skipDomainSteps && job.mode === 'full') {
       await updateBriefJobStatus(jobId, 'domain_overview');
-      domainKeywords = await fetchDomainKeywords(job.target_domain, locationCode);
+      domainKeywords = await fetchDomainKeywords(
+        job.target_domain,
+        locationCode,
+      );
 
       await updateBriefJobStatus(jobId, 'competitor_discovery');
-      const rawCompetitors = await fetchCompetitors(job.target_domain, locationCode);
-      const enriched = await enrichCompetitors(rawCompetitors, job.target_domain);
+      const rawCompetitors = await fetchCompetitors(
+        job.target_domain,
+        locationCode,
+      );
+      const enriched = await enrichCompetitors(
+        rawCompetitors,
+        job.target_domain,
+      );
       competitorDomains = enriched.competitors;
       targetOpr = enriched.targetOpr;
       targetReferringDomains = enriched.targetReferringDomains;
@@ -126,7 +130,9 @@ export async function runBriefJob(jobId: string): Promise<void> {
       targetKeyword,
     );
 
-    const successfulPages = competitorPages.filter((page) => !page.scrapeFailed);
+    const successfulPages = competitorPages.filter(
+      (page) => !page.scrapeFailed,
+    );
     const competitorAvgWc = Math.round(
       successfulPages.reduce((sum, page) => sum + page.wordCount, 0) /
         (successfulPages.length || 1),

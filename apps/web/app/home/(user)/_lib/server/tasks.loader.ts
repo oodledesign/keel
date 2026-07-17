@@ -7,17 +7,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+
+import { parseDueDateParts, toIsoDateString } from '../../../_lib/due-date-ymd';
+import { workspaceColorForSpaceType } from '../workspace-accent';
 
 /** Cap task payloads for faster SSR and hydration. */
 export const TASK_LIST_LIMIT = 300;
 
 const TASK_SELECT =
   'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-
-import { parseDueDateParts, toIsoDateString } from '../../../_lib/due-date-ymd';
-import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
-import { workspaceColorForSpaceType } from '../workspace-accent';
 
 type TaskQueryRow = {
   id: string;
@@ -216,7 +216,10 @@ function applyClientContext(
   }
 
   if (!next.workspaceName) {
-    const workspace = workspaceFromAccountId(client.account_id, maps.accountsById);
+    const workspace = workspaceFromAccountId(
+      client.account_id,
+      maps.accountsById,
+    );
     next.workspaceName = workspace.name;
     next.workspaceSlug = workspace.slug;
   }
@@ -250,7 +253,7 @@ function taskRowToPageTask(
     projectName =
       p && p.project_type !== 'campaign'
         ? deliveryProjectDisplayName(p)
-        : p?.name ?? null;
+        : (p?.name ?? null);
     const biz = p?.businesses;
     accentColor = biz?.colour ?? null;
     resolvedAccountId = p?.account_id ?? biz?.account_id ?? null;
@@ -259,16 +262,12 @@ function taskRowToPageTask(
     workspaceSlug = ws.slug;
   }
   if (row.client_id) {
-    const resolved = applyClientContext(
-      row.client_id,
-      maps,
-      {
-        clientName,
-        resolvedAccountId,
-        workspaceName,
-        workspaceSlug,
-      },
-    );
+    const resolved = applyClientContext(row.client_id, maps, {
+      clientName,
+      resolvedAccountId,
+      workspaceName,
+      workspaceSlug,
+    });
     clientName = resolved.clientName;
     resolvedAccountId = resolved.resolvedAccountId;
     workspaceName = resolved.workspaceName;
@@ -299,7 +298,8 @@ function taskRowToPageTask(
   if (resolvedAccountId) {
     const accountRow = maps.accountsById.get(resolvedAccountId);
     workspaceColor =
-      accentColor ?? workspaceColorForSpaceType(accountRow?.space_type ?? 'work');
+      accentColor ??
+      workspaceColorForSpaceType(accountRow?.space_type ?? 'work');
   } else if (!isWorkTaskRow(row)) {
     workspaceColor = '#7C3AED';
   }
@@ -455,7 +455,9 @@ async function enrichTaskRows(
     clientIds.length > 0
       ? rowDb
           .from('clients')
-          .select('id, display_name, first_name, last_name, account_id, picture_url')
+          .select(
+            'id, display_name, first_name, last_name, account_id, picture_url',
+          )
           .in('id', clientIds)
       : Promise.resolve({ data: [] as ClientEnrichment[] }),
     uniqueAccountIds.length > 0
@@ -624,16 +626,19 @@ export const loadTasksForTeamAccount = cache(
       return [];
     }
 
-    const [{ data: projectsData }, { data: clientsData }, { data: accountData }] =
-      await Promise.all([
-        scopedDb.from('projects').select('id').eq('account_id', accountId),
-        scopedDb.from('clients').select('id').eq('account_id', accountId),
-        scopedDb
-          .from('accounts')
-          .select('name, slug')
-          .eq('id', accountId)
-          .maybeSingle(),
-      ]);
+    const [
+      { data: projectsData },
+      { data: clientsData },
+      { data: accountData },
+    ] = await Promise.all([
+      scopedDb.from('projects').select('id').eq('account_id', accountId),
+      scopedDb.from('clients').select('id').eq('account_id', accountId),
+      scopedDb
+        .from('accounts')
+        .select('name, slug')
+        .eq('id', accountId)
+        .maybeSingle(),
+    ]);
 
     const workspaceFallback = {
       name: accountData?.name?.trim() || 'Workspace',
@@ -644,12 +649,13 @@ export const loadTasksForTeamAccount = cache(
     const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
 
     if (projectIds.length === 0 && clientIds.length === 0) {
-      const { data: accountOnlyData, error: accountOnlyError } = await userClient
-        .from('tasks')
-        .select(TASK_SELECT)
-        .eq('account_id', accountId)
-        .order('due_date', { ascending: true, nullsLast: true })
-        .limit(TASK_LIST_LIMIT);
+      const { data: accountOnlyData, error: accountOnlyError } =
+        await userClient
+          .from('tasks')
+          .select(TASK_SELECT)
+          .eq('account_id', accountId)
+          .order('due_date', { ascending: true, nullsLast: true })
+          .limit(TASK_LIST_LIMIT);
 
       if (accountOnlyError) {
         console.error(

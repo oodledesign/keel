@@ -26,7 +26,7 @@ export function WfImage({
   return (
     <div
       className={cn(
-        'flex items-center justify-center border border-dashed border-neutral-300 bg-neutral-200 text-[11px] font-medium uppercase tracking-wide text-neutral-500',
+        'flex items-center justify-center border border-dashed border-neutral-300 bg-neutral-200 text-[11px] font-medium tracking-wide text-neutral-500 uppercase',
         className,
       )}
     >

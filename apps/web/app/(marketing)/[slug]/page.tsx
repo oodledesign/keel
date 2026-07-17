@@ -1,12 +1,12 @@
 import { notFound } from 'next/navigation';
 
 import { SegmentLandingPage } from '~/(marketing)/_components/segment-landing-page';
+import { withI18n } from '~/lib/i18n/with-i18n';
+import { getSegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
 import {
   buildSegmentJsonLd,
   buildSegmentMetadata,
 } from '~/lib/marketing/segment-landing-seo';
-import { getSegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
-import { withI18n } from '~/lib/i18n/with-i18n';
 import { JsonLd } from '~/lib/seo/json-ld';
 
 type PageProps = {
@@ -14,10 +14,7 @@ type PageProps = {
 };
 
 export async function generateStaticParams() {
-  return [
-    { slug: 'personal' },
-    { slug: 'work' },
-  ];
+  return [{ slug: 'personal' }, { slug: 'work' }];
 }
 
 export async function generateMetadata({ params }: PageProps) {

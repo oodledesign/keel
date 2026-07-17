@@ -5,12 +5,14 @@ import { revalidatePath } from 'next/cache';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '../_lib/pipeline-constants';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
-function parseWorkspaceDealBusinessId(
-  businessId: string,
-): { accountId: string | null; businessId: string | null } {
+import { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '../_lib/pipeline-constants';
+
+function parseWorkspaceDealBusinessId(businessId: string): {
+  accountId: string | null;
+  businessId: string | null;
+} {
   if (businessId.startsWith(PIPELINE_WORKSPACE_BUSINESS_PREFIX)) {
     return {
       accountId: businessId.slice(PIPELINE_WORKSPACE_BUSINESS_PREFIX.length),
@@ -139,8 +141,10 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   if (input.companyName !== undefined) updates.company_name = input.companyName;
   if (input.value !== undefined) updates.value = input.value;
   if (input.stage !== undefined) updates.stage = input.stage;
-  if (input.nextAction !== undefined) updates.next_action = input.nextAction || null;
-  if (input.nextActionDate !== undefined) updates.next_action_date = input.nextActionDate || null;
+  if (input.nextAction !== undefined)
+    updates.next_action = input.nextAction || null;
+  if (input.nextActionDate !== undefined)
+    updates.next_action_date = input.nextActionDate || null;
   if (input.clientId !== undefined) updates.client_id = input.clientId || null;
 
   if (input.businessId !== undefined) {
@@ -153,8 +157,7 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
 
   if (input.contactName !== undefined || input.companyName !== undefined) {
     updates.name =
-      (input.companyName ?? '').trim() ||
-      (input.contactName ?? '').trim();
+      (input.companyName ?? '').trim() || (input.contactName ?? '').trim();
   }
 
   if (Object.keys(updates).length === 0) {
@@ -176,7 +179,9 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
 }
 
 /** Returns the first team account slug for the current user (for redirecting to clients after Won). */
-export async function getDefaultAccountSlug(): Promise<{ accountSlug: string } | null> {
+export async function getDefaultAccountSlug(): Promise<{
+  accountSlug: string;
+} | null> {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
@@ -228,16 +233,14 @@ export async function convertWonDealToProject(
     return { kind: 'error', error: error.message };
   }
 
-  const row = deal as
-    | {
-        account_id?: string | null;
-        client_id?: string | null;
-        company_name?: string | null;
-        contact_name?: string | null;
-        value?: number | null;
-        clients?: { display_name?: string | null } | null;
-      }
-    | null;
+  const row = deal as {
+    account_id?: string | null;
+    client_id?: string | null;
+    company_name?: string | null;
+    contact_name?: string | null;
+    value?: number | null;
+    clients?: { display_name?: string | null } | null;
+  } | null;
 
   if (!row?.client_id || !row.account_id) {
     return { kind: 'lead' };
@@ -256,9 +259,8 @@ export async function convertWonDealToProject(
       : undefined;
 
   try {
-    const { createJobsService } = await import(
-      '~/home/[account]/projects/_lib/server/jobs.service'
-    );
+    const { createJobsService } =
+      await import('~/home/[account]/projects/_lib/server/jobs.service');
     const service = createJobsService(client);
     const project = await service.createJob({
       accountId,

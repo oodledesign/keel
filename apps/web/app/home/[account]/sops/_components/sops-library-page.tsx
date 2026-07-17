@@ -83,7 +83,7 @@ export function SopsLibraryPage({
       ) : (
         Object.entries(byCategory).map(([category, items]) => (
           <section key={category} className="space-y-3">
-            <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+            <h2 className="text-sm font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               {category}
             </h2>
             <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
@@ -96,7 +96,9 @@ export function SopsLibraryPage({
                   className={`${panelClass} block p-5 transition-colors hover:border-[color:var(--workspace-shell-border)]`}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="font-semibold text-[var(--workspace-shell-text)]">{pb.title}</h3>
+                    <h3 className="font-semibold text-[var(--workspace-shell-text)]">
+                      {pb.title}
+                    </h3>
                     <Badge variant="outline" className="shrink-0 text-xs">
                       {recurrenceLabel[pb.recurrence] ?? pb.recurrence}
                     </Badge>
@@ -121,7 +123,7 @@ export function SopsLibraryPage({
 
       {recentRuns.length > 0 ? (
         <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+          <h2 className="text-sm font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Recent runs
           </h2>
           <div className={`${panelClass} divide-y divide-white/6`}>
@@ -139,7 +141,9 @@ export function SopsLibraryPage({
                   className="flex items-center gap-4 px-5 py-4 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 >
                   <div className="min-w-0 flex-1">
-                    <p className="truncate font-medium text-[var(--workspace-shell-text)]">{run.title}</p>
+                    <p className="truncate font-medium text-[var(--workspace-shell-text)]">
+                      {run.title}
+                    </p>
                     <p className="text-muted-foreground text-xs">
                       {run.playbook_title}
                       {run.period_label ? ` · ${run.period_label}` : ''}

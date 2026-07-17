@@ -3,8 +3,8 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
-  sendBookingReminderEmail,
   type NotificationSettings,
+  sendBookingReminderEmail,
 } from '../../app/book/_lib/server/booking-emails';
 import { loadBookingByManagementToken } from '../../app/book/_lib/server/public-booking.service';
 
@@ -27,7 +27,10 @@ function table(client: unknown, name: string) {
     client as {
       from: (n: string) => {
         select: (columns: string) => {
-          eq: (column: string, value: unknown) => {
+          eq: (
+            column: string,
+            value: unknown,
+          ) => {
             maybeSingle: () => Promise<{
               data: unknown;
               error: { message: string } | null;

@@ -8,12 +8,7 @@ export const TicketStatusSchema = z.enum([
   'closed',
 ]);
 
-export const TicketPrioritySchema = z.enum([
-  'low',
-  'medium',
-  'high',
-  'urgent',
-]);
+export const TicketPrioritySchema = z.enum(['low', 'medium', 'high', 'urgent']);
 
 export const ListTicketsSchema = z.object({
   accountId: z.string().uuid(),

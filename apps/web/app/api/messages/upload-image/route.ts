@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
 import { createMessagesService } from '../../../home/[account]/messages/_lib/server/messages.service';
 
 export const runtime = 'nodejs';
@@ -10,11 +11,7 @@ const CHAT_IMAGE_BUCKET = 'account_image';
 const MAX_IMAGE_SIZE_BYTES = 10 * 1024 * 1024;
 
 function safeSegment(name: string) {
-  return name
-    .replace(/[/\\]/g, '_')
-    .replace(/\.\./g, '_')
-    .trim()
-    .slice(0, 180);
+  return name.replace(/[/\\]/g, '_').replace(/\.\./g, '_').trim().slice(0, 180);
 }
 
 export async function POST(request: Request) {
@@ -97,8 +94,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const imageUrl = admin.storage.from(CHAT_IMAGE_BUCKET).getPublicUrl(path).data
-    .publicUrl;
+  const imageUrl = admin.storage.from(CHAT_IMAGE_BUCKET).getPublicUrl(path)
+    .data.publicUrl;
 
   return NextResponse.json({ imageUrl });
 }

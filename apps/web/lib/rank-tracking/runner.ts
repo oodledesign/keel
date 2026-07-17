@@ -15,14 +15,9 @@ import {
 } from './db';
 import { fetchKeywordRanksBatch } from './fetch-ranks';
 import {
-  RANK_GLOBAL_MAX_ACTIVE_JOBS,
-  RANK_JOB_STALE_MINUTES,
-  RANK_TASKS_PER_INVOCATION,
-} from './queue-config';
-import {
   buildRankTasks,
-  claimRankCheckTasks,
   cancelRankCheckJobTasks,
+  claimRankCheckTasks,
   completeRankCheckTask,
   countRankCheckTasksByStatus,
   enqueueRankCheckTasks,
@@ -30,9 +25,14 @@ import {
   loadKeywordTextMap,
   releaseStaleRankCheckTasks,
 } from './queue';
+import {
+  RANK_GLOBAL_MAX_ACTIVE_JOBS,
+  RANK_JOB_STALE_MINUTES,
+  RANK_TASKS_PER_INVOCATION,
+} from './queue-config';
+import { triggerRankCheckRunDebounced } from './trigger-run';
 import { estimateRankCheckCostUsd } from './types';
 import type { RankCheckJobRow } from './types';
-import { triggerRankCheckRunDebounced } from './trigger-run';
 
 function ranklyAdmin() {
   return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
@@ -84,7 +84,9 @@ export async function syncRankCheckJobProgress(jobId: string): Promise<void> {
   }
 }
 
-export async function cancelRankCheckJob(jobId: string): Promise<RankCheckJobRow> {
+export async function cancelRankCheckJob(
+  jobId: string,
+): Promise<RankCheckJobRow> {
   await releaseStaleRankCheckTasks();
 
   const job = await getRankCheckJob(jobId);
@@ -182,8 +184,11 @@ export async function runRankCheckJob(
     const trackDesktop = Boolean(project.track_desktop ?? true);
     const trackMobile = Boolean(project.track_mobile ?? true);
     const deviceCount = countRankDevices({
-      rankRefreshInterval: (project.rank_refresh_interval ??
-        'weekly') as 'manual' | 'daily' | 'weekly' | 'monthly',
+      rankRefreshInterval: (project.rank_refresh_interval ?? 'weekly') as
+        | 'manual'
+        | 'daily'
+        | 'weekly'
+        | 'monthly',
       trackDesktop,
       trackMobile,
       targetCountry: projectCountryToCode(
@@ -224,10 +229,7 @@ export async function runRankCheckJob(
       String(project.target_country ?? 'gb'),
     );
 
-    const claimed = await claimRankCheckTasks(
-      jobId,
-      RANK_TASKS_PER_INVOCATION,
-    );
+    const claimed = await claimRankCheckTasks(jobId, RANK_TASKS_PER_INVOCATION);
 
     if (claimed.length === 0) {
       const counts = await countRankCheckTasksByStatus(jobId);
@@ -237,8 +239,11 @@ export async function runRankCheckJob(
         await finalizeRankCheckJob({
           jobId,
           projectId: job.project_id,
-          rankRefreshInterval: (project.rank_refresh_interval ??
-            'weekly') as 'manual' | 'daily' | 'weekly' | 'monthly',
+          rankRefreshInterval: (project.rank_refresh_interval ?? 'weekly') as
+            | 'manual'
+            | 'daily'
+            | 'weekly'
+            | 'monthly',
           tasksCompleted: counts.done + counts.error,
           totalApiCostUsd: baselineCostUsd,
         });
@@ -322,8 +327,11 @@ export async function runRankCheckJob(
     await finalizeRankCheckJob({
       jobId,
       projectId: job.project_id,
-      rankRefreshInterval: (project.rank_refresh_interval ??
-        'weekly') as 'manual' | 'daily' | 'weekly' | 'monthly',
+      rankRefreshInterval: (project.rank_refresh_interval ?? 'weekly') as
+        | 'manual'
+        | 'daily'
+        | 'weekly'
+        | 'monthly',
       tasksCompleted: counts.done + counts.error,
       totalApiCostUsd,
     });

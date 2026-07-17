@@ -15,8 +15,6 @@ export async function redirectIfEmailAssistantNotAllowed(): Promise<void> {
   const allowed = await canUseEmailAssistant(client, user.id);
 
   if (!allowed) {
-    redirect(
-      `${pathsConfig.app.personalAccountBilling}?addon=email-assistant`,
-    );
+    redirect(`${pathsConfig.app.personalAccountBilling}?addon=email-assistant`);
   }
 }

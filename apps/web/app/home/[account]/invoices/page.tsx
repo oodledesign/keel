@@ -3,12 +3,15 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { loadInvoicesPageData } from './_lib/server/invoices-page.loader';
-import { loadInvoicesPageInitialData } from './_lib/server/invoices-page-initial.loader';
 import { InvoicesPageContent } from './_components/invoices-page-content';
+import { loadInvoicesPageInitialData } from './_lib/server/invoices-page-initial.loader';
+import { loadInvoicesPageData } from './_lib/server/invoices-page.loader';
 
 interface InvoicesPageProps {
   params: Promise<{ account: string }>;
@@ -36,8 +39,12 @@ async function InvoicesPage({ params }: InvoicesPageProps) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 
-  const { accountId, canViewInvoices, canEditInvoices, canManageInvoiceStatus } =
-    await loadInvoicesPageData(accountSlug);
+  const {
+    accountId,
+    canViewInvoices,
+    canEditInvoices,
+    canManageInvoiceStatus,
+  } = await loadInvoicesPageData(accountSlug);
 
   const initialData = await loadInvoicesPageInitialData(accountId);
 

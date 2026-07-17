@@ -92,7 +92,9 @@ export async function loadSiteCrawlPages(
   return (data ?? []) as SiteCrawlPageRow[];
 }
 
-export async function loadCrawledUrlsForJob(jobId: string): Promise<Set<string>> {
+export async function loadCrawledUrlsForJob(
+  jobId: string,
+): Promise<Set<string>> {
   const { data, error } = await ranklyAdmin()
     .from('site_crawl_pages')
     .select('url')
@@ -216,8 +218,7 @@ export async function listStalledSiteCrawlJobs(
   return (data ?? [])
     .map((row) => mapJobRow(row as Record<string, unknown>))
     .filter(
-      (job) =>
-        job.pending_urls.length > 0 || job.urls_crawled < job.url_limit,
+      (job) => job.pending_urls.length > 0 || job.urls_crawled < job.url_limit,
     );
 }
 

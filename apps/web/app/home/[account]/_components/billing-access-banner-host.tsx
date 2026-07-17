@@ -3,7 +3,6 @@ import 'server-only';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-
 import { checkAccountAccess } from '~/lib/billing/check-account-access';
 
 import { BillingAccessBanner } from '../_components/billing-access-banner';

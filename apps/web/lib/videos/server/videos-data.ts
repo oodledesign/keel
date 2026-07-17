@@ -1,15 +1,16 @@
 import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { createBunnyStreamClient } from '@kit/bunny';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import type { VideoFolderRow, VideoRow } from '../types';
 import { decryptVideoSecret } from '../crypto-secrets';
 import {
   resolveVideoThumbnailCandidates,
   resolveVideoThumbnailUrl,
 } from '../thumbnail';
+import type { VideoFolderRow, VideoRow } from '../types';
 import { loadAccountVideoSettings } from './player-config-data';
 
 let cachedCdnHostname: string | null | undefined;
@@ -95,7 +96,9 @@ export async function resolveBunnyCdnHostname(libraryId?: string) {
 
   try {
     const bunny = createBunnyStreamClient();
-    const library = await bunny.getLibrary(libraryId ?? getDefaultBunnyLibraryId());
+    const library = await bunny.getLibrary(
+      libraryId ?? getDefaultBunnyLibraryId(),
+    );
     cachedCdnHostname = library.hostname;
   } catch {
     cachedCdnHostname = null;

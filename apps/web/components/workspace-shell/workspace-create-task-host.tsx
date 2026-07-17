@@ -42,7 +42,9 @@ export function WorkspaceCreateTaskHost({
 
     params.delete('create');
     const query = params.toString();
-    router.replace(query ? `${pathname}?${query}` : pathname, { scroll: false });
+    router.replace(query ? `${pathname}?${query}` : pathname, {
+      scroll: false,
+    });
   }, [pathname, router]);
 
   useEffect(() => {

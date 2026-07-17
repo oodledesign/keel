@@ -70,180 +70,179 @@ async function resolveAccountId(
   return (data as { id?: string } | null)?.id ?? null;
 }
 
-export const loadCommunitySchedulePage = cache(
-  async (accountSlug: string) => {
-    const client = getSupabaseServerClient();
-    const accountId = await resolveAccountId(client, accountSlug);
-    if (!accountId) {
-      return {
-        accountSlug,
-        accountId: null as string | null,
-        upcoming: [] as MeetupListRow[],
-        past: [] as MeetupListRow[],
-        series: [] as MeetupSeriesOption[],
-        templates: [] as MeetupTemplate[],
-        members: [] as GroupMemberOption[],
-        tablesReady: false,
-      };
-    }
-
-    const { data: events, error } = await client
-      .from('account_calendar_events')
-      .select(
-        'id, title, starts_at, ends_at, location, status, series_id, series_label',
-      )
-      .eq('account_id', accountId)
-      .order('starts_at', { ascending: true });
-
-    if (isMissingTable(error)) {
-      return {
-        accountSlug,
-        accountId,
-        upcoming: [],
-        past: [],
-        series: [],
-        templates: [],
-        members: [],
-        tablesReady: false,
-      };
-    }
-
-    const eventIds = (events ?? []).map((e) => (e as { id: string }).id);
-    const attendeeCounts = new Map<string, number>();
-
-    if (eventIds.length > 0) {
-      const { data: attRows } = await client
-        .from('community_meetup_attendees')
-        .select('event_id')
-        .in('event_id', eventIds)
-        .eq('status', 'going');
-
-      for (const row of attRows ?? []) {
-        const eid = (row as { event_id: string }).event_id;
-        attendeeCounts.set(eid, (attendeeCounts.get(eid) ?? 0) + 1);
-      }
-    }
-
-    const [{ data: seriesRows }, { data: templateRows }, membersResult] =
-      await Promise.all([
-        client
-          .from('community_meetup_series')
-          .select('id, name')
-          .eq('account_id', accountId)
-          .order('name'),
-        client
-          .from('community_meetup_templates')
-          .select(
-            'id, name, default_title, meal_plan, evening_parts, content_items',
-          )
-          .eq('account_id', accountId)
-          .order('name'),
-        client.rpc('get_account_members', { account_slug: accountSlug }),
-      ]);
-
-    const seriesNameById = new Map<string, string>();
-    for (const s of seriesRows ?? []) {
-      const row = s as { id: string; name?: string };
-      seriesNameById.set(row.id, (row.name ?? '').trim());
-    }
-
-    const rows: MeetupListRow[] = (events ?? []).map((row) => {
-      const r = row as {
-        id: string;
-        title?: string;
-        starts_at: string;
-        ends_at?: string | null;
-        location?: string | null;
-        status?: string;
-        series_id?: string | null;
-        series_label?: string | null;
-      };
-      const labels = formatRowLabels(r.starts_at);
-      const sid = r.series_id ?? null;
-      return {
-        id: r.id,
-        title: (r.title ?? 'Meetup').trim(),
-        startsAt: r.starts_at,
-        endsAt: r.ends_at ?? null,
-        location: (r.location ?? '').trim() || null,
-        status: r.status ?? 'scheduled',
-        seriesId: sid,
-        seriesName: sid ? seriesNameById.get(sid) ?? null : null,
-        seriesLabel: (r.series_label ?? '').trim() || null,
-        attendeeCount: attendeeCounts.get(r.id) ?? 0,
-        ...labels,
-      };
-    });
-
-    const upcoming = rows.filter((r) => !r.isPast && r.status !== 'cancelled');
-    const past = rows
-      .filter((r) => r.isPast || r.status === 'completed')
-      .reverse();
-
-    const series: MeetupSeriesOption[] = (seriesRows ?? []).map((s) => ({
-      id: (s as { id: string }).id,
-      name: ((s as { name?: string }).name ?? '').trim(),
-    }));
-
-    const templates: MeetupTemplate[] = (templateRows ?? []).map((t) => {
-      const row = t as {
-        id: string;
-        name?: string;
-        default_title?: string | null;
-        meal_plan?: string | null;
-        evening_parts?: unknown;
-        content_items?: unknown;
-      };
-      const contentRaw = Array.isArray(row.content_items)
-        ? row.content_items
-        : [];
-      return {
-        id: row.id,
-        name: (row.name ?? '').trim(),
-        defaultTitle: (row.default_title ?? '').trim() || null,
-        mealPlan: (row.meal_plan ?? '').trim() || null,
-        eveningParts: parseEveningParts(row.evening_parts),
-        contentItems: contentRaw.map((c) => {
-          const o = c as {
-            kind?: string;
-            title?: string;
-            body?: string;
-            url?: string;
-          };
-          return {
-            kind: (o.kind ?? 'richtext') as MeetupTemplate['contentItems'][0]['kind'],
-            title: (o.title ?? '').trim() || 'Item',
-            body: o.body,
-            url: o.url,
-          };
-        }),
-      };
-    });
-
-    type MemberRpc = {
-      id?: string;
-      display_name?: string | null;
-      email?: string | null;
+export const loadCommunitySchedulePage = cache(async (accountSlug: string) => {
+  const client = getSupabaseServerClient();
+  const accountId = await resolveAccountId(client, accountSlug);
+  if (!accountId) {
+    return {
+      accountSlug,
+      accountId: null as string | null,
+      upcoming: [] as MeetupListRow[],
+      past: [] as MeetupListRow[],
+      series: [] as MeetupSeriesOption[],
+      templates: [] as MeetupTemplate[],
+      members: [] as GroupMemberOption[],
+      tablesReady: false,
     };
-    const members: GroupMemberOption[] = (
-      (membersResult.data ?? []) as MemberRpc[]
-    ).map((m) => ({
-      userId: m.id ?? '',
-      displayName: m.display_name?.trim() || m.email || 'Member',
-    }));
+  }
 
+  const { data: events, error } = await client
+    .from('account_calendar_events')
+    .select(
+      'id, title, starts_at, ends_at, location, status, series_id, series_label',
+    )
+    .eq('account_id', accountId)
+    .order('starts_at', { ascending: true });
+
+  if (isMissingTable(error)) {
     return {
       accountSlug,
       accountId,
-      upcoming,
-      past,
-      series,
-      templates,
-      members,
-      tablesReady: true,
+      upcoming: [],
+      past: [],
+      series: [],
+      templates: [],
+      members: [],
+      tablesReady: false,
     };
-  },
-);
+  }
+
+  const eventIds = (events ?? []).map((e) => (e as { id: string }).id);
+  const attendeeCounts = new Map<string, number>();
+
+  if (eventIds.length > 0) {
+    const { data: attRows } = await client
+      .from('community_meetup_attendees')
+      .select('event_id')
+      .in('event_id', eventIds)
+      .eq('status', 'going');
+
+    for (const row of attRows ?? []) {
+      const eid = (row as { event_id: string }).event_id;
+      attendeeCounts.set(eid, (attendeeCounts.get(eid) ?? 0) + 1);
+    }
+  }
+
+  const [{ data: seriesRows }, { data: templateRows }, membersResult] =
+    await Promise.all([
+      client
+        .from('community_meetup_series')
+        .select('id, name')
+        .eq('account_id', accountId)
+        .order('name'),
+      client
+        .from('community_meetup_templates')
+        .select(
+          'id, name, default_title, meal_plan, evening_parts, content_items',
+        )
+        .eq('account_id', accountId)
+        .order('name'),
+      client.rpc('get_account_members', { account_slug: accountSlug }),
+    ]);
+
+  const seriesNameById = new Map<string, string>();
+  for (const s of seriesRows ?? []) {
+    const row = s as { id: string; name?: string };
+    seriesNameById.set(row.id, (row.name ?? '').trim());
+  }
+
+  const rows: MeetupListRow[] = (events ?? []).map((row) => {
+    const r = row as {
+      id: string;
+      title?: string;
+      starts_at: string;
+      ends_at?: string | null;
+      location?: string | null;
+      status?: string;
+      series_id?: string | null;
+      series_label?: string | null;
+    };
+    const labels = formatRowLabels(r.starts_at);
+    const sid = r.series_id ?? null;
+    return {
+      id: r.id,
+      title: (r.title ?? 'Meetup').trim(),
+      startsAt: r.starts_at,
+      endsAt: r.ends_at ?? null,
+      location: (r.location ?? '').trim() || null,
+      status: r.status ?? 'scheduled',
+      seriesId: sid,
+      seriesName: sid ? (seriesNameById.get(sid) ?? null) : null,
+      seriesLabel: (r.series_label ?? '').trim() || null,
+      attendeeCount: attendeeCounts.get(r.id) ?? 0,
+      ...labels,
+    };
+  });
+
+  const upcoming = rows.filter((r) => !r.isPast && r.status !== 'cancelled');
+  const past = rows
+    .filter((r) => r.isPast || r.status === 'completed')
+    .reverse();
+
+  const series: MeetupSeriesOption[] = (seriesRows ?? []).map((s) => ({
+    id: (s as { id: string }).id,
+    name: ((s as { name?: string }).name ?? '').trim(),
+  }));
+
+  const templates: MeetupTemplate[] = (templateRows ?? []).map((t) => {
+    const row = t as {
+      id: string;
+      name?: string;
+      default_title?: string | null;
+      meal_plan?: string | null;
+      evening_parts?: unknown;
+      content_items?: unknown;
+    };
+    const contentRaw = Array.isArray(row.content_items)
+      ? row.content_items
+      : [];
+    return {
+      id: row.id,
+      name: (row.name ?? '').trim(),
+      defaultTitle: (row.default_title ?? '').trim() || null,
+      mealPlan: (row.meal_plan ?? '').trim() || null,
+      eveningParts: parseEveningParts(row.evening_parts),
+      contentItems: contentRaw.map((c) => {
+        const o = c as {
+          kind?: string;
+          title?: string;
+          body?: string;
+          url?: string;
+        };
+        return {
+          kind: (o.kind ??
+            'richtext') as MeetupTemplate['contentItems'][0]['kind'],
+          title: (o.title ?? '').trim() || 'Item',
+          body: o.body,
+          url: o.url,
+        };
+      }),
+    };
+  });
+
+  type MemberRpc = {
+    id?: string;
+    display_name?: string | null;
+    email?: string | null;
+  };
+  const members: GroupMemberOption[] = (
+    (membersResult.data ?? []) as MemberRpc[]
+  ).map((m) => ({
+    userId: m.id ?? '',
+    displayName: m.display_name?.trim() || m.email || 'Member',
+  }));
+
+  return {
+    accountSlug,
+    accountId,
+    upcoming,
+    past,
+    series,
+    templates,
+    members,
+    tablesReady: true,
+  };
+});
 
 export const loadCommunityMeetupDetail = cache(
   async (accountSlug: string, eventId: string) => {
@@ -279,24 +278,28 @@ export const loadCommunityMeetupDetail = cache(
       template_id?: string | null;
     };
 
-    const [{ data: contentRows }, { data: attRows }, { data: recordRow }, membersResult] =
-      await Promise.all([
-        client
-          .from('community_meetup_content_items')
-          .select('id, kind, title, body, url, sort_order')
-          .eq('event_id', eventId)
-          .order('sort_order'),
-        client
-          .from('community_meetup_attendees')
-          .select('user_id, status')
-          .eq('event_id', eventId),
-        client
-          .from('community_meetup_records')
-          .select('transcript, ai_summary, reflection_notes, summarized_at')
-          .eq('event_id', eventId)
-          .maybeSingle(),
-        client.rpc('get_account_members', { account_slug: accountSlug }),
-      ]);
+    const [
+      { data: contentRows },
+      { data: attRows },
+      { data: recordRow },
+      membersResult,
+    ] = await Promise.all([
+      client
+        .from('community_meetup_content_items')
+        .select('id, kind, title, body, url, sort_order')
+        .eq('event_id', eventId)
+        .order('sort_order'),
+      client
+        .from('community_meetup_attendees')
+        .select('user_id, status')
+        .eq('event_id', eventId),
+      client
+        .from('community_meetup_records')
+        .select('transcript, ai_summary, reflection_notes, summarized_at')
+        .eq('event_id', eventId)
+        .maybeSingle(),
+      client.rpc('get_account_members', { account_slug: accountSlug }),
+    ]);
 
     type MemberRpc = {
       id?: string;
@@ -360,17 +363,17 @@ export const loadCommunityMeetupDetail = cache(
       record: recordRow
         ? {
             transcript:
-              ((recordRow as { transcript?: string | null }).transcript ??
-                ''
+              (
+                (recordRow as { transcript?: string | null }).transcript ?? ''
               ).trim() || null,
             aiSummary:
-              ((recordRow as { ai_summary?: string | null }).ai_summary ??
-                ''
+              (
+                (recordRow as { ai_summary?: string | null }).ai_summary ?? ''
               ).trim() || null,
             reflectionNotes:
-              ((
-                recordRow as { reflection_notes?: string | null }
-              ).reflection_notes ?? ''
+              (
+                (recordRow as { reflection_notes?: string | null })
+                  .reflection_notes ?? ''
               ).trim() || null,
             summarizedAt:
               (recordRow as { summarized_at?: string | null }).summarized_at ??
@@ -386,7 +389,8 @@ export const loadCommunityMeetupDetail = cache(
         .select('name')
         .eq('id', ev.series_id)
         .maybeSingle();
-      seriesName = ((seriesRow as { name?: string } | null)?.name ?? '').trim() || null;
+      seriesName =
+        ((seriesRow as { name?: string } | null)?.name ?? '').trim() || null;
     }
 
     return {
@@ -413,67 +417,66 @@ async function loadSeriesOptions(
   }));
 }
 
-export const loadCommunityMemberNotes = cache(
-  async (accountSlug: string) => {
-    const client = getSupabaseServerClient();
-    const user = await requireUserInServerComponent();
-    const accountId = await resolveAccountId(client, accountSlug);
-    if (!accountId) return { notes: [] as MemberNoteRow[], members: [] as GroupMemberOption[] };
+export const loadCommunityMemberNotes = cache(async (accountSlug: string) => {
+  const client = getSupabaseServerClient();
+  const user = await requireUserInServerComponent();
+  const accountId = await resolveAccountId(client, accountSlug);
+  if (!accountId)
+    return { notes: [] as MemberNoteRow[], members: [] as GroupMemberOption[] };
 
-    const { data: noteRows, error } = await client
-      .from('community_member_notes')
-      .select(
-        'id, subject_user_id, author_user_id, visibility, category, content, created_at',
-      )
-      .eq('account_id', accountId)
-      .order('created_at', { ascending: false });
+  const { data: noteRows, error } = await client
+    .from('community_member_notes')
+    .select(
+      'id, subject_user_id, author_user_id, visibility, category, content, created_at',
+    )
+    .eq('account_id', accountId)
+    .order('created_at', { ascending: false });
 
-    if (isMissingTable(error)) {
-      return { notes: [], members: [] };
-    }
+  if (isMissingTable(error)) {
+    return { notes: [], members: [] };
+  }
 
-    const { data: membersRpc } = await client.rpc('get_account_members', {
-      account_slug: accountSlug,
-    });
+  const { data: membersRpc } = await client.rpc('get_account_members', {
+    account_slug: accountSlug,
+  });
 
-    type MemberRpc = {
-      id?: string;
-      display_name?: string | null;
-      email?: string | null;
-      account_role?: string | null;
-    };
-    const members: GroupMemberOption[] = (
-      (membersRpc ?? []) as MemberRpc[]
-    ).map((m) => ({
+  type MemberRpc = {
+    id?: string;
+    display_name?: string | null;
+    email?: string | null;
+    account_role?: string | null;
+  };
+  const members: GroupMemberOption[] = ((membersRpc ?? []) as MemberRpc[]).map(
+    (m) => ({
       userId: m.id ?? '',
       displayName: m.display_name?.trim() || m.email || 'Member',
-    }));
-    const nameById = new Map(members.map((m) => [m.userId, m.displayName]));
+    }),
+  );
+  const nameById = new Map(members.map((m) => [m.userId, m.displayName]));
 
-    const notes: MemberNoteRow[] = (noteRows ?? []).map((n) => {
-      const row = n as {
-        id: string;
-        subject_user_id: string;
-        author_user_id: string;
-        visibility: MemberNoteRow['visibility'];
-        category: MemberNoteRow['category'];
-        content: string;
-        created_at: string;
-      };
-      return {
-        id: row.id,
-        subjectUserId: row.subject_user_id,
-        subjectName: nameById.get(row.subject_user_id) ?? 'Member',
-        authorUserId: row.author_user_id,
-        authorName: nameById.get(row.author_user_id) ?? 'Member',
-        visibility: row.visibility,
-        category: row.category,
-        content: row.content,
-        createdAt: row.created_at,
-        canEdit: row.author_user_id === user.id,
-      };
-    });
+  const notes: MemberNoteRow[] = (noteRows ?? []).map((n) => {
+    const row = n as {
+      id: string;
+      subject_user_id: string;
+      author_user_id: string;
+      visibility: MemberNoteRow['visibility'];
+      category: MemberNoteRow['category'];
+      content: string;
+      created_at: string;
+    };
+    return {
+      id: row.id,
+      subjectUserId: row.subject_user_id,
+      subjectName: nameById.get(row.subject_user_id) ?? 'Member',
+      authorUserId: row.author_user_id,
+      authorName: nameById.get(row.author_user_id) ?? 'Member',
+      visibility: row.visibility,
+      category: row.category,
+      content: row.content,
+      createdAt: row.created_at,
+      canEdit: row.author_user_id === user.id,
+    };
+  });
 
-    return { notes, members };
-  },
-);
+  return { notes, members };
+});

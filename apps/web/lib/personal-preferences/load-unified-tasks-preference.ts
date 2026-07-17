@@ -12,7 +12,9 @@ export async function loadPersonalIncludeWorkspaceTasks(
     .eq('user_id', userId)
     .maybeSingle();
 
-  const row = data as { personal_include_workspace_tasks?: boolean | null } | null;
+  const row = data as {
+    personal_include_workspace_tasks?: boolean | null;
+  } | null;
 
   if (row?.personal_include_workspace_tasks === false) {
     return false;

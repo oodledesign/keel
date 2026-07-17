@@ -98,7 +98,11 @@ function Calendar({
           defaultClassNames.caption_label,
           classNames?.caption_label,
         ),
-        table: cn('w-full border-collapse', defaultClassNames.table, classNames?.table),
+        table: cn(
+          'w-full border-collapse',
+          defaultClassNames.table,
+          classNames?.table,
+        ),
         weekdays: cn('flex', defaultClassNames.weekdays, classNames?.weekdays),
         weekday: cn(
           'text-muted-foreground flex-1 rounded-md text-center text-[0.8rem] font-normal select-none',

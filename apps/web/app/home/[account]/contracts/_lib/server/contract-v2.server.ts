@@ -3,8 +3,8 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import type { PaymentPlanItem } from '../schema/contracts.schema';
 import { createInvoicesService } from '../../../invoices/_lib/server/invoices.service';
+import type { PaymentPlanItem } from '../schema/contracts.schema';
 import { createContractsService } from './contracts.service';
 
 function db() {
@@ -63,13 +63,16 @@ export async function markContractReadByToken(token: string) {
     .eq('id', contract.id);
 }
 
-export async function signContractRecipientByToken(token: string, input: {
-  recipient_type: 'individual' | 'company';
-  recipient_name: string;
-  recipient_company?: string | null;
-  recipient_signature_type: 'typed' | 'drawn' | 'uploaded';
-  recipient_signature_data: string;
-}) {
+export async function signContractRecipientByToken(
+  token: string,
+  input: {
+    recipient_type: 'individual' | 'company';
+    recipient_name: string;
+    recipient_company?: string | null;
+    recipient_signature_type: 'typed' | 'drawn' | 'uploaded';
+    recipient_signature_data: string;
+  },
+) {
   const service = createContractsService(adminDb());
   return service.signRecipient({
     token,

@@ -7,10 +7,7 @@ import {
   type VideoPlayerConfigRow,
   type VideoPlayerConfigValues,
 } from '../player-config-types';
-import {
-  parseVideoSettings,
-  type VideoSettings,
-} from '../video-settings';
+import { type VideoSettings, parseVideoSettings } from '../video-settings';
 
 export function configValuesFromRow(
   row: VideoPlayerConfigRow | null,
@@ -46,10 +43,7 @@ export function configValuesFromRow(
   };
 }
 
-export async function loadPresetById(
-  client: SupabaseClient,
-  presetId: string,
-) {
+export async function loadPresetById(client: SupabaseClient, presetId: string) {
   const { data, error } = await client
     .from('video_player_configs')
     .select('*')

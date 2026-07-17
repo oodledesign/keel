@@ -19,7 +19,9 @@ export function InvoicesIncomeSummary({
 }: {
   summary: Summary | null;
   period: 'month_to_date' | 'last_30_days' | 'last_90_days';
-  onPeriodChange: (period: 'month_to_date' | 'last_30_days' | 'last_90_days') => void;
+  onPeriodChange: (
+    period: 'month_to_date' | 'last_30_days' | 'last_90_days',
+  ) => void;
 }) {
   const maxBar = useMemo(
     () => Math.max(...(summary?.chart.map((d) => d.amount_pence) ?? [1]), 1),
@@ -38,7 +40,10 @@ export function InvoicesIncomeSummary({
           value={period}
           onChange={(e) =>
             onPeriodChange(
-              e.target.value as 'month_to_date' | 'last_30_days' | 'last_90_days',
+              e.target.value as
+                | 'month_to_date'
+                | 'last_30_days'
+                | 'last_90_days',
             )
           }
           className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1.5 text-xs text-[var(--workspace-shell-text)]"
@@ -51,16 +56,28 @@ export function InvoicesIncomeSummary({
 
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
-          { label: 'Issued', value: summary.issued_pence, color: 'text-[#B8D3D7]' },
+          {
+            label: 'Issued',
+            value: summary.issued_pence,
+            color: 'text-[#B8D3D7]',
+          },
           { label: 'Paid', value: summary.paid_pence, color: 'text-[#97D9AA]' },
-          { label: 'Unpaid', value: summary.unpaid_pence, color: 'text-amber-200' },
-          { label: 'Overdue', value: summary.overdue_pence, color: 'text-[#F6A7B5]' },
+          {
+            label: 'Unpaid',
+            value: summary.unpaid_pence,
+            color: 'text-amber-200',
+          },
+          {
+            label: 'Overdue',
+            value: summary.overdue_pence,
+            color: 'text-[#F6A7B5]',
+          },
         ].map((item) => (
           <div
             key={item.label}
             className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 px-3 py-3"
           >
-            <p className="text-xs text-muted-foreground">{item.label}</p>
+            <p className="text-muted-foreground text-xs">{item.label}</p>
             <p className={`mt-1 text-lg font-semibold ${item.color}`}>
               {formatPence(item.value)}
             </p>
@@ -86,7 +103,9 @@ export function InvoicesIncomeSummary({
           ))}
         </div>
       ) : (
-        <p className="mt-4 text-xs text-muted-foreground">No issued invoices in this period.</p>
+        <p className="text-muted-foreground mt-4 text-xs">
+          No issued invoices in this period.
+        </p>
       )}
     </div>
   );

@@ -1,11 +1,6 @@
 import Link from 'next/link';
 
-import {
-  ArrowRight,
-  Check,
-  Link2,
-  X,
-} from 'lucide-react';
+import { ArrowRight, Check, Link2, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
@@ -61,7 +56,7 @@ export function InterconnectedWorkspacesSection({
           <div>
             <span
               className={cn(
-                'inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em]',
+                'inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-xs font-semibold tracking-[0.14em] uppercase',
                 isLight
                   ? 'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]'
                   : 'border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-400)]',
@@ -73,7 +68,7 @@ export function InterconnectedWorkspacesSection({
             <h2
               id="connected-workspaces-heading"
               className={cn(
-                'mt-6 font-heading text-3xl font-bold leading-tight md:text-5xl lg:text-[3.25rem]',
+                'font-heading mt-6 text-3xl leading-tight font-bold md:text-5xl lg:text-[3.25rem]',
                 isLight
                   ? 'text-[var(--workspace-shell-text)]'
                   : 'text-[var(--ozer-text-on-dark)]',
@@ -136,7 +131,7 @@ export function InterconnectedWorkspacesSection({
         >
           <h3
             className={cn(
-              'text-center font-heading text-2xl font-semibold md:text-3xl',
+              'font-heading text-center text-2xl font-semibold md:text-3xl',
               isLight
                 ? 'text-[var(--workspace-shell-text)]'
                 : 'text-[var(--ozer-text-on-light)]',
@@ -193,10 +188,13 @@ function BenefitCard({
 
   const content = (
     <>
-      <Icon className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
+      <Icon
+        className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]"
+        aria-hidden
+      />
       <h3
         className={cn(
-          'mt-3 font-heading text-base font-semibold leading-snug md:text-lg',
+          'font-heading mt-3 text-base leading-snug font-semibold md:text-lg',
           isLight
             ? 'text-[var(--workspace-shell-text)]'
             : 'text-[var(--ozer-text-on-dark)]',
@@ -249,8 +247,10 @@ function ComparisonColumn({
     >
       <p
         className={cn(
-          'text-sm font-semibold uppercase tracking-wide',
-          isOzer ? 'text-[var(--ozer-coral-600)]' : 'text-[var(--ozer-plum-700)]',
+          'text-sm font-semibold tracking-wide uppercase',
+          isOzer
+            ? 'text-[var(--ozer-coral-600)]'
+            : 'text-[var(--ozer-plum-700)]',
         )}
       >
         {label}
@@ -259,11 +259,23 @@ function ComparisonColumn({
         {items.map((item) => (
           <li key={item} className="flex gap-2.5 text-sm leading-relaxed">
             {isOzer ? (
-              <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" aria-hidden />
+              <Check
+                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]"
+                aria-hidden
+              />
             ) : (
-              <X className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" aria-hidden />
+              <X
+                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]"
+                aria-hidden
+              />
             )}
-            <span className={isOzer ? 'text-[var(--ozer-text-on-light)]' : 'text-[var(--ozer-text-on-light-muted)]'}>
+            <span
+              className={
+                isOzer
+                  ? 'text-[var(--ozer-text-on-light)]'
+                  : 'text-[var(--ozer-text-on-light-muted)]'
+              }
+            >
               {item}
             </span>
           </li>

@@ -108,7 +108,8 @@ export async function resendProposal(accountId: string, proposalId: string) {
   }
   const email = proposal.data.sent_to_email;
   if (!email) throw new Error('No recipient email on file');
-  if (!proposal.data.public_token) throw new Error('Proposal has no portal token');
+  if (!proposal.data.public_token)
+    throw new Error('Proposal has no portal token');
 
   await sendProposalIssuedEmail({
     accountId,
@@ -235,7 +236,8 @@ export async function approveProposalByToken(input: {
 
   await handleProposalApproved(proposal.id);
 
-  const { maybeAutoSendContractAfterApproval } = await import('./proposal-automation');
+  const { maybeAutoSendContractAfterApproval } =
+    await import('./proposal-automation');
   await maybeAutoSendContractAfterApproval(proposal.id);
 
   try {
@@ -347,7 +349,10 @@ export async function handleProposalApproved(proposalId: string) {
     return;
   }
 
-  const converted = await convertDealToClient(proposal.account_id, proposal.deal_id);
+  const converted = await convertDealToClient(
+    proposal.account_id,
+    proposal.deal_id,
+  );
   if (!converted?.clientId) return;
 
   await admin

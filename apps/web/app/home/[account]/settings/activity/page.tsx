@@ -1,5 +1,9 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import { listActivityRulesAction } from '~/home/[account]/activity/_lib/server/activity-rules-actions';
+import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -11,9 +15,6 @@ import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.load
 import { ActivityPrivacySettingsForm } from './_components/ActivityPrivacySettingsForm';
 import { ActivityRulesPanel } from './_components/ActivityRulesPanel';
 import { getActivityPrivacySettings } from './actions';
-import { listActivityRulesAction } from '~/home/[account]/activity/_lib/server/activity-rules-actions';
-import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 interface ActivityPrivacySettingsPageProps {
   params: Promise<{ account: string }>;
@@ -86,9 +87,7 @@ async function ActivityPrivacySettingsPage({
         clients={(clientsResult.data ?? []).map((row) => ({
           id: row.id as string,
           name:
-            row.display_name?.trim() ||
-            row.company_name?.trim() ||
-            'Client',
+            row.display_name?.trim() || row.company_name?.trim() || 'Client',
         }))}
       />
     </div>

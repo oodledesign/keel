@@ -112,7 +112,9 @@ export async function getValidAccessToken(userId: string): Promise<string> {
   }
 
   if (!refreshToken) {
-    throw new Error('Google refresh token is missing; reconnect Google account');
+    throw new Error(
+      'Google refresh token is missing; reconnect Google account',
+    );
   }
 
   const refreshed = await refreshAccessToken(refreshToken);

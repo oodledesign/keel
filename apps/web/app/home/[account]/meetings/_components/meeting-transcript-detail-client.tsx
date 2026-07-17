@@ -27,7 +27,6 @@ import {
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -36,6 +35,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
@@ -43,9 +43,9 @@ import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
 import {
-  serializeResolvedTranscriptSegments,
   type SpeakerMappings,
   type TranscriptSegment,
+  serializeResolvedTranscriptSegments,
 } from '~/lib/recorder/transcript-speakers';
 
 import {
@@ -119,9 +119,7 @@ export function MeetingTranscriptDetailClient({
   const [mappings, setMappings] = useState<SpeakerMappings>(
     transcript.speakerMappings,
   );
-  const [contacts, setContacts] = useState<ContactOption[]>(
-    initialContacts,
-  );
+  const [contacts, setContacts] = useState<ContactOption[]>(initialContacts);
   const [copied, setCopied] = useState(false);
   const [extractOpen, setExtractOpen] = useState(false);
   const [editingTranscript, setEditingTranscript] = useState(false);
@@ -302,7 +300,7 @@ export function MeetingTranscriptDetailClient({
   return (
     <div
       className={cn(
-        'mx-auto w-full max-w-6xl space-y-6 pb-16 pt-2',
+        'mx-auto w-full max-w-6xl space-y-6 pt-2 pb-16',
         workspacePageContentClassName,
       )}
     >
@@ -321,12 +319,15 @@ export function MeetingTranscriptDetailClient({
               <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <Sparkles className="h-4 w-4 text-[var(--ozer-accent)]" />
-                  <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Summary</h2>
+                  <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                    Summary
+                  </h2>
                 </div>
                 {summary.attendeeEmails.length > 0 ? (
                   <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                     {summary.attendeeEmails.length} attendee
-                    {summary.attendeeEmails.length === 1 ? '' : 's'} from calendar
+                    {summary.attendeeEmails.length === 1 ? '' : 's'} from
+                    calendar
                   </p>
                 ) : null}
               </div>
@@ -339,112 +340,119 @@ export function MeetingTranscriptDetailClient({
           ) : null}
 
           <section className={panelClassName}>
-          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-            <div className="flex items-center gap-2">
-              <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Transcript</h2>
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              {canEdit && !editingTranscript ? (
+            <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Transcript
+                </h2>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                {canEdit && !editingTranscript ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                    onClick={startEditingTranscript}
+                  >
+                    <Pencil className="mr-2 h-4 w-4" />
+                    Edit transcript
+                  </Button>
+                ) : null}
+                {canEdit && editingTranscript ? (
+                  <>
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={pending}
+                      className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                      onClick={saveTranscript}
+                    >
+                      {pending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Check className="mr-2 h-4 w-4" />
+                      )}
+                      Save
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={pending}
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                      onClick={cancelEditingTranscript}
+                    >
+                      <X className="mr-2 h-4 w-4" />
+                      Cancel
+                    </Button>
+                  </>
+                ) : null}
                 <Button
                   type="button"
                   variant="outline"
                   size="sm"
                   className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                  onClick={startEditingTranscript}
+                  onClick={() => void copyTranscript()}
                 >
-                  <Pencil className="mr-2 h-4 w-4" />
-                  Edit transcript
+                  {copied ? (
+                    <Check className="mr-2 h-4 w-4 text-emerald-400" />
+                  ) : (
+                    <Copy className="mr-2 h-4 w-4" />
+                  )}
+                  {copied ? 'Copied' : 'Copy transcript'}
                 </Button>
-              ) : null}
-              {canEdit && editingTranscript ? (
-                <>
-                  <Button
-                    type="button"
-                    size="sm"
-                    disabled={pending}
-                    className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-                    onClick={saveTranscript}
-                  >
-                    {pending ? (
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    ) : (
-                      <Check className="mr-2 h-4 w-4" />
-                    )}
-                    Save
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    disabled={pending}
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                    onClick={cancelEditingTranscript}
-                  >
-                    <X className="mr-2 h-4 w-4" />
-                    Cancel
-                  </Button>
-                </>
-              ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                onClick={() => void copyTranscript()}
-              >
-                {copied ? (
-                  <Check className="mr-2 h-4 w-4 text-emerald-400" />
-                ) : (
-                  <Copy className="mr-2 h-4 w-4" />
-                )}
-                {copied ? 'Copied' : 'Copy transcript'}
-              </Button>
+              </div>
             </div>
-          </div>
-          <div className="max-h-[min(70vh,720px)] overflow-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm leading-relaxed text-[var(--workspace-shell-text)]">
-            {transcript.speakerSegments.length > 0 ? (
-              <MeetingTranscriptSegments
-                accountId={accountId}
-                accountSlug={accountSlug}
-                transcriptId={transcript.id}
-                segments={transcript.speakerSegments}
-                mappings={mappings}
-                clients={clients}
-                contacts={contacts}
-                members={members}
-                currentUserId={currentUserId}
-                linkClientId={clientId || transcript.clientId}
-                canEdit={canEdit}
-                editing={editingTranscript}
-                draftSegments={draftSegments}
-                onDraftChange={setDraftSegments}
-                onSaved={() => router.refresh()}
-                onMappingsChange={setMappings}
-                onContactsChange={setContacts}
-              />
-            ) : editingTranscript ? (
-              <Textarea
-                value={draftContent}
-                onChange={(event) => setDraftContent(event.target.value)}
-                className="min-h-[min(60vh,640px)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] font-mono text-sm text-[var(--workspace-shell-text)]"
-              />
-            ) : (
-              <pre className="whitespace-pre-wrap">{displayContent}</pre>
-            )}
-          </div>
-        </section>
+            <div className="max-h-[min(70vh,720px)] overflow-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm leading-relaxed text-[var(--workspace-shell-text)]">
+              {transcript.speakerSegments.length > 0 ? (
+                <MeetingTranscriptSegments
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  transcriptId={transcript.id}
+                  segments={transcript.speakerSegments}
+                  mappings={mappings}
+                  clients={clients}
+                  contacts={contacts}
+                  members={members}
+                  currentUserId={currentUserId}
+                  linkClientId={clientId || transcript.clientId}
+                  canEdit={canEdit}
+                  editing={editingTranscript}
+                  draftSegments={draftSegments}
+                  onDraftChange={setDraftSegments}
+                  onSaved={() => router.refresh()}
+                  onMappingsChange={setMappings}
+                  onContactsChange={setContacts}
+                />
+              ) : editingTranscript ? (
+                <Textarea
+                  value={draftContent}
+                  onChange={(event) => setDraftContent(event.target.value)}
+                  className="min-h-[min(60vh,640px)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] font-mono text-sm text-[var(--workspace-shell-text)]"
+                />
+              ) : (
+                <pre className="whitespace-pre-wrap">{displayContent}</pre>
+              )}
+            </div>
+          </section>
         </div>
 
         <aside className="space-y-6">
           <section className={panelClassName}>
-            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Meeting details</h2>
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Meeting details
+            </h2>
 
             <div className="mt-4 space-y-4">
               {canEdit ? (
                 <>
                   <div>
-                    <Label htmlFor="detail-title" className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    <Label
+                      htmlFor="detail-title"
+                      className="text-xs text-[var(--workspace-shell-text-muted)]"
+                    >
                       Title
                     </Label>
                     <Input
@@ -456,7 +464,10 @@ export function MeetingTranscriptDetailClient({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="detail-date" className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    <Label
+                      htmlFor="detail-date"
+                      className="text-xs text-[var(--workspace-shell-text-muted)]"
+                    >
                       Meeting date
                     </Label>
                     <Input
@@ -469,7 +480,10 @@ export function MeetingTranscriptDetailClient({
                     />
                   </div>
                   <div>
-                    <Label htmlFor="detail-client" className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    <Label
+                      htmlFor="detail-client"
+                      className="text-xs text-[var(--workspace-shell-text-muted)]"
+                    >
                       Client
                     </Label>
                     <Select
@@ -496,11 +510,17 @@ export function MeetingTranscriptDetailClient({
               ) : (
                 <>
                   <div>
-                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">Title</p>
-                    <p className="mt-1 font-medium text-[var(--workspace-shell-text)]">{transcript.title}</p>
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Title
+                    </p>
+                    <p className="mt-1 font-medium text-[var(--workspace-shell-text)]">
+                      {transcript.title}
+                    </p>
                   </div>
                   <div>
-                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">Meeting date</p>
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Meeting date
+                    </p>
                     <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
                       {meetingDisplayDate(
                         transcript.meetingDate,
@@ -530,7 +550,9 @@ export function MeetingTranscriptDetailClient({
                   )}
                 </p>
               ) : canEdit ? (
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">No client linked yet.</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  No client linked yet.
+                </p>
               ) : null}
             </div>
 
@@ -556,11 +578,13 @@ export function MeetingTranscriptDetailClient({
           <section className={panelClassName}>
             <div className="flex items-center gap-2">
               <Sparkles className="h-4 w-4 text-[var(--ozer-accent)]" />
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Extract tasks</h2>
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Extract tasks
+              </h2>
             </div>
             <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
-              Review AI-suggested tasks from this transcript before adding them to
-              the workspace.
+              Review AI-suggested tasks from this transcript before adding them
+              to the workspace.
             </p>
             <Button
               type="button"
@@ -596,8 +620,8 @@ export function MeetingTranscriptDetailClient({
           <DialogHeader className="border-b border-[color:var(--workspace-shell-border)] px-6 py-4">
             <DialogTitle>Extract tasks</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-              AI will analyse this meeting transcript and suggest actionable tasks.
-              Review and edit before adding them to the workspace.
+              AI will analyse this meeting transcript and suggest actionable
+              tasks. Review and edit before adding them to the workspace.
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[calc(min(90vh,900px)-5.5rem)] overflow-y-auto px-6 py-5">

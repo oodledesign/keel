@@ -11,8 +11,8 @@ import {
   marketingIconWell,
   marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import {
   absoluteUrl,
   breadcrumbJsonLd,
@@ -35,7 +35,7 @@ export default function FeaturesIndexPage() {
   const features = listFeaturePageConfigs();
 
   return (
-    <main className="relative overflow-hidden marketing-shell">
+    <main className="marketing-shell relative overflow-hidden">
       <JsonLd
         data={schemaGraph([
           softwareApplicationJsonLd({
@@ -52,15 +52,17 @@ export default function FeaturesIndexPage() {
         ])}
       />
 
-      <section className="relative mx-auto w-full max-w-7xl px-6 pb-20 pt-24 md:pt-28">
+      <section className="relative mx-auto w-full max-w-7xl px-6 pt-24 pb-20 md:pt-28">
         <div className="max-w-3xl space-y-5">
           <span className={marketingEyebrow}>Ozer Features</span>
-          <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
+          <h1 className="font-heading text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
             The Workspace OS, feature by feature
           </h1>
-          <p className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
-            Planner, pipeline, invoices, activity tracking, meetings, and more — one
-            system so a small studio does not need seven tools and Zapier.
+          <p
+            className={`text-base leading-relaxed md:text-lg ${marketingBodyText}`}
+          >
+            Planner, pipeline, invoices, activity tracking, meetings, and more —
+            one system so a small studio does not need seven tools and Zapier.
           </p>
         </div>
 
@@ -87,11 +89,15 @@ export default function FeaturesIndexPage() {
                   {feature.name}
                 </h2>
                 {feature.heroBadge ? (
-                  <p className={`mt-1 text-xs font-medium ${marketingMutedText}`}>
+                  <p
+                    className={`mt-1 text-xs font-medium ${marketingMutedText}`}
+                  >
                     {feature.heroBadge}
                   </p>
                 ) : null}
-                <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
+                <p
+                  className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
+                >
                   {feature.shortDescription}
                 </p>
                 <span className="mt-4 inline-flex items-center text-sm font-medium text-[var(--ozer-coral-600)] dark:text-[var(--ozer-coral-400)]">

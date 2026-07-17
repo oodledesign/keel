@@ -10,7 +10,10 @@ function hostFromOrigin(origin: string): string | null {
  * When marketing uses www.{apex} but SITE_URL still points at www, infer app.{apex}
  * so middleware redirects can split hosts before env vars are fully updated.
  */
-function inferAppOriginFromMarketing(siteUrl: string, marketingUrl: string): string | null {
+function inferAppOriginFromMarketing(
+  siteUrl: string,
+  marketingUrl: string,
+): string | null {
   if (process.env.NODE_ENV !== 'production') {
     return null;
   }
@@ -109,8 +112,10 @@ const DEFAULT_MARKETING_SITE_ORIGIN =
     : 'http://localhost:3000';
 
 export function getMarketingSiteOrigin(): string {
-  const explicitMarketing =
-    process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(/\/+$/, '');
+  const explicitMarketing = process.env.NEXT_PUBLIC_MARKETING_SITE_URL?.replace(
+    /\/+$/,
+    '',
+  );
 
   if (explicitMarketing) {
     return explicitMarketing;
@@ -128,9 +133,7 @@ export function getMarketingSiteOrigin(): string {
     return siteUrl;
   }
 
-  return (
-    DEFAULT_MARKETING_SITE_ORIGIN
-  );
+  return DEFAULT_MARKETING_SITE_ORIGIN;
 }
 
 export function buildMarketingSiteUrl(path: string): string {

@@ -1,10 +1,10 @@
 import 'server-only';
 
-import { fetchQuestionKeywords } from '~/lib/briefs/serp-analysis';
-import type { ProjectBriefSettings } from '~/lib/briefs/project-settings';
-import { loadProjectBriefSettings } from '~/lib/briefs/project-settings';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import type { ProjectBriefSettings } from '~/lib/briefs/project-settings';
+import { loadProjectBriefSettings } from '~/lib/briefs/project-settings';
+import { fetchQuestionKeywords } from '~/lib/briefs/serp-analysis';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import { normaliseDomain } from './crawl';
@@ -14,9 +14,13 @@ import {
   CITATION_CONTEXTUAL_PROMPTS_LLM,
 } from './types';
 
-const QUESTION_LIKE = /^(how|what|why|when|where|who|which|can|should|is|are|do|does)\b/i;
+const QUESTION_LIKE =
+  /^(how|what|why|when|where|who|which|can|should|is|are|do|does)\b/i;
 
-function homepageFromPages(domain: string, pages: PageCrawl[]): PageCrawl | undefined {
+function homepageFromPages(
+  domain: string,
+  pages: PageCrawl[],
+): PageCrawl | undefined {
   const host = normaliseDomain(domain);
   return (
     pages.find((page) => {
@@ -113,7 +117,9 @@ export function deriveContextualPrompts(
 
   if (brief.brief_mention_rules?.trim()) {
     const snippet = brief.brief_mention_rules.trim().slice(0, 100);
-    prompts.push(`When researching ${service}, how should ${brand} be positioned: ${snippet}?`);
+    prompts.push(
+      `When researching ${service}, how should ${brand} be positioned: ${snippet}?`,
+    );
   }
 
   for (const kw of extras?.questionKeywords ?? []) {
@@ -125,7 +131,9 @@ export function deriveContextualPrompts(
   for (const kw of extras?.briefKeywords ?? []) {
     const trimmed = kw.trim();
     if (!trimmed || trimmed.length < 4) continue;
-    prompts.push(`Which ${trimmed} provider would you recommend — is ${brand} on the list?`);
+    prompts.push(
+      `Which ${trimmed} provider would you recommend — is ${brand} on the list?`,
+    );
   }
 
   prompts.push(...faqStylePrompts(pages, brand));
@@ -158,7 +166,9 @@ async function loadLatestBriefKeywords(projectId: string): Promise<string[]> {
     brief.primary_keyword,
     ...((brief.secondary_keywords as string[] | null) ?? []),
   ]
-    .filter((kw): kw is string => typeof kw === 'string' && kw.trim().length > 0)
+    .filter(
+      (kw): kw is string => typeof kw === 'string' && kw.trim().length > 0,
+    )
     .map((kw) => kw.trim());
 
   return [...new Set(keywords)];

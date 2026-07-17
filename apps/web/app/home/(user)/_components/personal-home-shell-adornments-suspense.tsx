@@ -3,11 +3,13 @@ import { Suspense } from 'react';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
-import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
+import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 
 export type PersonalHomeShellAdornments = {
-  mobileNavShortcuts: Awaited<ReturnType<typeof loadPersonalMobileNavShortcuts>>;
+  mobileNavShortcuts: Awaited<
+    ReturnType<typeof loadPersonalMobileNavShortcuts>
+  >;
   focusSettingsByAccountId: ReturnType<typeof serializeWorkspaceFocusMap>;
 };
 

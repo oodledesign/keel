@@ -1,15 +1,17 @@
 import { type NextRequest } from 'next/server';
 import { after } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { runBriefJob } from '~/lib/briefs/runner';
 import { estimateBriefCredits } from '~/lib/briefs/types';
 import { loadClusterJobBundle } from '~/lib/clusters/db';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
@@ -37,8 +39,8 @@ async function assertProjectAccess(
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
 
-    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
-    if (addonDenied) return addonDenied;
+  const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+  if (addonDenied) return addonDenied;
 
   const { data: project } = await supabaseCustomSchema(client, 'rankly')
     .from('projects')
@@ -110,7 +112,9 @@ export async function POST(request: NextRequest) {
       .filter((cluster: { id: string }) =>
         parsed.data.clusterId ? cluster.id === parsed.data.clusterId : true,
       )
-      .flatMap((cluster: { spokes: Array<Record<string, unknown>> }) => cluster.spokes)
+      .flatMap(
+        (cluster: { spokes: Array<Record<string, unknown>> }) => cluster.spokes,
+      )
       .filter((spoke: Record<string, unknown>) =>
         spokeIdSet ? spokeIdSet.has(spoke.id as string) : true,
       )
@@ -149,7 +153,11 @@ export async function POST(request: NextRequest) {
         .single();
 
       if (error || !job) {
-        return jsonErr('DB_ERROR', error?.message ?? 'Failed to create job', 500);
+        return jsonErr(
+          'DB_ERROR',
+          error?.message ?? 'Failed to create job',
+          500,
+        );
       }
 
       const jobId = job.id as string;

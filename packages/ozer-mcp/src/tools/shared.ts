@@ -102,4 +102,8 @@ export function dealDisplayName(row: {
   );
 }
 
-export const OPEN_TASK_STATUSES = ['todo', 'in_progress', 'client_review'] as const;
+export const OPEN_TASK_STATUSES = [
+  'todo',
+  'in_progress',
+  'client_review',
+] as const;

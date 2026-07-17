@@ -2,8 +2,11 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  BUSINESS_LITE_ENTITLEMENT,
+  hasBusinessLiteEntitlement,
+} from './business-lite';
 import { hasEntitlement } from './entitlements';
-import { BUSINESS_LITE_ENTITLEMENT, hasBusinessLiteEntitlement } from './business-lite';
 
 /** True when the workspace is on the free apps shell (not full Business CRM). */
 export async function isBusinessLiteWorkspace(

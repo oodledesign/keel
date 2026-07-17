@@ -6,14 +6,14 @@ import { ChevronDown, ChevronRight, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
+  type WebsiteSitemapPage,
   createPlanningId,
   slugifyPageTitle,
-  type WebsiteSitemapPage,
 } from '~/lib/websites/planning-types';
 
 import { saveWebsiteSitemap } from '../_lib/server/planning-actions';
@@ -35,7 +35,9 @@ export function WebsiteSitemapEditor({
   const [expandedPageIds, setExpandedPageIds] = useState<Set<string>>(
     () => new Set(initialSitemap.map((page) => page.id)),
   );
-  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>('idle');
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved'>(
+    'idle',
+  );
   const [, startTransition] = useTransition();
   const skipNextSave = useRef(true);
   const onSitemapChangeRef = useRef(onSitemapChange);
@@ -208,7 +210,9 @@ export function WebsiteSitemapEditor({
                         className="h-9 max-w-xs border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
                         placeholder="Page title"
                       />
-                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">/{page.slug}</span>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        /{page.slug}
+                      </span>
                     </div>
                     {expanded ? (
                       <div className="space-y-2 pl-1">
@@ -234,7 +238,8 @@ export function WebsiteSitemapEditor({
                                                   row.id === section.id
                                                     ? {
                                                         ...row,
-                                                        title: event.target.value,
+                                                        title:
+                                                          event.target.value,
                                                       }
                                                     : row,
                                               ),
@@ -322,7 +327,9 @@ export function WebsiteSitemapEditor({
                   {canEdit ? (
                     <button
                       type="button"
-                      className={cn('text-[var(--workspace-shell-text-muted)] hover:text-red-400')}
+                      className={cn(
+                        'text-[var(--workspace-shell-text-muted)] hover:text-red-400',
+                      )}
                       onClick={() => removePage(page.id)}
                     >
                       <Trash2 className="h-4 w-4" />

@@ -1,8 +1,15 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import {
+  type FormEvent,
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+} from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import {
   ArrowLeft,
@@ -20,22 +27,23 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
+import { plannerTaskMetaWithoutClient } from '~/lib/planner/build-task-tree';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
+import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
+  type PlanDocument,
   attachGoogleEventIdsToPlan,
   flattenPlanBlocks,
   parsePlanDocument,
   serializePlanDocument,
-  type PlanDocument,
 } from '~/lib/planner/plan-blocks';
 import {
   applySyncMappingsToDocument,
   blocksForCalendarSync,
   planGainedGoogleIds,
 } from '~/lib/planner/plan-calendar-sync';
-import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
-import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
   dayViewHrefWithDate,
   loadStoredPlan,
@@ -45,6 +53,8 @@ import {
   shiftLocalDateYmd,
   toLocalDateYmd,
 } from '~/lib/planner/plan-storage';
+import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
+import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
 import type {
   DayViewData,
   DayViewPipeline,
@@ -52,18 +62,13 @@ import type {
 } from '~/lib/planner/types';
 
 import { createTask, updateTask } from '../../_lib/actions/task-actions';
-import { useRouter } from 'next/navigation';
-
-import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
-import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
-import { plannerTaskMetaWithoutClient } from '~/lib/planner/build-task-tree';
-import { PlannerClientPill } from './planner-client-pill';
 import { DayScheduleEditor } from './DayScheduleEditor';
-import { PlannerSyncCalendarButton } from './planner-push-to-calendar-button';
 import { PlannerRemindersToggle } from './PlannerRemindersToggle';
 import { PlannerViewTabs } from './PlannerViewTabs';
 import { ReplanDialog } from './ReplanDialog';
 import { SopSuggestionsStrip } from './SopSuggestionsStrip';
+import { PlannerClientPill } from './planner-client-pill';
+import { PlannerSyncCalendarButton } from './planner-push-to-calendar-button';
 
 type Props = {
   initialData: DayViewData;
@@ -113,9 +118,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const [calendarEvents, setCalendarEvents] = useState<PlannerCalendarEvent[]>(
     [],
   );
-  const [tasks, setTasks] = useState<PlannerTask[]>(
-    initialData.tasksDueToday,
-  );
+  const [tasks, setTasks] = useState<PlannerTask[]>(initialData.tasksDueToday);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [now, setNow] = useState(() => new Date());
@@ -216,7 +219,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
 
   const syncBlockToGoogle = useCallback(
     async (document: PlanDocument, blockId: string) => {
-      const block = flattenPlanBlocks(document).find((item) => item.id === blockId);
+      const block = flattenPlanBlocks(document).find(
+        (item) => item.id === blockId,
+      );
       if (!block?.googleEventId) {
         return null;
       }
@@ -230,14 +235,19 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       }
 
       try {
-        const result = await syncPlannerCalendarBlocks({ date: dateIso, blocks });
+        const result = await syncPlannerCalendarBlocks({
+          date: dateIso,
+          blocks,
+        });
         if (result.errors.length > 0) {
           toast.message('Google Calendar could not update one or more events');
         }
         return applySyncMappingsToDocument(document, result.mappings);
       } catch (err) {
         toast.error(
-          err instanceof Error ? err.message : 'Could not update Google Calendar',
+          err instanceof Error
+            ? err.message
+            : 'Could not update Google Calendar',
         );
         return null;
       }
@@ -342,7 +352,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
 
   const replanOpenTasks = useMemo(() => {
     const completedIds = new Set(
-      tasks.filter((task) => task.status === 'completed').map((task) => task.id),
+      tasks
+        .filter((task) => task.status === 'completed')
+        .map((task) => task.id),
     );
     const byId = new Map<string, PlannerTask>();
 
@@ -451,7 +463,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const todayHref = dayViewHref;
 
   return (
-    <div className={cn(workspacePageMainClassName, 'gap-4 pt-1 md:gap-5 md:pt-3')}>
+    <div
+      className={cn(workspacePageMainClassName, 'gap-4 pt-1 md:gap-5 md:pt-3')}
+    >
       <header className="flex items-center gap-2">
         <Button
           type="button"
@@ -527,7 +541,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">Schedule</h2>
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
+              Schedule
+            </h2>
             <div className="flex flex-wrap items-center gap-2">
               {hasPlan ? (
                 <>
@@ -607,7 +623,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               value={newTaskTitle}
               onChange={(event) => setNewTaskTitle(event.target.value)}
               placeholder={
-                isViewingToday ? 'Add a task for today…' : 'Add a task for this day…'
+                isViewingToday
+                  ? 'Add a task for today…'
+                  : 'Add a task for this day…'
               }
               className="h-9 min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30 focus:border-[var(--ozer-accent)]/60 focus:outline-none"
             />
@@ -691,7 +709,7 @@ function NowBar({
       )}
     >
       <span
-        className="font-mono text-xl font-semibold tabular-nums text-[var(--workspace-shell-text)] sm:text-2xl"
+        className="font-mono text-xl font-semibold text-[var(--workspace-shell-text)] tabular-nums sm:text-2xl"
         suppressHydrationWarning
       >
         {clock}
@@ -701,7 +719,7 @@ function NowBar({
         {hasSchedule ? (
           <>
             <p className="truncate text-xs sm:text-sm">
-              <span className="font-semibold uppercase tracking-wide text-[10px] text-[var(--ozer-accent-muted)]">
+              <span className="text-[10px] font-semibold tracking-wide text-[var(--ozer-accent-muted)] uppercase">
                 Now
               </span>{' '}
               <span className="font-medium text-[var(--workspace-shell-text)]">
@@ -719,7 +737,7 @@ function NowBar({
               ) : null}
             </p>
             <p className="truncate text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
-              <span className="font-semibold uppercase tracking-wide text-[10px] text-[var(--workspace-shell-text)]/35">
+              <span className="text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text)]/35 uppercase">
                 Next
               </span>{' '}
               {nextBlock
@@ -730,7 +748,10 @@ function NowBar({
         ) : (
           <p className="text-xs text-[var(--workspace-shell-text)]/55 sm:text-sm">
             No schedule yet —{' '}
-            <Link href={planHref} className="text-[var(--ozer-accent)] hover:underline">
+            <Link
+              href={planHref}
+              className="text-[var(--ozer-accent)] hover:underline"
+            >
               plan your day
             </Link>
           </p>
@@ -780,14 +801,16 @@ function ScheduleRow({
         <p
           className={cn(
             'mt-0.5 text-sm font-medium',
-            block.isBreak ? 'italic text-[var(--workspace-shell-text)]/45' : 'text-[var(--workspace-shell-text)]',
+            block.isBreak
+              ? 'text-[var(--workspace-shell-text)]/45 italic'
+              : 'text-[var(--workspace-shell-text)]',
           )}
         >
           {block.title}
         </p>
       </div>
       {status === 'current' ? (
-        <span className="mt-0.5 shrink-0 rounded-full bg-[var(--ozer-accent)]/25 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ozer-accent-muted)]">
+        <span className="mt-0.5 shrink-0 rounded-full bg-[var(--ozer-accent)]/25 px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--ozer-accent-muted)] uppercase">
           Now
         </span>
       ) : null}
@@ -835,7 +858,7 @@ function TaskRow({
         <button
           type="button"
           onClick={() => setEditOpen(true)}
-          className="min-w-0 flex-1 rounded-lg text-left transition-colors hover:bg-white/[0.03] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40"
+          className="min-w-0 flex-1 rounded-lg text-left transition-colors hover:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40 focus-visible:outline-none"
         >
           <p
             className={cn(
@@ -894,7 +917,9 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
     <section className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">Pipeline</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
+            Pipeline
+          </h2>
           <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">
             {pipeline.openCount} open deal{pipeline.openCount === 1 ? '' : 's'}{' '}
             · {gbp.format(pipeline.openValue)}
@@ -921,10 +946,16 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
                 backgroundColor: STAGE_DOT_COLORS[stage.key] ?? '#64748B',
               }}
             />
-            <span className="text-[var(--workspace-shell-text)]/70">{stage.label}</span>
-            <span className="font-semibold text-[var(--workspace-shell-text)]">{stage.count}</span>
+            <span className="text-[var(--workspace-shell-text)]/70">
+              {stage.label}
+            </span>
+            <span className="font-semibold text-[var(--workspace-shell-text)]">
+              {stage.count}
+            </span>
             {stage.value > 0 ? (
-              <span className="text-[var(--workspace-shell-text)]/40">{gbp.format(stage.value)}</span>
+              <span className="text-[var(--workspace-shell-text)]/40">
+                {gbp.format(stage.value)}
+              </span>
             ) : null}
           </span>
         ))}
@@ -932,7 +963,7 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
 
       {pipeline.needsAction.length > 0 ? (
         <div className="space-y-1.5 border-t border-[color:var(--workspace-shell-border)] pt-3">
-          <p className="text-[10px] font-semibold uppercase tracking-wide text-[var(--workspace-shell-text)]/35">
+          <p className="text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text)]/35 uppercase">
             Next actions due
           </p>
           <ul className="space-y-1.5">
@@ -942,13 +973,20 @@ function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
                 className="flex items-baseline justify-between gap-3 text-sm"
               >
                 <span className="min-w-0 truncate">
-                  <span className="font-medium text-[var(--workspace-shell-text)]">{deal.name}</span>
-                  <span className="text-[var(--workspace-shell-text)]/50"> — {deal.nextAction}</span>
+                  <span className="font-medium text-[var(--workspace-shell-text)]">
+                    {deal.name}
+                  </span>
+                  <span className="text-[var(--workspace-shell-text)]/50">
+                    {' '}
+                    — {deal.nextAction}
+                  </span>
                 </span>
                 <span
                   className={cn(
                     'shrink-0 text-xs',
-                    deal.overdue ? 'text-rose-300' : 'text-[var(--workspace-shell-text)]/45',
+                    deal.overdue
+                      ? 'text-rose-300'
+                      : 'text-[var(--workspace-shell-text)]/45',
                   )}
                 >
                   {deal.overdue ? 'Overdue' : 'Today'} · {deal.stageLabel}

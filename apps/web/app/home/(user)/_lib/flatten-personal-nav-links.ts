@@ -1,5 +1,6 @@
-import type { NavigationConfigSchema } from '@kit/ui/navigation-schema';
 import type { z } from 'zod';
+
+import type { NavigationConfigSchema } from '@kit/ui/navigation-schema';
 
 type NavConfig = z.infer<typeof NavigationConfigSchema>;
 type NavLink = {
@@ -17,7 +18,11 @@ export function flattenPersonalNavLinks(config: NavConfig): NavLink[] {
     }
 
     for (const child of group.children) {
-      if ('collapsible' in child && child.collapsible && child.children?.length) {
+      if (
+        'collapsible' in child &&
+        child.collapsible &&
+        child.children?.length
+      ) {
         for (const nested of child.children) {
           links.push({
             path: nested.path,

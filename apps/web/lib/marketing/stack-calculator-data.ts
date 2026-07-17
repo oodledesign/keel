@@ -97,7 +97,8 @@ export function ozerMonthlyFromBilling(): number {
 
 export const CALCULATOR_FAQS = [
   {
-    question: 'How much does business software cost for a small agency in the UK?',
+    question:
+      'How much does business software cost for a small agency in the UK?',
     answer:
       'It depends on seats and fees. Many studios pay separate subscriptions for PM, CRM, invoicing, portals, and meeting tools. This calculator totals your stack in pounds per year so you can compare it to Ozer’s flat team price.',
   },

@@ -1,11 +1,12 @@
 import 'server-only';
 
-import { createNotificationsApi } from '@kit/notifications/api';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
-import { formatUkDateTime } from '~/lib/format/uk-datetime';
+import { createNotificationsApi } from '@kit/notifications/api';
+
 import pathsConfig from '~/config/paths.config';
+import { formatUkDateTime } from '~/lib/format/uk-datetime';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 function escapeHtml(value: string) {
   return value
@@ -202,12 +203,12 @@ class MessagesNotificationsService {
       .filter(Boolean) as string[];
 
     const clientRows = clientIds.length
-      ? (
+      ? ((
           await this.client
             .from('clients')
             .select('id, display_name, company_name, first_name, last_name')
             .in('id', clientIds)
-        ).data ?? []
+        ).data ?? [])
       : [];
 
     const { data: clientContactRows } =
@@ -218,11 +219,13 @@ class MessagesNotificationsService {
             .in('client_id', clientIds)
             .order('is_primary', { ascending: false })
             .order('created_at', { ascending: true })
-        : { data: [] as Array<{
-            client_id: string;
-            is_primary: boolean | null;
-            contacts: { email: string | null } | null;
-          }> };
+        : {
+            data: [] as Array<{
+              client_id: string;
+              is_primary: boolean | null;
+              contacts: { email: string | null } | null;
+            }>,
+          };
 
     const contactEmailByClientId = new Map<string, string>();
     for (const row of clientContactRows ?? []) {
@@ -237,13 +240,13 @@ class MessagesNotificationsService {
 
     const clientMemberUserIdsRaw =
       clientEmails.length > 0
-        ? (
+        ? ((
             await this.client
               .from('accounts_memberships')
               .select('user_id, account_role')
               .eq('account_id', params.accountId)
               .eq('account_role', 'client')
-          ).data ?? []
+          ).data ?? [])
         : [];
 
     const clientEmailSet = new Set(
@@ -264,7 +267,9 @@ class MessagesNotificationsService {
         .map((row: any) => row.user_id as string)
         .filter((userId: string) => {
           const user = userById.get(userId);
-          return user?.email ? clientEmailSet.has(user.email.toLowerCase()) : false;
+          return user?.email
+            ? clientEmailSet.has(user.email.toLowerCase())
+            : false;
         });
     }
 
@@ -275,8 +280,9 @@ class MessagesNotificationsService {
       (id) => id !== params.senderUserId,
     );
 
-    const link = pathsConfig.app.accountMessages
-      .replace('[account]', params.accountSlug) + `?thread=${params.threadId}`;
+    const link =
+      pathsConfig.app.accountMessages.replace('[account]', params.accountSlug) +
+      `?thread=${params.threadId}`;
     const notificationsApi = createNotificationsApi(this.client as any);
     for (const userId of recipientUserIds) {
       try {
@@ -398,8 +404,7 @@ class MessagesNotificationsService {
     // participant-summary fallback title).
     const participantMemberIds = (participants ?? [])
       .filter(
-        (p: any) =>
-          p.participant_kind === 'member' && p.participant_user_id,
+        (p: any) => p.participant_kind === 'member' && p.participant_user_id,
       )
       .map((p: any) => p.participant_user_id as string);
     const identityUserIds = Array.from(
@@ -500,7 +505,10 @@ class MessagesNotificationsService {
             if (row.participant_kind === 'member' && row.participant_user_id) {
               return labelBySenderId.get(row.participant_user_id) ?? null;
             }
-            if (row.participant_kind === 'client' && row.participant_client_id) {
+            if (
+              row.participant_kind === 'client' &&
+              row.participant_client_id
+            ) {
               const c = clientRows.find(
                 (r: any) => r.id === row.participant_client_id,
               );
@@ -534,7 +542,10 @@ class MessagesNotificationsService {
 
     const html = buildChatNotificationEmailHtml({
       threadTitle,
-      threadTypeLabel: threadTypeLabel(thread?.type ?? null, Boolean(thread?.job_id)),
+      threadTypeLabel: threadTypeLabel(
+        thread?.type ?? null,
+        Boolean(thread?.job_id),
+      ),
       senderLabel,
       newMessageBody: params.messageBody,
       newMessageTimeLabel,
@@ -618,10 +629,7 @@ class MessagesNotificationsService {
   }
 }
 
-function threadTypeLabel(
-  type: string | null,
-  hasJob: boolean,
-): string {
+function threadTypeLabel(type: string | null, hasJob: boolean): string {
   if (type === 'job' || hasJob) return 'Job thread';
   if (type === 'group') return 'Group chat';
   if (type === 'direct') return 'Direct message';

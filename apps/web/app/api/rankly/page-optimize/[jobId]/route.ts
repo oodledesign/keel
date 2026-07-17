@@ -1,6 +1,7 @@
 import { type NextRequest } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadPageOptimizeReportByJobId } from '~/lib/page-optimize/db';

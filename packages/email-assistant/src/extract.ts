@@ -38,7 +38,9 @@ Assignee rules (critical):
 - Never guess an assignee to avoid leaving tasks unassigned.
 - assignee_confidence is 0-1 for how confident you are in suggested_assignee_email (use null email → confidence ≤ 0.5).`;
 
-function formatExtractInstructionsBlock(instructions: string | null | undefined): string {
+function formatExtractInstructionsBlock(
+  instructions: string | null | undefined,
+): string {
   const trimmed = instructions?.trim();
   if (!trimmed) return '';
 

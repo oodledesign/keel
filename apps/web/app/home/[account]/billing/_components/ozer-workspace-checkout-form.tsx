@@ -94,23 +94,23 @@ export function OzerWorkspaceCheckoutForm(params: {
     <Card>
       <CardHeader>
         <CardTitle>
-          {params.upgradeFromLite
-            ? 'Upgrade to full business'
-            : setupMode
-              ? 'Choose your workspace plan'
-              : (
-                <Trans i18nKey={'billing:manageTeamPlan'} />
-              )}
+          {params.upgradeFromLite ? (
+            'Upgrade to full business'
+          ) : setupMode ? (
+            'Choose your workspace plan'
+          ) : (
+            <Trans i18nKey={'billing:manageTeamPlan'} />
+          )}
         </CardTitle>
 
         <CardDescription>
-          {params.upgradeFromLite
-            ? 'Business Solo includes clients, projects, invoicing, and finances. Your installed apps stay on this workspace.'
-            : setupMode
-              ? 'Start a 14-day trial or subscribe to unlock this workspace. All prices in GBP.'
-              : (
-                <Trans i18nKey={'billing:manageTeamPlanDescription'} />
-              )}
+          {params.upgradeFromLite ? (
+            'Business Solo includes clients, projects, invoicing, and finances. Your installed apps stay on this workspace.'
+          ) : setupMode ? (
+            'Start a 14-day trial or subscribe to unlock this workspace. All prices in GBP.'
+          ) : (
+            <Trans i18nKey={'billing:manageTeamPlanDescription'} />
+          )}
         </CardDescription>
       </CardHeader>
 

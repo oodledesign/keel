@@ -14,8 +14,11 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
 import { clearMealEntryAction, setMealEntryAction } from '../_lib/actions';
+import type {
+  MealEntryRow,
+  RecipeRow,
+} from '../_lib/schema/family-meal.schema';
 import { weekdayLabel } from '../_lib/server/family-meal.dates';
-import type { MealEntryRow, RecipeRow } from '../_lib/schema/family-meal.schema';
 import { ACCENT } from './meal-ui';
 
 type Props = {
@@ -142,7 +145,9 @@ function MealDayEditForm({
     <>
       <DialogHeader>
         <DialogTitle>{formatDateLabel(date)}</DialogTitle>
-        <p className="text-xs text-[var(--workspace-shell-text-muted)]">{weekdayLabel(date)} · Dinner</p>
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {weekdayLabel(date)} · Dinner
+        </p>
       </DialogHeader>
 
       <div className="space-y-3">

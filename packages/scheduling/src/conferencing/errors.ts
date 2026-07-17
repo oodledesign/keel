@@ -11,8 +11,7 @@ export class ConferencingNotConnectedError extends Error {
     message?: string;
   }) {
     super(
-      input.message ??
-        `${input.provider} is not connected for this workspace.`,
+      input.message ?? `${input.provider} is not connected for this workspace.`,
     );
     this.name = 'ConferencingNotConnectedError';
     this.accountId = input.accountId;

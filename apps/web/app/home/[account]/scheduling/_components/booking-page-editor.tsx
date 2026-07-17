@@ -5,14 +5,7 @@ import { useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import {
-  ArrowLeft,
-  Check,
-  Copy,
-  Pencil,
-  Plus,
-  X,
-} from 'lucide-react';
+import { ArrowLeft, Check, Copy, Pencil, Plus, X } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
@@ -230,7 +223,9 @@ export function BookingPageEditor({
       </div>
 
       <div className="grid gap-6 lg:grid-cols-[280px_minmax(0,1fr)] xl:grid-cols-[300px_minmax(0,1fr)]">
-        <aside className={`h-fit rounded-2xl border p-5 ${workspacePanelBorder}`}>
+        <aside
+          className={`h-fit rounded-2xl border p-5 ${workspacePanelBorder}`}
+        >
           {editingPage ? (
             <div className="space-y-4">
               <div className="flex items-center justify-between gap-2">
@@ -363,7 +358,9 @@ export function BookingPageEditor({
             <div className="space-y-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className={`text-xs font-medium uppercase tracking-wide ${workspaceTextMuted}`}>
+                  <p
+                    className={`text-xs font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+                  >
                     Page settings
                   </p>
                   <h2 className="mt-1 text-base font-semibold text-[var(--workspace-shell-text)]">
@@ -385,12 +382,16 @@ export function BookingPageEditor({
               </div>
 
               {page.description ? (
-                <p className={`text-sm ${workspaceTextMuted}`}>{page.description}</p>
+                <p className={`text-sm ${workspaceTextMuted}`}>
+                  {page.description}
+                </p>
               ) : null}
 
               <dl className="space-y-3 text-sm">
                 <div>
-                  <dt className={`text-xs ${workspaceTextMuted}`}>Public link</dt>
+                  <dt className={`text-xs ${workspaceTextMuted}`}>
+                    Public link
+                  </dt>
                   <dd className="mt-1 break-all text-[var(--workspace-shell-text)]">
                     {pageUrl}
                   </dd>
@@ -474,7 +475,9 @@ export function BookingPageEditor({
             </div>
 
             {eventTypes.length === 0 ? (
-              <p className={`px-1 py-6 text-center text-sm ${workspaceTextMuted}`}>
+              <p
+                className={`px-1 py-6 text-center text-sm ${workspaceTextMuted}`}
+              >
                 No event types yet. Add one to start taking bookings.
               </p>
             ) : (

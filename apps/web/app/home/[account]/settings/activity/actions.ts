@@ -7,11 +7,11 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 
+import { formValuesToSettings } from './_lib/activity-privacy-form';
 import {
   ActivityPrivacyFormSchema,
   type ActivityPrivacySettings,
 } from './_lib/activity-privacy-settings.schema';
-import { formValuesToSettings } from './_lib/activity-privacy-form';
 
 type ActivityPrivacySettingsRow = {
   account_id: string;
@@ -25,7 +25,9 @@ type ActivityPrivacySettingsRow = {
   updated_at: string;
 };
 
-function mapRowToSettings(row: ActivityPrivacySettingsRow): ActivityPrivacySettings {
+function mapRowToSettings(
+  row: ActivityPrivacySettingsRow,
+): ActivityPrivacySettings {
   return {
     account_id: row.account_id,
     user_id: row.user_id,

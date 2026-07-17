@@ -1,5 +1,6 @@
-import { AppLogo } from '~/components/app-logo';
 import { cn } from '@kit/ui/utils';
+
+import { AppLogo } from '~/components/app-logo';
 
 /**
  * Auth pages share a marketing grain canvas + logo.

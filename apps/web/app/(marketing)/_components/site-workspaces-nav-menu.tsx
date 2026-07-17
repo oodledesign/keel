@@ -11,16 +11,16 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import {
-  getMarketingWorkspaceNavLinks,
-  isWorkspaceNavPath,
-} from '~/lib/marketing/segment-landing-pages';
-import {
   marketingNavDropdownDesc,
   marketingNavDropdownItem,
   marketingNavDropdownTitle,
   marketingNavLinkActive,
   marketingNavTrigger,
 } from '~/lib/marketing/marketing-ui';
+import {
+  getMarketingWorkspaceNavLinks,
+  isWorkspaceNavPath,
+} from '~/lib/marketing/segment-landing-pages';
 
 import {
   marketingNavPanelClass,
@@ -65,8 +65,12 @@ export function SiteWorkspacesNavMenu() {
                   <Icon className="h-4 w-4" aria-hidden />
                 </span>
                 <span className="min-w-0">
-                  <span className={marketingNavDropdownTitle}>{workspace.label}</span>
-                  <span className={marketingNavDropdownDesc}>{workspace.description}</span>
+                  <span className={marketingNavDropdownTitle}>
+                    {workspace.label}
+                  </span>
+                  <span className={marketingNavDropdownDesc}>
+                    {workspace.description}
+                  </span>
                 </span>
               </Link>
             );

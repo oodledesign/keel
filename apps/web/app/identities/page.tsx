@@ -92,9 +92,7 @@ async function IdentitiesPage(props: IdentitiesPageProps) {
                   : undefined
               }
               components={{
-                workspace: (
-                  <span className="text-foreground font-medium" />
-                ),
+                workspace: <span className="text-foreground font-medium" />,
               }}
             />
           </p>

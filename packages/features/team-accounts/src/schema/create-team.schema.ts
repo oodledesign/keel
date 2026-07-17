@@ -1,5 +1,6 @@
-import { RESERVED_WORKSPACE_URL_SEGMENTS } from '@kit/shared/workspace-url';
 import { z } from 'zod';
+
+import { RESERVED_WORKSPACE_URL_SEGMENTS } from '@kit/shared/workspace-url';
 
 /**
  * Slugs that cannot be used for workspaces — they collide with personal `/app/*` routes.
@@ -87,7 +88,9 @@ export const TeamNameSchema = z
 export const CreateTeamSchema = z
   .object({
     name: TeamNameSchema,
-    spaceType: z.enum(['work', 'family', 'community', 'property']).default('work'),
+    spaceType: z
+      .enum(['work', 'family', 'community', 'property'])
+      .default('work'),
     // Transform empty strings to undefined before validation
     slug: z.preprocess(
       (val) => (val === '' ? undefined : val),

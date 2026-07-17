@@ -12,8 +12,8 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import {
-  applyMarkdownFormat,
   type MarkdownFormat,
+  applyMarkdownFormat,
 } from '~/lib/markdown-editor';
 
 type NoteMarkdownToolbarProps = {
@@ -46,7 +46,11 @@ export function NoteMarkdownToolbar({
     });
   };
 
-  const btn = (label: string, format: MarkdownFormat, icon: React.ReactNode) => (
+  const btn = (
+    label: string,
+    format: MarkdownFormat,
+    icon: React.ReactNode,
+  ) => (
     <button
       key={format}
       type="button"

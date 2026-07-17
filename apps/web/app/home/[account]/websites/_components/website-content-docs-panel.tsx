@@ -4,12 +4,12 @@ import { useEffect, useRef, useState, useTransition } from 'react';
 
 import { Plus, Trash2 } from 'lucide-react';
 
-import { SimpleMarkdownEditor } from '~/components/simple-markdown-editor';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { SimpleMarkdownEditor } from '~/components/simple-markdown-editor';
 import type { WebsiteContentDoc } from '~/lib/websites/planning-types';
 
 import {
@@ -94,7 +94,9 @@ export function WebsiteContentDocsPanel({
             });
           } catch (error) {
             toast.error(
-              error instanceof Error ? error.message : 'Could not save document',
+              error instanceof Error
+                ? error.message
+                : 'Could not save document',
             );
           }
         });

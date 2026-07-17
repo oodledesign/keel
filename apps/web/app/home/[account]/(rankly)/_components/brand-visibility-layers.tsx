@@ -23,7 +23,9 @@ function SentimentIcon({ pct }: { pct: number | null }) {
         ? 'text-amber-400'
         : 'text-red-400';
 
-  return <span className={`text-sm font-medium tabular-nums ${tone}`}>{pct}%</span>;
+  return (
+    <span className={`text-sm font-medium tabular-nums ${tone}`}>{pct}%</span>
+  );
 }
 
 function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
@@ -32,7 +34,7 @@ function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[32rem] text-left text-sm">
-        <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide uppercase">
           <tr>
             <th className="px-3 py-2">Platform</th>
             <th className="px-3 py-2">Sampled presence</th>
@@ -46,11 +48,12 @@ function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
               className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
             >
               <td className="px-3 py-3">{row.label}</td>
-              <td className="px-3 py-3 text-muted-foreground">
+              <td className="text-muted-foreground px-3 py-3">
                 {row.presenceRatePct ?? row.visibilityPct}% ·{' '}
                 {row.promptsChecked ?? row.totalQueries} prompt
-                {(row.promptsChecked ?? row.totalQueries) === 1 ? '' : 's'} · {sampleRuns}{' '}
-                runs each
+                {(row.promptsChecked ?? row.totalQueries) === 1
+                  ? ''
+                  : 's'} · {sampleRuns} runs each
               </td>
               <td className="px-3 py-3">
                 <SentimentIcon pct={row.sentimentPct} />
@@ -63,12 +66,16 @@ function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
   );
 }
 
-function AuditCitationTable({ platforms }: { platforms: PlatformCitationResult[] }) {
+function AuditCitationTable({
+  platforms,
+}: {
+  platforms: PlatformCitationResult[];
+}) {
   return (
     <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
       <table className="w-full text-sm">
         <thead>
-          <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-xs uppercase text-muted-foreground">
+          <tr className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] text-left text-xs uppercase">
             <th className="px-4 py-2 font-medium">Platform</th>
             <th className="px-4 py-2 font-medium">Presence</th>
             <th className="px-4 py-2 font-medium">Prompts</th>
@@ -78,7 +85,7 @@ function AuditCitationTable({ platforms }: { platforms: PlatformCitationResult[]
           {platforms.map((platform) => (
             <tr
               key={`${platform.platform}-${platform.promptLayer ?? 'generic'}`}
-              className="border-b border-[color:var(--workspace-shell-border)] last:border-0 align-top"
+              className="border-b border-[color:var(--workspace-shell-border)] align-top last:border-0"
             >
               <td className="px-4 py-2 font-medium">{platform.label}</td>
               <td className="px-4 py-2">
@@ -90,14 +97,15 @@ function AuditCitationTable({ platforms }: { platforms: PlatformCitationResult[]
                   <span className="text-muted-foreground">0% avg</span>
                 )}
               </td>
-              <td className="px-4 py-2 text-muted-foreground">
+              <td className="text-muted-foreground px-4 py-2">
                 <ul className="space-y-1">
                   {platform.citations.map((citation) => (
                     <li key={citation.query}>
                       <span className="text-foreground">{citation.query}</span>
                       {' · '}
-                      {citation.presenceRate ?? (citation.domainCited ? 100 : 0)}% (
-                      {citation.sampleCount ?? CITATION_SAMPLE_RUNS} runs)
+                      {citation.presenceRate ??
+                        (citation.domainCited ? 100 : 0)}
+                      % ({citation.sampleCount ?? CITATION_SAMPLE_RUNS} runs)
                     </li>
                   ))}
                 </ul>
@@ -138,7 +146,9 @@ export function BrandVisibilityLayerPanel(props: {
   const [layer, setLayer] = useState<PromptLayer>('generic');
   const rowsByLayer = useMemo(
     () => ({
-      generic: props.rows.filter((row) => (row.promptLayer ?? 'generic') === 'generic'),
+      generic: props.rows.filter(
+        (row) => (row.promptLayer ?? 'generic') === 'generic',
+      ),
       contextual: props.rows.filter((row) => row.promptLayer === 'contextual'),
     }),
     [props.rows],
@@ -175,8 +185,8 @@ export function BrandVisibilityLayerPanel(props: {
 
       {activeRows.length === 0 ? (
         <p className="text-muted-foreground text-sm">
-          No {PROMPT_LAYER_LABELS[layer].toLowerCase()} data yet. Re-run the AI Search Audit after
-          filling in project brief settings.
+          No {PROMPT_LAYER_LABELS[layer].toLowerCase()} data yet. Re-run the AI
+          Search Audit after filling in project brief settings.
         </p>
       ) : (
         <BrandVisibilityTable rows={activeRows} />

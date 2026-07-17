@@ -43,7 +43,8 @@ export const MARKETING_CAMPAIGN_TEMPLATES: Record<
     description: 'Payment confirmed — account details arriving soon.',
     defaultTitle: 'Beta welcome email',
     defaultSubject: "You're in — welcome to the Tradeways beta",
-    defaultPreviewText: 'Your payment is confirmed. Account details are on the way.',
+    defaultPreviewText:
+      'Your payment is confirmed. Account details are on the way.',
     suggestedRecipientList: 'beta_users',
     render: renderBetaWelcomeCampaignEmail,
   },
@@ -61,7 +62,8 @@ export const MARKETING_CAMPAIGN_TEMPLATES: Record<
     description:
       'For new beta users with login access: magic link, onboarding, Quick links, and help.',
     defaultTitle: 'Beta access guide',
-    defaultSubject: 'Your Tradeways beta account is ready — here\'s how to sign in',
+    defaultSubject:
+      "Your Tradeways beta account is ready — here's how to sign in",
     defaultPreviewText:
       'Create your account at app.tradeways.co.uk/auth/sign-up with your beta email, then complete onboarding.',
     suggestedRecipientList: 'beta_users',
@@ -83,7 +85,7 @@ export const MARKETING_CAMPAIGN_TEMPLATES: Record<
     description:
       'Automatic-style welcome for non-beta sign-ups. Getting started without magic link steps.',
     defaultTitle: 'New user welcome',
-    defaultSubject: 'Welcome to Tradeways — here\'s how to get started',
+    defaultSubject: "Welcome to Tradeways — here's how to get started",
     defaultPreviewText:
       'Create your business workspace and start with clients, jobs, and proposals.',
     suggestedRecipientList: 'all_users',
@@ -91,10 +93,12 @@ export const MARKETING_CAMPAIGN_TEMPLATES: Record<
   },
   onboarding_nudge_1h: {
     label: 'Onboarding nudge — 1 hour',
-    description: 'Sent ~1 hour after sign-up if no business workspace has been created.',
+    description:
+      'Sent ~1 hour after sign-up if no business workspace has been created.',
     defaultTitle: 'Onboarding nudge — 1 hour',
     defaultSubject: 'Finish setting up your Tradeways business',
-    defaultPreviewText: 'Create your business workspace to start using Tradeways.',
+    defaultPreviewText:
+      'Create your business workspace to start using Tradeways.',
     suggestedRecipientList: 'no_subscription',
     render: renderOnboardingNudge1hEmail,
   },
@@ -103,7 +107,8 @@ export const MARKETING_CAMPAIGN_TEMPLATES: Record<
     description: 'Sent 2 days after sign-up if onboarding is still incomplete.',
     defaultTitle: 'Onboarding nudge — 2 days',
     defaultSubject: 'Your Tradeways workspace is waiting',
-    defaultPreviewText: 'Complete onboarding to unlock clients, jobs, and proposals.',
+    defaultPreviewText:
+      'Complete onboarding to unlock clients, jobs, and proposals.',
     suggestedRecipientList: 'no_subscription',
     render: renderOnboardingNudge2dEmail,
   },
@@ -112,7 +117,8 @@ export const MARKETING_CAMPAIGN_TEMPLATES: Record<
     description: 'Sent 1 week after sign-up if onboarding is still incomplete.',
     defaultTitle: 'Onboarding nudge — 1 week',
     defaultSubject: 'Can we help you get started with Tradeways?',
-    defaultPreviewText: 'Your account is ready — finish creating your business workspace.',
+    defaultPreviewText:
+      'Your account is ready — finish creating your business workspace.',
     suggestedRecipientList: 'no_subscription',
     render: renderOnboardingNudge1wEmail,
   },
@@ -125,7 +131,9 @@ export const EDITABLE_HTML_TEMPLATE_IDS = new Set<MarketingCampaignTemplateId>(
 export function isEditableHtmlTemplate(
   templateId: string,
 ): templateId is MarketingCampaignTemplateId {
-  return EDITABLE_HTML_TEMPLATE_IDS.has(templateId as MarketingCampaignTemplateId);
+  return EDITABLE_HTML_TEMPLATE_IDS.has(
+    templateId as MarketingCampaignTemplateId,
+  );
 }
 
 export function getMarketingCampaignTemplate(

@@ -1,4 +1,8 @@
-export type WorkspaceNotesVariant = 'work' | 'property' | 'family' | 'community';
+export type WorkspaceNotesVariant =
+  | 'work'
+  | 'property'
+  | 'family'
+  | 'community';
 
 export type WorkspaceDocsVariant = WorkspaceNotesVariant;
 

@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { toast } from '@kit/ui/sonner';
 
@@ -24,7 +25,9 @@ export function PagespeedJobPoller({
 
   const fetchStatus = useCallback(async () => {
     const res = await fetch(`/api/rankly/pagespeed/${jobId}`);
-    const json = (await res.json()) as ApiResponse<{ job: PagespeedCheckJobRow }>;
+    const json = (await res.json()) as ApiResponse<{
+      job: PagespeedCheckJobRow;
+    }>;
     if (!json.ok) throw new Error(json.error.message);
     setJob(json.data.job);
     return json.data.job;
@@ -91,7 +94,9 @@ export function PagespeedJobPoller({
 
   if (job.status === 'done') {
     return (
-      <p className="text-sm text-[var(--ozer-accent)]">PageSpeed check complete</p>
+      <p className="text-sm text-[var(--ozer-accent)]">
+        PageSpeed check complete
+      </p>
     );
   }
 

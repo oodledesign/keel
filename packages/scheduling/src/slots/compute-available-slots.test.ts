@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
-import { computeAvailableSlots } from './compute-available-slots';
 import type { EventTypeSlotSettings } from '../types';
+import { computeAvailableSlots } from './compute-available-slots';
 
 const baseEventType: EventTypeSlotSettings = {
   bufferBeforeMinutes: 0,
@@ -32,11 +32,11 @@ describe('computeAvailableSlots', () => {
       now,
     });
 
-    const saturday = slots.filter(
-      (slot) => slot.start.toISOString().startsWith('2026-03-28'),
+    const saturday = slots.filter((slot) =>
+      slot.start.toISOString().startsWith('2026-03-28'),
     );
-    const sunday = slots.filter(
-      (slot) => slot.start.toISOString().startsWith('2026-03-29'),
+    const sunday = slots.filter((slot) =>
+      slot.start.toISOString().startsWith('2026-03-29'),
     );
 
     expect(saturday.length).toBeGreaterThan(0);
@@ -79,7 +79,11 @@ describe('computeAvailableSlots', () => {
     const now = new Date('2026-07-13T07:00:00.000Z'); // Monday
 
     const withoutBuffers = computeAvailableSlots({
-      eventType: { ...baseEventType, bufferBeforeMinutes: 0, bufferAfterMinutes: 0 },
+      eventType: {
+        ...baseEventType,
+        bufferBeforeMinutes: 0,
+        bufferAfterMinutes: 0,
+      },
       schedule: { timezone: 'UTC' },
       rules: [{ dayOfWeek: 1, startTime: '09:00', endTime: '12:00' }],
       overrides: [],
@@ -144,7 +148,9 @@ describe('computeAvailableSlots', () => {
     // Exactly 4h later is allowed; earlier is not
     expect(slots[0]!.start.toISOString()).toBe('2026-07-13T13:00:00.000Z');
     expect(
-      slots.every((slot) => slot.start.getTime() >= now.getTime() + 240 * 60_000),
+      slots.every(
+        (slot) => slot.start.getTime() >= now.getTime() + 240 * 60_000,
+      ),
     ).toBe(true);
   });
 
@@ -201,9 +207,9 @@ describe('computeAvailableSlots', () => {
       '2026-07-13T09:30:00.000Z',
       '2026-07-13T10:00:00.000Z',
     ]);
-    expect(sixty.every((s) => s.end.getTime() - s.start.getTime() === 60 * 60_000)).toBe(
-      true,
-    );
+    expect(
+      sixty.every((s) => s.end.getTime() - s.start.getTime() === 60 * 60_000),
+    ).toBe(true);
   });
 
   it('enforces max bookings per day using existing bookings', () => {
@@ -227,8 +233,8 @@ describe('computeAvailableSlots', () => {
       now,
     });
 
-    expect(slots.every((slot) => !slot.start.toISOString().startsWith('2026-07-13'))).toBe(
-      true,
-    );
+    expect(
+      slots.every((slot) => !slot.start.toISOString().startsWith('2026-07-13')),
+    ).toBe(true);
   });
 });

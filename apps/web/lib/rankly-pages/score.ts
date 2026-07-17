@@ -116,7 +116,9 @@ function performanceScore(pagespeed: PagespeedSnapshot | null): number | null {
   ].filter((value): value is number => value != null);
 
   if (!scores.length) return null;
-  return clampScore(scores.reduce((sum, value) => sum + value, 0) / scores.length);
+  return clampScore(
+    scores.reduce((sum, value) => sum + value, 0) / scores.length,
+  );
 }
 
 function weightedOverall(parts: {

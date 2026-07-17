@@ -1,6 +1,6 @@
-import { listDictationHistory } from '~/lib/recorder/dictation-history';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { listDictationHistory } from '~/lib/recorder/dictation-history';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { PersonalSettingsPanel } from '../_components/personal-settings-panel';
@@ -8,7 +8,9 @@ import { PersonalSettingsPanel } from '../_components/personal-settings-panel';
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
   return {
-    title: i18n.t('account:dictationHistoryTitle', { defaultValue: 'Dictation history' }),
+    title: i18n.t('account:dictationHistoryTitle', {
+      defaultValue: 'Dictation history',
+    }),
   };
 };
 
@@ -23,8 +25,8 @@ async function PersonalDictationHistoryPage() {
     >
       {items.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          No dictation saved yet. Use the dictation hotkey in Ozer Assistant while
-          signed in.
+          No dictation saved yet. Use the dictation hotkey in Ozer Assistant
+          while signed in.
         </p>
       ) : (
         <ul className="flex flex-col gap-3">
@@ -33,7 +35,7 @@ async function PersonalDictationHistoryPage() {
               key={item.id}
               className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 px-4 py-3"
             >
-              <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
+              <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
                 {item.text}
               </p>
               <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">

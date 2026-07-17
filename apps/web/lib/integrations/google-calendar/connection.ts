@@ -1,9 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import {
-  decryptGoogleSecret,
-  encryptGoogleSecret,
-} from './crypto';
+import { decryptGoogleSecret, encryptGoogleSecret } from './crypto';
 import { getOptionalGoogleCalendarEnv } from './env';
 import type {
   GoogleCalendarConnection,
@@ -78,7 +75,9 @@ function normalizeCalendarIdList(value: unknown): string[] {
     .filter(Boolean);
 }
 
-function mapConnectionRow(row: GoogleCalendarConnectionRow): GoogleCalendarConnection {
+function mapConnectionRow(
+  row: GoogleCalendarConnectionRow,
+): GoogleCalendarConnection {
   return {
     id: row.id,
     userId: row.user_id,
@@ -301,8 +300,7 @@ export async function updateGoogleCalendarAccessToken(
     refreshToken: string | null;
   },
 ) {
-  const refreshToken =
-    input.tokens.refresh_token ?? input.refreshToken ?? null;
+  const refreshToken = input.tokens.refresh_token ?? input.refreshToken ?? null;
   const expiresAt = input.tokens.expires_in
     ? new Date(Date.now() + input.tokens.expires_in * 1000).toISOString()
     : null;

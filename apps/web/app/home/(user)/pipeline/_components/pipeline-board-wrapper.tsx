@@ -1,12 +1,14 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-
 import { useRouter } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
 
-import type { PipelineData, PipelineDeal } from '../../_lib/server/pipeline.loader';
+import type {
+  PipelineData,
+  PipelineDeal,
+} from '../../_lib/server/pipeline.loader';
 import { convertWonDealToProject, getDefaultAccountSlug } from '../actions';
 
 const PipelineBoard = dynamic(

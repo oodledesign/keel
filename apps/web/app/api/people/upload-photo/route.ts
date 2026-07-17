@@ -70,7 +70,10 @@ export async function POST(request: Request) {
   const file = formData.get('file');
 
   if (typeof personId !== 'string' || !personId.trim()) {
-    return NextResponse.json({ error: 'personId is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'personId is required' },
+      { status: 400 },
+    );
   }
 
   const person = await loadOwnedPerson(user.id, personId.trim());

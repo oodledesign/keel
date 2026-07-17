@@ -1,10 +1,11 @@
 'use client';
 
-const pulse = 'animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]';
+const pulse =
+  'animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]';
 
 export function DashboardSkeleton() {
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-8 px-4 pb-12 pt-6 md:px-6 lg:px-8">
+    <div className="flex min-h-0 flex-1 flex-col gap-8 px-4 pt-6 pb-12 md:px-6 lg:px-8">
       <div className="space-y-2">
         <div className={`h-10 w-64 ${pulse}`} />
         <div className={`h-4 w-48 ${pulse}`} />

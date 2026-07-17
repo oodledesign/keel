@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { redirect } from 'next/navigation';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
@@ -12,8 +13,8 @@ import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
-  resolveWorkspaceProfile,
   type WorkspaceProfile,
+  resolveWorkspaceProfile,
 } from './workspace-profile';
 
 export type TeamAccountWorkspace = Awaited<

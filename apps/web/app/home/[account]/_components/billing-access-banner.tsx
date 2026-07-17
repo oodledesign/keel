@@ -7,10 +7,10 @@ import { AlertTriangle, CreditCard } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
-import { UpdatePaymentMethodButton } from './update-payment-method-button';
-
 import type { AccountAccessLevel } from '~/lib/billing/account-access-matrix';
 import type { AccountBillingStatus } from '~/lib/billing/account-billing-types';
+
+import { UpdatePaymentMethodButton } from './update-payment-method-button';
 
 export type BillingAccessBannerProps = {
   accountId: string;
@@ -80,9 +80,7 @@ export function BillingAccessBanner({
     <div
       role={tone === 'danger' ? 'alert' : 'region'}
       aria-label={title}
-      className={cn(
-        'mx-auto w-full max-w-[1600px] px-4 pt-3 sm:px-6',
-      )}
+      className={cn('mx-auto w-full max-w-[1600px] px-4 pt-3 sm:px-6')}
     >
       <div
         className={cn(
@@ -125,7 +123,9 @@ export function BillingAccessBanner({
             <Button asChild size="sm" className="ozer-gradient-btn rounded-lg">
               <Link href={`${billingPath}?billing=1`}>
                 <CreditCard className="mr-2 h-4 w-4" aria-hidden />
-                {status === 'canceled' ? 'View billing' : 'Update payment method'}
+                {status === 'canceled'
+                  ? 'View billing'
+                  : 'Update payment method'}
               </Link>
             </Button>
           )}
@@ -142,4 +142,3 @@ export function BillingAccessBanner({
     </div>
   );
 }
-

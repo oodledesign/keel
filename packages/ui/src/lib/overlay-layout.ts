@@ -3,8 +3,7 @@ export const modalViewportClass =
   'max-h-[min(90dvh,calc(100dvh-2rem))] w-[calc(100%-2rem)] max-w-[calc(100vw-2rem)] sm:w-full sm:max-w-lg';
 
 /** Scrollable centered modal body. */
-export const modalScrollClass =
-  `${modalViewportClass} overflow-y-auto overscroll-contain`;
+export const modalScrollClass = `${modalViewportClass} overflow-y-auto overscroll-contain`;
 
 /** Radix popover surfaces — respect collision padding from the trigger. */
 export const popoverViewportClass =

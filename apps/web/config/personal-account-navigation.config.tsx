@@ -79,7 +79,8 @@ export function buildPersonalHomeNavRoutes() {
   return routes;
 }
 
-export const personalAccountSettingsPath = pathsConfig.app.personalAccountSettings;
+export const personalAccountSettingsPath =
+  pathsConfig.app.personalAccountSettings;
 
 export { Settings as PersonalSettingsIcon };
 
@@ -93,9 +94,8 @@ export function parsePersonalAccountNavigationConfig(
 }
 
 /** Layout defaults when routes are not needed. */
-export const personalAccountNavigationConfig = parsePersonalAccountNavigationConfig(
-  buildPersonalHomeNavRoutes(),
-);
+export const personalAccountNavigationConfig =
+  parsePersonalAccountNavigationConfig(buildPersonalHomeNavRoutes());
 
 export type PersonalShortcutRoute = {
   label: string;

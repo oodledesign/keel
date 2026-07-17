@@ -1,7 +1,9 @@
 'use client';
 
 import { useCallback, useState } from 'react';
+
 import Link from 'next/link';
+
 import { ArrowLeft } from 'lucide-react';
 
 import { toast } from '@kit/ui/sonner';
@@ -9,8 +11,8 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
-  DEFAULT_PLAYER_CONFIG,
   type CaptionTrack,
+  DEFAULT_PLAYER_CONFIG,
   type VideoPlayerConfigValues,
 } from '~/lib/videos/player-config-types';
 
@@ -54,14 +56,11 @@ export function PlayerConfigPageClient(props: {
     async (nextConfig: VideoPlayerConfigValues) => {
       setSaving(true);
       try {
-        const res = await fetch(
-          `/api/videos/${props.video.id}/player-config`,
-          {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(nextConfig),
-          },
-        );
+        const res = await fetch(`/api/videos/${props.video.id}/player-config`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(nextConfig),
+        });
         const json = await res.json();
         if (!json.ok) throw new Error(json.error?.message ?? 'Save failed');
         setConfig(json.data.config);

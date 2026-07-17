@@ -2,8 +2,9 @@
 
 import { z } from 'zod';
 
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import { enhanceAction } from '@kit/next/actions';
+
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import { ContactEmailSchema } from '../contact-email.schema';
 

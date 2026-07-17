@@ -17,7 +17,9 @@ function scoreMatch(query: string, candidate: string): number {
   if (q.includes(c)) return 40;
   const qTokens = q.split(' ');
   const cTokens = c.split(' ');
-  const overlap = qTokens.filter((t) => cTokens.some((ct) => ct.includes(t) || t.includes(ct)));
+  const overlap = qTokens.filter((t) =>
+    cTokens.some((ct) => ct.includes(t) || t.includes(ct)),
+  );
   if (overlap.length > 0) return 20 + overlap.length * 5;
   return 0;
 }

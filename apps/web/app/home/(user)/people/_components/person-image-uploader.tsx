@@ -8,9 +8,10 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+
 import { getInitials } from './person-avatar';
 import { PersonPhotoCropDialog } from './person-photo-crop-dialog';
-import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 type PersonImageUploaderProps = {
   personId: string;
@@ -116,7 +117,7 @@ export function PersonImageUploader({
             'group relative overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]',
             'bg-[var(--ozer-accent-subtle)] ring-2 ring-white/10 transition',
             'hover:border-[var(--ozer-accent)]/40 hover:ring-[var(--ozer-accent)]/30',
-            'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]',
+            'focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none',
             'disabled:cursor-not-allowed disabled:opacity-60',
             dimension,
           )}

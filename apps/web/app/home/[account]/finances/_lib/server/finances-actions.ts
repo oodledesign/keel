@@ -1,54 +1,55 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { suggestTransactionCategories } from '~/lib/ai/finance-category-suggest';
 import {
+  type CsvColumnMapping,
   parseMoneyPence,
   parseUkDate,
   suggestCsvColumnMapping,
-  type CsvColumnMapping,
 } from '~/lib/ai/finance-csv-map';
-import { suggestTransactionCategories } from '~/lib/ai/finance-category-suggest';
-import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import {
   projectDisplayName,
   resolveFinanceTransactionLinks,
 } from '~/lib/finance/transaction-links';
+import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
+import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
+import {
+  hasFreeAgentFinanceConnection,
+  loadFinanceCategoriesForAccount,
+} from '~/lib/integrations/freeagent/finance-categories';
 import {
   pushCategoryToFreeAgent,
   syncFreeAgentHistoryChunk,
   syncFreeAgentToOzer,
 } from '~/lib/integrations/freeagent/sync';
-import {
-  hasFreeAgentFinanceConnection,
-  loadFinanceCategoriesForAccount,
-} from '~/lib/integrations/freeagent/finance-categories';
-import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
 import { isStarlingConfigured } from '~/lib/integrations/starling/env';
 import { syncStarlingToOzer } from '~/lib/integrations/starling/sync';
 
 import { DEFAULT_FINANCE_PAGE_SIZE } from '../finance-transaction-pagination';
 
-function applyFinanceDateFilters<T extends { gte: (col: string, val: string) => T; lte: (col: string, val: string) => T }>(
-  query: T,
-  dateFrom?: string,
-  dateTo?: string,
-) {
+function applyFinanceDateFilters<
+  T extends {
+    gte: (col: string, val: string) => T;
+    lte: (col: string, val: string) => T;
+  },
+>(query: T, dateFrom?: string, dateTo?: string) {
   let next = query;
   if (dateFrom) next = next.gte('transaction_date', dateFrom);
   if (dateTo) next = next.lte('transaction_date', dateTo);
   return next;
 }
 
-function applyFinanceSearchFilter<T extends { ilike: (col: string, pattern: string) => T }>(
-  query: T,
-  search?: string,
-) {
+function applyFinanceSearchFilter<
+  T extends { ilike: (col: string, pattern: string) => T },
+>(query: T, search?: string) {
   const term = search?.trim();
   if (!term) return query;
   const escaped = term.replace(/[%_\\]/g, '\\$&');
@@ -113,9 +114,7 @@ function revalidateFinances(accountSlug: string, projectId?: string | null) {
   revalidatePath(
     pathsConfig.app.accountFinancesSettings.replace('[account]', accountSlug),
   );
-  revalidatePath(
-    pathsConfig.app.accountHome.replace('[account]', accountSlug),
-  );
+  revalidatePath(pathsConfig.app.accountHome.replace('[account]', accountSlug));
   if (projectId) {
     revalidatePath(
       `${pathsConfig.app.accountProjects.replace('[account]', accountSlug)}/${projectId}`,
@@ -161,7 +160,9 @@ export async function ensureDefaultFinanceCategories(accountId: string) {
   );
 
   if (insertError && !insertError.message.includes('duplicate')) {
-    throw new Error(insertError.message || 'Could not create default categories');
+    throw new Error(
+      insertError.message || 'Could not create default categories',
+    );
   }
 }
 
@@ -283,7 +284,9 @@ export const loadFinancesDashboardAction = enhanceAction(
       clients: clients ?? [],
       projects: (projects ?? []).map((project) => ({
         id: project.id as string,
-        label: projectDisplayName(project as { title?: string | null; name?: string | null }),
+        label: projectDisplayName(
+          project as { title?: string | null; name?: string | null },
+        ),
         client_id: (project.client_id as string | null) ?? null,
       })),
       summary: {
@@ -303,11 +306,7 @@ export const loadFinancesDashboardAction = enhanceAction(
       dateTo: z.string().optional(),
       page: z.number().int().min(1).optional(),
       pageSize: z
-        .union([
-          z.literal(50),
-          z.literal(100),
-          z.literal(200),
-        ])
+        .union([z.literal(50), z.literal(100), z.literal(200)])
         .optional(),
       search: z.string().max(200).optional(),
     }),
@@ -318,10 +317,14 @@ export const setFinanceTransactionLinksAction = enhanceAction(
   async (input) => {
     const client = getSupabaseServerClient();
 
-    const links = await resolveFinanceTransactionLinks(client, input.accountId, {
-      clientId: input.clientId,
-      projectId: input.projectId,
-    });
+    const links = await resolveFinanceTransactionLinks(
+      client,
+      input.accountId,
+      {
+        clientId: input.clientId,
+        projectId: input.projectId,
+      },
+    );
 
     const { error } = await client
       .from('finance_transactions')
@@ -661,10 +664,14 @@ export const importCsvTransactionsAction = enhanceAction(
 export const createManualTransactionAction = enhanceAction(
   async (input, user) => {
     const client = getSupabaseServerClient();
-    const links = await resolveFinanceTransactionLinks(client, input.accountId, {
-      clientId: input.clientId,
-      projectId: input.projectId,
-    });
+    const links = await resolveFinanceTransactionLinks(
+      client,
+      input.accountId,
+      {
+        clientId: input.clientId,
+        projectId: input.projectId,
+      },
+    );
 
     const { error } = await client.from('finance_transactions').insert({
       account_id: input.accountId,

@@ -55,13 +55,12 @@ export const WebsiteInputSchema = z.object({
 
 export const UpdateWebsiteSchema = WebsiteInputSchema.extend({
   websiteId: z.string().uuid(),
-})
-  .omit({
-    accountId: true,
-    create_delivery_project: true,
-    existing_job_id: true,
-    client_id: true,
-  });
+}).omit({
+  accountId: true,
+  create_delivery_project: true,
+  existing_job_id: true,
+  client_id: true,
+});
 
 export const DeleteWebsiteSchema = z.object({
   accountId: z.string().uuid(),

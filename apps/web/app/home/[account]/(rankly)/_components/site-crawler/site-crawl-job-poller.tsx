@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useCallback, useEffect, useState } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { toast } from '@kit/ui/sonner';
 
@@ -92,10 +93,7 @@ export function SiteCrawlJobPoller({
   }
 
   const total = Math.max(job.url_limit, job.urls_discovered, 1);
-  const percent = Math.min(
-    100,
-    Math.round((job.urls_crawled / total) * 100),
-  );
+  const percent = Math.min(100, Math.round((job.urls_crawled / total) * 100));
 
   return (
     <div className="max-w-xl space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
@@ -104,7 +102,8 @@ export function SiteCrawlJobPoller({
           {job.status === 'pending' ? 'Queued…' : 'Crawling internal links…'}
         </span>
         <span className="text-muted-foreground tabular-nums">
-          {job.urls_crawled.toLocaleString()} / {job.url_limit.toLocaleString()} pages
+          {job.urls_crawled.toLocaleString()} / {job.url_limit.toLocaleString()}{' '}
+          pages
         </span>
       </div>
       <div className="h-2 overflow-hidden rounded-full bg-black/30">

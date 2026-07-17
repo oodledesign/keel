@@ -6,15 +6,17 @@ import { usePathname } from 'next/navigation';
 import { cn } from '@kit/ui/utils';
 
 import {
-  isPersonalSettingsNavActive,
   type PersonalSettingsNavItem,
+  isPersonalSettingsNavActive,
 } from '../_lib/personal-settings-nav';
 
 type PersonalSettingsSidebarProps = {
   items: PersonalSettingsNavItem[];
 };
 
-export function PersonalSettingsSidebar({ items }: PersonalSettingsSidebarProps) {
+export function PersonalSettingsSidebar({
+  items,
+}: PersonalSettingsSidebarProps) {
   const pathname = usePathname();
 
   return (

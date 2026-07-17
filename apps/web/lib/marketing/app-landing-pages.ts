@@ -1,7 +1,10 @@
 import type { LucideIcon } from 'lucide-react';
 import { Globe, PenLine, Share2 } from 'lucide-react';
 
-import type { SegmentFeature, SegmentFaq } from '~/lib/marketing/segment-landing-pages';
+import type {
+  SegmentFaq,
+  SegmentFeature,
+} from '~/lib/marketing/segment-landing-pages';
 
 export type AppSlug = 'signatures';
 
@@ -91,8 +94,7 @@ export const APP_LANDING_PAGES: Record<AppSlug, AppLandingConfig> = {
     },
     pricing: {
       heading: 'Flat tiers for every mailbox',
-      body:
-        'Pick the mailbox band for this workspace. One workspace equals one brand; additional brands run on additional free Business Lite workspaces with their own Signatures subscription.',
+      body: 'Pick the mailbox band for this workspace. One workspace equals one brand; additional brands run on additional free Business Lite workspaces with their own Signatures subscription.',
       tiers: [
         {
           name: 'Starter',

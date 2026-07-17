@@ -214,9 +214,7 @@ export function WebsiteSharePanel({
             </Select>
             <Select
               value={expiryPreset}
-              onValueChange={(value) =>
-                setExpiryPreset(value as ExpiryPreset)
-              }
+              onValueChange={(value) => setExpiryPreset(value as ExpiryPreset)}
             >
               <SelectTrigger className="w-48 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]">
                 <SelectValue />
@@ -229,7 +227,12 @@ export function WebsiteSharePanel({
                 ))}
               </SelectContent>
             </Select>
-            <Button type="button" size="sm" disabled={pending} onClick={createLink}>
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending}
+              onClick={createLink}
+            >
               <Link2 className="mr-2 h-4 w-4" />
               Generate link
             </Button>
@@ -244,8 +247,8 @@ export function WebsiteSharePanel({
                 className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2 text-sm"
               >
                 <span className="text-[var(--workspace-shell-text-muted)]">
-                  {SHARE_SCOPES.find((item) => item.value === link.scope)?.label ??
-                    link.scope}
+                  {SHARE_SCOPES.find((item) => item.value === link.scope)
+                    ?.label ?? link.scope}
                   {' · '}
                   {formatExpiry(link.expiresAt)}
                   {' · '}

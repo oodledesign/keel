@@ -6,8 +6,9 @@ import { PlusCircle, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
+
 import {
   createNote,
   deleteNote,
@@ -98,26 +99,30 @@ export function ClientNotesBlock({
             rows={3}
             className="resize-none"
           />
-          <Button type="submit" size="sm" disabled={submitting || !newNote.trim()}>
+          <Button
+            type="submit"
+            size="sm"
+            disabled={submitting || !newNote.trim()}
+          >
             <PlusCircle className="mr-2 h-4 w-4" />
             {submitting ? 'Adding...' : 'Add note'}
           </Button>
         </form>
       )}
       {loading ? (
-        <p className="text-sm text-muted-foreground">Loading notes...</p>
+        <p className="text-muted-foreground text-sm">Loading notes...</p>
       ) : notes.length === 0 ? (
-        <p className="text-sm text-muted-foreground">No notes yet.</p>
+        <p className="text-muted-foreground text-sm">No notes yet.</p>
       ) : (
         <ul className="space-y-3">
           {notes.map((note) => (
             <li
               key={note.id}
-              className="flex items-start justify-between gap-2 rounded-md border bg-muted/30 p-3 text-sm"
+              className="bg-muted/30 flex items-start justify-between gap-2 rounded-md border p-3 text-sm"
             >
               <div className="min-w-0 flex-1">
                 <p className="whitespace-pre-wrap">{note.note}</p>
-                <p className="mt-1 text-xs text-muted-foreground">
+                <p className="text-muted-foreground mt-1 text-xs">
                   {new Date(note.created_at).toLocaleString('en-GB', {
                     day: 'numeric',
                     month: 'short',

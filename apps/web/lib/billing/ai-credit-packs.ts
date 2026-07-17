@@ -156,6 +156,8 @@ export function isAiCreditPackProductId(productId: string | null | undefined) {
   );
 }
 
-export function isAiCreditPackPriceId(stripePriceId: string | null | undefined) {
+export function isAiCreditPackPriceId(
+  stripePriceId: string | null | undefined,
+) {
   return Boolean(findAiCreditPackByPriceId(stripePriceId));
 }

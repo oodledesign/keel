@@ -3,11 +3,13 @@ import 'server-only';
 import { crawlFetch } from '~/lib/crawl/http-fetch';
 
 export function normaliseHost(domain: string): string {
-  return domain
-    .replace(/^https?:\/\//i, '')
-    .replace(/^www\./i, '')
-    .split('/')[0]
-    ?.toLowerCase() ?? domain.toLowerCase();
+  return (
+    domain
+      .replace(/^https?:\/\//i, '')
+      .replace(/^www\./i, '')
+      .split('/')[0]
+      ?.toLowerCase() ?? domain.toLowerCase()
+  );
 }
 
 export function projectDomainToStartUrl(domain: string): string {
@@ -23,7 +25,8 @@ export function normaliseCrawlUrl(raw: string, host: string): string | null {
   try {
     const base = `https://${normaliseHost(host)}`;
     const parsed = new URL(trimmed, base);
-    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return null;
+    if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:')
+      return null;
 
     parsed.hash = '';
     parsed.hostname = parsed.hostname.toLowerCase().replace(/^www\./, '');
@@ -44,13 +47,19 @@ export function normaliseCrawlUrl(raw: string, host: string): string | null {
 export function isInternalUrl(url: string, host: string): boolean {
   try {
     const parsed = new URL(url);
-    return parsed.hostname.toLowerCase().replace(/^www\./, '') === normaliseHost(host);
+    return (
+      parsed.hostname.toLowerCase().replace(/^www\./, '') ===
+      normaliseHost(host)
+    );
   } catch {
     return false;
   }
 }
 
-export async function loadSitemapUrls(domain: string, limit: number): Promise<string[]> {
+export async function loadSitemapUrls(
+  domain: string,
+  limit: number,
+): Promise<string[]> {
   const host = normaliseHost(domain);
 
   try {
@@ -70,7 +79,10 @@ export async function loadSitemapUrls(domain: string, limit: number): Promise<st
   }
 }
 
-export function buildInitialQueue(domain: string, sitemapUrls: string[]): string[] {
+export function buildInitialQueue(
+  domain: string,
+  sitemapUrls: string[],
+): string[] {
   const startUrl = projectDomainToStartUrl(domain);
   const queue = [startUrl, ...sitemapUrls];
   return [...new Set(queue)];

@@ -47,7 +47,7 @@ export function OAuthConsentCard({
           aria-hidden
         />
         <div>
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+          <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Authorise access
           </p>
           <h1 className="text-xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
@@ -88,7 +88,7 @@ export function OAuthConsentCard({
 
       {scopes.length > 0 ? (
         <div className="mt-5">
-          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+          <p className="mb-2 text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Requested permissions
           </p>
           <div className="flex flex-wrap gap-2">
@@ -112,14 +112,25 @@ export function OAuthConsentCard({
 
       <div className="mt-8 flex flex-col gap-3 sm:flex-row">
         <form action="/api/oauth/decision" method="post" className="flex-1">
-          <input type="hidden" name="authorization_id" value={authorizationId} />
+          <input
+            type="hidden"
+            name="authorization_id"
+            value={authorizationId}
+          />
           <input type="hidden" name="decision" value="approve" />
-          <Button type="submit" className="w-full bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]">
+          <Button
+            type="submit"
+            className="w-full bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
+          >
             Approve
           </Button>
         </form>
         <form action="/api/oauth/decision" method="post" className="flex-1">
-          <input type="hidden" name="authorization_id" value={authorizationId} />
+          <input
+            type="hidden"
+            name="authorization_id"
+            value={authorizationId}
+          />
           <input type="hidden" name="decision" value="deny" />
           <Button type="submit" variant="outline" className="w-full">
             Deny

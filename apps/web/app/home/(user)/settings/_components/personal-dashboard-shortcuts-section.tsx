@@ -1,8 +1,9 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { PersonalDashboardShortcutsSettingsForm } from './personal-dashboard-shortcuts-settings-form';
 import { loadPersonalShortcutsSettings } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+
+import { PersonalDashboardShortcutsSettingsForm } from './personal-dashboard-shortcuts-settings-form';
 
 export async function PersonalDashboardShortcutsSection() {
   const client = getSupabaseServerClient();

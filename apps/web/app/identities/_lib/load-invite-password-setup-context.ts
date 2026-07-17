@@ -1,8 +1,8 @@
 import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import {
   DEFAULT_WORKSPACE_NAMES,
@@ -67,8 +67,7 @@ export async function loadInvitePasswordSetupContext(input: {
   }
 
   const config = parseAdminUserInviteAccessConfig(invite.access_config);
-  const firstName =
-    firstNameFrom(config.inviteeName) ?? fallbackFirstName;
+  const firstName = firstNameFrom(config.inviteeName) ?? fallbackFirstName;
 
   if (config.personalOnly) {
     return {

@@ -2,8 +2,6 @@
 
 import { useState, useTransition } from 'react';
 
-import { toast } from '@kit/ui/sonner';
-
 import { Button } from '@kit/ui/button';
 import {
   Select,
@@ -12,6 +10,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 
 import { DashboardShortcutsEditor } from '~/components/dashboard-shortcuts/dashboard-shortcuts-editor';
 import {
@@ -82,7 +81,9 @@ export function PersonalDashboardShortcutsSettingsForm({
     <div className="space-y-8">
       <section className="space-y-4">
         <div>
-          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">Default landing</h2>
+          <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+            Default landing
+          </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Choose where Ozer opens after you sign in.
           </p>
@@ -90,7 +91,7 @@ export function PersonalDashboardShortcutsSettingsForm({
 
         <div className="grid gap-3 sm:grid-cols-2">
           <div className="space-y-2">
-            <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+            <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               Open on sign-in
             </p>
             <Select
@@ -111,10 +112,13 @@ export function PersonalDashboardShortcutsSettingsForm({
 
           {landingType === 'workspace' ? (
             <div className="space-y-2">
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+              <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 Workspace
               </p>
-              <Select value={workspaceSlug || 'none'} onValueChange={setWorkspaceSlug}>
+              <Select
+                value={workspaceSlug || 'none'}
+                onValueChange={setWorkspaceSlug}
+              >
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="Choose workspace" />
                 </SelectTrigger>
@@ -174,8 +178,8 @@ export function PersonalDashboardShortcutsSettingsForm({
             Personal dashboard shortcuts
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Quick links at the top of your personal home — including pages in any
-            workspace you can access, like finances or Rankly.
+            Quick links at the top of your personal home — including pages in
+            any workspace you can access, like finances or Rankly.
           </p>
         </div>
 
@@ -192,8 +196,8 @@ export function PersonalDashboardShortcutsSettingsForm({
             Mobile bottom navigation
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Choose up to three icon shortcuts beside Home and Menu on your phone.
-            Leave empty for Home and Menu only.
+            Choose up to three icon shortcuts beside Home and Menu on your
+            phone. Leave empty for Home and Menu only.
           </p>
         </div>
 

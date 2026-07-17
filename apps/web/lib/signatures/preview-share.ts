@@ -6,10 +6,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { getSignaturesSupabaseClient } from './graph';
 import { loadSignatureRenderOptions } from './render-context';
-import {
-  renderTemplate,
-  type SignaturesStaffRow,
-} from './render-template';
+import { type SignaturesStaffRow, renderTemplate } from './render-template';
 
 export type SignaturePreviewShareRow = {
   id: string;
@@ -36,13 +33,27 @@ export function getSiteOrigin() {
   return 'http://localhost:3000';
 }
 
-export function buildSignaturePreviewPath(token: string) {
-  return `/preview/signatures/${encodeURIComponent(token)}`;
+export type SignaturePreviewView = 'install' | 'preview';
+
+export function buildSignaturePreviewPath(
+  token: string,
+  view: SignaturePreviewView = 'install',
+) {
+  const path = `/preview/signatures/${encodeURIComponent(token)}`;
+  // Preview-only links hide the Outlook install instructions sidebar.
+  if (view === 'preview') {
+    return `${path}?view=preview`;
+  }
+  return path;
 }
 
-export function buildSignaturePreviewUrl(token: string, origin?: string) {
+export function buildSignaturePreviewUrl(
+  token: string,
+  origin?: string,
+  view: SignaturePreviewView = 'install',
+) {
   const base = (origin ?? getSiteOrigin()).replace(/\/$/, '');
-  return `${base}${buildSignaturePreviewPath(token)}`;
+  return `${base}${buildSignaturePreviewPath(token, view)}`;
 }
 
 export function createSamplePreviewStaff(
@@ -72,9 +83,12 @@ export async function ensureSignaturePreviewShare(input: {
   templateId: string;
   staffId?: string | null;
   createdBy?: string | null;
+  /** `preview` = mock email only; `install` (default) includes Outlook steps. */
+  view?: SignaturePreviewView;
 }): Promise<{ token: string; url: string; created: boolean }> {
   const db = getSignaturesSupabaseClient();
   const staffId = input.staffId ?? null;
+  const view = input.view ?? 'install';
 
   let existingQuery = db
     .from('preview_shares')
@@ -99,7 +113,7 @@ export async function ensureSignaturePreviewShare(input: {
   if (existing?.token) {
     return {
       token: existing.token as string,
-      url: buildSignaturePreviewUrl(existing.token as string),
+      url: buildSignaturePreviewUrl(existing.token as string, undefined, view),
       created: false,
     };
   }
@@ -123,7 +137,7 @@ export async function ensureSignaturePreviewShare(input: {
 
   return {
     token: inserted.token as string,
-    url: buildSignaturePreviewUrl(inserted.token as string),
+    url: buildSignaturePreviewUrl(inserted.token as string, undefined, view),
     created: true,
   };
 }

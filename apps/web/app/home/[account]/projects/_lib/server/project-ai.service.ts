@@ -6,10 +6,10 @@ import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import {
+  type ProjectSourceBlock,
   generatePhasePageMarkdown,
   generatePhasePlanJson,
   generateProjectBriefMarkdown,
-  type ProjectSourceBlock,
 } from '~/lib/ai/project-content-generate';
 import { Database } from '~/lib/database.types';
 import { adjustPhasePlanDates } from '~/lib/workspace-focus';
@@ -147,7 +147,9 @@ class ProjectAiService {
           type: 'proposal',
           title: (row.title as string) || 'Proposal',
           subtitle: String(row.status ?? 'draft'),
-          preview: ((row.content_html as string) ?? '').replace(/<[^>]+>/g, ' ').slice(0, 160),
+          preview: ((row.content_html as string) ?? '')
+            .replace(/<[^>]+>/g, ' ')
+            .slice(0, 160),
           date: row.updated_at as string,
         });
       }
@@ -184,7 +186,9 @@ class ProjectAiService {
 
     let docsQuery = this.db
       .from('docs')
-      .select('id, title, content, kind, updated_at, project_id, client_id, doc_type')
+      .select(
+        'id, title, content, kind, updated_at, project_id, client_id, doc_type',
+      )
       .eq('account_id', input.accountId)
       .neq('doc_type', 'phase_page')
       .order('updated_at', { ascending: false })
@@ -303,7 +307,10 @@ class ProjectAiService {
   async generateProjectContent(input: GenerateProjectContentInput) {
     const user = await this.ensureUserAndJobsEdit(input.accountId);
     const ctx = await this.getJobContext(input.accountId, input.jobId);
-    const sources = await this.loadSourceBlocks(input.accountId, input.sourceRefs);
+    const sources = await this.loadSourceBlocks(
+      input.accountId,
+      input.sourceRefs,
+    );
     const contextRefs = input.sourceRefs.map((r) => ({
       type: r.type,
       id: r.id,
@@ -459,17 +466,15 @@ class ProjectAiService {
     );
     const phases = adjustPhasePlanDates(input.phases, scheduling);
 
-    const [{ data: existingPhases }, { data: existingTasks }] = await Promise.all([
-      this.db
-        .from('project_phases')
-        .select('id, name')
-        .eq('account_id', input.accountId)
-        .eq('project_id', input.jobId),
-      this.db
-        .from('tasks')
-        .select('phase_id')
-        .eq('project_id', input.jobId),
-    ]);
+    const [{ data: existingPhases }, { data: existingTasks }] =
+      await Promise.all([
+        this.db
+          .from('project_phases')
+          .select('id, name')
+          .eq('account_id', input.accountId)
+          .eq('project_id', input.jobId),
+        this.db.from('tasks').select('phase_id').eq('project_id', input.jobId),
+      ]);
 
     const taskCountByPhase = new Map<string, number>();
     for (const task of existingTasks ?? []) {
@@ -483,7 +488,10 @@ class ProjectAiService {
     const emptyPlaceholderPhaseIds = (existingPhases ?? [])
       .filter((phase) => {
         const name = ((phase.name as string) ?? '').trim();
-        return name === 'New phase' && !(taskCountByPhase.get(phase.id as string) ?? 0);
+        return (
+          name === 'New phase' &&
+          !(taskCountByPhase.get(phase.id as string) ?? 0)
+        );
       })
       .map((phase) => phase.id as string);
 

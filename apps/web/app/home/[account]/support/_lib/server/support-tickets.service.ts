@@ -71,10 +71,13 @@ type TicketRow = {
   created_at: string;
   updated_at: string;
   client_orgs?: { name?: string | null } | { name?: string | null }[] | null;
-  websites?: { name?: string | null; domain?: string | null } | Array<{
-    name?: string | null;
-    domain?: string | null;
-  }> | null;
+  websites?:
+    | { name?: string | null; domain?: string | null }
+    | Array<{
+        name?: string | null;
+        domain?: string | null;
+      }>
+    | null;
 };
 
 type MessageRow = {
@@ -149,10 +152,10 @@ function mapTicketRow(
     websiteName: website?.name?.trim() ?? null,
     websiteDomain: website?.domain ?? null,
     assignedToName: row.assigned_to
-      ? profiles.get(row.assigned_to)?.full_name?.trim() ?? null
+      ? (profiles.get(row.assigned_to)?.full_name?.trim() ?? null)
       : null,
     createdByName: row.created_by
-      ? profiles.get(row.created_by)?.full_name?.trim() ?? null
+      ? (profiles.get(row.created_by)?.full_name?.trim() ?? null)
       : null,
   };
 }
@@ -229,8 +232,10 @@ class SupportTicketsService {
       .limit(1)
       .maybeSingle();
 
-    return ((data as { ticket_number?: number | null } | null)?.ticket_number ??
-      0) + 1;
+    return (
+      ((data as { ticket_number?: number | null } | null)?.ticket_number ?? 0) +
+      1
+    );
   }
 
   async listTickets(input: ListTicketsInput): Promise<SupportTicket[]> {
@@ -422,7 +427,9 @@ class SupportTicketsService {
       is_internal: false,
     });
 
-    const profiles = await this.loadProfiles([user.id, input.assigned_to].filter(Boolean) as string[]);
+    const profiles = await this.loadProfiles(
+      [user.id, input.assigned_to].filter(Boolean) as string[],
+    );
     return mapTicketRow(ticket, profiles);
   }
 
@@ -431,10 +438,14 @@ class SupportTicketsService {
 
     const updates: Record<string, unknown> = {
       ...(input.title !== undefined && { title: input.title }),
-      ...(input.description !== undefined && { description: input.description }),
+      ...(input.description !== undefined && {
+        description: input.description,
+      }),
       ...(input.status !== undefined && { status: input.status }),
       ...(input.priority !== undefined && { priority: input.priority }),
-      ...(input.assigned_to !== undefined && { assigned_to: input.assigned_to }),
+      ...(input.assigned_to !== undefined && {
+        assigned_to: input.assigned_to,
+      }),
       ...(input.client_org_id !== undefined && {
         client_org_id: input.client_org_id,
       }),

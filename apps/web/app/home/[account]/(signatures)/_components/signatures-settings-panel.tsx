@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { PlugZap, Trash2 } from 'lucide-react';
@@ -13,15 +14,15 @@ import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
+import type {
+  GoogleConnection,
+  MsConnection,
+} from '../_lib/server/signatures-data';
 import {
   connectGoogleWorkspaceAction,
   disconnectGoogleWorkspaceAction,
   disconnectMicrosoft365,
 } from '../_lib/server/signatures-module-actions';
-import type {
-  GoogleConnection,
-  MsConnection,
-} from '../_lib/server/signatures-data';
 
 export function SignaturesSettingsPanel({
   accountId,

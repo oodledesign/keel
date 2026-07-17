@@ -15,8 +15,8 @@ import { PageBody, PageHeader } from '@kit/ui/page';
 import pathsConfig from '~/config/paths.config';
 
 import {
-  loadAdminAtRiskAccounts,
   type AdminAtRiskAccountRow,
+  loadAdminAtRiskAccounts,
 } from '../_lib/load-admin-at-risk-accounts';
 
 export const metadata = { title: 'At-risk billing' };
@@ -52,7 +52,11 @@ async function AdminBillingAtRiskPage() {
 
       <PageBody className="mx-auto max-w-5xl space-y-8 py-4">
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard title="Suspended" value={String(counts.suspended)} warning={counts.suspended > 0} />
+          <MetricCard
+            title="Suspended"
+            value={String(counts.suspended)}
+            warning={counts.suspended > 0}
+          />
           <MetricCard
             title="Restricted"
             value={String(counts.past_due_restricted)}
@@ -108,8 +112,7 @@ async function AdminBillingAtRiskPage() {
                       </p>
                       {row.lastEvent ? (
                         <p className="text-muted-foreground text-xs">
-                          Last event:{' '}
-                          {row.lastEvent.fromStatus ?? '—'} →{' '}
+                          Last event: {row.lastEvent.fromStatus ?? '—'} →{' '}
                           {row.lastEvent.toStatus} ·{' '}
                           {new Date(row.lastEvent.createdAt).toLocaleString(
                             'en-GB',

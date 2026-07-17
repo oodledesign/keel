@@ -156,20 +156,24 @@ export async function savePlan(
         .insert(keywordRows);
 
       if (keywordError) {
-        throw new Error(`Failed to save cluster keywords: ${keywordError.message}`);
+        throw new Error(
+          `Failed to save cluster keywords: ${keywordError.message}`,
+        );
       }
     }
   }
 
   if (quality.length) {
-    const { error: qualityError } = await db.from('keyword_cluster_quality').insert(
-      quality.map((gate) => ({
-        job_id: jobId,
-        gate: gate.gate,
-        status: gate.status,
-        detail: gate.detail,
-      })),
-    );
+    const { error: qualityError } = await db
+      .from('keyword_cluster_quality')
+      .insert(
+        quality.map((gate) => ({
+          job_id: jobId,
+          gate: gate.gate,
+          status: gate.status,
+          detail: gate.detail,
+        })),
+      );
 
     if (qualityError) {
       throw new Error(`Failed to save quality gates: ${qualityError.message}`);

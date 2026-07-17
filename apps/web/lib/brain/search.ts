@@ -133,7 +133,9 @@ export async function searchBrainChunks(
   let semantic = (data ?? []) as BrainMatch[];
 
   if (params.scope) {
-    semantic = semantic.filter((row) => matchesScope(row.metadata ?? {}, params.scope));
+    semantic = semantic.filter((row) =>
+      matchesScope(row.metadata ?? {}, params.scope),
+    );
   }
 
   const keyword = await keywordSearchBrainChunks(client, {

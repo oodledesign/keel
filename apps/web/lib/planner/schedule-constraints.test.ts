@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type EditablePlanBlock,
   blockToScheduleLine,
   parsePlanDocument,
   serializePlanDocument,
-  type EditablePlanBlock,
 } from '~/lib/planner/plan-blocks';
 import {
   canPlaceBlock,
@@ -71,13 +71,15 @@ describe('schedule-constraints', () => {
   ];
 
   it('rejects overlapping a calendar event', () => {
-    expect(
-      canPlaceBlock(blocks, 'task', 9 * 60 + 45, 10 * 60 + 15).ok,
-    ).toBe(false);
+    expect(canPlaceBlock(blocks, 'task', 9 * 60 + 45, 10 * 60 + 15).ok).toBe(
+      false,
+    );
   });
 
   it('finds a valid drop start in a free gap', () => {
-    expect(findValidDropStart(blocks, 'admin', 12 * 60 + 50)).toBe(12 * 60 + 50);
+    expect(findValidDropStart(blocks, 'admin', 12 * 60 + 50)).toBe(
+      12 * 60 + 50,
+    );
   });
 
   it('rejects durations that no longer fit', () => {
@@ -89,9 +91,9 @@ describe('schedule-constraints', () => {
     const movableMeeting = { ...blocks[1]!, movable: true };
     const movableBlocks = [blocks[0]!, movableMeeting, blocks[2]!];
 
-    expect(
-      canPlaceBlock(movableBlocks, 'meeting', 11 * 60, 12 * 60).ok,
-    ).toBe(true);
+    expect(canPlaceBlock(movableBlocks, 'meeting', 11 * 60, 12 * 60).ok).toBe(
+      true,
+    );
   });
 
   it('keeps calendar blocks immovable in serialized lines', () => {

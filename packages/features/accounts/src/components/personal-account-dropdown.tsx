@@ -127,10 +127,10 @@ export function PersonalAccountDropdown({
         aria-label="Open your profile menu"
         data-test={'account-dropdown-trigger'}
         className={cn(
-          'group/trigger fade-in flex cursor-pointer items-center focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40',
+          'group/trigger fade-in flex cursor-pointer items-center focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40 focus-visible:outline-none',
           className ?? '',
           showProfileName
-            ? 'active:bg-[var(--workspace-shell-sidebar-accent)] gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]'
+            ? 'gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] active:bg-[var(--workspace-shell-sidebar-accent)]'
             : 'shrink-0 rounded-full p-0.5 ring-1 ring-transparent transition-[box-shadow,opacity] hover:opacity-95 hover:ring-[color:var(--workspace-shell-border)]',
         )}
       >
@@ -155,7 +155,9 @@ export function PersonalAccountDropdown({
           >
             <span
               data-test={'account-dropdown-display-name'}
-              className={'truncate text-sm font-medium text-[var(--workspace-shell-text)]'}
+              className={
+                'truncate text-sm font-medium text-[var(--workspace-shell-text)]'
+              }
             >
               {displayName}
             </span>
@@ -255,7 +257,7 @@ export function PersonalAccountDropdown({
 
         <DropdownMenuSeparator className="bg-[color:var(--workspace-shell-border)]" />
 
-        <div className="space-y-0.5 px-1.5 pb-1.5 pt-0.5">
+        <div className="space-y-0.5 px-1.5 pt-0.5 pb-1.5">
           <DropdownMenuItem
             data-test={'account-dropdown-sign-out'}
             role={'button'}

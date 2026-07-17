@@ -1,4 +1,5 @@
 import React from 'react';
+
 import Image from 'next/image';
 
 import { cn } from '../../lib/utils';
@@ -84,7 +85,7 @@ export function SocialProof({
     <section className={cn('py-16 lg:py-24', className)}>
       <div className="container mx-auto">
         <div className="mb-12 text-center">
-          <h2 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white lg:text-4xl">
+          <h2 className="mb-4 text-3xl font-bold text-gray-900 lg:text-4xl dark:text-white">
             {heading}
           </h2>
           {subheading && (

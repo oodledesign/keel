@@ -2,8 +2,9 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { ReceiptText } from 'lucide-react';
 import Link from 'next/link';
+
+import { ReceiptText } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -90,17 +91,20 @@ export function ClientInvoicesBlock({
     fetchInvoices();
   }, [fetchInvoices]);
 
-  const invoiceEditBase = pathsConfig.app.accountInvoiceEdit.replace(
-    '[account]',
-    accountSlug,
-  ).replace('/[id]/edit', '');
+  const invoiceEditBase = pathsConfig.app.accountInvoiceEdit
+    .replace('[account]', accountSlug)
+    .replace('/[id]/edit', '');
 
   return (
     <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
-      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Invoices</h3>
+      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+        Invoices
+      </h3>
 
       {loading ? (
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Loading…
+        </p>
       ) : invoices.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No invoices linked to this client yet.

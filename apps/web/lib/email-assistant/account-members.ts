@@ -24,7 +24,11 @@ export async function loadAccountMembersForExtraction(
 
     const [{ data: authUser }, { data: personalAccount }] = await Promise.all([
       admin.auth.admin.getUserById(userId),
-      admin.from('accounts').select('name, email').eq('id', userId).maybeSingle(),
+      admin
+        .from('accounts')
+        .select('name, email')
+        .eq('id', userId)
+        .maybeSingle(),
     ]);
 
     const email =
@@ -36,8 +40,12 @@ export async function loadAccountMembersForExtraction(
       continue;
     }
 
-    const meta = authUser?.user?.user_metadata as Record<string, unknown> | undefined;
-    let name = (personalAccount as { name?: string | null } | null)?.name?.trim() || null;
+    const meta = authUser?.user?.user_metadata as
+      | Record<string, unknown>
+      | undefined;
+    let name =
+      (personalAccount as { name?: string | null } | null)?.name?.trim() ||
+      null;
 
     if (!name && meta) {
       for (const key of ['full_name', 'name'] as const) {
@@ -64,7 +72,8 @@ export function resolveSuggestedAssigneeId(
   mailboxOwnerEmail: string,
 ): string | null {
   const ownerEmail = mailboxOwnerEmail.trim().toLowerCase();
-  const suggestedEmail = item.suggestedAssigneeEmail?.trim().toLowerCase() || null;
+  const suggestedEmail =
+    item.suggestedAssigneeEmail?.trim().toLowerCase() || null;
 
   if (!suggestedEmail) {
     return null;
@@ -97,7 +106,8 @@ export function shouldIncludeExtractedItem(
   mailboxOwnerEmail: string,
 ): boolean {
   const ownerEmail = mailboxOwnerEmail.trim().toLowerCase();
-  const suggestedEmail = item.suggestedAssigneeEmail?.trim().toLowerCase() || null;
+  const suggestedEmail =
+    item.suggestedAssigneeEmail?.trim().toLowerCase() || null;
 
   if (!suggestedEmail) {
     return true;

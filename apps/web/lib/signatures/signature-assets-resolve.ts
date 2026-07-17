@@ -61,7 +61,9 @@ export function filterSignatureAssetsForStaff(
     });
 }
 
-export function renderSignatureCustomTextHtml(assets: SignatureAsset[]): string {
+export function renderSignatureCustomTextHtml(
+  assets: SignatureAsset[],
+): string {
   return assets
     .filter((asset) => asset.kind === 'custom_text' && asset.body?.trim())
     .map(
@@ -71,7 +73,9 @@ export function renderSignatureCustomTextHtml(assets: SignatureAsset[]): string 
     .join('');
 }
 
-export function renderSignatureAwardBadgesHtml(assets: SignatureAsset[]): string {
+export function renderSignatureAwardBadgesHtml(
+  assets: SignatureAsset[],
+): string {
   return assets
     .filter((asset) => asset.kind === 'award_badge' && asset.image_url?.trim())
     .map((asset) => {

@@ -61,7 +61,9 @@ function mapDocRow(row: Record<string, unknown>): DocListItem {
     clientId: (row.client_id as string | null) ?? null,
     propertyId: (row.property_id as string | null) ?? null,
     taskId: (row.task_id as string | null) ?? null,
-    context: resolveNoteContext(row as Parameters<typeof resolveNoteContext>[0]),
+    context: resolveNoteContext(
+      row as Parameters<typeof resolveNoteContext>[0],
+    ),
     mimeType: (row.mime_type as string | null) ?? null,
     fileUrl: (row.file_url as string | null) ?? null,
     filePath,

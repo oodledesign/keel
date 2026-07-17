@@ -9,9 +9,9 @@ import {
   FileText,
   LayoutGrid,
   Loader2,
+  type LucideIcon,
   Plus,
   Sparkles,
-  type LucideIcon,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -25,12 +25,26 @@ import {
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { saveWorkspaceNoteAction } from '~/home/[account]/_lib/workspace-content/notes-actions';
+import type { PhasePlan } from '~/lib/ai/project-content-generate';
+
+import { getErrorMessage } from '../../_lib/error-message';
+import type {
+  ProjectAiSourceListItem,
+  ProjectAiSourcesResult,
+  ProjectGenerateMode,
+  ProjectSourceRef,
+} from '../../_lib/schema/project-ai.schema';
+import {
+  applyProjectPhasePlan,
+  generateProjectContent,
+  listProjectAiSources,
+} from '../../_lib/server/project-ai-actions';
 
 function projectDetailUrl(
   accountSlug: string,
@@ -46,20 +60,6 @@ function projectDetailUrl(
   const query = params.toString();
   return query ? `${path}?${query}` : path;
 }
-
-import {
-  applyProjectPhasePlan,
-  generateProjectContent,
-  listProjectAiSources,
-} from '../../_lib/server/project-ai-actions';
-import { getErrorMessage } from '../../_lib/error-message';
-import type {
-  ProjectAiSourceListItem,
-  ProjectAiSourcesResult,
-  ProjectGenerateMode,
-  ProjectSourceRef,
-} from '../../_lib/schema/project-ai.schema';
-import type { PhasePlan } from '~/lib/ai/project-content-generate';
 
 function sourceKey(item: ProjectAiSourceListItem) {
   return `${item.type}:${item.id}`;
@@ -80,7 +80,7 @@ function SourceGroup({
 
   return (
     <div className="space-y-2">
-      <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+      <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
         {label}
       </p>
       <ul className="max-h-40 space-y-2 overflow-y-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-2">
@@ -205,11 +205,11 @@ export function ProjectAiGenerateDialog({
   onPlanApplied?: () => void;
 }) {
   const router = useRouter();
-  const modes = allowedModes ?? (
-    phaseId
+  const modes =
+    allowedModes ??
+    (phaseId
       ? (['brief', 'phase_plan', 'phase_page'] as ProjectGenerateMode[])
-      : (['brief', 'phase_plan'] as ProjectGenerateMode[])
-  );
+      : (['brief', 'phase_plan'] as ProjectGenerateMode[]));
 
   const [loadingSources, setLoadingSources] = useState(false);
   const [sources, setSources] = useState<ProjectAiSourcesResult | null>(null);
@@ -340,7 +340,11 @@ export function ProjectAiGenerateDialog({
 
       const payload = result as
         | { mode: 'brief'; docId: string; title: string }
-        | { mode: 'phase_plan'; plan: PhasePlan; contextRefs: ProjectSourceRef[] }
+        | {
+            mode: 'phase_plan';
+            plan: PhasePlan;
+            contextRefs: ProjectSourceRef[];
+          }
         | { mode: 'phase_plan'; parseError: true; rawDraft: string }
         | { mode: 'phase_page'; content: string };
 
@@ -360,7 +364,9 @@ export function ProjectAiGenerateDialog({
       if (payload.mode === 'phase_plan') {
         if ('parseError' in payload && payload.parseError) {
           setRawDraft(payload.rawDraft);
-          toast.error('Could not parse the plan — paste or edit the draft below');
+          toast.error(
+            'Could not parse the plan — paste or edit the draft below',
+          );
           return;
         }
         if ('plan' in payload) {
@@ -413,208 +419,214 @@ export function ProjectAiGenerateDialog({
 
   return (
     <>
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[var(--ozer-accent)]" />
-            Generate with AI
-          </DialogTitle>
-        </DialogHeader>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-[var(--ozer-accent)]" />
+              Generate with AI
+            </DialogTitle>
+          </DialogHeader>
 
-        {planReview ? (
-          <div className="space-y-4">
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              Review the proposed phases and tasks before adding them to the
-              project. Nothing is saved until you confirm.
-            </p>
-            <ul className="max-h-[50vh] space-y-3 overflow-y-auto">
-              {planReview.plan.phases.map((phase, i) => (
-                <li
-                  key={`${phase.name}-${i}`}
-                  className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-3"
-                >
-                  <p className="font-medium text-[var(--workspace-shell-text)]">{phase.name}</p>
-                  {phase.description ? (
-                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                      {phase.description}
-                    </p>
-                  ) : null}
-                  <p className="mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
-                    {phase.start_date ?? '—'} → {phase.due_date ?? '—'}
-                    {phase.is_milestone ? ' · milestone' : ''}
-                  </p>
-                  {phase.tasks.length > 0 && (
-                    <ul className="mt-2 list-disc pl-4 text-xs text-[var(--workspace-shell-text-muted)]">
-                      {phase.tasks.map((t, j) => (
-                        <li key={`${t.title}-${j}`}>{t.title}</li>
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <DialogFooter className="gap-2 sm:gap-0">
-              <Button
-                type="button"
-                variant="outline"
-                className="border-[color:var(--workspace-shell-border)]"
-                onClick={() => setPlanReview(null)}
-              >
-                Back
-              </Button>
-              <Button
-                type="button"
-                className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-                disabled={applying}
-                onClick={handleApplyPlan}
-              >
-                {applying ? 'Creating…' : 'Confirm & create phases'}
-              </Button>
-            </DialogFooter>
-          </div>
-        ) : (
-          <>
-            <div className="space-y-3">
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                What do you want to create?
-              </Label>
-              {primaryModes.length > 0 ? (
-                <div className="grid grid-cols-2 gap-3">
-                  {primaryModes.map((m) => {
-                    const meta = MODE_META[m];
-                    return (
-                      <GenerationModeCard
-                        key={m}
-                        icon={meta.icon}
-                        heading={meta.heading}
-                        description={meta.description}
-                        selected={mode === m}
-                        onSelect={() => setMode(m)}
-                      />
-                    );
-                  })}
-                </div>
-              ) : null}
-              {showPhasePageMode ? (
-                <GenerationModeCard
-                  icon={FilePenLine}
-                  heading={phaseName ? `Fill “${phaseName}” page` : 'Fill phase page'}
-                  description="Generate this phase page from your selected sources."
-                  selected={mode === 'phase_page'}
-                  onSelect={() => setMode('phase_page')}
-                  className="aspect-auto min-h-[5.5rem] w-full"
-                />
-              ) : null}
-            </div>
-
-            {loadingSources ? (
-              <div className="flex items-center gap-2 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
-                <Loader2 className="h-4 w-4 animate-spin" />
-                Loading sources…
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <SourceGroup
-                  label="Meeting transcripts"
-                  items={sources?.transcripts ?? []}
-                  selected={selected}
-                  onToggle={toggleSource}
-                />
-                <SourceGroup
-                  label="Proposals"
-                  items={sources?.proposals ?? []}
-                  selected={selected}
-                  onToggle={toggleSource}
-                />
-                <SourceGroup
-                  label="Notes"
-                  items={sources?.notes ?? []}
-                  selected={selected}
-                  onToggle={toggleSource}
-                />
-                <div className="flex justify-end">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
-                    onClick={() => setNoteDialogOpen(true)}
+          {planReview ? (
+            <div className="space-y-4">
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                Review the proposed phases and tasks before adding them to the
+                project. Nothing is saved until you confirm.
+              </p>
+              <ul className="max-h-[50vh] space-y-3 overflow-y-auto">
+                {planReview.plan.phases.map((phase, i) => (
+                  <li
+                    key={`${phase.name}-${i}`}
+                    className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-3"
                   >
-                    <Plus className="mr-1.5 h-3.5 w-3.5" />
-                    Add project note
-                  </Button>
-                </div>
-                <SourceGroup
-                  label="Documents"
-                  items={sources?.docs ?? []}
-                  selected={selected}
-                  onToggle={toggleSource}
-                />
-                {allItems.length === 0 && (
-                  <div className="space-y-3 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 p-4">
-                    <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                      No sources found for this project yet. Add a note with
-                      scope, goals, or client context — then select it below to
-                      generate a brief or phase plan.
+                    <p className="font-medium text-[var(--workspace-shell-text)]">
+                      {phase.name}
                     </p>
+                    {phase.description ? (
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                        {phase.description}
+                      </p>
+                    ) : null}
+                    <p className="mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                      {phase.start_date ?? '—'} → {phase.due_date ?? '—'}
+                      {phase.is_milestone ? ' · milestone' : ''}
+                    </p>
+                    {phase.tasks.length > 0 && (
+                      <ul className="mt-2 list-disc pl-4 text-xs text-[var(--workspace-shell-text-muted)]">
+                        {phase.tasks.map((t, j) => (
+                          <li key={`${t.title}-${j}`}>{t.title}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </li>
+                ))}
+              </ul>
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-[color:var(--workspace-shell-border)]"
+                  onClick={() => setPlanReview(null)}
+                >
+                  Back
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                  disabled={applying}
+                  onClick={handleApplyPlan}
+                >
+                  {applying ? 'Creating…' : 'Confirm & create phases'}
+                </Button>
+              </DialogFooter>
+            </div>
+          ) : (
+            <>
+              <div className="space-y-3">
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  What do you want to create?
+                </Label>
+                {primaryModes.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {primaryModes.map((m) => {
+                      const meta = MODE_META[m];
+                      return (
+                        <GenerationModeCard
+                          key={m}
+                          icon={meta.icon}
+                          heading={meta.heading}
+                          description={meta.description}
+                          selected={mode === m}
+                          onSelect={() => setMode(m)}
+                        />
+                      );
+                    })}
+                  </div>
+                ) : null}
+                {showPhasePageMode ? (
+                  <GenerationModeCard
+                    icon={FilePenLine}
+                    heading={
+                      phaseName ? `Fill “${phaseName}” page` : 'Fill phase page'
+                    }
+                    description="Generate this phase page from your selected sources."
+                    selected={mode === 'phase_page'}
+                    onSelect={() => setMode('phase_page')}
+                    className="aspect-auto min-h-[5.5rem] w-full"
+                  />
+                ) : null}
+              </div>
+
+              {loadingSources ? (
+                <div className="flex items-center gap-2 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading sources…
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  <SourceGroup
+                    label="Meeting transcripts"
+                    items={sources?.transcripts ?? []}
+                    selected={selected}
+                    onToggle={toggleSource}
+                  />
+                  <SourceGroup
+                    label="Proposals"
+                    items={sources?.proposals ?? []}
+                    selected={selected}
+                    onToggle={toggleSource}
+                  />
+                  <SourceGroup
+                    label="Notes"
+                    items={sources?.notes ?? []}
+                    selected={selected}
+                    onToggle={toggleSource}
+                  />
+                  <div className="flex justify-end">
                     <Button
                       type="button"
+                      variant="outline"
                       size="sm"
-                      className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                      className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
                       onClick={() => setNoteDialogOpen(true)}
                     >
                       <Plus className="mr-1.5 h-3.5 w-3.5" />
                       Add project note
                     </Button>
                   </div>
-                )}
-              </div>
-            )}
+                  <SourceGroup
+                    label="Documents"
+                    items={sources?.docs ?? []}
+                    selected={selected}
+                    onToggle={toggleSource}
+                  />
+                  {allItems.length === 0 && (
+                    <div className="space-y-3 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 p-4">
+                      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                        No sources found for this project yet. Add a note with
+                        scope, goals, or client context — then select it below
+                        to generate a brief or phase plan.
+                      </p>
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                        onClick={() => setNoteDialogOpen(true)}
+                      >
+                        <Plus className="mr-1.5 h-3.5 w-3.5" />
+                        Add project note
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              )}
 
-            {rawDraft && (
-              <div className="space-y-2">
-                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  Raw AI output (parse failed)
-                </Label>
-                <Textarea
-                  readOnly
-                  value={rawDraft}
-                  rows={8}
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs text-[var(--workspace-shell-text-muted)]"
-                />
-              </div>
-            )}
+              {rawDraft && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    Raw AI output (parse failed)
+                  </Label>
+                  <Textarea
+                    readOnly
+                    value={rawDraft}
+                    rows={8}
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs text-[var(--workspace-shell-text-muted)]"
+                  />
+                </div>
+              )}
 
-            <DialogFooter>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-[color:var(--workspace-shell-border)]"
-                onClick={() => onOpenChange(false)}
-              >
-                Cancel
-              </Button>
-              <Button
-                type="button"
-                className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-                disabled={generating || loadingSources || selectedRefs.length === 0}
-                onClick={handleGenerate}
-              >
-                {generating ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Generating…
-                  </>
-                ) : (
-                  'Generate'
-                )}
-              </Button>
-            </DialogFooter>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-[color:var(--workspace-shell-border)]"
+                  onClick={() => onOpenChange(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                  disabled={
+                    generating || loadingSources || selectedRefs.length === 0
+                  }
+                  onClick={handleGenerate}
+                >
+                  {generating ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Generating…
+                    </>
+                  ) : (
+                    'Generate'
+                  )}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={noteDialogOpen} onOpenChange={setNoteDialogOpen}>
         <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
@@ -623,7 +635,10 @@ export function ProjectAiGenerateDialog({
           </DialogHeader>
           <form onSubmit={handleSaveNote} className="space-y-3">
             <div>
-              <Label htmlFor="ai-note-title" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="ai-note-title"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Title (optional)
               </Label>
               <Input
@@ -635,7 +650,10 @@ export function ProjectAiGenerateDialog({
               />
             </div>
             <div>
-              <Label htmlFor="ai-note-content" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="ai-note-content"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Note *
               </Label>
               <Textarea

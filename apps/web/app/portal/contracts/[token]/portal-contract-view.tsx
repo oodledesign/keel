@@ -12,13 +12,12 @@ import { toast } from '@kit/ui/sonner';
 import { DocumentHtmlPreview } from '~/components/document-rich-text';
 import {
   SignatureCapture,
-  SignatureDisplay,
   type SignatureCaptureResult,
+  SignatureDisplay,
 } from '~/components/signature-capture';
-import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
-
 import { getErrorMessage } from '~/home/[account]/contracts/_lib/error-message';
 import { signContractRecipientByTokenAction } from '~/home/[account]/contracts/_lib/server/server-actions';
+import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 
 type PartyType = 'individual' | 'company';
 
@@ -88,7 +87,9 @@ export function PortalContractView({
   token: string;
 }) {
   const data = contract as unknown as ContractPayload;
-  const [recipientType, setRecipientType] = useState<PartyType>(data.recipient_type ?? 'individual');
+  const [recipientType, setRecipientType] = useState<PartyType>(
+    data.recipient_type ?? 'individual',
+  );
   const [recipientName, setRecipientName] = useState(
     data.recipient_name ?? data.client?.display_name ?? '',
   );
@@ -96,7 +97,9 @@ export function PortalContractView({
     data.recipient_company ?? data.client?.company_name ?? '',
   );
   const [signing, setSigning] = useState(false);
-  const [signed, setSigned] = useState(Boolean(data.recipient_signed_at) || data.status === 'signed');
+  const [signed, setSigned] = useState(
+    Boolean(data.recipient_signed_at) || data.status === 'signed',
+  );
 
   const canSign =
     !signed &&
@@ -121,7 +124,8 @@ export function PortalContractView({
         token,
         recipient_type: recipientType,
         recipient_name: recipientName.trim(),
-        recipient_company: recipientType === 'company' ? recipientCompany.trim() || null : null,
+        recipient_company:
+          recipientType === 'company' ? recipientCompany.trim() || null : null,
         recipient_signature_type: signature.signature_type,
         recipient_signature_data: signature.signature_data,
       });
@@ -139,9 +143,13 @@ export function PortalContractView({
       <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           {data.account?.name ? (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">{data.account.name}</p>
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              {data.account.name}
+            </p>
           ) : null}
-          <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">{data.title?.trim() || 'Agreement'}</h1>
+          <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">
+            {data.title?.trim() || 'Agreement'}
+          </h1>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             {signed
               ? 'Fully executed agreement'
@@ -164,7 +172,9 @@ export function PortalContractView({
 
       {(data.payment_plan?.length ?? 0) > 0 ? (
         <div className="mt-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 p-4">
-          <h2 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Payment plan</h2>
+          <h2 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+            Payment plan
+          </h2>
           <ul className="mt-2 space-y-1 text-sm text-[var(--workspace-shell-text-muted)]">
             {data.payment_plan.map((row, index) => (
               <li key={index}>
@@ -177,7 +187,11 @@ export function PortalContractView({
           </ul>
           {data.total_pence > 0 ? (
             <p className="mt-2 text-sm font-medium text-[var(--workspace-shell-text)]">
-              Total {formatPence(data.total_pence, data.currency?.toUpperCase() ?? 'GBP')}
+              Total{' '}
+              {formatPence(
+                data.total_pence,
+                data.currency?.toUpperCase() ?? 'GBP',
+              )}
             </p>
           ) : null}
         </div>
@@ -185,7 +199,9 @@ export function PortalContractView({
 
       <div className="mt-8 grid gap-6 sm:grid-cols-2">
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40 p-4">
-          <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Author</h3>
+          <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+            Author
+          </h3>
           <SignatureDisplay
             type={data.author_signature_type}
             data={data.author_signature_data}
@@ -194,7 +210,9 @@ export function PortalContractView({
           />
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40 p-4">
-          <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">Recipient</h3>
+          <h3 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+            Recipient
+          </h3>
           {signed || data.recipient_signed_at ? (
             <SignatureDisplay
               type={data.recipient_signature_type}
@@ -205,16 +223,28 @@ export function PortalContractView({
           ) : canSign ? (
             <div className="mt-3 space-y-3">
               <div>
-                <Label className="mb-2 block text-[var(--workspace-shell-text-muted)]">Signing as</Label>
-                <PartyTypeToggle value={recipientType} onChange={setRecipientType} />
+                <Label className="mb-2 block text-[var(--workspace-shell-text-muted)]">
+                  Signing as
+                </Label>
+                <PartyTypeToggle
+                  value={recipientType}
+                  onChange={setRecipientType}
+                />
               </div>
               <div>
-                <Label className="text-[var(--workspace-shell-text-muted)]">Your name</Label>
-                <Input value={recipientName} onChange={(e) => setRecipientName(e.target.value)} />
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Your name
+                </Label>
+                <Input
+                  value={recipientName}
+                  onChange={(e) => setRecipientName(e.target.value)}
+                />
               </div>
               {recipientType === 'company' ? (
                 <div>
-                  <Label className="text-[var(--workspace-shell-text-muted)]">Company</Label>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Company
+                  </Label>
                   <Input
                     value={recipientCompany}
                     onChange={(e) => setRecipientCompany(e.target.value)}
@@ -228,14 +258,20 @@ export function PortalContractView({
               />
             </div>
           ) : (
-            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">Not available for signing yet</p>
+            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+              Not available for signing yet
+            </p>
           )}
         </div>
       </div>
 
       {signed ? (
         <div className="mt-6 rounded-lg border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-center text-[#97D9AA]">
-          {signing ? <Loader2 className="mx-auto h-5 w-5 animate-spin" /> : 'Thank you — your signature has been recorded.'}
+          {signing ? (
+            <Loader2 className="mx-auto h-5 w-5 animate-spin" />
+          ) : (
+            'Thank you — your signature has been recorded.'
+          )}
         </div>
       ) : null}
     </div>

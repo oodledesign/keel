@@ -15,7 +15,10 @@ const navItems = [
   { key: 'billing', label: 'Billing', pathKey: 'clientPortalBilling' as const },
 ];
 
-function createPortalPath(pathKey: keyof typeof pathsConfig.app, clientSlug: string) {
+function createPortalPath(
+  pathKey: keyof typeof pathsConfig.app,
+  clientSlug: string,
+) {
   return pathsConfig.app[pathKey].replace('[clientSlug]', clientSlug);
 }
 
@@ -47,10 +50,12 @@ export function PortalShell({
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <div>
-              <p className="text-xs font-medium uppercase tracking-wide text-[var(--ozer-text-on-light-muted)]">
+              <p className="text-xs font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
                 Client portal
               </p>
-              <h1 className="text-lg font-semibold text-[var(--ozer-text-on-light)]">{orgName}</h1>
+              <h1 className="text-lg font-semibold text-[var(--ozer-text-on-light)]">
+                {orgName}
+              </h1>
             </div>
 
             <div className="flex items-center gap-3">
@@ -93,7 +98,9 @@ export function PortalShell({
         </div>
       </header>
 
-      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">{children}</main>
+      <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
+        {children}
+      </main>
     </div>
   );
 }

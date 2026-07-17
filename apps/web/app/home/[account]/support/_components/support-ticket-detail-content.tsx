@@ -15,19 +15,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
-import type { TicketMessage, SupportTicket } from '../_lib/server/support-tickets.service';
 import type { TicketStatus } from '../_lib/schema/support-tickets.schema';
 import {
   addSupportTicketMessage,
   listSupportTeamMembers,
   updateSupportTicket,
 } from '../_lib/server/server-actions';
+import type {
+  SupportTicket,
+  TicketMessage,
+} from '../_lib/server/support-tickets.service';
 import {
   TicketPriorityBadge,
   TicketStatusBadge,
@@ -73,7 +76,9 @@ export function SupportTicketDetailContent({
 
   const visibleMessages = useMemo(
     () =>
-      showInternal ? messages : messages.filter((message) => !message.isInternal),
+      showInternal
+        ? messages
+        : messages.filter((message) => !message.isInternal),
     [messages, showInternal],
   );
 
@@ -127,7 +132,10 @@ export function SupportTicketDetailContent({
   return (
     <div className="mx-auto flex max-w-5xl flex-col gap-6">
       <div className="space-y-4">
-        <Link href={listHref} className="text-sm text-[var(--workspace-shell-text)]/50 hover:text-[var(--workspace-shell-text)]">
+        <Link
+          href={listHref}
+          className="text-sm text-[var(--workspace-shell-text)]/50 hover:text-[var(--workspace-shell-text)]"
+        >
           ← Back to support
         </Link>
 
@@ -140,7 +148,9 @@ export function SupportTicketDetailContent({
               <TicketStatusBadge status={ticket.status} />
               <TicketPriorityBadge priority={ticket.priority} />
             </div>
-            <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">{ticket.title}</h1>
+            <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
+              {ticket.title}
+            </h1>
             <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm text-[var(--workspace-shell-text)]/60">
               {ticket.clientOrgName ? (
                 <span>Client: {ticket.clientOrgName}</span>
@@ -246,7 +256,9 @@ export function SupportTicketDetailContent({
 
       <div className="rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Conversation</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Conversation
+          </h2>
           <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/60">
             <Checkbox
               checked={showInternal}
@@ -258,7 +270,9 @@ export function SupportTicketDetailContent({
 
         <div className="max-h-[480px] space-y-3 overflow-y-auto px-4 py-4">
           {visibleMessages.length === 0 ? (
-            <p className="text-sm text-[var(--workspace-shell-text)]/50">No messages yet.</p>
+            <p className="text-sm text-[var(--workspace-shell-text)]/50">
+              No messages yet.
+            </p>
           ) : (
             visibleMessages.map((message) => (
               <div
@@ -280,7 +294,7 @@ export function SupportTicketDetailContent({
                     </span>
                   ) : null}
                 </div>
-                <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/80">
+                <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/80">
                   {message.message}
                 </p>
               </div>

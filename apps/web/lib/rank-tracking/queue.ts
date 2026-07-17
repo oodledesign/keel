@@ -6,7 +6,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
-import { buildRankTasks, type RankTask } from './fetch-ranks';
+import { type RankTask, buildRankTasks } from './fetch-ranks';
 import {
   RANK_TASKS_PER_INVOCATION,
   RANK_TASK_STALE_MINUTES,
@@ -29,9 +29,12 @@ function ranklyAdmin() {
 }
 
 export async function releaseStaleRankCheckTasks(): Promise<number> {
-  const { data, error } = await ranklyAdmin().rpc('release_stale_rank_check_tasks', {
-    p_stale_minutes: RANK_TASK_STALE_MINUTES,
-  });
+  const { data, error } = await ranklyAdmin().rpc(
+    'release_stale_rank_check_tasks',
+    {
+      p_stale_minutes: RANK_TASK_STALE_MINUTES,
+    },
+  );
 
   if (error) {
     console.error('[rankly] release_stale_rank_check_tasks', error.message);
@@ -133,7 +136,13 @@ export async function cancelRankCheckJobTasks(jobId: string): Promise<number> {
 
 export async function countRankCheckTasksByStatus(
   jobId: string,
-): Promise<{ pending: number; processing: number; done: number; error: number; total: number }> {
+): Promise<{
+  pending: number;
+  processing: number;
+  done: number;
+  error: number;
+  total: number;
+}> {
   const { data, error } = await ranklyAdmin()
     .from('rank_check_tasks')
     .select('status')

@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
+
+import Link from 'next/link';
 
 import {
   BriefcaseBusiness,
@@ -90,7 +91,9 @@ export function TeamAccountQuickCreateMenu(props: { account: string }) {
         className="w-[22rem] rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[#1b2638]/98 p-3 text-[var(--workspace-shell-text)] shadow-[0_18px_60px_rgba(2,8,23,0.55)] backdrop-blur-xl"
       >
         <div className="mb-3 px-1">
-          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">New Item</p>
+          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            New Item
+          </p>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
@@ -105,7 +108,9 @@ export function TeamAccountQuickCreateMenu(props: { account: string }) {
                 </div>
 
                 <div className="space-y-1">
-                  <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{item.title}</p>
+                  <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                    {item.title}
+                  </p>
                   <p className="text-xs leading-5 text-[var(--workspace-shell-text-muted)]">
                     {item.description}
                   </p>

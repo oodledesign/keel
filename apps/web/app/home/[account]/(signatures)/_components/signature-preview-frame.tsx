@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, type ReactNode } from 'react';
+import { type ReactNode, useState } from 'react';
 
 import { Monitor, Moon, Smartphone, Sun, Tablet } from 'lucide-react';
 
@@ -41,7 +41,8 @@ export function SignaturePreviewFrame({
 }) {
   const [viewport, setViewport] =
     useState<SignaturePreviewViewport>(defaultViewport);
-  const active = VIEWPORTS.find((item) => item.id === viewport) ?? VIEWPORTS[2]!;
+  const active =
+    VIEWPORTS.find((item) => item.id === viewport) ?? VIEWPORTS[2]!;
   const resolvedTheme = theme ?? 'light';
 
   return (
@@ -56,8 +57,7 @@ export function SignaturePreviewFrame({
               variant="ghost"
               className={cn(
                 'h-8 gap-1.5 px-2.5',
-                viewport === id &&
-                  'bg-[var(--workspace-shell-sidebar-accent)]',
+                viewport === id && 'bg-[var(--workspace-shell-sidebar-accent)]',
               )}
               onClick={() => setViewport(id)}
               title={`${label} width`}
@@ -128,7 +128,7 @@ export function SignaturePreviewFrame({
         </div>
       </div>
 
-      <p className="text-xs text-muted-foreground">
+      <p className="text-muted-foreground text-xs">
         {active.widthPx
           ? `Previewing at ${active.widthPx}px (${active.label.toLowerCase()} reading width).`
           : 'Previewing at full desktop width.'}

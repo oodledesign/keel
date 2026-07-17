@@ -79,7 +79,11 @@ export async function syncBusinessLiteModules(
   accountId: string,
 ): Promise<void> {
   for (const moduleKey of BUSINESS_CORE_MODULE_KEYS) {
-    if (moduleKey === 'dashboard' || moduleKey === 'team' || moduleKey === 'settings') {
+    if (
+      moduleKey === 'dashboard' ||
+      moduleKey === 'team' ||
+      moduleKey === 'settings'
+    ) {
       continue;
     }
     await setModuleEnabled(admin, accountId, moduleKey, false);

@@ -80,7 +80,9 @@ describe('resolveAppSubdomainRedirect', () => {
 
     expect(
       resolveAppSubdomainRedirect(
-        new URL('https://app.ozer.so/connect/signatures/success?provider=microsoft'),
+        new URL(
+          'https://app.ozer.so/connect/signatures/success?provider=microsoft',
+        ),
       ),
     ).toBeNull();
   });
@@ -143,7 +145,9 @@ describe('resolveAppSubdomainRedirect', () => {
 
     expect(
       resolveAppSubdomainRedirect(
-        new URL('https://app.ozer.so/api/signatures/ms-callback?admin_consent=True'),
+        new URL(
+          'https://app.ozer.so/api/signatures/ms-callback?admin_consent=True',
+        ),
       ),
     ).toBeNull();
   });
@@ -166,10 +170,14 @@ describe('resolveAppSubdomainRedirect', () => {
     vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'http://localhost:3000');
 
     expect(
-      resolveAppSubdomainRedirect(new URL('http://localhost:3000/auth/sign-in')),
+      resolveAppSubdomainRedirect(
+        new URL('http://localhost:3000/auth/sign-in'),
+      ),
     ).toBeNull();
 
-    expect(resolveAppSubdomainRedirect(new URL('http://localhost:3000/'))).toBeNull();
+    expect(
+      resolveAppSubdomainRedirect(new URL('http://localhost:3000/')),
+    ).toBeNull();
     expect(
       resolveAppSubdomainRedirect(new URL('http://localhost:3000/pricing')),
     ).toBeNull();

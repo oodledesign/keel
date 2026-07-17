@@ -6,18 +6,18 @@ import { JWTUserData } from '@kit/supabase/types';
 import {
   Sidebar,
   SidebarContent,
+  SidebarContext,
   SidebarFooter,
   SidebarHeader,
   SidebarTrigger,
-  SidebarContext,
 } from '@kit/ui/shadcn-sidebar';
 
 import { OzerSidebarLogo } from '~/components/workspace-shell/ozer-sidebar-logo';
 import { workspaceSidebarClassName } from '~/components/workspace-shell/workspace-shell-styles';
-import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import pathsConfig from '~/config/paths.config';
-import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
+import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
+import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 
 import { TeamAccountAccountsSelector } from '../_components/team-account-accounts-selector';
@@ -48,7 +48,10 @@ export function TeamAccountLayoutSidebar(props: {
   );
 
   return (
-    <Sidebar collapsible={config.sidebarCollapsedStyle} className={workspaceSidebarClassName}>
+    <Sidebar
+      collapsible={config.sidebarCollapsedStyle}
+      className={workspaceSidebarClassName}
+    >
       <SidebarHeader className="gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-3">
         <SidebarLogoLink account={props.account} />
         <TeamAccountAccountsSelector
@@ -77,7 +80,5 @@ function SidebarLogoLink(props: { account: string }) {
   const collapsed = ctx ? !ctx.open : false;
   const href = pathsConfig.app.accountHome.replace('[account]', props.account);
 
-  return (
-    <OzerSidebarLogo href={href} collapsed={collapsed} />
-  );
+  return <OzerSidebarLogo href={href} collapsed={collapsed} />;
 }

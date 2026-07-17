@@ -49,9 +49,7 @@ export function buildBookingIcs(input: {
     lines.push(`ORGANIZER${cn}:mailto:${escapeIcs(input.organizerEmail)}`);
   }
   if (input.attendeeEmail) {
-    const cn = input.attendeeName
-      ? `;CN=${escapeIcs(input.attendeeName)}`
-      : '';
+    const cn = input.attendeeName ? `;CN=${escapeIcs(input.attendeeName)}` : '';
     lines.push(
       `ATTENDEE${cn};RSVP=FALSE:mailto:${escapeIcs(input.attendeeEmail)}`,
     );

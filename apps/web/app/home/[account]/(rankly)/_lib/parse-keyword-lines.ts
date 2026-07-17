@@ -5,7 +5,10 @@ export function parseKeywordLines(raw: string): string[] {
   const keywords: string[] = [];
 
   for (const line of raw.split('\n')) {
-    const keyword = line.trim().replace(/\s+/g, ' ').slice(0, MAX_KEYWORD_LENGTH);
+    const keyword = line
+      .trim()
+      .replace(/\s+/g, ' ')
+      .slice(0, MAX_KEYWORD_LENGTH);
     if (!keyword) continue;
 
     const key = keyword.toLowerCase();

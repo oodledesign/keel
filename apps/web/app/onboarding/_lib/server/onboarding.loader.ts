@@ -9,11 +9,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
-export type CompanyRole =
-  | 'admin'
-  | 'staff_member'
-  | 'contractor'
-  | 'client';
+export type CompanyRole = 'admin' | 'staff_member' | 'contractor' | 'client';
 
 export interface OnboardingContext {
   accountId: string;
@@ -107,7 +103,8 @@ export const getOnboardingContext = cache(
             mobile: userSettings.mobile ?? null,
             use_ozer_for_work: userSettings.use_ozer_for_work === true,
             use_ozer_for_family: userSettings.use_ozer_for_family === true,
-            use_ozer_for_community: userSettings.use_ozer_for_community === true,
+            use_ozer_for_community:
+              userSettings.use_ozer_for_community === true,
             accessibility_text_size:
               userSettings.accessibility_text_size ?? 'standard',
             accessibility_high_contrast:
@@ -136,7 +133,9 @@ export async function requireOnboardingContext(
  * Returns the first team account where the user has completed onboarding (for "Back to dashboard").
  * Excludes excludeAccountId so we don't link back to the team currently being set up.
  */
-export async function getFirstCompletedOnboardingAccount(excludeAccountId?: string): Promise<{
+export async function getFirstCompletedOnboardingAccount(
+  excludeAccountId?: string,
+): Promise<{
   accountSlug: string;
   accountName: string;
 } | null> {
@@ -171,7 +170,9 @@ export async function getFirstCompletedOnboardingAccount(excludeAccountId?: stri
 /**
  * Returns whether the current user is the primary owner of the given account (for "Cancel this team").
  */
-export async function isCurrentUserAccountOwner(accountId: string): Promise<boolean> {
+export async function isCurrentUserAccountOwner(
+  accountId: string,
+): Promise<boolean> {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 

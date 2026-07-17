@@ -24,7 +24,11 @@ function addDays(date: Date, days: number): Date {
   return next;
 }
 
-function nextWeekdayYmd(dayIndex: number, now = new Date(), includeToday = false): string {
+function nextWeekdayYmd(
+  dayIndex: number,
+  now = new Date(),
+  includeToday = false,
+): string {
   const current = now.getDay();
   let delta = (dayIndex - current + 7) % 7;
   if (delta === 0 && !includeToday) delta = 7;
@@ -47,7 +51,11 @@ export function parseRelativeDueDatePhrase(
   if (raw === 'today') return today;
   if (raw === 'tomorrow') return toYmd(addDays(now, 1));
 
-  if (raw === 'this week' || raw === 'end of week' || raw === 'by end of week') {
+  if (
+    raw === 'this week' ||
+    raw === 'end of week' ||
+    raw === 'by end of week'
+  ) {
     const day = now.getDay();
     const daysUntilSunday = day === 0 ? 0 : 7 - day;
     return toYmd(addDays(now, daysUntilSunday));
@@ -83,7 +91,9 @@ export function resolveDueDate(input: {
   dueDate?: string | null;
   dueDatePhrase?: string | null;
 }): string | null {
-  const explicit = normalizeAiExtractedDueDateYmd(input.dueDate?.trim() || null);
+  const explicit = normalizeAiExtractedDueDateYmd(
+    input.dueDate?.trim() || null,
+  );
   if (explicit) return explicit;
   return parseRelativeDueDatePhrase(input.dueDatePhrase);
 }

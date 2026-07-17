@@ -7,7 +7,10 @@ import { PageBody } from '@kit/ui/page';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import {
   getSpaceTypeFromAccount,
   isCommunityNavModuleEnabled,
@@ -79,7 +82,13 @@ async function NotesPage({ params }: NotesPageProps) {
         }
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-8">
-        <Suspense fallback={<p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>}>
+        <Suspense
+          fallback={
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Loading…
+            </p>
+          }
+        >
           <NotesPageContent
             accountId={data.accountId}
             accountSlug={data.accountSlug}

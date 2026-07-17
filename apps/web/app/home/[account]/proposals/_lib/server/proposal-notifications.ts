@@ -1,12 +1,12 @@
 import 'server-only';
 
-import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
   loadAccountBrandResolved,
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
+import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
   DEFAULT_PROPOSAL_EMAIL_BODY,
@@ -56,7 +56,11 @@ export async function sendProposalIssuedEmail(params: {
   }
 
   const [{ data: account }, clientResult, dealResult] = await Promise.all([
-    admin.from('accounts').select('name').eq('id', params.accountId).maybeSingle(),
+    admin
+      .from('accounts')
+      .select('name')
+      .eq('id', params.accountId)
+      .maybeSingle(),
     proposal.client_id
       ? admin
           .from('clients')
@@ -105,7 +109,8 @@ export async function sendProposalIssuedEmail(params: {
 
   const subjectTemplate =
     proposal.email_subject?.trim() || DEFAULT_PROPOSAL_EMAIL_SUBJECT;
-  const bodyTemplate = proposal.email_body?.trim() || DEFAULT_PROPOSAL_EMAIL_BODY;
+  const bodyTemplate =
+    proposal.email_body?.trim() || DEFAULT_PROPOSAL_EMAIL_BODY;
   const signatureTemplate =
     proposal.email_signature?.trim() || DEFAULT_PROPOSAL_EMAIL_SIGNATURE;
 
@@ -172,7 +177,9 @@ async function loadOwnerAdminEmails(accountId: string) {
             Boolean(member.email)
           );
         })
-        .map((member: { email?: string | null }) => member.email!.toLowerCase()),
+        .map((member: { email?: string | null }) =>
+          member.email!.toLowerCase(),
+        ),
     ),
   ) as string[];
 }

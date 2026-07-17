@@ -1,13 +1,14 @@
 import { type NextRequest } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { getSiteCrawlJob } from '~/lib/site-crawl/db';
 import { syncSiteCrawlJobProgress } from '~/lib/site-crawl/runner';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import { userIsAccountMember } from '~/lib/rankly/account-membership';
-import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -50,7 +51,11 @@ export async function GET(_request: NextRequest, context: RouteContext) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
 
-    const addonDenied = await denyUnlessRanklyAddon(client, user.id, project.account_id as string);
+    const addonDenied = await denyUnlessRanklyAddon(
+      client,
+      user.id,
+      project.account_id as string,
+    );
     if (addonDenied) return addonDenied;
 
     await syncSiteCrawlJobProgress(jobId);

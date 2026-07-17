@@ -11,7 +11,10 @@ export default function BookNotFound() {
           It may have been turned off, or the address may be incorrect.
         </p>
         <p className="mt-6">
-          <Link href="https://ozer.so" className="underline-offset-2 hover:underline">
+          <Link
+            href="https://ozer.so"
+            className="underline-offset-2 hover:underline"
+          >
             Go to ozer.so
           </Link>
         </p>

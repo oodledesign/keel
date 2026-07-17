@@ -1,7 +1,11 @@
 'use client';
 
-import type { DocListItem, LinkOption, WorkspaceDocsVariant } from '../../_lib/workspace-content/types';
 import { WorkspaceDocsPage } from '../../_components/workspace-content/workspace-docs-page';
+import type {
+  DocListItem,
+  LinkOption,
+  WorkspaceDocsVariant,
+} from '../../_lib/workspace-content/types';
 
 export type { DocListItem as WorkDocListItem };
 

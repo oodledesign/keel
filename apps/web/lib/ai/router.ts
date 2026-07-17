@@ -1,9 +1,10 @@
 // Env: ANTHROPIC_API_KEY, GOOGLE_AI_API_KEY
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import Anthropic from '@anthropic-ai/sdk';
 import { GoogleGenAI } from '@google/genai';
-import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -33,7 +34,8 @@ export const OzerAIFeature = {
   website_seo_answer_blocks: 'website_seo_answer_blocks',
 } as const;
 
-export type OzerAIFeatureKey = (typeof OzerAIFeature)[keyof typeof OzerAIFeature];
+export type OzerAIFeatureKey =
+  (typeof OzerAIFeature)[keyof typeof OzerAIFeature];
 
 type FeatureProvider = 'anthropic' | 'google';
 
@@ -281,7 +283,9 @@ export async function getOrCreateCreditBalance(
     .single();
 
   if (insertError || !inserted) {
-    throw new Error(insertError?.message ?? 'Failed to create AI credit balance');
+    throw new Error(
+      insertError?.message ?? 'Failed to create AI credit balance',
+    );
   }
 
   return inserted as AiCreditBalanceRow;
@@ -293,9 +297,12 @@ export async function checkAndDeductCredits(
   _supabase?: SupabaseClient,
 ): Promise<AiCreditBalanceRow> {
   const supabase = aiCreditsDb();
-  const { error: resetError } = await supabase.rpc('reset_ai_credits_if_expired', {
-    p_account_id: accountId,
-  });
+  const { error: resetError } = await supabase.rpc(
+    'reset_ai_credits_if_expired',
+    {
+      p_account_id: accountId,
+    },
+  );
 
   if (resetError) {
     throw new Error(resetError.message);
@@ -320,7 +327,9 @@ export async function checkAndDeductCredits(
       .single();
 
     if (refreshed.error || !refreshed.data) {
-      throw new Error(refreshed.error?.message ?? 'Failed to load AI credit balance');
+      throw new Error(
+        refreshed.error?.message ?? 'Failed to load AI credit balance',
+      );
     }
 
     balance = refreshed.data;
@@ -416,7 +425,10 @@ export async function invokeAIProvider({
   userPrompt,
   usePromptCaching = false,
   responseSchema,
-}: Omit<OzerAICallParams, 'accountId' | 'supabase'>): Promise<AIProviderResult> {
+}: Omit<
+  OzerAICallParams,
+  'accountId' | 'supabase'
+>): Promise<AIProviderResult> {
   const config = FEATURE_CONFIG[feature];
   let text = '';
   let inputTokens: number | null = null;
@@ -495,19 +507,24 @@ export async function callAI({
     responseSchema,
   });
 
-  const { error: txError } = await aiCreditsDb().from('ai_credit_transactions').insert({
-    account_id: accountId,
-    feature,
-    provider: result.provider,
-    model_used: result.model,
-    credits_used: result.credits,
-    input_tokens: result.inputTokens,
-    output_tokens: result.outputTokens,
-    was_batched: false,
-  });
+  const { error: txError } = await aiCreditsDb()
+    .from('ai_credit_transactions')
+    .insert({
+      account_id: accountId,
+      feature,
+      provider: result.provider,
+      model_used: result.model,
+      credits_used: result.credits,
+      input_tokens: result.inputTokens,
+      output_tokens: result.outputTokens,
+      was_batched: false,
+    });
 
   if (txError) {
-    console.error('[ai-router] failed to log credit transaction', txError.message);
+    console.error(
+      '[ai-router] failed to log credit transaction',
+      txError.message,
+    );
   }
 
   return result.text;

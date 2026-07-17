@@ -3,10 +3,10 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
+  type WorkspaceSchedulingSettings,
   getWorkWindowForYmd,
   isWorkingDayYmd,
   iterateYmdRange,
-  type WorkspaceSchedulingSettings,
   ymdFromMs,
 } from '~/lib/workspace-focus';
 
@@ -64,15 +64,19 @@ function mapRow(
       row?.email_tasks_mode === 'auto_publish'
         ? 'auto_publish'
         : 'requires_moderation',
-    autoScheduleOnCalendar: row?.auto_schedule_on_calendar ?? DEFAULT_SETTINGS.autoScheduleOnCalendar,
+    autoScheduleOnCalendar:
+      row?.auto_schedule_on_calendar ?? DEFAULT_SETTINGS.autoScheduleOnCalendar,
     calendarLeadTimeMinutes:
-      row?.calendar_lead_time_minutes ?? DEFAULT_SETTINGS.calendarLeadTimeMinutes,
+      row?.calendar_lead_time_minutes ??
+      DEFAULT_SETTINGS.calendarLeadTimeMinutes,
     workingHoursStart:
-      row?.working_hours_start?.slice(0, 5) ?? DEFAULT_SETTINGS.workingHoursStart,
+      row?.working_hours_start?.slice(0, 5) ??
+      DEFAULT_SETTINGS.workingHoursStart,
     workingHoursEnd:
       row?.working_hours_end?.slice(0, 5) ?? DEFAULT_SETTINGS.workingHoursEnd,
     excludePersonalCalendarBusy:
-      row?.exclude_personal_calendar_busy ?? DEFAULT_SETTINGS.excludePersonalCalendarBusy,
+      row?.exclude_personal_calendar_busy ??
+      DEFAULT_SETTINGS.excludePersonalCalendarBusy,
   };
 }
 
@@ -99,19 +103,21 @@ export async function upsertAccountTaskAutomationSettings(
   client: SupabaseClient,
   settings: AccountTaskAutomationSettings,
 ): Promise<AccountTaskAutomationSettings> {
-  const { error } = await client.from('account_task_automation_settings').upsert(
-    {
-      account_id: settings.accountId,
-      meeting_tasks_mode: settings.meetingTasksMode,
-      email_tasks_mode: settings.emailTasksMode,
-      auto_schedule_on_calendar: settings.autoScheduleOnCalendar,
-      calendar_lead_time_minutes: settings.calendarLeadTimeMinutes,
-      working_hours_start: settings.workingHoursStart,
-      working_hours_end: settings.workingHoursEnd,
-      exclude_personal_calendar_busy: settings.excludePersonalCalendarBusy,
-    },
-    { onConflict: 'account_id' },
-  );
+  const { error } = await client
+    .from('account_task_automation_settings')
+    .upsert(
+      {
+        account_id: settings.accountId,
+        meeting_tasks_mode: settings.meetingTasksMode,
+        email_tasks_mode: settings.emailTasksMode,
+        auto_schedule_on_calendar: settings.autoScheduleOnCalendar,
+        calendar_lead_time_minutes: settings.calendarLeadTimeMinutes,
+        working_hours_start: settings.workingHoursStart,
+        working_hours_end: settings.workingHoursEnd,
+        exclude_personal_calendar_busy: settings.excludePersonalCalendarBusy,
+      },
+      { onConflict: 'account_id' },
+    );
 
   if (error) {
     throw new Error(error.message);
@@ -139,7 +145,12 @@ export type FreeSlotResult = {
   end: Date;
 } | null;
 
-function overlaps(aStart: number, aEnd: number, bStart: number, bEnd: number): boolean {
+function overlaps(
+  aStart: number,
+  aEnd: number,
+  bStart: number,
+  bEnd: number,
+): boolean {
   return aStart < bEnd && bStart < aEnd;
 }
 

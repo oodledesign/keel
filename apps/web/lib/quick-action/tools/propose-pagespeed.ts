@@ -2,10 +2,13 @@ import 'server-only';
 
 import { z } from 'zod';
 
-import { assertAccountMember, assertRanklyModuleEnabled } from '../module-access';
 import { signQuickActionToken } from '../action-token';
 import type { QuickActionContext } from '../context';
 import { workspaceById } from '../context';
+import {
+  assertAccountMember,
+  assertRanklyModuleEnabled,
+} from '../module-access';
 import type { ProposedQuickAction } from '../types';
 
 const proposePagespeedSchema = z.object({
@@ -27,7 +30,10 @@ export async function proposePagespeedScan(
   }
 
   const { supabaseCustomSchema } = await import('~/lib/supabase-custom-schema');
-  const { data: project, error } = await supabaseCustomSchema(ctx.client, 'rankly')
+  const { data: project, error } = await supabaseCustomSchema(
+    ctx.client,
+    'rankly',
+  )
     .from('projects')
     .select('id, name, domain, account_id')
     .eq('id', parsed.project_id)
@@ -80,5 +86,8 @@ export async function handleProposePagespeedTool(
   ctx: QuickActionContext,
   input: unknown,
 ): Promise<ProposedQuickAction> {
-  return proposePagespeedScan(ctx, input as z.infer<typeof proposePagespeedSchema>);
+  return proposePagespeedScan(
+    ctx,
+    input as z.infer<typeof proposePagespeedSchema>,
+  );
 }

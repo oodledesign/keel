@@ -32,8 +32,12 @@ async function ContractEditPage({ params }: ContractEditPageProps) {
     notFound();
   }
 
-  const { accountId, canViewContracts, canEditContracts, canManageContractStatus } =
-    await loadContractsPageData(accountSlug);
+  const {
+    accountId,
+    canViewContracts,
+    canEditContracts,
+    canManageContractStatus,
+  } = await loadContractsPageData(accountSlug);
 
   if (!id) notFound();
   if (!canViewContracts) notFound();

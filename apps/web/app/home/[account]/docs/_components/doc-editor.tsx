@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState, useTransition } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -56,7 +57,7 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
-      <p className="text-sm capitalize text-[var(--workspace-shell-text-muted)]">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)] capitalize">
         {doc.kind} document
         {doc.projectName || doc.clientName
           ? ` · ${[doc.projectName, doc.clientName].filter(Boolean).join(' · ')}`
@@ -64,7 +65,10 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
       </p>
 
       <div className="space-y-2">
-        <Label htmlFor="doc-title" className="text-[var(--workspace-shell-text-muted)]">
+        <Label
+          htmlFor="doc-title"
+          className="text-[var(--workspace-shell-text-muted)]"
+        >
           Title
         </Label>
         <Input
@@ -76,7 +80,10 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="doc-type" className="text-[var(--workspace-shell-text-muted)]">
+        <Label
+          htmlFor="doc-type"
+          className="text-[var(--workspace-shell-text-muted)]"
+        >
           Document type
         </Label>
         <Input
@@ -90,7 +97,10 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
 
       {doc.kind === 'written' ? (
         <div className="space-y-2">
-          <Label htmlFor="doc-content" className="text-[var(--workspace-shell-text-muted)]">
+          <Label
+            htmlFor="doc-content"
+            className="text-[var(--workspace-shell-text-muted)]"
+          >
             Content
           </Label>
           <Textarea

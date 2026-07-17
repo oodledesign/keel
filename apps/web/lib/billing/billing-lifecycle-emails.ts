@@ -29,7 +29,8 @@ export async function loadWorkspaceOwnerEmail(
   const userId = (membership as { user_id?: string } | null)?.user_id;
   if (!userId) return null;
 
-  const { data: userResult, error } = await admin.auth.admin.getUserById(userId);
+  const { data: userResult, error } =
+    await admin.auth.admin.getUserById(userId);
   if (error || !userResult.user?.email) return null;
 
   return userResult.user.email;
@@ -116,7 +117,8 @@ export function buildBillingLifecycleEmail(input: {
     case 'trial_day_7':
       return {
         subject: `How’s ${safeAccountName} going so far?`,
-        preview: 'A quick look at what you’ve set up halfway through your trial.',
+        preview:
+          'A quick look at what you’ve set up halfway through your trial.',
         html: wrapOzerEmail({
           productName: input.productName,
           preview: 'Halfway through your Ozer trial',
@@ -237,7 +239,8 @@ export function buildBillingLifecycleEmail(input: {
     case 'cancel_warning':
       return {
         subject: `Final notice for ${safeAccountName}`,
-        preview: 'Your suspended workspace will be marked cancelled soon. Data retention policy applies.',
+        preview:
+          'Your suspended workspace will be marked cancelled soon. Data retention policy applies.',
         html: wrapOzerEmail({
           productName: input.productName,
           preview: 'Final notice before cancellation',

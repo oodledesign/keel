@@ -1,21 +1,23 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Heading } from '@kit/ui/heading';
 import { Trans } from '@kit/ui/trans';
 
 import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { VerifyEmailContent } from './_components/verify-email-content';
 import { AuthFormCard } from '../_components/auth-form-card';
+import { VerifyEmailContent } from './_components/verify-email-content';
 
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
 
   return {
-    title: i18n.t('auth:verifyEmailHeading', { defaultValue: 'Verify your email' }),
+    title: i18n.t('auth:verifyEmailHeading', {
+      defaultValue: 'Verify your email',
+    }),
   };
 };
 
@@ -36,7 +38,10 @@ async function VerifyEmailPage() {
     <AuthFormCard>
       <div className="flex flex-col items-center gap-1 text-center">
         <Heading level={4} className="tracking-tight">
-          <Trans i18nKey="auth:verifyEmailHeading" defaults="Verify your email" />
+          <Trans
+            i18nKey="auth:verifyEmailHeading"
+            defaults="Verify your email"
+          />
         </Heading>
       </div>
 

@@ -5,24 +5,28 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
-  ApplyGeneratedWeekSchema,
-  BulkAddGeneratedRecipesSchema,
-  ClearMealEntrySchema,
-  DeleteRecipeSchema,
-  MealPreferencesInputSchema,
-  RecipeInputSchema,
-  SetMealEntrySchema,
-  ToggleRecipeFavoriteSchema,
   type ApplyGeneratedWeekInput,
+  ApplyGeneratedWeekSchema,
   type BulkAddGeneratedRecipesInput,
+  BulkAddGeneratedRecipesSchema,
   type ClearMealEntryInput,
+  ClearMealEntrySchema,
   type DeleteRecipeInput,
+  DeleteRecipeSchema,
   type MealPreferencesInput,
+  MealPreferencesInputSchema,
   type RecipeInput,
+  RecipeInputSchema,
   type SetMealEntryInput,
+  SetMealEntrySchema,
   type ToggleRecipeFavoriteInput,
+  ToggleRecipeFavoriteSchema,
 } from './schema/family-meal.schema';
-import { resolveMealPlanScope, revalidateMealPlanPaths, revalidateRecipePaths } from './server/family-meal.scope';
+import {
+  resolveMealPlanScope,
+  revalidateMealPlanPaths,
+  revalidateRecipePaths,
+} from './server/family-meal.scope';
 
 type ActionResult<T = undefined> =
   | { success: true; data: T }

@@ -129,7 +129,10 @@ export const loadAdminFinances = cache(
             data: Record<string, unknown>[] | null;
             error: { message: string } | null;
           }>;
-          eq: (col: string, value: string) => {
+          eq: (
+            col: string,
+            value: string,
+          ) => {
             order: (col: string) => Promise<{
               data: Record<string, unknown>[] | null;
               error: { message: string } | null;
@@ -145,42 +148,39 @@ export const loadAdminFinances = cache(
     const periodEndIso = periodEnd.toISOString();
     const periodMonth = toIsoDate(periodStart);
 
-    const [
-      ratesRes,
-      costsRes,
-      txnsRes,
-      purchasesRes,
-      activeSubsRes,
-    ] = await Promise.all([
-      adminUntyped
-        .from('ai_model_cost_rates')
-        .select('model, provider, input_usd_per_mtok, output_usd_per_mtok, notes')
-        .order('model'),
-      adminUntyped
-        .from('platform_operating_costs')
-        .select(
-          'id, category, label, amount_minor, currency, period_month, notes',
-        )
-        .eq('period_month', periodMonth)
-        .order('category'),
-      admin
-        .from('ai_credit_transactions')
-        .select(
-          'account_id, feature, model_used, credits_used, input_tokens, output_tokens',
-        )
-        .gte('created_at', periodStartIso)
-        .lt('created_at', periodEndIso)
-        .limit(50_000),
-      admin
-        .from('ai_credit_purchases')
-        .select('amount_total, currency')
-        .gte('created_at', periodStartIso)
-        .lt('created_at', periodEndIso),
-      admin
-        .from('subscriptions')
-        .select('id, currency')
-        .in('status', ['active', 'trialing']),
-    ]);
+    const [ratesRes, costsRes, txnsRes, purchasesRes, activeSubsRes] =
+      await Promise.all([
+        adminUntyped
+          .from('ai_model_cost_rates')
+          .select(
+            'model, provider, input_usd_per_mtok, output_usd_per_mtok, notes',
+          )
+          .order('model'),
+        adminUntyped
+          .from('platform_operating_costs')
+          .select(
+            'id, category, label, amount_minor, currency, period_month, notes',
+          )
+          .eq('period_month', periodMonth)
+          .order('category'),
+        admin
+          .from('ai_credit_transactions')
+          .select(
+            'account_id, feature, model_used, credits_used, input_tokens, output_tokens',
+          )
+          .gte('created_at', periodStartIso)
+          .lt('created_at', periodEndIso)
+          .limit(50_000),
+        admin
+          .from('ai_credit_purchases')
+          .select('amount_total, currency')
+          .gte('created_at', periodStartIso)
+          .lt('created_at', periodEndIso),
+        admin
+          .from('subscriptions')
+          .select('id, currency')
+          .in('status', ['active', 'trialing']),
+      ]);
 
     if (ratesRes.error) throw new Error(ratesRes.error.message);
     if (costsRes.error) throw new Error(costsRes.error.message);

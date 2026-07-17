@@ -30,8 +30,8 @@ const EMPTY_SUMMARY: BacklinkSummary = {
 function isAthenaConfigured(): boolean {
   return Boolean(
     process.env.AWS_ACCESS_KEY_ID &&
-      process.env.AWS_SECRET_ACCESS_KEY &&
-      RESULTS_BUCKET,
+    process.env.AWS_SECRET_ACCESS_KEY &&
+    RESULTS_BUCKET,
   );
 }
 
@@ -184,9 +184,9 @@ async function runAthenaQuery(sql: string): Promise<string[][]> {
   );
 
   const rows = results.ResultSet?.Rows ?? [];
-  return rows.slice(1).map((row) =>
-    (row.Data ?? []).map((cell) => cell.VarCharValue ?? ''),
-  );
+  return rows
+    .slice(1)
+    .map((row) => (row.Data ?? []).map((cell) => cell.VarCharValue ?? ''));
 }
 
 async function pollUntilComplete(

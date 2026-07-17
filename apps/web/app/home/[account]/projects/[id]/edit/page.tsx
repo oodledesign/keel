@@ -1,7 +1,6 @@
 import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
@@ -16,8 +15,8 @@ import {
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
 import { JobEditContent } from '../../_components/job-edit-content';
-import { createJobsService } from '../../_lib/server/jobs.service';
 import { loadJobsPageData } from '../../_lib/server/jobs-page.loader';
+import { createJobsService } from '../../_lib/server/jobs.service';
 
 interface JobEditPageProps {
   params: Promise<{ account: string; id: string }>;
@@ -42,7 +41,8 @@ async function JobEditPage({ params }: JobEditPageProps) {
     notFound();
   }
 
-  const { accountId, canViewJobs, canEditJobs, canDeleteJobs } = await loadJobsPageData(accountSlug);
+  const { accountId, canViewJobs, canEditJobs, canDeleteJobs } =
+    await loadJobsPageData(accountSlug);
 
   if (!id) notFound();
   if (!canEditJobs) notFound();

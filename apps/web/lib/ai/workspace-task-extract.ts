@@ -209,13 +209,7 @@ export function resolveDraftAssignment(
   projectId: string | null;
   clientId: string | null;
 } {
-  const projectId = mapNameToId(
-    draft.suggestedProjectName,
-    context.projects,
-  );
-  const clientId = mapNameToId(
-    draft.suggestedClientName,
-    context.clients,
-  );
+  const projectId = mapNameToId(draft.suggestedProjectName, context.projects);
+  const clientId = mapNameToId(draft.suggestedClientName, context.clients);
   return { projectId, clientId };
 }

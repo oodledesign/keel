@@ -50,6 +50,7 @@ export async function loadJobsPageInitialData(
       name: row.name,
       clientCount: (row as { clientCount?: number }).clientCount,
     })),
-    members: ((membersResult.data ?? []) as JobsPageInitialData['members']) ?? [],
+    members:
+      ((membersResult.data ?? []) as JobsPageInitialData['members']) ?? [],
   };
 }

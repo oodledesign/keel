@@ -13,7 +13,8 @@ function extractJsonLdTypes($: ReturnType<typeof load>): string[] {
       const parsed = JSON.parse($(el).html() ?? '') as Record<string, unknown>;
       const t = parsed['@type'];
       if (typeof t === 'string') types.push(t);
-      if (Array.isArray(t)) types.push(...t.filter((v) => typeof v === 'string'));
+      if (Array.isArray(t))
+        types.push(...t.filter((v) => typeof v === 'string'));
     } catch {
       // ignore malformed JSON-LD
     }
@@ -28,7 +29,9 @@ function estimateWordCount(text: string): number {
 export function parseCompetitorHtml(url: string, html: string): CompetitorPage {
   const $ = load(html);
 
-  $('nav, footer, header, script, style, .cookie-banner, #cookie-consent').remove();
+  $(
+    'nav, footer, header, script, style, .cookie-banner, #cookie-consent',
+  ).remove();
 
   return {
     url,
@@ -67,8 +70,7 @@ async function fetchCompetitorHtml(url: string): Promise<string> {
 
   const res = await fetch(url, {
     headers: {
-      'User-Agent':
-        'Mozilla/5.0 (compatible; Rankly/1.0; +https://rankly.app)',
+      'User-Agent': 'Mozilla/5.0 (compatible; Rankly/1.0; +https://rankly.app)',
       Accept: 'text/html',
     },
     signal: AbortSignal.timeout(10000),
@@ -81,7 +83,9 @@ async function fetchCompetitorHtml(url: string): Promise<string> {
   return res.text();
 }
 
-export async function scrapeCompetitorPage(url: string): Promise<CompetitorPage> {
+export async function scrapeCompetitorPage(
+  url: string,
+): Promise<CompetitorPage> {
   const html = await fetchCompetitorHtml(url);
   return parseCompetitorHtml(url, html);
 }

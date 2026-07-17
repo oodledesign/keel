@@ -51,8 +51,12 @@ export const loadClientFinanceAction = enhanceAction(
       })),
     );
 
-    const linkedCount = (transactions ?? []).filter((tx) => !tx.is_transfer).length;
-    const transferCount = (transactions ?? []).filter((tx) => tx.is_transfer).length;
+    const linkedCount = (transactions ?? []).filter(
+      (tx) => !tx.is_transfer,
+    ).length;
+    const transferCount = (transactions ?? []).filter(
+      (tx) => tx.is_transfer,
+    ).length;
 
     let estimatedValuePence = 0;
     let estimatedCostPence = 0;
@@ -63,7 +67,10 @@ export const loadClientFinanceAction = enhanceAction(
 
     const label =
       (clientRow.display_name as string | null)?.trim() ||
-      [clientRow.first_name, clientRow.last_name].filter(Boolean).join(' ').trim() ||
+      [clientRow.first_name, clientRow.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
       (clientRow.company_name as string | null)?.trim() ||
       'Client';
 

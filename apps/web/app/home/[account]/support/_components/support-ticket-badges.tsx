@@ -72,7 +72,11 @@ export function TicketStatusBadge({ status }: { status: TicketStatus }) {
   );
 }
 
-export function TicketPriorityBadge({ priority }: { priority: TicketPriority }) {
+export function TicketPriorityBadge({
+  priority,
+}: {
+  priority: TicketPriority;
+}) {
   const style = ticketPriorityStyles[priority] ?? ticketPriorityStyles.medium;
 
   return (

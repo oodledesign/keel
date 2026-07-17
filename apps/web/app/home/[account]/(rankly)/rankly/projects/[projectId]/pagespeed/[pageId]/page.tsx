@@ -1,15 +1,16 @@
 import { notFound } from 'next/navigation';
 
-import { ranklyProjectPaths } from '../../../../../_lib/rankly-project-paths';
-import { PagespeedPageDetail } from '../../../../../_components/pagespeed/pagespeed-page-detail';
-import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
-import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
-import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
 import {
   loadPagespeedPageHistory,
   loadPagespeedPageSnapshot,
 } from '~/lib/pagespeed/db';
+
+import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
+import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
+import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
+import { PagespeedPageDetail } from '../../../../../_components/pagespeed/pagespeed-page-detail';
+import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
+import { ranklyProjectPaths } from '../../../../../_lib/rankly-project-paths';
 
 type RanklyProjectPagespeedPageDetailProps = {
   params: Promise<{

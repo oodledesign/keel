@@ -2,8 +2,8 @@ import 'server-only';
 
 import {
   DELIVERY_PROJECT_FILTER,
-  PROJECT_ASSIGNMENTS_TABLE,
   PROJECTS_TABLE,
+  PROJECT_ASSIGNMENTS_TABLE,
 } from '~/lib/projects/delivery-project-db';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
@@ -12,7 +12,6 @@ import {
   isMissingRelationError,
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
-
 import type {
   ClientOverviewItem,
   ClientOverviewProject,
@@ -154,7 +153,10 @@ function mapLegacyTaskRows(rows: Array<Record<string, unknown>>): TaskRow[] {
   return rows.map((row) => ({
     id: String(row.id),
     client_id: (row.client_id as string | null) ?? null,
-    project_id: (row.project_id as string | null) ?? (row.job_id as string | null) ?? null,
+    project_id:
+      (row.project_id as string | null) ??
+      (row.job_id as string | null) ??
+      null,
     status: (row.status as string | null) ?? null,
     due_date: (row.due_date as string | null) ?? null,
   }));
@@ -183,14 +185,16 @@ async function loadDeliveryProjectsForClients(
   }
 
   if (!result.error) {
-    return ((result.data ?? []) as Array<{
-      id: string;
-      client_id: string | null;
-      title: string | null;
-      name: string | null;
-      status: string | null;
-      due_date: string | null;
-    }>).map((row) => ({
+    return (
+      (result.data ?? []) as Array<{
+        id: string;
+        client_id: string | null;
+        title: string | null;
+        name: string | null;
+        status: string | null;
+        due_date: string | null;
+      }>
+    ).map((row) => ({
       id: row.id,
       client_id: row.client_id,
       title: deliveryProjectTitle(row),
@@ -241,14 +245,19 @@ async function loadTasksByProjectIds(
   }
 
   if (result.error) {
-    if (!isMissingRelationError(result.error) && !isMissingColumnError(result.error)) {
+    if (
+      !isMissingRelationError(result.error) &&
+      !isMissingColumnError(result.error)
+    ) {
       throw result.error;
     }
     logMissingRelation('clients-overview.tasks', result.error);
     return [];
   }
 
-  return mapLegacyTaskRows((result.data ?? []) as Array<Record<string, unknown>>);
+  return mapLegacyTaskRows(
+    (result.data ?? []) as Array<Record<string, unknown>>,
+  );
 }
 
 async function loadTasksByClientIds(
@@ -268,14 +277,19 @@ async function loadTasksByClientIds(
   }
 
   if (result.error) {
-    if (!isMissingRelationError(result.error) && !isMissingColumnError(result.error)) {
+    if (
+      !isMissingRelationError(result.error) &&
+      !isMissingColumnError(result.error)
+    ) {
       throw result.error;
     }
     logMissingRelation('clients-overview.client-tasks', result.error);
     return [];
   }
 
-  return mapLegacyTaskRows((result.data ?? []) as Array<Record<string, unknown>>);
+  return mapLegacyTaskRows(
+    (result.data ?? []) as Array<Record<string, unknown>>,
+  );
 }
 
 async function loadProjectAssignments(
@@ -285,7 +299,7 @@ async function loadProjectAssignments(
 ): Promise<AssignmentRow[]> {
   if (projectIds.length === 0) return [];
 
-  let result = await db
+  const result = await db
     .from(PROJECT_ASSIGNMENTS_TABLE)
     .select('project_id, user_id')
     .eq('account_id', accountId)
@@ -315,12 +329,12 @@ async function loadProjectAssignments(
     return [];
   }
 
-  return ((legacy.data ?? []) as Array<{ job_id: string; user_id: string }>).map(
-    (row) => ({
-      project_id: row.job_id,
-      user_id: row.user_id,
-    }),
-  );
+  return (
+    (legacy.data ?? []) as Array<{ job_id: string; user_id: string }>
+  ).map((row) => ({
+    project_id: row.job_id,
+    user_id: row.user_id,
+  }));
 }
 
 export async function buildClientsOverview(params: {

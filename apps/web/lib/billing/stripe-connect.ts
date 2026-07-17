@@ -1,10 +1,11 @@
 import 'server-only';
 
-import { createHmac, timingSafeEqual } from 'crypto';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { createHmac, timingSafeEqual } from 'crypto';
+
 import pathsConfig from '~/config/paths.config';
+
 import { stripeConnectErrorMessage } from './stripe-connect-messages';
 
 export { stripeConnectErrorMessage };

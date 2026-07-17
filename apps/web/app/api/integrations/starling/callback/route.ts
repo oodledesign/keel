@@ -2,9 +2,7 @@ import { redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import {
-  encryptGoogleSecret,
-} from '~/lib/integrations/google-calendar/crypto';
+import { encryptGoogleSecret } from '~/lib/integrations/google-calendar/crypto';
 import {
   exchangeStarlingCode,
   verifyStarlingState,
@@ -30,7 +28,9 @@ export async function GET(request: Request) {
   const returnUrl = payload.returnPath;
 
   if (error || !code) {
-    return redirect(`${returnUrl}?finance_error=${encodeURIComponent(error ?? 'denied')}`);
+    return redirect(
+      `${returnUrl}?finance_error=${encodeURIComponent(error ?? 'denied')}`,
+    );
   }
 
   const client = getSupabaseServerClient();
@@ -46,20 +46,22 @@ export async function GET(request: Request) {
     const tokens = await exchangeStarlingCode(code);
     const expiresAt = new Date(Date.now() + tokens.expires_in * 1000);
 
-    const { error: upsertError } = await client.from('finance_connections').upsert(
-      {
-        account_id: payload.accountId,
-        provider: 'starling',
-        access_token: null,
-        refresh_token: null,
-        access_token_encrypted: encryptGoogleSecret(tokens.access_token),
-        refresh_token_encrypted: encryptGoogleSecret(tokens.refresh_token),
-        token_expires_at: expiresAt.toISOString(),
-        connected_by: user.id,
-        sync_state: { scope: tokens.scope ?? null },
-      } as never,
-      { onConflict: 'account_id,provider' },
-    );
+    const { error: upsertError } = await client
+      .from('finance_connections')
+      .upsert(
+        {
+          account_id: payload.accountId,
+          provider: 'starling',
+          access_token: null,
+          refresh_token: null,
+          access_token_encrypted: encryptGoogleSecret(tokens.access_token),
+          refresh_token_encrypted: encryptGoogleSecret(tokens.refresh_token),
+          token_expires_at: expiresAt.toISOString(),
+          connected_by: user.id,
+          sync_state: { scope: tokens.scope ?? null },
+        } as never,
+        { onConflict: 'account_id,provider' },
+      );
 
     if (upsertError) throw upsertError;
 

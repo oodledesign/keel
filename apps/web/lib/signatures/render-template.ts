@@ -1,10 +1,10 @@
+import type { AccountBranch } from '~/lib/brand/account-branches';
 import {
+  type AccountBrandResolved,
   DEFAULT_BRAND_ACCENT,
   DEFAULT_BRAND_PRIMARY,
   DEFAULT_BRAND_SECONDARY,
-  type AccountBrandResolved,
 } from '~/lib/brand/account-brand';
-import type { AccountBranch } from '~/lib/brand/account-branches';
 
 /** Row shape for template rendering (matches `signatures.staff`). */
 export type SignaturesStaffRow = {

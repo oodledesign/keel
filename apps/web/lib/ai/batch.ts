@@ -1,16 +1,17 @@
 // Env: ANTHROPIC_API_KEY, GOOGLE_AI_API_KEY, CRON_SECRET
 import 'server-only';
 
-import Anthropic from '@anthropic-ai/sdk';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import Anthropic from '@anthropic-ai/sdk';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
-  checkAndDeductCredits,
   FEATURE_CONFIG,
-  invokeAIProvider,
   type OzerAIFeatureKey,
+  checkAndDeductCredits,
+  invokeAIProvider,
 } from './router';
 
 type BatchRequestPayload = {
@@ -41,17 +42,19 @@ async function recordBatchedTransaction(
   outputTokens: number | null,
 ) {
   const config = FEATURE_CONFIG[job.feature as OzerAIFeatureKey];
-  await getSupabaseServerAdminClient().from('ai_credit_transactions').insert({
-    account_id: job.account_id,
-    feature: job.feature,
-    provider: job.provider,
-    model_used: config.model,
-    credits_used: job.credits_reserved,
-    input_tokens: inputTokens,
-    output_tokens: outputTokens,
-    was_batched: true,
-    metadata: job.requests[0]?.metadata ?? {},
-  });
+  await getSupabaseServerAdminClient()
+    .from('ai_credit_transactions')
+    .insert({
+      account_id: job.account_id,
+      feature: job.feature,
+      provider: job.provider,
+      model_used: config.model,
+      credits_used: job.credits_reserved,
+      input_tokens: inputTokens,
+      output_tokens: outputTokens,
+      was_batched: true,
+      metadata: job.requests[0]?.metadata ?? {},
+    });
 }
 
 export async function queueBatchRequest({
@@ -258,7 +261,9 @@ export async function pollAndProcessBatches(supabase: SupabaseClient) {
 
       if (result.result.type === 'succeeded') {
         const message = result.result.message;
-        const textBlock = message.content.find((block) => block.type === 'text');
+        const textBlock = message.content.find(
+          (block) => block.type === 'text',
+        );
         const text =
           textBlock && textBlock.type === 'text' ? textBlock.text : '';
 

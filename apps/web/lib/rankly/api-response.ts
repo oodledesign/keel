@@ -6,7 +6,10 @@ export type ApiFailure = {
   error: { code: string; message: string; details?: unknown };
 };
 
-export function jsonOk<T>(data: T, init?: ResponseInit): NextResponse<ApiSuccess<T>> {
+export function jsonOk<T>(
+  data: T,
+  init?: ResponseInit,
+): NextResponse<ApiSuccess<T>> {
   return NextResponse.json({ ok: true as const, data }, init);
 }
 

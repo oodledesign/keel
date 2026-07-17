@@ -9,8 +9,8 @@ import { Check, Copy, Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -81,7 +81,9 @@ export function SopRunChecklist({
         router.refresh();
       } catch (e) {
         setAssignedTo(run.assigned_to ?? '');
-        toast.error(e instanceof Error ? e.message : 'Could not update assignee');
+        toast.error(
+          e instanceof Error ? e.message : 'Could not update assignee',
+        );
       }
     });
   }
@@ -145,11 +147,16 @@ export function SopRunChecklist({
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 lg:px-0">
       <div className="flex flex-wrap items-center gap-2 text-sm">
-        <Link href={playbookPath} className="text-[var(--ozer-accent)] hover:underline">
+        <Link
+          href={playbookPath}
+          className="text-[var(--ozer-accent)] hover:underline"
+        >
           {playbook?.title ?? 'Playbook'}
         </Link>
         <span className="text-[var(--workspace-shell-text-muted)]">/</span>
-        <span className="text-[var(--workspace-shell-text-muted)]">{run.period_label ?? 'Run'}</span>
+        <span className="text-[var(--workspace-shell-text-muted)]">
+          {run.period_label ?? 'Run'}
+        </span>
         {run.status === 'completed' ? (
           <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-xs text-[var(--ozer-accent)]">
             Completed
@@ -160,7 +167,9 @@ export function SopRunChecklist({
       <div className={`${panelClass} p-6`}>
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
           <div>
-            <h1 className="text-xl font-bold text-[var(--workspace-shell-text)]">{run.title}</h1>
+            <h1 className="text-xl font-bold text-[var(--workspace-shell-text)]">
+              {run.title}
+            </h1>
             <p className="text-muted-foreground mt-1 text-sm">
               {completed} of {total} steps complete ({pct}%)
             </p>
@@ -218,13 +227,14 @@ export function SopRunChecklist({
               <p
                 className={cn(
                   'font-medium text-[var(--workspace-shell-text)]',
-                  step.is_complete && 'text-[var(--workspace-shell-text-muted)] line-through',
+                  step.is_complete &&
+                    'text-[var(--workspace-shell-text-muted)] line-through',
                 )}
               >
                 {index + 1}. {step.title}
               </p>
               {step.body_md ? (
-                <p className="text-muted-foreground mt-2 whitespace-pre-wrap text-sm">
+                <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
                   {step.body_md}
                 </p>
               ) : null}
@@ -240,7 +250,9 @@ export function SopRunChecklist({
       </div>
 
       <div className={`${panelClass} space-y-3 p-6`}>
-        <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Run notes</h2>
+        <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+          Run notes
+        </h2>
         <p className="text-muted-foreground text-xs">
           Client context, links, or anything specific to this month or project.
         </p>
@@ -258,7 +270,9 @@ export function SopRunChecklist({
           disabled={notesPending}
           onClick={saveNotes}
         >
-          {notesPending ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
+          {notesPending ? (
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+          ) : null}
           Save notes
         </Button>
       </div>

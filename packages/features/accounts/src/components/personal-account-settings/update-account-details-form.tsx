@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { useTranslation } from 'react-i18next';
 
 import { Database } from '@kit/supabase/database';
+import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Button } from '@kit/ui/button';
 import {
   Form,
@@ -19,7 +20,6 @@ import {
 } from '@kit/ui/input-group';
 import { toast } from '@kit/ui/sonner';
 import { Trans } from '@kit/ui/trans';
-import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 
 import { useRevalidatePersonalAccountDataQuery } from '../../hooks/use-personal-account-data';
 import { AccountDetailsSchema } from '../../schema/account-details.schema';
@@ -57,15 +57,17 @@ export function UpdateAccountDetailsForm({
     last_name?: string;
   }) => {
     const promise = (async () => {
-      const { error: settingsError } = await client.from('user_settings').upsert(
-        {
-          user_id: userId,
-          first_name: first_name.trim() || null,
-          last_name: (last_name?.trim() ?? '') || null,
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id' },
-      );
+      const { error: settingsError } = await client
+        .from('user_settings')
+        .upsert(
+          {
+            user_id: userId,
+            first_name: first_name.trim() || null,
+            last_name: (last_name?.trim() ?? '') || null,
+            updated_at: new Date().toISOString(),
+          },
+          { onConflict: 'user_id' },
+        );
       if (settingsError) throw settingsError;
 
       const displayName = [first_name.trim(), (last_name ?? '').trim()]

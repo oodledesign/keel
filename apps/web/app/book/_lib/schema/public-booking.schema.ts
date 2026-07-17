@@ -47,5 +47,7 @@ export const ReschedulePublicBookingSchema = z.object({
   inviteeTimezone: z.string().min(1).max(100),
 });
 
-export type CreatePublicBookingInput = z.infer<typeof CreatePublicBookingSchema>;
+export type CreatePublicBookingInput = z.infer<
+  typeof CreatePublicBookingSchema
+>;
 export type FetchSlotsInput = z.infer<typeof FetchSlotsSchema>;

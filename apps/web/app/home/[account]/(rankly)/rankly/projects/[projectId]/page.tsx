@@ -1,15 +1,16 @@
 import { notFound } from 'next/navigation';
 
-import { RanklyProjectDashboard } from '../../../_components/rankly-project-dashboard';
+import { loadPagespeedSnapshots } from '~/lib/pagespeed/db';
+import { loadSiteOverviewForProject } from '~/lib/site-overview/db';
+import { projectCountryToCode } from '~/lib/site-overview/domain';
+
 import {
   loadRanklyKeywordsForProject,
   loadRanklyProjectForTeam,
 } from '../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
-import { loadPagespeedSnapshots } from '~/lib/pagespeed/db';
-import { loadSiteOverviewForProject } from '~/lib/site-overview/db';
-import { projectCountryToCode } from '~/lib/site-overview/domain';
+import { RanklyProjectDashboard } from '../../../_components/rankly-project-dashboard';
 
 type RanklyProjectDashboardPageProps = {
   params: Promise<{

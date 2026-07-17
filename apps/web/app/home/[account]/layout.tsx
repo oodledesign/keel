@@ -9,33 +9,32 @@ import { TeamAccountWorkspaceContextProvider } from '@kit/team-accounts/componen
 import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
+import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
+import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
+import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
-
-import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
-
-import { BillingAccessBannerHost } from './_components/billing-access-banner-host';
-import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
-import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
-import { flattenTeamNavLinks } from './_lib/flatten-team-nav-links';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
-import pathsConfig from '~/config/paths.config';
-import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
-import { getTeamAccountAccess } from './_lib/role-access';
-import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 import { buildWorkspaceShellMetadata } from '~/lib/seo/app-shell-metadata';
-import { spaceTypeFromProfile } from './_lib/workspace-profile';
-import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
-import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
-import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
-import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
-import { loadTeamWorkspaceShellAdornments } from './_lib/server/team-workspace-shell-adornments.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
   userRequiresWorkspaceSetup,
   workspaceSetupPath,
 } from '~/lib/server/workspace-setup-guard';
+import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
+
+import { loadWorkspaceSwitcherAccounts } from '../_lib/server/workspace-switcher.loader';
+import { BillingAccessBannerHost } from './_components/billing-access-banner-host';
+import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
+import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
+import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
+import { flattenTeamNavLinks } from './_lib/flatten-team-nav-links';
+import { getTeamAccountAccess } from './_lib/role-access';
+import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
+import { loadTeamWorkspaceShellAdornments } from './_lib/server/team-workspace-shell-adornments.loader';
+import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
+import { spaceTypeFromProfile } from './_lib/workspace-profile';
 
 type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
@@ -51,8 +50,7 @@ export const dynamic = 'force-dynamic';
 export async function generateMetadata({ params }: TeamWorkspaceLayoutProps) {
   const { account } = await params;
   const workspace = await loadTeamWorkspace(account);
-  const workspaceName =
-    workspace.account.name?.trim() || account;
+  const workspaceName = workspace.account.name?.trim() || account;
 
   return buildWorkspaceShellMetadata(workspaceName);
 }
@@ -89,7 +87,9 @@ async function SidebarLayout({
     redirect(workspaceSetupPath());
   }
 
-  const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+  const client = (
+    await import('@kit/supabase/server-client')
+  ).getSupabaseServerClient();
 
   const [data, switcherAccounts] = await Promise.all([
     loadTeamWorkspace(account),
@@ -175,7 +175,9 @@ function TeamWorkspaceSidebarShell({
   user: React.ComponentProps<typeof TeamAccountLayoutSidebar>['user'];
   accounts: React.ComponentProps<typeof TeamAccountLayoutSidebar>['accounts'];
   moduleSettings: Record<string, boolean>;
-  workspaceProfile: React.ComponentProps<typeof TeamAccountLayoutSidebar>['workspaceProfile'];
+  workspaceProfile: React.ComponentProps<
+    typeof TeamAccountLayoutSidebar
+  >['workspaceProfile'];
   accountAccess: {
     permissions?: string[] | null;
     role?: string | null;
@@ -207,9 +209,7 @@ function TeamWorkspaceSidebarShell({
   });
 
   return (
-    <WorkspaceFocusProviderShell
-      settingsByAccountId={focusSettingsByAccountId}
-    >
+    <WorkspaceFocusProviderShell settingsByAccountId={focusSettingsByAccountId}>
       <SidebarProvider defaultOpen={layoutState.open}>
         <Page
           style={'sidebar'}
@@ -261,7 +261,9 @@ async function HeaderLayout({
     redirect(workspaceSetupPath());
   }
 
-  const client = (await import('@kit/supabase/server-client')).getSupabaseServerClient();
+  const client = (
+    await import('@kit/supabase/server-client')
+  ).getSupabaseServerClient();
   const [data, switcherAccounts] = await Promise.all([
     loadTeamWorkspace(account),
     loadWorkspaceSwitcherAccounts(client, user.id),

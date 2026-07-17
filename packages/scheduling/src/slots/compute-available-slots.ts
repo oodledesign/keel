@@ -1,14 +1,5 @@
 import { TZDate } from '@date-fns/tz';
 
-import type {
-  AvailabilityOverrideInput,
-  AvailabilityRuleInput,
-  AvailabilityScheduleInput,
-  AvailableSlot,
-  BusyInterval,
-  EventTypeSlotSettings,
-  ExistingBookingInput,
-} from '../types';
 import {
   addCalendarDaysInTimeZone,
   dayOfWeekInTimeZone,
@@ -18,6 +9,15 @@ import {
   startOfDayInTimeZone,
   zonedDateTimeToUtc,
 } from '../timezone';
+import type {
+  AvailabilityOverrideInput,
+  AvailabilityRuleInput,
+  AvailabilityScheduleInput,
+  AvailableSlot,
+  BusyInterval,
+  EventTypeSlotSettings,
+  ExistingBookingInput,
+} from '../types';
 
 export type ComputeAvailableSlotsInput = {
   eventType: EventTypeSlotSettings;
@@ -64,10 +64,7 @@ function mergeIntervals(intervals: UtcInterval[]): UtcInterval[] {
   return merged;
 }
 
-function subtractBusy(
-  free: UtcInterval[],
-  busy: UtcInterval[],
-): UtcInterval[] {
+function subtractBusy(free: UtcInterval[], busy: UtcInterval[]): UtcInterval[] {
   let result = free;
 
   for (const block of busy) {
@@ -78,10 +75,16 @@ function subtractBusy(
         continue;
       }
       if (block.start > window.start) {
-        next.push({ start: window.start, end: Math.min(block.start, window.end) });
+        next.push({
+          start: window.start,
+          end: Math.min(block.start, window.end),
+        });
       }
       if (block.end < window.end) {
-        next.push({ start: Math.max(block.end, window.start), end: window.end });
+        next.push({
+          start: Math.max(block.end, window.start),
+          end: window.end,
+        });
       }
     }
     result = next.filter((w) => w.end > w.start);
@@ -205,7 +208,11 @@ function alignSlotStart(
   const minutesOfDay = zoned.getHours() * 60 + zoned.getMinutes();
   const remainder = minutesOfDay % incrementMinutes;
 
-  if (remainder === 0 && zoned.getSeconds() === 0 && zoned.getMilliseconds() === 0) {
+  if (
+    remainder === 0 &&
+    zoned.getSeconds() === 0 &&
+    zoned.getMilliseconds() === 0
+  ) {
     return cursorMs;
   }
 

@@ -8,11 +8,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { Info, Link2, RefreshCw } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@kit/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 

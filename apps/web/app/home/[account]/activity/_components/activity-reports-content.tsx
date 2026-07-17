@@ -1,8 +1,9 @@
 'use client';
 
+import { useTransition } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useTransition } from 'react';
 
 import { ArrowLeft, BarChart3, Sparkles } from 'lucide-react';
 
@@ -31,8 +32,8 @@ import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import type { ActivityReportsData } from '~/home/[account]/activity/_lib/server/activity-reports.loader';
 import {
   ACTIVITY_REPORT_UNASSIGNED,
-  formatDuration,
   type ActivityReportRow,
+  formatDuration,
 } from '~/lib/activity/activity-history';
 import type { DateRangeSelection } from '~/lib/date-range/analytics-date-range';
 
@@ -144,11 +145,7 @@ function ActivityReportTable({
                         'cursor-pointer transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]/60',
                       isUnassigned && 'bg-amber-500/5',
                     )}
-                    onClick={
-                      clickable
-                        ? () => onRowClick?.(row)
-                        : undefined
-                    }
+                    onClick={clickable ? () => onRowClick?.(row) : undefined}
                   >
                     <TableCell
                       className={cn(
@@ -162,10 +159,10 @@ function ActivityReportTable({
                         {row.label}
                       </span>
                     </TableCell>
-                    <TableCell className="whitespace-nowrap px-3 py-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <TableCell className="px-3 py-2 text-sm whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                       {row.blockCount}
                     </TableCell>
-                    <TableCell className="whitespace-nowrap px-3 py-2 text-right text-sm font-medium text-[var(--workspace-shell-text)]">
+                    <TableCell className="px-3 py-2 text-right text-sm font-medium whitespace-nowrap text-[var(--workspace-shell-text)]">
                       {formatDuration(row.durationSeconds)}
                     </TableCell>
                   </TableRow>
@@ -219,7 +216,11 @@ export function ActivityReportsContent({ data }: Props) {
     });
   }
 
-  function onDateRangeApply(from: string, to: string, _selection: DateRangeSelection) {
+  function onDateRangeApply(
+    from: string,
+    to: string,
+    _selection: DateRangeSelection,
+  ) {
     navigate({ from, to });
   }
 
@@ -227,7 +228,8 @@ export function ActivityReportsContent({ data }: Props) {
   const unassignedPercent =
     data.assignment.totalActiveSeconds > 0
       ? Math.round(
-          (data.assignment.unassignedSeconds / data.assignment.totalActiveSeconds) *
+          (data.assignment.unassignedSeconds /
+            data.assignment.totalActiveSeconds) *
             100,
         )
       : 0;
@@ -238,7 +240,10 @@ export function ActivityReportsContent({ data }: Props) {
     status: 'needs_review',
   });
 
-  function handleReportRowClick(dimension: ReportDimension, row: ActivityReportRow) {
+  function handleReportRowClick(
+    dimension: ReportDimension,
+    row: ActivityReportRow,
+  ) {
     if (row.id === ACTIVITY_REPORT_UNASSIGNED) {
       startTransition(() => {
         router.push(
@@ -324,7 +329,7 @@ export function ActivityReportsContent({ data }: Props) {
           <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             {formatDuration(data.assignment.needsReviewSeconds)} not confirmed
           </p>
-          <Button asChild size="sm" className="mt-3 ozer-gradient-btn">
+          <Button asChild size="sm" className="ozer-gradient-btn mt-3">
             <Link href={reviewActivityPath}>Review sessions</Link>
           </Button>
         </div>
@@ -347,8 +352,8 @@ export function ActivityReportsContent({ data }: Props) {
               </p>
               <p className="max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
                 Most of your time is still unassigned. Assign a few sessions on
-                the activity page and tick &quot;Remember for future&quot; — Ozer
-                will auto-apply that client or project to matching apps and
+                the activity page and tick &quot;Remember for future&quot; —
+                Ozer will auto-apply that client or project to matching apps and
                 websites going forward.
               </p>
             </div>

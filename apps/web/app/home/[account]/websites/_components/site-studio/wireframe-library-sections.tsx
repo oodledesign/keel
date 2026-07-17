@@ -100,13 +100,13 @@ export function WireframeLibrarySection({
                 value={slot(copy, 'eyebrow')}
                 canEdit={canEdit}
                 onChange={(v) => onSlotChange('eyebrow', v)}
-                className="text-xs font-semibold uppercase tracking-wide text-[#6b6b6b]"
+                className="text-xs font-semibold tracking-wide text-[#6b6b6b] uppercase"
               />
               <WfText
                 value={slot(copy, 'headline')}
                 canEdit={canEdit}
                 onChange={(v) => onSlotChange('headline', v)}
-                className="text-3xl font-semibold leading-tight md:text-4xl"
+                className="text-3xl leading-tight font-semibold md:text-4xl"
               />
               <WfText
                 value={slot(copy, 'subheadline')}
@@ -138,19 +138,22 @@ export function WireframeLibrarySection({
     case 'hero-centered':
       return (
         <WfSectionFrame className="relative">
-          <WfImage className="absolute inset-0 min-h-full rounded-none border-0 opacity-40" label="Background" />
+          <WfImage
+            className="absolute inset-0 min-h-full rounded-none border-0 opacity-40"
+            label="Background"
+          />
           <div className="relative mx-auto max-w-2xl space-y-4 py-10 text-center">
             <WfText
               value={slot(copy, 'eyebrow')}
               canEdit={canEdit}
               onChange={(v) => onSlotChange('eyebrow', v)}
-              className="text-center text-xs font-semibold uppercase tracking-wide text-[#6b6b6b]"
+              className="text-center text-xs font-semibold tracking-wide text-[#6b6b6b] uppercase"
             />
             <WfText
               value={slot(copy, 'headline')}
               canEdit={canEdit}
               onChange={(v) => onSlotChange('headline', v)}
-              className="text-center text-3xl font-semibold leading-tight md:text-4xl"
+              className="text-center text-3xl leading-tight font-semibold md:text-4xl"
             />
             <WfText
               value={slot(copy, 'subheadline')}
@@ -180,7 +183,7 @@ export function WireframeLibrarySection({
                 value={slot(copy, 'headline')}
                 canEdit={canEdit}
                 onChange={(v) => onSlotChange('headline', v)}
-                className="text-3xl font-semibold leading-tight"
+                className="text-3xl leading-tight font-semibold"
               />
               <WfText
                 value={slot(copy, 'subheadline')}
@@ -226,7 +229,7 @@ export function WireframeLibrarySection({
               value={slot(copy, 'eyebrow')}
               canEdit={canEdit}
               onChange={(v) => onSlotChange('eyebrow', v)}
-              className="text-center text-xs font-semibold uppercase tracking-wide text-[#6b6b6b]"
+              className="text-center text-xs font-semibold tracking-wide text-[#6b6b6b] uppercase"
             />
             <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-5">
               {items(copy).map((item) => (
@@ -391,7 +394,7 @@ export function WireframeLibrarySection({
                   onChange={(v) => onItemSlotChange(item.id, 'quote', v)}
                   multiline
                   rows={4}
-                  className="text-sm italic leading-relaxed"
+                  className="text-sm leading-relaxed italic"
                 />
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 shrink-0 rounded-full bg-[#e8e8e8]" />
@@ -440,7 +443,10 @@ export function WireframeLibrarySection({
           </div>
           <div className="grid gap-4 md:grid-cols-3">
             {items(copy).map((item) => (
-              <div key={item.id} className="overflow-hidden rounded-lg border border-[#d4d4d4] bg-white">
+              <div
+                key={item.id}
+                className="overflow-hidden rounded-lg border border-[#d4d4d4] bg-white"
+              >
                 <WfImage className="h-32 w-full rounded-none border-0 border-b border-[#d4d4d4]" />
                 <div className="space-y-2 p-4">
                   <WfText
@@ -450,9 +456,7 @@ export function WireframeLibrarySection({
                     className="text-base font-semibold"
                   />
                   <WfText
-                    value={
-                      item.slots.outcome ?? item.slots.meta ?? ''
-                    }
+                    value={item.slots.outcome ?? item.slots.meta ?? ''}
                     canEdit={canEdit}
                     onChange={(v) =>
                       onItemSlotChange(
@@ -484,7 +488,10 @@ export function WireframeLibrarySection({
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             {items(copy).map((item) => (
               <div key={item.id} className="space-y-2 text-center">
-                <WfImage className="mx-auto h-28 w-28 rounded-full" label="Photo" />
+                <WfImage
+                  className="mx-auto h-28 w-28 rounded-full"
+                  label="Photo"
+                />
                 <WfText
                   value={item.slots.name ?? ''}
                   canEdit={canEdit}
@@ -530,7 +537,7 @@ export function WireframeLibrarySection({
                   value={item.slots.name ?? ''}
                   canEdit={canEdit}
                   onChange={(v) => onItemSlotChange(item.id, 'name', v)}
-                  className="text-sm font-semibold uppercase tracking-wide text-[#6b6b6b]"
+                  className="text-sm font-semibold tracking-wide text-[#6b6b6b] uppercase"
                 />
                 <WfText
                   value={item.slots.price ?? ''}
@@ -798,7 +805,7 @@ export function WireframeLibrarySection({
                 value={slot(copy, 'col1Title')}
                 canEdit={canEdit}
                 onChange={(v) => onSlotChange('col1Title', v)}
-                className="text-xs font-semibold uppercase tracking-wide"
+                className="text-xs font-semibold tracking-wide uppercase"
               />
               <WfText
                 value={slot(copy, 'col1Links')}
@@ -814,7 +821,7 @@ export function WireframeLibrarySection({
                 value={slot(copy, 'col2Title')}
                 canEdit={canEdit}
                 onChange={(v) => onSlotChange('col2Title', v)}
-                className="text-xs font-semibold uppercase tracking-wide"
+                className="text-xs font-semibold tracking-wide uppercase"
               />
               <WfText
                 value={slot(copy, 'col2Links')}

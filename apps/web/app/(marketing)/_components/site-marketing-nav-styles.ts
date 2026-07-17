@@ -5,5 +5,4 @@ export const marketingNavPanelClass =
 export const marketingNavScrollClass =
   'max-h-[min(70dvh,32rem)] overflow-y-auto overscroll-contain';
 
-export const marketingNavSubContentClass =
-  `${marketingNavPanelClass} max-h-[min(60dvh,20rem)] overflow-y-auto overscroll-contain p-1`;
+export const marketingNavSubContentClass = `${marketingNavPanelClass} max-h-[min(60dvh,20rem)] overflow-y-auto overscroll-contain p-1`;

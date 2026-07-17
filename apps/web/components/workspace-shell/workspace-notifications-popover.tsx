@@ -23,8 +23,7 @@ export function WorkspaceNotificationsPopover(params: {
         return true;
       }
 
-      const focusSettings =
-        byAccountId.get(notification.account_id) ?? null;
+      const focusSettings = byAccountId.get(notification.account_id) ?? null;
 
       return shouldSurfaceNotificationForFocus(
         {

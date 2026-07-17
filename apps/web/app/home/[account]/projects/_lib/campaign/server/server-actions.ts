@@ -26,7 +26,10 @@ import {
 import { createCampaignProjectsService } from './campaign-projects.service';
 
 function revalidateCampaignPaths(accountSlug: string, projectId?: string) {
-  const listPath = pathsConfig.app.accountProjects.replace('[account]', accountSlug);
+  const listPath = pathsConfig.app.accountProjects.replace(
+    '[account]',
+    accountSlug,
+  );
   revalidatePath(listPath);
   if (projectId) {
     const detailPath = `${listPath}/${projectId}`;
@@ -162,7 +165,9 @@ export const updateClientFieldValue = enhanceAction(
 
 export const importWebsiteRevampCampaign = enhanceAction(
   async (input) => {
-    const project = await getService().importWebsiteRevampCampaign(input.accountId);
+    const project = await getService().importWebsiteRevampCampaign(
+      input.accountId,
+    );
     revalidateCampaignPaths(input.accountSlug, project.id);
     return project;
   },

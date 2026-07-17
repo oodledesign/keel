@@ -2,8 +2,8 @@ import 'server-only';
 
 import { revalidatePath } from 'next/cache';
 
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -39,7 +39,10 @@ export function revalidateMealPlanPaths(scope: MealPlanScope) {
   revalidatePath(scope.basePath);
 }
 
-export { buildRecipeDetailPath, buildRecipesListPath } from '../family-meal.paths';
+export {
+  buildRecipeDetailPath,
+  buildRecipesListPath,
+} from '../family-meal.paths';
 
 export function revalidateRecipePaths(scope: MealPlanScope, recipeId: string) {
   revalidateMealPlanPaths(scope);

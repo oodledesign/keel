@@ -3,6 +3,7 @@ import 'server-only';
 import { cache } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -60,7 +61,9 @@ export const loadFeedflowWidgetsForTeam = cache(
     const client = getSupabaseServerClient();
     const { data, error } = await supabaseCustomSchema(client, 'feedflow')
       .from('widgets')
-      .select('id, name, embed_key, layout, post_count, created_at, social_account_id')
+      .select(
+        'id, name, embed_key, layout, post_count, created_at, social_account_id',
+      )
       .eq('account_id', accountId)
       .order('created_at', { ascending: false });
 

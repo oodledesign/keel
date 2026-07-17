@@ -2,13 +2,12 @@
 
 import { useMemo } from 'react';
 
-import FullCalendar from '@fullcalendar/react';
-import dayGridPlugin from '@fullcalendar/daygrid';
-import timeGridPlugin from '@fullcalendar/timegrid';
-import listPlugin from '@fullcalendar/list';
-import interactionPlugin from '@fullcalendar/interaction';
-
 import type { EventClickArg } from '@fullcalendar/core';
+import dayGridPlugin from '@fullcalendar/daygrid';
+import interactionPlugin from '@fullcalendar/interaction';
+import listPlugin from '@fullcalendar/list';
+import FullCalendar from '@fullcalendar/react';
+import timeGridPlugin from '@fullcalendar/timegrid';
 
 /** Normalized calendar item (from server). */
 export type CalendarItemNormalized = {
@@ -67,7 +66,9 @@ function normalizeToFC(events: CalendarItemNormalized[]): FCEvent[] {
 }
 
 /** Event payload passed to onEventClick (normalized item + FC click arg). */
-export type CalendarEventClickPayload = CalendarItemNormalized & { _fc?: EventClickArg };
+export type CalendarEventClickPayload = CalendarItemNormalized & {
+  _fc?: EventClickArg;
+};
 
 export type OzerCalendarView = 'month' | 'week' | 'agenda';
 
@@ -90,7 +91,11 @@ export function OzerCalendar({
   const fcEvents = useMemo(() => normalizeToFC(events), [events]);
 
   const initialView =
-    view === 'agenda' ? 'listYear' : view === 'week' ? 'timeGridWeek' : 'dayGridMonth';
+    view === 'agenda'
+      ? 'listYear'
+      : view === 'week'
+        ? 'timeGridWeek'
+        : 'dayGridMonth';
 
   const handleEventClick = (arg: EventClickArg) => {
     const ext = arg.event.extendedProps as FCEvent['extendedProps'];
@@ -101,7 +106,7 @@ export function OzerCalendar({
   };
 
   return (
-    <div className="ozer-calendar rounded-xl border border-[color:var(--workspace-shell-border)] bg-[color-mix(in_oklab,var(--workspace-shell-panel)_92%,black_8%)] p-3 shadow-sm [&_.fc]:border-0 [&_.fc]:bg-transparent [&_.fc-scrollgrid]:border-[color:var(--workspace-shell-border)] [&_.fc-col-header-cell]:border-[color:var(--workspace-shell-border)] [&_.fc-col-header-cell]:bg-transparent [&_.fc-col-header-cell-cushion]:py-2 [&_.fc-col-header-cell-cushion]:text-xs [&_.fc-col-header-cell-cushion]:text-[var(--workspace-shell-text-muted)] [&_.fc-day]:border-[color:var(--workspace-shell-border)] [&_.fc-daygrid-day-number]:text-[var(--workspace-shell-text-muted)] [&_.fc-toolbar]:mb-3 [&_.fc-toolbar-title]:text-xs [&_.fc-toolbar-title]:font-medium [&_.fc-toolbar-title]:text-[var(--workspace-shell-text-muted)] [&_.fc-button]:h-8 [&_.fc-button]:rounded-md [&_.fc-button]:border border-[color:var(--workspace-control-border)] [&_.fc-button]:bg-[var(--workspace-control-surface)] [&_.fc-button]:px-3 [&_.fc-button]:text-[11px] [&_.fc-button]:font-medium [&_.fc-button]:text-[var(--workspace-shell-text-muted)] [&_.fc-button:hover]:bg-[var(--workspace-shell-panel-hover)] [&_.fc-button-primary]:text-[var(--workspace-shell-text)] [&_.fc-button-primary]:shadow-none [&_.fc-button-primary:not(:disabled)]:bg-transparent [&_.fc-button-primary:not(:disabled)]:text-[var(--workspace-shell-text)] [&_.fc-today-button]:rounded-full [&_.fc-today-button]:px-4 [&_.fc-today-button]:bg-transparent [&_.fc-today-button]:border-dashed [&_.fc-today-button]:border-[color:var(--workspace-control-border)] [&_.fc-today-button:hover]:bg-[var(--workspace-shell-panel-hover)]/70 [&_.fc-event]:!bg-transparent [&_.fc-event]:!border-none [&_.fc-list-day-cushion]:bg-transparent [&_.fc-list-day-text]:text-xs [&_.fc-list-day-text]:font-medium [&_.fc-list-day-text]:text-[var(--workspace-shell-text-muted)] [&_.fc-list-day-side-text]:text-xs [&_.fc-list-day-side-text]:text-[var(--workspace-shell-text-muted)] [&_.fc-list-event]:border-zinc-900/60 [&_.fc-list-event-title]:text-[var(--workspace-shell-text)] [&_.fc-list-event-time]:text-[var(--workspace-shell-text-muted)] [&_.fc-list-empty]:text-[var(--workspace-shell-text-muted)]">
+    <div className="ozer-calendar rounded-xl border border-[color:var(--workspace-control-border)] border-[color:var(--workspace-shell-border)] bg-[color-mix(in_oklab,var(--workspace-shell-panel)_92%,black_8%)] p-3 shadow-sm [&_.fc]:border-0 [&_.fc]:bg-transparent [&_.fc-button]:h-8 [&_.fc-button]:rounded-md [&_.fc-button]:border [&_.fc-button]:bg-[var(--workspace-control-surface)] [&_.fc-button]:px-3 [&_.fc-button]:text-[11px] [&_.fc-button]:font-medium [&_.fc-button]:text-[var(--workspace-shell-text-muted)] [&_.fc-button-primary]:text-[var(--workspace-shell-text)] [&_.fc-button-primary]:shadow-none [&_.fc-button-primary:not(:disabled)]:bg-transparent [&_.fc-button-primary:not(:disabled)]:text-[var(--workspace-shell-text)] [&_.fc-button:hover]:bg-[var(--workspace-shell-panel-hover)] [&_.fc-col-header-cell]:border-[color:var(--workspace-shell-border)] [&_.fc-col-header-cell]:bg-transparent [&_.fc-col-header-cell-cushion]:py-2 [&_.fc-col-header-cell-cushion]:text-xs [&_.fc-col-header-cell-cushion]:text-[var(--workspace-shell-text-muted)] [&_.fc-day]:border-[color:var(--workspace-shell-border)] [&_.fc-daygrid-day-number]:text-[var(--workspace-shell-text-muted)] [&_.fc-event]:!border-none [&_.fc-event]:!bg-transparent [&_.fc-list-day-cushion]:bg-transparent [&_.fc-list-day-side-text]:text-xs [&_.fc-list-day-side-text]:text-[var(--workspace-shell-text-muted)] [&_.fc-list-day-text]:text-xs [&_.fc-list-day-text]:font-medium [&_.fc-list-day-text]:text-[var(--workspace-shell-text-muted)] [&_.fc-list-empty]:text-[var(--workspace-shell-text-muted)] [&_.fc-list-event]:border-zinc-900/60 [&_.fc-list-event-time]:text-[var(--workspace-shell-text-muted)] [&_.fc-list-event-title]:text-[var(--workspace-shell-text)] [&_.fc-scrollgrid]:border-[color:var(--workspace-shell-border)] [&_.fc-today-button]:rounded-full [&_.fc-today-button]:border-dashed [&_.fc-today-button]:border-[color:var(--workspace-control-border)] [&_.fc-today-button]:bg-transparent [&_.fc-today-button]:px-4 [&_.fc-today-button:hover]:bg-[var(--workspace-shell-panel-hover)]/70 [&_.fc-toolbar]:mb-3 [&_.fc-toolbar-title]:text-xs [&_.fc-toolbar-title]:font-medium [&_.fc-toolbar-title]:text-[var(--workspace-shell-text-muted)]">
       <FullCalendar
         plugins={[dayGridPlugin, timeGridPlugin, listPlugin, interactionPlugin]}
         initialView={initialView}

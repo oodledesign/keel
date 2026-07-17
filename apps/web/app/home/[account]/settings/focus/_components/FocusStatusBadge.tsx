@@ -44,12 +44,7 @@ function StatusIcon({
     return <Mail className="h-3.5 w-3.5" aria-hidden />;
   }
 
-  return (
-    <span
-      className="h-2 w-2 rounded-full bg-emerald-400"
-      aria-hidden
-    />
-  );
+  return <span className="h-2 w-2 rounded-full bg-emerald-400" aria-hidden />;
 }
 
 export function FocusStatusBadge({
@@ -59,7 +54,9 @@ export function FocusStatusBadge({
 }: FocusStatusBadgeProps) {
   const snapshotState = useWorkspaceFocusSnapshot(settings);
   const managedState = useWorkspaceFocus(
-    enableHolidayAutoDisable ? (settings as WorkspaceFocusSettings | null) : null,
+    enableHolidayAutoDisable
+      ? (settings as WorkspaceFocusSettings | null)
+      : null,
   );
   const state = enableHolidayAutoDisable ? managedState : snapshotState;
   const label = state.currentStatusLabel;

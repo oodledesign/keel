@@ -8,9 +8,12 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 
-import { updatePhase } from '../../_lib/server/server-actions';
 import { getErrorMessage } from '../../_lib/error-message';
-import type { JobBoardResult, PhaseListItem } from '../../_lib/schema/project-phases.schema';
+import type {
+  JobBoardResult,
+  PhaseListItem,
+} from '../../_lib/schema/project-phases.schema';
+import { updatePhase } from '../../_lib/server/server-actions';
 import {
   PHASE_STATUS_LABELS,
   formatShortDate,
@@ -52,8 +55,7 @@ function resolvePhaseDates(
   phases: PhaseListItem[],
   jobStart: string | null,
 ): ResolvedPhase[] {
-  let cursor =
-    parseDateKey(jobStart) ?? startOfWeek(new Date());
+  let cursor = parseDateKey(jobStart) ?? startOfWeek(new Date());
 
   return phases.map((phase) => {
     const start = parseDateKey(phase.start_date) ?? new Date(cursor);
@@ -86,11 +88,10 @@ function PhaseBar({
   const rangeMs = rangeEnd.getTime() - rangeStart.getTime();
   const leftPct =
     ((phase.start.getTime() - rangeStart.getTime()) / rangeMs) * 100;
-  const widthPct =
-    Math.max(
-      phase.is_milestone ? 1.5 : 4,
-      ((phase.end.getTime() - phase.start.getTime()) / rangeMs) * 100,
-    );
+  const widthPct = Math.max(
+    phase.is_milestone ? 1.5 : 4,
+    ((phase.end.getTime() - phase.start.getTime()) / rangeMs) * 100,
+  );
 
   const dragRef = useRef<'start' | 'end' | null>(null);
   const [isDragging, setIsDragging] = useState(false);
@@ -130,7 +131,11 @@ function PhaseBar({
 
   if (phase.is_milestone) {
     return (
-      <div className="relative h-10" onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
+      <div
+        className="relative h-10"
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+      >
         <Link
           href={phasePath(accountSlug, jobId, phase.id)}
           prefetch={false}
@@ -148,7 +153,11 @@ function PhaseBar({
   }
 
   return (
-    <div className="relative h-10 py-1" onPointerMove={onPointerMove} onPointerUp={onPointerUp}>
+    <div
+      className="relative h-10 py-1"
+      onPointerMove={onPointerMove}
+      onPointerUp={onPointerUp}
+    >
       <div
         className="absolute top-1/2 h-6 -translate-y-1/2 overflow-hidden rounded-md border border-[color:var(--workspace-shell-border)]"
         style={{
@@ -168,13 +177,13 @@ function PhaseBar({
           <>
             <button
               type="button"
-              className="absolute left-0 top-0 h-full w-2 cursor-ew-resize bg-white/20 hover:bg-white/40"
+              className="absolute top-0 left-0 h-full w-2 cursor-ew-resize bg-white/20 hover:bg-white/40"
               onPointerDown={onPointerDown('start')}
               aria-label="Adjust start date"
             />
             <button
               type="button"
-              className="absolute right-0 top-0 h-full w-2 cursor-ew-resize bg-white/20 hover:bg-white/40"
+              className="absolute top-0 right-0 h-full w-2 cursor-ew-resize bg-white/20 hover:bg-white/40"
               onPointerDown={onPointerDown('end')}
               aria-label="Adjust end date"
             />
@@ -287,7 +296,7 @@ export function JobProjectTimeline({
           {weeks.map((w) => (
             <div
               key={w.toISOString()}
-              className="flex-1 min-w-[72px] text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]"
+              className="min-w-[72px] flex-1 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase"
             >
               {formatShortDate(dateToInput(w))}
             </div>
@@ -296,7 +305,10 @@ export function JobProjectTimeline({
 
         <div className="space-y-6">
           {resolved.map((phase) => (
-            <div key={phase.id} className="grid grid-cols-[140px_1fr] gap-3 items-start">
+            <div
+              key={phase.id}
+              className="grid grid-cols-[140px_1fr] items-start gap-3"
+            >
               <div className="pt-1">
                 <Link
                   href={phasePath(accountSlug, jobId, phase.id)}
@@ -306,9 +318,12 @@ export function JobProjectTimeline({
                   {phase.name}
                 </Link>
                 <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
-                  {formatShortDate(phase.start_date)} – {formatShortDate(phase.due_date)}
+                  {formatShortDate(phase.start_date)} –{' '}
+                  {formatShortDate(phase.due_date)}
                 </p>
-                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">{phase.progressPct}% complete</p>
+                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                  {phase.progressPct}% complete
+                </p>
               </div>
               <div className="relative rounded-lg bg-[var(--workspace-control-surface)]/30 px-1">
                 <PhaseBar
@@ -327,7 +342,8 @@ export function JobProjectTimeline({
 
         {!canEditJobs && (
           <p className="mt-4 text-xs text-[var(--workspace-shell-text-muted)]">
-            Timeline dates are read-only — you need jobs edit permission to adjust.
+            Timeline dates are read-only — you need jobs edit permission to
+            adjust.
           </p>
         )}
       </div>

@@ -52,8 +52,8 @@ import {
   deletePersonNoteAction,
   toggleGiftPurchasedAction,
 } from '../_lib/actions/people-actions';
-import type { PersonProfile } from '../_lib/server/people.service';
 import { DATE_KINDS } from '../_lib/schema/people.schema';
+import type { PersonProfile } from '../_lib/server/people.service';
 import { CircleTierBadge } from './circle-tier-badge';
 import { PersonFormDialog } from './person-form-dialog';
 import { PersonImageUploader } from './person-image-uploader';
@@ -111,7 +111,7 @@ export function PersonProfileClient({ person }: Props) {
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pb-12 pt-2 text-[var(--workspace-shell-text)] md:px-0">
+    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 pt-2 pb-12 text-[var(--workspace-shell-text)] md:px-0">
       <div className="flex items-center gap-3">
         <Button
           asChild
@@ -140,7 +140,9 @@ export function PersonProfileClient({ person }: Props) {
             <div>
               <h1 className="text-2xl font-semibold">{name}</h1>
               {person.nickname && person.full_name !== person.nickname && (
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">{person.full_name}</p>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  {person.full_name}
+                </p>
               )}
               <div className="mt-2 flex flex-wrap items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 <CircleTierBadge tier={person.circle_tier} showFullLabel />
@@ -249,7 +251,7 @@ export function PersonProfileClient({ person }: Props) {
                       </p>
                     )}
                     {c.conversation_notes && (
-                      <p className="mt-2 whitespace-pre-wrap text-sm text-[var(--workspace-shell-text-muted)]">
+                      <p className="mt-2 text-sm whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
                         {c.conversation_notes}
                       </p>
                     )}
@@ -298,10 +300,13 @@ export function PersonProfileClient({ person }: Props) {
             {person.notes.map((n) => (
               <div
                 key={n.id}
-                className={cn(panelClass, 'flex items-start justify-between gap-3 p-4')}
+                className={cn(
+                  panelClass,
+                  'flex items-start justify-between gap-3 p-4',
+                )}
               >
                 <div>
-                  <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]">
+                  <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
                     {n.body}
                   </p>
                   <p className="mt-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
@@ -351,10 +356,13 @@ export function PersonProfileClient({ person }: Props) {
             {person.dates.map((d) => (
               <div
                 key={d.id}
-                className={cn(panelClass, 'flex items-center justify-between p-4')}
+                className={cn(
+                  panelClass,
+                  'flex items-center justify-between p-4',
+                )}
               >
                 <div>
-                  <p className="font-medium capitalize text-[var(--workspace-shell-text)]">
+                  <p className="font-medium text-[var(--workspace-shell-text)] capitalize">
                     {d.kind === 'custom' ? d.label || 'Custom' : d.kind}
                   </p>
                   <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -362,7 +370,9 @@ export function PersonProfileClient({ person }: Props) {
                     {d.year_optional ? ` (${d.year_optional})` : ''}
                   </p>
                   {d.notes && (
-                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">{d.notes}</p>
+                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                      {d.notes}
+                    </p>
                   )}
                 </div>
                 <Button
@@ -427,16 +437,21 @@ export function PersonProfileClient({ person }: Props) {
                   <p
                     className={cn(
                       'font-medium text-[var(--workspace-shell-text)]',
-                      g.purchased && 'text-[var(--workspace-shell-text-muted)] line-through',
+                      g.purchased &&
+                        'text-[var(--workspace-shell-text-muted)] line-through',
                     )}
                   >
                     {g.title}
                   </p>
                   {g.occasion && (
-                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">{g.occasion}</p>
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      {g.occasion}
+                    </p>
                   )}
                   {g.notes && (
-                    <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{g.notes}</p>
+                    <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                      {g.notes}
+                    </p>
                   )}
                   {g.url && (
                     <a
@@ -535,7 +550,7 @@ function SummaryTile({
 }) {
   return (
     <div className="rounded-xl bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3">
-      <p className="text-[11px] uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+      <p className="text-[11px] tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
         {label}
       </p>
       <p

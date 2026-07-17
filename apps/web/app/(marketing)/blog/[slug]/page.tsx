@@ -1,24 +1,19 @@
-import Link from 'next/link';
-
 import type { Metadata } from 'next';
 
 import Image from 'next/image';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
+
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-
-import { notFound } from 'next/navigation';
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 
 import { getBlogPost } from '~/lib/blog';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
-import {
-  articleJsonLd,
-  breadcrumbJsonLd,
-  schemaGraph,
-} from '~/lib/seo/schema';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import { articleJsonLd, breadcrumbJsonLd, schemaGraph } from '~/lib/seo/schema';
 
 type BlogPostPageProps = {
   params: Promise<{ slug: string }>;
@@ -184,7 +179,9 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
 
       {post.content ? (
         <div className="markdoc">
-          <ReactMarkdown remarkPlugins={[remarkGfm]}>{post.content}</ReactMarkdown>
+          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+            {post.content}
+          </ReactMarkdown>
         </div>
       ) : null}
 
@@ -233,13 +230,13 @@ export default async function BlogPostPage({ params }: BlogPostPageProps) {
           ← Back to blog
         </Link>
 
-        <div className="bg-muted/30 rounded-lg border border-border/40 p-6">
+        <div className="bg-muted/30 border-border/40 rounded-lg border p-6">
           <h2 className="font-heading text-xl font-semibold tracking-tight">
             Run the studio from one home
           </h2>
           <p className="text-muted-foreground mt-2 text-sm leading-relaxed">
-            Ozer is the Workspace OS for freelancers and small agencies — flat price
-            for the whole team.
+            Ozer is the Workspace OS for freelancers and small agencies — flat
+            price for the whole team.
           </p>
           <Button asChild className="mt-4">
             <Link href="/auth/sign-up">Start free</Link>

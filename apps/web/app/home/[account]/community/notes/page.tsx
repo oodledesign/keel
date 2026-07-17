@@ -16,9 +16,7 @@ async function CommunityNotesRedirectPage({
   const workspace = await loadTeamWorkspace(accountSlug);
   redirectIfSpaceNotIn(workspace, accountSlug, ['community']);
 
-  redirect(
-    pathsConfig.app.accountNotes.replace('[account]', accountSlug),
-  );
+  redirect(pathsConfig.app.accountNotes.replace('[account]', accountSlug));
 }
 
 export default CommunityNotesRedirectPage;

@@ -32,8 +32,10 @@ async function loadThreadContext(
     new Set(
       (participants ?? [])
         .filter(
-          (row: { participant_kind: string; participant_client_id: string | null }) =>
-            row.participant_kind === 'client' && row.participant_client_id,
+          (row: {
+            participant_kind: string;
+            participant_client_id: string | null;
+          }) => row.participant_kind === 'client' && row.participant_client_id,
         )
         .map(
           (row: { participant_client_id: string | null }) =>
@@ -76,7 +78,9 @@ function itemVisibleToClients(
 
   if (row.is_public) return true;
 
-  const linkedClientIds = [row.client_id, row.client_org_id].filter(Boolean) as string[];
+  const linkedClientIds = [row.client_id, row.client_org_id].filter(
+    Boolean,
+  ) as string[];
   if (linkedClientIds.some((id) => context.clientIds.includes(id))) {
     return true;
   }
@@ -159,13 +163,17 @@ export async function listAttachableNotesAndDocs(params: {
   const [notesRes, docsRes] = await Promise.all([
     params.admin
       .from('notes')
-      .select('id, title, is_public, client_id, client_org_id, job_id, updated_at')
+      .select(
+        'id, title, is_public, client_id, client_org_id, job_id, updated_at',
+      )
       .eq('account_id', params.accountId)
       .order('updated_at', { ascending: false })
       .limit(200),
     params.admin
       .from('docs')
-      .select('id, title, kind, is_public, client_id, client_org_id, job_id, updated_at')
+      .select(
+        'id, title, kind, is_public, client_id, client_org_id, job_id, updated_at',
+      )
       .eq('account_id', params.accountId)
       .order('updated_at', { ascending: false })
       .limit(200),
@@ -222,7 +230,9 @@ export async function loadAttachmentsForMessages(params: {
   if (error) throw error;
 
   const noteIds = (rows ?? [])
-    .filter((row: { attachment_type: string }) => row.attachment_type === 'note')
+    .filter(
+      (row: { attachment_type: string }) => row.attachment_type === 'note',
+    )
     .map((row: { attachment_id: string }) => row.attachment_id);
   const docIds = (rows ?? [])
     .filter((row: { attachment_type: string }) => row.attachment_type === 'doc')
@@ -244,23 +254,30 @@ export async function loadAttachmentsForMessages(params: {
   ]);
 
   const noteMeta = new Map(
-    (notesRes.data ?? []).map((row: { id: string; is_public: boolean; public_token: string | null }) => [
-      row.id,
-      row,
-    ]),
+    (notesRes.data ?? []).map(
+      (row: {
+        id: string;
+        is_public: boolean;
+        public_token: string | null;
+      }) => [row.id, row],
+    ),
   );
   const docMeta = new Map(
-    (docsRes.data ?? []).map((row: { id: string; is_public: boolean; public_token: string | null }) => [
-      row.id,
-      row,
-    ]),
+    (docsRes.data ?? []).map(
+      (row: {
+        id: string;
+        is_public: boolean;
+        public_token: string | null;
+      }) => [row.id, row],
+    ),
   );
 
   for (const row of rows ?? []) {
     const messageId = row.message_id as string;
     const type = row.attachment_type as 'note' | 'doc';
     const attachmentId = row.attachment_id as string;
-    const meta = type === 'note' ? noteMeta.get(attachmentId) : docMeta.get(attachmentId);
+    const meta =
+      type === 'note' ? noteMeta.get(attachmentId) : docMeta.get(attachmentId);
     const isPublic = Boolean(meta?.is_public);
     const publicToken = (meta?.public_token as string | null) ?? null;
 

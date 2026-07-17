@@ -1,5 +1,4 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import { cn } from '@kit/ui/utils';
 
 import { DashboardShortcutsBar } from '~/components/dashboard-shortcuts/dashboard-shortcuts-bar';

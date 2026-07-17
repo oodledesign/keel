@@ -1,10 +1,10 @@
+import pathsConfig from '~/config/paths.config';
+import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import {
   formatGbp as formatGbpFromConfig,
   getBillingProductPrice,
   listAllWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
-import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
-import pathsConfig from '~/config/paths.config';
 
 export type BillingInterval = 'month' | 'year';
 
@@ -59,7 +59,8 @@ export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] =
   listAllWorkspacePrices().map((plan) => ({
     productId: plan.productId,
     monthlyPlanId: plan.monthlyPlanId ?? `${plan.productId}-monthly`,
-    yearlyPlanId: plan.yearlyPlanId ?? plan.monthlyPlanId ?? `${plan.productId}-yearly`,
+    yearlyPlanId:
+      plan.yearlyPlanId ?? plan.monthlyPlanId ?? `${plan.productId}-yearly`,
     profile: PRODUCT_PROFILE[plan.productId] ?? 'work_design',
     name: plan.productName,
     description: plan.description,
@@ -71,9 +72,7 @@ export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] =
     badge: plan.badge,
   }));
 
-const ADDON_PRODUCT_IDS = [
-  'ozer-addon-signatures',
-] as const;
+const ADDON_PRODUCT_IDS = ['ozer-addon-signatures'] as const;
 
 const PRODUCT_URL_ALIASES = {
   'ozer-business-lite': 'business-lite',
@@ -91,8 +90,8 @@ const PRODUCT_ID_BY_URL_ALIAS = new Map(
 );
 
 /** Derived from billing.config.ts. */
-export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] = ADDON_PRODUCT_IDS.map(
-  (productId) => {
+export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] =
+  ADDON_PRODUCT_IDS.map((productId) => {
     const plan = getBillingProductPrice(productId);
     if (!plan) {
       throw new Error(`Missing billing product ${productId}`);
@@ -105,8 +104,7 @@ export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] = ADDON_PRODUCT_IDS.map
       monthlyPriceGbp: plan.monthlyPriceGbp,
       features: plan.features,
     };
-  },
-);
+  });
 
 export function planIdForInterval(
   plan: MarketingWorkspacePlan,
@@ -184,7 +182,10 @@ export function buildSignedInBillingUrl(params: {
   interval?: BillingInterval;
   setup?: boolean;
 }) {
-  const path = pathsConfig.app.accountBilling.replace('[account]', params.accountSlug);
+  const path = pathsConfig.app.accountBilling.replace(
+    '[account]',
+    params.accountSlug,
+  );
   const search = new URLSearchParams({
     product: params.productId,
     plan: params.planId,
@@ -212,8 +213,7 @@ export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
   const productId = internalProductId(searchParams.get('product'));
   const planId = searchParams.get('plan')?.trim() || undefined;
   const intervalRaw = searchParams.get('interval');
-  const interval: BillingInterval =
-    intervalRaw === 'year' ? 'year' : 'month';
+  const interval: BillingInterval = intervalRaw === 'year' ? 'year' : 'month';
 
   return {
     profile:
@@ -230,9 +230,10 @@ export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
 }
 
 export function publicProductSlug(productId: string) {
-  return PRODUCT_URL_ALIASES[
-    productId as keyof typeof PRODUCT_URL_ALIASES
-  ] ?? productId;
+  return (
+    PRODUCT_URL_ALIASES[productId as keyof typeof PRODUCT_URL_ALIASES] ??
+    productId
+  );
 }
 
 export function internalProductId(product: string | null | undefined) {

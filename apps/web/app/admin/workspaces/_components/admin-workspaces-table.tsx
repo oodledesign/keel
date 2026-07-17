@@ -72,10 +72,7 @@ function WorkspacesFilters(props: { query: string }) {
           render={({ field }) => (
             <FormItem>
               <FormControl>
-                <Input
-                  placeholder="Search name, slug, or email…"
-                  {...field}
-                />
+                <Input placeholder="Search name, slug, or email…" {...field} />
               </FormControl>
             </FormItem>
           )}
@@ -147,15 +144,11 @@ const columns: ColumnDef<AdminWorkspaceRow>[] = [
     cell: ({ row }) => {
       const createdAt = row.original.createdAt;
       if (!createdAt) {
-        return (
-          <span className="text-muted-foreground text-sm">—</span>
-        );
+        return <span className="text-muted-foreground text-sm">—</span>;
       }
       const date = new Date(createdAt);
       if (Number.isNaN(date.getTime())) {
-        return (
-          <span className="text-muted-foreground text-sm">—</span>
-        );
+        return <span className="text-muted-foreground text-sm">—</span>;
       }
       return date.toLocaleDateString('en-GB');
     },

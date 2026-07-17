@@ -4,12 +4,12 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  type FinanceDashboardSummary,
+  loadFinanceDashboardSummary,
+} from './finance-dashboard-summary.loader';
 import type { GroupDashboardData } from './group-dashboard.loader';
 import { loadGroupDashboardData } from './group-dashboard.loader';
-import {
-  loadFinanceDashboardSummary,
-  type FinanceDashboardSummary,
-} from './finance-dashboard-summary.loader';
 
 export type { FinanceDashboardSummary };
 
@@ -51,38 +51,37 @@ export const loadPropertyDashboardData = cache(
 
     const accountId = (accountRow as { id?: string } | null)?.id;
 
-    const [groupData, propertiesResult, jobsResult, projectsResult, financeSummary] =
-      await Promise.all([
-        loadGroupDashboardData(accountSlug),
-        accountId
-          ? client
-              .from('properties')
-              .select('status')
-              .eq('account_id', accountId)
-          : Promise.resolve({ data: [], error: null }),
-        accountId
-          ? client
-              .from('jobs')
-              .select('id', { count: 'exact', head: true })
-              .eq('account_id', accountId)
-              .not('status', 'in', '("completed","cancelled")')
-          : Promise.resolve({ count: 0, error: null }),
-        accountId
-          ? client
-              .from('projects')
-              .select('id')
-              .eq('account_id', accountId)
-          : Promise.resolve({ data: [], error: null }),
-        accountId
-          ? loadFinanceDashboardSummary(client, accountId)
-          : Promise.resolve({
-              financeIncomePence: 0,
-              financeExpensePence: 0,
-              financeNetPence: 0,
-              hasFinanceData: false,
-              financeTrend: [],
-            }),
-      ]);
+    const [
+      groupData,
+      propertiesResult,
+      jobsResult,
+      projectsResult,
+      financeSummary,
+    ] = await Promise.all([
+      loadGroupDashboardData(accountSlug),
+      accountId
+        ? client.from('properties').select('status').eq('account_id', accountId)
+        : Promise.resolve({ data: [], error: null }),
+      accountId
+        ? client
+            .from('jobs')
+            .select('id', { count: 'exact', head: true })
+            .eq('account_id', accountId)
+            .not('status', 'in', '("completed","cancelled")')
+        : Promise.resolve({ count: 0, error: null }),
+      accountId
+        ? client.from('projects').select('id').eq('account_id', accountId)
+        : Promise.resolve({ data: [], error: null }),
+      accountId
+        ? loadFinanceDashboardSummary(client, accountId)
+        : Promise.resolve({
+            financeIncomePence: 0,
+            financeExpensePence: 0,
+            financeNetPence: 0,
+            hasFinanceData: false,
+            financeTrend: [],
+          }),
+    ]);
 
     type PropertyRow = { status?: string | null };
     const rows = ((propertiesResult as { data?: unknown[] | null }).data ??

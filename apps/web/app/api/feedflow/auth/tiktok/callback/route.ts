@@ -4,8 +4,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { encryptSecret } from '~/lib/feedflow/crypto-tokens';
-import { exchangeTikTokCode } from '~/lib/feedflow/tiktok';
 import { verifyFeedflowOAuthState } from '~/lib/feedflow/oauth-state';
+import { exchangeTikTokCode } from '~/lib/feedflow/tiktok';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const dynamic = 'force-dynamic';
@@ -31,9 +31,7 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(absoluteUrl(pathsConfig.auth.signIn));
   }
 
-  const payload = stateToken
-    ? verifyFeedflowOAuthState(stateToken)
-    : null;
+  const payload = stateToken ? verifyFeedflowOAuthState(stateToken) : null;
 
   const fallback = absoluteUrl(pathsConfig.app.home);
 

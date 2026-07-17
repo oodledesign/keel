@@ -3,7 +3,13 @@ import { z } from 'zod';
 const optionalString = z.string().optional();
 const optionalNullableString = z.string().nullable().optional();
 
-const proposalStatus = z.enum(['draft', 'sent', 'read', 'approved', 'declined']);
+const proposalStatus = z.enum([
+  'draft',
+  'sent',
+  'read',
+  'approved',
+  'declined',
+]);
 
 export const ProposalContextRefSchema = z.object({
   type: z.enum(['note', 'file']),
@@ -164,12 +170,20 @@ export type SendProposalInput = z.infer<typeof SendProposalSchema>;
 export type DuplicateProposalInput = z.infer<typeof DuplicateProposalSchema>;
 export type ArchiveProposalInput = z.infer<typeof ArchiveProposalSchema>;
 export type SetProposalStatusInput = z.infer<typeof SetProposalStatusSchema>;
-export type GetProposalPortalLinkInput = z.infer<typeof GetProposalPortalLinkSchema>;
-export type GetProposalForPortalInput = z.infer<typeof GetProposalForPortalSchema>;
+export type GetProposalPortalLinkInput = z.infer<
+  typeof GetProposalPortalLinkSchema
+>;
+export type GetProposalForPortalInput = z.infer<
+  typeof GetProposalForPortalSchema
+>;
 export type AddProposalCommentInput = z.infer<typeof AddProposalCommentSchema>;
 export type AddProposalCommentByTokenInput = z.infer<
   typeof AddProposalCommentByTokenSchema
 >;
-export type ApproveProposalByTokenInput = z.infer<typeof ApproveProposalByTokenSchema>;
-export type DeclineProposalByTokenInput = z.infer<typeof DeclineProposalByTokenSchema>;
+export type ApproveProposalByTokenInput = z.infer<
+  typeof ApproveProposalByTokenSchema
+>;
+export type DeclineProposalByTokenInput = z.infer<
+  typeof DeclineProposalByTokenSchema
+>;
 export type ResendProposalInput = z.infer<typeof ResendProposalSchema>;

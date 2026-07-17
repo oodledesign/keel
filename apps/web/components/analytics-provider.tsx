@@ -116,7 +116,9 @@ function useReportPageView(reportAnalyticsFn: (url: string) => unknown) {
 
   const callAnalyticsOnPathChange = useEffectEvent(() => {
     const search =
-      typeof window !== 'undefined' ? window.location.search.replace(/^\?/, '') : '';
+      typeof window !== 'undefined'
+        ? window.location.search.replace(/^\?/, '')
+        : '';
     const url = [pathname, search].filter(Boolean).join('?');
 
     return reportAnalyticsFn(url);

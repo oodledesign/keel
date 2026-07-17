@@ -23,7 +23,9 @@ function signInPath(state: string) {
   return `${pathsConfig.auth.signIn}?next=${encodeURIComponent(next)}`;
 }
 
-export default async function DesktopRecorderConnectPage({ searchParams }: PageProps) {
+export default async function DesktopRecorderConnectPage({
+  searchParams,
+}: PageProps) {
   const { state: rawState } = await searchParams;
   const state = rawState?.trim() ?? '';
 
@@ -31,13 +33,20 @@ export default async function DesktopRecorderConnectPage({ searchParams }: PageP
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16">
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 text-[var(--workspace-shell-text)] shadow-xl">
-          <h1 className="text-2xl font-bold tracking-tight">Connect Ozer Assistant</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Connect Ozer Assistant
+          </h1>
           <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
-            Open Ozer Assistant on your Mac and choose <strong className="text-[var(--workspace-shell-text)]">Sign in to Ozer</strong>{' '}
+            Open Ozer Assistant on your Mac and choose{' '}
+            <strong className="text-[var(--workspace-shell-text)]">
+              Sign in to Ozer
+            </strong>{' '}
             to start the connection.
           </p>
           <Button asChild className="mt-6 w-full">
-            <Link href={pathsConfig.app.personalAccountRecorderSettings}>Open Ozer settings</Link>
+            <Link href={pathsConfig.app.personalAccountRecorderSettings}>
+              Open Ozer settings
+            </Link>
           </Button>
         </div>
       </main>
@@ -60,14 +69,22 @@ export default async function DesktopRecorderConnectPage({ searchParams }: PageP
     redirectURL = session.redirectURL;
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'Could not connect Ozer Assistant.';
+      error instanceof Error
+        ? error.message
+        : 'Could not connect Ozer Assistant.';
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16">
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 text-[var(--workspace-shell-text)] shadow-xl">
-          <h1 className="text-2xl font-bold tracking-tight">Connection failed</h1>
-          <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">{message}</p>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Connection failed
+          </h1>
+          <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+            {message}
+          </p>
           <Button asChild variant="outline" className="mt-6 w-full">
-            <Link href={pathsConfig.app.personalAccountRecorderSettings}>Back to settings</Link>
+            <Link href={pathsConfig.app.personalAccountRecorderSettings}>
+              Back to settings
+            </Link>
           </Button>
         </div>
       </main>

@@ -2,8 +2,8 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 export type PlatformSupportMessage = {
   id: string;
@@ -150,9 +150,7 @@ async function loadTicketDetail(
         isInternalNote: (row as { is_internal_note: boolean }).is_internal_note,
         createdAt: (row as { created_at: string }).created_at,
         authorEmail: authorEmails.get(authorId) ?? null,
-        authorIsCurrentUser: viewerUserId
-          ? authorId === viewerUserId
-          : false,
+        authorIsCurrentUser: viewerUserId ? authorId === viewerUserId : false,
       };
     }),
   };

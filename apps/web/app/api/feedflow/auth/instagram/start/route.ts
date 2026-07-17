@@ -3,11 +3,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { assertFeedflowWriteAccess } from '~/lib/feedflow/assert-feedflow-write';
 import { getOptionalInstagram } from '~/lib/feedflow/env';
 import { buildInstagramAuthUrl } from '~/lib/feedflow/instagram';
 import { signFeedflowOAuthState } from '~/lib/feedflow/oauth-state';
-
-import { assertFeedflowWriteAccess } from '~/lib/feedflow/assert-feedflow-write';
 import { denyUnlessFeedflowAddon } from '~/lib/feedflow/require-feedflow-api-access';
 
 export const dynamic = 'force-dynamic';
@@ -35,7 +34,9 @@ export async function GET(request: NextRequest) {
   } = await client.auth.getUser();
 
   if (!user) {
-    const next = encodeURIComponent(request.nextUrl.pathname + request.nextUrl.search);
+    const next = encodeURIComponent(
+      request.nextUrl.pathname + request.nextUrl.search,
+    );
     return NextResponse.redirect(
       absoluteUrl(`${pathsConfig.auth.signIn}?next=${next}`),
     );
@@ -47,7 +48,9 @@ export async function GET(request: NextRequest) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'Forbidden';
     return NextResponse.redirect(
-      absoluteUrl(`${pathsConfig.app.home}?feedflow_error=${encodeURIComponent(msg)}`),
+      absoluteUrl(
+        `${pathsConfig.app.home}?feedflow_error=${encodeURIComponent(msg)}`,
+      ),
     );
   }
 
@@ -67,15 +70,18 @@ export async function GET(request: NextRequest) {
       ),
     );
   }
-  const defaultReturn = `${pathsConfig.app.accountFeedflowSocialAccounts}`.replace(
-    '[account]',
-    slug,
-  );
+  const defaultReturn =
+    `${pathsConfig.app.accountFeedflowSocialAccounts}`.replace(
+      '[account]',
+      slug,
+    );
   const returnPath =
     returnParam && returnParam.startsWith('/') ? returnParam : defaultReturn;
 
   const clientUuid =
-    clientIdParam && /^[0-9a-f-]{36}$/i.test(clientIdParam) ? clientIdParam : null;
+    clientIdParam && /^[0-9a-f-]{36}$/i.test(clientIdParam)
+      ? clientIdParam
+      : null;
 
   const state = signFeedflowOAuthState({
     provider: 'instagram',
@@ -92,9 +98,7 @@ export async function GET(request: NextRequest) {
   } catch (e) {
     const msg = e instanceof Error ? e.message : 'OAuth start failed';
     return NextResponse.redirect(
-      absoluteUrl(
-        `${returnPath}?feedflow_error=${encodeURIComponent(msg)}`,
-      ),
+      absoluteUrl(`${returnPath}?feedflow_error=${encodeURIComponent(msg)}`),
     );
   }
 }

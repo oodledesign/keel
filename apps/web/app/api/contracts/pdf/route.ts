@@ -5,7 +5,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { buildContractPdf } from '~/home/[account]/contracts/_lib/server/contract-pdf';
 
-async function buildPayload(contract: Record<string, unknown>, accountId: string) {
+async function buildPayload(
+  contract: Record<string, unknown>,
+  accountId: string,
+) {
   const client = getSupabaseServerAdminClient();
 
   const [{ data: clientRow }, { data: account }] = await Promise.all([
@@ -47,8 +50,12 @@ async function buildPayload(contract: Record<string, unknown>, accountId: string
     recipient_name: contract.recipient_name as string | null,
     recipient_company: contract.recipient_company as string | null,
     recipient_type: contract.recipient_type as string | null,
-    recipient_signature_type: contract.recipient_signature_type as string | null,
-    recipient_signature_data: contract.recipient_signature_data as string | null,
+    recipient_signature_type: contract.recipient_signature_type as
+      | string
+      | null,
+    recipient_signature_data: contract.recipient_signature_data as
+      | string
+      | null,
     recipient_signed_at: contract.recipient_signed_at as string | null,
     brand_name: account?.name ?? null,
     client: clientRow ?? null,
@@ -73,7 +80,10 @@ export async function GET(request: Request) {
       .maybeSingle();
 
     if (error || !contract) {
-      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Contract not found' },
+        { status: 404 },
+      );
     }
 
     const payload = await buildPayload(contract, contract.account_id);
@@ -99,7 +109,10 @@ export async function GET(request: Request) {
       .eq('id', contractId)
       .single();
     if (error || !contract) {
-      return NextResponse.json({ error: 'Contract not found' }, { status: 404 });
+      return NextResponse.json(
+        { error: 'Contract not found' },
+        { status: 404 },
+      );
     }
 
     const payload = await buildPayload(contract, contract.account_id);
@@ -117,5 +130,8 @@ export async function GET(request: Request) {
     });
   }
 
-  return NextResponse.json({ error: 'Provide token or contractId' }, { status: 400 });
+  return NextResponse.json(
+    { error: 'Provide token or contractId' },
+    { status: 400 },
+  );
 }

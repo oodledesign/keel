@@ -171,8 +171,7 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
         'Home, Menu, and up to three pins reach any workspace from your phone.',
     },
   ] satisfies InterconnectedBenefit[],
-  ctaLine:
-    'Studio work, family, and personal life — one account.',
+  ctaLine: 'Studio work, family, and personal life — one account.',
 } as const;
 
 export const INTERCONNECTED_PERSONAL_HOOK =

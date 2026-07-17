@@ -68,7 +68,9 @@ export function TagsInput({
           Add
         </Button>
       </div>
-      <p className="hidden text-xs text-[var(--workspace-shell-text-muted)] md:block">Press Enter to add a tag</p>
+      <p className="hidden text-xs text-[var(--workspace-shell-text-muted)] md:block">
+        Press Enter to add a tag
+      </p>
     </div>
   );
 }

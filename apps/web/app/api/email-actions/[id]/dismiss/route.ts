@@ -1,5 +1,5 @@
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const dynamic = 'force-dynamic';
 
@@ -32,7 +32,11 @@ export async function POST(_request: Request, context: RouteContext) {
   }
 
   if ((actionItem as { status: string }).status !== 'suggested') {
-    return jsonErr('INVALID_STATE', 'Action item is not open for dismissal', 409);
+    return jsonErr(
+      'INVALID_STATE',
+      'Action item is not open for dismissal',
+      409,
+    );
   }
 
   const { data: updated, error: updateError } = await auth.client

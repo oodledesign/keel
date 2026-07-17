@@ -1,11 +1,10 @@
 'use client';
 
+import { PersonalAccountDropdown } from '@kit/accounts/personal-account-dropdown';
 import { useSignOut } from '@kit/supabase/hooks/use-sign-out';
+import { useUser } from '@kit/supabase/hooks/use-user';
 import { JWTUserData } from '@kit/supabase/types';
 import { cn } from '@kit/ui/utils';
-
-import { PersonalAccountDropdown } from '@kit/accounts/personal-account-dropdown';
-import { useUser } from '@kit/supabase/hooks/use-user';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
@@ -44,7 +43,8 @@ export function WorkspaceProfileBlock(props: {
     <PersonalAccountDropdown
       className={cn(
         'w-full gap-2.5 rounded-lg border border-solid border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
-        props.collapsed && 'justify-center border-0 bg-transparent p-0 hover:bg-[var(--workspace-shell-sidebar-accent)]',
+        props.collapsed &&
+          'justify-center border-0 bg-transparent p-0 hover:bg-[var(--workspace-shell-sidebar-accent)]',
       )}
       paths={paths}
       features={features}

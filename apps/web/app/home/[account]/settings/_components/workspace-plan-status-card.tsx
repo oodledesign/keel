@@ -11,7 +11,6 @@ import {
 } from '@kit/ui/card';
 
 import pathsConfig from '~/config/paths.config';
-
 import type { AccountBillingStatus } from '~/lib/billing/account-billing-types';
 import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
 
@@ -66,7 +65,8 @@ export function WorkspacePlanStatusCard({
               <CardTitle className="text-base">Workspace plan</CardTitle>
               <CardDescription>
                 Business Lite is free — enough to run Signatures and team
-                settings. Upgrade when you need clients, projects, and invoicing.
+                settings. Upgrade when you need clients, projects, and
+                invoicing.
               </CardDescription>
             </div>
             <Badge variant="outline">Business Lite</Badge>
@@ -75,7 +75,9 @@ export function WorkspacePlanStatusCard({
         {canManageBilling ? (
           <CardContent className="pt-0">
             <Button asChild variant="outline" size="sm">
-              <Link href={`${billingPath}?upgrade=1`}>Upgrade to full business</Link>
+              <Link href={`${billingPath}?upgrade=1`}>
+                Upgrade to full business
+              </Link>
             </Button>
           </CardContent>
         ) : null}

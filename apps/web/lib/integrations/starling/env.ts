@@ -12,7 +12,9 @@ export function getStarlingEnv() {
     );
   }
   if (!siteUrl) {
-    throw new Error('NEXT_PUBLIC_SITE_URL must be configured for Starling OAuth');
+    throw new Error(
+      'NEXT_PUBLIC_SITE_URL must be configured for Starling OAuth',
+    );
   }
 
   const oauthBase = sandbox
@@ -39,6 +41,6 @@ export function getStarlingEnv() {
 export function isStarlingConfigured() {
   return Boolean(
     process.env.STARLING_CLIENT_ID?.trim() &&
-      process.env.STARLING_CLIENT_SECRET?.trim(),
+    process.env.STARLING_CLIENT_SECRET?.trim(),
   );
 }

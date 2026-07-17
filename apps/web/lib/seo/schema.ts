@@ -2,7 +2,6 @@
  * Typed JSON-LD builders for the Ozer marketing site.
  * Render with <JsonLd data={...} /> — never hand-paste script tags.
  */
-
 import { brandAssets } from '~/config/brand.config';
 import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
 
@@ -13,7 +12,9 @@ const SITE_URL = () => getMarketingSiteOrigin().replace(/\/$/, '');
 export function absoluteUrl(path = '/'): string {
   const base = SITE_URL();
   if (!path || path === '/') return `${base}/`;
-  return path.startsWith('http') ? path : `${base}${path.startsWith('/') ? path : `/${path}`}`;
+  return path.startsWith('http')
+    ? path
+    : `${base}${path.startsWith('/') ? path : `/${path}`}`;
 }
 
 export function organizationJsonLd(): JsonLd {
@@ -203,7 +204,9 @@ export function blogJsonLd(): JsonLd {
 }
 
 /** Merge graphs into a single JSON-LD payload (array or one object). */
-export function schemaGraph(nodes: Array<JsonLd | null | undefined>): JsonLd | JsonLd[] {
+export function schemaGraph(
+  nodes: Array<JsonLd | null | undefined>,
+): JsonLd | JsonLd[] {
   const list = nodes.filter((n): n is JsonLd => Boolean(n));
   if (list.length === 1) return list[0]!;
   return list;

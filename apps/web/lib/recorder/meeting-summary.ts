@@ -5,9 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { queueBrainIndexSource } from '~/lib/brain/sync';
-import {
-  extractAndPersistMeetingActionItems,
-} from '~/lib/recorder/meeting-action-items';
+import { extractAndPersistMeetingActionItems } from '~/lib/recorder/meeting-action-items';
 import {
   attendeeEmailsFromCalendarAttendees,
   generateMeetingSummaryText,

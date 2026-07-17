@@ -1034,7 +1034,11 @@ class ClientsService {
       .eq('account_id', input.accountId);
 
     if (contactError && isMissingColumnError(contactError)) {
-      const { first_name: _f, last_name: _l, ...legacyPayload } = contactPayload;
+      const {
+        first_name: _f,
+        last_name: _l,
+        ...legacyPayload
+      } = contactPayload;
       const { error: legacyError } = await this.adminDb
         .from('contacts')
         .update(legacyPayload)

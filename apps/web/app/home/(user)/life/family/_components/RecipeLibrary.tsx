@@ -21,7 +21,10 @@ import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
-import { deleteRecipeAction, toggleRecipeFavoriteAction } from '../_lib/actions';
+import {
+  deleteRecipeAction,
+  toggleRecipeFavoriteAction,
+} from '../_lib/actions';
 import { buildRecipeDetailPath } from '../_lib/family-meal.paths';
 import type { RecipeRow } from '../_lib/schema/family-meal.schema';
 import { RecipeDialog } from './RecipeDialog';
@@ -114,7 +117,7 @@ export function RecipeLibrary({
     <div className="space-y-4">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="relative flex-1 sm:max-w-xs">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -252,7 +255,7 @@ export function RecipeLibrary({
                       {recipe.tags.slice(0, 4).map((tag) => (
                         <span
                           key={tag}
-                          className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] capitalize text-[var(--workspace-shell-text-muted)]"
+                          className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)] capitalize"
                         >
                           {tag}
                         </span>

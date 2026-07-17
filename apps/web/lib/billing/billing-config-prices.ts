@@ -2,7 +2,6 @@
  * Read marketing prices only from apps/web/config/billing.config.ts.
  * Never hardcode list prices and never query the database.
  */
-
 import billingConfig from '~/config/billing.config';
 
 export type BillingPlanPrice = {
@@ -147,12 +146,12 @@ export function annualSavingPercent(plan: BillingPlanPrice): number | null {
   if (plan.yearlyPriceGbp == null || plan.monthlyPriceGbp <= 0) return null;
   const monthlyAnnualised = plan.monthlyPriceGbp * 12;
   if (monthlyAnnualised <= plan.yearlyPriceGbp) return 0;
-  return (
-    ((monthlyAnnualised - plan.yearlyPriceGbp) / monthlyAnnualised) * 100
-  );
+  return ((monthlyAnnualised - plan.yearlyPriceGbp) / monthlyAnnualised) * 100;
 }
 
-export function formatAnnualSavingPercent(plan: BillingPlanPrice): string | null {
+export function formatAnnualSavingPercent(
+  plan: BillingPlanPrice,
+): string | null {
   const pct = annualSavingPercent(plan);
   if (pct == null) return null;
   // Truth-check: never round up to a marketing "20%" when the maths is 16.7%.

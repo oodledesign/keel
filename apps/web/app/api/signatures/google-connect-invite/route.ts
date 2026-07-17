@@ -1,13 +1,12 @@
 import { NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
+import { connectGoogleWorkspace } from '~/lib/signatures/google-workspace';
 import {
   loadIntegrationInviteByToken,
   markIntegrationInviteUsed,
 } from '~/lib/signatures/integration-invite';
-import {
-  connectGoogleWorkspace,
-} from '~/lib/signatures/google-workspace';
 
 export const runtime = 'nodejs';
 

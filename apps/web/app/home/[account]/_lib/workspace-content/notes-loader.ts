@@ -2,11 +2,7 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import {
-  displayTitle,
-  parseTags,
-  resolveNoteContext,
-} from './context-resolve';
+import { displayTitle, parseTags, resolveNoteContext } from './context-resolve';
 import type { NoteFileCategory, NoteListItem } from './types';
 import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
@@ -70,7 +66,9 @@ function mapNoteRow(row: Record<string, unknown>): NoteListItem {
     clientId: (row.client_id as string | null) ?? null,
     propertyId: (row.property_id as string | null) ?? null,
     taskId: (row.task_id as string | null) ?? null,
-    context: resolveNoteContext(row as Parameters<typeof resolveNoteContext>[0]),
+    context: resolveNoteContext(
+      row as Parameters<typeof resolveNoteContext>[0],
+    ),
     isPublic: Boolean(row.is_public),
     publicToken: (row.public_token as string | null) ?? null,
     updatedAt: row.updated_at as string,
@@ -129,7 +127,9 @@ export async function loadAccountNotes(
   }
 
   return {
-    notes: (data ?? []).map((row) => mapNoteRow(row as Record<string, unknown>)),
+    notes: (data ?? []).map((row) =>
+      mapNoteRow(row as Record<string, unknown>),
+    ),
     tableAvailable: !error,
   };
 }

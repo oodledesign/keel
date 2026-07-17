@@ -9,10 +9,10 @@ import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
-  MobileNavShortcutsArraySchema,
-  StoredShortcutsArraySchema,
   type DefaultLandingType,
+  MobileNavShortcutsArraySchema,
   type StoredShortcut,
+  StoredShortcutsArraySchema,
 } from './types';
 
 function revalidatePersonalDashboard() {
@@ -28,9 +28,7 @@ function revalidateWorkspaceDashboard(slug: string) {
   revalidatePath(`/app/${slug}`, 'layout');
   revalidatePath(publicHome, 'layout');
   revalidatePath(publicHome);
-  revalidatePath(
-    pathsConfig.app.accountSettings.replace('[account]', slug),
-  );
+  revalidatePath(pathsConfig.app.accountSettings.replace('[account]', slug));
 }
 
 export async function savePersonalDashboardShortcutsAction(
@@ -203,8 +201,11 @@ export async function searchShortcutCatalogAction(input: {
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
-    const { buildPersonalShortcutCatalog, buildWorkspaceShortcutCatalog, filterCatalog } =
-      await import('./build-catalog');
+    const {
+      buildPersonalShortcutCatalog,
+      buildWorkspaceShortcutCatalog,
+      filterCatalog,
+    } = await import('./build-catalog');
 
     const catalog =
       input.scope === 'workspace' && input.accountSlug

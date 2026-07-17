@@ -15,8 +15,8 @@ import {
   DialogTrigger,
 } from '@kit/ui/dialog';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
@@ -28,9 +28,9 @@ import {
 import type { PlannerScope, PlannerTask } from '~/lib/planner/types';
 
 import {
-  plannerTaskToPayload,
   type DeepWorkPreference,
   type PlannerPreferences,
+  plannerTaskToPayload,
 } from './planner-types';
 
 const defaultPreferences: PlannerPreferences = {
@@ -125,7 +125,8 @@ export function ReplanDialog({
           planning_mode: 'day',
           date: now.toISOString(),
           working_hours: preferences.workingHours,
-          deep_work_preference: preferences.deepWorkPreference as DeepWorkPreference,
+          deep_work_preference:
+            preferences.deepWorkPreference as DeepWorkPreference,
           user_context: preferences.userContext,
           calendar_events: calendarEvents.map(({ id: _id, ...event }) => event),
           tasks: openTasks.map(plannerTaskToPayload),
@@ -216,7 +217,10 @@ export function ReplanDialog({
           <DialogDescription className="text-[var(--workspace-shell-text)]/55">
             Tell the planner where you are now. It will keep what is already
             done, then schedule the remainder of the day from{' '}
-            <span className="font-medium text-[var(--workspace-shell-text)]/70" suppressHydrationWarning>
+            <span
+              className="font-medium text-[var(--workspace-shell-text)]/70"
+              suppressHydrationWarning
+            >
               {formatCurrentTime(new Date())}
             </span>{' '}
             onwards.
@@ -225,7 +229,10 @@ export function ReplanDialog({
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label htmlFor="replan-where" className="text-[var(--workspace-shell-text)]/80">
+            <Label
+              htmlFor="replan-where"
+              className="text-[var(--workspace-shell-text)]/80"
+            >
               Where I am in the day
             </Label>
             <Textarea
@@ -239,7 +246,10 @@ export function ReplanDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="replan-not-done" className="text-[var(--workspace-shell-text)]/80">
+            <Label
+              htmlFor="replan-not-done"
+              className="text-[var(--workspace-shell-text)]/80"
+            >
               What I haven&apos;t managed to do
             </Label>
             <Textarea
@@ -253,7 +263,10 @@ export function ReplanDialog({
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="replan-still-needed" className="text-[var(--workspace-shell-text)]/80">
+            <Label
+              htmlFor="replan-still-needed"
+              className="text-[var(--workspace-shell-text)]/80"
+            >
               What else needs to be done
             </Label>
             <Textarea

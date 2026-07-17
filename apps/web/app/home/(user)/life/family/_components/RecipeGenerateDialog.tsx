@@ -22,8 +22,8 @@ import { cn } from '@kit/ui/utils';
 
 import { bulkAddGeneratedRecipesAction } from '../_lib/actions';
 import {
-  RECIPE_MEAL_TYPES,
   type MealPreferencesRow,
+  RECIPE_MEAL_TYPES,
   type RecipeMealType,
   type RecipeRow,
 } from '../_lib/schema/family-meal.schema';
@@ -134,7 +134,9 @@ export function RecipeGenerateDialog({
       setSelectedKeys(new Set(items.map((item) => item.key)));
       setStep('preview');
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not generate recipes');
+      toast.error(
+        err instanceof Error ? err.message : 'Could not generate recipes',
+      );
     } finally {
       setIsGenerating(false);
     }
@@ -217,8 +219,16 @@ export function RecipeGenerateDialog({
               <div className="grid grid-cols-2 gap-2">
                 {(
                   [
-                    { value: 5 as const, label: '1–5 recipes', hint: 'A focused batch' },
-                    { value: 10 as const, label: '5–10 recipes', hint: 'Fill out the library' },
+                    {
+                      value: 5 as const,
+                      label: '1–5 recipes',
+                      hint: 'A focused batch',
+                    },
+                    {
+                      value: 10 as const,
+                      label: '5–10 recipes',
+                      hint: 'Fill out the library',
+                    },
                   ] as const
                 ).map((option) => {
                   const active = batchSize === option.value;
@@ -234,8 +244,12 @@ export function RecipeGenerateDialog({
                           : 'border-[color:var(--workspace-shell-border)] hover:border-[color:var(--workspace-shell-border)]',
                       )}
                     >
-                      <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{option.label}</p>
-                      <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">{option.hint}</p>
+                      <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                        {option.label}
+                      </p>
+                      <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                        {option.hint}
+                      </p>
                     </button>
                   );
                 })}
@@ -251,7 +265,11 @@ export function RecipeGenerateDialog({
                 className="h-9 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 text-sm text-[var(--workspace-shell-text)] outline-none focus:border-[color:var(--workspace-shell-border)]"
               >
                 {RECIPE_MEAL_TYPES.map((type) => (
-                  <option key={type} value={type} className="bg-[var(--ozer-surface-panel)]">
+                  <option
+                    key={type}
+                    value={type}
+                    className="bg-[var(--ozer-surface-panel)]"
+                  >
                     {mealTypeLabels[type]}
                   </option>
                 ))}
@@ -267,7 +285,7 @@ export function RecipeGenerateDialog({
                   {preferenceSummary.map((item) => (
                     <span
                       key={item}
-                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] capitalize text-[var(--workspace-shell-text-muted)]"
+                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)] capitalize"
                     >
                       {item}
                     </span>
@@ -294,7 +312,9 @@ export function RecipeGenerateDialog({
             <label className="flex cursor-pointer items-start gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
               <Checkbox
                 checked={useSavedFavorites}
-                onCheckedChange={(value) => setUseSavedFavorites(value === true)}
+                onCheckedChange={(value) =>
+                  setUseSavedFavorites(value === true)
+                }
                 className="mt-0.5"
               />
               <span>
@@ -367,9 +387,13 @@ export function RecipeGenerateDialog({
                       className="mt-1"
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{recipe.name}</p>
+                      <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                        {recipe.name}
+                      </p>
                       {recipe.description ? (
-                        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">{recipe.description}</p>
+                        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                          {recipe.description}
+                        </p>
                       ) : null}
                       {recipe.inspiration ? (
                         <p className="mt-1 text-[11px] text-[var(--ozer-accent-muted)]/80">
@@ -378,7 +402,9 @@ export function RecipeGenerateDialog({
                       ) : null}
                       <div className="mt-2 flex flex-wrap gap-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
                         {time ? <span>{time}</span> : null}
-                        {recipe.servings ? <span>Serves {recipe.servings}</span> : null}
+                        {recipe.servings ? (
+                          <span>Serves {recipe.servings}</span>
+                        ) : null}
                         <span>{recipe.ingredients.length} ingredients</span>
                       </div>
                       {recipe.tags.length > 0 ? (
@@ -386,7 +412,7 @@ export function RecipeGenerateDialog({
                           {recipe.tags.slice(0, 4).map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 capitalize text-[var(--workspace-shell-text-muted)]"
+                              className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[var(--workspace-shell-text-muted)] capitalize"
                             >
                               {tag}
                             </span>

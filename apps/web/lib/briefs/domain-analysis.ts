@@ -1,18 +1,24 @@
 import 'server-only';
 
+import {
+  countryToLocationCode,
+  deduplicateBy,
+  normalise,
+} from '~/lib/clusters/utils';
 import { compareBacklinks } from '~/lib/commoncrawl/athena';
 import { dfsPost } from '~/lib/dataforseo/client';
 import { getPageRanks, normaliseOprDomain } from '~/lib/openpagerank/client';
-import { countryToLocationCode, deduplicateBy, normalise } from '~/lib/clusters/utils';
 
 import type { CompetitorWithOpr, DomainKeyword, KeywordGap } from './types';
 
 function normaliseDomain(domain: string): string {
-  return domain
-    .replace(/^https?:\/\//i, '')
-    .replace(/^www\./i, '')
-    .split('/')[0]
-    ?.toLowerCase() ?? domain;
+  return (
+    domain
+      .replace(/^https?:\/\//i, '')
+      .replace(/^www\./i, '')
+      .split('/')[0]
+      ?.toLowerCase() ?? domain
+  );
 }
 
 export async function fetchDomainOverview(
@@ -20,9 +26,10 @@ export async function fetchDomainOverview(
   locationCode: number,
 ): Promise<{ keywordCount: number; etv: number }> {
   const target = normaliseDomain(domain);
-  const json = await dfsPost('/dataforseo_labs/google/domain_rank_overview/live', [
-    { target, location_code: locationCode, language_code: 'en' },
-  ]);
+  const json = await dfsPost(
+    '/dataforseo_labs/google/domain_rank_overview/live',
+    [{ target, location_code: locationCode, language_code: 'en' }],
+  );
 
   const metrics = json.tasks?.[0]?.result?.[0] as
     | { metrics?: { organic?: { count?: number; etv?: number } } }
@@ -53,19 +60,29 @@ export async function fetchDomainKeywords(
     (json.tasks?.[0]?.result?.[0] as { items?: Array<Record<string, unknown>> })
       ?.items ?? [];
 
-  return items.map((item) => {
-    const keywordData = item.keyword_data as Record<string, unknown> | undefined;
-    const keywordInfo = keywordData?.keyword_info as Record<string, unknown> | undefined;
-    const serpElement = item.ranked_serp_element as Record<string, unknown> | undefined;
-    const serpItem = serpElement?.serp_item as Record<string, unknown> | undefined;
+  return items
+    .map((item) => {
+      const keywordData = item.keyword_data as
+        | Record<string, unknown>
+        | undefined;
+      const keywordInfo = keywordData?.keyword_info as
+        | Record<string, unknown>
+        | undefined;
+      const serpElement = item.ranked_serp_element as
+        | Record<string, unknown>
+        | undefined;
+      const serpItem = serpElement?.serp_item as
+        | Record<string, unknown>
+        | undefined;
 
-    return {
-      keyword: String(keywordData?.keyword ?? item.keyword ?? ''),
-      rank: Number(serpItem?.rank_group ?? serpItem?.rank_absolute ?? 0),
-      volume: Number(keywordInfo?.search_volume ?? 0),
-      url: String(serpItem?.url ?? serpItem?.relative_url ?? ''),
-    };
-  }).filter((row) => row.keyword);
+      return {
+        keyword: String(keywordData?.keyword ?? item.keyword ?? ''),
+        rank: Number(serpItem?.rank_group ?? serpItem?.rank_absolute ?? 0),
+        volume: Number(keywordInfo?.search_volume ?? 0),
+        url: String(serpItem?.url ?? serpItem?.relative_url ?? ''),
+      };
+    })
+    .filter((row) => row.keyword);
 }
 
 export async function fetchCompetitors(
@@ -73,9 +90,10 @@ export async function fetchCompetitors(
   locationCode: number,
 ): Promise<string[]> {
   const target = normaliseDomain(domain);
-  const json = await dfsPost('/dataforseo_labs/google/competitors_domain/live', [
-    { target, location_code: locationCode, language_code: 'en', limit: 10 },
-  ]);
+  const json = await dfsPost(
+    '/dataforseo_labs/google/competitors_domain/live',
+    [{ target, location_code: locationCode, language_code: 'en', limit: 10 }],
+  );
 
   const items =
     (json.tasks?.[0]?.result?.[0] as { items?: Array<Record<string, unknown>> })
@@ -84,7 +102,9 @@ export async function fetchCompetitors(
   return items
     .map((item) => {
       const competitorDomain = String(item.domain ?? item.target ?? '');
-      const metrics = item.metrics as { organic?: { count?: number } } | undefined;
+      const metrics = item.metrics as
+        | { organic?: { count?: number } }
+        | undefined;
       const organicCount = metrics?.organic?.count ?? 0;
       return { domain: competitorDomain, organicCount };
     })
@@ -167,29 +187,43 @@ export async function fetchKeywordGaps(
 
   for (const competitor of competitorDomains.slice(0, 5)) {
     try {
-      const json = await dfsPost('/dataforseo_labs/google/domain_intersection/live', [
-        {
-          target1: normaliseDomain(competitor),
-          target2: target,
-          location_code: locationCode,
-          language_code: 'en',
-          filters: [
-            ['keyword_data.search_intent_info.main_intent', '=', 'informational'],
-            ['keyword_data.keyword_info.search_volume', '>', 1000],
-            ['first_domain_serp_element.rank_group', '<=', 20],
-            ['second_domain_serp_element', '=', null],
-          ],
-          limit: 50,
-        },
-      ]);
+      const json = await dfsPost(
+        '/dataforseo_labs/google/domain_intersection/live',
+        [
+          {
+            target1: normaliseDomain(competitor),
+            target2: target,
+            location_code: locationCode,
+            language_code: 'en',
+            filters: [
+              [
+                'keyword_data.search_intent_info.main_intent',
+                '=',
+                'informational',
+              ],
+              ['keyword_data.keyword_info.search_volume', '>', 1000],
+              ['first_domain_serp_element.rank_group', '<=', 20],
+              ['second_domain_serp_element', '=', null],
+            ],
+            limit: 50,
+          },
+        ],
+      );
 
       const items =
-        (json.tasks?.[0]?.result?.[0] as { items?: Array<Record<string, unknown>> })
-          ?.items ?? [];
+        (
+          json.tasks?.[0]?.result?.[0] as {
+            items?: Array<Record<string, unknown>>;
+          }
+        )?.items ?? [];
 
       for (const item of items) {
-        const keywordData = item.keyword_data as Record<string, unknown> | undefined;
-        const keywordInfo = keywordData?.keyword_info as Record<string, unknown> | undefined;
+        const keywordData = item.keyword_data as
+          | Record<string, unknown>
+          | undefined;
+        const keywordInfo = keywordData?.keyword_info as
+          | Record<string, unknown>
+          | undefined;
         const keywordProps = keywordData?.keyword_properties as
           | Record<string, unknown>
           | undefined;

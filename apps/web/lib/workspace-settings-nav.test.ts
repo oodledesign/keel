@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
   buildWorkspaceSettingsNav,
   isWorkspaceSettingsNavActive,
 } from '~/home/[account]/settings/_lib/workspace-settings-nav';
-import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 
 describe('buildWorkspaceSettingsNav', () => {
   const ownerAccess = getTeamAccountAccess({ role: 'owner' });
@@ -28,7 +28,12 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(
       isWorkspaceSettingsNavActive(
         '/app/oodle/settings',
-        { id: 'general', label: 'General', href: '/app/oodle/settings', exact: true },
+        {
+          id: 'general',
+          label: 'General',
+          href: '/app/oodle/settings',
+          exact: true,
+        },
         'oodle',
       ),
     ).toBe(true);
@@ -36,7 +41,12 @@ describe('buildWorkspaceSettingsNav', () => {
     expect(
       isWorkspaceSettingsNavActive(
         '/app/oodle/settings/payments',
-        { id: 'general', label: 'General', href: '/app/oodle/settings', exact: true },
+        {
+          id: 'general',
+          label: 'General',
+          href: '/app/oodle/settings',
+          exact: true,
+        },
         'oodle',
       ),
     ).toBe(false);

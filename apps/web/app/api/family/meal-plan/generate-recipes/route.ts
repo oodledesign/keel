@@ -1,15 +1,16 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
+
 import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { generateMealRecipes } from '~/lib/ai/meal-recipes-generate';
-import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import {
-  RECIPE_MEAL_TYPES,
   type MealPreferencesRow,
+  RECIPE_MEAL_TYPES,
   type RecipeRow,
 } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
+import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
+import { generateMealRecipes } from '~/lib/ai/meal-recipes-generate';
 
 export const dynamic = 'force-dynamic';
 
@@ -74,7 +75,10 @@ export async function POST(request: NextRequest) {
   ]);
 
   const preferences = prefData as MealPreferencesRow | null;
-  const recipes = (recipeData ?? []) as Pick<RecipeRow, 'name' | 'is_favorite'>[];
+  const recipes = (recipeData ?? []) as Pick<
+    RecipeRow,
+    'name' | 'is_favorite'
+  >[];
 
   const favoriteRecipes = parsed.data.useSavedFavorites
     ? recipes.filter((r) => r.is_favorite).map((r) => r.name)

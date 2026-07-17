@@ -64,7 +64,8 @@ export function renderSmartFields(
     '{{contact.firstName}}': contactFirst,
     '{{contact.lastName}}': contactLast,
     '{{contact.fullName}}': contactFull,
-    '{{contact.email}}': ctx.contact?.email?.trim() || ctx.client?.email?.trim() || '',
+    '{{contact.email}}':
+      ctx.contact?.email?.trim() || ctx.client?.email?.trim() || '',
     '{{client.firstName}}': clientFirst,
     '{{client.lastName}}': clientLast,
     '{{client.fullName}}':

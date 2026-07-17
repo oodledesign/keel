@@ -21,7 +21,13 @@ export function RolesDataProvider(props: {
 }
 
 /** Product account roles only (excludes test/seed roles like custom-role). */
-const PRODUCT_ROLES = new Set(['owner', 'admin', 'staff', 'contractor', 'client']);
+const PRODUCT_ROLES = new Set([
+  'owner',
+  'admin',
+  'staff',
+  'contractor',
+  'client',
+]);
 
 function useFetchRoles(props: { maxRoleHierarchy: number }) {
   const supabase = useSupabase();

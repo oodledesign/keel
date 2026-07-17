@@ -28,10 +28,7 @@ async function AdminEditBlogPostPage({
 
   return (
     <>
-      <PageHeader
-        title="Edit blog post"
-        description={post.title}
-      />
+      <PageHeader title="Edit blog post" description={post.title} />
 
       <PageBody>
         <BlogPostForm post={post} authorOptions={authorOptions} />

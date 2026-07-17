@@ -37,6 +37,12 @@ export const GetCalendarItemDetailsSchema = z.object({
   source_id: z.string().uuid(),
 });
 
-export type GetJobCalendarItemsInput = z.infer<typeof GetJobCalendarItemsSchema>;
-export type GetOrgCalendarItemsInput = z.infer<typeof GetOrgCalendarItemsSchema>;
-export type GetCalendarItemDetailsInput = z.infer<typeof GetCalendarItemDetailsSchema>;
+export type GetJobCalendarItemsInput = z.infer<
+  typeof GetJobCalendarItemsSchema
+>;
+export type GetOrgCalendarItemsInput = z.infer<
+  typeof GetOrgCalendarItemsSchema
+>;
+export type GetCalendarItemDetailsInput = z.infer<
+  typeof GetCalendarItemDetailsSchema
+>;

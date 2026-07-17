@@ -158,12 +158,14 @@ export function AdminBillingGrantsPanel(props: {
           disabled={pending}
           onClick={toggleExempt}
         >
-          {props.billingExempt ? 'Remove billing exempt' : 'Mark billing exempt'}
+          {props.billingExempt
+            ? 'Remove billing exempt'
+            : 'Mark billing exempt'}
         </Button>
       </CardHeader>
       <CardContent className="space-y-6">
         <div>
-          <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+          <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
             Quick plan presets
           </p>
           <div className="flex flex-wrap gap-2">
@@ -225,7 +227,7 @@ function EntitlementGroup({
 }) {
   return (
     <div>
-      <p className="text-muted-foreground mb-2 text-xs font-medium uppercase tracking-wide">
+      <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
         {title}
       </p>
       <ul className="space-y-2">
@@ -271,7 +273,9 @@ function EntitlementGroup({
                   </Button>
                 </div>
               ) : active ? (
-                <span className="text-muted-foreground text-xs">Active (Stripe)</span>
+                <span className="text-muted-foreground text-xs">
+                  Active (Stripe)
+                </span>
               ) : (
                 <Button
                   type="button"

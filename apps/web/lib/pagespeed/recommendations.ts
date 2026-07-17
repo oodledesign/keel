@@ -106,7 +106,9 @@ export type ParsedPagespeedRecommendation = {
   isQuickWin: boolean;
 };
 
-export function parsePagespeedRecommendations(json: Record<string, unknown>): ParsedPagespeedRecommendation[] {
+export function parsePagespeedRecommendations(
+  json: Record<string, unknown>,
+): ParsedPagespeedRecommendation[] {
   const lighthouse = json.lighthouseResult as
     | {
         categories?: Record<string, LighthouseCategory>;

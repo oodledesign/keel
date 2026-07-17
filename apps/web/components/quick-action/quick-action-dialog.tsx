@@ -4,18 +4,18 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
+import { Loader2, Sparkles, X } from 'lucide-react';
+
+import { Button } from '@kit/ui/button';
 import {
-  Command as CommandRoot,
   CommandEmpty,
   CommandList,
   CommandRawInput,
+  Command as CommandRoot,
 } from '@kit/ui/command';
 import { Dialog, DialogContent } from '@kit/ui/dialog';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
-import { Loader2, Sparkles, X } from 'lucide-react';
-
-import { Button } from '@kit/ui/button';
 
 import type {
   ProposedQuickAction,
@@ -48,9 +48,8 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
   const [proposedActions, setProposedActions] = useState<ProposedQuickAction[]>(
     [],
   );
-  const [selectedAction, setSelectedAction] = useState<ProposedQuickAction | null>(
-    null,
-  );
+  const [selectedAction, setSelectedAction] =
+    useState<ProposedQuickAction | null>(null);
   const [resultLink, setResultLink] = useState<string | null>(null);
 
   const reset = useCallback(() => {
@@ -151,12 +150,14 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
           <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
             <div className="flex min-w-0 items-center gap-2.5">
               <Sparkles className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]" />
-              <p className="text-base font-semibold text-[var(--workspace-shell-text)]">Quick action</p>
+              <p className="text-base font-semibold text-[var(--workspace-shell-text)]">
+                Quick action
+              </p>
             </div>
             <button
               type="button"
               aria-label="Close quick action"
-              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] outline-none transition-colors hover:bg-white/8 hover:text-[var(--workspace-shell-text)] focus:outline-none focus-visible:outline-none"
+              className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] transition-colors outline-none hover:bg-white/8 hover:text-[var(--workspace-shell-text)] focus:outline-none focus-visible:outline-none"
               onClick={() => onOpenChange(false)}
             >
               <X className="h-5 w-5" />
@@ -203,9 +204,9 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
             {!showPreview && !planning ? (
               <div className="space-y-4">
                 <p className="text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-                  Examples: &quot;Write a task in greentrees to get an electrician
-                  for the bungalow this week&quot; · &quot;Run a pagespeed scan for
-                  arcanum&quot;
+                  Examples: &quot;Write a task in greentrees to get an
+                  electrician for the bungalow this week&quot; · &quot;Run a
+                  pagespeed scan for arcanum&quot;
                 </p>
                 <Button
                   type="button"
@@ -255,14 +256,14 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
 
             {!showPreview && proposedActions.length > 1 && !planning ? (
               <div className="space-y-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   Choose an action
                 </p>
                 {proposedActions.map((action) => (
                   <button
                     key={action.actionToken}
                     type="button"
-                    className="w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-left text-sm text-[var(--workspace-shell-text)] outline-none transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] focus:outline-none focus-visible:outline-none"
+                    className="w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-left text-sm text-[var(--workspace-shell-text)] transition-colors outline-none hover:bg-[var(--workspace-shell-sidebar-accent)] focus:outline-none focus-visible:outline-none"
                     onClick={() => setSelectedAction(action)}
                   >
                     {action.preview.type === 'create_task'

@@ -13,8 +13,8 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import {
-  PERSONAL_ASSISTANTS_MARKETING,
   type InterconnectedWorkspaceNode,
+  PERSONAL_ASSISTANTS_MARKETING,
   type PersonalAssistantMarketing,
 } from '~/lib/marketing/interconnected-workspaces';
 import type { PricingTone } from '~/lib/marketing/pricing-theme';
@@ -133,7 +133,9 @@ function CircuitPaths({
               key={`${path.id}-${begin}`}
               r="1"
               fill="var(--ozer-accent)"
-              style={{ filter: 'drop-shadow(0 0 2px var(--ozer-coral-alpha-45))' }}
+              style={{
+                filter: 'drop-shadow(0 0 2px var(--ozer-coral-alpha-45))',
+              }}
             >
               <animateMotion
                 dur={`${DOT_DURATION_S}s`}
@@ -215,7 +217,7 @@ function AssistantBillingBadge({
       <TooltipTrigger asChild>
         <span
           className={cn(
-            'absolute -right-1 -top-1 flex h-4 w-4 items-center justify-center rounded-full border',
+            'absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full border',
             isAddon
               ? 'border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-coral-600)] text-[var(--ozer-white)]'
               : isLight
@@ -281,8 +283,10 @@ function AssistantLayerCard({
       </span>
       <p
         className={cn(
-          'font-semibold leading-tight',
-          isLight ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--ozer-text-on-dark)]',
+          'leading-tight font-semibold',
+          isLight
+            ? 'text-[var(--workspace-shell-text)]'
+            : 'text-[var(--ozer-text-on-dark)]',
           compact ? 'mt-1.5 text-[9px]' : 'mt-2 text-[11px]',
         )}
       >
@@ -339,7 +343,9 @@ function PersonalHomeCard({
       <p
         className={cn(
           'mt-2 text-sm font-bold',
-          isLight ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--ozer-text-on-dark)]',
+          isLight
+            ? 'text-[var(--workspace-shell-text)]'
+            : 'text-[var(--ozer-text-on-dark)]',
         )}
       >
         Personal Home
@@ -347,7 +353,9 @@ function PersonalHomeCard({
       <p
         className={cn(
           'mt-0.5 text-[10px]',
-          isLight ? 'text-[var(--workspace-shell-text-muted)]' : 'text-[var(--ozer-text-on-dark-muted)]',
+          isLight
+            ? 'text-[var(--workspace-shell-text-muted)]'
+            : 'text-[var(--ozer-text-on-dark-muted)]',
         )}
       >
         Your command centre
@@ -401,7 +409,12 @@ function MobileWorkspaceDiagram({
 
       <div className="grid grid-cols-3 gap-2">
         {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
-          <AssistantLayerCard key={assistant.id} compact assistant={assistant} tone={tone} />
+          <AssistantLayerCard
+            key={assistant.id}
+            compact
+            assistant={assistant}
+            tone={tone}
+          />
         ))}
       </div>
     </div>
@@ -436,19 +449,23 @@ function DesktopWorkspaceDiagram({
         <CircuitPaths paths={OUTER_CIRCUIT_PATHS} />
       </svg>
 
-      <div className="absolute left-0 top-1/2 z-10 flex -translate-y-1/2 flex-col gap-1.5 pl-0 sm:gap-2">
+      <div className="absolute top-1/2 left-0 z-10 flex -translate-y-1/2 flex-col gap-1.5 pl-0 sm:gap-2">
         {PERSONAL_ASSISTANTS_MARKETING.map((assistant) => (
-          <AssistantLayerCard key={assistant.id} assistant={assistant} tone={tone} />
+          <AssistantLayerCard
+            key={assistant.id}
+            assistant={assistant}
+            tone={tone}
+          />
         ))}
       </div>
 
-      <div className="absolute left-1/2 top-[5%] z-10 -translate-x-1/2">
+      <div className="absolute top-[5%] left-1/2 z-10 -translate-x-1/2">
         {business ? (
           <OrbitWorkspaceCard node={{ ...business, orbitId: 'business' }} />
         ) : null}
       </div>
 
-      <div className="absolute right-[1%] top-1/2 z-10 -translate-y-1/2 sm:right-[3%]">
+      <div className="absolute top-1/2 right-[1%] z-10 -translate-y-1/2 sm:right-[3%]">
         {family ? (
           <OrbitWorkspaceCard node={{ ...family, orbitId: 'family' }} />
         ) : null}
@@ -460,7 +477,7 @@ function DesktopWorkspaceDiagram({
         ) : null}
       </div>
 
-      <div className="absolute left-1/2 top-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
+      <div className="absolute top-1/2 left-1/2 z-20 -translate-x-1/2 -translate-y-1/2">
         <PersonalHomeCard flashing={hubFlashing} tone={tone} />
       </div>
     </div>

@@ -26,27 +26,27 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
-  isHighConfidenceMeetingSuggestion,
   LOW_CONFIDENCE_ASSIGNEE_THRESHOLD,
+  isHighConfidenceMeetingSuggestion,
 } from '~/lib/recorder/meeting-task-confidence';
+import type { AccountTaskAutomationSettings } from '~/lib/recorder/task-automation-settings';
 
-import type {
-  MeetingReviewItem,
-  MeetingReviewMember,
-} from '../_lib/server/meeting-review.loader';
 import {
   approveMeetingActionItem,
   bulkApproveHighConfidenceMeetingItems,
   rejectMeetingActionItem,
 } from '../_lib/server/meeting-review-actions';
-import type { AccountTaskAutomationSettings } from '~/lib/recorder/task-automation-settings';
+import type {
+  MeetingReviewItem,
+  MeetingReviewMember,
+} from '../_lib/server/meeting-review.loader';
 
 type Props = {
   accountId: string;
@@ -198,11 +198,17 @@ export function MeetingTaskReviewClient({
           description: draft.description.trim() || null,
           dueDate: draft.dueDate.trim() || null,
         });
-        toast.success(edited ? 'Task updated and added to planner' : 'Task added to planner');
+        toast.success(
+          edited
+            ? 'Task updated and added to planner'
+            : 'Task added to planner',
+        );
         removeItem(item.id);
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not approve suggestion',
+          error instanceof Error
+            ? error.message
+            : 'Could not approve suggestion',
         );
       } finally {
         setPendingId(null);
@@ -223,7 +229,9 @@ export function MeetingTaskReviewClient({
         removeItem(item.id);
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not reject suggestion',
+          error instanceof Error
+            ? error.message
+            : 'Could not reject suggestion',
         );
       } finally {
         setPendingId(null);
@@ -250,9 +258,7 @@ export function MeetingTaskReviewClient({
             : 'No high-confidence suggestions to approve',
         );
         setItems((current) =>
-          current.filter(
-            (item) => !isHighConfidenceMeetingSuggestion(item),
-          ),
+          current.filter((item) => !isHighConfidenceMeetingSuggestion(item)),
         );
       } catch (error) {
         toast.error(
@@ -265,7 +271,9 @@ export function MeetingTaskReviewClient({
   }
 
   return (
-    <div className={cn('mx-auto max-w-4xl space-y-6 px-4 py-6 md:px-8 md:py-8')}>
+    <div
+      className={cn('mx-auto max-w-4xl space-y-6 px-4 py-6 md:px-8 md:py-8')}
+    >
       <div>
         <Link
           href={tasksPath}
@@ -280,8 +288,8 @@ export function MeetingTaskReviewClient({
               Meeting task review
             </h1>
             <p className="mt-2 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
-              Approve AI-suggested action items from recorded meetings. Assign an owner
-              before publishing anything with unclear ownership.
+              Approve AI-suggested action items from recorded meetings. Assign
+              an owner before publishing anything with unclear ownership.
             </p>
           </div>
           {highConfidenceItems.length > 0 ? (
@@ -308,21 +316,33 @@ export function MeetingTaskReviewClient({
       </div>
 
       <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
-        Meeting tasks: <span className="text-[var(--workspace-shell-text)]">{meetingModeLabel}</span>
+        Meeting tasks:{' '}
+        <span className="text-[var(--workspace-shell-text)]">
+          {meetingModeLabel}
+        </span>
         {automationSettings.autoScheduleOnCalendar ? (
-          <span className="text-[var(--workspace-shell-text-muted)]"> · Calendar auto-scheduling on</span>
+          <span className="text-[var(--workspace-shell-text-muted)]">
+            {' '}
+            · Calendar auto-scheduling on
+          </span>
         ) : null}
         .{' '}
-        <Link href={settingsPath} className="font-medium text-[var(--ozer-accent)] hover:underline">
+        <Link
+          href={settingsPath}
+          className="font-medium text-[var(--ozer-accent)] hover:underline"
+        >
           Change automation settings
         </Link>
       </div>
 
       {items.length === 0 ? (
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-center">
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meeting tasks waiting for review.</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            No meeting tasks waiting for review.
+          </p>
           <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
-            New suggestions appear here after KeelAssistant syncs a meeting transcript.
+            New suggestions appear here after KeelAssistant syncs a meeting
+            transcript.
           </p>
         </div>
       ) : (
@@ -347,7 +367,9 @@ export function MeetingTaskReviewClient({
                     <div className="flex flex-wrap items-center gap-2">
                       <Badge
                         variant="outline"
-                        className={confidenceBadgeClass(item.assigneeConfidence)}
+                        className={confidenceBadgeClass(
+                          item.assigneeConfidence,
+                        )}
                       >
                         {confidenceLabel(item.assigneeConfidence)}
                       </Badge>
@@ -379,17 +401,23 @@ export function MeetingTaskReviewClient({
                     ) : (
                       <div className="space-y-3 pt-1">
                         <div className="space-y-2">
-                          <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
+                          <Label className="text-[var(--workspace-shell-text-muted)]">
+                            Title
+                          </Label>
                           <Input
                             value={draft.title}
                             onChange={(event) =>
-                              updateDraft(item.id, { title: event.target.value })
+                              updateDraft(item.id, {
+                                title: event.target.value,
+                              })
                             }
                             className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[var(--workspace-shell-text-muted)]">Description</Label>
+                          <Label className="text-[var(--workspace-shell-text-muted)]">
+                            Description
+                          </Label>
                           <Textarea
                             value={draft.description}
                             onChange={(event) =>
@@ -401,12 +429,16 @@ export function MeetingTaskReviewClient({
                           />
                         </div>
                         <div className="space-y-2">
-                          <Label className="text-[var(--workspace-shell-text-muted)]">Due date</Label>
+                          <Label className="text-[var(--workspace-shell-text-muted)]">
+                            Due date
+                          </Label>
                           <Input
                             type="date"
                             value={draft.dueDate}
                             onChange={(event) =>
-                              updateDraft(item.id, { dueDate: event.target.value })
+                              updateDraft(item.id, {
+                                dueDate: event.target.value,
+                              })
                             }
                             className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]"
                           />
@@ -417,7 +449,7 @@ export function MeetingTaskReviewClient({
                 </div>
 
                 {item.sourceExcerpt ? (
-                  <blockquote className="mt-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/70 px-4 py-3 text-sm italic text-[var(--workspace-shell-text-muted)]">
+                  <blockquote className="mt-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/70 px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)] italic">
                     “{item.sourceExcerpt}”
                   </blockquote>
                 ) : null}
@@ -428,13 +460,17 @@ export function MeetingTaskReviewClient({
                     className="inline-flex items-center gap-1 text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
                   >
                     From: {item.meetingTitle}
-                    {item.meetingDate ? ` · ${formatDueDate(item.meetingDate)}` : ''}
+                    {item.meetingDate
+                      ? ` · ${formatDueDate(item.meetingDate)}`
+                      : ''}
                     <ExternalLink className="h-3.5 w-3.5" />
                   </Link>
 
                   <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
                     <div className="min-w-[220px] space-y-1">
-                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Assignee</Label>
+                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        Assignee
+                      </Label>
                       <Select
                         value={draft.assigneeId || '__none__'}
                         onValueChange={(value) =>
@@ -449,7 +485,10 @@ export function MeetingTaskReviewClient({
                         <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
                           <SelectItem value="__none__">Unassigned</SelectItem>
                           {members.map((member) => (
-                            <SelectItem key={member.userId} value={member.userId}>
+                            <SelectItem
+                              key={member.userId}
+                              value={member.userId}
+                            >
                               {member.name}
                             </SelectItem>
                           ))}

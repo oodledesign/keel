@@ -6,10 +6,7 @@ type GmailMetadataMessage = {
   } | null;
 };
 
-function getHeader(
-  message: GmailMetadataMessage,
-  name: string,
-): string | null {
+function getHeader(message: GmailMetadataMessage, name: string): string | null {
   const headers = message.payload?.headers ?? [];
   const match = headers.find(
     (header) => header.name?.toLowerCase() === name.toLowerCase(),

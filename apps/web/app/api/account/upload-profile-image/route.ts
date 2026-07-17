@@ -70,7 +70,10 @@ export async function POST(request: Request) {
   const account = await loadPersonalAccount(user.id);
 
   if (!account) {
-    return NextResponse.json({ error: 'Personal account not found' }, { status: 404 });
+    return NextResponse.json(
+      { error: 'Personal account not found' },
+      { status: 404 },
+    );
   }
 
   const admin = getSupabaseServerAdminClient();

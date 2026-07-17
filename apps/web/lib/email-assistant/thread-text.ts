@@ -13,9 +13,7 @@ export function buildThreadText(messages: ThreadMessageRow[]): string {
         ? new Date(message.internal_date).toISOString()
         : 'unknown date';
       const body =
-        message.body_text?.trim() ||
-        message.snippet?.trim() ||
-        '(no body)';
+        message.body_text?.trim() || message.snippet?.trim() || '(no body)';
 
       return [
         `From: ${message.from_address ?? 'unknown'}`,

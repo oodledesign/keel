@@ -1,15 +1,10 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
-import {
-  Filter,
-  LayoutGrid,
-  List,
-  PlusCircle,
-  Search,
-} from 'lucide-react';
+import { Filter, LayoutGrid, List, PlusCircle, Search } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -30,7 +25,11 @@ import pathsConfig from '~/config/paths.config';
 import { listAccountMembers } from '../../jobs/_lib/server/server-actions';
 import type { ClientOverviewItem } from '../_lib/clients-overview.types';
 import { listClientsOverview } from '../_lib/server/server-actions';
-import { ClientCard, ClientListTableColGroup, ClientListTableHeader } from './client-card';
+import {
+  ClientCard,
+  ClientListTableColGroup,
+  ClientListTableHeader,
+} from './client-card';
 import { ClientDetailDrawer } from './client-detail-drawer';
 import { ClientOverviewCard } from './client-overview-card';
 
@@ -71,12 +70,13 @@ function sortClients(items: ClientOverviewItem[], sort: SortKey) {
   const list = [...items];
   list.sort((a, b) => {
     if (sort === 'projects') {
-      return b.projectCount - a.projectCount || a.displayName.localeCompare(b.displayName);
+      return (
+        b.projectCount - a.projectCount ||
+        a.displayName.localeCompare(b.displayName)
+      );
     }
     if (sort === 'recent') {
-      return (
-        new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime()
-      );
+      return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     }
     if (sort === 'name-desc') {
       return b.displayName.localeCompare(a.displayName);
@@ -98,7 +98,10 @@ function mergeClients(
   return [...byId.values()];
 }
 
-function clientMatchesSearch(client: ClientOverviewItem, query: string): boolean {
+function clientMatchesSearch(
+  client: ClientOverviewItem,
+  query: string,
+): boolean {
   const haystack = [
     client.displayName,
     client.companyName,
@@ -140,7 +143,8 @@ export function ClientsPageContent({
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const [pageClients, setPageClients] = useState<ClientOverviewItem[]>(initialOverview);
+  const [pageClients, setPageClients] =
+    useState<ClientOverviewItem[]>(initialOverview);
   const [cachedClients, setCachedClients] =
     useState<ClientOverviewItem[]>(initialOverview);
   const [total, setTotal] = useState(Number(initialTotal) || 0);
@@ -282,7 +286,9 @@ export function ClientsPageContent({
         }
       } catch (e) {
         if (!cancelled) {
-          toast.error(e instanceof Error ? e.message : 'Failed to search clients');
+          toast.error(
+            e instanceof Error ? e.message : 'Failed to search clients',
+          );
         }
       } finally {
         if (!cancelled) {
@@ -387,7 +393,9 @@ export function ClientsPageContent({
   return (
     <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5">
-        <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">{pageTitle}</h1>
+        <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+          {pageTitle}
+        </h1>
         {canEditClients ? (
           <Button
             size="sm"
@@ -402,177 +410,175 @@ export function ClientsPageContent({
       </div>
 
       <div className="flex flex-wrap items-center gap-2 px-4 pb-3 md:px-5">
-          <div className="relative min-w-[220px] flex-1">
-            <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
-            <Input
-              placeholder="Search clients or projects..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-              }}
-              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
-            />
-          </div>
+        <div className="relative min-w-[220px] flex-1">
+          <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <Input
+            placeholder="Search clients or projects..."
+            value={search}
+            onChange={(e) => {
+              setSearch(e.target.value);
+            }}
+            className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
+          />
+        </div>
 
-          <Button
-            variant="outline"
-            size="sm"
-            className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]"
-          >
-            <Filter className="mr-1 h-4 w-4" />
-            Filter
-          </Button>
+        <Button
+          variant="outline"
+          size="sm"
+          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]"
+        >
+          <Filter className="mr-1 h-4 w-4" />
+          Filter
+        </Button>
 
-          <Select value={sort} onValueChange={(value) => setSort(value as SortKey)}>
-            <SelectTrigger
-              className={cn(
-                'w-full border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] sm:w-[160px]',
-                panelToolbarClass,
-              )}
-            >
-              <SelectValue placeholder="Sort" />
-            </SelectTrigger>
-            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
-              <SelectItem value="name-asc">Sort: A–Z</SelectItem>
-              <SelectItem value="name-desc">Sort: Z–A</SelectItem>
-              <SelectItem value="recent">Recently updated</SelectItem>
-              <SelectItem value="projects">Most projects</SelectItem>
-            </SelectContent>
-          </Select>
-
-          <div
+        <Select
+          value={sort}
+          onValueChange={(value) => setSort(value as SortKey)}
+        >
+          <SelectTrigger
             className={cn(
-              'inline-flex rounded-lg p-1',
+              'w-full border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)] sm:w-[160px]',
               panelToolbarClass,
             )}
           >
-            <button
-              type="button"
-              onClick={() => setView('cards')}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
-                viewMode === 'cards'
-                  ? 'bg-[var(--ozer-info)] text-[var(--workspace-shell-text)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-              aria-pressed={viewMode === 'cards'}
-              aria-label="Card view"
-            >
-              <LayoutGrid className="h-4 w-4" />
-            </button>
-            <button
-              type="button"
-              onClick={() => setView('list')}
-              className={cn(
-                'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
-                viewMode === 'list'
-                  ? 'bg-[var(--ozer-info)] text-[var(--workspace-shell-text)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-              aria-pressed={viewMode === 'list'}
-              aria-label="List view"
-            >
-              <List className="h-4 w-4" />
-            </button>
+            <SelectValue placeholder="Sort" />
+          </SelectTrigger>
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]">
+            <SelectItem value="name-asc">Sort: A–Z</SelectItem>
+            <SelectItem value="name-desc">Sort: Z–A</SelectItem>
+            <SelectItem value="recent">Recently updated</SelectItem>
+            <SelectItem value="projects">Most projects</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <div className={cn('inline-flex rounded-lg p-1', panelToolbarClass)}>
+          <button
+            type="button"
+            onClick={() => setView('cards')}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
+              viewMode === 'cards'
+                ? 'bg-[var(--ozer-info)] text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+            )}
+            aria-pressed={viewMode === 'cards'}
+            aria-label="Card view"
+          >
+            <LayoutGrid className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            onClick={() => setView('list')}
+            className={cn(
+              'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
+              viewMode === 'list'
+                ? 'bg-[var(--ozer-info)] text-[var(--workspace-shell-text)]'
+                : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+            )}
+            aria-pressed={viewMode === 'list'}
+            aria-label="List view"
+          >
+            <List className="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+
+      <div className="flex-1 overflow-y-auto px-4 pb-4 md:px-5 md:pb-5">
+        {loadingPage && displayedClients.length === 0 ? (
+          <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+            <Trans i18nKey="common:loading" />
           </div>
-        </div>
+        ) : displayedClients.length === 0 ? (
+          <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+            {isSearching
+              ? 'No clients match your search.'
+              : 'No clients yet. Add your first client to get started.'}
+          </div>
+        ) : viewMode === 'cards' ? (
+          <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            {displayedClients.map((client) => (
+              <ClientOverviewCard
+                key={client.id}
+                client={client}
+                accountSlug={accountSlug}
+                isFavorite={favorites.has(client.id)}
+                onToggleFavorite={() => toggleFavorite(client.id)}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
+            <table className="w-full table-fixed border-collapse text-sm">
+              <ClientListTableColGroup />
+              <ClientListTableHeader />
+              <tbody>
+                {displayedClients.map((client) => (
+                  <ClientCard
+                    key={client.id}
+                    id={client.id}
+                    display_name={client.displayName}
+                    company_name={client.companyName}
+                    email={client.email}
+                    city={client.city}
+                    picture_url={client.pictureUrl}
+                    updated_at={client.updatedAt}
+                    projectCount={client.projectCount}
+                    dueTaskCount={client.dueTaskCount}
+                    selected={false}
+                    onSelect={() => openClient(client.id)}
+                    detailHref={`${clientsBasePath}/${client.id}`}
+                    onNotes={() => openClient(client.id)}
+                    onEmail={
+                      client.email
+                        ? () => window.open(`mailto:${client.email}`, '_blank')
+                        : undefined
+                    }
+                    onCall={
+                      client.phone
+                        ? () => window.open(`tel:${client.phone}`, '_blank')
+                        : undefined
+                    }
+                  />
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
 
-        <div className="flex-1 overflow-y-auto px-4 pb-4 md:px-5 md:pb-5">
-          {loadingPage && displayedClients.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-              <Trans i18nKey="common:loading" />
-            </div>
-          ) : displayedClients.length === 0 ? (
-            <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-              {isSearching
-                ? 'No clients match your search.'
-                : 'No clients yet. Add your first client to get started.'}
-            </div>
-          ) : viewMode === 'cards' ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-              {displayedClients.map((client) => (
-                <ClientOverviewCard
-                  key={client.id}
-                  client={client}
-                  accountSlug={accountSlug}
-                  isFavorite={favorites.has(client.id)}
-                  onToggleFavorite={() => toggleFavorite(client.id)}
-                />
-              ))}
-            </div>
-          ) : (
-            <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
-              <table className="w-full table-fixed border-collapse text-sm">
-                <ClientListTableColGroup />
-                <ClientListTableHeader />
-                <tbody>
-                  {displayedClients.map((client) => (
-                    <ClientCard
-                      key={client.id}
-                      id={client.id}
-                      display_name={client.displayName}
-                      company_name={client.companyName}
-                      email={client.email}
-                      city={client.city}
-                      picture_url={client.pictureUrl}
-                      updated_at={client.updatedAt}
-                      projectCount={client.projectCount}
-                      dueTaskCount={client.dueTaskCount}
-                      selected={false}
-                      onSelect={() => openClient(client.id)}
-                      detailHref={`${clientsBasePath}/${client.id}`}
-                      onNotes={() => openClient(client.id)}
-                      onEmail={
-                        client.email
-                          ? () => window.open(`mailto:${client.email}`, '_blank')
-                          : undefined
-                      }
-                      onCall={
-                        client.phone
-                          ? () => window.open(`tel:${client.phone}`, '_blank')
-                          : undefined
-                      }
-                    />
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
+        {isSearching && enrichingSearch ? (
+          <p className="mt-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
+            Finding more matches…
+          </p>
+        ) : null}
 
-          {isSearching && enrichingSearch ? (
-            <p className="mt-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
-              Finding more matches…
-            </p>
-          ) : null}
-
-          {!isSearching && totalPages > 1 && (
-            <div className="mt-6 flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
-              <span>
-                Page {page} of {totalPages} ({total} clients)
-              </span>
-              <div className="flex gap-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
-                  disabled={page <= 1}
-                  onClick={() => setPage((p) => Math.max(1, p - 1))}
-                >
-                  Previous
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
-                  disabled={page >= totalPages}
-                  onClick={() => setPage((p) => p + 1)}
-                >
-                  Next
-                </Button>
-              </div>
+        {!isSearching && totalPages > 1 && (
+          <div className="mt-6 flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
+            <span>
+              Page {page} of {totalPages} ({total} clients)
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+                disabled={page <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+                disabled={page >= totalPages}
+                onClick={() => setPage((p) => p + 1)}
+              >
+                Next
+              </Button>
             </div>
-          )}
-        </div>
+          </div>
+        )}
+      </div>
 
       <ClientDetailDrawer
         open={createDrawerOpen}

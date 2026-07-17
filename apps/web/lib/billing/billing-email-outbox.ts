@@ -111,7 +111,9 @@ export async function flushBillingEmailJob(
       accountSlug = accountSlug ?? (account?.slug as string | undefined);
       accountName =
         accountName ??
-        ((account?.name as string | null) ?? accountSlug ?? 'Workspace');
+        (account?.name as string | null) ??
+        accountSlug ??
+        'Workspace';
     }
 
     if (!accountSlug) {

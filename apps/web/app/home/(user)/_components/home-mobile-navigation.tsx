@@ -86,7 +86,10 @@ export function HomeMobileNavigation(props: { workspace: UserWorkspace }) {
         <DropdownMenuSeparator />
 
         <DropdownMenuItem asChild>
-          <Link href={personalAccountSettingsPath} className="flex h-12 w-full items-center px-2">
+          <Link
+            href={personalAccountSettingsPath}
+            className="flex h-12 w-full items-center px-2"
+          >
             Settings
           </Link>
         </DropdownMenuItem>

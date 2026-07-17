@@ -32,14 +32,10 @@ export async function GET(request: NextRequest) {
   } = await client.auth.getUser();
 
   if (!user) {
-    return NextResponse.redirect(
-      absoluteUrl(pathsConfig.auth.signIn),
-    );
+    return NextResponse.redirect(absoluteUrl(pathsConfig.auth.signIn));
   }
 
-  const payload = stateToken
-    ? verifyFeedflowOAuthState(stateToken)
-    : null;
+  const payload = stateToken ? verifyFeedflowOAuthState(stateToken) : null;
 
   const fallback = absoluteUrl(pathsConfig.app.home);
 

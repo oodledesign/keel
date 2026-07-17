@@ -19,13 +19,15 @@ import { Badge } from '@kit/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
-import pathsConfig from '~/config/paths.config';
 import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
+import pathsConfig from '~/config/paths.config';
 import { workspaceIconChip, workspacePanelCard } from '~/lib/workspace-ui';
 
+import type {
+  GroupMember,
+  GroupTask,
+} from '../_lib/server/group-dashboard.loader';
 import type { FinanceDashboardSummary } from '../_lib/server/property-dashboard.loader';
-
-import type { GroupMember, GroupTask } from '../_lib/server/group-dashboard.loader';
 import type { PropertyStatusCounts } from '../_lib/server/property-dashboard.loader';
 
 interface PropertyBusinessDashboardProps {
@@ -46,7 +48,8 @@ const iconChip = workspaceIconChip;
 const priorityColour: Record<string, string> = {
   urgent: 'bg-rose-500/15 text-rose-700 dark:text-rose-300',
   high: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
-  medium: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
+  medium:
+    'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
   low: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/50',
 };
 
@@ -113,7 +116,7 @@ export function PropertyBusinessDashboard({
               <p className="text-xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
                 {c.value}
               </p>
-              <p className="mt-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
+              <p className="mt-0.5 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
                 {c.label}
               </p>
             </CardContent>
@@ -121,7 +124,9 @@ export function PropertyBusinessDashboard({
         ))}
       </div>
 
-      <div className={`grid gap-3 ${financesEnabled ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}>
+      <div
+        className={`grid gap-3 ${financesEnabled ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-3'}`}
+      >
         <ShortcutCard
           href={accountPath(accountSlug, pathsConfig.app.accountProperties)}
           icon={Building2}
@@ -162,7 +167,7 @@ export function PropertyBusinessDashboard({
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as typeof activeTab)}
         >
-          <CardHeader className="border-b border-[color:var(--workspace-shell-border)] pb-0 pt-4">
+          <CardHeader className="border-b border-[color:var(--workspace-shell-border)] pt-4 pb-0">
             <TabsList className="h-10 w-full justify-start rounded-none border-0 bg-transparent p-0 md:w-auto">
               <TabsTrigger
                 value="tasks"
@@ -199,7 +204,10 @@ function FinanceOverviewPanel({
   accountSlug: string;
   summary: FinanceDashboardSummary;
 }) {
-  const financesPath = accountPath(accountSlug, pathsConfig.app.accountFinances);
+  const financesPath = accountPath(
+    accountSlug,
+    pathsConfig.app.accountFinances,
+  );
 
   return (
     <Card className={panelClass}>
@@ -247,7 +255,9 @@ function FinanceOverviewPanel({
         ) : (
           <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] py-8 text-center">
             <Wallet className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
-            <p className="text-sm text-[var(--workspace-shell-text)]/40">No transactions yet</p>
+            <p className="text-sm text-[var(--workspace-shell-text)]/40">
+              No transactions yet
+            </p>
             <Link
               href={financesPath}
               className="mt-2 inline-block text-xs text-[var(--ozer-accent-muted)] hover:underline"
@@ -280,7 +290,7 @@ function FinanceStatCard({
         >
           <Icon className="h-3.5 w-3.5" />
         </span>
-        <p className="text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
+        <p className="text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
           {label}
         </p>
       </div>
@@ -318,7 +328,9 @@ function ShortcutCard({
 }) {
   return (
     <Link href={href}>
-      <Card className={`${panelClass} transition hover:border-[var(--ozer-accent)]/25`}>
+      <Card
+        className={`${panelClass} transition hover:border-[var(--ozer-accent)]/25`}
+      >
         <CardContent className="flex items-center gap-3 p-4">
           <span
             className={`flex h-10 w-10 items-center justify-center rounded-lg ${iconChip}`}
@@ -326,8 +338,12 @@ function ShortcutCard({
             <Icon className="h-5 w-5" />
           </span>
           <div>
-            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{title}</p>
-            <p className="text-xs text-[var(--workspace-shell-text)]/50">{description}</p>
+            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              {title}
+            </p>
+            <p className="text-xs text-[var(--workspace-shell-text)]/50">
+              {description}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -346,7 +362,9 @@ function TasksPanel({
     return (
       <div className="py-8 text-center">
         <CheckSquare className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
-        <p className="text-sm text-[var(--workspace-shell-text)]/40">No open tasks</p>
+        <p className="text-sm text-[var(--workspace-shell-text)]/40">
+          No open tasks
+        </p>
       </div>
     );
   }
@@ -361,14 +379,20 @@ function TasksPanel({
           className="flex items-center justify-between rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5"
         >
           <div className="min-w-0">
-            <p className="truncate text-sm text-[var(--workspace-shell-text)]/80">{task.title}</p>
+            <p className="truncate text-sm text-[var(--workspace-shell-text)]/80">
+              {task.title}
+            </p>
             {task.projectName ? (
-              <p className="text-xs text-[var(--workspace-shell-text)]/40">{task.projectName}</p>
+              <p className="text-xs text-[var(--workspace-shell-text)]/40">
+                {task.projectName}
+              </p>
             ) : null}
           </div>
           <div className="ml-3 flex flex-shrink-0 items-center gap-2">
             {task.dueDate ? (
-              <span className="text-xs text-[var(--workspace-shell-text)]/40">{task.dueDate}</span>
+              <span className="text-xs text-[var(--workspace-shell-text)]/40">
+                {task.dueDate}
+              </span>
             ) : null}
             <Badge
               className={`text-[10px] ${priorityColour[task.priority] ?? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/50'}`}
@@ -395,7 +419,9 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
     return (
       <div className="py-8 text-center">
         <Users className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
-        <p className="text-sm text-[var(--workspace-shell-text)]/40">No team members yet</p>
+        <p className="text-sm text-[var(--workspace-shell-text)]/40">
+          No team members yet
+        </p>
       </div>
     );
   }
@@ -411,12 +437,16 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
             {m.displayName.slice(0, 2).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm text-[var(--workspace-shell-text)]/80">{m.displayName}</p>
+            <p className="truncate text-sm text-[var(--workspace-shell-text)]/80">
+              {m.displayName}
+            </p>
             {m.email ? (
-              <p className="truncate text-xs text-[var(--workspace-shell-text)]/40">{m.email}</p>
+              <p className="truncate text-xs text-[var(--workspace-shell-text)]/40">
+                {m.email}
+              </p>
             ) : null}
           </div>
-          <span className="ml-auto flex-shrink-0 text-xs capitalize text-[var(--workspace-shell-text)]/40">
+          <span className="ml-auto flex-shrink-0 text-xs text-[var(--workspace-shell-text)]/40 capitalize">
             {m.role}
           </span>
         </div>

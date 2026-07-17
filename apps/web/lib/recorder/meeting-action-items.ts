@@ -10,8 +10,8 @@ import {
   shouldIncludeExtractedItem,
 } from '~/lib/email-assistant/account-members';
 import {
-  extractMeetingActionItems,
   type MeetingExtractedActionItem,
+  extractMeetingActionItems,
 } from '~/lib/recorder/meeting-action-items-extract';
 import { snapDueDateYmd } from '~/lib/workspace-focus';
 import { loadWorkspaceSchedulingSettingsForUser } from '~/lib/workspace-focus/load-workspace-focus-settings';
@@ -45,7 +45,8 @@ async function loadRecorderContext(
     return null;
   }
 
-  let name = (personalAccount as { name?: string | null } | null)?.name?.trim() || null;
+  let name =
+    (personalAccount as { name?: string | null } | null)?.name?.trim() || null;
 
   if (!name && authUser?.user?.user_metadata) {
     const meta = authUser.user.user_metadata as Record<string, unknown>;
@@ -82,7 +83,9 @@ function mapExtractedItemToRow(
   input: MeetingActionItemJobInput,
   members: Awaited<ReturnType<typeof loadAccountMembersForExtraction>>,
   recorderEmail: string,
-  scheduling: Awaited<ReturnType<typeof loadWorkspaceSchedulingSettingsForUser>>,
+  scheduling: Awaited<
+    ReturnType<typeof loadWorkspaceSchedulingSettingsForUser>
+  >,
 ) {
   return {
     meeting_transcript_id: input.meetingTranscriptId,
@@ -165,7 +168,9 @@ export async function extractAndPersistMeetingActionItems(
   return rows.length;
 }
 
-export function queueMeetingActionItemExtraction(input: MeetingActionItemJobInput) {
+export function queueMeetingActionItemExtraction(
+  input: MeetingActionItemJobInput,
+) {
   const admin = getSupabaseServerAdminClient();
 
   void extractAndPersistMeetingActionItems(admin, input).catch((error) => {

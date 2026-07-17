@@ -12,8 +12,8 @@ import {
   encryptGoogleCalendarSecret,
 } from './crypto';
 import {
-  refreshGoogleCalendarAccessToken,
   type GoogleTokenResponse,
+  refreshGoogleCalendarAccessToken,
 } from './refresh';
 
 const REFRESH_WINDOW_MS = 60_000;

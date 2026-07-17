@@ -2,14 +2,11 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { decryptConferencingSecret, encryptConferencingSecret } from './crypto';
 import {
   ConferencingNotConnectedError,
   ConferencingReconnectRequiredError,
 } from './errors';
-import {
-  decryptConferencingSecret,
-  encryptConferencingSecret,
-} from './crypto';
 import { refreshTeamsAccessToken } from './teams/refresh';
 import type {
   ConferencingConnectionCredentials,

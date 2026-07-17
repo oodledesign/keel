@@ -12,8 +12,8 @@ import type {
   CrawlResult,
   PlatformCitationResult,
   ReferringDomainRow,
-  ScorerOutput,
   ScoreHistoryRow,
+  ScorerOutput,
 } from './types';
 
 function ranklyAdmin() {
@@ -104,22 +104,24 @@ export async function saveAuditReport(
   const reportId = report.id as string;
 
   if (result.recommendations.length) {
-    const { error: recError } = await db.from('ai_audit_recommendations').insert(
-      result.recommendations.map((rec, index) => ({
-        report_id: reportId,
-        project_id: projectId,
-        dimension: rec.dimension,
-        priority: rec.priority,
-        is_quick_win: rec.is_quick_win,
-        title: rec.title,
-        description: rec.description,
-        outcome: rec.outcome,
-        why: rec.why,
-        magnitude: rec.magnitude,
-        example_urls: rec.example_urls,
-        display_order: index,
-      })),
-    );
+    const { error: recError } = await db
+      .from('ai_audit_recommendations')
+      .insert(
+        result.recommendations.map((rec, index) => ({
+          report_id: reportId,
+          project_id: projectId,
+          dimension: rec.dimension,
+          priority: rec.priority,
+          is_quick_win: rec.is_quick_win,
+          title: rec.title,
+          description: rec.description,
+          outcome: rec.outcome,
+          why: rec.why,
+          magnitude: rec.magnitude,
+          example_urls: rec.example_urls,
+          display_order: index,
+        })),
+      );
 
     if (recError) {
       throw new Error(`Failed to save recommendations: ${recError.message}`);
@@ -244,10 +246,7 @@ export async function loadAuditReportsForProject(
   const { data } = await db
     .from('ai_audit_reports')
     .select('id, target_domain, overall_score, created_at')
-    .in(
-      'job_id',
-      jobIds,
-    )
+    .in('job_id', jobIds)
     .order('created_at', { ascending: false });
 
   return (data ?? []) as Array<{

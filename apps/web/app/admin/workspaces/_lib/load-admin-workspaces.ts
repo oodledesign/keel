@@ -189,7 +189,12 @@ export const loadAdminWorkspacesPage = cache(
               .select('primary_owner_user_id, email')
               .eq('is_personal_account', true)
               .in('primary_owner_user_id', ownerUserIds)
-          : Promise.resolve({ data: [] as { primary_owner_user_id: string; email: string | null }[] }),
+          : Promise.resolve({
+              data: [] as {
+                primary_owner_user_id: string;
+                email: string | null;
+              }[],
+            }),
       ]);
 
     const ownerEmailByUserId = new Map<string, string | null>();

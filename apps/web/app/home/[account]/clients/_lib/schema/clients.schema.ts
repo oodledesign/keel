@@ -186,7 +186,9 @@ export const UpdateContactSchema = z
     email: z
       .union([z.string().email(), z.literal(''), z.null()])
       .optional()
-      .transform((value) => (value === '' || value === undefined ? null : value)),
+      .transform((value) =>
+        value === '' || value === undefined ? null : value,
+      ),
     phone: optionalNullableString,
     role: optionalNullableString,
   })

@@ -17,6 +17,7 @@ import {
   LayoutDashboard,
   LifeBuoy,
   ListChecks,
+  type LucideIcon,
   Mail,
   Megaphone,
   MessageSquare,
@@ -32,16 +33,15 @@ import {
   Users,
   Video,
   Wallet,
-  type LucideIcon,
 } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
 import {
+  type MobileNavIconKey,
   coerceMobileNavIconKey,
   resolveMobileNavIconKey,
   resolveNavIconKey,
-  type MobileNavIconKey,
 } from '~/lib/mobile-nav/nav-icon-keys';
 
 const ICON_BY_KEY: Record<MobileNavIconKey, LucideIcon> = {
@@ -110,7 +110,7 @@ export function MobileNavTabIcon({
         ? pathKey
         : href != null
           ? resolveMobileNavIconKey(href, { homePath, preferredKey: iconKey })
-          : storedKey ?? 'workspace';
+          : (storedKey ?? 'workspace');
 
   if (avatarUrl && resolvedKey === 'workspace') {
     return (

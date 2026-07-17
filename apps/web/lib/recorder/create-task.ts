@@ -5,14 +5,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import pathsConfig from '~/config/paths.config';
-import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
+import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { assertTasksModuleEnabled } from '~/lib/quick-action/module-access';
 
 const TASK_DB_PRIORITIES = new Set(['low', 'medium', 'high', 'urgent']);
 
 function normalizeTaskPriority(input: string | undefined | null) {
-  const raw = String(input ?? 'medium').trim().toLowerCase();
+  const raw = String(input ?? 'medium')
+    .trim()
+    .toLowerCase();
   if (TASK_DB_PRIORITIES.has(raw)) return raw;
   return 'medium';
 }
@@ -68,18 +70,24 @@ export async function createRecorderTask(input: CreateRecorderTaskInput) {
   await assertWorkspaceMember(admin, input.accountId, input.userId);
   await assertTasksModuleEnabled(admin, input.accountId);
 
-  let projectId = input.projectId?.trim() || null;
-  let clientId = input.clientId?.trim() || null;
+  const projectId = input.projectId?.trim() || null;
+  const clientId = input.clientId?.trim() || null;
 
   if (projectId && clientId) {
     throw new Error('Link a task to either a project or a client, not both');
   }
 
-  if (projectId && !(await assertProjectBelongsToAccount(admin, projectId, input.accountId))) {
+  if (
+    projectId &&
+    !(await assertProjectBelongsToAccount(admin, projectId, input.accountId))
+  ) {
     throw new Error('Invalid project for this workspace');
   }
 
-  if (clientId && !(await assertClientBelongsToAccount(admin, clientId, input.accountId))) {
+  if (
+    clientId &&
+    !(await assertClientBelongsToAccount(admin, clientId, input.accountId))
+  ) {
     throw new Error('Invalid client for this workspace');
   }
 

@@ -12,8 +12,8 @@ export const dynamic = 'force-dynamic';
 const MS_AUTHORIZE =
   'https://login.microsoftonline.com/common/oauth2/v2.0/authorize';
 
-const SCOPES =
-  'MailboxSettings.ReadWrite User.Read.All ProfilePhoto.Read.All offline_access';
+// Sign-in only — tenant id comes from the token `tid` claim; directory sync uses client credentials.
+const SCOPES = 'openid profile';
 
 function absoluteUrl(path: string) {
   const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
@@ -55,7 +55,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const addonDenied = await denyUnlessSignaturesAddon(client, user.id, accountId);
+  const addonDenied = await denyUnlessSignaturesAddon(
+    client,
+    user.id,
+    accountId,
+  );
   if (addonDenied) {
     return NextResponse.redirect(
       absoluteUrl(

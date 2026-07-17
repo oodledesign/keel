@@ -1,6 +1,7 @@
+import { redirectIfAddonNotAllowed } from '~/lib/billing/require-addon-access';
+
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
-import { redirectIfAddonNotAllowed } from '~/lib/billing/require-addon-access';
 
 type FeedflowLayoutProps = {
   children: React.ReactNode;

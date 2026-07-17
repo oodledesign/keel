@@ -16,8 +16,7 @@ export function getOptionalTeamsOAuthEnv() {
   if (!parsed.success) return null;
 
   const env = parsed.data;
-  const clientId =
-    env.MICROSOFT_TEAMS_CLIENT_ID ?? env.MICROSOFT_CLIENT_ID;
+  const clientId = env.MICROSOFT_TEAMS_CLIENT_ID ?? env.MICROSOFT_CLIENT_ID;
   const clientSecret =
     env.MICROSOFT_TEAMS_CLIENT_SECRET ?? env.MICROSOFT_CLIENT_SECRET;
   const redirectUri =

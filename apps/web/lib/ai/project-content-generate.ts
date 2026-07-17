@@ -2,8 +2,8 @@ import 'server-only';
 
 import { z } from 'zod';
 
-import { extractJsonObject } from '~/lib/ai/extract-json-object';
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import { extractJsonObject } from '~/lib/ai/extract-json-object';
 
 export type ProjectSourceBlock = {
   type: 'transcript' | 'proposal' | 'note' | 'file';
@@ -59,7 +59,9 @@ function stripHtml(html: string) {
     .trim();
 }
 
-export function buildProjectSourceCorpus(sources: ProjectSourceBlock[]): string {
+export function buildProjectSourceCorpus(
+  sources: ProjectSourceBlock[],
+): string {
   let total = 0;
   const blocks: string[] = [];
 

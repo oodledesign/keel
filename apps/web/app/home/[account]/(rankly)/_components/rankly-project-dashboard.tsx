@@ -2,9 +2,13 @@ import Link from 'next/link';
 
 import type { LucideIcon } from 'lucide-react';
 
-import { RANKLY_DASHBOARD_TOOL_SECTIONS, getRanklySection } from '../_lib/rankly-project-sections';
-import { ranklyProjectPaths } from '../_lib/rankly-project-paths';
 import type { SiteOverviewSnapshot } from '~/lib/site-overview/types';
+
+import { ranklyProjectPaths } from '../_lib/rankly-project-paths';
+import {
+  RANKLY_DASHBOARD_TOOL_SECTIONS,
+  getRanklySection,
+} from '../_lib/rankly-project-sections';
 
 function SectionIcon(props: { icon: LucideIcon }) {
   const Icon = props.icon;
@@ -31,10 +35,13 @@ function StatCard(props: {
       className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-black/30"
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-muted-foreground text-xs uppercase tracking-wide">
+        <p className="text-muted-foreground text-xs tracking-wide uppercase">
           {props.label}
         </p>
-        <Icon className="text-muted-foreground h-4 w-4 shrink-0 opacity-80" aria-hidden />
+        <Icon
+          className="text-muted-foreground h-4 w-4 shrink-0 opacity-80"
+          aria-hidden
+        />
       </div>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{props.value}</p>
       {props.hint ? (
@@ -61,7 +68,9 @@ export function RanklyProjectDashboard(props: {
   return (
     <div className="space-y-8">
       <header className="space-y-1">
-        <h1 className="text-xl font-semibold tracking-tight">Project overview</h1>
+        <h1 className="text-xl font-semibold tracking-tight">
+          Project overview
+        </h1>
         <p className="text-muted-foreground text-sm">
           {props.countryLabel} market · quick snapshot across Rankly tools
         </p>

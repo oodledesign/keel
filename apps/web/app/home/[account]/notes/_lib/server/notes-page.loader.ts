@@ -4,15 +4,6 @@ import { redirect } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
 
-import { loadAccountNoteCategories } from '../../../_lib/workspace-content/note-categories.loader';
-import { loadAccountNoteFolders } from '../../../_lib/workspace-content/note-folders.loader';
-import {
-  linkOptionsForProfile,
-  loadWorkspaceLinkOptions,
-} from '../../../_lib/workspace-content/link-options.loader';
-import { loadAccountDocs } from '../../../_lib/workspace-content/docs-loader';
-import { loadAccountNotes } from '../../../_lib/workspace-content/notes-loader';
-import type { NoteListItem } from '../../../_lib/workspace-content/types';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import {
   notesVariantFromProfile,
@@ -22,7 +13,16 @@ import {
   ACCOUNT_NOTES_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
+import { loadAccountDocs } from '../../../_lib/workspace-content/docs-loader';
+import {
+  linkOptionsForProfile,
+  loadWorkspaceLinkOptions,
+} from '../../../_lib/workspace-content/link-options.loader';
+import { loadAccountNoteCategories } from '../../../_lib/workspace-content/note-categories.loader';
+import { loadAccountNoteFolders } from '../../../_lib/workspace-content/note-folders.loader';
+import { loadAccountNotes } from '../../../_lib/workspace-content/notes-loader';
 import { loadAccountNoteById } from '../../../_lib/workspace-content/notes-loader';
+import type { NoteListItem } from '../../../_lib/workspace-content/types';
 
 export type WorkNoteListItem = NoteListItem;
 
@@ -73,10 +73,7 @@ export async function loadNotesPageData(accountSlug: string) {
   };
 }
 
-export async function loadNoteDetailData(
-  accountSlug: string,
-  noteId: string,
-) {
+export async function loadNoteDetailData(accountSlug: string, noteId: string) {
   const workspace = await loadTeamWorkspace(accountSlug);
 
   if (!workspace?.account) {
@@ -98,9 +95,7 @@ export async function loadNoteDetailData(
   ]);
 
   if (!note) {
-    redirect(
-      pathsConfig.app.accountNotes.replace('[account]', accountSlug),
-    );
+    redirect(pathsConfig.app.accountNotes.replace('[account]', accountSlug));
   }
 
   return {
@@ -121,8 +116,7 @@ export async function loadNoteDetailData(
         note.context?.type === 'job' || note.context?.type === 'project'
           ? note.context.label
           : null,
-      clientName:
-        note.context?.type === 'client' ? note.context.label : null,
+      clientName: note.context?.type === 'client' ? note.context.label : null,
       propertyName:
         note.context?.type === 'property' ? note.context.label : null,
       createdAt: note.createdAt,

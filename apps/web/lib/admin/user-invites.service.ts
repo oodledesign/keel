@@ -4,9 +4,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  type WorkspaceProfile,
   businessTypeForProfile,
   spaceTypeForProfile,
-  type WorkspaceProfile,
 } from '~/home/[account]/_lib/server/workspace-profile';
 import { logAdminAction } from '~/lib/admin/log-admin-action';
 import {
@@ -16,8 +16,8 @@ import {
   summarizeAccessConfig,
 } from '~/lib/admin/user-invites.schema';
 import {
-  findPlanByProductAndPlanId,
   type OzerAddonKey,
+  findPlanByProductAndPlanId,
 } from '~/lib/billing/ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from '~/lib/billing/sync-addon-modules-from-entitlements';
 import {
@@ -218,7 +218,11 @@ async function createInviteWorkspace(
   admin: SupabaseClient,
   userId: string,
   workspace: NonNullable<AdminUserInviteAccessConfig['workspaces']>[number],
-): Promise<{ accountId: string; slug: string; profile: AdminInviteWorkspaceProfile }> {
+): Promise<{
+  accountId: string;
+  slug: string;
+  profile: AdminInviteWorkspaceProfile;
+}> {
   const name = workspace.name?.trim() || 'Workspace';
   const slug = await uniqueSlug(admin, slugifyName(name));
   const profile = workspace.profile;
@@ -262,7 +266,10 @@ async function applyWorkspacePlanForInvite(
     return;
   }
 
-  if (workspace.profile === 'work_design' && workspace.businessMode === 'full') {
+  if (
+    workspace.profile === 'work_design' &&
+    workspace.businessMode === 'full'
+  ) {
     await applyPlanPreset(
       admin,
       accountId,
@@ -342,10 +349,8 @@ export async function sendAdminUserInviteEmail(params: {
     throw new Error('EMAIL_SENDER is not configured');
   }
 
-  const {
-    escapeEmailHtml,
-    renderOzerTransactionalEmail,
-  } = await import('~/lib/email/ozer-transactional-shell');
+  const { escapeEmailHtml, renderOzerTransactionalEmail } =
+    await import('~/lib/email/ozer-transactional-shell');
 
   const firstName = params.inviteeName?.trim().split(/\s+/)[0] ?? '';
   const greeting = firstName
@@ -691,10 +696,9 @@ export async function fulfillAdminUserInvite(
       );
     }
 
-    const redirectTo =
-      config.personalAddons?.includes('addon_email_assistant')
-        ? pathsConfig.app.personalEmailAssistant
-        : pathsConfig.app.home;
+    const redirectTo = config.personalAddons?.includes('addon_email_assistant')
+      ? pathsConfig.app.personalEmailAssistant
+      : pathsConfig.app.home;
 
     return { redirectTo };
   }

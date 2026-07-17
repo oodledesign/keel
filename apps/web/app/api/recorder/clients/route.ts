@@ -23,7 +23,9 @@ function badRequest(message: string) {
 }
 
 export async function GET(request: Request) {
-  const auth = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  const auth = await authenticateRecorderRequest(request, {
+    touchLastUsed: true,
+  });
   if (auth instanceof NextResponse) {
     return auth;
   }

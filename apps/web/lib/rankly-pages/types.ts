@@ -44,7 +44,10 @@ export type RanklyPageDetail = RanklyPageSummary & {
   recommendations: PageRecommendation[];
 };
 
-export const PAGE_SCORE_LABELS: Record<keyof Omit<PageScoreBreakdown, 'overall'>, string> = {
+export const PAGE_SCORE_LABELS: Record<
+  keyof Omit<PageScoreBreakdown, 'overall'>,
+  string
+> = {
   onPage: 'On-page SEO',
   performance: 'Performance',
   technical: 'Technical',

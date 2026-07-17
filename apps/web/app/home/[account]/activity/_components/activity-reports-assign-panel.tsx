@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import { Check, Loader2 } from 'lucide-react';
@@ -63,8 +64,8 @@ export function ActivityReportsAssignPanel({ data }: Props) {
 
   const hasNarrowFilter = Boolean(
     data.filters.appKey ||
-      data.filters.clientId === ACTIVITY_REPORT_UNASSIGNED ||
-      data.filters.projectId === ACTIVITY_REPORT_UNASSIGNED,
+    data.filters.clientId === ACTIVITY_REPORT_UNASSIGNED ||
+    data.filters.projectId === ACTIVITY_REPORT_UNASSIGNED,
   );
 
   if (!data.canEdit || !hasNarrowFilter || data.unassignedInFilterCount === 0) {
@@ -73,7 +74,8 @@ export function ActivityReportsAssignPanel({ data }: Props) {
 
   const appLabel =
     data.filters.appKey != null
-      ? (data.apps.find((app) => app.key === data.filters.appKey)?.label ?? null)
+      ? (data.apps.find((app) => app.key === data.filters.appKey)?.label ??
+        null)
       : null;
   const ruleMatch = inferRuleMatch(data.filters.appKey, appLabel);
   const filterLabel = appLabel
@@ -142,7 +144,11 @@ export function ActivityReportsAssignPanel({ data }: Props) {
             ))}
           </SelectContent>
         </Select>
-        <Select value={projectId} onValueChange={setProjectId} disabled={pending}>
+        <Select
+          value={projectId}
+          onValueChange={setProjectId}
+          disabled={pending}
+        >
           <SelectTrigger className="h-9 w-[10rem] bg-[var(--workspace-control-surface)] text-xs">
             <SelectValue placeholder="Project" />
           </SelectTrigger>

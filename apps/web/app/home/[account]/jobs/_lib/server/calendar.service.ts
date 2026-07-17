@@ -6,13 +6,16 @@ import { requireUser } from '@kit/supabase/require-user';
 
 import { Database } from '~/lib/database.types';
 
+import {
+  isMissingRelationError,
+  logMissingRelation,
+} from '../../../_lib/server/supabase-errors';
 import type { CalendarItem } from '../schema/calendar.schema';
 import type {
   GetCalendarItemDetailsInput,
   GetJobCalendarItemsInput,
   GetOrgCalendarItemsInput,
 } from '../schema/calendar.schema';
-import { isMissingRelationError, logMissingRelation } from '../../../_lib/server/supabase-errors';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 type Db = any;
@@ -31,7 +34,10 @@ class CalendarService {
   private throwErr(err: unknown, fallback = 'Something went wrong'): never {
     if (err instanceof Error) throw err;
     const msg =
-      err && typeof err === 'object' && 'message' in err && typeof (err as { message: unknown }).message === 'string'
+      err &&
+      typeof err === 'object' &&
+      'message' in err &&
+      typeof (err as { message: unknown }).message === 'string'
         ? (err as { message: string }).message
         : fallback;
     throw new Error(msg);
@@ -44,14 +50,18 @@ class CalendarService {
   }
 
   /** Calendar items for a single job: events + job deadline (and start date if in range). */
-  async getJobCalendarItems(params: GetJobCalendarItemsInput): Promise<CalendarItem[]> {
+  async getJobCalendarItems(
+    params: GetJobCalendarItemsInput,
+  ): Promise<CalendarItem[]> {
     await this.ensureUser();
     const { accountId, jobId, start, end } = params;
     const items: CalendarItem[] = [];
 
     const { data: events, error: eventsErr } = await this.db
       .from('job_events')
-      .select('id, job_id, client_id, title, event_type, scheduled_start_at, scheduled_end_at, location')
+      .select(
+        'id, job_id, client_id, title, event_type, scheduled_start_at, scheduled_end_at, location',
+      )
       .eq('account_id', accountId)
       .eq('job_id', jobId)
       .gte('scheduled_start_at', start)
@@ -72,7 +82,10 @@ class CalendarService {
       if (!isMissingRelationError(eventsErr)) {
         this.throwErr(eventsErr);
       } else {
-        logMissingRelation('calendar.getJobCalendarItems.job_events', eventsErr);
+        logMissingRelation(
+          'calendar.getJobCalendarItems.job_events',
+          eventsErr,
+        );
       }
     } else {
       eventList = (events ?? []) as typeof eventList;
@@ -155,14 +168,18 @@ class CalendarService {
   }
 
   /** Calendar items for the whole org: all job_events + all job due/start dates in range. */
-  async getOrgCalendarItems(params: GetOrgCalendarItemsInput): Promise<CalendarItem[]> {
+  async getOrgCalendarItems(
+    params: GetOrgCalendarItemsInput,
+  ): Promise<CalendarItem[]> {
     await this.ensureUser();
     const { accountId, start, end } = params;
     const items: CalendarItem[] = [];
 
     const { data: events, error: eventsErr } = await this.db
       .from('job_events')
-      .select('id, job_id, client_id, title, event_type, scheduled_start_at, scheduled_end_at, location')
+      .select(
+        'id, job_id, client_id, title, event_type, scheduled_start_at, scheduled_end_at, location',
+      )
       .eq('account_id', accountId)
       .gte('scheduled_start_at', start)
       .lte('scheduled_start_at', end);
@@ -182,7 +199,10 @@ class CalendarService {
       if (!isMissingRelationError(eventsErr)) {
         this.throwErr(eventsErr);
       } else {
-        logMissingRelation('calendar.getOrgCalendarItems.job_events', eventsErr);
+        logMissingRelation(
+          'calendar.getOrgCalendarItems.job_events',
+          eventsErr,
+        );
       }
     } else {
       eventList = (events ?? []) as typeof eventList;
@@ -276,7 +296,9 @@ class CalendarService {
   }
 
   /** Full details for the details panel (event or job). */
-  async getCalendarItemDetails(params: GetCalendarItemDetailsInput): Promise<Record<string, unknown>> {
+  async getCalendarItemDetails(
+    params: GetCalendarItemDetailsInput,
+  ): Promise<Record<string, unknown>> {
     await this.ensureUser();
     const { accountId, source_type, source_id } = params;
 
@@ -289,7 +311,10 @@ class CalendarService {
         .single();
       if (error) {
         if (isMissingRelationError(error)) {
-          logMissingRelation('calendar.getCalendarItemDetails.job_events', error);
+          logMissingRelation(
+            'calendar.getCalendarItemDetails.job_events',
+            error,
+          );
           throw new Error(
             'Schedule events are not available yet. Run database migrations (apps/web: supabase db push).',
           );

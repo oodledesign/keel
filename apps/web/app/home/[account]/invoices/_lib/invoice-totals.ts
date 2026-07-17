@@ -49,7 +49,9 @@ export function isInvoiceOverdue(input: {
   return due < today;
 }
 
-export function computeInvoiceTotals(input: InvoiceTotalsInput): InvoiceTotalsResult {
+export function computeInvoiceTotals(
+  input: InvoiceTotalsInput,
+): InvoiceTotalsResult {
   const subtotal_pence = Math.max(0, input.subtotal_pence ?? 0);
   const discount_pence = applyAdjustment(
     subtotal_pence,
@@ -68,7 +70,11 @@ export function computeInvoiceTotals(input: InvoiceTotalsInput): InvoiceTotalsRe
   });
   const late_fee_pence =
     overdue && input.late_fee_type
-      ? applyAdjustment(total_pence, input.late_fee_type, input.late_fee_value ?? 0)
+      ? applyAdjustment(
+          total_pence,
+          input.late_fee_type,
+          input.late_fee_value ?? 0,
+        )
       : 0;
   total_pence += late_fee_pence;
 

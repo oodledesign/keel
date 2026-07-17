@@ -62,9 +62,9 @@ Byline: ${c.bylinePresent ? 'yes' : 'no'} | og:image: ${c.ogImage ? 'yes' : 'no'
   .join('\n')}
 
 RELATED KEYWORDS: ${input.relatedKeywords
-  .slice(0, 20)
-  .map((k) => `${k.keyword} (${k.volume})`)
-  .join(', ')}
+    .slice(0, 20)
+    .map((k) => `${k.keyword} (${k.volume})`)
+    .join(', ')}
 QUESTION VARIANTS: ${input.questionKeywords.slice(0, 8).join(', ')}
 
 ---

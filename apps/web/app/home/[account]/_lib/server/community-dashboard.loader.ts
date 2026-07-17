@@ -120,8 +120,8 @@ export const loadCommunityDashboardData = cache(
             minute: '2-digit',
           }),
           sessionNotes:
-            ((nextRow as { session_notes?: string | null }).session_notes ??
-              ''
+            (
+              (nextRow as { session_notes?: string | null }).session_notes ?? ''
             ).trim() || null,
           location:
             ((nextRow as { location?: string | null }).location ?? '').trim() ||

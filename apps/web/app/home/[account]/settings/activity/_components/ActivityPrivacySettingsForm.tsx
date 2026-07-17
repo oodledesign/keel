@@ -17,20 +17,20 @@ import {
   FormMessage,
 } from '@kit/ui/form';
 import { Input } from '@kit/ui/input';
+import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 
-import {
-  getActivityPrivacySettings,
-  upsertActivityPrivacySettings,
-} from '~/home/[account]/settings/activity/actions';
+import { buildActivityPrivacyFormDefaults } from '~/home/[account]/settings/activity/_lib/activity-privacy-form';
 import {
   ActivityPrivacyFormSchema,
   type ActivityPrivacyFormValues,
   type ActivityPrivacySettings,
 } from '~/home/[account]/settings/activity/_lib/activity-privacy-settings.schema';
-import { buildActivityPrivacyFormDefaults } from '~/home/[account]/settings/activity/_lib/activity-privacy-form';
+import {
+  getActivityPrivacySettings,
+  upsertActivityPrivacySettings,
+} from '~/home/[account]/settings/activity/actions';
 
 type ActivityPrivacySettingsFormProps = {
   accountId: string;
@@ -217,7 +217,9 @@ export function ActivityPrivacySettingsForm({
                 <FormDescription>
                   Match by app name or bundle ID, e.g.{' '}
                   <span className="font-mono text-xs">1Password</span> or{' '}
-                  <span className="font-mono text-xs">com.1password.1password</span>
+                  <span className="font-mono text-xs">
+                    com.1password.1password
+                  </span>
                 </FormDescription>
                 <FormControl>
                   <Textarea

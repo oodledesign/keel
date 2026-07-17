@@ -58,7 +58,9 @@ export function EmailSignatureField({
     }
 
     if (nextFormat === 'html' && format === 'plain' && signature.trim()) {
-      onSignatureChange(signature.replace(/\r\n/g, '\n').replace(/\n/g, '<br>'));
+      onSignatureChange(
+        signature.replace(/\r\n/g, '\n').replace(/\n/g, '<br>'),
+      );
     }
 
     onFormatChange(nextFormat);
@@ -67,7 +69,10 @@ export function EmailSignatureField({
   return (
     <div className="space-y-3">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <Label htmlFor="email-signature" className="text-[var(--workspace-shell-text-muted)]">
+        <Label
+          htmlFor="email-signature"
+          className="text-[var(--workspace-shell-text-muted)]"
+        >
           Signature
         </Label>
         <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
@@ -123,7 +128,7 @@ export function EmailSignatureField({
 
       <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60">
         <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-2">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+          <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Preview
           </p>
         </div>
@@ -135,7 +140,7 @@ export function EmailSignatureField({
           ) : (
             <>
               <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[#10182f] p-4">
-                <p className="whitespace-pre-wrap text-sm leading-relaxed text-[var(--workspace-shell-text)]">
+                <p className="text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text)]">
                   {MOCK_REPLY}
                 </p>
               </div>
@@ -146,7 +151,7 @@ export function EmailSignatureField({
                     dangerouslySetInnerHTML={{ __html: sanitizedHtml }}
                   />
                 ) : (
-                  <p className="whitespace-pre-wrap text-sm leading-relaxed">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
                     {plainPreview}
                   </p>
                 )}

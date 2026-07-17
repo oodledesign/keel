@@ -1,7 +1,6 @@
 'use client';
 
 import { AiCreditsBillingCard } from '~/components/billing/ai-credits-billing-card';
-
 import { createTeamAccountCheckoutSession } from '~/home/[account]/billing/_lib/server/server-actions';
 
 export function WorkspaceAiCreditsBillingCard(props: {

@@ -58,7 +58,11 @@ export function ContractRowMenu({
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const run = async (key: string, fn: () => Promise<unknown>, success: string) => {
+  const run = async (
+    key: string,
+    fn: () => Promise<unknown>,
+    success: string,
+  ) => {
     setLoading(key);
     try {
       await fn();
@@ -82,7 +86,11 @@ export function ContractRowMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -90,8 +98,13 @@ export function ContractRowMenu({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-        <DropdownMenuItem onClick={() => router.push(editPath)}>Open</DropdownMenuItem>
+      <DropdownMenuContent
+        align="end"
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+      >
+        <DropdownMenuItem onClick={() => router.push(editPath)}>
+          Open
+        </DropdownMenuItem>
         {canEditContracts && contract.author_signed_at ? (
           <DropdownMenuItem onClick={() => router.push(`${editPath}?send=1`)}>
             <Send className="mr-2 h-4 w-4" />
@@ -99,7 +112,11 @@ export function ContractRowMenu({
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild>
-          <a href={`/api/contracts/pdf?contractId=${contract.id}`} target="_blank" rel="noreferrer">
+          <a
+            href={`/api/contracts/pdf?contractId=${contract.id}`}
+            target="_blank"
+            rel="noreferrer"
+          >
             <Download className="mr-2 h-4 w-4" />
             Export to PDF
           </a>
@@ -113,7 +130,11 @@ export function ContractRowMenu({
             onClick={() =>
               run(
                 'invoices',
-                () => generateInvoicesFromPaymentPlan({ accountId, contractId: contract.id }),
+                () =>
+                  generateInvoicesFromPaymentPlan({
+                    accountId,
+                    contractId: contract.id,
+                  }),
                 'Instalment invoices generated',
               )
             }
@@ -128,7 +149,12 @@ export function ContractRowMenu({
             onClick={() =>
               run(
                 'cancel',
-                () => setContractStatus({ accountId, contractId: contract.id, status: 'cancelled' }),
+                () =>
+                  setContractStatus({
+                    accountId,
+                    contractId: contract.id,
+                    status: 'cancelled',
+                  }),
                 'Contract cancelled',
               )
             }
@@ -143,7 +169,11 @@ export function ContractRowMenu({
             <DropdownMenuItem
               className="text-red-400 focus:text-red-300"
               onClick={() =>
-                run('delete', () => deleteContract({ accountId, contractId: contract.id }), 'Contract deleted')
+                run(
+                  'delete',
+                  () => deleteContract({ accountId, contractId: contract.id }),
+                  'Contract deleted',
+                )
               }
             >
               <Trash2 className="mr-2 h-4 w-4" />

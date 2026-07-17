@@ -4,14 +4,16 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
-import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
-
-import { createMeetingTranscriptsService, type MeetingTranscriptListItem } from '~/home/[account]/_lib/server/meeting-transcripts.service';
 import {
-  resolveMeetingParticipants,
+  type MeetingTranscriptListItem,
+  createMeetingTranscriptsService,
+} from '~/home/[account]/_lib/server/meeting-transcripts.service';
+import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
+import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
+import {
   type MeetingParticipant,
+  resolveMeetingParticipants,
 } from '~/lib/recorder/meeting-participants';
 import { loadMeetingSummary } from '~/lib/recorder/meeting-summary';
 
@@ -62,7 +64,7 @@ function mapClientOptions(
       name:
         row.display_name?.trim() ||
         row.company_name?.trim() ||
-        [(row.first_name as string), (row.last_name as string)]
+        [row.first_name as string, row.last_name as string]
           .filter(Boolean)
           .join(' ')
           .trim() ||
@@ -72,9 +74,7 @@ function mapClientOptions(
     .sort((a, b) => a.name.localeCompare(b.name));
 }
 
-function mapMemberOptions(
-  rows: unknown[],
-): MeetingMemberOption[] {
+function mapMemberOptions(rows: unknown[]): MeetingMemberOption[] {
   return rows
     .map((row) => {
       const member = row as {
@@ -210,19 +210,22 @@ async function loadMeetingTranscriptPageDataImpl(
 
   const [transcript, clientsResult, contactsResult, membersResult, summary] =
     await Promise.all([
-    transcriptsService.getById({
-      accountId,
-      transcriptId,
-    }),
-    clientsService.listClients({
-      accountId,
-      page: 1,
-      pageSize: 100,
-    }),
-    clientsService.listWorkspaceContacts({ accountId }),
-    client.rpc('get_account_members', { account_slug: accountSlug }),
-    loadMeetingSummary(client, { meetingTranscriptId: transcriptId, accountId }),
-  ]);
+      transcriptsService.getById({
+        accountId,
+        transcriptId,
+      }),
+      clientsService.listClients({
+        accountId,
+        page: 1,
+        pageSize: 100,
+      }),
+      clientsService.listWorkspaceContacts({ accountId }),
+      client.rpc('get_account_members', { account_slug: accountSlug }),
+      loadMeetingSummary(client, {
+        meetingTranscriptId: transcriptId,
+        accountId,
+      }),
+    ]);
 
   if (membersResult.error) {
     throw new Error(membersResult.error.message);

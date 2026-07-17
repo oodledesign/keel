@@ -67,11 +67,14 @@ export const loadAdminAuditLogPage = cache(
         }),
       ),
       accountIds.length
-        ? client
-            .from('accounts')
-            .select('id, name, slug')
-            .in('id', accountIds)
-        : Promise.resolve({ data: [] as { id: string; name: string | null; slug: string | null }[] }),
+        ? client.from('accounts').select('id, name, slug').in('id', accountIds)
+        : Promise.resolve({
+            data: [] as {
+              id: string;
+              name: string | null;
+              slug: string | null;
+            }[],
+          }),
     ]);
 
     const emailById = new Map(actors.map((a) => [a.id, a.email]));

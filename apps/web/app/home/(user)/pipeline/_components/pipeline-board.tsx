@@ -1,25 +1,31 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from 'react';
 
 import {
   DndContext,
+  type DragEndEvent,
   DragOverlay,
+  type DragStartEvent,
   PointerSensor,
+  closestCorners,
   useDroppable,
   useSensor,
   useSensors,
-  closestCorners,
-  type DragStartEvent,
-  type DragEndEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
-  verticalListSortingStrategy,
   useSortable,
+  verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-
 import {
   ArrowRight,
   DollarSign,
@@ -30,8 +36,12 @@ import {
   X,
 } from 'lucide-react';
 
-import type { PipelineData, PipelineDeal } from '../../_lib/server/pipeline.loader';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
+
+import type {
+  PipelineData,
+  PipelineDeal,
+} from '../../_lib/server/pipeline.loader';
 import { moveDealToStage } from '../actions';
 import { AddDealDialog } from './add-deal-dialog';
 import { EditDealDialog } from './edit-deal-dialog';
@@ -48,18 +58,32 @@ const STAGES = [
   { key: 'lost', label: 'Lost', icon: X },
 ] as const;
 
-const STAGE_COLORS: Record<
-  string,
-  { dot: string; bar: string; tint: string }
-> = {
-  lead: { dot: '#3B82F6', bar: '#3B82F6', tint: 'rgba(59,130,246,0.08)' },
-  qualified: { dot: '#FF5C34', bar: '#FF5C34', tint: 'rgba(255, 92, 52, 0.08)' },
-  call_booked: { dot: '#A855F7', bar: '#A855F7', tint: 'rgba(168,85,247,0.08)' },
-  proposal_sent: { dot: '#F97316', bar: '#F97316', tint: 'rgba(249,115,22,0.08)' },
-  negotiation: { dot: '#EAB308', bar: '#EAB308', tint: 'rgba(234,179,8,0.08)' },
-  won: { dot: '#FF5C34', bar: '#FF5C34', tint: 'rgba(255, 92, 52, 0.16)' },
-  lost: { dot: '#64748B', bar: '#64748B', tint: 'rgba(100,116,139,0.10)' },
-};
+const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
+  {
+    lead: { dot: '#3B82F6', bar: '#3B82F6', tint: 'rgba(59,130,246,0.08)' },
+    qualified: {
+      dot: '#FF5C34',
+      bar: '#FF5C34',
+      tint: 'rgba(255, 92, 52, 0.08)',
+    },
+    call_booked: {
+      dot: '#A855F7',
+      bar: '#A855F7',
+      tint: 'rgba(168,85,247,0.08)',
+    },
+    proposal_sent: {
+      dot: '#F97316',
+      bar: '#F97316',
+      tint: 'rgba(249,115,22,0.08)',
+    },
+    negotiation: {
+      dot: '#EAB308',
+      bar: '#EAB308',
+      tint: 'rgba(234,179,8,0.08)',
+    },
+    won: { dot: '#FF5C34', bar: '#FF5C34', tint: 'rgba(255, 92, 52, 0.16)' },
+    lost: { dot: '#64748B', bar: '#64748B', tint: 'rgba(100,116,139,0.10)' },
+  };
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
@@ -122,9 +146,7 @@ export function PipelineBoard({
 
   const handleDealUpdated = useCallback(
     (updated: PipelineDeal) => {
-      setDeals((prev) =>
-        prev.map((d) => (d.id === updated.id ? updated : d)),
-      );
+      setDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
       setEditOpen(false);
       setDealToEdit(null);
       if (updated.stage === 'won') {
@@ -140,9 +162,7 @@ export function PipelineBoard({
 
   const filteredDeals = useMemo(
     () =>
-      filter === 'all'
-        ? deals
-        : deals.filter((d) => d.businessId === filter),
+      filter === 'all' ? deals : deals.filter((d) => d.businessId === filter),
     [deals, filter],
   );
 
@@ -199,9 +219,7 @@ export function PipelineBoard({
       if (!currentDeal || currentDeal.stage === newStage) return;
 
       const updatedDeal = { ...currentDeal, stage: newStage! };
-      setDeals((prev) =>
-        prev.map((d) => (d.id === dealId ? updatedDeal : d)),
-      );
+      setDeals((prev) => prev.map((d) => (d.id === dealId ? updatedDeal : d)));
 
       startTransition(async () => {
         const result = await moveDealToStage(dealId, newStage!, {
@@ -222,11 +240,13 @@ export function PipelineBoard({
   );
 
   return (
-    <div className="flex min-h-[calc(100svh-3.5rem)] w-full flex-col gap-6 px-4 pb-12 pt-6 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
+    <div className="flex min-h-[calc(100svh-3.5rem)] w-full flex-col gap-6 px-4 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       {/* Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">Pipeline</h1>
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+            Pipeline
+          </h1>
           <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
             {activeCount} active leads · {formatCurrency(totalValue)} total
             value
@@ -348,7 +368,9 @@ function StageColumn({
     >
       <div className="mb-3 flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[var(--workspace-shell-text)]">{label}</span>
+          <span className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            {label}
+          </span>
           <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {deals.length}
           </span>
@@ -418,7 +440,7 @@ function DealCard({
     <div
       ref={isOverlay ? undefined : setNodeRef}
       style={isOverlay ? undefined : style}
-      className={`${panelClass} p-4 cursor-grab active:cursor-grabbing ${isOverlay ? 'rotate-2 scale-105 shadow-2xl' : ''}`}
+      className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${isOverlay ? 'scale-105 rotate-2 shadow-2xl' : ''}`}
       {...(isOverlay ? {} : { ...attributes, ...listeners })}
     >
       {stageColor && !isOverlay && (

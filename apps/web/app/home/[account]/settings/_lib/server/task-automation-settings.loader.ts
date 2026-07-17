@@ -2,14 +2,14 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { getGoogleCalendarConnectionStatus } from '~/lib/integrations/google-calendar/connection';
 import { getOptionalGoogleCalendarEnv } from '~/lib/integrations/google-calendar/env';
 import { listUserGoogleCalendars } from '~/lib/integrations/google-calendar/events';
 import {
-  loadAccountTaskAutomationSettings,
   type AccountTaskAutomationSettings,
+  loadAccountTaskAutomationSettings,
 } from '~/lib/recorder/task-automation-settings';
-import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 export type TaskAutomationGoogleAccount = {

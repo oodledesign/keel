@@ -1,6 +1,7 @@
 'use client';
 
 import { Suspense, useState } from 'react';
+
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
@@ -68,12 +69,7 @@ function BriefFormInner(props: {
   };
 
   if (jobId) {
-    return (
-      <BriefJobPoller
-        jobId={jobId}
-        briefsPath={props.briefsPath}
-      />
-    );
+    return <BriefJobPoller jobId={jobId} briefsPath={props.briefsPath} />;
   }
 
   return (
@@ -87,7 +83,12 @@ function BriefFormInner(props: {
 
       <div className="space-y-2">
         <Label htmlFor="brief-domain">Target domain</Label>
-        <Input id="brief-domain" value={props.projectDomain} readOnly disabled />
+        <Input
+          id="brief-domain"
+          value={props.projectDomain}
+          readOnly
+          disabled
+        />
       </div>
 
       <div className="space-y-2">
@@ -98,7 +99,7 @@ function BriefFormInner(props: {
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Leave empty to auto-discover best opportunity"
         />
-        <p className="text-xs text-muted-foreground">
+        <p className="text-muted-foreground text-xs">
           Leave blank in full mode to let Rankly find the best gap vs your
           competitors
         </p>
@@ -151,7 +152,9 @@ export function BriefForm(props: {
   briefsPath: string;
 }) {
   return (
-    <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+    <Suspense
+      fallback={<p className="text-muted-foreground text-sm">Loading…</p>}
+    >
       <BriefFormInner {...props} />
     </Suspense>
   );

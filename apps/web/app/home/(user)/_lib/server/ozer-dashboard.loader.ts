@@ -4,31 +4,31 @@ import { cache } from 'react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import pathsConfig from '~/config/paths.config';
+import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
+import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
+import { normalizeSpaceType } from '~/home/[account]/_lib/server/account-modules';
+import {
+  displayTitle,
+  resolveNoteAssignmentLabels,
+} from '~/home/[account]/_lib/workspace-content/context-resolve';
 import {
   isCalendarOverdueYmd,
   parseDueDateParts,
-  todayLocalYmd,
   toIsoDateString,
+  todayLocalYmd,
 } from '~/home/_lib/due-date-ymd';
 import {
+  type WorkspaceAccountRow,
   loadBusinessIdsForTeamAccount,
   loadUserWorkspaceAccounts,
-  type WorkspaceAccountRow,
 } from '~/home/_lib/server/workspace-scope';
-import { normalizeSpaceType } from '~/home/[account]/_lib/server/account-modules';
-import { displayTitle, resolveNoteAssignmentLabels } from '~/home/[account]/_lib/workspace-content/context-resolve';
-import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-
-import type { PersonalNavWorkspace } from '~/config/personal-account-navigation.config';
-import pathsConfig from '~/config/paths.config';
-import { getPersonalAccountId } from '~/lib/recorder/personal-account';
-
-import {
-  createPeopleService,
-} from '../../people/_lib/server/people.service';
 import { loadPersonalDashboardShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
+import { getPersonalAccountId } from '~/lib/recorder/personal-account';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+
+import { createPeopleService } from '../../people/_lib/server/people.service';
 
 // ─── Types ───────────────────────────────────────────────────────────
 
@@ -141,7 +141,9 @@ function formatDueLabel(due: string | null, isOverdue: boolean): string {
   });
 }
 
-function mapPriority(raw: string | null | undefined): PersonalDashboardTask['priority'] {
+function mapPriority(
+  raw: string | null | undefined,
+): PersonalDashboardTask['priority'] {
   const p = (raw ?? 'medium').toLowerCase();
   if (p === 'low' || p === 'high' || p === 'urgent') return p;
   return 'medium';
@@ -293,7 +295,7 @@ async function mapTasksToDashboard(
       workspaceSlug: ws?.slug ?? null,
       workspaceColor: isPersonal
         ? '#7C3AED'
-        : accent ?? workspaceColorForSpaceType(ws?.space_type ?? 'work'),
+        : (accent ?? workspaceColorForSpaceType(ws?.space_type ?? 'work')),
     };
   });
 }
@@ -312,7 +314,11 @@ async function countOpenTasksForAccount(
   const projectIds = (projectsData ?? []).map((p: { id: string }) => p.id);
   const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
   const jobIds = (jobsData ?? []).map((j: { id: string }) => j.id);
-  if (projectIds.length === 0 && clientIds.length === 0 && jobIds.length === 0) {
+  if (
+    projectIds.length === 0 &&
+    clientIds.length === 0 &&
+    jobIds.length === 0
+  ) {
     return 0;
   }
 
@@ -363,23 +369,20 @@ async function buildWorkspaceOverview(
             ? `account_id.eq.${w.id},business_id.in.(${bids.join(',')})`
             : `account_id.eq.${w.id}`;
 
-        const [
-          { count: jobCount },
-          openTasks,
-          { data: deals },
-        ] = await Promise.all([
-          client
-            .from('jobs')
-            .select('id', { count: 'exact', head: true })
-            .eq('account_id', w.id)
-            .not('status', 'in', '("completed","cancelled")'),
-          countOpenTasksForAccount(client, userId, w.id),
-          client
-            .from('pipeline_deals')
-            .select('value')
-            .or(pipelineOr)
-            .not('stage', 'in', '("won","lost")'),
-        ]);
+        const [{ count: jobCount }, openTasks, { data: deals }] =
+          await Promise.all([
+            client
+              .from('jobs')
+              .select('id', { count: 'exact', head: true })
+              .eq('account_id', w.id)
+              .not('status', 'in', '("completed","cancelled")'),
+            countOpenTasksForAccount(client, userId, w.id),
+            client
+              .from('pipeline_deals')
+              .select('value')
+              .or(pipelineOr)
+              .not('stage', 'in', '("won","lost")'),
+          ]);
 
         const pipelineValue = (deals ?? []).reduce(
           (sum, d) => sum + (Number((d as { value?: number }).value) || 0),
@@ -452,8 +455,9 @@ async function buildWorkspaceOverview(
           .limit(1)
           .maybeSingle();
 
-        const nextSession = (nextEvent as { scheduled_start_at?: string } | null)
-          ?.scheduled_start_at;
+        const nextSession = (
+          nextEvent as { scheduled_start_at?: string } | null
+        )?.scheduled_start_at;
         let nextLabel = '—';
         if (nextSession) {
           const d = new Date(nextSession);
@@ -632,7 +636,9 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
 
   const { data: focusRows } = await client
     .from('tasks')
-    .select('id, title, status, priority, due_date, project_id, client_id, account_id, job_id')
+    .select(
+      'id, title, status, priority, due_date, project_id, client_id, account_id, job_id',
+    )
     .eq('user_id', userId)
     .not('status', 'eq', 'done')
     .not('due_date', 'is', null)
@@ -642,7 +648,9 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
 
   const { data: upcomingRows } = await client
     .from('tasks')
-    .select('id, title, status, priority, due_date, project_id, client_id, account_id, job_id')
+    .select(
+      'id, title, status, priority, due_date, project_id, client_id, account_id, job_id',
+    )
     .eq('user_id', userId)
     .not('status', 'eq', 'done')
     .gt('due_date', today)
@@ -742,9 +750,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
             name,
             kind: 'anniversary',
             label:
-              diff === 0
-                ? 'Anniversary today'
-                : `Anniversary in ${diff} days`,
+              diff === 0 ? 'Anniversary today' : `Anniversary in ${diff} days`,
             href,
           });
         }
@@ -756,8 +762,9 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     peopleUpcoming = [];
   }
 
-  let dashboardShortcuts: Awaited<ReturnType<typeof loadPersonalDashboardShortcuts>> =
-    [];
+  let dashboardShortcuts: Awaited<
+    ReturnType<typeof loadPersonalDashboardShortcuts>
+  > = [];
   let includeWorkspaceTasks = true;
   try {
     [dashboardShortcuts, includeWorkspaceTasks] = await Promise.all([

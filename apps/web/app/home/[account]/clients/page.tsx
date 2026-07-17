@@ -4,15 +4,18 @@ import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import {
   getSpaceTypeFromAccount,
   isPropertyNavModuleEnabled,
   isWorkModuleEnabled,
 } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { loadClientsPageData } from './_lib/server/clients-page.loader';
 import { ClientsPageContent } from './_components/clients-page-content';
+import { loadClientsPageData } from './_lib/server/clients-page.loader';
 
 interface ClientsPageProps {
   params: Promise<{ account: string }>;

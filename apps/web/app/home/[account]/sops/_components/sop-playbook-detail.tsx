@@ -47,7 +47,10 @@ export function SopPlaybookDetail({
   const [runTitle, setRunTitle] = useState('');
   const [assignedToUserId, setAssignedToUserId] = useState<string | null>(null);
 
-  const libraryPath = pathsConfig.app.accountSops.replace('[account]', accountSlug);
+  const libraryPath = pathsConfig.app.accountSops.replace(
+    '[account]',
+    accountSlug,
+  );
 
   function startRun() {
     startTransition(async () => {
@@ -74,14 +77,21 @@ export function SopPlaybookDetail({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 lg:px-0">
-      <Link href={libraryPath} className="text-sm text-[var(--ozer-accent)] hover:underline">
+      <Link
+        href={libraryPath}
+        className="text-sm text-[var(--ozer-accent)] hover:underline"
+      >
         ← All SOPs
       </Link>
 
       <div className={`${panelClass} p-6`}>
-        <h1 className="text-xl font-bold text-[var(--workspace-shell-text)]">{playbook.title}</h1>
+        <h1 className="text-xl font-bold text-[var(--workspace-shell-text)]">
+          {playbook.title}
+        </h1>
         {playbook.description ? (
-          <p className="text-muted-foreground mt-2 text-sm">{playbook.description}</p>
+          <p className="text-muted-foreground mt-2 text-sm">
+            {playbook.description}
+          </p>
         ) : null}
         <p className="text-muted-foreground mt-3 text-xs">
           {steps.length} steps · {playbook.category ?? 'General'}
@@ -89,7 +99,10 @@ export function SopPlaybookDetail({
 
         <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-end">
           <div className="min-w-0 flex-1 space-y-1">
-            <label className="text-xs text-[var(--workspace-shell-text-muted)]" htmlFor="run-title">
+            <label
+              className="text-xs text-[var(--workspace-shell-text-muted)]"
+              htmlFor="run-title"
+            >
               Run title (optional)
             </label>
             <Input
@@ -129,7 +142,9 @@ export function SopPlaybookDetail({
 
       <div className={`${panelClass} divide-y divide-white/6`}>
         <div className="px-5 py-3">
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Process steps</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Process steps
+          </h2>
         </div>
         {steps.map((step, index) => (
           <div key={step.id} className="px-5 py-4">
@@ -137,7 +152,7 @@ export function SopPlaybookDetail({
               {index + 1}. {step.title}
             </p>
             {step.body_md ? (
-              <p className="text-muted-foreground mt-2 whitespace-pre-wrap text-sm">
+              <p className="text-muted-foreground mt-2 text-sm whitespace-pre-wrap">
                 {step.body_md}
               </p>
             ) : null}
@@ -148,7 +163,9 @@ export function SopPlaybookDetail({
       {runs.length > 0 ? (
         <div className={`${panelClass} divide-y divide-white/6`}>
           <div className="px-5 py-3">
-            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Past runs</h2>
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Past runs
+            </h2>
           </div>
           {runs.map((run) => (
             <Link
@@ -158,7 +175,9 @@ export function SopPlaybookDetail({
                 .replace('[runId]', run.id)}
               className="block px-5 py-4 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
-              <p className="font-medium text-[var(--workspace-shell-text)]">{run.title}</p>
+              <p className="font-medium text-[var(--workspace-shell-text)]">
+                {run.title}
+              </p>
               <p className="text-muted-foreground text-xs capitalize">
                 {run.status}
                 {run.period_label ? ` · ${run.period_label}` : ''}

@@ -2,14 +2,12 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import Script from 'next/script';
 import { usePathname } from 'next/navigation';
+import Script from 'next/script';
 
 import { useCookieConsent } from '@kit/ui/cookie-banner';
 
-import {
-  resolveGoogleAnalyticsMeasurementId,
-} from '~/config/analytics.config';
+import { resolveGoogleAnalyticsMeasurementId } from '~/config/analytics.config';
 
 declare global {
   interface Window {

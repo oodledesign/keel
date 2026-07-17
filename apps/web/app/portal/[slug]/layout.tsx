@@ -29,7 +29,9 @@ export default async function PortalSlugLayout({
       notFound();
     }
 
-    return <AgencyPortalShell branding={branding}>{children}</AgencyPortalShell>;
+    return (
+      <AgencyPortalShell branding={branding}>{children}</AgencyPortalShell>
+    );
   }
 
   const ctx = await loadClientPortalContext(slug);

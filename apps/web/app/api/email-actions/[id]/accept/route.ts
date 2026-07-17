@@ -1,7 +1,7 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const dynamic = 'force-dynamic';
 
@@ -98,7 +98,11 @@ export async function POST(request: Request, context: RouteContext) {
   };
 
   if (item.status !== 'suggested') {
-    return jsonErr('INVALID_STATE', 'Action item is not open for acceptance', 409);
+    return jsonErr(
+      'INVALID_STATE',
+      'Action item is not open for acceptance',
+      409,
+    );
   }
 
   let taskId: string;

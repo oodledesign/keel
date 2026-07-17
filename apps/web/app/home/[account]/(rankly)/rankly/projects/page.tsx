@@ -2,9 +2,10 @@ import Link from 'next/link';
 
 import { PageBody } from '@kit/ui/page';
 
-import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
+import pathsConfig from '~/config/paths.config';
+
 import { ModuleDataSection } from '../../../_components/module-data-section';
-import { RanklyProjectsManager } from '../../_components/rankly-projects-manager';
+import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import {
   loadRanklyClientImportOptions,
   loadRanklyKeywordCountsByProject,
@@ -13,7 +14,7 @@ import {
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
-import pathsConfig from '~/config/paths.config';
+import { RanklyProjectsManager } from '../../_components/rankly-projects-manager';
 
 type RanklyProjectsPageProps = {
   params: Promise<{

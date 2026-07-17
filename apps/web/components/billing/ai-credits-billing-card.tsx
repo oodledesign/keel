@@ -19,10 +19,10 @@ import { cn } from '@kit/ui/utils';
 
 import billingConfig from '~/config/billing.config';
 import {
-  OZER_AI_CREDIT_PACK_TIERS,
-  tierDescription,
   type AiCreditPurchaseMode,
+  OZER_AI_CREDIT_PACK_TIERS,
   type OzerAiCreditPackTier,
+  tierDescription,
 } from '~/lib/billing/ai-credit-packs';
 
 const EmbeddedCheckout = dynamic(
@@ -232,10 +232,12 @@ export function AiCreditsBillingCard(props: AiCreditsBillingCardProps) {
               onClick={() => {
                 startTransition(async () => {
                   try {
-                    const { checkoutToken: token } = await props.createCheckout({
-                      productId: selectedOffer.productId,
-                      planId: selectedOffer.planId,
-                    });
+                    const { checkoutToken: token } = await props.createCheckout(
+                      {
+                        productId: selectedOffer.productId,
+                        planId: selectedOffer.planId,
+                      },
+                    );
                     setCheckoutToken(token);
                   } catch {
                     setLoadError('Could not start checkout. Please try again.');

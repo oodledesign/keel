@@ -17,16 +17,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 
 import {
+  type ExtractedTaskReviewRow,
   commitWorkspaceExtractedTasks,
   extractWorkspaceTasksFromTranscript,
-  type ExtractedTaskReviewRow,
 } from '../_lib/server/task-ai-actions';
 
 type Props = {
@@ -39,13 +39,19 @@ type Props = {
   successRedirectHref?: string;
 };
 
-function assignValue(projectId: string | null, clientId: string | null): string {
+function assignValue(
+  projectId: string | null,
+  clientId: string | null,
+): string {
   if (projectId) return `p:${projectId}`;
   if (clientId) return `c:${clientId}`;
   return '__none__';
 }
 
-function parseAssignValue(v: string): { projectId: string | null; clientId: string | null } {
+function parseAssignValue(v: string): {
+  projectId: string | null;
+  clientId: string | null;
+} {
   if (v.startsWith('p:')) return { projectId: v.slice(2), clientId: null };
   if (v.startsWith('c:')) return { projectId: null, clientId: v.slice(2) };
   return { projectId: null, clientId: null };
@@ -137,7 +143,8 @@ export function ExtractWorkspaceTasksClient({
         );
         if (result.rows.length === 0) {
           toast.message('No tasks extracted', {
-            description: 'Try a longer email or transcript with clear action items.',
+            description:
+              'Try a longer email or transcript with clear action items.',
           });
         } else {
           toast.success(`Extracted ${result.rows.length} task group(s)`);
@@ -207,7 +214,7 @@ export function ExtractWorkspaceTasksClient({
       className={
         embedded
           ? 'space-y-6'
-          : 'mx-auto max-w-4xl space-y-8 px-4 pb-16 pt-6 text-[var(--workspace-shell-text)] md:px-6'
+          : 'mx-auto max-w-4xl space-y-8 px-4 pt-6 pb-16 text-[var(--workspace-shell-text)] md:px-6'
       }
     >
       {!embedded ? (
@@ -219,11 +226,13 @@ export function ExtractWorkspaceTasksClient({
             <ChevronLeft className="h-4 w-4" />
             Back to tasks
           </Link>
-          <h1 className="text-2xl font-bold tracking-tight">Extract tasks with AI</h1>
+          <h1 className="text-2xl font-bold tracking-tight">
+            Extract tasks with AI
+          </h1>
           <p className="mt-2 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
-            Paste an email thread or meeting transcript. We use Anthropic to suggest tasks,
-            subtasks, due dates, and project or client links. Review everything before they
-            are added to this workspace.
+            Paste an email thread or meeting transcript. We use Anthropic to
+            suggest tasks, subtasks, due dates, and project or client links.
+            Review everything before they are added to this workspace.
           </p>
         </div>
       ) : null}
@@ -241,14 +250,21 @@ export function ExtractWorkspaceTasksClient({
                 className="min-h-[220px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Requires <code className="text-[var(--workspace-shell-text-muted)]">ANTHROPIC_API_KEY</code> on the server.
-                Optional: <code className="text-[var(--workspace-shell-text-muted)]">ANTHROPIC_TASK_EXTRACT_MODEL</code>.
+                Requires{' '}
+                <code className="text-[var(--workspace-shell-text-muted)]">
+                  ANTHROPIC_API_KEY
+                </code>{' '}
+                on the server. Optional:{' '}
+                <code className="text-[var(--workspace-shell-text-muted)]">
+                  ANTHROPIC_TASK_EXTRACT_MODEL
+                </code>
+                .
               </p>
             </div>
           ) : (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              We&apos;ll analyse the transcript above and suggest actionable tasks for this
-              workspace.
+              We&apos;ll analyse the transcript above and suggest actionable
+              tasks for this workspace.
             </p>
           )}
           <div className="space-y-2">
@@ -266,7 +282,8 @@ export function ExtractWorkspaceTasksClient({
               className="min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Tell the AI how to group or phrase tasks before you review the suggestions.
+              Tell the AI how to group or phrase tasks before you review the
+              suggestions.
             </p>
           </div>
           <Button
@@ -297,24 +314,28 @@ export function ExtractWorkspaceTasksClient({
                 : 'If only the first group got a client or project from AI, we copy that link to the other groups—you can still change any row before adding.'}
             </p>
             <div className="flex flex-wrap gap-2">
-            <Button type="button" variant="outline" onClick={() => setRows(null)}>
-              Start over
-            </Button>
-            <Button
-              type="button"
-              onClick={commit}
-              disabled={committing}
-              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-            >
-              {committing ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Creating…
-                </>
-              ) : (
-                'Add selected tasks'
-              )}
-            </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setRows(null)}
+              >
+                Start over
+              </Button>
+              <Button
+                type="button"
+                onClick={commit}
+                disabled={committing}
+                className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+              >
+                {committing ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Creating…
+                  </>
+                ) : (
+                  'Add selected tasks'
+                )}
+              </Button>
             </div>
           </div>
 
@@ -329,38 +350,49 @@ export function ExtractWorkspaceTasksClient({
                     checked={row.included}
                     onCheckedChange={(v) => {
                       const checked = v === true;
-                      setRows((prev) =>
-                        prev?.map((r) =>
-                          r.id === row.id ? { ...r, included: checked } : r,
-                        ) ?? null,
+                      setRows(
+                        (prev) =>
+                          prev?.map((r) =>
+                            r.id === row.id ? { ...r, included: checked } : r,
+                          ) ?? null,
                       );
                     }}
                     className="mt-1"
                   />
                   <div className="min-w-0 flex-1 space-y-3">
                     <div>
-                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Parent task</Label>
+                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        Parent task
+                      </Label>
                       <Input
                         value={row.title}
                         onChange={(e) =>
-                          setRows((prev) =>
-                            prev?.map((r) =>
-                              r.id === row.id ? { ...r, title: e.target.value } : r,
-                            ) ?? null,
+                          setRows(
+                            (prev) =>
+                              prev?.map((r) =>
+                                r.id === row.id
+                                  ? { ...r, title: e.target.value }
+                                  : r,
+                              ) ?? null,
                           )
                         }
                         className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                       />
                     </div>
                     <div>
-                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Notes</Label>
+                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        Notes
+                      </Label>
                       <Textarea
                         value={row.notes ?? ''}
                         onChange={(e) =>
-                          setRows((prev) =>
-                            prev?.map((r) =>
-                              r.id === row.id ? { ...r, notes: e.target.value || null } : r,
-                            ) ?? null,
+                          setRows(
+                            (prev) =>
+                              prev?.map((r) =>
+                                r.id === row.id
+                                  ? { ...r, notes: e.target.value || null }
+                                  : r,
+                              ) ?? null,
                           )
                         }
                         className="mt-1 min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
@@ -368,15 +400,20 @@ export function ExtractWorkspaceTasksClient({
                     </div>
                     <div className="grid gap-3 sm:grid-cols-3">
                       <div>
-                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Link to</Label>
+                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                          Link to
+                        </Label>
                         <Select
                           value={assignValue(row.projectId, row.clientId)}
                           onValueChange={(v) => {
                             const { projectId, clientId } = parseAssignValue(v);
-                            setRows((prev) =>
-                              prev?.map((r) =>
-                                r.id === row.id ? { ...r, projectId, clientId } : r,
-                              ) ?? null,
+                            setRows(
+                              (prev) =>
+                                prev?.map((r) =>
+                                  r.id === row.id
+                                    ? { ...r, projectId, clientId }
+                                    : r,
+                                ) ?? null,
                             );
                           }}
                         >
@@ -399,36 +436,43 @@ export function ExtractWorkspaceTasksClient({
                         </Select>
                       </div>
                       <div>
-                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Due date</Label>
+                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                          Due date
+                        </Label>
                         <Input
                           type="date"
                           value={row.dueDate ?? ''}
                           onChange={(e) =>
-                            setRows((prev) =>
-                              prev?.map((r) =>
-                                r.id === row.id
-                                  ? { ...r, dueDate: e.target.value || null }
-                                  : r,
-                              ) ?? null,
+                            setRows(
+                              (prev) =>
+                                prev?.map((r) =>
+                                  r.id === row.id
+                                    ? { ...r, dueDate: e.target.value || null }
+                                    : r,
+                                ) ?? null,
                             )
                           }
                           className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                         />
                       </div>
                       <div>
-                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Priority</Label>
+                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                          Priority
+                        </Label>
                         <Select
                           value={row.priority}
                           onValueChange={(v) =>
-                            setRows((prev) =>
-                              prev?.map((r) =>
-                                r.id === row.id
-                                  ? {
-                                      ...r,
-                                      priority: v as ExtractedTaskReviewRow['priority'],
-                                    }
-                                  : r,
-                              ) ?? null,
+                            setRows(
+                              (prev) =>
+                                prev?.map((r) =>
+                                  r.id === row.id
+                                    ? {
+                                        ...r,
+                                        priority:
+                                          v as ExtractedTaskReviewRow['priority'],
+                                      }
+                                    : r,
+                                ) ?? null,
                             )
                           }
                         >
@@ -436,11 +480,13 @@ export function ExtractWorkspaceTasksClient({
                             <SelectValue />
                           </SelectTrigger>
                           <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                            {(['low', 'medium', 'high', 'urgent'] as const).map((p) => (
-                              <SelectItem key={p} value={p}>
-                                {p}
-                              </SelectItem>
-                            ))}
+                            {(['low', 'medium', 'high', 'urgent'] as const).map(
+                              (p) => (
+                                <SelectItem key={p} value={p}>
+                                  {p}
+                                </SelectItem>
+                              ),
+                            )}
                           </SelectContent>
                         </Select>
                       </div>
@@ -450,7 +496,7 @@ export function ExtractWorkspaceTasksClient({
 
                 {row.subtasks.length > 0 ? (
                   <div className="mt-4 space-y-3 pl-8">
-                    <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                    <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                       Subtasks
                     </p>
                     {row.subtasks.map((st) => (
@@ -462,17 +508,20 @@ export function ExtractWorkspaceTasksClient({
                           checked={st.included}
                           onCheckedChange={(v) => {
                             const checked = v === true;
-                            setRows((prev) =>
-                              prev?.map((r) =>
-                                r.id === row.id
-                                  ? {
-                                      ...r,
-                                      subtasks: r.subtasks.map((s) =>
-                                        s.id === st.id ? { ...s, included: checked } : s,
-                                      ),
-                                    }
-                                  : r,
-                              ) ?? null,
+                            setRows(
+                              (prev) =>
+                                prev?.map((r) =>
+                                  r.id === row.id
+                                    ? {
+                                        ...r,
+                                        subtasks: r.subtasks.map((s) =>
+                                          s.id === st.id
+                                            ? { ...s, included: checked }
+                                            : s,
+                                        ),
+                                      }
+                                    : r,
+                                ) ?? null,
                             );
                           }}
                           className="mt-1"
@@ -481,19 +530,20 @@ export function ExtractWorkspaceTasksClient({
                           <Input
                             value={st.title}
                             onChange={(e) =>
-                              setRows((prev) =>
-                                prev?.map((r) =>
-                                  r.id === row.id
-                                    ? {
-                                        ...r,
-                                        subtasks: r.subtasks.map((s) =>
-                                          s.id === st.id
-                                            ? { ...s, title: e.target.value }
-                                            : s,
-                                        ),
-                                      }
-                                    : r,
-                                ) ?? null,
+                              setRows(
+                                (prev) =>
+                                  prev?.map((r) =>
+                                    r.id === row.id
+                                      ? {
+                                          ...r,
+                                          subtasks: r.subtasks.map((s) =>
+                                            s.id === st.id
+                                              ? { ...s, title: e.target.value }
+                                              : s,
+                                          ),
+                                        }
+                                      : r,
+                                  ) ?? null,
                               )
                             }
                             className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
@@ -501,22 +551,23 @@ export function ExtractWorkspaceTasksClient({
                           <Textarea
                             value={st.notes ?? ''}
                             onChange={(e) =>
-                              setRows((prev) =>
-                                prev?.map((r) =>
-                                  r.id === row.id
-                                    ? {
-                                        ...r,
-                                        subtasks: r.subtasks.map((s) =>
-                                          s.id === st.id
-                                            ? {
-                                                ...s,
-                                                notes: e.target.value || null,
-                                              }
-                                            : s,
-                                        ),
-                                      }
-                                    : r,
-                                ) ?? null,
+                              setRows(
+                                (prev) =>
+                                  prev?.map((r) =>
+                                    r.id === row.id
+                                      ? {
+                                          ...r,
+                                          subtasks: r.subtasks.map((s) =>
+                                            s.id === st.id
+                                              ? {
+                                                  ...s,
+                                                  notes: e.target.value || null,
+                                                }
+                                              : s,
+                                          ),
+                                        }
+                                      : r,
+                                  ) ?? null,
                               )
                             }
                             placeholder="Subtask notes"
@@ -527,22 +578,24 @@ export function ExtractWorkspaceTasksClient({
                               type="date"
                               value={st.dueDate ?? ''}
                               onChange={(e) =>
-                                setRows((prev) =>
-                                  prev?.map((r) =>
-                                    r.id === row.id
-                                      ? {
-                                          ...r,
-                                          subtasks: r.subtasks.map((s) =>
-                                            s.id === st.id
-                                              ? {
-                                                  ...s,
-                                                  dueDate: e.target.value || null,
-                                                }
-                                              : s,
-                                          ),
-                                        }
-                                      : r,
-                                  ) ?? null,
+                                setRows(
+                                  (prev) =>
+                                    prev?.map((r) =>
+                                      r.id === row.id
+                                        ? {
+                                            ...r,
+                                            subtasks: r.subtasks.map((s) =>
+                                              s.id === st.id
+                                                ? {
+                                                    ...s,
+                                                    dueDate:
+                                                      e.target.value || null,
+                                                  }
+                                                : s,
+                                            ),
+                                          }
+                                        : r,
+                                    ) ?? null,
                                 )
                               }
                               className="w-40 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
@@ -550,23 +603,24 @@ export function ExtractWorkspaceTasksClient({
                             <Select
                               value={st.priority}
                               onValueChange={(v) =>
-                                setRows((prev) =>
-                                  prev?.map((r) =>
-                                    r.id === row.id
-                                      ? {
-                                          ...r,
-                                          subtasks: r.subtasks.map((s) =>
-                                            s.id === st.id
-                                              ? {
-                                                  ...s,
-                                                  priority:
-                                                    v as (typeof st)['priority'],
-                                                }
-                                              : s,
-                                          ),
-                                        }
-                                      : r,
-                                  ) ?? null,
+                                setRows(
+                                  (prev) =>
+                                    prev?.map((r) =>
+                                      r.id === row.id
+                                        ? {
+                                            ...r,
+                                            subtasks: r.subtasks.map((s) =>
+                                              s.id === st.id
+                                                ? {
+                                                    ...s,
+                                                    priority:
+                                                      v as (typeof st)['priority'],
+                                                  }
+                                                : s,
+                                            ),
+                                          }
+                                        : r,
+                                    ) ?? null,
                                 )
                               }
                             >
@@ -574,13 +628,13 @@ export function ExtractWorkspaceTasksClient({
                                 <SelectValue />
                               </SelectTrigger>
                               <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                                {(['low', 'medium', 'high', 'urgent'] as const).map(
-                                  (p) => (
-                                    <SelectItem key={p} value={p}>
-                                      {p}
-                                    </SelectItem>
-                                  ),
-                                )}
+                                {(
+                                  ['low', 'medium', 'high', 'urgent'] as const
+                                ).map((p) => (
+                                  <SelectItem key={p} value={p}>
+                                    {p}
+                                  </SelectItem>
+                                ))}
                               </SelectContent>
                             </Select>
                           </div>
@@ -597,10 +651,16 @@ export function ExtractWorkspaceTasksClient({
 
       {!embedded ? (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          Future: connect Gmail to scan new messages and surface suggested tasks for review
-          in Ozer — see{' '}
-          <code className="text-[var(--workspace-shell-text-muted)]">TASK_GMAIL_INGEST_ENABLED</code> placeholder in{' '}
-          <code className="text-[var(--workspace-shell-text-muted)]">lib/integrations/gmail-tasks-ingest.placeholder.ts</code>.
+          Future: connect Gmail to scan new messages and surface suggested tasks
+          for review in Ozer — see{' '}
+          <code className="text-[var(--workspace-shell-text-muted)]">
+            TASK_GMAIL_INGEST_ENABLED
+          </code>{' '}
+          placeholder in{' '}
+          <code className="text-[var(--workspace-shell-text-muted)]">
+            lib/integrations/gmail-tasks-ingest.placeholder.ts
+          </code>
+          .
         </p>
       ) : null}
     </div>

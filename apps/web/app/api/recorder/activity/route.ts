@@ -36,7 +36,9 @@ function badRequest(message: string) {
 }
 
 export async function POST(request: Request) {
-  const auth = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  const auth = await authenticateRecorderRequest(request, {
+    touchLastUsed: true,
+  });
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -65,7 +67,9 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'Failed to upload activity blocks';
+      error instanceof Error
+        ? error.message
+        : 'Failed to upload activity blocks';
 
     if (message.includes('not a member')) {
       return NextResponse.json({ error: message }, { status: 403 });
@@ -91,7 +95,10 @@ export async function POST(request: Request) {
       return badRequest(message);
     }
 
-    if (message.includes('activity_blocks') || message.includes('does not exist')) {
+    if (
+      message.includes('activity_blocks') ||
+      message.includes('does not exist')
+    ) {
       return NextResponse.json(
         {
           error:

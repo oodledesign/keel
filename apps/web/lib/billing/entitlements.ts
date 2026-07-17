@@ -6,16 +6,16 @@ import { isSuperAdmin } from '@kit/admin';
 
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
+import { accessLevelFromBillingStatus } from './account-access-matrix';
+import { loadAccountBilling } from './account-billing-lifecycle';
 import {
   EMAIL_ASSISTANT_ENTITLEMENT,
-  findPlanByStripePriceId,
-  requiredEntitlementForProfile,
   type OzerAddonKey,
   type OzerPersonalAddonKey,
   type OzerPlanDefinition,
+  findPlanByStripePriceId,
+  requiredEntitlementForProfile,
 } from './ozer-plan-catalog';
-import { accessLevelFromBillingStatus } from './account-access-matrix';
-import { loadAccountBilling } from './account-billing-lifecycle';
 
 export type AccountPlanLimitsRow = {
   account_id: string;
@@ -164,7 +164,10 @@ export async function canAccessPaidWorkspace(
   const lifecycleLevel = accessLevelFromBillingStatus(
     billing?.subscription_status,
   );
-  if (lifecycleLevel === 'full_access' || lifecycleLevel === 'restricted_access') {
+  if (
+    lifecycleLevel === 'full_access' ||
+    lifecycleLevel === 'restricted_access'
+  ) {
     return true;
   }
   if (lifecycleLevel === 'no_access') {
@@ -212,7 +215,11 @@ export async function canUseAddon(
     .eq('account_id', accountId);
 
   for (const sub of subs ?? []) {
-    if (!ACTIVE_SUB_STATUSES.has(String((sub as { status?: string }).status ?? ''))) {
+    if (
+      !ACTIVE_SUB_STATUSES.has(
+        String((sub as { status?: string }).status ?? ''),
+      )
+    ) {
       continue;
     }
 

@@ -1,5 +1,8 @@
 import { OZER_TEAM_OF_FOUR } from '~/lib/marketing/compare/ozer-baseline';
-import type { ComparisonConfig, SourcedValue } from '~/lib/marketing/compare/types';
+import type {
+  ComparisonConfig,
+  SourcedValue,
+} from '~/lib/marketing/compare/types';
 
 function c<T>(
   value: T,
@@ -143,7 +146,11 @@ export const hellobonsaiComparison: ComparisonConfig = {
         note: 'Replace with Bonsai’s published processing rates × your volume',
       },
     ],
-    competitorTotalGbp: c(2257, 'https://www.hellobonsai.com/pricing', '2026-07-04'),
+    competitorTotalGbp: c(
+      2257,
+      'https://www.hellobonsai.com/pricing',
+      '2026-07-04',
+    ),
     ozerLines: [
       {
         label: 'Business Team annual (up to 5 members)',
@@ -200,7 +207,8 @@ export const hellobonsaiComparison: ComparisonConfig = {
         'There is no single best alternative. Ozer is built for UK/EU studios that want flat team pricing, EU residency, and Mac meeting capture. Other tools may fit if you prioritise different modules or US-centric ecosystems.',
     },
     {
-      question: 'How does Hello Bonsai pricing compare to Ozer for four people?',
+      question:
+        'How does Hello Bonsai pricing compare to Ozer for four people?',
       answer:
         'Bonsai charges per user; Ozer Business Team is a flat workspace price for up to five members (£790/year on annual billing). Run the pricing maths section with verified Bonsai tiers and FX before deciding.',
     },

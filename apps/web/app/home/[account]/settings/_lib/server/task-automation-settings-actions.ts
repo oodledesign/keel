@@ -9,10 +9,13 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
-import { updateGoogleCalendarSelection, deleteGoogleCalendarConnection } from '~/lib/integrations/google-calendar/connection';
 import {
-  upsertAccountTaskAutomationSettings,
+  deleteGoogleCalendarConnection,
+  updateGoogleCalendarSelection,
+} from '~/lib/integrations/google-calendar/connection';
+import {
   type AccountTaskAutomationSettings,
+  upsertAccountTaskAutomationSettings,
 } from '~/lib/recorder/task-automation-settings';
 
 function revalidateTaskAutomationSurfaces(accountSlug: string) {
@@ -56,7 +59,11 @@ const saveSettingsSchema = z.object({
   meetingTasksMode: z.enum(['auto_publish', 'requires_moderation']),
   emailTasksMode: z.enum(['auto_publish', 'requires_moderation']),
   autoScheduleOnCalendar: z.boolean(),
-  calendarLeadTimeMinutes: z.number().int().min(0).max(24 * 60),
+  calendarLeadTimeMinutes: z
+    .number()
+    .int()
+    .min(0)
+    .max(24 * 60),
   workingHoursStart: z.string().regex(/^\d{2}:\d{2}$/),
   workingHoursEnd: z.string().regex(/^\d{2}:\d{2}$/),
   excludePersonalCalendarBusy: z.boolean(),
@@ -66,9 +73,11 @@ export const saveAccountTaskAutomationSettingsAction = enhanceAction(
   async (input, user) => {
     await assertWorkspaceMember(input.accountId, user.id);
 
-    const startMinutes = Number(input.workingHoursStart.slice(0, 2)) * 60 +
+    const startMinutes =
+      Number(input.workingHoursStart.slice(0, 2)) * 60 +
       Number(input.workingHoursStart.slice(3, 5));
-    const endMinutes = Number(input.workingHoursEnd.slice(0, 2)) * 60 +
+    const endMinutes =
+      Number(input.workingHoursEnd.slice(0, 2)) * 60 +
       Number(input.workingHoursEnd.slice(3, 5));
 
     if (endMinutes <= startMinutes) {

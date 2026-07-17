@@ -37,7 +37,10 @@ function renderBody(body?: string) {
 
   return body
     .split(/\n{2,}/)
-    .map((paragraph) => `<p style="margin:0 0 16px;color:${BRAND.text};font-size:16px;line-height:1.7;">${paragraph.trim()}</p>`)
+    .map(
+      (paragraph) =>
+        `<p style="margin:0 0 16px;color:${BRAND.text};font-size:16px;line-height:1.7;">${paragraph.trim()}</p>`,
+    )
     .join('');
 }
 

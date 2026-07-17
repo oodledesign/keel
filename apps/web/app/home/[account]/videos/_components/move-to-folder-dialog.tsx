@@ -86,9 +86,7 @@ export function MoveToFolderDialog(props: {
             disabled={pending || !props.video}
             onClick={() => {
               startTransition(async () => {
-                await props.onConfirm(
-                  folderId === NO_FOLDER ? null : folderId,
-                );
+                await props.onConfirm(folderId === NO_FOLDER ? null : folderId);
               });
             }}
           >

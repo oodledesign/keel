@@ -7,22 +7,22 @@ import {
   WorkspaceAccountsSelector,
   buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
-import { WorkspaceMobileNewMenu } from '~/components/workspace-shell/workspace-new-menu';
 import {
-  useWorkspaceMobileNav,
+  type MobileNavLink,
   WorkspaceMobileBottomNav,
   WorkspaceMobileHeaderBar,
   WorkspaceMobileMenu,
-  type MobileNavLink,
+  useWorkspaceMobileNav,
 } from '~/components/workspace-shell/workspace-mobile-nav';
-import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import { WorkspaceMobileNewMenu } from '~/components/workspace-shell/workspace-new-menu';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
-import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import pathsConfig from '~/config/paths.config';
-import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
-import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
-import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import type { UserWorkspace } from '~/home/(user)/_lib/server/load-user-workspace';
+import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
+import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
+import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
 
 type PersonalHomeMobileChromeProps = {
   workspace: UserWorkspace;
@@ -73,9 +73,7 @@ export function PersonalHomeMobileChrome({
           />
         </WorkspaceMobileHeaderBar>
 
-        <PullToRefresh className="min-w-0 lg:pb-0">
-          {children}
-        </PullToRefresh>
+        <PullToRefresh className="min-w-0 lg:pb-0">{children}</PullToRefresh>
       </div>
 
       <WorkspaceMobileMenu

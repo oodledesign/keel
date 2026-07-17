@@ -1,12 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
-import { enhanceAction } from '@kit/next/actions';
 import { isSuperAdmin } from '@kit/admin';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { logAdminAction } from '~/lib/admin/log-admin-action';
 
@@ -173,11 +174,7 @@ export const adminSetBillingExemptAction = enhanceAction(
 );
 
 export const adminApplyPlanLimitsAction = enhanceAction(
-  async (input: {
-    accountId: string;
-    productId: string;
-    planId: string;
-  }) => {
+  async (input: { accountId: string; productId: string; planId: string }) => {
     const { user } = await requireSuperAdmin();
     const admin = getSupabaseServerAdminClient();
 

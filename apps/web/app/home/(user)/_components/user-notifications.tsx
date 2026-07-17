@@ -1,6 +1,5 @@
-import featuresFlagConfig from '~/config/feature-flags.config';
-
 import { WorkspaceNotificationsPopover } from '~/components/workspace-shell/workspace-notifications-popover';
+import featuresFlagConfig from '~/config/feature-flags.config';
 
 export function UserNotifications(props: { userId: string }) {
   if (!featuresFlagConfig.enableNotifications) {

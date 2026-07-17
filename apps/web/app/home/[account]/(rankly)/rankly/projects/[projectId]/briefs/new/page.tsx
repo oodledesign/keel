@@ -1,16 +1,17 @@
-import Link from 'next/link';
-import { notFound } from 'next/navigation';
 import { Suspense } from 'react';
 
-import pathsConfig from '~/config/paths.config';
+import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
-import { BriefForm } from '../../../../../_components/briefs/brief-form';
-import { BriefJobPoller } from '../../../../../_components/briefs/brief-job-poller';
-import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
+import pathsConfig from '~/config/paths.config';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+
 import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { BriefForm } from '../../../../../_components/briefs/brief-form';
+import { BriefJobPoller } from '../../../../../_components/briefs/brief-job-poller';
+import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 
 type RanklyNewBriefPageProps = {
   params: Promise<{ account: string; projectId: string }>;
@@ -49,7 +50,9 @@ export default async function RanklyNewBriefPage({
       {jobId ? (
         <BriefJobPoller jobId={jobId} briefsPath={base} />
       ) : (
-        <Suspense fallback={<p className="text-sm text-muted-foreground">Loading…</p>}>
+        <Suspense
+          fallback={<p className="text-muted-foreground text-sm">Loading…</p>}
+        >
           <BriefForm
             accountId={accountId}
             projectId={projectId}
@@ -61,7 +64,7 @@ export default async function RanklyNewBriefPage({
 
       <Link
         href={base}
-        className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+        className="text-primary inline-block text-sm underline-offset-4 hover:underline"
       >
         ← Back to briefs
       </Link>

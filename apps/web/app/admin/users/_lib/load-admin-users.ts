@@ -40,7 +40,10 @@ function parsePage(raw: string | undefined): number {
 }
 
 export const loadAdminUsersPage = cache(
-  async (pageInput: number | string | undefined, query?: string): Promise<AdminUsersPageData> => {
+  async (
+    pageInput: number | string | undefined,
+    query?: string,
+  ): Promise<AdminUsersPageData> => {
     const page =
       typeof pageInput === 'number'
         ? Math.max(1, pageInput)
@@ -77,7 +80,10 @@ export const loadAdminUsersPage = cache(
           .eq('is_personal_account', true);
 
         if (accountsError) {
-          console.error('[admin-users] personal account lookup failed:', accountsError.message);
+          console.error(
+            '[admin-users] personal account lookup failed:',
+            accountsError.message,
+          );
         } else {
           personalAccountByUserId = new Map(
             (personalAccounts ?? []).map((row) => [

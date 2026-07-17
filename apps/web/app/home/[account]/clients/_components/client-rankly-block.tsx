@@ -1,19 +1,19 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
+
+import Link from 'next/link';
 
 import { Search } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
+import { RanklyProjectForm } from '~/home/[account]/(rankly)/_components/rankly-project-form';
 import type {
   RanklyClientImportOption,
   RanklyProjectRow,
 } from '~/home/[account]/_lib/server/rankly-account-data';
-
-import { RanklyProjectForm } from '~/home/[account]/(rankly)/_components/rankly-project-form';
 
 function projectHref(accountSlug: string, projectId: string) {
   return pathsConfig.app.accountRanklyProjectDetail
@@ -36,11 +36,17 @@ export function ClientRanklyBlock(props: {
       <div className="flex items-start gap-2">
         <Search className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Rankly SEO</p>
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            Rankly SEO
+          </p>
           {props.project ? (
             <>
-              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">{props.project.name}</p>
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">{props.project.domain}</p>
+              <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                {props.project.name}
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                {props.project.domain}
+              </p>
               <Link
                 href={`${projectHref(props.accountSlug, props.project.id)}#keyword-tracking`}
                 className="mt-2 inline-block text-sm text-[var(--ozer-accent-muted)] underline-offset-4 hover:underline"

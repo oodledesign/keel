@@ -1,5 +1,8 @@
 import { OZER_TEAM_OF_FOUR } from '~/lib/marketing/compare/ozer-baseline';
-import type { ComparisonConfig, SourcedValue } from '~/lib/marketing/compare/types';
+import type {
+  ComparisonConfig,
+  SourcedValue,
+} from '~/lib/marketing/compare/types';
 
 function c<T>(
   value: T,
@@ -138,7 +141,11 @@ export const withmoxieComparison: ComparisonConfig = {
         amountGbp: c(1160, 'https://www.withmoxie.com/pricing', '2026-07-04'),
       },
     ],
-    competitorTotalGbp: c(1539, 'https://www.withmoxie.com/pricing', '2026-07-04'),
+    competitorTotalGbp: c(
+      1539,
+      'https://www.withmoxie.com/pricing',
+      '2026-07-04',
+    ),
     ozerLines: [
       {
         label: 'Business Team annual (up to 5 members)',

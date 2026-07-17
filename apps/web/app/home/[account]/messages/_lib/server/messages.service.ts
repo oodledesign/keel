@@ -1,14 +1,15 @@
 import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import { createMessagesAccessService } from './messages-access.service';
 import {
-  loadAttachmentsForMessages,
-  listAttachableNotesAndDocs,
-  validateMessageAttachments,
   type MessageAttachmentInput,
   type MessageAttachmentItem,
+  listAttachableNotesAndDocs,
+  loadAttachmentsForMessages,
+  validateMessageAttachments,
 } from './messages-attachments.service';
-import { createMessagesAccessService } from './messages-access.service';
 import { loadClientDisplayByIds } from './messages-client-directory';
 import { createMessagesNotificationsService } from './messages-notifications.service';
 
@@ -54,21 +55,30 @@ export function createMessagesService() {
 class MessagesService {
   private readonly admin: any = getSupabaseServerAdminClient();
   private readonly access = createMessagesAccessService(this.admin);
-  private readonly notifications = createMessagesNotificationsService(this.admin);
+  private readonly notifications = createMessagesNotificationsService(
+    this.admin,
+  );
 
   private async loadThreadParticipants(threadIds: string[]) {
-    if (threadIds.length === 0) return new Map<string, MessageThreadListItem['participants']>();
+    if (threadIds.length === 0)
+      return new Map<string, MessageThreadListItem['participants']>();
 
     const { data: rows } = await this.admin
       .from('chat_thread_participants')
-      .select('thread_id, participant_kind, participant_user_id, participant_client_id')
+      .select(
+        'thread_id, participant_kind, participant_user_id, participant_client_id',
+      )
       .in('thread_id', threadIds);
 
     const userIds = Array.from(
-      new Set((rows ?? []).map((r: any) => r.participant_user_id).filter(Boolean)),
+      new Set(
+        (rows ?? []).map((r: any) => r.participant_user_id).filter(Boolean),
+      ),
     ) as string[];
     const clientIds = Array.from(
-      new Set((rows ?? []).map((r: any) => r.participant_client_id).filter(Boolean)),
+      new Set(
+        (rows ?? []).map((r: any) => r.participant_client_id).filter(Boolean),
+      ),
     ) as string[];
 
     const [usersRes, clientMap] = await Promise.all([
@@ -91,7 +101,8 @@ class MessagesService {
           kind: 'member',
           user_id: row.participant_user_id,
           client_id: null,
-          display_name: userMap.get(row.participant_user_id)?.email ?? 'Team member',
+          display_name:
+            userMap.get(row.participant_user_id)?.email ?? 'Team member',
           email: userMap.get(row.participant_user_id)?.email ?? null,
         });
       } else {
@@ -110,7 +121,11 @@ class MessagesService {
     return out;
   }
 
-  async listThreads(params: { accountId: string; userId: string; limit?: number }) {
+  async listThreads(params: {
+    accountId: string;
+    userId: string;
+    limit?: number;
+  }) {
     await this.access.assertAccountMember(params.accountId, params.userId);
 
     const limit = params.limit ?? 20;
@@ -128,7 +143,9 @@ class MessagesService {
 
     const { data: threads } = await this.admin
       .from('chat_threads')
-      .select('id, account_id, type, title, job_id, created_at, updated_at, last_message_at')
+      .select(
+        'id, account_id, type, title, job_id, created_at, updated_at, last_message_at',
+      )
       .eq('account_id', params.accountId)
       .in('id', threadIds)
       .order('last_message_at', { ascending: false })
@@ -155,13 +172,18 @@ class MessagesService {
         .maybeSingle();
 
       let attachmentPreview: string | null = null;
-      if (latestMessage?.id && !latestMessage.body?.trim() && !latestMessage.image_url) {
+      if (
+        latestMessage?.id &&
+        !latestMessage.body?.trim() &&
+        !latestMessage.image_url
+      ) {
         const { count } = await this.admin
           .from('chat_message_attachments')
           .select('id', { count: 'exact', head: true })
           .eq('message_id', latestMessage.id);
         if ((count ?? 0) > 0) {
-          attachmentPreview = (count ?? 0) === 1 ? 'Attachment' : `${count} attachments`;
+          attachmentPreview =
+            (count ?? 0) === 1 ? 'Attachment' : `${count} attachments`;
         }
       }
 
@@ -225,9 +247,10 @@ class MessagesService {
       senderIds.length > 0
         ? await this.admin.auth.admin.listUsers({ page: 1, perPage: 1000 })
         : { data: { users: [] as any[] } };
-    const userById = new Map<string, { email?: string | null; user_metadata?: Record<string, unknown> | null }>(
-      (usersRes.data?.users ?? []).map((u: any) => [u.id as string, u]),
-    );
+    const userById = new Map<
+      string,
+      { email?: string | null; user_metadata?: Record<string, unknown> | null }
+    >((usersRes.data?.users ?? []).map((u: any) => [u.id as string, u]));
 
     return rows.map((r) => {
       const u = userById.get(r.sender_user_id);
@@ -254,7 +277,9 @@ class MessagesService {
         ...r,
         sender_label: label,
         sender_avatar_url:
-          typeof avatarRaw === 'string' && avatarRaw.length > 0 ? avatarRaw : null,
+          typeof avatarRaw === 'string' && avatarRaw.length > 0
+            ? avatarRaw
+            : null,
         attachments: attachmentsByMessageId.get(r.id) ?? [],
       };
     });
@@ -300,7 +325,11 @@ class MessagesService {
 
     const { data } = await query;
     const ordered = (data ?? []).reverse();
-    return this.enrichChatMessages(ordered, params.threadId, params.accountSlug);
+    return this.enrichChatMessages(
+      ordered,
+      params.threadId,
+      params.accountSlug,
+    );
   }
 
   async createThread(params: {
@@ -328,17 +357,20 @@ class MessagesService {
 
     // If selected clients have portal logins, include their user memberships
     // as member participants so they can access/read in-app chats.
-    const clientDisplayById = await loadClientDisplayByIds(this.admin, clientIds);
+    const clientDisplayById = await loadClientDisplayByIds(
+      this.admin,
+      clientIds,
+    );
 
     const loginClientUserIds =
       clientIds.length > 0
-        ? (
+        ? ((
             await this.admin
               .from('accounts_memberships')
               .select('user_id')
               .eq('account_id', params.accountId)
               .eq('account_role', 'client')
-          ).data ?? []
+          ).data ?? [])
         : [];
 
     const selectedClientEmailSet = new Set(
@@ -364,10 +396,7 @@ class MessagesService {
     }
 
     const finalMemberIds = Array.from(
-      new Set([
-        ...memberUserIds,
-        ...mappedClientUserIds,
-      ]),
+      new Set([...memberUserIds, ...mappedClientUserIds]),
     );
 
     const { data: thread, error } = await this.admin
@@ -671,5 +700,4 @@ class MessagesService {
     if (error) throw error;
     return { ok: true };
   }
-
 }

@@ -1,11 +1,12 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
+import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
+import { isBusinessLiteWorkspace } from '~/lib/billing/is-business-lite-workspace';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
-import { isBusinessLiteWorkspace } from '~/lib/billing/is-business-lite-workspace';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { BusinessLiteDashboard } from './_components/business-lite-dashboard';
 import { DashboardPageContent } from './_components/dashboard-page-content';
@@ -13,15 +14,17 @@ import { FamilyDashboard } from './_components/family-dashboard';
 import { HomegroupDashboard } from './_components/homegroup-dashboard';
 import { PropertyBusinessDashboard } from './_components/property-business-dashboard';
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from './_lib/role-access';
-import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
-import { spaceTypeFromProfile } from './_lib/workspace-profile';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from './_lib/role-access';
 import { isPropertyNavModuleEnabled } from './_lib/server/account-modules';
-import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
 import { loadCommunityDashboardData } from './_lib/server/community-dashboard.loader';
+import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
 import { loadFamilyDashboardData } from './_lib/server/family-dashboard.loader';
 import { loadPropertyDashboardData } from './_lib/server/property-dashboard.loader';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
+import { spaceTypeFromProfile } from './_lib/workspace-profile';
 
 interface TeamAccountHomePageProps {
   params: Promise<{ account: string }>;
@@ -53,8 +56,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
 
   const spaceType = spaceTypeFromProfile(workspace.workspaceProfile);
   const accountLabel =
-    (workspace.account as { name?: string | null }).name?.trim() ||
-    account;
+    (workspace.account as { name?: string | null }).name?.trim() || account;
   const accountId = (workspace.account as { id: string }).id;
 
   const billingClient = getSupabaseServerClient();
@@ -137,7 +139,9 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   }
 
   if (isLiteWorkspace) {
-    const userRecord = workspace.user as { user_metadata?: { first_name?: string } };
+    const userRecord = workspace.user as {
+      user_metadata?: { first_name?: string };
+    };
     const userFirstName =
       typeof userRecord?.user_metadata?.first_name === 'string'
         ? userRecord.user_metadata.first_name.trim()

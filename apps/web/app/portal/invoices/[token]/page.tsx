@@ -1,6 +1,5 @@
-import { notFound } from 'next/navigation';
-
 import Link from 'next/link';
+import { notFound } from 'next/navigation';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -13,7 +12,11 @@ import { PortalInvoiceView } from './portal-invoice-view';
 
 interface PortalInvoicePageProps {
   params: Promise<{ token: string }>;
-  searchParams: Promise<{ paid?: string; cancelled?: string; session_id?: string }>;
+  searchParams: Promise<{
+    paid?: string;
+    cancelled?: string;
+    session_id?: string;
+  }>;
 }
 
 async function getInvoiceByToken(token: string) {
@@ -32,7 +35,9 @@ async function getInvoiceByToken(token: string) {
   const [{ data: items }, { data: clientData }] = await Promise.all([
     client
       .from('invoice_items')
-      .select('description, description_detail, quantity, unit_price_pence, total_pence')
+      .select(
+        'description, description_detail, quantity, unit_price_pence, total_pence',
+      )
       .eq('invoice_id', invoice.id)
       .order('sort_order', { ascending: true }),
     invoice.client_id
@@ -81,7 +86,10 @@ export default async function PortalInvoicePage({
 
   if (paid === '1' && session_id) {
     try {
-      const result = await reconcileInvoicePaymentByCheckoutSession(session_id, token);
+      const result = await reconcileInvoicePaymentByCheckoutSession(
+        session_id,
+        token,
+      );
       paymentReconciled = result.paid;
     } catch {
       paymentReconciled = false;
@@ -91,8 +99,12 @@ export default async function PortalInvoicePage({
   const invoice = await getInvoiceByToken(token);
   if (!invoice) notFound();
 
-  const accountId = String((invoice as { account_id?: string }).account_id ?? '');
-  const paymentSettings = accountId ? await loadPaymentSettingsForPortal(accountId) : null;
+  const accountId = String(
+    (invoice as { account_id?: string }).account_id ?? '',
+  );
+  const paymentSettings = accountId
+    ? await loadPaymentSettingsForPortal(accountId)
+    : null;
 
   const invoiceStatus = String((invoice as { status?: string }).status ?? '');
   const isPaid = invoiceStatus === 'paid';
@@ -101,7 +113,10 @@ export default async function PortalInvoicePage({
   return (
     <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
       <div className="mb-6">
-        <Link href="/" className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+        <Link
+          href="/"
+          className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        >
           ← Back to home
         </Link>
       </div>

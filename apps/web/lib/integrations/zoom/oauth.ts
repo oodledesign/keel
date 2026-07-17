@@ -58,7 +58,9 @@ export function verifyZoomState(token: string) {
   return verifyConferencingOAuthState(token, 'zoom');
 }
 
-export async function exchangeZoomCode(code: string): Promise<ZoomTokenResponse> {
+export async function exchangeZoomCode(
+  code: string,
+): Promise<ZoomTokenResponse> {
   const env = getZoomOAuthEnv();
   const basic = Buffer.from(`${env.clientId}:${env.clientSecret}`).toString(
     'base64',

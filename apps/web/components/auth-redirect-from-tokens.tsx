@@ -1,7 +1,8 @@
 'use client';
 
-import { useRouter, usePathname } from 'next/navigation';
 import { useEffect, useRef } from 'react';
+
+import { usePathname, useRouter } from 'next/navigation';
 
 /**
  * If the user lands on the marketing home (/) with Supabase auth tokens in the URL
@@ -21,8 +22,7 @@ export function AuthRedirectFromTokens() {
     const hash = window.location.hash.slice(1);
     const hashParams = new URLSearchParams(hash);
 
-    const tokenHash =
-      params.get('token_hash') ?? hashParams.get('token_hash');
+    const tokenHash = params.get('token_hash') ?? hashParams.get('token_hash');
     const type = params.get('type') ?? hashParams.get('type');
 
     if (tokenHash && type) {

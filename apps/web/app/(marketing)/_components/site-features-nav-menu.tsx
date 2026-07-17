@@ -9,7 +9,10 @@ import {
 } from '@kit/ui/navigation-menu';
 import { cn } from '@kit/ui/utils';
 
-import { marketingNavLinkActive, marketingNavTrigger } from '~/lib/marketing/marketing-ui';
+import {
+  marketingNavLinkActive,
+  marketingNavTrigger,
+} from '~/lib/marketing/marketing-ui';
 
 import { SiteFeaturesNavPanel } from './site-features-nav-panel';
 

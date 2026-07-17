@@ -38,11 +38,7 @@ export function formatSonioxTokens(
       continue;
     }
 
-    if (
-      labelSpeakers &&
-      token.speaker &&
-      token.speaker !== currentSpeaker
-    ) {
+    if (labelSpeakers && token.speaker && token.speaker !== currentSpeaker) {
       currentSpeaker = token.speaker;
       if (transcript.length > 0) {
         transcript += '\n\n';

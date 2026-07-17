@@ -3,13 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import {
-  Bell,
-  CalendarClock,
-  CalendarRange,
-  Link2,
-  Plug,
-} from 'lucide-react';
+import { Bell, CalendarClock, CalendarRange, Link2, Plug } from 'lucide-react';
 
 import { Tabs, TabsList, TabsTrigger } from '@kit/ui/tabs';
 

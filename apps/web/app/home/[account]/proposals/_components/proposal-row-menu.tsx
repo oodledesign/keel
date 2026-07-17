@@ -4,7 +4,14 @@ import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Copy, Download, Loader2, MoreVertical, Send, Trash2 } from 'lucide-react';
+import {
+  Copy,
+  Download,
+  Loader2,
+  MoreVertical,
+  Send,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -45,7 +52,11 @@ export function ProposalRowMenu({
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
 
-  const run = async (key: string, fn: () => Promise<unknown>, success: string) => {
+  const run = async (
+    key: string,
+    fn: () => Promise<unknown>,
+    success: string,
+  ) => {
     setLoading(key);
     try {
       await fn();
@@ -66,7 +77,11 @@ export function ProposalRowMenu({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+        >
           {loading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
@@ -74,14 +89,23 @@ export function ProposalRowMenu({
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-        <DropdownMenuItem onClick={() => router.push(editPath)}>Open</DropdownMenuItem>
+      <DropdownMenuContent
+        align="end"
+        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+      >
+        <DropdownMenuItem onClick={() => router.push(editPath)}>
+          Open
+        </DropdownMenuItem>
         {canEditProposals ? (
           <DropdownMenuItem
             onClick={() =>
               run(
                 'duplicate',
-                () => duplicateProposalAction({ accountId, proposalId: proposal.id }),
+                () =>
+                  duplicateProposalAction({
+                    accountId,
+                    proposalId: proposal.id,
+                  }),
                 'Proposal duplicated',
               )
             }
@@ -91,7 +115,11 @@ export function ProposalRowMenu({
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem asChild>
-          <a href={`/api/proposals/pdf?proposalId=${proposal.id}`} target="_blank" rel="noreferrer">
+          <a
+            href={`/api/proposals/pdf?proposalId=${proposal.id}`}
+            target="_blank"
+            rel="noreferrer"
+          >
             <Download className="mr-2 h-4 w-4" />
             Export to PDF
           </a>
@@ -101,7 +129,8 @@ export function ProposalRowMenu({
             onClick={() =>
               run(
                 'resend',
-                () => resendProposalAction({ accountId, proposalId: proposal.id }),
+                () =>
+                  resendProposalAction({ accountId, proposalId: proposal.id }),
                 'Proposal resent',
               )
             }

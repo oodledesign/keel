@@ -2,11 +2,16 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { dfsPost, type DfsResponse } from '~/lib/dataforseo/client';
 import { countryToLocationCode, normaliseUrl } from '~/lib/clusters/utils';
+import { type DfsResponse, dfsPost } from '~/lib/dataforseo/client';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
-import type { AiOverviewData, RelatedKeyword, SerpData, SerpOrganicResult } from './types';
+import type {
+  AiOverviewData,
+  RelatedKeyword,
+  SerpData,
+  SerpOrganicResult,
+} from './types';
 
 const QUESTION_PREFIX =
   /^(who|what|when|where|why|how|can|should|is|are|do|does|will)\b/i;
@@ -24,10 +29,14 @@ function parseSerpItems(json: DfsResponse): SerpData {
     const type = String(item.type ?? '');
     if (type === 'organic') {
       organic.push({
-        rank: Number(item.rank_group ?? item.rank_absolute ?? organic.length + 1),
+        rank: Number(
+          item.rank_group ?? item.rank_absolute ?? organic.length + 1,
+        ),
         title: String(item.title ?? ''),
         url: String(item.url ?? ''),
-        domain: String(item.domain ?? normaliseUrl(String(item.url ?? '')).split('/')[0]),
+        domain: String(
+          item.domain ?? normaliseUrl(String(item.url ?? '')).split('/')[0],
+        ),
       });
     } else if (type) {
       features.add(type);
@@ -105,25 +114,29 @@ export async function fetchRelatedKeywords(
     (json.tasks?.[0]?.result?.[0] as { items?: Array<Record<string, unknown>> })
       ?.items ?? [];
 
-  return items.map((item) => ({
-    keyword: String(item.keyword ?? ''),
-    volume: Number(
-      (item.keyword_info as Record<string, unknown> | undefined)?.search_volume ?? 0,
-    ),
-    kd: Number(
-      (item.keyword_properties as Record<string, unknown> | undefined)
-        ?.keyword_difficulty ?? 0,
-    ),
-  })).filter((row) => row.keyword);
+  return items
+    .map((item) => ({
+      keyword: String(item.keyword ?? ''),
+      volume: Number(
+        (item.keyword_info as Record<string, unknown> | undefined)
+          ?.search_volume ?? 0,
+      ),
+      kd: Number(
+        (item.keyword_properties as Record<string, unknown> | undefined)
+          ?.keyword_difficulty ?? 0,
+      ),
+    }))
+    .filter((row) => row.keyword);
 }
 
 export async function fetchQuestionKeywords(
   keyword: string,
   locationCode: number,
 ): Promise<string[]> {
-  const json = await dfsPost('/dataforseo_labs/google/keyword_suggestions/live', [
-    { keyword, location_code: locationCode, language_code: 'en', limit: 30 },
-  ]);
+  const json = await dfsPost(
+    '/dataforseo_labs/google/keyword_suggestions/live',
+    [{ keyword, location_code: locationCode, language_code: 'en', limit: 30 }],
+  );
 
   const items =
     (json.tasks?.[0]?.result?.[0] as { items?: Array<Record<string, unknown>> })
@@ -147,8 +160,11 @@ export async function fetchAiOverview(
       | { items?: Array<Record<string, unknown>> }
       | undefined;
     const references =
-      (result?.items?.[0] as { references?: Array<Record<string, unknown>> } | undefined)
-        ?.references ?? [];
+      (
+        result?.items?.[0] as
+          | { references?: Array<Record<string, unknown>> }
+          | undefined
+      )?.references ?? [];
 
     if (!references.length) {
       return { triggered: false, citedDomains: [], references: [] };
@@ -156,7 +172,9 @@ export async function fetchAiOverview(
 
     const parsed = references.map((ref) => ({
       url: String(ref.url ?? ''),
-      domain: String(ref.domain ?? normaliseUrl(String(ref.url ?? '')).split('/')[0]),
+      domain: String(
+        ref.domain ?? normaliseUrl(String(ref.url ?? '')).split('/')[0],
+      ),
       title: ref.title ? String(ref.title) : undefined,
     }));
 

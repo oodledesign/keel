@@ -1,16 +1,15 @@
 import { redirect } from 'next/navigation';
 
-import { createInvoicePaymentSettingsService } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import {
-  BUSINESS_WORKSPACE_SPACE_TYPES,
-} from '../../_lib/server/workspace-route-guard';
+import { createInvoicePaymentSettingsService } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
+
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
+import { BUSINESS_WORKSPACE_SPACE_TYPES } from '../../_lib/server/workspace-route-guard';
 import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 import { PaymentSettingsForm } from './_components/payment-settings-form';
 
@@ -20,7 +19,9 @@ interface PaymentSettingsPageProps {
   params: Promise<{ account: string }>;
 }
 
-export default async function PaymentSettingsPage(props: PaymentSettingsPageProps) {
+export default async function PaymentSettingsPage(
+  props: PaymentSettingsPageProps,
+) {
   const { account } = await props.params;
   const workspace = await loadTeamWorkspace(account);
   redirectIfSpaceNotIn(workspace, account, BUSINESS_WORKSPACE_SPACE_TYPES);

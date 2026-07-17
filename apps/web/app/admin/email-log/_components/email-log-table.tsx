@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -191,73 +192,101 @@ export function EmailLogTable({
           transactionalRows={transactionalRows}
         />
       ) : (
-      <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-        <Table>
-          <TableHeader>
-            <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Sent</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Type</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Business</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Recipient</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Subject</TableHead>
-              <TableHead className="text-[var(--workspace-shell-text-muted)]">Status</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {rows.length === 0 ? (
-              <TableRow className="border-[color:var(--workspace-shell-border)]">
-                <TableCell colSpan={6} className="py-10 text-center text-[var(--workspace-shell-text-muted)]">
-                  No emails logged yet.
-                </TableCell>
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <Table>
+            <TableHeader>
+              <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Sent
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Type
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Business
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Recipient
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Subject
+                </TableHead>
+                <TableHead className="text-[var(--workspace-shell-text-muted)]">
+                  Status
+                </TableHead>
               </TableRow>
-            ) : (
-              rows.map((row) => (
-                <TableRow key={row.id} className="border-[color:var(--workspace-shell-border)]">
-                  <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
-                    {formatUkDateTimeMedium(row.created_at)}
-                  </TableCell>
-                  <TableCell className="capitalize text-[var(--workspace-shell-text-muted)]">
-                    {formatEmailType(row.email_type)}
-                  </TableCell>
-                  <TableCell className="text-[var(--workspace-shell-text-muted)]">
-                    {row.account_name ? (
-                      <div>
-                        <p>{row.account_name}</p>
-                        {row.account_slug ? (
-                          <p className="text-xs text-[var(--workspace-shell-text-muted)]">/{row.account_slug}</p>
-                        ) : null}
-                      </div>
-                    ) : (
-                      '—'
-                    )}
-                  </TableCell>
-                  <TableCell className="text-[var(--workspace-shell-text-muted)]">{row.recipient_email}</TableCell>
-                  <TableCell className="max-w-xs truncate text-[var(--workspace-shell-text-muted)]" title={row.subject}>
-                    {row.subject}
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant="outline"
-                      className={
-                        row.status === 'sent'
-                          ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
-                          : 'border-rose-400/40 bg-rose-500/10 text-rose-200'
-                      }
-                    >
-                      {row.status}
-                    </Badge>
-                    {row.error_message ? (
-                      <p className="mt-1 max-w-xs truncate text-xs text-rose-300/80" title={row.error_message}>
-                        {row.error_message}
-                      </p>
-                    ) : null}
+            </TableHeader>
+            <TableBody>
+              {rows.length === 0 ? (
+                <TableRow className="border-[color:var(--workspace-shell-border)]">
+                  <TableCell
+                    colSpan={6}
+                    className="py-10 text-center text-[var(--workspace-shell-text-muted)]"
+                  >
+                    No emails logged yet.
                   </TableCell>
                 </TableRow>
-              ))
-            )}
-          </TableBody>
-        </Table>
-      </div>
+              ) : (
+                rows.map((row) => (
+                  <TableRow
+                    key={row.id}
+                    className="border-[color:var(--workspace-shell-border)]"
+                  >
+                    <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
+                      {formatUkDateTimeMedium(row.created_at)}
+                    </TableCell>
+                    <TableCell className="text-[var(--workspace-shell-text-muted)] capitalize">
+                      {formatEmailType(row.email_type)}
+                    </TableCell>
+                    <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                      {row.account_name ? (
+                        <div>
+                          <p>{row.account_name}</p>
+                          {row.account_slug ? (
+                            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                              /{row.account_slug}
+                            </p>
+                          ) : null}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
+                    </TableCell>
+                    <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                      {row.recipient_email}
+                    </TableCell>
+                    <TableCell
+                      className="max-w-xs truncate text-[var(--workspace-shell-text-muted)]"
+                      title={row.subject}
+                    >
+                      {row.subject}
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant="outline"
+                        className={
+                          row.status === 'sent'
+                            ? 'border-emerald-400/40 bg-emerald-500/10 text-emerald-200'
+                            : 'border-rose-400/40 bg-rose-500/10 text-rose-200'
+                        }
+                      >
+                        {row.status}
+                      </Badge>
+                      {row.error_message ? (
+                        <p
+                          className="mt-1 max-w-xs truncate text-xs text-rose-300/80"
+                          title={row.error_message}
+                        >
+                          {row.error_message}
+                        </p>
+                      ) : null}
+                    </TableCell>
+                  </TableRow>
+                ))
+              )}
+            </TableBody>
+          </Table>
+        </div>
       )}
 
       {view === 'individual' && pageCount > 1 ? (
@@ -301,30 +330,54 @@ function GroupedEmailLogTable({
       <Table>
         <TableHeader>
           <TableRow className="border-[color:var(--workspace-shell-border)] hover:bg-transparent">
-            <TableHead className="text-[var(--workspace-shell-text-muted)]">Date sent</TableHead>
-            <TableHead className="text-[var(--workspace-shell-text-muted)]">Type</TableHead>
-            <TableHead className="text-[var(--workspace-shell-text-muted)]">Campaign / Subject</TableHead>
-            <TableHead className="text-[var(--workspace-shell-text-muted)]">Recipient list</TableHead>
-            <TableHead className="text-[var(--workspace-shell-text-muted)]">Total sent</TableHead>
-            <TableHead className="text-[var(--workspace-shell-text-muted)]">Actions</TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">
+              Date sent
+            </TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">
+              Type
+            </TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">
+              Campaign / Subject
+            </TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">
+              Recipient list
+            </TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">
+              Total sent
+            </TableHead>
+            <TableHead className="text-[var(--workspace-shell-text-muted)]">
+              Actions
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {campaigns.map((campaign) => (
-            <TableRow key={`campaign-${campaign.id}`} className="border-[color:var(--workspace-shell-border)]">
+            <TableRow
+              key={`campaign-${campaign.id}`}
+              className="border-[color:var(--workspace-shell-border)]"
+            >
               <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
-                {campaign.sent_at ? formatUkDateTimeMedium(campaign.sent_at) : '—'}
+                {campaign.sent_at
+                  ? formatUkDateTimeMedium(campaign.sent_at)
+                  : '—'}
               </TableCell>
               <TableCell>
-                <Badge variant="outline" className="border-emerald-400/40 bg-emerald-500/10 text-emerald-200">
+                <Badge
+                  variant="outline"
+                  className="border-emerald-400/40 bg-emerald-500/10 text-emerald-200"
+                >
                   Campaign
                 </Badge>
               </TableCell>
-              <TableCell className="font-medium text-[var(--workspace-shell-text)]">{campaign.title}</TableCell>
+              <TableCell className="font-medium text-[var(--workspace-shell-text)]">
+                {campaign.title}
+              </TableCell>
               <TableCell className="text-[var(--workspace-shell-text-muted)]">
                 {campaign.recipient_list.replace(/_/g, ' ')}
               </TableCell>
-              <TableCell className="text-[var(--workspace-shell-text-muted)]">{campaign.total_sent}</TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                {campaign.total_sent}
+              </TableCell>
               <TableCell>
                 <Link
                   href={`/admin/email-marketing/${campaign.id}`}
@@ -337,25 +390,40 @@ function GroupedEmailLogTable({
           ))}
 
           {transactionalRows.map((row) => (
-            <TableRow key={`transactional-${row.id}`} className="border-[color:var(--workspace-shell-border)]">
+            <TableRow
+              key={`transactional-${row.id}`}
+              className="border-[color:var(--workspace-shell-border)]"
+            >
               <TableCell className="whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                 {formatUkDateTimeMedium(row.created_at)}
               </TableCell>
-              <TableCell className="capitalize text-[var(--workspace-shell-text-muted)]">
+              <TableCell className="text-[var(--workspace-shell-text-muted)] capitalize">
                 {formatEmailType(row.email_type)}
               </TableCell>
-              <TableCell className="max-w-xs truncate text-[var(--workspace-shell-text-muted)]" title={row.subject}>
+              <TableCell
+                className="max-w-xs truncate text-[var(--workspace-shell-text-muted)]"
+                title={row.subject}
+              >
                 {row.subject}
               </TableCell>
-              <TableCell className="text-[var(--workspace-shell-text-muted)]">—</TableCell>
-              <TableCell className="text-[var(--workspace-shell-text-muted)]">1</TableCell>
-              <TableCell className="text-[var(--workspace-shell-text-muted)]">—</TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                —
+              </TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                1
+              </TableCell>
+              <TableCell className="text-[var(--workspace-shell-text-muted)]">
+                —
+              </TableCell>
             </TableRow>
           ))}
 
           {campaigns.length === 0 && transactionalRows.length === 0 ? (
             <TableRow className="border-[color:var(--workspace-shell-border)]">
-              <TableCell colSpan={6} className="py-10 text-center text-[var(--workspace-shell-text-muted)]">
+              <TableCell
+                colSpan={6}
+                className="py-10 text-center text-[var(--workspace-shell-text-muted)]"
+              >
                 No emails logged yet.
               </TableCell>
             </TableRow>

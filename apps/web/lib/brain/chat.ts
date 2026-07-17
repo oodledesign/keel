@@ -2,10 +2,15 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { extractJsonObject } from '~/lib/ai/extract-json-object';
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import { extractJsonObject } from '~/lib/ai/extract-json-object';
 
-import { formatBrainContext, searchBrainChunks, type BrainMatch, type BrainSearchScope } from './search';
+import {
+  type BrainMatch,
+  type BrainSearchScope,
+  formatBrainContext,
+  searchBrainChunks,
+} from './search';
 import { isVoyageConfigured } from './voyage';
 
 const SYSTEM_PROMPT = `You are Ozer's second brain assistant. Answer from the sources below only.

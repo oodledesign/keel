@@ -36,29 +36,29 @@ const ranklyProjectsProvider: DynamicShortcutProvider = {
 
     if (error || !data?.length) return [];
 
-    return (data as Array<{ id: string; name: string; domain: string | null }>).map(
-      (p) => ({
-        catalogId: SHORTCUT_CATALOG_RANKLY_PROJECT,
-        label: `${ctx.workspaceName} — Rankly: ${p.name}`,
-        description: p.domain
-          ? `Track rankings for ${p.domain}`
-          : 'Rank tracking project',
-        category: `${ctx.workspaceName} · Rankly`,
-        params: {
-          accountSlug: ctx.accountSlug,
-          projectId: p.id,
-        },
-        keywords: [
-          'rankly',
-          'seo',
-          'rank',
-          'tracking',
-          p.name,
-          p.domain ?? '',
-          ctx.workspaceName,
-        ].filter(Boolean),
-      }),
-    );
+    return (
+      data as Array<{ id: string; name: string; domain: string | null }>
+    ).map((p) => ({
+      catalogId: SHORTCUT_CATALOG_RANKLY_PROJECT,
+      label: `${ctx.workspaceName} — Rankly: ${p.name}`,
+      description: p.domain
+        ? `Track rankings for ${p.domain}`
+        : 'Rank tracking project',
+      category: `${ctx.workspaceName} · Rankly`,
+      params: {
+        accountSlug: ctx.accountSlug,
+        projectId: p.id,
+      },
+      keywords: [
+        'rankly',
+        'seo',
+        'rank',
+        'tracking',
+        p.name,
+        p.domain ?? '',
+        ctx.workspaceName,
+      ].filter(Boolean),
+    }));
   },
 };
 

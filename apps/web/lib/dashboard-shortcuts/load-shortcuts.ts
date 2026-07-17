@@ -5,7 +5,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import pathsConfig from '~/config/paths.config';
 import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 
-import { buildPersonalShortcutCatalog, buildWorkspaceShortcutCatalog } from './build-catalog';
+import {
+  buildPersonalShortcutCatalog,
+  buildWorkspaceShortcutCatalog,
+} from './build-catalog';
 import { enrichPersonalShortcutsWithWorkspaceAvatars } from './enrich-workspace-shortcut-avatars';
 import { resolveStoredShortcuts } from './resolve-shortcuts';
 import type {
@@ -33,7 +36,10 @@ export async function loadPersonalMobileNavShortcuts(
   let stored = parseStoredShortcuts(row?.personal_mobile_nav_shortcuts);
 
   if (stored.length === 0) {
-    stored = parseStoredShortcuts(row?.personal_dashboard_shortcuts).slice(0, 3);
+    stored = parseStoredShortcuts(row?.personal_dashboard_shortcuts).slice(
+      0,
+      3,
+    );
   }
 
   if (stored.length === 0) return [];
@@ -196,7 +202,9 @@ export async function loadPersonalShortcutsSettings(
 
   return {
     shortcuts: parseStoredShortcuts(row?.personal_dashboard_shortcuts),
-    mobileNavShortcuts: parseStoredShortcuts(row?.personal_mobile_nav_shortcuts),
+    mobileNavShortcuts: parseStoredShortcuts(
+      row?.personal_mobile_nav_shortcuts,
+    ),
     defaultLanding: {
       type:
         row?.default_landing_type === 'workspace' ? 'workspace' : 'personal',
@@ -216,7 +224,10 @@ export async function loadWorkspaceShortcutsSettings(
   client: SupabaseClient,
   userId: string,
   accountId: string,
-): Promise<{ shortcuts: StoredShortcut[]; mobileNavShortcuts: StoredShortcut[] }> {
+): Promise<{
+  shortcuts: StoredShortcut[];
+  mobileNavShortcuts: StoredShortcut[];
+}> {
   const { data } = await client
     .from('workspace_dashboard_shortcuts')
     .select('shortcuts, mobile_nav_shortcuts')

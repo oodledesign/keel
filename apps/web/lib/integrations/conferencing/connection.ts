@@ -10,7 +10,10 @@ type DynamicTable = {
     options?: Record<string, unknown>,
   ) => Promise<{ error: { message: string } | null }>;
   delete: () => {
-    eq: (column: string, value: string) => {
+    eq: (
+      column: string,
+      value: string,
+    ) => {
       eq: (
         column: string,
         value: string,

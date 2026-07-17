@@ -2,12 +2,11 @@ import Link from 'next/link';
 
 import { PageBody } from '@kit/ui/page';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import {
   ModuleDataSection,
   ModuleEmptyState,
 } from '../../_components/module-data-section';
-import { FeedflowOauthBanner } from '../_components/feedflow-oauth-banner';
+import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import {
   loadFeedflowSocialAccountsForTeam,
   loadFeedflowWidgetsForTeam,
@@ -15,6 +14,7 @@ import {
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../_lib/work-account-path';
+import { FeedflowOauthBanner } from '../_components/feedflow-oauth-banner';
 
 type FeedflowReviewsPageProps = {
   params: Promise<{
@@ -71,7 +71,7 @@ export default async function FeedflowReviewsPage({
           ) : (
             <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[32rem] text-left text-sm">
-                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
                   <tr>
                     <th className="px-4 py-3">Platform</th>
                     <th className="px-4 py-3">External id</th>
@@ -103,7 +103,7 @@ export default async function FeedflowReviewsPage({
                           <span className="text-muted-foreground">—</span>
                         )}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="text-muted-foreground px-4 py-3">
                         {row.token_status ?? '—'}
                       </td>
                     </tr>
@@ -123,7 +123,7 @@ export default async function FeedflowReviewsPage({
           ) : (
             <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[36rem] text-left text-sm">
-                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
                   <tr>
                     <th className="px-4 py-3">Name</th>
                     <th className="px-4 py-3">Layout</th>
@@ -138,10 +138,12 @@ export default async function FeedflowReviewsPage({
                       className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                     >
                       <td className="px-4 py-3">{w.name}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="text-muted-foreground px-4 py-3">
                         {w.layout ?? 'grid'} · {w.post_count ?? 9} posts
                       </td>
-                      <td className="px-4 py-3 font-mono text-xs">{w.embed_key}</td>
+                      <td className="px-4 py-3 font-mono text-xs">
+                        {w.embed_key}
+                      </td>
                       <td className="px-4 py-3">
                         <a
                           href={`/api/feedflow/feed?widget=${encodeURIComponent(w.embed_key)}`}
@@ -162,7 +164,10 @@ export default async function FeedflowReviewsPage({
 
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
-            href={workAccountPath(workPaths.accountFeedflowSocialAccounts, account)}
+            href={workAccountPath(
+              workPaths.accountFeedflowSocialAccounts,
+              account,
+            )}
             className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Manage social connections

@@ -105,10 +105,7 @@ export const loadTaskAssignmentOptions = cache(
         .from('projects')
         .select('id, name, account_id, accounts(id, name), businesses(colour)')
         .not('status', 'in', '("completed","cancelled","archived")'),
-      client
-        .from('areas')
-        .select('id, name, colour')
-        .eq('user_id', user.id),
+      client.from('areas').select('id, name, colour').eq('user_id', user.id),
     ]);
 
     const projects: TaskAssignmentOption[] = (projectsResult.data ?? []).map(

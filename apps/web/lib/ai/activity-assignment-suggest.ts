@@ -134,7 +134,10 @@ export async function suggestActivityAssignments(input: {
       }))
       .filter((s) => s.clientId || s.projectId);
   } catch (err) {
-    console.warn('[activity-assignment-suggest] Falling back to heuristics:', err);
+    console.warn(
+      '[activity-assignment-suggest] Falling back to heuristics:',
+      err,
+    );
     return heuristicActivitySuggestions(input);
   }
 }
@@ -147,12 +150,7 @@ function heuristicActivitySuggestions(input: {
   const suggestions: ActivityAssignmentSuggestion[] = [];
 
   for (const block of input.blocks) {
-    const haystack = [
-      block.windowTitle,
-      block.url,
-      block.domain,
-      block.appName,
-    ]
+    const haystack = [block.windowTitle, block.url, block.domain, block.appName]
       .filter(Boolean)
       .join(' ')
       .toLowerCase();

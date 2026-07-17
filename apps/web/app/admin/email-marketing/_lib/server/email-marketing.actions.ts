@@ -7,6 +7,14 @@ import { z } from 'zod';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { requireSuperAdmin } from '~/admin/_lib/server/require-super-admin';
+import {
+  EMAIL_RECIPIENT_LISTS,
+  type EmailRecipientList,
+  customListKey,
+  isCustomListKey,
+  parseCustomListId,
+  parseManualEmails,
+} from '~/lib/admin-email/campaigns';
 import { DEFAULT_ANTHROPIC_MODEL } from '~/lib/ai/default-anthropic-model';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
 
@@ -27,16 +35,8 @@ import {
   SuggestEmailContactImportMappingsSchema,
 } from '../email-contact-import.schema';
 import {
-  EMAIL_RECIPIENT_LISTS,
-  customListKey,
-  isCustomListKey,
-  parseCustomListId,
-  parseManualEmails,
-  type EmailRecipientList,
-} from '~/lib/admin-email/campaigns';
-import {
-  isExcludableSystemList,
   type ExcludableSystemList,
+  isExcludableSystemList,
 } from '../recipient-list-constants';
 
 type DbClient = {
@@ -137,7 +137,9 @@ export async function saveCampaignDraft(input: {
   return (data as { id: string }).id;
 }
 
-function normalizeContactSource(value: string | null | undefined): EmailContactSource {
+function normalizeContactSource(
+  value: string | null | undefined,
+): EmailContactSource {
   const source = value?.trim() || 'manual';
   if ((EMAIL_CONTACT_SOURCES as readonly string[]).includes(source)) {
     return source as EmailContactSource;
@@ -205,7 +207,10 @@ export async function upsertContact(input: {
 
 export async function deleteContact(id: string) {
   await requireSuperAdmin();
-  const { error } = await adminClient().from('email_contacts').delete().eq('id', id);
+  const { error } = await adminClient()
+    .from('email_contacts')
+    .delete()
+    .eq('id', id);
   if (error) throw new Error(error.message);
   refreshEmailMarketing();
 }
@@ -297,7 +302,10 @@ export async function deleteContactList(id: string) {
   await requireSuperAdmin();
   const admin = adminClient();
 
-  const { error } = await admin.from('email_contact_lists').delete().eq('id', id);
+  const { error } = await admin
+    .from('email_contact_lists')
+    .delete()
+    .eq('id', id);
   if (error) throw new Error(error.message);
   refreshEmailMarketing();
 }
@@ -388,7 +396,8 @@ Never invent field names. Never guess — use null when unsure.`;
   const body = (await response.json()) as {
     content?: { type: string; text?: string }[];
   };
-  const textBlock = body.content?.find((chunk) => chunk.type === 'text')?.text ?? '';
+  const textBlock =
+    body.content?.find((chunk) => chunk.type === 'text')?.text ?? '';
   if (!textBlock) {
     return { ok: false as const, code: 'parse' as const };
   }
@@ -410,7 +419,9 @@ Never invent field names. Never guess — use null when unsure.`;
     const value = validated.data[header];
     if (value === null || value === undefined) {
       suggestions[header] = null;
-    } else if ((EMAIL_CONTACT_IMPORT_FIELD_KEYS as readonly string[]).includes(value)) {
+    } else if (
+      (EMAIL_CONTACT_IMPORT_FIELD_KEYS as readonly string[]).includes(value)
+    ) {
       suggestions[header] = value;
     } else {
       suggestions[header] = null;
@@ -444,7 +455,9 @@ export async function importContactsFromCsv(
 
   const emailSet = new Set<string>();
   for (const row of existingContacts ?? []) {
-    const email = (row as { email?: string | null }).email?.trim().toLowerCase();
+    const email = (row as { email?: string | null }).email
+      ?.trim()
+      .toLowerCase();
     if (email) emailSet.add(email);
   }
 

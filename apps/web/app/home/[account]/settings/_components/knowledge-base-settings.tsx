@@ -81,10 +81,15 @@ export function KnowledgeBaseSettings({
     <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5">
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">Knowledge base</h2>
+          <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
+            Knowledge base
+          </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Semantic index for Second brain chat. Requires{' '}
-            <code className="text-[var(--workspace-shell-text-muted)]">VOYAGE_API_KEY</code>.
+            <code className="text-[var(--workspace-shell-text-muted)]">
+              VOYAGE_API_KEY
+            </code>
+            .
           </p>
         </div>
         <Button
@@ -123,7 +128,9 @@ export function KnowledgeBaseSettings({
 
       <dl className="mt-5 grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 p-3">
-          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">Total chunks</dt>
+          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Total chunks
+          </dt>
           <dd className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
             {stats.totalChunks}
           </dd>
@@ -132,17 +139,22 @@ export function KnowledgeBaseSettings({
 
       <div className="mt-5 overflow-x-auto">
         <table className="min-w-full text-left text-sm">
-          <thead className="text-xs uppercase text-[var(--workspace-shell-text-muted)]">
+          <thead className="text-xs text-[var(--workspace-shell-text-muted)] uppercase">
             <tr>
-              <th className="pb-2 pr-4">Source type</th>
-              <th className="pb-2 pr-4">Chunks</th>
+              <th className="pr-4 pb-2">Source type</th>
+              <th className="pr-4 pb-2">Chunks</th>
               <th className="pb-2">Last indexed</th>
             </tr>
           </thead>
           <tbody>
             {Object.entries(stats.byType).map(([type, row]) => (
-              <tr key={type} className="border-t border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
-                <td className="py-2 pr-4 capitalize">{type.replace('_', ' ')}</td>
+              <tr
+                key={type}
+                className="border-t border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+              >
+                <td className="py-2 pr-4 capitalize">
+                  {type.replace('_', ' ')}
+                </td>
                 <td className="py-2 pr-4">{row.count}</td>
                 <td className="py-2">
                   {row.lastIndexedAt
@@ -153,7 +165,10 @@ export function KnowledgeBaseSettings({
             ))}
             {Object.keys(stats.byType).length === 0 && (
               <tr>
-                <td colSpan={3} className="py-4 text-[var(--workspace-shell-text-muted)]">
+                <td
+                  colSpan={3}
+                  className="py-4 text-[var(--workspace-shell-text-muted)]"
+                >
                   No chunks indexed yet. Run a full re-index after adding
                   VOYAGE_API_KEY.
                 </td>

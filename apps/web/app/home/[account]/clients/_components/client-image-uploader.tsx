@@ -56,7 +56,11 @@ export function ClientImageUploader({
       setUploading(true);
 
       try {
-        const nextUrl = await uploadClientPhotoViaApi(file, accountId, clientId);
+        const nextUrl = await uploadClientPhotoViaApi(
+          file,
+          accountId,
+          clientId,
+        );
         setPreviewUrl(nextUrl);
         toast.success('Client photo updated');
         onUpdated();
@@ -121,7 +125,7 @@ export function ClientImageUploader({
           'group relative shrink-0 overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]',
           'bg-[var(--workspace-control-surface)] ring-2 ring-white/10 transition',
           'hover:border-[var(--ozer-accent)]/40 hover:ring-[var(--ozer-accent)]/30',
-          'focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]',
+          'focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none',
           'disabled:cursor-not-allowed disabled:opacity-60',
           dimension,
         )}
@@ -129,11 +133,7 @@ export function ClientImageUploader({
       >
         {previewUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={previewUrl}
-            alt=""
-            className="h-full w-full object-cover"
-          />
+          <img src={previewUrl} alt="" className="h-full w-full object-cover" />
         ) : (
           <span className="flex h-full w-full flex-col items-center justify-center gap-1 text-[var(--workspace-shell-text)]">
             <span className="text-2xl font-semibold">

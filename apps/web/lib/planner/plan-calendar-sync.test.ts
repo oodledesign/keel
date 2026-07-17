@@ -26,10 +26,7 @@ describe('blocksForCalendarSync', () => {
   });
 
   it('keeps day plans on the selected date', () => {
-    const markdown = [
-      '## Today',
-      '9am–10am · Inbox · ~60min',
-    ].join('\n');
+    const markdown = ['## Today', '9am–10am · Inbox · ~60min'].join('\n');
 
     const doc = parsePlanDocument(markdown);
     const blocks = blocksForCalendarSync(doc, '2026-07-08T12:00:00', {

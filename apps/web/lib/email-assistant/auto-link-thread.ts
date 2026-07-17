@@ -2,8 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { extractEmailAddress } from './address-utils';
 import { syncSuggestedActionItemsFromThreadLink } from './action-item-links';
+import { extractEmailAddress } from './address-utils';
 
 type Participant = {
   name?: string | null;
@@ -24,7 +24,10 @@ type ClientMatch = {
   account_id: string;
 };
 
-function participantEmails(participants: unknown, ownerEmail: string): string[] {
+function participantEmails(
+  participants: unknown,
+  ownerEmail: string,
+): string[] {
   if (!Array.isArray(participants)) {
     return [];
   }
@@ -178,7 +181,9 @@ async function inferProjectId(
 
   if (normalizedSubject) {
     const bySubject = active.find((row) => {
-      const name = String(row.name ?? '').trim().toLowerCase();
+      const name = String(row.name ?? '')
+        .trim()
+        .toLowerCase();
       return name.length >= 3 && normalizedSubject.includes(name);
     });
 

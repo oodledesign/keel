@@ -3,10 +3,11 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { isTransientSupabaseError } from '~/lib/supabase/transient-errors';
+
 import { assertWorkspaceMember } from './assert-workspace-member';
 import { generateKeelApiToken, hashKeelApiToken } from './token';
 import type { ApiTokenListItem, ValidatedApiToken } from './types';
-import { isTransientSupabaseError } from '~/lib/supabase/transient-errors';
 
 export class ApiTokenAuthError extends Error {
   readonly transient: boolean;
@@ -140,10 +141,7 @@ export async function validateApiTokenForAuth(
     .maybeSingle();
 
   if (error) {
-    throw new ApiTokenAuthError(
-      error.message,
-      isTransientSupabaseError(error),
-    );
+    throw new ApiTokenAuthError(error.message, isTransientSupabaseError(error));
   }
 
   if (!data) {

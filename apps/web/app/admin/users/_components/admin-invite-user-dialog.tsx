@@ -42,9 +42,9 @@ import {
   ADMIN_INVITE_ADDON_OPTIONS,
   ADMIN_INVITE_LANDING_MODULES,
   ADMIN_INVITE_WORKSPACE_PROFILES,
+  type CreateAdminUserInviteInput,
   CreateAdminUserInviteSchema,
   DEFAULT_WORKSPACE_NAMES,
-  type CreateAdminUserInviteInput,
 } from '~/lib/admin/user-invites.schema';
 
 const WORKSPACE_OPTIONS: Array<{
@@ -53,7 +53,11 @@ const WORKSPACE_OPTIONS: Array<{
   businessMode?: 'lite' | 'full';
 }> = [
   { profile: 'work_design', label: 'Business Lite', businessMode: 'lite' },
-  { profile: 'work_design', label: 'Business (full CRM)', businessMode: 'full' },
+  {
+    profile: 'work_design',
+    label: 'Business (full CRM)',
+    businessMode: 'full',
+  },
   { profile: 'work_property', label: 'Property' },
   { profile: 'family', label: 'Family' },
   { profile: 'community', label: 'Community' },
@@ -61,7 +65,9 @@ const WORKSPACE_OPTIONS: Array<{
 
 type WorkspaceKey = string;
 
-function workspaceKey(option: (typeof WORKSPACE_OPTIONS)[number]): WorkspaceKey {
+function workspaceKey(
+  option: (typeof WORKSPACE_OPTIONS)[number],
+): WorkspaceKey {
   return `${option.profile}:${option.businessMode ?? 'default'}`;
 }
 
@@ -92,7 +98,10 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
     },
   });
 
-  const personalOnly = useWatch({ control: form.control, name: 'personalOnly' });
+  const personalOnly = useWatch({
+    control: form.control,
+    name: 'personalOnly',
+  });
   const selectedAddons = useWatch({ control: form.control, name: 'addons' });
 
   const workspaceNames = useWatch({
@@ -165,7 +174,9 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
 
         toast.success(`Invitation sent to ${data.email}`);
         form.reset();
-        setSelectedWorkspaceKeys(new Set([workspaceKey(WORKSPACE_OPTIONS[0]!)]));
+        setSelectedWorkspaceKeys(
+          new Set([workspaceKey(WORKSPACE_OPTIONS[0]!)]),
+        );
         setOpen(false);
       } catch (error) {
         toast.error(
@@ -184,17 +195,14 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
           <AlertDialogTitle>Invite user</AlertDialogTitle>
           <AlertDialogDescription>
             Send an email invitation with access configured before they sign in.
-            Workspaces and add-ons are created automatically on acceptance. If SES is
-            still in sandbox mode, verify both the sender and the invitee email in
-            Amazon SES, or request production access.
+            Workspaces and add-ons are created automatically on acceptance. If
+            SES is still in sandbox mode, verify both the sender and the invitee
+            email in Amazon SES, or request production access.
           </AlertDialogDescription>
         </AlertDialogHeader>
 
         <Form {...form}>
-          <form
-            className="space-y-5"
-            onSubmit={form.handleSubmit(onSubmit)}
-          >
+          <form className="space-y-5" onSubmit={form.handleSubmit(onSubmit)}>
             <FormField
               control={form.control}
               name="email"
@@ -221,11 +229,7 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
                 <FormItem>
                   <FormLabel>Name (optional)</FormLabel>
                   <FormControl>
-                    <Input
-                      {...field}
-                      placeholder="Aimee"
-                      autoComplete="off"
-                    />
+                    <Input {...field} placeholder="Aimee" autoComplete="off" />
                   </FormControl>
                   <FormDescription>
                     Used in the invite email greeting — e.g. “Hi Aimee,”.
@@ -252,7 +256,9 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
                           form.setValue('addons', []);
                         } else {
                           form.setValue('personalAddons', []);
-                          const defaultKey = workspaceKey(WORKSPACE_OPTIONS[0]!);
+                          const defaultKey = workspaceKey(
+                            WORKSPACE_OPTIONS[0]!,
+                          );
                           const next = new Set<WorkspaceKey>([defaultKey]);
                           setSelectedWorkspaceKeys(next);
                           syncWorkspacesFromSelection(next);
@@ -277,15 +283,20 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
                 <div className="rounded-md border p-3">
                   <label className="flex items-center gap-2 text-sm">
                     <Checkbox
-                      checked={form.watch('personalAddons')?.includes(
-                        'addon_email_assistant',
-                      )}
+                      checked={form
+                        .watch('personalAddons')
+                        ?.includes('addon_email_assistant')}
                       onCheckedChange={(checked) => {
                         const current = form.getValues('personalAddons') ?? [];
                         form.setValue(
                           'personalAddons',
                           checked
-                            ? [...new Set([...current, 'addon_email_assistant' as const])]
+                            ? [
+                                ...new Set([
+                                  ...current,
+                                  'addon_email_assistant' as const,
+                                ]),
+                              ]
                             : current.filter(
                                 (key) => key !== 'addon_email_assistant',
                               ),
@@ -351,7 +362,9 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
                       );
                     })}
                   </div>
-                  <FormMessage>{form.formState.errors.workspaces?.message}</FormMessage>
+                  <FormMessage>
+                    {form.formState.errors.workspaces?.message}
+                  </FormMessage>
                 </div>
 
                 <div className="space-y-3">
@@ -370,7 +383,9 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
                       </label>
                     ))}
                   </div>
-                  <FormMessage>{form.formState.errors.addons?.message}</FormMessage>
+                  <FormMessage>
+                    {form.formState.errors.addons?.message}
+                  </FormMessage>
                 </div>
 
                 {showLandingModule ? (

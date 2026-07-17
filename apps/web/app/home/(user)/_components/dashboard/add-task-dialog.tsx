@@ -1,17 +1,19 @@
 'use client';
 
-import { useRouter } from 'next/navigation';
 import { useEffect, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+
+import { Loader2, Plus, Sparkles } from 'lucide-react';
 
 import {
   Dialog,
   DialogContent,
-  DialogHeader,
-  DialogTitle,
   DialogDescription,
   DialogFooter,
+  DialogHeader,
+  DialogTitle,
   DialogTrigger,
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
@@ -24,17 +26,15 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 
-import { Loader2, Plus, Sparkles } from 'lucide-react';
-
 import pathsConfig from '~/config/paths.config';
+import { createClient } from '~/home/[account]/clients/_lib/server/server-actions';
 
 import {
+  type TaskAssignmentOption,
   createTask,
   loadTaskAssignmentOptions,
   loadTaskAssignmentOptionsForWorkspace,
-  type TaskAssignmentOption,
 } from '../../_lib/actions/task-actions';
-import { createClient } from '~/home/[account]/clients/_lib/server/server-actions';
 import { TaskAssignmentCombobox } from './task-assignment-combobox';
 
 const PRIORITIES = [
@@ -206,7 +206,10 @@ export function AddTaskDialog({
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="title" className="text-[var(--workspace-shell-text-muted)]">
+            <Label
+              htmlFor="title"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
               Task title *
             </Label>
             <Input
@@ -221,7 +224,9 @@ export function AddTaskDialog({
 
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Priority</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Priority
+              </Label>
               <Select value={priority} onValueChange={setPriority}>
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -236,7 +241,10 @@ export function AddTaskDialog({
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="dueDate" className="text-[var(--workspace-shell-text-muted)]">
+              <Label
+                htmlFor="dueDate"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
                 Due date
               </Label>
               <Input
@@ -306,9 +314,7 @@ export function AddTaskDialog({
             ) : null}
           </div>
 
-          {error && (
-            <p className="text-sm text-rose-400">{error}</p>
-          )}
+          {error && <p className="text-sm text-rose-400">{error}</p>}
 
           {isWorkspaceMode && workspaceAccountSlug ? (
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">

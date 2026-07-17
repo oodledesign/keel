@@ -41,7 +41,7 @@ function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
           ) : null}
         </span>
         {rec.isQuickWin ? (
-          <span className="shrink-0 rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[10px] uppercase text-cyan-200">
+          <span className="shrink-0 rounded border border-cyan-500/40 bg-cyan-500/10 px-2 py-0.5 text-[10px] text-cyan-200 uppercase">
             Quick win
           </span>
         ) : null}
@@ -56,7 +56,7 @@ function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
       </button>
 
       {expanded && rec.description ? (
-        <div className="border-t border-[color:var(--workspace-shell-border)] px-3 pb-3 pt-2">
+        <div className="border-t border-[color:var(--workspace-shell-border)] px-3 pt-2 pb-3">
           <p className="text-muted-foreground text-sm leading-relaxed">
             {rec.description}
           </p>
@@ -118,12 +118,14 @@ function CategoryRecommendations(props: {
               className={`rounded-md px-2 py-1 text-xs capitalize ${
                 priorityFilter === filter
                   ? 'ozer-gradient-active text-[var(--ozer-white)]'
-                  : 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground hover:text-[var(--workspace-shell-text)]'
+                  : 'text-muted-foreground bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]'
               }`}
               onClick={() => setPriorityFilter(filter)}
             >
               {filter === 'all' ? 'All' : PAGESPEED_PRIORITY_LABELS[filter]}
-              {filter !== 'all' && counts[filter] > 0 ? ` (${counts[filter]})` : ''}
+              {filter !== 'all' && counts[filter] > 0
+                ? ` (${counts[filter]})`
+                : ''}
             </button>
           ))}
         </div>
@@ -151,7 +153,10 @@ function StrategyCategoryTabs(props: {
   const recommendations = props.metrics?.recommendations ?? [];
 
   const byCategory = useMemo(() => {
-    const grouped = new Map<PagespeedRecommendationCategory, PagespeedRecommendation[]>();
+    const grouped = new Map<
+      PagespeedRecommendationCategory,
+      PagespeedRecommendation[]
+    >();
 
     for (const category of PAGESPEED_RECOMMENDATION_CATEGORIES) {
       grouped.set(category, []);
@@ -205,7 +210,7 @@ function StrategyCategoryTabs(props: {
             <TabsTrigger
               key={category}
               value={category}
-              className="text-xs data-[state=active]:ozer-gradient-active"
+              className="data-[state=active]:ozer-gradient-active text-xs"
             >
               {PAGESPEED_CATEGORY_LABELS[category]}
               {count > 0 ? ` (${count})` : ''}
@@ -255,16 +260,27 @@ export function PagespeedRecommendations(props: {
     (props.mobile?.resultId || props.desktop?.resultId)
   ) {
     return (
-      <div className={props.className ?? 'border-t border-[color:var(--workspace-shell-border)] px-4 py-4'}>
+      <div
+        className={
+          props.className ??
+          'border-t border-[color:var(--workspace-shell-border)] px-4 py-4'
+        }
+      >
         <p className="text-muted-foreground text-sm">
-          Re-run PageSpeed to import Lighthouse fix recommendations for this page.
+          Re-run PageSpeed to import Lighthouse fix recommendations for this
+          page.
         </p>
       </div>
     );
   }
 
   return (
-    <div className={props.className ?? 'border-t border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-4'}>
+    <div
+      className={
+        props.className ??
+        'border-t border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-4'
+      }
+    >
       <div className="mb-3">
         <h4 className="text-sm font-medium">Lighthouse fixes</h4>
         <p className="text-muted-foreground mt-0.5 text-xs">
@@ -276,14 +292,14 @@ export function PagespeedRecommendations(props: {
         <TabsList className="mb-4 flex h-auto gap-1 bg-black/30 p-1">
           <TabsTrigger
             value="mobile"
-            className="text-xs data-[state=active]:ozer-gradient-active"
+            className="data-[state=active]:ozer-gradient-active text-xs"
           >
             Mobile
             {mobileCount > 0 ? ` (${mobileCount})` : ''}
           </TabsTrigger>
           <TabsTrigger
             value="desktop"
-            className="text-xs data-[state=active]:ozer-gradient-active"
+            className="data-[state=active]:ozer-gradient-active text-xs"
           >
             Desktop
             {desktopCount > 0 ? ` (${desktopCount})` : ''}

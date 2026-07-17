@@ -31,7 +31,10 @@ export function BusinessLiteDashboard({
     '[account]',
     accountSlug,
   );
-  const appsPath = pathsConfig.app.accountApps.replace('[account]', accountSlug);
+  const appsPath = pathsConfig.app.accountApps.replace(
+    '[account]',
+    accountSlug,
+  );
   const greeting = userFirstName?.trim() || accountName;
 
   return (
@@ -68,7 +71,9 @@ export function BusinessLiteDashboard({
                     {app.Icon}
                   </span>
                   <div className="min-w-0">
-                    <h3 className="font-semibold text-[var(--workspace-shell-text)]">{app.label}</h3>
+                    <h3 className="font-semibold text-[var(--workspace-shell-text)]">
+                      {app.label}
+                    </h3>
                     {app.description ? (
                       <p className="text-muted-foreground mt-1 text-sm">
                         {app.description}
@@ -82,7 +87,10 @@ export function BusinessLiteDashboard({
         ) : (
           <p className="text-muted-foreground mt-6 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm">
             No apps installed yet.{' '}
-            <Link href={appsPath} className="text-[var(--ozer-accent)] hover:underline">
+            <Link
+              href={appsPath}
+              className="text-[var(--ozer-accent)] hover:underline"
+            >
               Open the apps marketplace
             </Link>{' '}
             to get started.

@@ -1,9 +1,9 @@
 import 'server-only';
 
 import {
+  type AccountBrandResolved,
   loadAccountBrandResolved,
   wrapEmailHtmlWithBrand,
-  type AccountBrandResolved,
 } from '~/lib/brand/account-brand';
 
 import { formatBookingWhenForEmail } from '../calendar-links';
@@ -79,7 +79,10 @@ function formResponsesBlock(ctx: BookingEmailContext) {
 
 function notesBlock(ctx: BookingEmailContext) {
   if (!ctx.inviteeNotes?.trim()) return '';
-  const escaped = escapeHtml(ctx.inviteeNotes.trim()).replaceAll('\n', '<br />');
+  const escaped = escapeHtml(ctx.inviteeNotes.trim()).replaceAll(
+    '\n',
+    '<br />',
+  );
   return `<p><strong>Notes:</strong><br />${escaped}</p>`;
 }
 

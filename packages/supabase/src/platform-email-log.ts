@@ -27,10 +27,10 @@ export async function insertPlatformEmailLog(
 
     const { error } = await (
       client as unknown as {
-        from: (
-          table: string,
-        ) => {
-          insert: (values: Record<string, unknown>) => PromiseLike<{ error: { message: string } | null }>;
+        from: (table: string) => {
+          insert: (
+            values: Record<string, unknown>,
+          ) => PromiseLike<{ error: { message: string } | null }>;
         };
       }
     )

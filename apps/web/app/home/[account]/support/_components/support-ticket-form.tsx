@@ -15,8 +15,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
@@ -270,7 +270,11 @@ export function SupportTicketForm({
       </section>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={isPending} className={workspaceBtnPrimaryMd}>
+        <Button
+          type="submit"
+          disabled={isPending}
+          className={workspaceBtnPrimaryMd}
+        >
           {isPending ? 'Creating…' : 'Create ticket'}
         </Button>
         <Button type="button" variant="ghost" asChild>

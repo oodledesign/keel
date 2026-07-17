@@ -1,8 +1,8 @@
 import 'server-only';
 
 import { loadPagespeedSnapshots } from '~/lib/pagespeed/db';
-import type { PagespeedSnapshot } from '~/lib/pagespeed/types';
 import { pageLabelFromUrl } from '~/lib/pagespeed/domain';
+import type { PagespeedSnapshot } from '~/lib/pagespeed/types';
 import {
   loadLatestSiteCrawlJob,
   loadSiteCrawlPages,
@@ -39,7 +39,7 @@ function buildLabel(
   pagespeed: PagespeedSnapshot | null,
 ): string {
   if (pagespeed?.label) return pagespeed.label;
-  if (pagespeed?.isHomepage || crawl?.url && isHomepageUrl(crawl.url)) {
+  if (pagespeed?.isHomepage || (crawl?.url && isHomepageUrl(crawl.url))) {
     return 'Homepage';
   }
   return pageLabelFromUrl(url, isHomepageUrl(url));
@@ -192,7 +192,8 @@ export async function loadRanklyPageInventoryMeta(projectId: string): Promise<{
   ]);
 
   const keys = new Set<string>();
-  for (const page of crawlPages) keys.add(pageUrlKey(normalizeProjectPageUrl(page.url)));
+  for (const page of crawlPages)
+    keys.add(pageUrlKey(normalizeProjectPageUrl(page.url)));
   for (const snapshot of pagespeedSnapshots) {
     keys.add(pageUrlKey(normalizeProjectPageUrl(snapshot.url)));
   }

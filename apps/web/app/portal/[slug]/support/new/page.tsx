@@ -16,9 +16,12 @@ export default async function PortalSupportNewPage({
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">Raise a ticket</h2>
+        <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
+          Raise a ticket
+        </h2>
         <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
-          Tell us what you need help with and we&apos;ll respond as soon as we can.
+          Tell us what you need help with and we&apos;ll respond as soon as we
+          can.
         </p>
       </div>
 

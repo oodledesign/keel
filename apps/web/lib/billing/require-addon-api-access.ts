@@ -34,7 +34,8 @@ export async function denyUnlessAddonAccess(
 
   return jsonErr(
     'FORBIDDEN',
-    ADDON_MESSAGES[addonKey] ?? 'This feature requires an active add-on subscription.',
+    ADDON_MESSAGES[addonKey] ??
+      'This feature requires an active add-on subscription.',
     403,
   );
 }

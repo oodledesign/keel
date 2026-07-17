@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState, type ReactNode } from 'react';
+import { type ReactNode, useEffect, useState } from 'react';
+
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+
 import { PanelLeftClose, PanelLeftOpen } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -14,11 +16,11 @@ import {
 } from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
-import {
-  isRanklySectionActive,
-  RANKLY_PROJECT_SECTIONS,
-} from '../_lib/rankly-project-sections';
 import { ranklyProjectPaths } from '../_lib/rankly-project-paths';
+import {
+  RANKLY_PROJECT_SECTIONS,
+  isRanklySectionActive,
+} from '../_lib/rankly-project-sections';
 
 const STORAGE_KEY = 'rankly-project-nav-collapsed';
 
@@ -43,7 +45,9 @@ function NavLink(props: {
       )}
     >
       {props.icon}
-      {!props.collapsed ? <span className="truncate">{props.label}</span> : null}
+      {!props.collapsed ? (
+        <span className="truncate">{props.label}</span>
+      ) : null}
     </Link>
   );
 
@@ -107,16 +111,22 @@ export function RanklyProjectNav(props: {
           <div
             className={cn(
               'mb-1 flex',
-              collapsed ? 'max-lg:mb-2 max-lg:justify-end lg:justify-center' : 'justify-end',
+              collapsed
+                ? 'max-lg:mb-2 max-lg:justify-end lg:justify-center'
+                : 'justify-end',
             )}
           >
             <Button
               type="button"
               variant="ghost"
               size="icon"
-              className="h-8 w-8 text-muted-foreground hover:text-[var(--workspace-shell-text)]"
+              className="text-muted-foreground h-8 w-8 hover:text-[var(--workspace-shell-text)]"
               onClick={toggleCollapsed}
-              aria-label={collapsed ? 'Expand project navigation' : 'Collapse project navigation'}
+              aria-label={
+                collapsed
+                  ? 'Expand project navigation'
+                  : 'Collapse project navigation'
+              }
               aria-expanded={!collapsed}
             >
               {collapsed ? (
@@ -146,7 +156,12 @@ export function RanklyProjectNav(props: {
                     active={active}
                     collapsed={collapsed}
                     label={section.navLabel}
-                    icon={<Icon className="h-4 w-4 shrink-0 opacity-90" aria-hidden />}
+                    icon={
+                      <Icon
+                        className="h-4 w-4 shrink-0 opacity-90"
+                        aria-hidden
+                      />
+                    }
                   />
                 </li>
               );

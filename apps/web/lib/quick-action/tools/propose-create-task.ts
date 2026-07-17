@@ -4,11 +4,14 @@ import { z } from 'zod';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
 
-import { assertAccountMember, assertTasksModuleEnabled } from '../module-access';
-import { resolveDueDate } from '../relative-dates';
 import { signQuickActionToken } from '../action-token';
 import type { QuickActionContext } from '../context';
 import { workspaceById } from '../context';
+import {
+  assertAccountMember,
+  assertTasksModuleEnabled,
+} from '../module-access';
+import { resolveDueDate } from '../relative-dates';
 import type { ProposedQuickAction } from '../types';
 
 const proposeCreateTaskSchema = z.object({
@@ -126,7 +129,10 @@ export const proposeCreateTaskToolDefinition = {
     properties: {
       account_id: { type: 'string', description: 'Workspace account UUID' },
       title: { type: 'string', description: 'Task title' },
-      notes: { type: 'string', description: 'Optional task notes / description' },
+      notes: {
+        type: 'string',
+        description: 'Optional task notes / description',
+      },
       due_date: {
         type: 'string',
         description: 'Due date as YYYY-MM-DD if known',
@@ -159,5 +165,8 @@ export async function handleProposeCreateTaskTool(
   ctx: QuickActionContext,
   input: unknown,
 ): Promise<ProposedQuickAction> {
-  return proposeCreateTask(ctx, input as z.infer<typeof proposeCreateTaskSchema>);
+  return proposeCreateTask(
+    ctx,
+    input as z.infer<typeof proposeCreateTaskSchema>,
+  );
 }

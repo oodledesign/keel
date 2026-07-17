@@ -1,18 +1,17 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+
 import { Check, Copy, MessageCircle } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
-import {
-  buildWhatsAppShareUrl,
-} from '~/lib/videos/public-share';
+import { buildWhatsAppShareUrl } from '~/lib/videos/public-share';
 
 type ApiResponse =
   | {
@@ -137,7 +136,13 @@ export function PublicSharePanel(props: {
 
           <div className="flex flex-wrap gap-2">
             {whatsAppUrl ? (
-              <Button type="button" variant="outline" size="sm" className="gap-1.5" asChild>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="gap-1.5"
+                asChild
+              >
                 <a href={whatsAppUrl} target="_blank" rel="noreferrer">
                   <MessageCircle className="h-3.5 w-3.5" />
                   Share on WhatsApp
@@ -148,7 +153,9 @@ export function PublicSharePanel(props: {
               type="button"
               variant="outline"
               size="sm"
-              onClick={() => window.open(publicUrl, '_blank', 'noopener,noreferrer')}
+              onClick={() =>
+                window.open(publicUrl, '_blank', 'noopener,noreferrer')
+              }
             >
               Open public page
             </Button>

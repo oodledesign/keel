@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useTransition } from 'react';
+
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
@@ -36,18 +37,16 @@ export function BlogPostRowActions({
         router.refresh();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Failed to update publish status',
+          error instanceof Error
+            ? error.message
+            : 'Failed to update publish status',
         );
       }
     });
   };
 
   const handleDelete = () => {
-    if (
-      !window.confirm(
-        'Delete this blog post? This cannot be undone.',
-      )
-    ) {
+    if (!window.confirm('Delete this blog post? This cannot be undone.')) {
       return;
     }
 
@@ -57,7 +56,9 @@ export function BlogPostRowActions({
         toast.success('Post deleted');
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to delete post');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to delete post',
+        );
       }
     });
   };

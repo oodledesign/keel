@@ -16,9 +16,7 @@ export const UpsertOperatingCostSchema = z.object({
   label: z.string().trim().min(1).max(120),
   amountMajor: z.coerce.number().min(0).max(1_000_000),
   currency: z.string().trim().min(3).max(3).default('gbp'),
-  periodMonth: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-01'),
+  periodMonth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-01'),
   notes: z.string().trim().max(500).optional().nullable(),
 });
 

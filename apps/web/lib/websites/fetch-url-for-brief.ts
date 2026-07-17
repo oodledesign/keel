@@ -52,8 +52,7 @@ function htmlToMainText(html: string): { title: string; text: string } {
     'script, style, noscript, iframe, svg, nav, footer, header, .cookie-banner, #cookie-consent',
   ).remove();
 
-  const metaDesc =
-    $('meta[name="description"]').attr('content')?.trim() ?? '';
+  const metaDesc = $('meta[name="description"]').attr('content')?.trim() ?? '';
   const headings = $('h1, h2')
     .map((_, el) => $(el).text().trim())
     .get()

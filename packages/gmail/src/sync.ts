@@ -24,7 +24,10 @@ function isUnread(labelIds: string[] | null | undefined) {
   return (labelIds ?? []).includes('UNREAD');
 }
 
-async function fetchMessage(userId: string, messageId: string): Promise<GmailMessage> {
+async function fetchMessage(
+  userId: string,
+  messageId: string,
+): Promise<GmailMessage> {
   return gmailFetch<GmailMessage>(
     userId,
     `/messages/${encodeURIComponent(messageId)}?format=full`,
@@ -160,7 +163,9 @@ function collectHistoryMessageIds(
   return ids;
 }
 
-export async function incrementalSync(userId: string): Promise<GmailSyncResult> {
+export async function incrementalSync(
+  userId: string,
+): Promise<GmailSyncResult> {
   const settings = await loadAssistantSettings(userId);
 
   if (!settings?.last_history_id) {

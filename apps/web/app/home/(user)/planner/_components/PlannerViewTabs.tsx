@@ -11,7 +11,12 @@ type Props = {
   className?: string;
 };
 
-export function PlannerViewTabs({ dayHref, planHref, active, className }: Props) {
+export function PlannerViewTabs({
+  dayHref,
+  planHref,
+  active,
+  className,
+}: Props) {
   return (
     <div
       className={cn(

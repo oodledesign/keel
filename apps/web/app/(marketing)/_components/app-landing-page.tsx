@@ -6,11 +6,11 @@ import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
-import {
-  formatGbp,
-  MARKETING_BUSINESS_LITE_SIGNUP_URL,
-} from '~/lib/billing/pricing-marketing';
 import { listBillingProductPlanPrices } from '~/lib/billing/billing-config-prices';
+import {
+  MARKETING_BUSINESS_LITE_SIGNUP_URL,
+  formatGbp,
+} from '~/lib/billing/pricing-marketing';
 import type { AppLandingConfig } from '~/lib/marketing/app-landing-pages';
 import {
   marketingBodyText,
@@ -35,20 +35,22 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
   const Icon = config.icon;
 
   return (
-    <main className="relative overflow-hidden marketing-shell">
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-14 px-6 pb-16 pt-24 md:pt-28">
+    <main className="marketing-shell relative overflow-hidden">
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col gap-14 px-6 pt-24 pb-16 md:pt-28">
         <div className="grid items-center gap-12 lg:grid-cols-[1.05fr,0.95fr]">
           <div className="space-y-8">
             <div className="flex flex-wrap items-center gap-2">
               <span className={marketingEyebrow}>{config.hero.eyebrow}</span>
-              <span className={`inline-flex items-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/70 px-3 py-1 text-xs font-medium ${marketingBodyText}`}>
+              <span
+                className={`inline-flex items-center rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/70 px-3 py-1 text-xs font-medium ${marketingBodyText}`}
+              >
                 {config.hero.priceBadge ??
                   `From ${formatGbp(config.fromPriceGbp)}/mo`}
               </span>
             </div>
 
             <div className="space-y-5">
-              <h1 className="font-heading text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
+              <h1 className="font-heading text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl lg:text-6xl">
                 {config.hero.title}
                 <span className={marketingHeadlineGradient}>
                   {' '}
@@ -56,7 +58,9 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                 </span>
                 .
               </h1>
-              <p className={`max-w-xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}>
+              <p
+                className={`max-w-xl text-base leading-relaxed md:text-lg ${marketingBodyText}`}
+              >
                 {config.hero.subtitle}
               </p>
             </div>
@@ -64,7 +68,8 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
             <div className="flex flex-wrap items-center gap-3">
               <Button asChild size="lg" className={marketingBtnGradient}>
                 <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>
-                  {config.hero.primaryCtaLabel ?? 'Start with free Business Lite'}
+                  {config.hero.primaryCtaLabel ??
+                    'Start with free Business Lite'}
                   <ArrowRight className="ml-1.5 h-4 w-4" />
                 </Link>
               </Button>
@@ -102,8 +107,12 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                     <Icon className="h-5 w-5" aria-hidden />
                   </span>
                   <div>
-                    <p className="font-semibold text-[var(--workspace-shell-text)]">{config.name}</p>
-                    <p className={`text-xs ${marketingMutedText}`}>Ozer workspace add-on</p>
+                    <p className="font-semibold text-[var(--workspace-shell-text)]">
+                      {config.name}
+                    </p>
+                    <p className={`text-xs ${marketingMutedText}`}>
+                      Ozer workspace add-on
+                    </p>
                   </div>
                 </div>
                 <ul className="space-y-3">
@@ -114,8 +123,12 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                     >
                       <feature.icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
                       <div>
-                        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">{feature.title}</p>
-                        <p className={`mt-0.5 text-xs leading-relaxed ${marketingMutedText}`}>
+                        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                          {feature.title}
+                        </p>
+                        <p
+                          className={`mt-0.5 text-xs leading-relaxed ${marketingMutedText}`}
+                        >
                           {feature.description}
                         </p>
                       </div>
@@ -148,7 +161,9 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                 <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
                   {card.title}
                 </h3>
-                <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
+                <p
+                  className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
+                >
                   {card.description}
                 </p>
               </article>
@@ -170,7 +185,8 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
             What {config.name} includes
           </h2>
           <p className={`mt-3 ${marketingBodyText}`}>
-            Install {config.name} on any Ozer business workspace. Business Lite is free — you only pay for the apps you need.
+            Install {config.name} on any Ozer business workspace. Business Lite
+            is free — you only pay for the apps you need.
           </p>
         </div>
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -179,11 +195,16 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
               key={feature.title}
               className={`rounded-2xl border border-[color:var(--workspace-shell-border)] ${marketingFeatureCard} p-6`}
             >
-              <feature.icon className="h-5 w-5 text-[var(--ozer-accent)]" aria-hidden />
-              <h3 className="mt-4 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
+              <feature.icon
+                className="h-5 w-5 text-[var(--ozer-accent)]"
+                aria-hidden
+              />
+              <h3 className="font-heading mt-4 text-xl font-semibold text-[var(--workspace-shell-text)]">
                 {feature.title}
               </h3>
-              <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
+              <p
+                className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
+              >
                 {feature.description}
               </p>
             </article>
@@ -191,9 +212,7 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
         </div>
       </section>
 
-      {config.pricing ? (
-        <SignaturePricingSection config={config} />
-      ) : null}
+      {config.pricing ? <SignaturePricingSection config={config} /> : null}
 
       <section
         className={`border-y py-20 ${marketingSectionMuted}`}
@@ -215,8 +234,12 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
                 <span className="inline-flex h-8 w-8 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-sm font-bold text-[var(--ozer-coral-600)]">
                   {index + 1}
                 </span>
-                <h3 className="mt-4 text-lg font-semibold text-[var(--workspace-shell-text)]">{step.title}</h3>
-                <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
+                <h3 className="mt-4 text-lg font-semibold text-[var(--workspace-shell-text)]">
+                  {step.title}
+                </h3>
+                <p
+                  className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
+                >
                   {step.description}
                 </p>
               </li>
@@ -233,12 +256,15 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
       />
 
       <section className="relative mx-auto w-full max-w-7xl px-6 py-20">
-        <div className={`rounded-2xl border border-[color:var(--workspace-shell-border)] px-8 py-12 text-center ${marketingFeatureCard}`}>
+        <div
+          className={`rounded-2xl border border-[color:var(--workspace-shell-border)] px-8 py-12 text-center ${marketingFeatureCard}`}
+        >
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]">
             Add {config.name} to your workspace
           </h2>
           <p className={`mx-auto mt-3 max-w-xl ${marketingBodyText}`}>
-            Create a free Business Lite workspace, then subscribe to {config.name} from billing when you are ready.
+            Create a free Business Lite workspace, then subscribe to{' '}
+            {config.name} from billing when you are ready.
           </p>
           <Button
             asChild
@@ -249,12 +275,18 @@ export function AppLandingPage({ config }: AppLandingPageProps) {
           </Button>
           <p className={`mt-4 text-xs ${marketingMutedText}`}>
             Explore all apps on the{' '}
-            <Link href="/apps" className="underline hover:text-[var(--workspace-shell-text)]">
+            <Link
+              href="/apps"
+              className="underline hover:text-[var(--workspace-shell-text)]"
+            >
               Ozer apps page
             </Link>
             {' · '}
             Already have an account?{' '}
-            <Link href={pathsConfig.auth.signIn} className="underline hover:text-[var(--workspace-shell-text)]">
+            <Link
+              href={pathsConfig.auth.signIn}
+              className="underline hover:text-[var(--workspace-shell-text)]"
+            >
               Sign in
             </Link>
           </p>
@@ -270,10 +302,10 @@ function SignatureHeroMock() {
       <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
         <div className="flex items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-semibold uppercase tracking-[0.12em] text-[var(--ozer-coral-600)]">
+            <p className="text-xs font-semibold tracking-[0.12em] text-[var(--ozer-coral-600)] uppercase">
               Signature template
             </p>
-            <p className="mt-1 font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
+            <p className="font-heading mt-1 text-xl font-semibold text-[var(--workspace-shell-text)]">
               Studio launch campaign
             </p>
           </div>
@@ -310,7 +342,9 @@ function SignatureHeroMock() {
             <p className="text-xs font-semibold text-[var(--workspace-shell-text)]">
               {item}
             </p>
-            <p className={`mt-1 text-[10px] ${marketingMutedText}`}>Connected</p>
+            <p className={`mt-1 text-[10px] ${marketingMutedText}`}>
+              Connected
+            </p>
           </div>
         ))}
       </div>
@@ -351,10 +385,10 @@ function SignaturePricingSection({ config }: { config: AppLandingConfig }) {
               key={tier.name}
               className={`flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] ${marketingFeatureCard} p-6`}
             >
-              <p className="text-sm font-semibold uppercase tracking-[0.12em] text-[var(--ozer-coral-600)]">
+              <p className="text-sm font-semibold tracking-[0.12em] text-[var(--ozer-coral-600)] uppercase">
                 {tier.mailboxes}
               </p>
-              <h3 className="mt-2 font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]">
+              <h3 className="font-heading mt-2 text-2xl font-semibold text-[var(--workspace-shell-text)]">
                 {tier.name}
               </h3>
               <p className="mt-4 text-4xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
@@ -381,7 +415,9 @@ function SignaturePricingSection({ config }: { config: AppLandingConfig }) {
               </ul>
 
               <Button asChild className={cn('mt-6', marketingBtnGradient)}>
-                <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>Start free with Business Lite</Link>
+                <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>
+                  Start free with Business Lite
+                </Link>
               </Button>
             </article>
           );
@@ -390,7 +426,10 @@ function SignaturePricingSection({ config }: { config: AppLandingConfig }) {
 
       <div className="mt-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 text-center">
         <p className={`text-sm ${marketingBodyText}`}>
-          <Link href={setupHref} className="font-semibold underline underline-offset-2">
+          <Link
+            href={setupHref}
+            className="font-semibold underline underline-offset-2"
+          >
             {pricing.contactLine}
           </Link>
         </p>

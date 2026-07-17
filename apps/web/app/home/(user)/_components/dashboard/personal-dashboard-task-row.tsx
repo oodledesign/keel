@@ -37,7 +37,9 @@ export function PersonalDashboardTaskRow(props: {
         <p
           className={cn(
             'truncate text-sm font-medium',
-            task.isOverdue ? 'text-rose-200' : 'text-[var(--workspace-shell-text)]',
+            task.isOverdue
+              ? 'text-rose-200'
+              : 'text-[var(--workspace-shell-text)]',
           )}
         >
           {task.title}
@@ -52,7 +54,9 @@ export function PersonalDashboardTaskRow(props: {
             <span
               className={cn(
                 'text-xs',
-                task.isOverdue ? 'text-rose-300/90' : 'text-[var(--workspace-shell-text)]/50',
+                task.isOverdue
+                  ? 'text-rose-300/90'
+                  : 'text-[var(--workspace-shell-text)]/50',
               )}
             >
               {task.isOverdue ? `Overdue · ${task.dueLabel}` : task.dueLabel}
@@ -62,7 +66,7 @@ export function PersonalDashboardTaskRow(props: {
       </div>
       <span
         className={cn(
-          'shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide',
+          'shrink-0 rounded-md border px-2 py-0.5 text-[10px] font-semibold tracking-wide uppercase',
           priorityStyles[task.priority],
         )}
       >
@@ -72,7 +76,11 @@ export function PersonalDashboardTaskRow(props: {
   );
 }
 
-function WorkspaceChip(props: { name: string; color: string; slug: string | null }) {
+function WorkspaceChip(props: {
+  name: string;
+  color: string;
+  slug: string | null;
+}) {
   const inner = (
     <>
       <span
@@ -92,7 +100,10 @@ function WorkspaceChip(props: { name: string; color: string; slug: string | null
       <Link
         href={href}
         onClick={(event) => event.stopPropagation()}
-        className={cn(className, 'transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]')}
+        className={cn(
+          className,
+          'transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
+        )}
       >
         {inner}
       </Link>

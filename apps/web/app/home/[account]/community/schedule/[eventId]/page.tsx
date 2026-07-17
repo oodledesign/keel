@@ -4,13 +4,16 @@ import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { CommunityMeetupDetailClient } from '../../_components/community-meetup-detail-client';
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../../../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../../../_lib/role-access';
 import { isAccountModuleEnabled } from '../../../_lib/server/account-modules';
-import { loadCommunityMeetupDetail } from '../../_lib/server/community-schedule.loader';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
+import { CommunityMeetupDetailClient } from '../../_components/community-meetup-detail-client';
+import { loadCommunityMeetupDetail } from '../../_lib/server/community-schedule.loader';
 
 interface MeetupDetailPageProps {
   params: Promise<{ account: string; eventId: string }>;

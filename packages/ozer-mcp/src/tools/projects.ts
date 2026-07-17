@@ -1,12 +1,12 @@
 import { z } from 'zod';
 
-import type { OzerMcpToolRegistrar } from './types';
 import {
   assertAccountAccess,
   assertSupabaseOk,
   loadUserAccountIds,
   toolJson,
 } from './shared';
+import type { OzerMcpToolRegistrar } from './types';
 
 const listProjectsSchema = z.object({
   business_id: z.string().uuid().optional(),
@@ -129,9 +129,7 @@ export const registerProjectTools: OzerMcpToolRegistrar = (server, context) => {
 
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks')
-        .select(
-          'id, title, status, priority, due_date, project_id, area_id',
-        )
+        .select('id, title, status, priority, due_date, project_id, area_id')
         .eq('project_id', input.id)
         .eq('user_id', userId)
         .order('due_date', { ascending: true, nullsFirst: false });

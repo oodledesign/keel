@@ -14,16 +14,17 @@ import {
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
-import { toast } from '@kit/ui/sonner';
 
-import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
-import { emailApiFetch } from '../_lib/email-api';
 import {
   previewEmailBody,
   splitEmailQuotedHistory,
 } from '~/lib/email-assistant/message-body-display';
+
+import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
+import { emailApiFetch } from '../_lib/email-api';
 import type {
   EmailActionItemRow,
   EmailDraftRow,
@@ -252,7 +253,9 @@ export function EmailThreadPanel({
         )}
       >
         <div>
-          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Select a thread</p>
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            Select a thread
+          </p>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Choose a conversation from your inbox to review messages, suggested
             to-dos, and draft a reply.
@@ -278,7 +281,9 @@ export function EmailThreadPanel({
 
   return (
     <>
-      <section className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}>
+      <section
+        className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}
+      >
         <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <div className="flex items-start gap-3">
             {showBackButton && onBack ? (
@@ -386,7 +391,9 @@ export function EmailThreadPanel({
                               </span>
                             ) : null}
                             {item.suggested_due_date && item.linkLabel ? (
-                              <span className="text-[var(--workspace-shell-text-muted)]">·</span>
+                              <span className="text-[var(--workspace-shell-text-muted)]">
+                                ·
+                              </span>
                             ) : null}
                             {item.linkLabel ? (
                               <span className="text-[var(--ozer-accent)]">
@@ -430,7 +437,7 @@ export function EmailThreadPanel({
 
             {resolvedItems.length > 0 ? (
               <div className="space-y-2 pt-2">
-                <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   Resolved
                 </p>
                 <ul className="space-y-2">
@@ -439,8 +446,10 @@ export function EmailThreadPanel({
                       key={item.id}
                       className="rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2 text-sm text-[var(--workspace-shell-text-muted)]"
                     >
-                      <span className="text-[var(--workspace-shell-text-muted)]">{item.title}</span>
-                      <span className="ml-2 text-xs uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+                      <span className="text-[var(--workspace-shell-text-muted)]">
+                        {item.title}
+                      </span>
+                      <span className="ml-2 text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                         {item.status}
                       </span>
                     </li>
@@ -452,7 +461,9 @@ export function EmailThreadPanel({
 
           <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
             <div className="flex items-center justify-between gap-3">
-              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Draft reply</h3>
+              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                Draft reply
+              </h3>
               <Button
                 type="button"
                 size="sm"
@@ -558,15 +569,15 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
 
   return (
     <div className="space-y-3">
-      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Messages</h3>
+      <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+        Messages
+      </h3>
       <ul className="space-y-2">
         {messages.map((message) => {
           const isLatest = message.id === latestMessageId;
           const isExpanded = isLatest || expandedOlderIds.has(message.id);
           const rawBody =
-            message.body_text?.trim() ||
-            message.snippet?.trim() ||
-            '';
+            message.body_text?.trim() || message.snippet?.trim() || '';
           const { visible, quoted } = splitEmailQuotedHistory(rawBody);
           const body = visible || '(no content)';
           const preview = previewEmailBody(rawBody);
@@ -626,7 +637,7 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                       {formatMessageDate(message.internal_date)}
                     </p>
                   </div>
-                  <p className="mt-3 whitespace-pre-wrap text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                  <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
                     {body}
                   </p>
                   {quoted ? (
@@ -636,10 +647,12 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                         onClick={() => toggleQuotedHistory(message.id)}
                         className="text-xs font-medium text-[var(--ozer-accent)] hover:underline"
                       >
-                        {showQuoted ? 'Hide quoted history' : 'Show quoted history'}
+                        {showQuoted
+                          ? 'Hide quoted history'
+                          : 'Show quoted history'}
                       </button>
                       {showQuoted ? (
-                        <p className="mt-2 whitespace-pre-wrap border-l border-[color:var(--workspace-shell-border)] pl-3 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
+                        <p className="mt-2 border-l border-[color:var(--workspace-shell-border)] pl-3 text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
                           {quoted}
                         </p>
                       ) : null}

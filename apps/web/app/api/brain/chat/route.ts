@@ -2,11 +2,11 @@ import { enhanceRouteHandler } from '@kit/next/routes';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  type BrainContextRef,
   parseSseAssistantText,
   prepareBrainChat,
   streamBrainChatReply,
   summarizeThreadTitle,
-  type BrainContextRef,
 } from '~/lib/brain/chat';
 import { isVoyageConfigured } from '~/lib/brain/voyage';
 
@@ -102,9 +102,7 @@ export const POST = enhanceRouteHandler(
           }
 
           controller.enqueue(
-            encoder.encode(
-              `\n\n[[BRAIN_REFS:${JSON.stringify(contextRefs)}]]`,
-            ),
+            encoder.encode(`\n\n[[BRAIN_REFS:${JSON.stringify(contextRefs)}]]`),
           );
           controller.close();
         } catch (error) {

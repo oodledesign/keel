@@ -105,9 +105,8 @@ async function workspaceLoader() {
   const user = await requireUserInServerComponent();
 
   let accounts: Awaited<ReturnType<typeof api.loadUserAccounts>> | [] = [];
-  let workspace: Awaited<
-    ReturnType<typeof api.getAccountWorkspace>
-  > | null = null;
+  let workspace: Awaited<ReturnType<typeof api.getAccountWorkspace>> | null =
+    null;
 
   if (shouldLoadAccounts) {
     try {

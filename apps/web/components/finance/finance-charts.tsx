@@ -51,7 +51,8 @@ const tooltipItemStyle = {
 };
 
 const WORKSPACE_CHART_TICK = 'var(--workspace-shell-text-muted)';
-const WORKSPACE_CHART_GRID = 'color-mix(in srgb, var(--workspace-shell-border) 70%, transparent)';
+const WORKSPACE_CHART_GRID =
+  'color-mix(in srgb, var(--workspace-shell-border) 70%, transparent)';
 
 const GROUPED_INCOME_COLOR = '#FF5C34';
 const GROUPED_EXPENSES_COLOR = '#94A3B8';
@@ -77,7 +78,9 @@ function FinanceGroupedTooltip({
 
   return (
     <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2.5 text-xs shadow-lg">
-      <p className="mb-2 font-medium text-[var(--workspace-shell-text)]">{label}</p>
+      <p className="mb-2 font-medium text-[var(--workspace-shell-text)]">
+        {label}
+      </p>
       <div className="space-y-1.5">
         <div className="flex items-center justify-between gap-6">
           <span className="flex items-center gap-2 text-[var(--workspace-shell-text-muted)]">
@@ -137,7 +140,9 @@ function FinanceNetTooltip({
 
   return (
     <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2.5 text-xs shadow-lg">
-      <p className="mb-2 font-medium text-[var(--workspace-shell-text)]">{label}</p>
+      <p className="mb-2 font-medium text-[var(--workspace-shell-text)]">
+        {label}
+      </p>
       <div className="flex items-center justify-between gap-6">
         <span className="flex items-center gap-2 text-[var(--workspace-shell-text)]">
           <span
@@ -176,7 +181,9 @@ export function FinanceTrendBarChart({
 }) {
   const isWorkspaceSurface = surface === 'workspace';
   const axisTickFill = isWorkspaceSurface ? WORKSPACE_CHART_TICK : '#8FA1BC';
-  const gridStroke = isWorkspaceSurface ? WORKSPACE_CHART_GRID : 'rgba(255,255,255,0.05)';
+  const gridStroke = isWorkspaceSurface
+    ? WORKSPACE_CHART_GRID
+    : 'rgba(255,255,255,0.05)';
   const legendColor = isWorkspaceSurface
     ? 'var(--workspace-shell-text-muted)'
     : '#D7DEEE';
@@ -217,7 +224,10 @@ export function FinanceTrendBarChart({
               tickFormatter={(v) => `£${Math.round(v / 1000)}k`}
               width={compact ? 36 : 60}
             />
-            <Tooltip cursor={{ fill: cursorFill }} content={<FinanceGroupedTooltip />} />
+            <Tooltip
+              cursor={{ fill: cursorFill }}
+              content={<FinanceGroupedTooltip />}
+            />
             {!compact ? (
               <Legend wrapperStyle={{ fontSize: 12, color: legendColor }} />
             ) : null}
@@ -344,11 +354,7 @@ export function FinanceNetLineChart({ data }: { data: MonthlyFinancePoint[] }) {
   );
 }
 
-export function FinanceMonthRail({
-  data,
-}: {
-  data: MonthlyFinancePoint[];
-}) {
+export function FinanceMonthRail({ data }: { data: MonthlyFinancePoint[] }) {
   const recent = [...data].reverse().slice(0, 3);
 
   return (
@@ -363,7 +369,9 @@ export function FinanceMonthRail({
           }`}
         >
           <div className="flex items-center justify-between gap-3">
-            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">{month.month}</p>
+            <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              {month.month}
+            </p>
             <span className="text-sm font-semibold text-violet-300">
               {formatCurrency(month.net)}
             </span>

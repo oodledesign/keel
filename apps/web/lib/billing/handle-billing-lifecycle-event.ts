@@ -1,7 +1,8 @@
 import 'server-only';
 
-import type Stripe from 'stripe';
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type Stripe from 'stripe';
 
 import { getLogger } from '@kit/shared/logger';
 
@@ -16,7 +17,9 @@ import { isBillingRecoveryStatus } from './billing-recovery';
 
 type AnyClient = SupabaseClient<any>;
 
-function customerIdFrom(value: string | Stripe.Customer | Stripe.DeletedCustomer | null): string | null {
+function customerIdFrom(
+  value: string | Stripe.Customer | Stripe.DeletedCustomer | null,
+): string | null {
   if (!value) return null;
   if (typeof value === 'string') return value;
   if ('deleted' in value && value.deleted) return null;
@@ -70,13 +73,19 @@ export async function handleBillingLifecycleStripeEvent(
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = customerIdFrom(invoice.customer);
       const subscriptionId = subscriptionIdFrom(
-        (invoice as Stripe.Invoice & { subscription?: string | Stripe.Subscription | null })
-          .subscription,
+        (
+          invoice as Stripe.Invoice & {
+            subscription?: string | Stripe.Subscription | null;
+          }
+        ).subscription,
       );
 
       if (!customerId) break;
 
-      const accountId = await findAccountIdByStripeCustomerId(admin, customerId);
+      const accountId = await findAccountIdByStripeCustomerId(
+        admin,
+        customerId,
+      );
       const current = accountId
         ? await loadAccountBilling(admin, accountId)
         : null;
@@ -98,8 +107,7 @@ export async function handleBillingLifecycleStripeEvent(
         stripeSubscriptionId: subscriptionId,
         toStatus,
         forceEvent: true,
-        emailKind:
-          toStatus === 'past_due_grace' ? 'payment_failed' : null,
+        emailKind: toStatus === 'past_due_grace' ? 'payment_failed' : null,
       });
       emailJobIds.push(...result.emailJobIds);
       break;
@@ -110,8 +118,11 @@ export async function handleBillingLifecycleStripeEvent(
       const invoice = event.data.object as Stripe.Invoice;
       const customerId = customerIdFrom(invoice.customer);
       const subscriptionId = subscriptionIdFrom(
-        (invoice as Stripe.Invoice & { subscription?: string | Stripe.Subscription | null })
-          .subscription,
+        (
+          invoice as Stripe.Invoice & {
+            subscription?: string | Stripe.Subscription | null;
+          }
+        ).subscription,
       );
 
       if (!customerId || !subscriptionId) {
@@ -119,7 +130,10 @@ export async function handleBillingLifecycleStripeEvent(
         break;
       }
 
-      const accountId = await findAccountIdByStripeCustomerId(admin, customerId);
+      const accountId = await findAccountIdByStripeCustomerId(
+        admin,
+        customerId,
+      );
       const current = accountId
         ? await loadAccountBilling(admin, accountId)
         : null;
@@ -168,7 +182,10 @@ export async function handleBillingLifecycleStripeEvent(
       const customerId = customerIdFrom(subscription.customer);
       if (!customerId) break;
 
-      const accountId = await findAccountIdByStripeCustomerId(admin, customerId);
+      const accountId = await findAccountIdByStripeCustomerId(
+        admin,
+        customerId,
+      );
       const current = accountId
         ? await loadAccountBilling(admin, accountId)
         : null;

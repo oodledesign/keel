@@ -1,7 +1,8 @@
 'use client';
 
-import Link from 'next/link';
 import { useState } from 'react';
+
+import Link from 'next/link';
 
 import { Button } from '@kit/ui/button';
 
@@ -79,11 +80,13 @@ export function RanklyDashboardProjectsPanel(props: {
               <div className="min-w-0">
                 <Link
                   href={projectHref(props.accountSlug, project.id)}
-                  className="font-medium text-primary underline-offset-4 hover:underline"
+                  className="text-primary font-medium underline-offset-4 hover:underline"
                 >
                   {project.name}
                 </Link>
-                <p className="text-muted-foreground text-sm">{project.domain}</p>
+                <p className="text-muted-foreground text-sm">
+                  {project.domain}
+                </p>
                 {project.client_id && props.clientLabels[project.client_id] ? (
                   <p className="text-muted-foreground mt-0.5 text-xs">
                     Client: {props.clientLabels[project.client_id]}

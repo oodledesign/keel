@@ -182,7 +182,10 @@ export async function reconcileClientSubscriptionCheckoutSession(
   }
 
   if (session.mode !== 'subscription' || session.payment_status !== 'paid') {
-    return { activated: false as const, reason: 'payment_not_complete' as const };
+    return {
+      activated: false as const,
+      reason: 'payment_not_complete' as const,
+    };
   }
 
   const stripeSubscriptionId =
@@ -191,7 +194,10 @@ export async function reconcileClientSubscriptionCheckoutSession(
       : session.subscription?.id;
 
   if (!stripeSubscriptionId) {
-    return { activated: false as const, reason: 'missing_subscription' as const };
+    return {
+      activated: false as const,
+      reason: 'missing_subscription' as const,
+    };
   }
 
   const admin = getSupabaseServerAdminClient();

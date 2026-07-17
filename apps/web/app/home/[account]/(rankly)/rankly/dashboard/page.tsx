@@ -2,19 +2,20 @@ import Link from 'next/link';
 
 import { PageBody } from '@kit/ui/page';
 
-import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
+import pathsConfig from '~/config/paths.config';
+
 import { ModuleDataSection } from '../../../_components/module-data-section';
-import { RanklyDashboardProjectsPanel } from '../../_components/rankly-dashboard-projects-panel';
+import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import {
+  loadRanklyAlertsForTeam,
   loadRanklyClientImportOptions,
   loadRanklyKeywordCountsByProject,
   loadRanklyProjectsForTeam,
-  loadRanklyAlertsForTeam,
 } from '../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
-import pathsConfig from '~/config/paths.config';
+import { RanklyDashboardProjectsPanel } from '../../_components/rankly-dashboard-projects-panel';
 
 type RanklyDashboardPageProps = {
   params: Promise<{
@@ -60,19 +61,19 @@ export default async function RanklyDashboardPage({
       <PageBody className="space-y-10 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="grid gap-4 px-4 sm:grid-cols-3 lg:px-0">
           <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">
               Projects
             </p>
             <p className="mt-1 text-3xl font-semibold">{projects.length}</p>
           </div>
           <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">
               Keywords
             </p>
             <p className="mt-1 text-3xl font-semibold">{keywordTotal}</p>
           </div>
           <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
-            <p className="text-muted-foreground text-xs uppercase tracking-wide">
+            <p className="text-muted-foreground text-xs tracking-wide uppercase">
               Active alerts
             </p>
             <p className="mt-1 text-3xl font-semibold">{activeAlerts}</p>

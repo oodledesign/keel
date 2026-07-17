@@ -25,9 +25,7 @@ import {
   UpsertInvoiceItemsSchema,
   UpsertRecurringSeriesSchema,
 } from '../schema/invoices.schema';
-import {
-  createInvoiceCheckoutSessionByToken as createInvoiceCheckoutByToken,
-} from './invoice-checkout';
+import { createInvoiceCheckoutSessionByToken as createInvoiceCheckoutByToken } from './invoice-checkout';
 import { createInvoicePaymentSettingsService } from './invoice-payment-settings.service';
 import {
   archiveInvoice,
@@ -105,7 +103,11 @@ export const createInvoiceCheckoutSessionByToken = enhanceAction(
     createInvoiceCheckoutByToken(input.token, {
       payDepositOnly: input.pay_deposit_only,
     }),
-  { schema: CreateInvoiceCheckoutSessionByTokenSchema, auth: false, verifyEmail: false },
+  {
+    schema: CreateInvoiceCheckoutSessionByTokenSchema,
+    auth: false,
+    verifyEmail: false,
+  },
 );
 
 export const getInvoicePortalLink = enhanceAction(
@@ -119,7 +121,8 @@ export const duplicateInvoiceAction = enhanceAction(
 );
 
 export const archiveInvoiceAction = enhanceAction(
-  async (input) => archiveInvoice(input.accountId, input.invoiceId, input.archived),
+  async (input) =>
+    archiveInvoice(input.accountId, input.invoiceId, input.archived),
   { schema: ArchiveInvoiceSchema },
 );
 
@@ -170,6 +173,7 @@ export const savePaymentSettingsAction = enhanceAction(
 );
 
 export const disconnectStripeAction = enhanceAction(
-  async (input) => getPaymentSettingsService().disconnectStripe(input.accountId),
+  async (input) =>
+    getPaymentSettingsService().disconnectStripe(input.accountId),
   { schema: SavePaymentSettingsSchema.pick({ accountId: true }) },
 );

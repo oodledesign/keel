@@ -95,7 +95,8 @@ export class StarlingClient {
   }
 
   async listAccounts() {
-    const data = await this.request<StarlingAccountsResponse>('/api/v2/accounts');
+    const data =
+      await this.request<StarlingAccountsResponse>('/api/v2/accounts');
     return data.accounts ?? [];
   }
 

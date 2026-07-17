@@ -1,33 +1,34 @@
 import Link from 'next/link';
 
+import { cn } from '@kit/ui/utils';
+
 import {
   BILLING_TRIAL_DAYS,
   formatGbp,
   getBillingProductPrice,
   listBusinessWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
-import {
-  annualCostForTeamSize,
-  philosophyLine,
-  PRICING_LAST_VERIFIED,
-} from '~/lib/marketing/pricing-content';
+import { MARKETING_FREE_TIER } from '~/lib/billing/pricing-marketing';
+import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   marketingBodyText,
   marketingEyebrow,
   marketingMutedText,
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
+import {
+  PRICING_LAST_VERIFIED,
+  annualCostForTeamSize,
+  philosophyLine,
+} from '~/lib/marketing/pricing-content';
 import { JsonLd } from '~/lib/seo/json-ld';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import {
   articleJsonLd,
   breadcrumbJsonLd,
   faqPageJsonLd,
   schemaGraph,
 } from '~/lib/seo/schema';
-import { cn } from '@kit/ui/utils';
-import { withI18n } from '~/lib/i18n/with-i18n';
-import { MARKETING_FREE_TIER } from '~/lib/billing/pricing-marketing';
 
 const FAQS = () => {
   const lite = getBillingProductPrice('ozer-business-lite');
@@ -105,9 +106,9 @@ function PricingExplainedPage() {
         ])}
       />
 
-      <article className="relative mx-auto w-full max-w-3xl px-6 pb-20 pt-24 md:pt-28">
+      <article className="relative mx-auto w-full max-w-3xl px-6 pt-24 pb-20 md:pt-28">
         <span className={marketingEyebrow}>Pricing explained</span>
-        <h1 className="font-heading mt-4 text-4xl font-bold leading-tight text-[var(--workspace-shell-text)] md:text-5xl">
+        <h1 className="font-heading mt-4 text-4xl leading-tight font-bold text-[var(--workspace-shell-text)] md:text-5xl">
           How much does Ozer cost?
         </h1>
 
@@ -115,10 +116,13 @@ function PricingExplainedPage() {
           {answerFirst}
         </p>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
-          Last verified {PRICING_LAST_VERIFIED}. Figures read from billing config.
+          Last verified {PRICING_LAST_VERIFIED}. Figures read from billing
+          config.
         </p>
 
-        <p className={cn('mt-6 text-sm', marketingBodyText)}>{philosophyLine()}</p>
+        <p className={cn('mt-6 text-sm', marketingBodyText)}>
+          {philosophyLine()}
+        </p>
 
         <section className="mt-12" aria-labelledby="examples-heading">
           <h2
@@ -131,20 +135,21 @@ function PricingExplainedPage() {
             <li>
               <strong>Solo freelancer:</strong> Business Solo at{' '}
               {formatGbp(solo.monthlyGbp)} per month (
-              {formatGbp(solo.yearlyGbp)} per year on annual billing). Last verified{' '}
-              {PRICING_LAST_VERIFIED}.
+              {formatGbp(solo.yearlyGbp)} per year on annual billing). Last
+              verified {PRICING_LAST_VERIFIED}.
             </li>
             <li>
               <strong>4-person studio:</strong> Business Team at{' '}
               {formatGbp(four.monthlyGbp)} per month (
-              {formatGbp(four.yearlyGbp)} per year) — flat price for the whole team, up to{' '}
-              {four.plan.maxTeamMembers} members. Last verified {PRICING_LAST_VERIFIED}.
+              {formatGbp(four.yearlyGbp)} per year) — flat price for the whole
+              team, up to {four.plan.maxTeamMembers} members. Last verified{' '}
+              {PRICING_LAST_VERIFIED}.
             </li>
             <li>
               <strong>10-person agency:</strong> Business Scale at{' '}
-              {formatGbp(ten.monthlyGbp)} per month (
-              {formatGbp(ten.yearlyGbp)} per year) — up to {ten.plan.maxTeamMembers}{' '}
-              members. Last verified {PRICING_LAST_VERIFIED}.
+              {formatGbp(ten.monthlyGbp)} per month ({formatGbp(ten.yearlyGbp)}{' '}
+              per year) — up to {ten.plan.maxTeamMembers} members. Last verified{' '}
+              {PRICING_LAST_VERIFIED}.
             </li>
           </ul>
         </section>
@@ -156,7 +161,9 @@ function PricingExplainedPage() {
           >
             All published workspace prices
           </h2>
-          <ul className={cn('mt-4 list-disc space-y-2 pl-5', marketingBodyText)}>
+          <ul
+            className={cn('mt-4 list-disc space-y-2 pl-5', marketingBodyText)}
+          >
             <li>
               {MARKETING_FREE_TIER.name}: {formatGbp(0)} per month
             </li>
@@ -178,8 +185,8 @@ function PricingExplainedPage() {
             More workspace types are coming. See{' '}
             <Link href="/#coming-soon" className="underline underline-offset-2">
               Growing with you
-            </Link>
-            {' '}for what is in development.
+            </Link>{' '}
+            for what is in development.
           </p>
         </section>
 
@@ -197,10 +204,16 @@ function PricingExplainedPage() {
             How does Ozer pricing compare to Bonsai and HoneyBook?
           </h2>
           <p className={cn('mt-2', marketingBodyText)}>
-            See the neutral comparison pages for worked annual costs for a four-person UK
-            studio. Competitor figures are sourced and flagged until verified.
+            See the neutral comparison pages for worked annual costs for a
+            four-person UK studio. Competitor figures are sourced and flagged
+            until verified.
           </p>
-          <ul className={cn('mt-3 list-disc space-y-1 pl-5 text-sm', marketingBodyText)}>
+          <ul
+            className={cn(
+              'mt-3 list-disc space-y-1 pl-5 text-sm',
+              marketingBodyText,
+            )}
+          >
             <li>
               <Link
                 href="/compare/hellobonsai"
@@ -210,7 +223,10 @@ function PricingExplainedPage() {
               </Link>
             </li>
             <li>
-              <Link href="/compare/honeybook" className="underline underline-offset-2">
+              <Link
+                href="/compare/honeybook"
+                className="underline underline-offset-2"
+              >
                 HoneyBook alternatives
               </Link>
             </li>

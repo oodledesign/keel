@@ -4,7 +4,9 @@ import { pageRoute } from './types';
 /** Draft llms.txt (llmstxt.org convention) from brief + sitemap + answer blocks. */
 export function buildLlmsTxt(input: WebsiteExportInput): WebsiteExportFile {
   const { brief, sitemap } = input;
-  const origin = input.domain ? `https://${input.domain.replace(/^https?:\/\//, '')}` : '';
+  const origin = input.domain
+    ? `https://${input.domain.replace(/^https?:\/\//, '')}`
+    : '';
 
   const lines: string[] = [
     `# ${brief?.org.name || input.websiteName}`,
@@ -41,7 +43,9 @@ export function buildLlmsTxt(input: WebsiteExportInput): WebsiteExportFile {
   if (faqs.length > 0) {
     lines.push('', '## Common questions', '');
     for (const { block } of faqs.slice(0, 12)) {
-      lines.push(`- **${block.question}** ${block.answer.replace(/\n+/g, ' ')}`);
+      lines.push(
+        `- **${block.question}** ${block.answer.replace(/\n+/g, ' ')}`,
+      );
     }
   }
 
@@ -126,7 +130,14 @@ export function buildSeoPlan(input: WebsiteExportInput): WebsiteExportFile {
       `- Schema types: ${seo.schemaTypes.join(', ') || '—'}`,
     );
     if (seo.headingOutline) {
-      lines.push('', '### Heading outline', '', '```', seo.headingOutline, '```');
+      lines.push(
+        '',
+        '### Heading outline',
+        '',
+        '```',
+        seo.headingOutline,
+        '```',
+      );
     }
     if (seo.localSeo) {
       lines.push('', `### Local SEO`, '', seo.localSeo);

@@ -76,10 +76,22 @@ function daysBetween(fromYmd: string, toYmd: string): number {
   return Math.round((b - a) / (1000 * 60 * 60 * 24));
 }
 
-function nextOccurrenceMonthDay(month: number, day: number, from = new Date()): string {
+function nextOccurrenceMonthDay(
+  month: number,
+  day: number,
+  from = new Date(),
+): string {
   const y = from.getFullYear();
   let candidate = new Date(y, month - 1, day, 12, 0, 0, 0);
-  const today = new Date(from.getFullYear(), from.getMonth(), from.getDate(), 12, 0, 0, 0);
+  const today = new Date(
+    from.getFullYear(),
+    from.getMonth(),
+    from.getDate(),
+    12,
+    0,
+    0,
+    0,
+  );
   if (candidate < today) {
     candidate = new Date(y + 1, month - 1, day, 12, 0, 0, 0);
   }
@@ -139,7 +151,9 @@ function normalizePersonRow(row: PersonRow): PersonRow {
   return {
     ...row,
     avatar_url:
-      toSupabasePublicStorageUrl(row.avatar_url) ?? row.avatar_url?.trim() ?? null,
+      toSupabasePublicStorageUrl(row.avatar_url) ??
+      row.avatar_url?.trim() ??
+      null,
   };
 }
 
@@ -195,7 +209,10 @@ class PeopleService {
     });
   }
 
-  async getPerson(userId: string, personId: string): Promise<PersonProfile | null> {
+  async getPerson(
+    userId: string,
+    personId: string,
+  ): Promise<PersonProfile | null> {
     const { data: person, error } = await this.db
       .from('personal_people')
       .select('*')
@@ -213,10 +230,27 @@ class PeopleService {
     });
 
     const [datesRes, giftsRes, catchupsRes, notesRes] = await Promise.all([
-      this.db.from('personal_person_dates').select('*').eq('person_id', personId).order('month').order('day'),
-      this.db.from('personal_person_gift_ideas').select('*').eq('person_id', personId).order('created_at', { ascending: false }),
-      this.db.from('personal_person_catchups').select('*').eq('person_id', personId).order('met_on', { ascending: false }),
-      this.db.from('personal_person_notes').select('*').eq('person_id', personId).order('created_at', { ascending: false }),
+      this.db
+        .from('personal_person_dates')
+        .select('*')
+        .eq('person_id', personId)
+        .order('month')
+        .order('day'),
+      this.db
+        .from('personal_person_gift_ideas')
+        .select('*')
+        .eq('person_id', personId)
+        .order('created_at', { ascending: false }),
+      this.db
+        .from('personal_person_catchups')
+        .select('*')
+        .eq('person_id', personId)
+        .order('met_on', { ascending: false }),
+      this.db
+        .from('personal_person_notes')
+        .select('*')
+        .eq('person_id', personId)
+        .order('created_at', { ascending: false }),
     ]);
 
     const dates = (datesRes.data ?? []) as PersonDateRow[];
@@ -416,7 +450,9 @@ class PeopleService {
         notes: input.notes ?? null,
         url: input.url || null,
         occasion: input.occasion ?? null,
-        ...(input.purchased !== undefined ? { purchased: input.purchased } : {}),
+        ...(input.purchased !== undefined
+          ? { purchased: input.purchased }
+          : {}),
       })
       .eq('id', input.id);
 
@@ -488,7 +524,10 @@ class PeopleService {
     await this.recomputeLastCatchupOn(personId);
   }
 
-  private async syncLastCatchupOn(personId: string, metOn: string): Promise<void> {
+  private async syncLastCatchupOn(
+    personId: string,
+    metOn: string,
+  ): Promise<void> {
     const { data: person } = await this.db
       .from('personal_people')
       .select('last_catchup_on')

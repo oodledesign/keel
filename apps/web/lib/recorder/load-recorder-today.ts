@@ -110,7 +110,9 @@ function mapTaskStatus(
 function mapPriority(
   priority: string | null | undefined,
 ): RecorderTodayTask['priority'] {
-  const raw = String(priority ?? 'medium').trim().toLowerCase();
+  const raw = String(priority ?? 'medium')
+    .trim()
+    .toLowerCase();
   if (raw === 'low' || raw === 'high' || raw === 'urgent') return raw;
   return 'medium';
 }
@@ -333,7 +335,9 @@ async function loadMaps(
   };
 }
 
-export async function loadRecorderToday(userId: string): Promise<RecorderTodayPayload> {
+export async function loadRecorderToday(
+  userId: string,
+): Promise<RecorderTodayPayload> {
   const admin = getSupabaseServerAdminClient();
   const todayYmd = todayLocalYmd();
   const includeWorkspaceTasks = await loadPersonalIncludeWorkspaceTasks(
@@ -368,9 +372,7 @@ export async function loadRecorderToday(userId: string): Promise<RecorderTodayPa
     .filter((task) => task.due_date === todayYmd)
     .sort(sortTasks);
 
-  const overdueTasks = openTasks
-    .filter((task) => task.overdue)
-    .sort(sortTasks);
+  const overdueTasks = openTasks.filter((task) => task.overdue).sort(sortTasks);
 
   const allOpenTasks = [...openTasks].sort(sortTasks);
 

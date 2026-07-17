@@ -79,10 +79,12 @@ export function PersonAvatar({
   return (
     <span
       className={cn(
-        'inline-flex shrink-0 items-center justify-center font-semibold ring-2 ring-inset ring-white/10',
+        'inline-flex shrink-0 items-center justify-center font-semibold ring-2 ring-white/10 ring-inset',
         shapeClass,
         sizeClass,
-        tier ? circleTierBadgeClass(tier) : 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
+        tier
+          ? circleTierBadgeClass(tier)
+          : 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
         className,
       )}
       aria-hidden

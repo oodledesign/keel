@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+
 import { formatDuration } from '~/lib/activity/activity-history';
 import type { ActivityAssignmentSummary } from '~/lib/activity/activity-history';
 import type { ActivityReportRow } from '~/lib/activity/activity-history';
@@ -48,16 +49,19 @@ export function ActivityReviewDigest({
             Weekly review
           </p>
           <p className="max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
-            {formatDuration(assignment.unassignedSeconds)} ({unassignedPercent}%)
-            still unassigned across {assignment.needsReviewCount} sessions in this
-            range.
+            {formatDuration(assignment.unassignedSeconds)} ({unassignedPercent}
+            %) still unassigned across {assignment.needsReviewCount} sessions in
+            this range.
             {topUnassignedApps.length > 0 ? (
               <>
                 {' '}
                 Top sources:{' '}
                 {topUnassignedApps
                   .slice(0, 3)
-                  .map((row) => `${row.label} (${formatDuration(row.durationSeconds)})`)
+                  .map(
+                    (row) =>
+                      `${row.label} (${formatDuration(row.durationSeconds)})`,
+                  )
                   .join(', ')}
                 .
               </>

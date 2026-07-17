@@ -6,15 +6,15 @@ import { Pin } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { getErrorMessage } from '../../_lib/error-message';
 import {
   addPhaseNote,
   updatePhaseNote,
 } from '../../_lib/server/server-actions';
-import { getErrorMessage } from '../../_lib/error-message';
 
 export type PhaseNote = {
   id: string;
@@ -77,9 +77,7 @@ export function PhaseNotesPanel({
         });
       } catch (err) {
         toast.error(getErrorMessage(err));
-        setNotes((prev) =>
-          prev.map((n) => (n.id === note.id ? note : n)),
-        );
+        setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
       }
     });
   };
@@ -109,11 +107,18 @@ export function PhaseNotesPanel({
 
   return (
     <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-      <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Notes</h2>
-      <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">Pinned notes appear first</p>
+      <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+        Notes
+      </h2>
+      <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+        Pinned notes appear first
+      </p>
 
       {canEdit && (
-        <form onSubmit={addNote} className="mt-3 space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-4">
+        <form
+          onSubmit={addNote}
+          className="mt-3 space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-4"
+        >
           <Input
             value={draftTitle}
             onChange={(e) => setDraftTitle(e.target.value)}
@@ -140,7 +145,9 @@ export function PhaseNotesPanel({
 
       <ul className="mt-3 space-y-3">
         {sortedNotes.length === 0 && (
-          <li className="text-sm text-[var(--workspace-shell-text-muted)]">No notes yet.</li>
+          <li className="text-sm text-[var(--workspace-shell-text-muted)]">
+            No notes yet.
+          </li>
         )}
         {sortedNotes.map((note) => (
           <li
@@ -154,7 +161,9 @@ export function PhaseNotesPanel({
           >
             <div className="flex items-start justify-between gap-2">
               {note.title ? (
-                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">{note.title}</p>
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  {note.title}
+                </p>
               ) : null}
               {canEdit && (
                 <button
@@ -172,7 +181,7 @@ export function PhaseNotesPanel({
                 </button>
               )}
             </div>
-            <p className="mt-1 whitespace-pre-wrap text-sm text-[var(--workspace-shell-text-muted)]">
+            <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
               {note.content}
             </p>
             <p className="mt-2 text-[10px] text-[var(--workspace-shell-text-muted)]">

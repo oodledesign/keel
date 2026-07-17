@@ -62,9 +62,11 @@ export function recommendSopsForTasks(
   const scored = playbooks
     .map((playbook) => {
       const playbookTokens = tokens(
-        [playbook.title, playbook.description ?? '', playbook.category ?? ''].join(
-          ' ',
-        ),
+        [
+          playbook.title,
+          playbook.description ?? '',
+          playbook.category ?? '',
+        ].join(' '),
       );
       const score = overlapScore(taskTokens, playbookTokens);
       return { playbook, score };

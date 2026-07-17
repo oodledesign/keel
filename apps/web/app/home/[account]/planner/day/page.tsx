@@ -2,14 +2,13 @@ import { redirect } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
+import pathsConfig from '~/config/paths.config';
+import { DayViewClient } from '~/home/(user)/planner/_components/DayViewClient';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   assertWorkspacePlannerAccess,
   loadWorkspaceDayViewData,
 } from '~/lib/planner/load-planner-data';
-import pathsConfig from '~/config/paths.config';
-
-import { DayViewClient } from '~/home/(user)/planner/_components/DayViewClient';
 
 interface WorkspacePlannerDayPageProps {
   params: Promise<{ account: string }>;

@@ -105,22 +105,25 @@ export function ApiTokensSettingsCard({
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const formatMinutes = (seconds: number) => Math.max(1, Math.round(seconds / 60));
+  const formatMinutes = (seconds: number) =>
+    Math.max(1, Math.round(seconds / 60));
 
   return (
     <div className="space-y-5">
       {scope === 'personal' && usageSummary ? (
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4 text-sm text-muted-foreground">
+        <div className="text-muted-foreground rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4 text-sm">
           <p>
             Plan:{' '}
             <span className="font-medium text-[var(--workspace-shell-text)]">
-              {usageSummary.tier === 'standard' ? 'Included with paid workspace' : 'Personal / Business Lite'}
+              {usageSummary.tier === 'standard'
+                ? 'Included with paid workspace'
+                : 'Personal / Business Lite'}
             </span>
           </p>
           <p className="mt-1">
             This month: {formatMinutes(usageSummary.durationSeconds)} of{' '}
-            {formatMinutes(usageSummary.limits.maxDurationSecondsPerMonth)} minutes
-            recorded.
+            {formatMinutes(usageSummary.limits.maxDurationSecondsPerMonth)}{' '}
+            minutes recorded.
           </p>
           {usageSummary.tier === 'limited' ? (
             <p className="mt-2 text-xs">
@@ -132,7 +135,7 @@ export function ApiTokensSettingsCard({
         </div>
       ) : null}
 
-      <p className="text-sm text-muted-foreground">
+      <p className="text-muted-foreground text-sm">
         {scope === 'personal'
           ? 'Connect the Ozer desktop recorder with a personal access token. Choose the destination workspace when you sync each recording.'
           : 'Legacy workspace tokens still work. For new setups, create tokens in your personal settings instead.'}
@@ -162,14 +165,19 @@ export function ApiTokensSettingsCard({
 
       {rawToken ? (
         <div className="space-y-2 rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4">
-          <p className="text-xs font-semibold uppercase tracking-wide text-amber-200">
+          <p className="text-xs font-semibold tracking-wide text-amber-200 uppercase">
             Save this token now — it will not be shown again
           </p>
           <div className="flex flex-wrap items-center gap-2">
-            <code className="min-w-0 flex-1 break-all rounded-lg bg-black/30 px-3 py-2 text-xs text-[var(--workspace-shell-text)]">
+            <code className="min-w-0 flex-1 rounded-lg bg-black/30 px-3 py-2 text-xs break-all text-[var(--workspace-shell-text)]">
               {rawToken}
             </code>
-            <Button type="button" size="sm" variant="outline" onClick={copyToken}>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={copyToken}
+            >
               {copied ? (
                 <Check className="mr-2 h-4 w-4" />
               ) : (
@@ -178,7 +186,7 @@ export function ApiTokensSettingsCard({
               {copied ? 'Copied' : 'Copy'}
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Store it somewhere safe. You will not be able to view it again after
             you leave this page.
           </p>
@@ -187,8 +195,10 @@ export function ApiTokensSettingsCard({
 
       {tokens.length > 0 ? (
         <div className="space-y-2 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
-          <p className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-            {scope === 'personal' ? 'Your tokens' : 'Your tokens in this workspace'}
+          <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+            {scope === 'personal'
+              ? 'Your tokens'
+              : 'Your tokens in this workspace'}
           </p>
           <ul className="space-y-2">
             {tokens.map((token) => {
@@ -208,7 +218,7 @@ export function ApiTokensSettingsCard({
                         </Badge>
                       ) : null}
                     </div>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-muted-foreground text-xs">
                       Created {formatWhen(token.created_at)}
                       {token.last_used_at
                         ? ` · Last used ${formatWhen(token.last_used_at)}`
@@ -236,8 +246,10 @@ export function ApiTokensSettingsCard({
           </ul>
         </div>
       ) : (
-        <p className="text-sm text-muted-foreground">
-          {scope === 'personal' ? 'No tokens yet.' : 'No tokens yet for this workspace.'}
+        <p className="text-muted-foreground text-sm">
+          {scope === 'personal'
+            ? 'No tokens yet.'
+            : 'No tokens yet for this workspace.'}
         </p>
       )}
     </div>

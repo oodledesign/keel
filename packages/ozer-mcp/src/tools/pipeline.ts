@@ -1,8 +1,7 @@
-import { z } from 'zod';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { OzerMcpToolRegistrar } from './types';
+import { z } from 'zod';
+
 import {
   assertSupabaseOk,
   dealDisplayName,
@@ -10,6 +9,7 @@ import {
   pickDefined,
   toolJson,
 } from './shared';
+import type { OzerMcpToolRegistrar } from './types';
 
 const listPipelineDealsSchema = z.object({
   stage: z.string().trim().optional(),
@@ -77,7 +77,10 @@ async function loadAccessibleDeal(
   return data as PipelineDealRow;
 }
 
-export const registerPipelineTools: OzerMcpToolRegistrar = (server, context) => {
+export const registerPipelineTools: OzerMcpToolRegistrar = (
+  server,
+  context,
+) => {
   const { supabase, userId } = context;
 
   server.registerTool(

@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { Loader2, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
 import {
   Select,
   SelectContent,
@@ -12,13 +13,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
 import {
+  type ActivityRuleRow,
   createManualActivityRuleAction,
   deleteActivityRuleAction,
-  type ActivityRuleRow,
 } from '~/home/[account]/activity/_lib/server/activity-rules-actions';
 
 type Props = {
@@ -38,8 +38,9 @@ export function ActivityRulesPanel({
 }: Props) {
   const [rules, setRules] = useState(initialRules);
   const [pending, startTransition] = useTransition();
-  const [matchType, setMatchType] =
-    useState<'domain' | 'app_name' | 'title_contains'>('domain');
+  const [matchType, setMatchType] = useState<
+    'domain' | 'app_name' | 'title_contains'
+  >('domain');
   const [matchValue, setMatchValue] = useState('');
   const [clientId, setClientId] = useState('none');
   const [projectId, setProjectId] = useState('none');

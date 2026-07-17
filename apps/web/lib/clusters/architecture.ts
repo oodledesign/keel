@@ -1,3 +1,5 @@
+import { overlapScore } from '~/lib/dataforseo/serp';
+
 import type {
   ClusterDraft,
   ClusterLink,
@@ -7,12 +9,7 @@ import type {
   SerpCache,
   SpokeDraft,
 } from './types';
-import {
-  intentWeight,
-  normalise,
-  titleCaseKeyword,
-} from './utils';
-import { overlapScore } from '~/lib/dataforseo/serp';
+import { intentWeight, normalise, titleCaseKeyword } from './utils';
 
 function weightedKd(keywords: ClusterDraft['keywords']): number {
   const totalVolume = keywords.reduce((sum, kw) => sum + kw.search_volume, 0);
@@ -308,7 +305,9 @@ export function mergeCannibalisingPlans(
               ]),
             ],
             total_volume: a.total_volume + b.total_volume,
-            weighted_kd: Number(((a.weighted_kd + b.weighted_kd) / 2).toFixed(1)),
+            weighted_kd: Number(
+              ((a.weighted_kd + b.weighted_kd) / 2).toFixed(1),
+            ),
             spokes: [...a.spokes, ...b.spokes],
           };
           merged.splice(j, 1);

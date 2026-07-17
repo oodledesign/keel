@@ -24,24 +24,27 @@ export function PersonalClientsAccountPicker({
     if (!only) return null;
     return (
       <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-        <span className="text-[var(--workspace-shell-text-muted)]">Workspace</span>{' '}
-        <span className="font-medium text-[var(--workspace-shell-text)]">{only.label}</span>
+        <span className="text-[var(--workspace-shell-text-muted)]">
+          Workspace
+        </span>{' '}
+        <span className="font-medium text-[var(--workspace-shell-text)]">
+          {only.label}
+        </span>
       </p>
     );
   }
 
   return (
     <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-3">
-      <span className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+      <span className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
         Workspace
       </span>
       <Select
         value={currentSlug}
         onValueChange={(value) => {
-          router.push(
-            `/app/clients?account=${encodeURIComponent(value)}`,
-            { scroll: false },
-          );
+          router.push(`/app/clients?account=${encodeURIComponent(value)}`, {
+            scroll: false,
+          });
         }}
       >
         <SelectTrigger className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] sm:w-[min(100%,280px)]">

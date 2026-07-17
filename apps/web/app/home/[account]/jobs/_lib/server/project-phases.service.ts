@@ -1,25 +1,31 @@
 import 'server-only';
 
 import { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { Database } from '~/lib/database.types';
+import {
+  notifyJobTaskAssigned,
+  notifyPhaseCompleted,
+} from '~/lib/jobs/project-notifications';
+import { WEBSITE_DESIGN_TEMPLATE } from '~/lib/websites/website-design-template';
 
 import {
   isMissingColumnError,
   isMissingRelationError,
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
-
 import type {
   AddPhaseNoteInput,
   ApplyPhaseTemplateInput,
-  CreatePhaseInput,
   CreateJobTaskInput,
+  CreatePhaseInput,
   DeletePhaseInput,
   EnsurePhasePageInput,
   GetPhaseDetailInput,
@@ -37,16 +43,10 @@ import type {
   ReorderPhasesInput,
   SavePhasePageDocInput,
   TaskStatusCount,
-  UpdatePhaseInput,
   UpdateJobTaskInput,
+  UpdatePhaseInput,
   UpdatePhaseNoteInput,
 } from '../schema/project-phases.schema';
-import {
-  notifyJobTaskAssigned,
-  notifyPhaseCompleted,
-} from '~/lib/jobs/project-notifications';
-import { queueBrainIndexSource } from '~/lib/brain/sync';
-import { WEBSITE_DESIGN_TEMPLATE } from '~/lib/websites/website-design-template';
 
 const PhaseTemplatePhaseSchema = z.object({
   name: z.string().min(1).max(200),
@@ -210,7 +210,10 @@ class ProjectPhasesService {
   }
 
   private computeProgressPct(counts: TaskStatusCount): number {
-    const total = TASK_STATUSES.reduce((sum, status) => sum + counts[status], 0);
+    const total = TASK_STATUSES.reduce(
+      (sum, status) => sum + counts[status],
+      0,
+    );
     if (total === 0) return 0;
     const active = total - counts.cancelled;
     if (active === 0) return 0;
@@ -264,7 +267,10 @@ class ProjectPhasesService {
   }
 
   async createPhase(input: CreatePhaseInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'jobs.edit',
+    );
     await this.verifyJob(input.accountId, input.jobId);
 
     const { data: maxRow, error: maxErr } = await this.db
@@ -294,7 +300,9 @@ class ProjectPhasesService {
         start_date: input.start_date
           ? input.start_date.toISOString().slice(0, 10)
           : null,
-        due_date: input.due_date ? input.due_date.toISOString().slice(0, 10) : null,
+        due_date: input.due_date
+          ? input.due_date.toISOString().slice(0, 10)
+          : null,
         created_by: user.id,
       })
       .select()
@@ -325,7 +333,8 @@ class ProjectPhasesService {
         payload.completed_at = null;
       }
     }
-    if (input.is_milestone !== undefined) payload.is_milestone = input.is_milestone;
+    if (input.is_milestone !== undefined)
+      payload.is_milestone = input.is_milestone;
     if (input.colour !== undefined) payload.colour = input.colour;
     if (input.start_date !== undefined) {
       payload.start_date = input.start_date
@@ -362,8 +371,10 @@ class ProjectPhasesService {
         accountId: input.accountId,
         accountSlug: input.accountSlug,
         jobId: input.jobId,
-        jobTitle: ((job.title as string | null) ?? 'Project').trim() || 'Project',
-        phaseName: (data.name as string) || (existing.name as string) || 'Phase',
+        jobTitle:
+          ((job.title as string | null) ?? 'Project').trim() || 'Project',
+        phaseName:
+          (data.name as string) || (existing.name as string) || 'Phase',
       });
     }
 
@@ -402,7 +413,9 @@ class ProjectPhasesService {
 
     for (const id of input.orderedPhaseIds) {
       if (!existingIds.has(id)) {
-        throw new Error('Invalid phase order: phase does not belong to this job');
+        throw new Error(
+          'Invalid phase order: phase does not belong to this job',
+        );
       }
     }
 
@@ -422,7 +435,9 @@ class ProjectPhasesService {
     }
   }
 
-  async listPhasesForJob(input: ListPhasesForJobInput): Promise<PhaseListItem[]> {
+  async listPhasesForJob(
+    input: ListPhasesForJobInput,
+  ): Promise<PhaseListItem[]> {
     await this.ensureUser();
     await this.verifyJob(input.accountId, input.jobId);
 
@@ -438,28 +453,29 @@ class ProjectPhasesService {
     const phaseRows = (phases ?? []) as Array<Record<string, unknown>>;
     const phaseIds = phaseRows.map((p) => p.id as string);
 
-    const [{ data: tasks }, { data: docs }, { data: notes }] = await Promise.all([
-      this.db
-        .from('tasks')
-        .select('phase_id, status')
-        .eq('project_id', input.jobId),
-      phaseIds.length > 0
-        ? this.db
-            .from('docs')
-            .select('id, phase_id')
-            .eq('account_id', input.accountId)
-            .eq('project_id', input.jobId)
-            .eq('doc_type', 'phase_page')
-            .in('phase_id', phaseIds)
-        : Promise.resolve({ data: [] }),
-      phaseIds.length > 0
-        ? this.db
-            .from('notes')
-            .select('phase_id')
-            .eq('account_id', input.accountId)
-            .in('phase_id', phaseIds)
-        : Promise.resolve({ data: [] }),
-    ]);
+    const [{ data: tasks }, { data: docs }, { data: notes }] =
+      await Promise.all([
+        this.db
+          .from('tasks')
+          .select('phase_id, status')
+          .eq('project_id', input.jobId),
+        phaseIds.length > 0
+          ? this.db
+              .from('docs')
+              .select('id, phase_id')
+              .eq('account_id', input.accountId)
+              .eq('project_id', input.jobId)
+              .eq('doc_type', 'phase_page')
+              .in('phase_id', phaseIds)
+          : Promise.resolve({ data: [] }),
+        phaseIds.length > 0
+          ? this.db
+              .from('notes')
+              .select('phase_id')
+              .eq('account_id', input.accountId)
+              .in('phase_id', phaseIds)
+          : Promise.resolve({ data: [] }),
+      ]);
 
     const pageDocByPhase = new Map<string, string>();
     for (const doc of docs ?? []) {
@@ -845,7 +861,10 @@ class ProjectPhasesService {
 
     if (tasksResult.error) {
       if (isMissingColumnError(tasksResult.error)) {
-        logMissingRelation('project_phases.getPhaseDetail.tasks', tasksResult.error);
+        logMissingRelation(
+          'project_phases.getPhaseDetail.tasks',
+          tasksResult.error,
+        );
         tasks = [];
       } else {
         this.throwErr(tasksResult.error);
@@ -856,7 +875,10 @@ class ProjectPhasesService {
 
     if (notesResult.error) {
       if (isMissingColumnError(notesResult.error)) {
-        logMissingRelation('project_phases.getPhaseDetail.notes', notesResult.error);
+        logMissingRelation(
+          'project_phases.getPhaseDetail.notes',
+          notesResult.error,
+        );
         notes = [];
       } else {
         this.throwErr(notesResult.error);
@@ -872,7 +894,10 @@ class ProjectPhasesService {
   }
 
   async createJobTask(input: CreateJobTaskInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'jobs.edit',
+    );
     const job = await this.verifyJob(input.accountId, input.jobId);
 
     if (input.phaseId) {
@@ -938,7 +963,10 @@ class ProjectPhasesService {
   }
 
   async updateJobTask(input: UpdateJobTaskInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'jobs.edit',
+    );
     const job = await this.verifyJob(input.accountId, input.jobId);
 
     const { data: task, error: taskErr } = await this.db
@@ -997,7 +1025,8 @@ class ProjectPhasesService {
         accountId: input.accountId,
         accountSlug: input.accountSlug,
         jobId: input.jobId,
-        jobTitle: ((job.title as string | null) ?? 'Project').trim() || 'Project',
+        jobTitle:
+          ((job.title as string | null) ?? 'Project').trim() || 'Project',
         taskTitle: (data.title as string) || 'Task',
         assigneeUserId: nextAssignee,
         actorUserId: user.id,
@@ -1045,7 +1074,10 @@ class ProjectPhasesService {
   }
 
   async addPhaseNote(input: AddPhaseNoteInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'jobs.edit',
+    );
     await this.verifyPhase(input.accountId, input.jobId, input.phaseId);
 
     const { data, error } = await this.db
@@ -1095,7 +1127,10 @@ class ProjectPhasesService {
     return data;
   }
 
-  private async ensureWebsiteDesignPhaseTemplate(accountId: string, userId: string) {
+  private async ensureWebsiteDesignPhaseTemplate(
+    accountId: string,
+    userId: string,
+  ) {
     const { data: existing, error: existingErr } = await this.db
       .from('project_phase_templates')
       .select('id, phases')
@@ -1106,7 +1141,9 @@ class ProjectPhasesService {
     if (existingErr) this.throwErr(existingErr);
 
     if (existing?.id) {
-      const parsed = z.array(PhaseTemplatePhaseSchema).safeParse(existing.phases);
+      const parsed = z
+        .array(PhaseTemplatePhaseSchema)
+        .safeParse(existing.phases);
       const hasPageContent =
         parsed.success &&
         parsed.data.some((phase) => Boolean(phase.page_content?.trim()));
@@ -1194,7 +1231,10 @@ class ProjectPhasesService {
   }
 
   async applyPhaseTemplate(input: ApplyPhaseTemplateInput) {
-    const user = await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'jobs.edit',
+    );
     await this.verifyJob(input.accountId, input.jobId);
 
     const { data: template, error: templateErr } = await this.db

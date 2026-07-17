@@ -26,7 +26,10 @@ function formatMoney(pence: number, currency = 'gbp') {
   }).format(pence / 100);
 }
 
-export function renderContractSmartFields(template: string, ctx: SmartFieldContext): string {
+export function renderContractSmartFields(
+  template: string,
+  ctx: SmartFieldContext,
+): string {
   const clientFirst =
     ctx.client?.first_name?.trim() ||
     ctx.client?.display_name?.split(' ')[0] ||

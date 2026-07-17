@@ -26,7 +26,10 @@ type ProfileAvatarProps = (SessionProps | TextProps) & {
 };
 
 export function ProfileAvatar(props: ProfileAvatarProps) {
-  const avatarClassName = cn('h-9 w-9 shrink-0 group-focus:ring-2', props.className);
+  const avatarClassName = cn(
+    'h-9 w-9 shrink-0 group-focus:ring-2',
+    props.className,
+  );
 
   if ('text' in props) {
     return (

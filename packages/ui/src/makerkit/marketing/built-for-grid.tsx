@@ -52,14 +52,11 @@ export function BuiltForGrid({
 }: BuiltForGridProps) {
   return (
     <section
-      className={cn(
-        'bg-white py-16 dark:bg-[#0D1421] lg:py-24',
-        className,
-      )}
+      className={cn('bg-white py-16 lg:py-24 dark:bg-[#0D1421]', className)}
     >
       <div className="container mx-auto">
         <div className="mb-12 text-center">
-          <h2 className="mb-4 text-3xl font-bold text-gray-900 dark:text-white lg:text-4xl">
+          <h2 className="mb-4 text-3xl font-bold text-gray-900 lg:text-4xl dark:text-white">
             {heading}
           </h2>
           {subheading && (

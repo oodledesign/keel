@@ -5,14 +5,14 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getLogger } from '@kit/shared/logger';
 
 import {
-  BILLING_GRACE_PERIOD_DAYS,
   type AccountBillingRow,
   type AccountBillingStatus,
+  BILLING_GRACE_PERIOD_DAYS,
   type BillingEmailKind,
 } from './account-billing-types';
 import {
-  enqueueBillingEmail,
   type BillingEmailPayload,
+  enqueueBillingEmail,
 } from './billing-email-outbox';
 
 type AnyClient = SupabaseClient<any>;
@@ -215,11 +215,7 @@ export async function applyAccountBillingTransition(
   const fromStatus = existing?.subscription_status ?? null;
   const now = new Date();
 
-  if (
-    !input.forceEvent &&
-    fromStatus === input.toStatus &&
-    !input.emailKind
-  ) {
+  if (!input.forceEvent && fromStatus === input.toStatus && !input.emailKind) {
     // Still record the event so redeliveries are no-ops
     const { error: noopEventError } = await eventsTable(admin).insert({
       account_id: accountId,
@@ -299,7 +295,8 @@ export async function applyAccountBillingTransition(
       payload: {
         accountSlug: meta?.slug,
         accountName: meta?.name,
-        subscriptionId: input.stripeSubscriptionId ?? existing?.stripe_subscription_id,
+        subscriptionId:
+          input.stripeSubscriptionId ?? existing?.stripe_subscription_id,
         trialEndsAt: input.trialEndsAt ?? existing?.trial_ends_at,
         fromStatus,
         toStatus: input.toStatus,

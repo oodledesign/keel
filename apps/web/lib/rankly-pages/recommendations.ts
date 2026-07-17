@@ -1,5 +1,5 @@
-import type { PagespeedSnapshot } from '~/lib/pagespeed/types';
 import { PAGESPEED_PRIORITY_LABELS } from '~/lib/pagespeed/recommendations';
+import type { PagespeedSnapshot } from '~/lib/pagespeed/types';
 import type { SiteCrawlIssue } from '~/lib/site-crawl/types';
 import { SITE_CRAWL_ISSUE_LABELS } from '~/lib/site-crawl/types';
 import type { SiteCrawlPageRow } from '~/lib/site-crawl/types';
@@ -117,7 +117,8 @@ function recommendationFromCrawlIssue(
         title: 'Shorten the meta description',
         detail: `Your meta description is ${page.meta_description.length} characters (recommended max ~160). Current: "${page.meta_description}"`,
         source: 'site-crawl',
-        action: 'Cut secondary phrases and keep the core value proposition in the first 155 characters.',
+        action:
+          'Cut secondary phrases and keep the core value proposition in the first 155 characters.',
       };
 
     case 'missing_h1':

@@ -5,8 +5,8 @@ import { z } from 'zod';
 import type { ExtractAccountMember } from '@kit/email-assistant';
 import { parseExtractResponse, stripJsonFences } from '@kit/email-assistant';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
+import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 
 const MAX_TRANSCRIPT_CHARS = 80_000;
 const MIN_TASK_CONFIDENCE = 0.45;
@@ -142,7 +142,9 @@ function normalizeExcerpt(value: string | null | undefined): string | null {
   return trimmed.length > 200 ? `${trimmed.slice(0, 197)}…` : trimmed;
 }
 
-export function parseMeetingExtractResponse(raw: string): MeetingExtractedActionItem[] {
+export function parseMeetingExtractResponse(
+  raw: string,
+): MeetingExtractedActionItem[] {
   const cleaned = stripJsonFences(raw);
 
   let json: unknown;
@@ -199,15 +201,15 @@ export function parseMeetingExtractResponse(raw: string): MeetingExtractedAction
         sourceExcerpt: normalizeExcerpt(item.source_excerpt),
         taskConfidence: normalizeConfidence(item.task_confidence),
         assigneeConfidence: normalizeConfidence(item.assignee_confidence),
-        suggestedAssigneeEmail: item.suggested_assignee_email
-          ?.trim()
-          .toLowerCase() || null,
+        suggestedAssigneeEmail:
+          item.suggested_assignee_email?.trim().toLowerCase() || null,
       };
     })
     .filter(
       (item) =>
         item.suggestedTitle.length > 0 &&
-        (item.taskConfidence === null || item.taskConfidence >= MIN_TASK_CONFIDENCE),
+        (item.taskConfidence === null ||
+          item.taskConfidence >= MIN_TASK_CONFIDENCE),
     );
 }
 
@@ -280,7 +282,9 @@ Respond with JSON only.`;
     content?: Array<{ type: string; text?: string }>;
   };
 
-  const raw = body.content?.find((block) => block.type === 'text')?.text?.trim();
+  const raw = body.content
+    ?.find((block) => block.type === 'text')
+    ?.text?.trim();
   if (!raw) {
     throw new Error('Empty extraction response from Anthropic');
   }

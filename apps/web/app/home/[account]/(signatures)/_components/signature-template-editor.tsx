@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useRef, useState } from 'react';
+
 import { useRouter } from 'next/navigation';
 
 import {
@@ -17,48 +18,61 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
   SIGNATURE_TEMPLATE_TOKENS,
+  type SignatureBuilderDocument,
   createMinimalSignatureDocument,
   htmlToSignatureBlocks,
   signatureBlocksToHtml,
-  type SignatureBuilderDocument,
 } from '~/lib/signatures/signature-blocks';
 import {
   SIGNATURE_DARK_MODE_CHECKLIST,
   lintSignatureTemplateHtml,
 } from '~/lib/signatures/template-dark-mode-lint';
 
-import { saveSignatureTemplate } from '../_lib/server/signatures-module-actions';
 import type {
   SignatureStaff,
   SignatureTemplate,
 } from '../_lib/server/signatures-data';
-
-import { SignaturePreviewLinkButton } from './signature-preview-link-button';
+import { saveSignatureTemplate } from '../_lib/server/signatures-module-actions';
 import {
   SignaturePreviewFrame,
   type SignaturePreviewTheme,
 } from './signature-preview-frame';
+import { SignaturePreviewLinkButton } from './signature-preview-link-button';
 import { SignatureVisualEditor } from './signature-visual-editor';
 
 type EditorMode = 'visual' | 'html';
+
+const TRANSPARENT_PIXEL =
+  'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+
+export type SignatureTemplatePreviewBrand = {
+  primaryColor: string;
+  secondaryColor: string;
+  accentColor: string;
+  logoUrl: string | null;
+  websiteUrl: string | null;
+  address: string | null;
+};
 
 export function SignatureTemplateEditor({
   accountId,
   template,
   previewStaff,
+  previewBrand,
   previewAssetHtml,
 }: {
   accountId: string;
   template: SignatureTemplate;
   previewStaff: SignatureStaff | null;
+  previewBrand?: SignatureTemplatePreviewBrand | null;
   previewAssetHtml?: {
     awardBadgesHtml: string;
     signatureCustomTextHtml: string;
@@ -73,17 +87,13 @@ export function SignatureTemplateEditor({
   );
   const [html, setHtml] = useState(() => {
     const parsed = htmlToSignatureBlocks(template.html_template);
-    return parsed
-      ? signatureBlocksToHtml(parsed)
-      : template.html_template;
+    return parsed ? signatureBlocksToHtml(parsed) : template.html_template;
   });
   const [mode, setMode] = useState<EditorMode>('visual');
   const [isDefault, setIsDefault] = useState(template.is_default);
   const [previewHtml, setPreviewHtml] = useState(() => {
     const parsed = htmlToSignatureBlocks(template.html_template);
-    return parsed
-      ? signatureBlocksToHtml(parsed)
-      : template.html_template;
+    return parsed ? signatureBlocksToHtml(parsed) : template.html_template;
   });
   const [saving, setSaving] = useState(false);
   const [previewTheme, setPreviewTheme] =
@@ -99,19 +109,38 @@ export function SignatureTemplateEditor({
     let output = previewHtml;
 
     for (const token of SIGNATURE_TEMPLATE_TOKENS) {
-      let value = token;
+      let value = '';
       if (staff && token in staff) {
         value = String(staff[token as keyof SignatureStaff] ?? '');
       }
+
       if (token === 'award_badges') {
         value = previewAssetHtml?.awardBadgesHtml ?? '';
       } else if (token === 'signature_custom_text') {
         value = previewAssetHtml?.signatureCustomTextHtml ?? '';
       } else if (token === 'award_badge_url') {
+        value = previewAssetHtml?.awardBadgeUrl?.trim() || TRANSPARENT_PIXEL;
+      } else if (token === 'brand_logo_url' || token === 'company_logo_url') {
+        value = previewBrand?.logoUrl?.trim() || TRANSPARENT_PIXEL;
+      } else if (token === 'brand_primary_color') {
+        value = previewBrand?.primaryColor?.trim() || '#0D2344';
+      } else if (token === 'brand_secondary_color') {
+        value = previewBrand?.secondaryColor?.trim() || '#FFFFFF';
+      } else if (token === 'brand_accent_color') {
+        value = previewBrand?.accentColor?.trim() || '#e63329';
+      } else if (token === 'website') {
+        value = previewBrand?.websiteUrl?.trim() || '';
+      } else if (token === 'address') {
         value =
-          previewAssetHtml?.awardBadgeUrl ??
-          'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+          (staff as { address?: string | null } | null)?.address?.trim() ||
+          previewBrand?.address?.trim() ||
+          '';
+      } else if (token === 'credentials') {
+        // Not yet a first-class staff column — leave blank rather than
+        // rendering the literal token name in the live preview.
+        value = '';
       }
+
       output = output.replace(
         new RegExp(`\\{\\{\\s*${token}\\s*\\}\\}`, 'gi'),
         value,
@@ -135,7 +164,7 @@ export function SignatureTemplateEditor({
 <div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>
 </body>
 </html>`;
-  }, [previewHtml, previewStaff, previewTheme, previewAssetHtml]);
+  }, [previewHtml, previewStaff, previewTheme, previewAssetHtml, previewBrand]);
 
   const lintIssues = useMemo(() => lintSignatureTemplateHtml(html), [html]);
   const lintWarnings = lintIssues.filter((issue) => issue.severity === 'warn');
@@ -154,7 +183,8 @@ export function SignatureTemplateEditor({
     applyVisualDoc(createMinimalSignatureDocument());
     setMode('visual');
     toast.success('Visual layout ready', {
-      description: 'Drag blocks to build the signature. Save when you are happy.',
+      description:
+        'Drag blocks to build the signature. Save when you are happy.',
     });
   };
 
@@ -209,7 +239,7 @@ export function SignatureTemplateEditor({
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-1">
               <CardTitle>Signature template</CardTitle>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-muted-foreground text-xs">
                 Use the visual builder for drag-and-drop editing, or switch to
                 HTML for full control. Both save to the same template.
               </p>
@@ -240,7 +270,7 @@ export function SignatureTemplateEditor({
             value={mode}
             onValueChange={(value) => setMode(value as EditorMode)}
           >
-            <TabsList className="grid w-full grid-cols-2 sm:w-auto sm:inline-grid">
+            <TabsList className="grid w-full grid-cols-2 sm:inline-grid sm:w-auto">
               <TabsTrigger value="visual" className="gap-1.5">
                 <LayoutTemplate className="h-3.5 w-3.5" />
                 Visual
@@ -274,7 +304,7 @@ export function SignatureTemplateEditor({
               <div className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
                 <div>
                   <h3 className="text-sm font-medium">Token reference</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="text-muted-foreground mt-1 text-xs">
                     Click a token to insert it at the cursor.
                   </p>
                 </div>
@@ -303,8 +333,8 @@ export function SignatureTemplateEditor({
                   Dark-mode resilience
                 </h3>
                 <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  Soft checks only — saving is never blocked. Fix warnings before
-                  publishing to staff inboxes.
+                  Soft checks only — saving is never blocked. Fix warnings
+                  before publishing to staff inboxes.
                 </p>
               </div>
               {lintWarnings.length === 0 ? (
@@ -386,11 +416,11 @@ export function SignatureTemplateEditor({
         <CardHeader className="space-y-3">
           <div className="space-y-1">
             <CardTitle>Live preview</CardTitle>
-            <p className="text-xs text-muted-foreground">
-              Check mobile, tablet, and desktop widths against light or dark inbox
-              chrome. Prefer mid-grey text (#333), underlined links, and
-              transparent logos — clients invert colours inconsistently unless you
-              set a signature background.
+            <p className="text-muted-foreground text-xs">
+              Check mobile, tablet, and desktop widths against light or dark
+              inbox chrome. Prefer mid-grey text (#333), underlined links, and
+              transparent logos — clients invert colours inconsistently unless
+              you set a signature background.
             </p>
           </div>
           <SignaturePreviewLinkButton

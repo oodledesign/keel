@@ -1,10 +1,11 @@
 'use client';
 
-import Link from 'next/link';
 import { useSyncExternalStore } from 'react';
-import type { LucideIcon } from 'lucide-react';
+
+import Link from 'next/link';
 
 import { motion, useReducedMotion } from 'framer-motion';
+import type { LucideIcon } from 'lucide-react';
 import {
   Activity,
   Brain,
@@ -45,15 +46,87 @@ type FeatureNodeDef = {
 };
 
 const FEATURE_NODES: readonly FeatureNodeDef[] = [
-  { id: 'clients', label: 'Clients', icon: Contact, href: '/features/pipeline', x: 8, target: 16, row: 0 },
-  { id: 'projects', label: 'Projects', icon: FolderKanban, href: '/features/project-management', x: 18.5, target: 24, row: 1 },
-  { id: 'invoicing', label: 'Invoicing', icon: CreditCard, href: '/features/invoicing', x: 29, target: 31, row: 0 },
-  { id: 'email', label: 'Email', icon: Mail, href: '/features/email-assistant', x: 39.5, target: 40, row: 1 },
-  { id: 'planner', label: 'Planner', icon: Sparkles, href: '/features/planner', x: 50, target: 50, row: 0 },
-  { id: 'second-brain', label: 'Second Brain', icon: Brain, href: '/features/second-brain', x: 60.5, target: 60, row: 1 },
-  { id: 'activity', label: 'Activity', icon: Activity, href: '/features/activity', x: 71, target: 69, row: 0 },
-  { id: 'notes', label: 'Notes', icon: StickyNote, href: '/features/notes', x: 81.5, target: 76, row: 1 },
-  { id: 'pipeline', label: 'Pipeline', icon: Kanban, href: '/features/pipeline', x: 92, target: 84, row: 0 },
+  {
+    id: 'clients',
+    label: 'Clients',
+    icon: Contact,
+    href: '/features/pipeline',
+    x: 8,
+    target: 16,
+    row: 0,
+  },
+  {
+    id: 'projects',
+    label: 'Projects',
+    icon: FolderKanban,
+    href: '/features/project-management',
+    x: 18.5,
+    target: 24,
+    row: 1,
+  },
+  {
+    id: 'invoicing',
+    label: 'Invoicing',
+    icon: CreditCard,
+    href: '/features/invoicing',
+    x: 29,
+    target: 31,
+    row: 0,
+  },
+  {
+    id: 'email',
+    label: 'Email',
+    icon: Mail,
+    href: '/features/email-assistant',
+    x: 39.5,
+    target: 40,
+    row: 1,
+  },
+  {
+    id: 'planner',
+    label: 'Planner',
+    icon: Sparkles,
+    href: '/features/planner',
+    x: 50,
+    target: 50,
+    row: 0,
+  },
+  {
+    id: 'second-brain',
+    label: 'Second Brain',
+    icon: Brain,
+    href: '/features/second-brain',
+    x: 60.5,
+    target: 60,
+    row: 1,
+  },
+  {
+    id: 'activity',
+    label: 'Activity',
+    icon: Activity,
+    href: '/features/activity',
+    x: 71,
+    target: 69,
+    row: 0,
+  },
+  {
+    id: 'notes',
+    label: 'Notes',
+    icon: StickyNote,
+    href: '/features/notes',
+    x: 81.5,
+    target: 76,
+    row: 1,
+  },
+  {
+    id: 'pipeline',
+    label: 'Pipeline',
+    icon: Kanban,
+    href: '/features/pipeline',
+    x: 92,
+    target: 84,
+    row: 0,
+  },
 ] as const;
 
 /**
@@ -124,7 +197,9 @@ function ConnectionLines({
               <circle
                 r="3.5"
                 fill="var(--ozer-accent)"
-                style={{ filter: 'drop-shadow(0 0 2px var(--ozer-coral-alpha-45))' }}
+                style={{
+                  filter: 'drop-shadow(0 0 2px var(--ozer-coral-alpha-45))',
+                }}
               >
                 <animateMotion
                   dur="5s"
@@ -137,7 +212,6 @@ function ConnectionLines({
           </g>
         );
       })}
-
     </svg>
   );
 }
@@ -152,7 +226,7 @@ function FeatureNodeChip({ node }: { node: FeatureNodeDef }) {
   return (
     <Link
       href={node.href}
-      className="flex items-center gap-1.5 whitespace-nowrap rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2.5 py-1.5 shadow-[0_4px_14px_var(--ozer-plum-alpha-08)] transition-[border-color,background-color] duration-200 hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)]"
+      className="flex items-center gap-1.5 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2.5 py-1.5 whitespace-nowrap shadow-[0_4px_14px_var(--ozer-plum-alpha-08)] transition-[border-color,background-color] duration-200 hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)]"
     >
       <Icon className="h-3 w-3 text-[var(--ozer-accent)]" aria-hidden />
       <span className="text-[10px] font-semibold text-[var(--workspace-shell-text)] lg:text-[11px]">
@@ -265,7 +339,7 @@ function DashboardScreen({
             ))}
           </div>
           <div>
-            <p className="px-2 text-[9px] font-semibold uppercase tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)]">
+            <p className="px-2 text-[9px] font-semibold tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)] uppercase">
               Workspaces
             </p>
             <div className="mt-1.5 space-y-1">
@@ -303,10 +377,13 @@ function DashboardScreen({
               {...reveal(0.05)}
             >
               <div className="mb-2 flex items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)]">
+                <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)] uppercase">
                   Planner
                 </p>
-                <Sparkles className="h-3 w-3 text-[var(--ozer-coral-400)]" aria-hidden />
+                <Sparkles
+                  className="h-3 w-3 text-[var(--ozer-coral-400)]"
+                  aria-hidden
+                />
               </div>
               <div className="relative space-y-1.5">
                 {PLANNER_BLOCKS.map((block) => (
@@ -351,7 +428,7 @@ function DashboardScreen({
               className="rounded-xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] p-3 lg:col-span-2"
               {...reveal(0.12)}
             >
-              <p className="mb-2 text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)]">
+              <p className="mb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)] uppercase">
                 Tasks
               </p>
               <div className="space-y-1.5">
@@ -394,10 +471,13 @@ function DashboardScreen({
               {...reveal(0.18)}
             >
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ozer-plum-600)]">
+                <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--ozer-plum-600)] uppercase">
                   Notes
                 </p>
-                <StickyNote className="h-3 w-3 text-[var(--ozer-plum-600)]" aria-hidden />
+                <StickyNote
+                  className="h-3 w-3 text-[var(--ozer-plum-600)]"
+                  aria-hidden
+                />
               </div>
               <p className="mt-1.5 text-[11px] font-semibold text-[var(--ozer-text-on-light)]">
                 Acme kickoff — decisions
@@ -415,7 +495,7 @@ function DashboardScreen({
               {...reveal(0.24)}
             >
               <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold uppercase tracking-[0.12em] text-[var(--ozer-plum-600)]">
+                <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--ozer-plum-600)] uppercase">
                   Finances
                 </p>
                 <span className="rounded-full bg-[var(--ozer-plum-950)] px-2 py-0.5 text-[9px] font-semibold text-[var(--ozer-cream-50)]">

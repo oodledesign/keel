@@ -23,7 +23,11 @@ export const PAGESPEED_RECOMMENDATION_CATEGORIES: PagespeedRecommendationCategor
 
 export type PagespeedStrategy = 'mobile' | 'desktop';
 
-export type PagespeedRefreshInterval = 'manual' | 'daily' | 'weekly' | 'monthly';
+export type PagespeedRefreshInterval =
+  | 'manual'
+  | 'daily'
+  | 'weekly'
+  | 'monthly';
 
 export type PagespeedPageRow = {
   id: string;

@@ -5,24 +5,23 @@ import { useCallback, useState, useTransition } from 'react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-import { AlertTriangle, Flame } from 'lucide-react';
-
 import {
   DndContext,
+  type DragEndEvent,
   DragOverlay,
+  type DragStartEvent,
   PointerSensor,
   closestCorners,
   useDraggable,
   useDroppable,
   useSensor,
   useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
 } from '@dnd-kit/core';
+import { AlertTriangle, Flame } from 'lucide-react';
 
 import { parseDueDateParts } from '../../../_lib/due-date-ymd';
-import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { updateTask } from '../../_lib/actions/task-actions';
+import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { InlineTaskTitle } from './tasks-inline-task-title';
 
 const EditTaskDialog = dynamic(
@@ -318,11 +317,14 @@ export function TasksKanbanBoard({
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
   );
 
-  const onDragStart = useCallback((event: DragStartEvent) => {
-    const id = String(event.active.id);
-    const found = flatTasks.find((t) => t.id === id);
-    setActiveDragTask(found ?? null);
-  }, [flatTasks]);
+  const onDragStart = useCallback(
+    (event: DragStartEvent) => {
+      const id = String(event.active.id);
+      const found = flatTasks.find((t) => t.id === id);
+      setActiveDragTask(found ?? null);
+    },
+    [flatTasks],
+  );
 
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {

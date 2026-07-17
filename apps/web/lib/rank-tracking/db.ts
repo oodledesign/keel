@@ -7,12 +7,12 @@ import { projectCountryToCode } from '~/lib/site-overview/domain';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import {
-  computeNextRankCheckAt,
-  estimateRankCheckCostUsd,
   type KeywordRankSnapshot,
   type RankCheckJobRow,
   type RankRefreshInterval,
   type RankTrackingSettings,
+  computeNextRankCheckAt,
+  estimateRankCheckCostUsd,
 } from './types';
 
 function ranklyAdmin() {
@@ -135,7 +135,9 @@ export async function loadKeywordRankSnapshots(
   const keywordIds = keywords.map((row) => row.id as string);
   const { data: rankings } = await ranklyClient()
     .from('keyword_rankings')
-    .select('keyword_id, position, ranking_url, ai_overview_present, date, device')
+    .select(
+      'keyword_id, position, ranking_url, ai_overview_present, date, device',
+    )
     .in('keyword_id', keywordIds)
     .in('device', devices)
     .order('date', { ascending: false });

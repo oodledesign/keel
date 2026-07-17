@@ -46,7 +46,10 @@ export async function POST(request: Request) {
     if (error.code === 'weak_password') {
       const reasons =
         (error as unknown as { reasons?: string[] }).reasons ?? [];
-      return NextResponse.json({ error: 'weak_password', reasons }, { status: 400 });
+      return NextResponse.json(
+        { error: 'weak_password', reasons },
+        { status: 400 },
+      );
     }
 
     return NextResponse.json(
@@ -59,7 +62,10 @@ export async function POST(request: Request) {
   const identities = user?.identities ?? [];
 
   if (identities.length === 0) {
-    return NextResponse.json({ error: 'User already registered' }, { status: 409 });
+    return NextResponse.json(
+      { error: 'User already registered' },
+      { status: 409 },
+    );
   }
 
   return NextResponse.json({

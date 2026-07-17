@@ -1,9 +1,9 @@
 'use client';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { ChevronRight } from 'lucide-react';
-import { useRouter } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
 
@@ -97,7 +97,10 @@ export function SubscriptionStep({
             Start a trial or subscribe to unlock your workspace.
           </p>
           <div className="flex flex-wrap items-center gap-3">
-            <PrimaryButton asChild className="gap-1.5 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]">
+            <PrimaryButton
+              asChild
+              className="gap-1.5 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+            >
               <Link href={billingPath}>
                 Go to billing
                 <ChevronRight className="h-4 w-4" />

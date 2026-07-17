@@ -2,8 +2,8 @@ import 'server-only';
 
 import { delay } from '~/lib/clusters/utils';
 
-import { getSiteCrawlJob, updateSiteCrawlJob } from './db';
 import { SITE_CRAWL_WORKER_TRIGGER_DEBOUNCE_SEC } from './config';
+import { getSiteCrawlJob, updateSiteCrawlJob } from './db';
 
 const RUN_TIME_BUDGET_MS = 270_000;
 const RUN_TRIGGER_ATTEMPTS = 4;
@@ -72,7 +72,9 @@ export async function scheduleSiteCrawlContinuation(
 ): Promise<boolean> {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
-    console.error('[rankly] CRON_SECRET missing; cannot trigger site crawl run');
+    console.error(
+      '[rankly] CRON_SECRET missing; cannot trigger site crawl run',
+    );
     return false;
   }
 
@@ -89,7 +91,9 @@ export async function triggerSiteCrawlRunDebounced(
 ): Promise<boolean> {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
-    console.error('[rankly] CRON_SECRET missing; cannot trigger site crawl run');
+    console.error(
+      '[rankly] CRON_SECRET missing; cannot trigger site crawl run',
+    );
     return false;
   }
 

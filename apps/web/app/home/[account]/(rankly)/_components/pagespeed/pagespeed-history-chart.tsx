@@ -107,8 +107,7 @@ function buildChartRows(
   }
 
   return Array.from(byTime.values()).sort(
-    (a, b) =>
-      new Date(a.fetchedAt).getTime() - new Date(b.fetchedAt).getTime(),
+    (a, b) => new Date(a.fetchedAt).getTime() - new Date(b.fetchedAt).getTime(),
   );
 }
 
@@ -158,7 +157,7 @@ function HistoryTable(props: {
   return (
     <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
       <table className="w-full min-w-[24rem] text-left text-sm">
-        <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs uppercase tracking-wide text-muted-foreground">
+        <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide uppercase">
           <tr>
             <th className="px-3 py-2">Run</th>
             <th className="px-3 py-2 text-right">Mobile</th>
@@ -167,8 +166,11 @@ function HistoryTable(props: {
         </thead>
         <tbody>
           {rows.map((row) => (
-            <tr key={row.fetchedAt} className="border-b border-[color:var(--workspace-shell-border)] last:border-0">
-              <td className="px-3 py-2 text-muted-foreground">
+            <tr
+              key={row.fetchedAt}
+              className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
+            >
+              <td className="text-muted-foreground px-3 py-2">
                 {formatRunDate(row.fetchedAt)}
               </td>
               <td
@@ -196,8 +198,7 @@ export function PagespeedHistoryChart(props: {
   const [showTable, setShowTable] = useState(false);
 
   const chartRows = useMemo(
-    () =>
-      buildChartRows(props.history.mobile, props.history.desktop, metric),
+    () => buildChartRows(props.history.mobile, props.history.desktop, metric),
     [props.history.desktop, props.history.mobile, metric],
   );
 
@@ -234,22 +235,22 @@ export function PagespeedHistoryChart(props: {
 
         <div className="flex flex-wrap items-center gap-2">
           <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
-            {(
-              Object.keys(PAGESPEED_METRIC_LABELS) as PagespeedMetricKey[]
-            ).map((key) => (
-              <button
-                key={key}
-                type="button"
-                className={`rounded-md px-2 py-1 text-xs transition ${
-                  metric === key
-                    ? 'ozer-gradient-active text-[var(--ozer-white)]'
-                    : 'text-muted-foreground hover:text-[var(--workspace-shell-text)]'
-                }`}
-                onClick={() => setMetric(key)}
-              >
-                {PAGESPEED_METRIC_LABELS[key]}
-              </button>
-            ))}
+            {(Object.keys(PAGESPEED_METRIC_LABELS) as PagespeedMetricKey[]).map(
+              (key) => (
+                <button
+                  key={key}
+                  type="button"
+                  className={`rounded-md px-2 py-1 text-xs transition ${
+                    metric === key
+                      ? 'ozer-gradient-active text-[var(--ozer-white)]'
+                      : 'text-muted-foreground hover:text-[var(--workspace-shell-text)]'
+                  }`}
+                  onClick={() => setMetric(key)}
+                >
+                  {PAGESPEED_METRIC_LABELS[key]}
+                </button>
+              ),
+            )}
           </div>
           <button
             type="button"
@@ -263,7 +264,10 @@ export function PagespeedHistoryChart(props: {
 
       <div className="h-56 w-full">
         <ResponsiveContainer width="100%" height="100%">
-          <LineChart data={chartRows} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+          <LineChart
+            data={chartRows}
+            margin={{ top: 8, right: 8, left: 0, bottom: 0 }}
+          >
             <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
             <XAxis
               dataKey="label"

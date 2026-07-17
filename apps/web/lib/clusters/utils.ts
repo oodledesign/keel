@@ -20,10 +20,7 @@ export function delay(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-export function deduplicateBy<T>(
-  items: T[],
-  keyFn: (item: T) => string,
-): T[] {
+export function deduplicateBy<T>(items: T[], keyFn: (item: T) => string): T[] {
   const seen = new Set<string>();
   const out: T[] = [];
   for (const item of items) {
@@ -48,10 +45,12 @@ export function groupBy<T>(
 }
 
 export function normaliseUrl(url: string): string {
-  return url
-    .replace(/^https?:\/\/(www\.)?/i, '')
-    .replace(/\/$/, '')
-    .split('?')[0] ?? url;
+  return (
+    url
+      .replace(/^https?:\/\/(www\.)?/i, '')
+      .replace(/\/$/, '')
+      .split('?')[0] ?? url
+  );
 }
 
 export function titleCaseKeyword(keyword: string): string {

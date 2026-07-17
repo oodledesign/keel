@@ -23,7 +23,9 @@ const CreateTaskBodySchema = z.object({
 });
 
 export async function POST(request: Request) {
-  const auth = await authenticateRecorderRequest(request, { touchLastUsed: true });
+  const auth = await authenticateRecorderRequest(request, {
+    touchLastUsed: true,
+  });
   if (auth instanceof NextResponse) {
     return auth;
   }
@@ -37,7 +39,10 @@ export async function POST(request: Request) {
 
   const parsed = CreateTaskBodySchema.safeParse(body);
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Invalid request body' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'Invalid request body' },
+      { status: 400 },
+    );
   }
 
   try {
@@ -54,7 +59,8 @@ export async function POST(request: Request) {
 
     return NextResponse.json(result);
   } catch (error) {
-    const message = error instanceof Error ? error.message : 'Failed to create task';
+    const message =
+      error instanceof Error ? error.message : 'Failed to create task';
     const status = message.includes('not a member') ? 403 : 400;
     return NextResponse.json({ error: message }, { status });
   }

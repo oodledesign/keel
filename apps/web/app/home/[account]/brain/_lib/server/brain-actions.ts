@@ -1,19 +1,16 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
+import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
-import { requireUser } from '@kit/supabase/require-user';
 
 import pathsConfig from '~/config/paths.config';
-
-import {
-  getBrainIndexStats,
-  indexAccount,
-} from '~/lib/brain/indexer';
+import { getBrainIndexStats, indexAccount } from '~/lib/brain/indexer';
 import { loadBrainSourcePreview } from '~/lib/brain/source-preview';
 import { isVoyageConfigured } from '~/lib/brain/voyage';
 
@@ -116,7 +113,10 @@ export const reindexBrainAccount = enhanceAction(
     const admin = getSupabaseServerAdminClient();
     const result = await indexAccount(admin, input.accountId, { force: true });
     revalidatePath(
-      pathsConfig.app.accountBrainKnowledge.replace('[account]', input.accountSlug),
+      pathsConfig.app.accountBrainKnowledge.replace(
+        '[account]',
+        input.accountSlug,
+      ),
     );
     return result;
   },

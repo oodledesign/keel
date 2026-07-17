@@ -34,7 +34,9 @@ export const DeleteCampaignProjectSchema = z.object({
   projectId,
 });
 
-export type DeleteCampaignProjectInput = z.infer<typeof DeleteCampaignProjectSchema>;
+export type DeleteCampaignProjectInput = z.infer<
+  typeof DeleteCampaignProjectSchema
+>;
 
 export const CreateProjectFieldSchema = z.object({
   accountId,
@@ -43,7 +45,10 @@ export const CreateProjectFieldSchema = z.object({
   fieldType: z.enum(PROJECT_FIELD_TYPES),
   fieldKey: z
     .string()
-    .regex(/^[a-z][a-z0-9_]*$/, 'Key must be lowercase letters, numbers, underscores')
+    .regex(
+      /^[a-z][a-z0-9_]*$/,
+      'Key must be lowercase letters, numbers, underscores',
+    )
     .optional(),
   options: fieldOptionsSchema,
 });
@@ -92,15 +97,25 @@ export const ImportWebsiteRevampCampaignSchema = z.object({
   accountId,
 });
 
-export type ListCampaignProjectsInput = z.infer<typeof ListCampaignProjectsSchema>;
+export type ListCampaignProjectsInput = z.infer<
+  typeof ListCampaignProjectsSchema
+>;
 export type GetCampaignProjectInput = z.infer<typeof GetCampaignProjectSchema>;
-export type CreateCampaignProjectInput = z.infer<typeof CreateCampaignProjectSchema>;
+export type CreateCampaignProjectInput = z.infer<
+  typeof CreateCampaignProjectSchema
+>;
 export type CreateProjectFieldInput = z.infer<typeof CreateProjectFieldSchema>;
 export type UpdateProjectFieldInput = z.infer<typeof UpdateProjectFieldSchema>;
 export type DeleteProjectFieldInput = z.infer<typeof DeleteProjectFieldSchema>;
-export type ReorderProjectFieldsInput = z.infer<typeof ReorderProjectFieldsSchema>;
-export type AddClientToCampaignInput = z.infer<typeof AddClientToCampaignSchema>;
+export type ReorderProjectFieldsInput = z.infer<
+  typeof ReorderProjectFieldsSchema
+>;
+export type AddClientToCampaignInput = z.infer<
+  typeof AddClientToCampaignSchema
+>;
 export type RemoveClientFromCampaignInput = z.infer<
   typeof RemoveClientFromCampaignSchema
 >;
-export type UpdateClientFieldValueInput = z.infer<typeof UpdateClientFieldValueSchema>;
+export type UpdateClientFieldValueInput = z.infer<
+  typeof UpdateClientFieldValueSchema
+>;

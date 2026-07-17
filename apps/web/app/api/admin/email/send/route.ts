@@ -13,7 +13,10 @@ export async function POST(request: Request) {
   } | null;
 
   if (!body?.campaignId) {
-    return NextResponse.json({ error: 'campaignId is required' }, { status: 400 });
+    return NextResponse.json(
+      { error: 'campaignId is required' },
+      { status: 400 },
+    );
   }
 
   try {
@@ -21,7 +24,10 @@ export async function POST(request: Request) {
     return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Failed to send campaign' },
+      {
+        error:
+          error instanceof Error ? error.message : 'Failed to send campaign',
+      },
       { status: 400 },
     );
   }

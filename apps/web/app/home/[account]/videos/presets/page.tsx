@@ -1,13 +1,12 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
-import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { getDefaultAccountPath } from '~/home/[account]/_lib/role-access';
+import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-
 import { configValuesFromRow } from '~/lib/videos/server/player-config-data';
 import {
   loadAccountPresets,

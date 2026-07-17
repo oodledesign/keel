@@ -90,10 +90,14 @@ export function EmailInboxList({
   const linkedCount = threads.filter((thread) => thread.link.linked).length;
 
   return (
-    <section className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}>
+    <section
+      className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}
+    >
       <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
         <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">Inbox</h2>
+          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+            Inbox
+          </h2>
           <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
             <button
               type="button"
@@ -149,23 +153,23 @@ export function EmailInboxList({
                 : filter === 'linked'
                   ? `${threads.length} linked thread${threads.length === 1 ? '' : 's'}`
                   : filter === 'needs_reply'
-                  ? `${threads.length} thread${threads.length === 1 ? '' : 's'} need a reply`
-                  : `${threads.length} threads${needsReplyCount > 0 && filter === 'all' ? ` · ${needsReplyCount} need a reply` : ''}${linkedCount > 0 && filter === 'all' ? ` · ${linkedCount} linked` : ''}`}
+                    ? `${threads.length} thread${threads.length === 1 ? '' : 's'} need a reply`
+                    : `${threads.length} threads${needsReplyCount > 0 && filter === 'all' ? ` · ${needsReplyCount} need a reply` : ''}${linkedCount > 0 && filter === 'all' ? ` · ${linkedCount} linked` : ''}`}
         </p>
 
         <div className="relative mt-3">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
             value={searchQuery}
             onChange={(event) => onSearchQueryChange(event.target.value)}
             placeholder="Search subject, sender, or message…"
-            className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] pl-9 pr-9 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] pr-9 pl-9 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
           {searchQuery ? (
             <button
               type="button"
               onClick={() => onSearchQueryChange('')}
-              className="absolute right-2 top-1/2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+              className="absolute top-1/2 right-2 flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
               aria-label="Clear search"
             >
               <X className="h-4 w-4" />
@@ -224,14 +228,16 @@ export function EmailInboxList({
                       <span
                         className={cn(
                           'mt-0.5 block truncate text-sm',
-                          thread.is_unread ? 'text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)]',
+                          thread.is_unread
+                            ? 'text-[var(--workspace-shell-text)]'
+                            : 'text-[var(--workspace-shell-text-muted)]',
                         )}
                       >
                         {thread.subject?.trim() || '(no subject)'}
                       </span>
                       <span className="mt-1 flex flex-wrap items-center gap-1">
                         {thread.assistant_category === 'needs_reply' ? (
-                          <span className="inline-flex rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-[var(--ozer-accent)]">
+                          <span className="inline-flex rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--ozer-accent)] uppercase">
                             Needs reply
                           </span>
                         ) : null}

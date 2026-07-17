@@ -9,12 +9,7 @@ import {
   pushSignatureToGoogleStaff,
   syncStaffFromGoogleWorkspace,
 } from './google-workspace';
-import {
-  getSignaturesSupabaseClient,
-  pushAllSignatures as pushAllMicrosoftSignatures,
-  pushSignatureToStaff as pushMicrosoftSignature,
-  syncStaffFromM365,
-} from './graph';
+import { getSignaturesSupabaseClient, syncStaffFromM365 } from './graph';
 import type { StaffSyncResult } from './staff-source';
 import { sendSignatureSyncCompletedEmail } from './sync-notifications';
 
@@ -23,6 +18,9 @@ export type SignaturesMailProvider = 'google' | 'microsoft' | null;
 export type SignaturesTierWarning = {
   warning?: string;
 };
+
+const MICROSOFT_OUTLOOK_INSTALL_MESSAGE =
+  'Outlook signatures are installed by each person via copy and paste. Use the install instructions link instead of Graph push.';
 
 export async function getSignaturesMailProvider(
   accountId: string,
@@ -99,8 +97,11 @@ export async function pushSignatureToStaff(
     return { ...result, warning };
   }
   if (provider === 'microsoft') {
-    const result = await pushMicrosoftSignature(staffId);
-    return { ...result, warning };
+    return {
+      success: false,
+      error: MICROSOFT_OUTLOOK_INSTALL_MESSAGE,
+      warning,
+    };
   }
 
   return {
@@ -119,8 +120,7 @@ export async function pushAllSignatures(
   const warning = await loadSignatureTierWarning(accountId);
 
   if (provider === 'microsoft') {
-    const summary = await pushAllMicrosoftSignatures(accountId, pushedBy);
-    return { ...summary, warning };
+    throw new Error(MICROSOFT_OUTLOOK_INSTALL_MESSAGE);
   }
 
   const db = getSignaturesSupabaseClient();

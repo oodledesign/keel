@@ -1,9 +1,11 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
-import { useDropzone } from 'react-dropzone';
+
 import { useRouter } from 'next/navigation';
+
 import { Loader2 } from 'lucide-react';
+import { useDropzone } from 'react-dropzone';
 import * as tus from 'tus-js-client';
 
 import { Button } from '@kit/ui/button';
@@ -47,7 +49,10 @@ type CreateUploadResponse = {
 type UploadPhase = 'idle' | 'preparing' | 'uploading';
 
 function titleFromFilename(name: string) {
-  return name.replace(/\.[^.]+$/, '').replace(/[-_]+/g, ' ').trim();
+  return name
+    .replace(/\.[^.]+$/, '')
+    .replace(/[-_]+/g, ' ')
+    .trim();
 }
 
 const TUS_CHUNK_SIZE = 50 * 1024 * 1024;
@@ -131,7 +136,7 @@ function UploadProgressPanel(props: {
           <p className="text-sm font-medium">{label}</p>
           <p className="text-muted-foreground mt-0.5 text-xs">{detail}</p>
         </div>
-        <span className="text-sm font-medium tabular-nums text-[var(--ozer-accent)]">
+        <span className="text-sm font-medium text-[var(--ozer-accent)] tabular-nums">
           {props.progress}%
         </span>
       </div>
@@ -282,8 +287,8 @@ export function UploadModal(props: {
         <DialogHeader>
           <DialogTitle>Upload video</DialogTitle>
           <DialogDescription>
-            Upload finishes here; Bunny encodes in the background and the library
-            updates when the video is ready.
+            Upload finishes here; Bunny encodes in the background and the
+            library updates when the video is ready.
           </DialogDescription>
         </DialogHeader>
 

@@ -42,13 +42,15 @@ export type AdminUserInviteAccessConfig = {
   landingModule?: string;
 };
 
-export const DEFAULT_WORKSPACE_NAMES: Record<AdminInviteWorkspaceProfile, string> =
-  {
-    work_design: 'My Business',
-    work_property: 'My Properties',
-    family: 'Our Family',
-    community: 'Our Group',
-  };
+export const DEFAULT_WORKSPACE_NAMES: Record<
+  AdminInviteWorkspaceProfile,
+  string
+> = {
+  work_design: 'My Business',
+  work_property: 'My Properties',
+  family: 'Our Family',
+  community: 'Our Group',
+};
 
 export const ADMIN_INVITE_ADDON_OPTIONS: Array<{
   key: OzerAddonKey;
@@ -125,7 +127,8 @@ export const CreateAdminUserInviteSchema = z
       if (!hasFullBusiness) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: 'Add-ons require a Business Lite or full Business workspace.',
+          message:
+            'Add-ons require a Business Lite or full Business workspace.',
           path: ['addons'],
         });
       }

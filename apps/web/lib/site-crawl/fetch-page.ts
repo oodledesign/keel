@@ -29,7 +29,10 @@ export async function fetchAndParsePage(
     const contentType = response.headers.get('content-type') ?? '';
     const finalUrl = response.url || url;
 
-    if (!contentType.includes('text/html') && !contentType.includes('application/xhtml')) {
+    if (
+      !contentType.includes('text/html') &&
+      !contentType.includes('application/xhtml')
+    ) {
       const issues = detectPageIssues({
         statusCode: response.status,
         title: '',
@@ -67,7 +70,8 @@ export async function fetchAndParsePage(
     const $ = load(html);
 
     const title = $('title').first().text().trim();
-    const metaDescription = $('meta[name="description"]').attr('content')?.trim() ?? '';
+    const metaDescription =
+      $('meta[name="description"]').attr('content')?.trim() ?? '';
     const canonical = $('link[rel="canonical"]').attr('href')?.trim() ?? '';
     const h1s = $('h1')
       .map((_, el) => $(el).text().trim())

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+
 import { Check, Copy, ExternalLink } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -69,8 +70,7 @@ export function EmbedCode(props: {
   );
 
   const previewUrl = useMemo(
-    () =>
-      buildEmbedUrl(props.libraryId, props.bunnyVideoId, props.config),
+    () => buildEmbedUrl(props.libraryId, props.bunnyVideoId, props.config),
     [props.libraryId, props.bunnyVideoId, props.config],
   );
 
@@ -122,7 +122,9 @@ export function EmbedCode(props: {
             variant="outline"
             size="sm"
             className="gap-1.5"
-            onClick={() => window.open(previewUrl, '_blank', 'noopener,noreferrer')}
+            onClick={() =>
+              window.open(previewUrl, '_blank', 'noopener,noreferrer')
+            }
           >
             <ExternalLink className="h-3.5 w-3.5" />
             Preview in new tab

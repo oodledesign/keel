@@ -4,10 +4,7 @@
  * DRAFT FOR DAN — confirm restricted behaviour before enforcing every capability
  * in server actions. Public / client-facing surfaces are called out as decisions.
  */
-
-import type {
-  AccountBillingStatus,
-} from './account-billing-types';
+import type { AccountBillingStatus } from './account-billing-types';
 
 export const ACCOUNT_ACCESS_LEVELS = [
   'full_access',

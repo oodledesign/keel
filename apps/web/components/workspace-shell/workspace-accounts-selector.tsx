@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { CaretSortIcon } from '@radix-ui/react-icons';
 import { CheckCircle, Mail, Plus } from 'lucide-react';
 
+import { CreateTeamAccountDialog } from '@kit/team-accounts/components';
 import { Button } from '@kit/ui/button';
 import {
   Command,
@@ -17,26 +18,22 @@ import {
   CommandSeparator,
 } from '@kit/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
-import { workspaceComboboxListClass } from '~/components/workspace-shell/workspace-combobox-styles';
-import { cn } from '@kit/ui/utils';
 import { SidebarContext } from '@kit/ui/shadcn-sidebar';
+import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
-import {
-  getWorkspaceFocusMutedClassName,
-} from '~/components/workspace-shell/workspace-focus-sidebar-decorations';
+import { workspaceComboboxListClass } from '~/components/workspace-shell/workspace-combobox-styles';
 import { useWorkspaceFocusSettings } from '~/components/workspace-shell/workspace-focus-context';
-import { useWorkspaceFocusSnapshot } from '~/lib/hooks/use-workspace-focus';
+import { getWorkspaceFocusMutedClassName } from '~/components/workspace-shell/workspace-focus-sidebar-decorations';
+import pathsConfig from '~/config/paths.config';
 import { FocusStatusBadge } from '~/home/[account]/settings/focus/_components/FocusStatusBadge';
 import { holidayEmoji } from '~/home/[account]/settings/focus/_lib/focus-form';
-import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
+import { useWorkspaceFocusSnapshot } from '~/lib/hooks/use-workspace-focus';
 import {
-  isPersonalWorkspaceValue,
   PERSONAL_WORKSPACE_VALUE,
+  isPersonalWorkspaceValue,
 } from '~/lib/workspace-personal-switcher';
-
-import { CreateTeamAccountDialog } from '@kit/team-accounts/components';
 
 type WorkspaceAccountsSelectorProps = {
   selectedAccount: string;
@@ -91,7 +88,9 @@ export function WorkspaceAccountsSelector({
       onClick={variant === 'inline' ? () => setOpen((v) => !v) : undefined}
       className={cn(
         'group mr-1 w-full min-w-0 px-2 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] lg:w-auto lg:max-w-fit',
-        collapsed && variant === 'popover' ? 'm-auto justify-center px-2' : 'justify-start',
+        collapsed && variant === 'popover'
+          ? 'm-auto justify-center px-2'
+          : 'justify-start',
         className,
       )}
     >
@@ -118,7 +117,9 @@ export function WorkspaceAccountsSelector({
           ) : null}
         </span>
       ) : (
-        <span className="text-sm text-[var(--workspace-shell-text-muted)]">Workspace</span>
+        <span className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Workspace
+        </span>
       )}
       {!collapsed || variant === 'inline' ? (
         <CaretSortIcon className="ml-1 h-4 w-4 shrink-0 opacity-50" />
@@ -244,13 +245,7 @@ function WorkspaceAvatar({
 }
 
 /** @deprecated use WorkspaceAvatar */
-function WorkspaceInitial({
-  name,
-  color,
-}: {
-  name: string;
-  color: string;
-}) {
+function WorkspaceInitial({ name, color }: { name: string; color: string }) {
   return <WorkspaceAvatar name={name} color={color} image={null} />;
 }
 
@@ -266,7 +261,9 @@ function WorkspaceSwitcherAccountRow({
   onSelect: () => void;
 }) {
   const isPersonal = isPersonalWorkspaceValue(account.value);
-  const focusSettings = useWorkspaceFocusSettings(isPersonal ? null : account.id);
+  const focusSettings = useWorkspaceFocusSettings(
+    isPersonal ? null : account.id,
+  );
   const focusState = useWorkspaceFocusSnapshot(focusSettings);
 
   return (

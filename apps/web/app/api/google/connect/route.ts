@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import { buildConsentUrl } from '@kit/google-auth';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -56,9 +56,7 @@ export async function GET(request: NextRequest) {
       error instanceof Error ? error.message : 'Google Gmail is not configured';
 
     return NextResponse.redirect(
-      absoluteUrl(
-        `${returnPath}?email_error=${encodeURIComponent(message)}`,
-      ),
+      absoluteUrl(`${returnPath}?email_error=${encodeURIComponent(message)}`),
     );
   }
 }

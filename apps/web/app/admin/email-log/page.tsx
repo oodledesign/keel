@@ -2,12 +2,13 @@ import { Suspense } from 'react';
 
 import { AdminGuard } from '@kit/admin/components/admin-guard';
 import { PageBody, PageHeader } from '@kit/ui/page';
+
 import { PLATFORM_EMAIL_TYPES } from '~/lib/server/send-platform-email';
 
 import { EmailLogTable } from './_components/email-log-table';
 import {
-  loadGroupedCampaignEmailLog,
   loadEmailLogBusinessOptions,
+  loadGroupedCampaignEmailLog,
   loadPlatformEmailLog,
 } from './_lib/server/admin-email-log.loader';
 
@@ -56,7 +57,11 @@ async function AdminEmailLogPage({
         description="Outbound platform emails — grouped campaigns or individual sends."
       />
       <PageBody>
-        <Suspense fallback={<div className="text-muted-foreground">Loading email log…</div>}>
+        <Suspense
+          fallback={
+            <div className="text-muted-foreground">Loading email log…</div>
+          }
+        >
           <EmailLogTable
             rows={rows}
             groupedCampaigns={groupedCampaigns}

@@ -32,9 +32,8 @@ export const generateMetadata = async (
 
   const { total } = await getContentItems(resolvedLanguage, limit, offset);
 
-  const { buildMarketingMetadata } = await import(
-    '~/lib/seo/marketing-metadata'
-  );
+  const { buildMarketingMetadata } =
+    await import('~/lib/seo/marketing-metadata');
 
   return {
     ...buildMarketingMetadata({

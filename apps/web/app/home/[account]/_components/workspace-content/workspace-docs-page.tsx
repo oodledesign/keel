@@ -23,24 +23,19 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-} from '@kit/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
+import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
-import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { docContentPreview } from '../../_lib/workspace-content/context-resolve';
-import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import {
   getWorkspaceDocDownloadUrlAction,
   registerUploadedWorkspaceDocAction,
   saveWrittenWorkspaceDocAction,
 } from '../../_lib/workspace-content/docs-actions';
+import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import {
   DOC_TYPE_OPTIONS,
   type DocListItem,
@@ -147,7 +142,9 @@ export function WorkspaceDocsPage({
       </div>
 
       {filtered.length === 0 ? (
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">No documents in this tab.</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          No documents in this tab.
+        </p>
       ) : kindTab === 'written' ? (
         <ul className="space-y-3">
           {filtered.map((doc) => (
@@ -160,10 +157,7 @@ export function WorkspaceDocsPage({
         <ul className="space-y-3">
           {filtered.map((doc) => (
             <li key={doc.id}>
-              <DocUploadedRow
-                doc={doc}
-                accountId={accountId}
-              />
+              <DocUploadedRow doc={doc} accountId={accountId} />
             </li>
           ))}
         </ul>
@@ -192,11 +186,13 @@ function DocWrittenRow({ doc }: { doc: DocListItem }) {
         <div className="min-w-0 flex-1">
           <div className="flex flex-wrap items-center gap-2">
             {doc.docType ? (
-              <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-xs capitalize text-[var(--workspace-shell-text)]">
+              <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)] capitalize">
                 {docTypeLabel(doc.docType)}
               </Badge>
             ) : null}
-            <span className="font-medium text-[var(--workspace-shell-text)]">{doc.title}</span>
+            <span className="font-medium text-[var(--workspace-shell-text)]">
+              {doc.title}
+            </span>
           </div>
           <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">
             {docContentPreview(doc.content) || 'No content yet'}
@@ -210,7 +206,9 @@ function DocWrittenRow({ doc }: { doc: DocListItem }) {
             </Badge>
           ) : null}
         </div>
-        <span className="text-xs text-[var(--workspace-shell-text-muted)]">{formatDate(doc.updatedAt)}</span>
+        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {formatDate(doc.updatedAt)}
+        </span>
       </div>
     </div>
   );
@@ -242,17 +240,24 @@ function DocUploadedRow({
   };
 
   return (
-    <div className={cn(panelClass, 'flex flex-wrap items-center justify-between gap-3 p-4')}>
+    <div
+      className={cn(
+        panelClass,
+        'flex flex-wrap items-center justify-between gap-3 p-4',
+      )}
+    >
       <div className="flex min-w-0 flex-1 items-start gap-3">
         <Icon className="mt-0.5 h-5 w-5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             {doc.docType ? (
-              <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-xs capitalize text-[var(--workspace-shell-text)]">
+              <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)] capitalize">
                 {docTypeLabel(doc.docType)}
               </Badge>
             ) : null}
-            <span className="font-medium text-[var(--workspace-shell-text)]">{doc.title}</span>
+            <span className="font-medium text-[var(--workspace-shell-text)]">
+              {doc.title}
+            </span>
           </div>
           <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {doc.mimeType ?? 'file'} · {formatBytes(doc.fileSizeBytes)}
@@ -268,7 +273,9 @@ function DocUploadedRow({
         </div>
       </div>
       <div className="flex items-center gap-3">
-        <span className="text-xs text-[var(--workspace-shell-text-muted)]">{formatDate(doc.updatedAt)}</span>
+        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {formatDate(doc.updatedAt)}
+        </span>
         <Button
           type="button"
           size="sm"
@@ -406,7 +413,9 @@ function NewDocSheet({
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <SheetHeader>
-          <SheetTitle className="text-[var(--workspace-shell-text)]">New document</SheetTitle>
+          <SheetTitle className="text-[var(--workspace-shell-text)]">
+            New document
+          </SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
           <Tabs value={kind} onValueChange={(v) => setKind(v as typeof kind)}>
@@ -418,7 +427,9 @@ function NewDocSheet({
 
           {kind === 'uploaded' ? (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">File</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                File
+              </Label>
               <input
                 ref={fileRef}
                 type="file"
@@ -426,7 +437,8 @@ function NewDocSheet({
                 onChange={(e) => {
                   const f = e.target.files?.[0];
                   setFile(f ?? null);
-                  if (f && !title.trim()) setTitle(f.name.replace(/\.[^.]+$/, ''));
+                  if (f && !title.trim())
+                    setTitle(f.name.replace(/\.[^.]+$/, ''));
                 }}
               />
               <Button
@@ -441,7 +453,9 @@ function NewDocSheet({
             </div>
           ) : (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Content</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Content
+              </Label>
               <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
@@ -452,17 +466,23 @@ function NewDocSheet({
           )}
 
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Title
+            </Label>
             <Input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder={kind === 'uploaded' ? 'Auto-fills from filename' : ''}
+              placeholder={
+                kind === 'uploaded' ? 'Auto-fills from filename' : ''
+              }
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
             />
           </div>
 
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Document type</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Document type
+            </Label>
             <Select
               value={docType}
               onValueChange={(v) => setDocType(v as DocTypeOption)}
@@ -482,7 +502,9 @@ function NewDocSheet({
 
           {linkOptions.length > 0 ? (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Link to</Label>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Link to
+              </Label>
               <LinkToSelect
                 options={linkOptions}
                 value={link}
@@ -493,7 +515,9 @@ function NewDocSheet({
           ) : null}
 
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Tags</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Tags
+            </Label>
             <TagsInput tags={tags} onChange={setTags} disabled={pending} />
           </div>
 

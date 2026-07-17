@@ -8,10 +8,9 @@ import { JWTUserData } from '@kit/supabase/types';
 import { Button } from '@kit/ui/button';
 import { Trans } from '@kit/ui/trans';
 
+import { ThemeModeToggle } from '~/components/theme-mode-toggle';
 import pathsConfig from '~/config/paths.config';
 import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
-
-import { ThemeModeToggle } from '~/components/theme-mode-toggle';
 
 import { SiteMobileMarketingMenu } from './site-mobile-marketing-menu';
 
@@ -61,7 +60,12 @@ function AuthButtons() {
           </Link>
         </Button>
 
-        <Button asChild className="text-xs md:text-sm" variant="default" size="sm">
+        <Button
+          asChild
+          className="text-xs md:text-sm"
+          variant="default"
+          size="sm"
+        >
           <Link href={MARKETING_FREE_SIGNUP_URL}>
             <Trans i18nKey="auth:signUp" />
           </Link>

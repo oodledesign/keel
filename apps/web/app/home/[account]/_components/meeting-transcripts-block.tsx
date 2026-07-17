@@ -9,21 +9,21 @@ import { Loader2, Mic, PlusCircle, Trash2, Upload } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 
 import {
-  meetingDisplayDate,
-  todayIsoDate,
-} from '../meetings/_lib/format-meeting-date';
-import {
   createMeetingTranscript,
   deleteMeetingTranscript,
   listMeetingTranscripts,
 } from '../meeting-transcripts/_lib/server/server-actions';
+import {
+  meetingDisplayDate,
+  todayIsoDate,
+} from '../meetings/_lib/format-meeting-date';
 
 type TranscriptRow = {
   id: string;
@@ -160,7 +160,9 @@ export function MeetingTranscriptsBlock({
   const meetingList = loading ? (
     <p className="text-sm text-[var(--workspace-shell-text-muted)]">Loading…</p>
   ) : rows.length === 0 ? (
-    <p className="text-sm text-[var(--workspace-shell-text-muted)]">No meetings yet.</p>
+    <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+      No meetings yet.
+    </p>
   ) : (
     <ul className="space-y-2">
       {rows.map((row) => (
@@ -182,7 +184,9 @@ export function MeetingTranscriptsBlock({
                 {row.title}
               </Link>
             ) : (
-              <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">{row.title}</p>
+              <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                {row.title}
+              </p>
             )}
             <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               {meetingDisplayDate(row.meetingDate, row.createdAt)}
@@ -244,9 +248,9 @@ export function MeetingTranscriptsBlock({
           </Link>
         ) : null}
       </div>
-      <p className="mb-4 text-xs text-muted-foreground">
-        Save call transcripts here to reference when generating proposals or extracting
-        tasks with AI.
+      <p className="text-muted-foreground mb-4 text-xs">
+        Save call transcripts here to reference when generating proposals or
+        extracting tasks with AI.
       </p>
 
       {canEdit ? (

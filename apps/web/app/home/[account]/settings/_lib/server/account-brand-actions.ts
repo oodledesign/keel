@@ -38,9 +38,11 @@ export const saveAccountBrandSettings = enhanceAction(
       address: input.address?.trim() || null,
     };
 
-    const { error } = await admin.from('account_brand_settings').upsert(payload, {
-      onConflict: 'account_id',
-    });
+    const { error } = await admin
+      .from('account_brand_settings')
+      .upsert(payload, {
+        onConflict: 'account_id',
+      });
 
     if (error) {
       throw new Error(error.message);

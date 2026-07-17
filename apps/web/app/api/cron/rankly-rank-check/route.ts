@@ -1,11 +1,16 @@
 import { type NextRequest } from 'next/server';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import {
+  CRON_KILL_SWITCH,
+  cronSkippedResponse,
+  isCronDisabled,
+} from '~/lib/cron/cron-guards';
 import { loadProjectsDueForRankCheck } from '~/lib/rank-tracking/db';
 import { triggerRankCheckRun } from '~/lib/rank-tracking/trigger-run';
-import { CRON_KILL_SWITCH, cronSkippedResponse, isCronDisabled } from '~/lib/cron/cron-guards';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;

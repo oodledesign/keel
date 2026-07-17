@@ -4,9 +4,10 @@ import Link from 'next/link';
 
 import { LayoutGrid } from 'lucide-react';
 
+import { cn } from '@kit/ui/utils';
+
 import pathsConfig from '~/config/paths.config';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
-import { cn } from '@kit/ui/utils';
 
 const STATUS_COLUMNS = [
   { key: 'pending', label: 'Planned' },
@@ -32,7 +33,8 @@ export function ProjectsKanbanView({
   items: ProjectsKanbanItem[];
 }) {
   const detailPath = (id: string) =>
-    pathsConfig.app.accountProjects.replace('[account]', accountSlug) + `/${id}`;
+    pathsConfig.app.accountProjects.replace('[account]', accountSlug) +
+    `/${id}`;
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-x-auto md:grid-cols-2 xl:grid-cols-4">
@@ -53,14 +55,18 @@ export function ProjectsKanbanView({
             className="flex min-h-[280px] flex-col rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
           >
             <header className="border-b border-[color:var(--workspace-shell-border)] px-3 py-2.5">
-              <h3 className="text-xs font-semibold uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+              <h3 className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 {column.label}
-                <span className="ml-2 text-[var(--workspace-shell-text-muted)]">{columnItems.length}</span>
+                <span className="ml-2 text-[var(--workspace-shell-text-muted)]">
+                  {columnItems.length}
+                </span>
               </h3>
             </header>
             <div className="flex flex-1 flex-col gap-2 overflow-y-auto p-2">
               {columnItems.length === 0 ? (
-                <p className="px-2 py-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">No projects</p>
+                <p className="px-2 py-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
+                  No projects
+                </p>
               ) : (
                 columnItems.map((item) => (
                   <Link
@@ -74,16 +80,24 @@ export function ProjectsKanbanView({
                       {item.projectType === 'campaign' ? (
                         <LayoutGrid className="h-3.5 w-3.5 text-[var(--ozer-accent-muted)]" />
                       ) : null}
-                      <span className="text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
-                        {item.projectType === 'campaign' ? 'Campaign' : 'Delivery'}
+                      <span className="text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                        {item.projectType === 'campaign'
+                          ? 'Campaign'
+                          : 'Delivery'}
                       </span>
                     </div>
-                    <p className="text-sm font-medium text-[var(--workspace-shell-text)]">{item.title}</p>
+                    <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                      {item.title}
+                    </p>
                     {item.clientName ? (
-                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">{item.clientName}</p>
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                        {item.clientName}
+                      </p>
                     ) : null}
                     {item.dueDate ? (
-                      <p className="mt-2 text-[11px] text-[var(--workspace-shell-text-muted)]">Due {item.dueDate}</p>
+                      <p className="mt-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                        Due {item.dueDate}
+                      </p>
                     ) : null}
                   </Link>
                 ))
@@ -96,13 +110,20 @@ export function ProjectsKanbanView({
   );
 }
 
-export function mapDeliveryRowToKanbanItem(row: Record<string, unknown>): ProjectsKanbanItem {
-  const clients = row.clients as { display_name?: string | null } | null | undefined;
+export function mapDeliveryRowToKanbanItem(
+  row: Record<string, unknown>,
+): ProjectsKanbanItem {
+  const clients = row.clients as
+    | { display_name?: string | null }
+    | null
+    | undefined;
   return {
     id: String(row.id),
     projectType: 'delivery',
     status: String(row.status ?? 'pending'),
-    title: deliveryProjectTitle(row as { title?: string | null; name?: string | null }),
+    title: deliveryProjectTitle(
+      row as { title?: string | null; name?: string | null },
+    ),
     clientName: clients?.display_name ?? null,
     dueDate: (row.due_date as string | null) ?? null,
   };

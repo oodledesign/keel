@@ -30,9 +30,12 @@ function isHomepageUrl(url: string): boolean {
   }
 }
 
-export function analyzeCrawlAccess(pages: CrawlAccessPage[]): CrawlAccessSummary {
+export function analyzeCrawlAccess(
+  pages: CrawlAccessPage[],
+): CrawlAccessSummary {
   const fallbackPages = pages.filter(
-    (page) => page.fetchProfile === 'browser_fallback' || page.botBlockedInitially,
+    (page) =>
+      page.fetchProfile === 'browser_fallback' || page.botBlockedInitially,
   );
   const blockedPages = pages.filter(
     (page) =>
@@ -41,15 +44,18 @@ export function analyzeCrawlAccess(pages: CrawlAccessPage[]): CrawlAccessSummary
       (page.statusCode === 0 && page.wordCount === 0),
   );
 
-  const homepage =
-    pages.find((page) => isHomepageUrl(page.url)) ?? pages[0];
+  const homepage = pages.find((page) => isHomepageUrl(page.url)) ?? pages[0];
   const homepageBlocked =
     !homepage ||
     homepage.crawlFailed ||
     isBlockedCrawlStatus(homepage.statusCode) ||
-    (homepage.statusCode === 200 && (homepage.wordCount ?? 0) < 50 && homepage.botBlockedInitially);
+    (homepage.statusCode === 200 &&
+      (homepage.wordCount ?? 0) < 50 &&
+      homepage.botBlockedInitially);
 
-  const stillBlocked = Boolean(homepageBlocked && blockedPages.length === pages.length);
+  const stillBlocked = Boolean(
+    homepageBlocked && blockedPages.length === pages.length,
+  );
   const usedBrowserFallback = fallbackPages.length > 0;
 
   if (stillBlocked) {

@@ -1,7 +1,6 @@
 'use client';
 
 import dynamic from 'next/dynamic';
-
 import Link from 'next/link';
 
 import type {
@@ -9,12 +8,15 @@ import type {
   PagespeedSnapshot,
 } from '~/lib/pagespeed/types';
 
+import { PagespeedRecommendations } from './pagespeed-recommendations';
+
 const PagespeedHistoryChart = dynamic(
   () =>
-    import('./pagespeed-history-chart').then((mod) => mod.PagespeedHistoryChart),
+    import('./pagespeed-history-chart').then(
+      (mod) => mod.PagespeedHistoryChart,
+    ),
   { ssr: false },
 );
-import { PagespeedRecommendations } from './pagespeed-recommendations';
 
 function scoreTone(score: number | null | undefined): string {
   if (score == null) return 'text-muted-foreground';
@@ -48,7 +50,7 @@ function ScoreCard(props: {
   if (!props.metrics) {
     return (
       <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-        <p className="text-muted-foreground text-xs uppercase tracking-wide">
+        <p className="text-muted-foreground text-xs tracking-wide uppercase">
           {props.label}
         </p>
         <p className="text-muted-foreground mt-2 text-sm">Not checked yet</p>
@@ -59,7 +61,7 @@ function ScoreCard(props: {
   if (props.metrics.errorMsg) {
     return (
       <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-        <p className="text-muted-foreground text-xs uppercase tracking-wide">
+        <p className="text-muted-foreground text-xs tracking-wide uppercase">
           {props.label}
         </p>
         <p className="mt-2 text-sm text-red-400">{props.metrics.errorMsg}</p>
@@ -69,7 +71,7 @@ function ScoreCard(props: {
 
   return (
     <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-      <p className="text-muted-foreground text-xs uppercase tracking-wide">
+      <p className="text-muted-foreground text-xs tracking-wide uppercase">
         {props.label}
       </p>
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">

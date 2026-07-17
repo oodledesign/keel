@@ -64,8 +64,7 @@ export async function loadAccountBrandResolved(
   }
 
   const base = data as AccountBrandSettingsRow | null;
-  let logoUrl =
-    toSupabasePublicStorageUrl(base?.logo_url?.trim()) || null;
+  let logoUrl = toSupabasePublicStorageUrl(base?.logo_url?.trim()) || null;
 
   if (!logoUrl) {
     const { data: accountRow } = await admin

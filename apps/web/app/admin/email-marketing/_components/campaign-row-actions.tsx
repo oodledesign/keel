@@ -1,6 +1,7 @@
 'use client';
 
 import { useTransition } from 'react';
+
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -25,10 +26,18 @@ export function CampaignRowActions({
     startTransition(async () => {
       try {
         const newId = await duplicateCampaign(campaignId);
-        toast.success(sendAgain ? 'Campaign duplicated — choose a new audience' : 'Campaign duplicated');
+        toast.success(
+          sendAgain
+            ? 'Campaign duplicated — choose a new audience'
+            : 'Campaign duplicated',
+        );
         router.push(`/admin/email-marketing/${newId}/edit`);
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to duplicate campaign');
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Failed to duplicate campaign',
+        );
       }
     });
   };
@@ -36,11 +45,21 @@ export function CampaignRowActions({
   return (
     <div className="flex flex-wrap gap-2">
       {status === 'draft' ? (
-        <Button asChild variant="outline" size="sm" className="border-[color:var(--workspace-shell-border)]">
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="border-[color:var(--workspace-shell-border)]"
+        >
           <Link href={`/admin/email-marketing/${campaignId}/edit`}>Edit</Link>
         </Button>
       ) : null}
-      <Button asChild variant="outline" size="sm" className="border-[color:var(--workspace-shell-border)]">
+      <Button
+        asChild
+        variant="outline"
+        size="sm"
+        className="border-[color:var(--workspace-shell-border)]"
+      >
         <Link href={`/admin/email-marketing/${campaignId}`}>View</Link>
       </Button>
       {status === 'sent' || status === 'cancelled' ? (

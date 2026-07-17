@@ -1,7 +1,9 @@
 import { type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
@@ -14,8 +16,8 @@ import {
   triggerRankCheckRun,
   triggerRankCheckRunDebounced,
 } from '~/lib/rank-tracking/trigger-run';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
@@ -35,7 +37,9 @@ const startSchema = z.object({
 const settingsSchema = z.object({
   projectId: z.string().uuid(),
   accountId: z.string().uuid(),
-  rankRefreshInterval: z.enum(['manual', 'daily', 'weekly', 'monthly']).optional(),
+  rankRefreshInterval: z
+    .enum(['manual', 'daily', 'weekly', 'monthly'])
+    .optional(),
   trackDesktop: z.boolean().optional(),
   trackMobile: z.boolean().optional(),
 });
@@ -51,8 +55,8 @@ async function assertProjectAccess(
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
 
-    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
-    if (addonDenied) return addonDenied;
+  const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+  if (addonDenied) return addonDenied;
 
   const { data: project } = await supabaseCustomSchema(client, 'rankly')
     .from('projects')
@@ -85,7 +89,12 @@ export async function GET(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return jsonErr('VALIDATION', 'Invalid query', 400, parsed.error.flatten());
+      return jsonErr(
+        'VALIDATION',
+        'Invalid query',
+        400,
+        parsed.error.flatten(),
+      );
     }
 
     const accessError = await assertProjectAccess(
@@ -179,7 +188,11 @@ export async function POST(request: NextRequest) {
       .eq('project_id', parsed.data.projectId);
 
     if (!count) {
-      return jsonErr('VALIDATION', 'Add keywords before running a rank check', 400);
+      return jsonErr(
+        'VALIDATION',
+        'Add keywords before running a rank check',
+        400,
+      );
     }
 
     const settings = await loadRankTrackingSettings(parsed.data.projectId);
@@ -252,10 +265,7 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    if (
-      parsed.data.trackDesktop != null ||
-      parsed.data.trackMobile != null
-    ) {
+    if (parsed.data.trackDesktop != null || parsed.data.trackMobile != null) {
       const settings = await loadRankTrackingSettings(parsed.data.projectId);
       if (!settings) {
         return jsonErr('NOT_FOUND', 'Project not found', 404);

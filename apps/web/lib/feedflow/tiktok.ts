@@ -80,7 +80,9 @@ export async function refreshTikTokToken(refreshToken: string): Promise<{
     error_description?: string;
   };
   if (!res.ok || !json.access_token) {
-    throw new Error(json.error_description ?? json.error ?? 'TikTok refresh failed');
+    throw new Error(
+      json.error_description ?? json.error ?? 'TikTok refresh failed',
+    );
   }
   return {
     accessToken: json.access_token,

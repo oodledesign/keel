@@ -55,9 +55,7 @@ export function BrandSettingsForm({
       await saveAccountBrandSettings({
         accountId,
         primary_color: normalizeHex(primary),
-        secondary_color: secondary.trim()
-          ? normalizeHex(secondary)
-          : null,
+        secondary_color: secondary.trim() ? normalizeHex(secondary) : null,
         accent_color: accent.trim() ? normalizeHex(accent) : null,
         website_url: websiteUrl.trim() || null,
         address: address.trim() || null,
@@ -74,17 +72,21 @@ export function BrandSettingsForm({
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
       {!canEdit ? (
-        <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm text-muted-foreground">
+        <p className="text-muted-foreground rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm">
           Only workspace owners and admins can edit brand colours.
         </p>
       ) : null}
 
-      <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm text-muted-foreground">
+      <p className="text-muted-foreground rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-3 text-sm">
         Upload your business logo under{' '}
-        <Link href={settingsHref} className="text-[var(--ozer-accent)] hover:underline">
+        <Link
+          href={settingsHref}
+          className="text-[var(--ozer-accent)] hover:underline"
+        >
           General settings
         </Link>
-        . It appears in the sidebar workspace switcher, emails, and signature templates.
+        . It appears in the sidebar workspace switcher, emails, and signature
+        templates.
       </p>
 
       <div className="grid gap-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
@@ -112,9 +114,10 @@ export function BrandSettingsForm({
 
         <div className="space-y-2">
           <Label htmlFor="brand-website">Company website</Label>
-          <p className="text-xs text-muted-foreground">
+          <p className="text-muted-foreground text-xs">
             Shown in email signatures as{' '}
-            <code className="text-[11px]">{'{{website}}'}</code> (e.g. www.example.com).
+            <code className="text-[11px]">{'{{website}}'}</code> (e.g.
+            www.example.com).
           </p>
           <Input
             id="brand-website"
@@ -127,9 +130,9 @@ export function BrandSettingsForm({
 
         <div className="space-y-2">
           <Label htmlFor="brand-address">Default company address</Label>
-          <p className="text-xs text-muted-foreground">
-            Fallback for signatures when a branch has no address. Branch addresses
-            are set under Branches below.
+          <p className="text-muted-foreground text-xs">
+            Fallback for signatures when a branch has no address. Branch
+            addresses are set under Branches below.
           </p>
           <Input
             id="brand-address"
@@ -173,7 +176,7 @@ function ColorField({
   return (
     <div className="space-y-2">
       <Label>{label}</Label>
-      <p className="text-xs text-muted-foreground">{description}</p>
+      <p className="text-muted-foreground text-xs">{description}</p>
       <div className="flex flex-wrap items-center gap-3">
         <input
           type="color"

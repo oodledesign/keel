@@ -62,6 +62,8 @@ export async function assertRanklyModuleEnabled(
   const { canUseAddon } = await import('~/lib/billing/entitlements');
   const allowed = await canUseAddon(client, userId, accountId, 'addon_rankly');
   if (!allowed) {
-    throw new Error('Rankly add-on required. Subscribe from Billing in this workspace.');
+    throw new Error(
+      'Rankly add-on required. Subscribe from Billing in this workspace.',
+    );
   }
 }

@@ -1,12 +1,13 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
-import { enhanceAction } from '@kit/next/actions';
 import { isSuperAdmin } from '@kit/admin';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
   loadTicketAccountName,
@@ -176,7 +177,9 @@ const adminReplySchema = z.object({
   ticketId: z.string().uuid(),
   body: z.string().min(1).max(10000),
   isInternalNote: z.boolean().optional(),
-  status: z.enum(['open', 'in_progress', 'waiting', 'resolved', 'closed']).optional(),
+  status: z
+    .enum(['open', 'in_progress', 'waiting', 'resolved', 'closed'])
+    .optional(),
 });
 
 export const adminReplyPlatformSupportTicketAction = enhanceAction(

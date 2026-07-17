@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
+import { Button } from '@kit/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -10,7 +11,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@kit/ui/dialog';
-import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
 import {
   Select,
@@ -21,19 +21,19 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 import {
+  type TaskAssignmentOption,
   loadTaskAssignmentOptions,
   loadTaskAssignmentOptionsForWorkspace,
-  type TaskAssignmentOption,
 } from '~/home/(user)/_lib/actions/task-actions';
-import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 
+import { emailApiFetch } from '../_lib/email-api';
 import type {
   EmailActionItemRow,
   EmailThreadLink,
   EmailWorkspaceOption,
 } from '../_lib/types';
-import { emailApiFetch } from '../_lib/email-api';
 
 type Props = {
   open: boolean;
@@ -137,11 +137,11 @@ export function AcceptActionItemDialog({
     const projectId =
       selected?.type === 'project'
         ? selected.id
-        : actionItem.project_id ?? threadLink?.projectId ?? null;
+        : (actionItem.project_id ?? threadLink?.projectId ?? null);
     const clientId =
       selected?.type === 'client'
         ? selected.id
-        : actionItem.client_id ?? threadLink?.clientId ?? null;
+        : (actionItem.client_id ?? threadLink?.clientId ?? null);
 
     if (destination === 'workspace' && !projectId && !clientId) {
       toast.error('Choose a workspace project or client for this task.');
@@ -183,12 +183,12 @@ export function AcceptActionItemDialog({
 
         <div className="space-y-4 py-2">
           <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">Destination</Label>
+            <Label className="text-[var(--workspace-shell-text-muted)]">
+              Destination
+            </Label>
             <Select
               value={destination}
-              onValueChange={(value) =>
-                setDestination(value as Destination)
-              }
+              onValueChange={(value) => setDestination(value as Destination)}
             >
               <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
@@ -202,8 +202,13 @@ export function AcceptActionItemDialog({
 
           {destination === 'workspace' ? (
             <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">Workspace</Label>
-              <Select value={workspaceId || 'none'} onValueChange={setWorkspaceId}>
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Workspace
+              </Label>
+              <Select
+                value={workspaceId || 'none'}
+                onValueChange={setWorkspaceId}
+              >
                 <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
                   <SelectValue placeholder="Choose workspace" />
                 </SelectTrigger>

@@ -56,10 +56,16 @@ export async function enrichProjectKeywordMetrics(input: {
   });
 
   if (rows.length === 0) {
-    return { updated: 0, skipped: keywordRows?.length ?? 0, estimatedCostUsd: 0 };
+    return {
+      updated: 0,
+      skipped: keywordRows?.length ?? 0,
+      estimatedCostUsd: 0,
+    };
   }
 
-  const countryCode = projectCountryToCode(String(project.target_country ?? 'gb'));
+  const countryCode = projectCountryToCode(
+    String(project.target_country ?? 'gb'),
+  );
   const metricsByKeyword = await fetchKeywordOverviewMetrics(
     rows.map((row) => String(row.keyword)),
     countryCode,
@@ -69,7 +75,9 @@ export async function enrichProjectKeywordMetrics(input: {
   let updated = 0;
 
   for (const row of rows) {
-    const metrics = metricsByKeyword.get(String(row.keyword).trim().toLowerCase());
+    const metrics = metricsByKeyword.get(
+      String(row.keyword).trim().toLowerCase(),
+    );
 
     const { error } = await ranklyAdmin()
       .from('keywords')

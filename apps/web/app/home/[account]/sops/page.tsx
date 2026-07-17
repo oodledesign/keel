@@ -5,7 +5,10 @@ import { PageBody } from '@kit/ui/page';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import { isWorkNavModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
@@ -55,8 +58,9 @@ async function SopsPage({ params }: SopsPageProps) {
         <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-8">
           <p className="text-sm text-amber-200/90">
             SOPs module is not available on this database yet. Apply the latest
-            Supabase migrations and add the <code className="text-xs">sops</code>{' '}
-            schema to PostgREST exposed schemas.
+            Supabase migrations and add the{' '}
+            <code className="text-xs">sops</code> schema to PostgREST exposed
+            schemas.
           </p>
         </PageBody>
       </>

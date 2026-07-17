@@ -4,20 +4,24 @@ import type { LucideIcon } from 'lucide-react';
 import { Activity, LayoutDashboard, ListTodo, Mail, Mic } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
-import { marketingFeatureCard, marketingShellClass } from '~/lib/marketing/marketing-ui';
+
 import { PricingConversion } from '~/(marketing)/pricing/_components/pricing-conversion';
-import { withI18n } from '~/lib/i18n/with-i18n';
 import {
   formatGbp,
   listBusinessWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
 import { MARKETING_FREE_TIER } from '~/lib/billing/pricing-marketing';
+import { withI18n } from '~/lib/i18n/with-i18n';
+import {
+  marketingFeatureCard,
+  marketingShellClass,
+} from '~/lib/marketing/marketing-ui';
 import {
   pricingFaqs,
   replacedStackMonthlyTotal,
 } from '~/lib/marketing/pricing-content';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import {
   absoluteUrl,
   breadcrumbJsonLd,
@@ -42,7 +46,10 @@ const STACK_EXTRAS: Array<{
   { label: 'Tasks & pipeline', href: '/features/pipeline', icon: ListTodo },
 ];
 
-function stackSavingPercent(stackYear: number, ozerYear: number): number | null {
+function stackSavingPercent(
+  stackYear: number,
+  ozerYear: number,
+): number | null {
   if (stackYear <= 0 || ozerYear >= stackYear) return null;
   return Math.floor(((stackYear - ozerYear) / stackYear) * 100);
 }
@@ -102,7 +109,7 @@ async function PricingPage() {
     <div className={cn('relative overflow-hidden', marketingShellClass)}>
       <JsonLd data={schema} />
       <div className="relative flex flex-col">
-        <div className="container mx-auto px-4 pb-8 pt-8 xl:pb-16">
+        <div className="container mx-auto px-4 pt-8 pb-8 xl:pb-16">
           <PricingConversion />
 
           {/* Stage 4 — calculator bridge (full tool on its own route) */}
@@ -120,9 +127,9 @@ async function PricingPage() {
               What does this mean for your studio?
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
-              A typical UK tool stack in our strip totals about {formatGbp(stackYear)}{' '}
-              per year. Ozer Business Team is {formatGbp(teamYear)} per year — flat
-              price for the whole team
+              A typical UK tool stack in our strip totals about{' '}
+              {formatGbp(stackYear)} per year. Ozer Business Team is{' '}
+              {formatGbp(teamYear)} per year — flat price for the whole team
               {savingPct != null ? (
                 <>
                   {' '}
@@ -133,8 +140,9 @@ async function PricingPage() {
                   )
                 </>
               ) : null}
-              . And that is not just the apps in the strip — you also get personal
-              assistants and tracking that usually sit in separate tools.
+              . And that is not just the apps in the strip — you also get
+              personal assistants and tracking that usually sit in separate
+              tools.
             </p>
 
             <ul className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">

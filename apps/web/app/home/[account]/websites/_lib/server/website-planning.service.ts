@@ -5,6 +5,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { createJobsService } from '~/home/[account]/jobs/_lib/server/jobs.service';
+import { createProjectPhasesService } from '~/home/[account]/jobs/_lib/server/project-phases.service';
 import type {
   WebsiteContentDoc,
   WebsiteSitemapDocument,
@@ -14,9 +16,6 @@ import type {
 } from '~/lib/websites/planning-types';
 import { migrateSitemapDocument } from '~/lib/websites/sitemap-document';
 import { WEBSITE_DESIGN_TEMPLATE_NAME } from '~/lib/websites/website-design-template';
-
-import { createJobsService } from '~/home/[account]/jobs/_lib/server/jobs.service';
-import { createProjectPhasesService } from '~/home/[account]/jobs/_lib/server/project-phases.service';
 
 import {
   isMissingColumnError,
@@ -441,11 +440,7 @@ class WebsitePlanningService {
     return { jobId };
   }
 
-  async createContentDoc(
-    accountId: string,
-    websiteId: string,
-    title: string,
-  ) {
+  async createContentDoc(accountId: string, websiteId: string, title: string) {
     const user = await this.ensureCanEdit(accountId);
 
     const { data: maxRow, error: maxError } = await this.adminDb
@@ -502,7 +497,8 @@ class WebsitePlanningService {
     await this.ensureCanEdit(accountId);
 
     const payload: Record<string, unknown> = {};
-    if (input.title !== undefined) payload.title = input.title.trim() || 'Untitled';
+    if (input.title !== undefined)
+      payload.title = input.title.trim() || 'Untitled';
     if (input.contentMd !== undefined) payload.content_md = input.contentMd;
 
     if (Object.keys(payload).length === 0) {
@@ -522,11 +518,7 @@ class WebsitePlanningService {
     return this.mapContentDoc(data as ContentDocRow);
   }
 
-  async deleteContentDoc(
-    accountId: string,
-    websiteId: string,
-    docId: string,
-  ) {
+  async deleteContentDoc(accountId: string, websiteId: string, docId: string) {
     await this.ensureCanEdit(accountId);
 
     const { error } = await this.adminDb

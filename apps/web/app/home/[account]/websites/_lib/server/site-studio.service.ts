@@ -1615,9 +1615,8 @@ export async function setShareApprovalByToken(input: {
   status: 'approved' | 'blocked';
   note?: string;
 }): Promise<{ ok: true }> {
-  const { setShareApprovalByToken: apply } = await import(
-    './website-approvals.service'
-  );
+  const { setShareApprovalByToken: apply } =
+    await import('./website-approvals.service');
   return apply({
     token: input.token,
     targetType: 'page',

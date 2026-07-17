@@ -201,10 +201,7 @@ export function isBriefValueEmpty(value: unknown): boolean {
   return false;
 }
 
-export function getBriefPathValue(
-  brief: WebsiteBrief,
-  path: string,
-): unknown {
+export function getBriefPathValue(brief: WebsiteBrief, path: string): unknown {
   const parts = path.split('.');
   let current: unknown = brief;
   for (const part of parts) {
@@ -247,7 +244,10 @@ export function applyBriefPatch(
 ): WebsiteBrief {
   const next = structuredClone(current) as WebsiteBrief;
 
-  function merge(target: Record<string, unknown>, source: Record<string, unknown>) {
+  function merge(
+    target: Record<string, unknown>,
+    source: Record<string, unknown>,
+  ) {
     for (const [key, value] of Object.entries(source)) {
       if (value === undefined) continue;
       if (

@@ -76,7 +76,9 @@ export async function loadGoogleConnectionMeta(
   return { scopes: row.scopes ?? [] };
 }
 
-export function hasGmailVacationScope(scopes: string[] | null | undefined): boolean {
+export function hasGmailVacationScope(
+  scopes: string[] | null | undefined,
+): boolean {
   return (scopes ?? []).includes(GMAIL_SETTINGS_BASIC_SCOPE);
 }
 
@@ -149,10 +151,7 @@ async function gmailVacationRequest(
   });
 }
 
-function mapVacationApiError(
-  status: number,
-  body: string,
-): VacationSyncResult {
+function mapVacationApiError(status: number, body: string): VacationSyncResult {
   if (status === 403) {
     return {
       success: false,

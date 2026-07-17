@@ -70,7 +70,9 @@ export function htmlToPlainText(html: string): string {
   return text;
 }
 
-async function fetchLogoBytes(url: string): Promise<{ bytes: Uint8Array; kind: 'png' | 'jpg' } | null> {
+async function fetchLogoBytes(
+  url: string,
+): Promise<{ bytes: Uint8Array; kind: 'png' | 'jpg' } | null> {
   try {
     const response = await fetch(url);
     if (!response.ok) return null;
@@ -118,7 +120,9 @@ function wrapText(text: string, maxChars: number): string[] {
   return lines;
 }
 
-export async function buildProposalPdf(proposal: ProposalForPdf): Promise<Uint8Array> {
+export async function buildProposalPdf(
+  proposal: ProposalForPdf,
+): Promise<Uint8Array> {
   const doc = await PDFDocument.create();
   const font = await doc.embedFont(StandardFonts.Helvetica);
   const fontBold = await doc.embedFont(StandardFonts.HelveticaBold);
@@ -136,7 +140,11 @@ export async function buildProposalPdf(proposal: ProposalForPdf): Promise<Uint8A
           : await doc.embedJpg(logo.bytes);
       const maxWidth = 120;
       const maxHeight = 48;
-      const scale = Math.min(maxWidth / image.width, maxHeight / image.height, 1);
+      const scale = Math.min(
+        maxWidth / image.width,
+        maxHeight / image.height,
+        1,
+      );
       const logoWidth = image.width * scale;
       const logoHeight = image.height * scale;
       page.drawImage(image, {
@@ -198,7 +206,9 @@ export async function buildProposalPdf(proposal: ProposalForPdf): Promise<Uint8A
   const recipientName =
     proposal.recipient_name?.trim() ||
     proposal.client?.display_name?.trim() ||
-    [proposal.client?.first_name, proposal.client?.last_name].filter(Boolean).join(' ') ||
+    [proposal.client?.first_name, proposal.client?.last_name]
+      .filter(Boolean)
+      .join(' ') ||
     null;
 
   if (recipientName) {

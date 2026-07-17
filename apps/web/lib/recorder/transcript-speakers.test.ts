@@ -76,7 +76,10 @@ describe('renameSpeakersInSegments', () => {
       'Speaker 2': 'Sarah Chen',
     });
 
-    expect(distinctTranscriptSpeakers(renamed)).toEqual(['Sarah Chen', 'Speaker 1']);
+    expect(distinctTranscriptSpeakers(renamed)).toEqual([
+      'Sarah Chen',
+      'Speaker 1',
+    ]);
     expect(serializeTranscriptSegments(renamed)).toBe(
       'Sarah Chen: Hello\n\nSpeaker 1: Hi\n\nSarah Chen: Again',
     );
@@ -125,21 +128,21 @@ describe('speaker mappings', () => {
       'Speaker 4': { type: 'member' as const, userId: 'u1' },
     };
 
-    expect(resolveSpeakerLabel('Speaker 1', mappings, clients, contacts, members)).toBe(
-      'Acme Corp',
-    );
-    expect(resolveSpeakerLabel('Speaker 2', mappings, clients, contacts, members)).toBe(
-      'Jane Doe',
-    );
-    expect(resolveSpeakerLabel('Speaker 3', mappings, clients, contacts, members)).toBe(
-      'Guest',
-    );
-    expect(resolveSpeakerLabel('Speaker 4', mappings, clients, contacts, members)).toBe(
-      'Dan Potter',
-    );
-    expect(resolveSpeakerLabel('Speaker 5', mappings, clients, contacts, members)).toBe(
-      'Speaker 5',
-    );
+    expect(
+      resolveSpeakerLabel('Speaker 1', mappings, clients, contacts, members),
+    ).toBe('Acme Corp');
+    expect(
+      resolveSpeakerLabel('Speaker 2', mappings, clients, contacts, members),
+    ).toBe('Jane Doe');
+    expect(
+      resolveSpeakerLabel('Speaker 3', mappings, clients, contacts, members),
+    ).toBe('Guest');
+    expect(
+      resolveSpeakerLabel('Speaker 4', mappings, clients, contacts, members),
+    ).toBe('Dan Potter');
+    expect(
+      resolveSpeakerLabel('Speaker 5', mappings, clients, contacts, members),
+    ).toBe('Speaker 5');
   });
 
   it('serializes segments with resolved speaker names', () => {
@@ -155,7 +158,13 @@ describe('speaker mappings', () => {
     };
 
     expect(
-      serializeResolvedTranscriptSegments(segments, mappings, clients, contacts, members),
+      serializeResolvedTranscriptSegments(
+        segments,
+        mappings,
+        clients,
+        contacts,
+        members,
+      ),
     ).toBe('Acme Corp: Hello\n\nBob: Hi there\n\nDan Potter: Sounds good');
   });
 });

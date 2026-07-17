@@ -12,13 +12,37 @@ import { loadAdminDashboardStats } from '~/admin/_lib/load-admin-dashboard';
 
 const links = [
   { href: '/admin/users', label: 'Users', description: 'All auth users' },
-  { href: '/admin/workspaces', label: 'Workspaces', description: 'Team accounts & billing' },
-  { href: '/admin/billing', label: 'Billing', description: 'MRR, dunning & churn' },
-  { href: '/admin/accounts', label: 'Accounts', description: 'Personal & team accounts' },
-  { href: '/admin/branding', label: 'Branding', description: 'Colours, fonts & logos' },
+  {
+    href: '/admin/workspaces',
+    label: 'Workspaces',
+    description: 'Team accounts & billing',
+  },
+  {
+    href: '/admin/billing',
+    label: 'Billing',
+    description: 'MRR, dunning & churn',
+  },
+  {
+    href: '/admin/accounts',
+    label: 'Accounts',
+    description: 'Personal & team accounts',
+  },
+  {
+    href: '/admin/branding',
+    label: 'Branding',
+    description: 'Colours, fonts & logos',
+  },
   { href: '/admin/support', label: 'Support', description: 'Platform tickets' },
-  { href: '/admin/email-marketing', label: 'Email marketing', description: 'Campaigns, contacts & lists' },
-  { href: '/admin/email-log', label: 'Email log', description: 'Grouped & individual sends' },
+  {
+    href: '/admin/email-marketing',
+    label: 'Email marketing',
+    description: 'Campaigns, contacts & lists',
+  },
+  {
+    href: '/admin/email-log',
+    label: 'Email log',
+    description: 'Grouped & individual sends',
+  },
   { href: '/admin/audit', label: 'Audit log', description: 'Admin actions' },
 ];
 
@@ -38,7 +62,7 @@ export async function OzerAdminDashboard() {
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {links.map((item) => (
           <Link key={item.href} href={item.href}>
-            <Card className="h-full transition hover:border-foreground/20">
+            <Card className="hover:border-foreground/20 h-full transition">
               <CardHeader className="pb-2">
                 <CardTitle className="text-base">{item.label}</CardTitle>
                 <CardDescription>{item.description}</CardDescription>

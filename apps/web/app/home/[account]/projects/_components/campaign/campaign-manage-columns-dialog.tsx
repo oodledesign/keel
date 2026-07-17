@@ -4,11 +4,11 @@ import { useEffect, useState, useTransition } from 'react';
 
 import {
   DndContext,
+  type DragEndEvent,
   PointerSensor,
   closestCenter,
   useSensor,
   useSensors,
-  type DragEndEvent,
 } from '@dnd-kit/core';
 import {
   SortableContext,
@@ -60,8 +60,14 @@ function SortableFieldRow({
   canDelete: boolean;
   onDelete: () => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
-    useSortable({ id: field.id });
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: field.id });
 
   return (
     <div
@@ -83,7 +89,9 @@ function SortableFieldRow({
         <GripVertical className="h-4 w-4" />
       </button>
       <div className="min-w-0 flex-1">
-        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">{field.label}</p>
+        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+          {field.label}
+        </p>
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           {PROJECT_FIELD_TYPE_LABELS[field.fieldType]}
         </p>
@@ -128,7 +136,9 @@ export function CampaignManageColumnsDialog({
   const [choices, setChoices] = useState('');
   const [pending, startTransition] = useTransition();
 
-  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 6 } }));
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
 
   useEffect(() => {
     if (open) setLocalFields(fields);
@@ -157,7 +167,9 @@ export function CampaignManageColumnsDialog({
         });
         onUpdated();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to reorder columns');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to reorder columns',
+        );
         setLocalFields(fields);
       }
     });
@@ -193,7 +205,9 @@ export function CampaignManageColumnsDialog({
         toast.success('Column added');
         onUpdated();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to add column');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to add column',
+        );
       }
     });
   };
@@ -210,7 +224,9 @@ export function CampaignManageColumnsDialog({
         toast.success('Column removed');
         onUpdated();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Failed to remove column');
+        toast.error(
+          error instanceof Error ? error.message : 'Failed to remove column',
+        );
       }
     });
   };
@@ -221,7 +237,8 @@ export function CampaignManageColumnsDialog({
         <DialogHeader>
           <DialogTitle>Manage columns</DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-            Drag to reorder display columns. Add custom fields with different types.
+            Drag to reorder display columns. Add custom fields with different
+            types.
           </DialogDescription>
         </DialogHeader>
 
@@ -249,9 +266,13 @@ export function CampaignManageColumnsDialog({
 
         {canEdit ? (
           <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
-            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">Add column</p>
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Add column
+            </p>
             <div>
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Label</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Label
+              </Label>
               <Input
                 value={label}
                 onChange={(event) => setLabel(event.target.value)}
@@ -260,10 +281,14 @@ export function CampaignManageColumnsDialog({
               />
             </div>
             <div>
-              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Type</Label>
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Type
+              </Label>
               <Select
                 value={fieldType}
-                onValueChange={(value) => setFieldType(value as ProjectFieldType)}
+                onValueChange={(value) =>
+                  setFieldType(value as ProjectFieldType)
+                }
               >
                 <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
                   <SelectValue />
@@ -279,7 +304,9 @@ export function CampaignManageColumnsDialog({
             </div>
             {fieldType === 'select' ? (
               <div>
-                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">Options (comma-separated)</Label>
+                <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Options (comma-separated)
+                </Label>
                 <Input
                   value={choices}
                   onChange={(event) => setChoices(event.target.value)}

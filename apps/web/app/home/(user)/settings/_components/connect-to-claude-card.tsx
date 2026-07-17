@@ -45,18 +45,19 @@ export function ConnectToClaudeCard({ connectorUrl }: Props) {
             </h3>
             <Badge
               variant="outline"
-              className="rounded-full border-[color:var(--workspace-shell-border)] px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]"
+              className="rounded-full border-[color:var(--workspace-shell-border)] px-2.5 py-0.5 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase"
             >
               MCP
             </Badge>
           </div>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Link Claude to your Ozer tasks so you can create, list and update them
-            from chat. Disconnect any time from Claude&apos;s connector settings.
+            Link Claude to your Ozer tasks so you can create, list and update
+            them from chat. Disconnect any time from Claude&apos;s connector
+            settings.
           </p>
 
           <div className="mt-4">
-            <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+            <p className="mb-2 text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               Connector URL
             </p>
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

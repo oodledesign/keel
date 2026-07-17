@@ -5,12 +5,12 @@ import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
+import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import type { PageOptimizeRecommendation } from '~/lib/page-optimize/types';
 import { PAGE_OPTIMIZE_STATUS_LABELS } from '~/lib/page-optimize/types';
-import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 
-import { RanklyJobProgress } from '../rankly-job-progress';
 import { useRanklyJobProgress } from '../../_lib/use-rankly-job-progress';
+import { RanklyJobProgress } from '../rankly-job-progress';
 
 type ApiResponse<T> =
   | { ok: true; data: T }
@@ -62,18 +62,22 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
     <div className="space-y-4 rounded-lg border border-[var(--ozer-accent)]/20 bg-[var(--ozer-accent)]/5 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          <p className="text-muted-foreground text-xs tracking-wide uppercase">
             SEO optimization score
           </p>
           <p className="text-3xl font-semibold tabular-nums">
             {report.score ?? '—'}
             {report.score != null ? (
-              <span className="text-muted-foreground text-lg font-normal"> /100</span>
+              <span className="text-muted-foreground text-lg font-normal">
+                {' '}
+                /100
+              </span>
             ) : null}
           </p>
         </div>
-        <p className="text-sm text-muted-foreground">
-          Target keyword: <span className="text-foreground">{report.target_keyword}</span>
+        <p className="text-muted-foreground text-sm">
+          Target keyword:{' '}
+          <span className="text-foreground">{report.target_keyword}</span>
         </p>
       </div>
 
@@ -83,7 +87,7 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
 
       {report.title_suggestions?.length ? (
         <div>
-          <p className="mb-2 text-xs font-medium uppercase text-muted-foreground">
+          <p className="text-muted-foreground mb-2 text-xs font-medium uppercase">
             Title suggestions
           </p>
           <ul className="list-inside list-disc space-y-1 text-sm">
@@ -96,7 +100,7 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
 
       {report.meta_suggestion ? (
         <div>
-          <p className="mb-1 text-xs font-medium uppercase text-muted-foreground">
+          <p className="text-muted-foreground mb-1 text-xs font-medium uppercase">
             Meta description
           </p>
           <p className="text-sm">{report.meta_suggestion}</p>
@@ -105,7 +109,7 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
 
       {report.recommendations.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-xs font-medium uppercase text-muted-foreground">
+          <p className="text-muted-foreground text-xs font-medium uppercase">
             Recommendations
           </p>
           {report.recommendations.map((rec) => (
@@ -257,11 +261,15 @@ export function PageOptimizePanel(props: {
 
   return (
     <div className="space-y-3">
-      <p className="text-sm text-muted-foreground">
-        Scrape this URL, compare it to the SERP, and get AI-powered title, meta, and
-        content recommendations.
+      <p className="text-muted-foreground text-sm">
+        Scrape this URL, compare it to the SERP, and get AI-powered title, meta,
+        and content recommendations.
       </p>
-      <Button size="sm" onClick={() => void startOptimization()} disabled={loading}>
+      <Button
+        size="sm"
+        onClick={() => void startOptimization()}
+        disabled={loading}
+      >
         {loading ? 'Starting…' : 'Optimize this page'}
       </Button>
     </div>

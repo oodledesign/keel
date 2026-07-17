@@ -4,7 +4,13 @@ import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
-import { ArrowRight, BriefcaseBusiness, PenLine, Sparkles, X } from 'lucide-react';
+import {
+  ArrowRight,
+  BriefcaseBusiness,
+  PenLine,
+  Sparkles,
+  X,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 

@@ -18,7 +18,7 @@ import {
   monthKeyFromYmd,
   weekDatesFrom,
 } from './family-meal.dates';
-import { resolveMealPlanScope, type MealPlanScope } from './family-meal.scope';
+import { type MealPlanScope, resolveMealPlanScope } from './family-meal.scope';
 
 function defaultPreferences(
   userId: string,
@@ -92,21 +92,21 @@ export const loadFamilyMealData = cache(
       options.monthKey ??
       (view === 'month' ? currentMonthKey() : monthKeyFromYmd(weekStart));
 
-    const planDates =
-      view === 'month' ? monthDatesFrom(monthKey) : weekDates;
+    const planDates = view === 'month' ? monthDatesFrom(monthKey) : weekDates;
     const rangeStart = planDates[0] ?? weekStart;
     const rangeEnd = planDates[planDates.length - 1] ?? rangeStart;
 
-    const accountId =
-      scope.kind === 'workspace' ? scope.accountId : null;
+    const accountId = scope.kind === 'workspace' ? scope.accountId : null;
 
-    const [recipesResult, preferencesResult, entriesResult] = await Promise.all([
-      recipesQuery(scope)
-        .order('is_favorite', { ascending: false })
-        .order('updated_at', { ascending: false }),
-      preferencesQuery(scope).maybeSingle(),
-      entriesQuery(scope, rangeStart, rangeEnd),
-    ]);
+    const [recipesResult, preferencesResult, entriesResult] = await Promise.all(
+      [
+        recipesQuery(scope)
+          .order('is_favorite', { ascending: false })
+          .order('updated_at', { ascending: false }),
+        preferencesQuery(scope).maybeSingle(),
+        entriesQuery(scope, rangeStart, rangeEnd),
+      ],
+    );
 
     const recipes = (recipesResult.data ?? []) as RecipeRow[];
     const preferences =
@@ -117,8 +117,7 @@ export const loadFamilyMealData = cache(
     return {
       recipes,
       preferences,
-      accountSlug:
-        scope.kind === 'workspace' ? scope.accountSlug : undefined,
+      accountSlug: scope.kind === 'workspace' ? scope.accountSlug : undefined,
       basePath: scope.basePath,
       view,
       periodStart: view === 'month' ? `${monthKey}-01` : weekStart,
@@ -132,10 +131,7 @@ export const loadFamilyMealData = cache(
 );
 
 export const loadFamilyRecipeById = cache(
-  async (
-    recipeId: string,
-    accountSlug?: string,
-  ): Promise<RecipeRow | null> => {
+  async (recipeId: string, accountSlug?: string): Promise<RecipeRow | null> => {
     const scope = await resolveMealPlanScope(accountSlug);
     const { data, error } = await recipesQuery(scope)
       .eq('id', recipeId)

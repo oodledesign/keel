@@ -1,7 +1,8 @@
 'use client';
 
+import { type ReactNode, useMemo, useState } from 'react';
+
 import Link from 'next/link';
-import { useMemo, useState, type ReactNode } from 'react';
 
 import { ArrowRight, Check } from 'lucide-react';
 
@@ -10,18 +11,17 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  type BillingInterval,
   MARKETING_ADDON_PLANS,
   MARKETING_BUSINESS_LITE_SIGNUP_URL,
   MARKETING_FREE_SIGNUP_URL,
   MARKETING_FREE_TIER,
   MARKETING_WORKSPACE_PLANS,
-  type BillingInterval,
   type MarketingWorkspacePlan,
   buildPricingSignupUrl,
   formatGbp,
   planIdForInterval,
 } from '~/lib/billing/pricing-marketing';
-import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -30,15 +30,18 @@ import {
   marketingFeaturedPlan,
   marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
+import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
 
-import { PricingComparisonTable } from '../../_components/pricing-comparison-table';
 import { InterconnectedWorkspacesSection } from '../../_components/interconnected-workspaces-section';
+import { PricingComparisonTable } from '../../_components/pricing-comparison-table';
 
 export function OzerPricingPage() {
   const [interval, setInterval] = useState<BillingInterval>('month');
 
   const workspacePlans = useMemo(() => {
-    return MARKETING_WORKSPACE_PLANS.filter((plan) => plan.profile === 'work_design');
+    return MARKETING_WORKSPACE_PLANS.filter(
+      (plan) => plan.profile === 'work_design',
+    );
   }, []);
 
   const pricingComparison = useMemo(
@@ -54,10 +57,16 @@ export function OzerPricingPage() {
   return (
     <div className="space-y-16">
       <section className="text-center">
-        <p className={cn('mx-auto max-w-2xl text-lg leading-relaxed', marketingBodyText)}>
-          Start free with a personal account — your hub for every workspace.
-          Add Ozer Business when you need the studio stack. One price covers the
-          team, not a per-seat tax. One Workspace OS, not a pile of siloed tools.
+        <p
+          className={cn(
+            'mx-auto max-w-2xl text-lg leading-relaxed',
+            marketingBodyText,
+          )}
+        >
+          Start free with a personal account — your hub for every workspace. Add
+          Ozer Business when you need the studio stack. One price covers the
+          team, not a per-seat tax. One Workspace OS, not a pile of siloed
+          tools.
         </p>
         <div className="mt-8 flex flex-wrap items-center justify-center gap-3">
           <Button asChild size="lg" className={marketingBtnGradient}>
@@ -66,12 +75,18 @@ export function OzerPricingPage() {
               <ArrowRight className="ml-1.5 h-4 w-4" />
             </Link>
           </Button>
-          <Button asChild size="lg" variant="outline" className={marketingBtnOutline}>
+          <Button
+            asChild
+            size="lg"
+            variant="outline"
+            className={marketingBtnOutline}
+          >
             <Link href={pathsConfig.auth.signIn}>Sign in</Link>
           </Button>
         </div>
         <p className={cn('mt-4 text-sm', marketingMutedText)}>
-          Free personal forever · 14-day trial, no card needed · Annual plans save 16.7%
+          Free personal forever · 14-day trial, no card needed · Annual plans
+          save 16.7%
         </p>
       </section>
 
@@ -103,12 +118,19 @@ export function OzerPricingPage() {
       >
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
           {workspacePlans.map((plan) => (
-            <WorkspacePlanCard key={plan.productId} plan={plan} interval={interval} />
+            <WorkspacePlanCard
+              key={plan.productId}
+              plan={plan}
+              interval={interval}
+            />
           ))}
         </div>
 
         {pricingComparison ? (
-          <PricingComparisonTable comparison={pricingComparison} className="mt-4" />
+          <PricingComparisonTable
+            comparison={pricingComparison}
+            className="mt-4"
+          />
         ) : null}
       </PricingSection>
 
@@ -123,8 +145,15 @@ export function OzerPricingPage() {
         </div>
       </PricingSection>
 
-      <section className={cn('rounded-2xl border border-[color:var(--workspace-shell-border)] px-6 py-10 text-center', marketingFeatureCard)}>
-        <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">Ready to run the studio?</h2>
+      <section
+        className={cn(
+          'rounded-2xl border border-[color:var(--workspace-shell-border)] px-6 py-10 text-center',
+          marketingFeatureCard,
+        )}
+      >
+        <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+          Ready to run the studio?
+        </h2>
         <p className={cn('mx-auto mt-2 max-w-lg text-sm', marketingBodyText)}>
           Start with a free personal account, then add Solo or Team for the
           studio. Invited team members never pay — billing stays with the
@@ -156,7 +185,10 @@ function BillingIntervalToggle(props: {
             'rounded-full px-4 py-2 text-sm font-medium transition',
             props.interval === 'month'
               ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
-              : cn(marketingMutedText, 'hover:text-[var(--workspace-shell-text)]'),
+              : cn(
+                  marketingMutedText,
+                  'hover:text-[var(--workspace-shell-text)]',
+                ),
           )}
         >
           Monthly
@@ -168,11 +200,16 @@ function BillingIntervalToggle(props: {
             'rounded-full px-4 py-2 text-sm font-medium transition',
             props.interval === 'year'
               ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm'
-              : cn(marketingMutedText, 'hover:text-[var(--workspace-shell-text)]'),
+              : cn(
+                  marketingMutedText,
+                  'hover:text-[var(--workspace-shell-text)]',
+                ),
           )}
         >
           Annual
-          <span className="ml-1.5 text-xs text-[var(--ozer-accent)]">Save 16.7%</span>
+          <span className="ml-1.5 text-xs text-[var(--ozer-accent)]">
+            Save 16.7%
+          </span>
         </button>
       </div>
     </div>
@@ -181,13 +218,24 @@ function BillingIntervalToggle(props: {
 
 function FreePlanCard() {
   return (
-    <article className={cn('flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 text-[var(--workspace-shell-text)]', marketingFeatureCard)}>
+    <article
+      className={cn(
+        'flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 text-[var(--workspace-shell-text)]',
+        marketingFeatureCard,
+      )}
+    >
       <h3 className="text-lg font-semibold">{MARKETING_FREE_TIER.name}</h3>
-      <p className={cn('mt-1 text-sm', marketingMutedText)}>{MARKETING_FREE_TIER.description}</p>
+      <p className={cn('mt-1 text-sm', marketingMutedText)}>
+        {MARKETING_FREE_TIER.description}
+      </p>
       <p className="mt-4 text-3xl font-bold tracking-tight">Free</p>
       <FeatureList features={[...MARKETING_FREE_TIER.features]} />
       <div className="mt-6">
-        <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">
+        <Button
+          asChild
+          className={cn(marketingBtnOutline, 'w-full')}
+          variant="outline"
+        >
           <Link href={buildPricingSignupUrl({})}>Start free</Link>
         </Button>
         <p className={cn('mt-2 text-center text-xs', marketingMutedText)}>
@@ -227,7 +275,10 @@ function WorkspacePlanCard(props: {
         'relative flex h-full flex-col rounded-2xl border p-6 text-[var(--workspace-shell-text)]',
         plan.highlighted
           ? marketingFeaturedPlan
-          : cn('border-[color:var(--workspace-shell-border)]', marketingFeatureCard),
+          : cn(
+              'border-[color:var(--workspace-shell-border)]',
+              marketingFeatureCard,
+            ),
       )}
     >
       {plan.badge ? (
@@ -236,7 +287,9 @@ function WorkspacePlanCard(props: {
         </span>
       ) : null}
       <h3 className="text-lg font-semibold">{plan.name}</h3>
-      <p className={cn('mt-1 text-sm', marketingMutedText)}>{plan.description}</p>
+      <p className={cn('mt-1 text-sm', marketingMutedText)}>
+        {plan.description}
+      </p>
       <p className="mt-4 text-3xl font-bold tracking-tight">
         {formatGbp(price)}
         <span className={cn('text-base font-normal', marketingMutedText)}>
@@ -282,13 +335,22 @@ function AddonPlanCard(props: {
   const isSignatures = plan.productId === 'ozer-addon-signatures';
 
   return (
-    <article className={cn('flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 text-[var(--workspace-shell-text)]', marketingFeatureCard)}>
+    <article
+      className={cn(
+        'flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6 text-[var(--workspace-shell-text)]',
+        marketingFeatureCard,
+      )}
+    >
       <h3 className="text-lg font-semibold">{plan.name}</h3>
-      <p className={cn('mt-1 text-sm', marketingMutedText)}>{plan.description}</p>
+      <p className={cn('mt-1 text-sm', marketingMutedText)}>
+        {plan.description}
+      </p>
       <p className="mt-4 text-2xl font-bold tracking-tight">
         {isSignatures ? 'From ' : null}
         {formatGbp(plan.monthlyPriceGbp)}
-        <span className={cn('text-base font-normal', marketingMutedText)}>/mo</span>
+        <span className={cn('text-base font-normal', marketingMutedText)}>
+          /mo
+        </span>
       </p>
       {isSignatures ? (
         <p className={cn('mt-1 text-xs', marketingMutedText)}>
@@ -298,7 +360,11 @@ function AddonPlanCard(props: {
       ) : null}
       <FeatureList features={plan.features} compact />
       <div className="mt-6">
-        <Button asChild className={cn(marketingBtnOutline, 'w-full')} variant="outline">
+        <Button
+          asChild
+          className={cn(marketingBtnOutline, 'w-full')}
+          variant="outline"
+        >
           <Link href={MARKETING_BUSINESS_LITE_SIGNUP_URL}>Start free</Link>
         </Button>
         <p className={cn('mt-2 text-center text-xs', marketingMutedText)}>
@@ -330,8 +396,12 @@ function PricingSection(props: {
   return (
     <section className="space-y-6">
       <div className="text-center">
-        <h2 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">{props.title}</h2>
-        <p className={cn('mt-1 text-sm', marketingMutedText)}>{props.subtitle}</p>
+        <h2 className="text-2xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
+          {props.title}
+        </h2>
+        <p className={cn('mt-1 text-sm', marketingMutedText)}>
+          {props.subtitle}
+        </p>
       </div>
       {props.children}
     </section>

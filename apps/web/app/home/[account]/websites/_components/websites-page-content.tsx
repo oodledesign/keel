@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
+
 import { ExternalLink, Globe, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -55,7 +56,9 @@ export function WebsitesPageContent({
     <div className="flex w-full flex-col gap-6 px-4 md:px-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">Websites</h1>
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+            Websites
+          </h1>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
             {filteredWebsites.length}{' '}
             {filteredWebsites.length === 1 ? 'website' : 'websites'}
@@ -96,9 +99,12 @@ export function WebsitesPageContent({
         <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Globe className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
-            <p className="font-medium text-[var(--workspace-shell-text)]">No websites yet</p>
+            <p className="font-medium text-[var(--workspace-shell-text)]">
+              No websites yet
+            </p>
             <p className="mt-1 max-w-md text-sm text-[var(--workspace-shell-text)]/50">
-              Track client sites, domains, stacks, and launch dates in one place.
+              Track client sites, domains, stacks, and launch dates in one
+              place.
             </p>
             {canEditWebsites ? (
               <Button asChild className={`mt-4 ${workspaceBtnPrimaryMd}`}>
@@ -114,7 +120,7 @@ export function WebsitesPageContent({
         <div className="overflow-hidden rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <div className="overflow-x-auto">
             <table className="min-w-full text-left text-sm">
-              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-[var(--workspace-shell-text)]/40">
+              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text)]/40 uppercase">
                 <tr>
                   <th className="px-4 py-3 font-medium">Name</th>
                   <th className="px-4 py-3 font-medium">Domain</th>
@@ -132,8 +138,10 @@ export function WebsitesPageContent({
                   const domainHref = externalHref(site.domain);
                   const clientHref =
                     site.linkedClientId &&
-                    pathsConfig.app.accountClients
-                      .replace('[account]', accountSlug) + `/${site.linkedClientId}`;
+                    pathsConfig.app.accountClients.replace(
+                      '[account]',
+                      accountSlug,
+                    ) + `/${site.linkedClientId}`;
 
                   return (
                     <tr
@@ -160,7 +168,9 @@ export function WebsitesPageContent({
                             <ExternalLink className="h-3.5 w-3.5" />
                           </a>
                         ) : (
-                          <span className="text-[var(--workspace-shell-text)]/40">—</span>
+                          <span className="text-[var(--workspace-shell-text)]/40">
+                            —
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3">
@@ -179,10 +189,14 @@ export function WebsitesPageContent({
                               {site.clientOrgName}
                             </Link>
                           ) : (
-                            <span className="text-[var(--workspace-shell-text)]/70">{site.clientOrgName}</span>
+                            <span className="text-[var(--workspace-shell-text)]/70">
+                              {site.clientOrgName}
+                            </span>
                           )
                         ) : (
-                          <span className="text-[var(--workspace-shell-text)]/40">—</span>
+                          <span className="text-[var(--workspace-shell-text)]/40">
+                            —
+                          </span>
                         )}
                       </td>
                       <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">

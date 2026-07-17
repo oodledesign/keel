@@ -9,8 +9,8 @@ import {
   formatBookingWhenForEmail,
   googleCalendarTemplateUrl,
 } from '../calendar-links';
-import { bookingIcsAttachment } from './booking-ics-attachment';
 import {
+  type BookingEmailContext,
   loadBookingEmailBrand,
   renderGuestInvitationEmail,
   renderHostCancellationEmail,
@@ -21,8 +21,8 @@ import {
   renderInviteeConfirmationEmail,
   renderInviteeReminderEmail,
   renderInviteeRescheduleEmail,
-  type BookingEmailContext,
 } from './booking-email-templates';
+import { bookingIcsAttachment } from './booking-ics-attachment';
 import type { PublicBookingRecord } from './public-booking.service';
 
 export type NotificationSettings = {
@@ -53,7 +53,11 @@ async function resolveHostEmail(hostUserId: string): Promise<string | null> {
 async function loadWorkspaceIdentity(accountId: string) {
   const admin = getSupabaseServerAdminClient();
   const [{ data: account }, brand] = await Promise.all([
-    admin.from('accounts').select('name, slug').eq('id', accountId).maybeSingle(),
+    admin
+      .from('accounts')
+      .select('name, slug')
+      .eq('id', accountId)
+      .maybeSingle(),
     loadBookingEmailBrand(accountId),
   ]);
 
@@ -97,7 +101,8 @@ function buildContext(
     hostAttentionReason: booking.hostAttentionReason,
     managementToken: booking.managementToken,
     locationDetail: booking.locationDetail,
-    cancellationReason: extras?.cancellationReason ?? booking.cancellationReason,
+    cancellationReason:
+      extras?.cancellationReason ?? booking.cancellationReason,
     formResponses: extras?.formResponses,
     inviteeNotes: booking.inviteeNotes ?? null,
     clientId: booking.clientId,

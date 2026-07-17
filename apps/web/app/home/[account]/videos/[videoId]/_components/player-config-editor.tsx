@@ -1,7 +1,9 @@
 'use client';
 
+import { type ReactNode, useRef, useState } from 'react';
+
 import Link from 'next/link';
-import { useRef, useState, type ReactNode } from 'react';
+
 import { Upload } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -26,10 +28,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import {
   ASPECT_RATIO_OPTIONS,
-  DEFAULT_PLAYER_CONFIG,
-  PLAYBACK_SPEED_OPTIONS,
   type CaptionTrack,
+  DEFAULT_PLAYER_CONFIG,
   type LogoPosition,
+  PLAYBACK_SPEED_OPTIONS,
   type PlayerPreload,
   type VideoPlayerConfigValues,
 } from '~/lib/videos/player-config-types';
@@ -44,7 +46,9 @@ function ConfigRow(props: {
       <div className="min-w-0 flex-1">
         <Label className="text-sm font-medium">{props.label}</Label>
         {props.description ? (
-          <p className="text-muted-foreground mt-1 text-xs">{props.description}</p>
+          <p className="text-muted-foreground mt-1 text-xs">
+            {props.description}
+          </p>
         ) : null}
       </div>
       <div className="shrink-0">{props.children}</div>
@@ -131,7 +135,11 @@ export function PlayerConfigEditor(props: {
   onReset: () => void;
   onLoadPreset: (values: VideoPlayerConfigValues) => void;
   onSavePreset: (name: string) => Promise<void>;
-  onUploadCaption: (file: File, srclang: string, label: string) => Promise<void>;
+  onUploadCaption: (
+    file: File,
+    srclang: string,
+    label: string,
+  ) => Promise<void>;
   uploadingCaption: boolean;
 }) {
   const { config } = props;
@@ -180,12 +188,16 @@ export function PlayerConfigEditor(props: {
     }
   };
 
-  const handleCaptionUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleCaptionUpload = async (
+    event: React.ChangeEvent<HTMLInputElement>,
+  ) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
     const srclang =
-      config.default_caption_language || file.name.replace(/\.srt$/i, '') || 'en';
+      config.default_caption_language ||
+      file.name.replace(/\.srt$/i, '') ||
+      'en';
     const label = srclang.toUpperCase();
 
     await props.onUploadCaption(file, srclang, label);
@@ -218,7 +230,7 @@ export function PlayerConfigEditor(props: {
       </div>
 
       <Tabs defaultValue="playback" className="px-4 pb-4">
-        <TabsList className="mb-2 mt-3 flex h-auto flex-wrap gap-1 bg-black/30 p-1">
+        <TabsList className="mt-3 mb-2 flex h-auto flex-wrap gap-1 bg-black/30 p-1">
           <TabsTrigger value="playback" className="text-xs">
             Playback
           </TabsTrigger>
@@ -256,7 +268,9 @@ export function PlayerConfigEditor(props: {
           >
             <Switch
               checked={config.autoplay}
-              onCheckedChange={(checked) => props.onChange({ autoplay: checked })}
+              onCheckedChange={(checked) =>
+                props.onChange({ autoplay: checked })
+              }
             />
           </ConfigRow>
           <ConfigRow label="Muted">
@@ -310,7 +324,10 @@ export function PlayerConfigEditor(props: {
         </TabsContent>
 
         <TabsContent value="controls" className="mt-0">
-          <ConfigRow label="Show player controls" description="Master toggle for all controls">
+          <ConfigRow
+            label="Show player controls"
+            description="Master toggle for all controls"
+          >
             <Switch
               checked={config.show_controls}
               onCheckedChange={updateControls}
@@ -411,66 +428,66 @@ export function PlayerConfigEditor(props: {
 
         {!props.hideCaptionsTab ? (
           <TabsContent value="captions" className="mt-0">
-          <ConfigRow label="Enable captions">
-            <Switch
-              checked={config.enable_captions}
-              onCheckedChange={(checked) =>
-                props.onChange({ enable_captions: checked })
-              }
-            />
-          </ConfigRow>
-          <ConfigRow label="Default language">
-            <Select
-              value={config.default_caption_language}
-              onValueChange={(value) =>
-                props.onChange({ default_caption_language: value })
-              }
-              disabled={!config.enable_captions}
-            >
-              <SelectTrigger className="w-[10rem]">
-                <SelectValue placeholder="Language" />
-              </SelectTrigger>
-              <SelectContent>
-                {props.captions.length > 0 ? (
-                  props.captions.map((track) => (
-                    <SelectItem key={track.srclang} value={track.srclang}>
-                      {track.label} ({track.srclang})
-                    </SelectItem>
-                  ))
-                ) : (
-                  <SelectItem value={config.default_caption_language}>
-                    {config.default_caption_language}
-                  </SelectItem>
-                )}
-              </SelectContent>
-            </Select>
-          </ConfigRow>
-          <ConfigRow
-            label="Upload SRT"
-            description="Upload a caption file for this video"
-          >
-            <div>
-              <input
-                ref={captionInputRef}
-                type="file"
-                accept=".srt,text/plain"
-                className="hidden"
-                onChange={(event) => void handleCaptionUpload(event)}
+            <ConfigRow label="Enable captions">
+              <Switch
+                checked={config.enable_captions}
+                onCheckedChange={(checked) =>
+                  props.onChange({ enable_captions: checked })
+                }
               />
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="gap-1.5"
-                disabled={props.uploadingCaption}
-                onClick={() => captionInputRef.current?.click()}
+            </ConfigRow>
+            <ConfigRow label="Default language">
+              <Select
+                value={config.default_caption_language}
+                onValueChange={(value) =>
+                  props.onChange({ default_caption_language: value })
+                }
+                disabled={!config.enable_captions}
               >
-                <Upload className="h-3.5 w-3.5" />
-                {props.uploadingCaption ? 'Uploading…' : 'Upload SRT'}
-              </Button>
-            </div>
-          </ConfigRow>
-        </TabsContent>
+                <SelectTrigger className="w-[10rem]">
+                  <SelectValue placeholder="Language" />
+                </SelectTrigger>
+                <SelectContent>
+                  {props.captions.length > 0 ? (
+                    props.captions.map((track) => (
+                      <SelectItem key={track.srclang} value={track.srclang}>
+                        {track.label} ({track.srclang})
+                      </SelectItem>
+                    ))
+                  ) : (
+                    <SelectItem value={config.default_caption_language}>
+                      {config.default_caption_language}
+                    </SelectItem>
+                  )}
+                </SelectContent>
+              </Select>
+            </ConfigRow>
+            <ConfigRow
+              label="Upload SRT"
+              description="Upload a caption file for this video"
+            >
+              <div>
+                <input
+                  ref={captionInputRef}
+                  type="file"
+                  accept=".srt,text/plain"
+                  className="hidden"
+                  onChange={(event) => void handleCaptionUpload(event)}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="gap-1.5"
+                  disabled={props.uploadingCaption}
+                  onClick={() => captionInputRef.current?.click()}
+                >
+                  <Upload className="h-3.5 w-3.5" />
+                  {props.uploadingCaption ? 'Uploading…' : 'Upload SRT'}
+                </Button>
+              </div>
+            </ConfigRow>
+          </TabsContent>
         ) : null}
 
         <TabsContent value="sharing" className="mt-0">
@@ -487,7 +504,10 @@ export function PlayerConfigEditor(props: {
             description={
               <>
                 Restrict embed access with signed tokens.{' '}
-                <Link href="#" className="text-[var(--ozer-accent)] underline-offset-2 hover:underline">
+                <Link
+                  href="#"
+                  className="text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+                >
                   Manage tokens
                 </Link>{' '}
                 (coming soon)
@@ -514,7 +534,8 @@ export function PlayerConfigEditor(props: {
               value={config.aspect_ratio}
               onValueChange={(value) =>
                 props.onChange({
-                  aspect_ratio: value as VideoPlayerConfigValues['aspect_ratio'],
+                  aspect_ratio:
+                    value as VideoPlayerConfigValues['aspect_ratio'],
                 })
               }
             >
@@ -530,7 +551,10 @@ export function PlayerConfigEditor(props: {
               </SelectContent>
             </Select>
           </ConfigRow>
-          <ConfigRow label="Max width (px)" description="Leave blank for unrestricted">
+          <ConfigRow
+            label="Max width (px)"
+            description="Leave blank for unrestricted"
+          >
             <Input
               type="number"
               min={1}
@@ -549,43 +573,45 @@ export function PlayerConfigEditor(props: {
         </TabsContent>
 
         {!props.hidePresetsTab ? (
-        <TabsContent value="presets" className="mt-0 space-y-4 py-2">
-          <div className="flex flex-wrap items-end gap-3">
-            <div className="min-w-[12rem] flex-1">
-              <Label className="text-xs">Load preset</Label>
-              <Select
-                onValueChange={(presetId) => {
-                  const preset = props.presets.find((row) => row.id === presetId);
-                  if (preset) props.onLoadPreset(preset.values);
-                }}
-              >
-                <SelectTrigger className="mt-1.5">
-                  <SelectValue placeholder="Choose a preset…" />
-                </SelectTrigger>
-                <SelectContent>
-                  {props.presets.length === 0 ? (
-                    <SelectItem value="__none" disabled>
-                      No presets saved yet
-                    </SelectItem>
-                  ) : (
-                    props.presets.map((preset) => (
-                      <SelectItem key={preset.id} value={preset.id}>
-                        {preset.name}
+          <TabsContent value="presets" className="mt-0 space-y-4 py-2">
+            <div className="flex flex-wrap items-end gap-3">
+              <div className="min-w-[12rem] flex-1">
+                <Label className="text-xs">Load preset</Label>
+                <Select
+                  onValueChange={(presetId) => {
+                    const preset = props.presets.find(
+                      (row) => row.id === presetId,
+                    );
+                    if (preset) props.onLoadPreset(preset.values);
+                  }}
+                >
+                  <SelectTrigger className="mt-1.5">
+                    <SelectValue placeholder="Choose a preset…" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {props.presets.length === 0 ? (
+                      <SelectItem value="__none" disabled>
+                        No presets saved yet
                       </SelectItem>
-                    ))
-                  )}
-                </SelectContent>
-              </Select>
+                    ) : (
+                      props.presets.map((preset) => (
+                        <SelectItem key={preset.id} value={preset.id}>
+                          {preset.name}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setPresetOpen(true)}
+              >
+                Save as preset
+              </Button>
             </div>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => setPresetOpen(true)}
-            >
-              Save as preset
-            </Button>
-          </div>
-        </TabsContent>
+          </TabsContent>
         ) : null}
       </Tabs>
 
@@ -601,7 +627,11 @@ export function PlayerConfigEditor(props: {
             autoFocus
           />
           <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => setPresetOpen(false)}>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setPresetOpen(false)}
+            >
               Cancel
             </Button>
             <Button

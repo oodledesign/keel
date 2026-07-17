@@ -2,12 +2,11 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { ApiTokensSettingsCard } from '~/home/[account]/settings/_components/api-tokens-settings-card';
 import { listApiTokensForUser } from '~/lib/api-tokens/api-tokens.service';
 import { loadRecorderUsageSummary } from '~/lib/recorder/access';
 import { getPersonalAccountId } from '~/lib/recorder/personal-account';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-
-import { ApiTokensSettingsCard } from '~/home/[account]/settings/_components/api-tokens-settings-card';
 
 export async function PersonalApiTokensSection() {
   const user = await requireUserInServerComponent();
@@ -33,8 +32,8 @@ export async function PersonalApiTokensSection() {
   } catch {
     return (
       <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-        Desktop recorder settings are not available yet. Apply the latest database
-        migrations, then refresh this page.
+        Desktop recorder settings are not available yet. Apply the latest
+        database migrations, then refresh this page.
       </p>
     );
   }

@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useMemo, useState } from 'react';
+
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
@@ -8,15 +9,8 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { cn } from '@kit/ui/utils';
 
-import {
-  CALCULATOR_FAQS,
-  ozerAnnualFromBilling,
-  ozerMonthlyFromBilling,
-  STACK_TOOLS,
-  type StackTool,
-} from '~/lib/marketing/stack-calculator-data';
-import { formatGbp } from '~/lib/billing/billing-config-prices';
 import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
+import { formatGbp } from '~/lib/billing/billing-config-prices';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -24,6 +18,13 @@ import {
   marketingFeatureCard,
   marketingMutedText,
 } from '~/lib/marketing/marketing-ui';
+import {
+  CALCULATOR_FAQS,
+  STACK_TOOLS,
+  type StackTool,
+  ozerAnnualFromBilling,
+  ozerMonthlyFromBilling,
+} from '~/lib/marketing/stack-calculator-data';
 
 type ToolState = {
   on: boolean;
@@ -40,7 +41,9 @@ function parseState(params: URLSearchParams): {
   const tools: Record<string, ToolState> = {};
   for (const tool of STACK_TOOLS) {
     const on = params.get(tool.id) === '1' || params.get(tool.id) === 'true';
-    const monthly = Number(params.get(`${tool.id}_m`) ?? tool.defaultMonthlyGbp);
+    const monthly = Number(
+      params.get(`${tool.id}_m`) ?? tool.defaultMonthlyGbp,
+    );
     const seats = Number(params.get(`${tool.id}_s`) ?? tool.defaultSeats);
     tools[tool.id] = {
       on: params.has(tool.id) ? on : false,
@@ -145,12 +148,14 @@ export function StackCostCalculatorClient() {
     [pathname, router],
   );
 
-  const update = (patch: Partial<{
-    tools: Record<string, ToolState>;
-    revenue: number;
-    transactions: number;
-    includeFees: boolean;
-  }>) => {
+  const update = (
+    patch: Partial<{
+      tools: Record<string, ToolState>;
+      revenue: number;
+      transactions: number;
+      includeFees: boolean;
+    }>,
+  ) => {
     const next = {
       tools: patch.tools ?? tools,
       revenue: patch.revenue ?? revenue,
@@ -193,102 +198,107 @@ export function StackCostCalculatorClient() {
                 {category}
               </h2>
               <ul className="mt-3 space-y-3">
-                {STACK_TOOLS.filter((t) => t.category === category).map((tool) => {
-                  const row = tools[tool.id]!;
-                  return (
-                    <li
-                      key={tool.id}
-                      className={cn(
-                        'rounded-xl border border-[color:var(--workspace-shell-border)] p-4',
-                        marketingFeatureCard,
-                      )}
-                    >
-                      <label className="flex items-start gap-3">
-                        <input
-                          type="checkbox"
-                          className="mt-1"
-                          checked={row.on}
-                          onChange={(e) => {
-                            update({
-                              tools: {
-                                ...tools,
-                                [tool.id]: { ...row, on: e.target.checked },
-                              },
-                            });
-                          }}
-                        />
-                        <span className="min-w-0 flex-1">
-                          <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
-                            {tool.name}
-                          </span>
-                          <span className="mt-2 flex flex-wrap gap-3">
-                            <span>
-                              <Label
-                                htmlFor={`${tool.id}-m`}
-                                className={cn('text-xs', marketingMutedText)}
-                              >
-                                £ per month{tool.perSeat ? ' per seat' : ''}
-                              </Label>
-                              <Input
-                                id={`${tool.id}-m`}
-                                type="number"
-                                min={0}
-                                step={1}
-                                value={row.monthly}
-                                disabled={!row.on}
-                                className="mt-1 h-9 w-28"
-                                onChange={(e) => {
-                                  update({
-                                    tools: {
-                                      ...tools,
-                                      [tool.id]: {
-                                        ...row,
-                                        monthly: Number(e.target.value) || 0,
-                                      },
-                                    },
-                                  });
-                                }}
-                              />
+                {STACK_TOOLS.filter((t) => t.category === category).map(
+                  (tool) => {
+                    const row = tools[tool.id]!;
+                    return (
+                      <li
+                        key={tool.id}
+                        className={cn(
+                          'rounded-xl border border-[color:var(--workspace-shell-border)] p-4',
+                          marketingFeatureCard,
+                        )}
+                      >
+                        <label className="flex items-start gap-3">
+                          <input
+                            type="checkbox"
+                            className="mt-1"
+                            checked={row.on}
+                            onChange={(e) => {
+                              update({
+                                tools: {
+                                  ...tools,
+                                  [tool.id]: { ...row, on: e.target.checked },
+                                },
+                              });
+                            }}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
+                              {tool.name}
                             </span>
-                            {tool.perSeat ? (
+                            <span className="mt-2 flex flex-wrap gap-3">
                               <span>
                                 <Label
-                                  htmlFor={`${tool.id}-s`}
+                                  htmlFor={`${tool.id}-m`}
                                   className={cn('text-xs', marketingMutedText)}
                                 >
-                                  Seats
+                                  £ per month{tool.perSeat ? ' per seat' : ''}
                                 </Label>
                                 <Input
-                                  id={`${tool.id}-s`}
+                                  id={`${tool.id}-m`}
                                   type="number"
-                                  min={1}
+                                  min={0}
                                   step={1}
-                                  value={row.seats}
+                                  value={row.monthly}
                                   disabled={!row.on}
-                                  className="mt-1 h-9 w-20"
+                                  className="mt-1 h-9 w-28"
                                   onChange={(e) => {
                                     update({
                                       tools: {
                                         ...tools,
                                         [tool.id]: {
                                           ...row,
-                                          seats: Math.max(
-                                            1,
-                                            Number(e.target.value) || 1,
-                                          ),
+                                          monthly: Number(e.target.value) || 0,
                                         },
                                       },
                                     });
                                   }}
                                 />
                               </span>
-                            ) : null}
+                              {tool.perSeat ? (
+                                <span>
+                                  <Label
+                                    htmlFor={`${tool.id}-s`}
+                                    className={cn(
+                                      'text-xs',
+                                      marketingMutedText,
+                                    )}
+                                  >
+                                    Seats
+                                  </Label>
+                                  <Input
+                                    id={`${tool.id}-s`}
+                                    type="number"
+                                    min={1}
+                                    step={1}
+                                    value={row.seats}
+                                    disabled={!row.on}
+                                    className="mt-1 h-9 w-20"
+                                    onChange={(e) => {
+                                      update({
+                                        tools: {
+                                          ...tools,
+                                          [tool.id]: {
+                                            ...row,
+                                            seats: Math.max(
+                                              1,
+                                              Number(e.target.value) || 1,
+                                            ),
+                                          },
+                                        },
+                                      });
+                                    }}
+                                  />
+                                </span>
+                              ) : null}
+                            </span>
                           </span>
-                        </span>
-                      </label>
-                    </li>
-                  );
-                })}
+                        </label>
+                      </li>
+                    );
+                  },
+                )}
               </ul>
             </section>
           ))}
@@ -308,11 +318,20 @@ export function StackCostCalculatorClient() {
               />
               <span>
                 <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
-                  Card fees on tools that take a cut (2.9% + £0.20 per transaction)
+                  Card fees on tools that take a cut (2.9% + £0.20 per
+                  transaction)
                 </span>
-                <span className={cn('mt-2 flex flex-wrap gap-3', !includeFees && 'opacity-50')}>
+                <span
+                  className={cn(
+                    'mt-2 flex flex-wrap gap-3',
+                    !includeFees && 'opacity-50',
+                  )}
+                >
                   <span>
-                    <Label htmlFor="rev" className={cn('text-xs', marketingMutedText)}>
+                    <Label
+                      htmlFor="rev"
+                      className={cn('text-xs', marketingMutedText)}
+                    >
                       Annual card revenue (£)
                     </Label>
                     <Input
@@ -328,7 +347,10 @@ export function StackCostCalculatorClient() {
                     />
                   </span>
                   <span>
-                    <Label htmlFor="txn" className={cn('text-xs', marketingMutedText)}>
+                    <Label
+                      htmlFor="txn"
+                      className={cn('text-xs', marketingMutedText)}
+                    >
                       Transactions per year
                     </Label>
                     <Input
@@ -356,22 +378,27 @@ export function StackCostCalculatorClient() {
               marketingFeatureCard,
             )}
           >
-            <p className={cn('text-xs font-semibold uppercase tracking-wide', marketingMutedText)}>
+            <p
+              className={cn(
+                'text-xs font-semibold tracking-wide uppercase',
+                marketingMutedText,
+              )}
+            >
               Shareable summary
             </p>
             <p className="font-heading mt-3 text-2xl font-bold text-[var(--workspace-shell-text)]">
               My stack costs {formatGbp(Math.round(stackAnnual))}/year
             </p>
             <p className={cn('mt-2 text-sm', marketingBodyText)}>
-              That is {formatGbp(Math.round(stackMonthly))} per month with your current
-              selections.
+              That is {formatGbp(Math.round(stackMonthly))} per month with your
+              current selections.
             </p>
             <div className="mt-6 border-t border-[color:var(--workspace-shell-border)] pt-4">
               <p className="text-sm text-[var(--workspace-shell-text)]">
                 Ozer Business Team:{' '}
                 <strong>{formatGbp(ozerAnnual)}/year</strong> (
-                {formatGbp(ozerMonthly)} per month), flat price for the whole team (up to 5
-                members).
+                {formatGbp(ozerMonthly)} per month), flat price for the whole
+                team (up to 5 members).
               </p>
               <p className={cn('mt-2 text-sm', marketingMutedText)}>
                 Difference:{' '}
@@ -382,7 +409,11 @@ export function StackCostCalculatorClient() {
               </p>
             </div>
             <div className="mt-6 flex flex-col gap-2">
-              <Button type="button" className={marketingBtnGradient} onClick={copyShare}>
+              <Button
+                type="button"
+                className={marketingBtnGradient}
+                onClick={copyShare}
+              >
                 {copied ? 'Link copied' : 'Copy shareable link'}
               </Button>
               <Button asChild variant="outline" className={marketingBtnOutline}>
@@ -390,7 +421,8 @@ export function StackCostCalculatorClient() {
               </Button>
             </div>
             <p className={cn('mt-4 text-xs', marketingMutedText)}>
-              Selections live in the URL only — nothing is stored in your browser profile.
+              Selections live in the URL only — nothing is stored in your
+              browser profile.
             </p>
           </div>
         </aside>

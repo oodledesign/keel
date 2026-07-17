@@ -4,12 +4,11 @@ import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
-import {
-  launchedWorkspaceAddons,
-  type OzerAddonKey,
-} from '~/lib/billing/ozer-plan-catalog';
-
 import type { NavChild } from '~/config/work-account-navigation.config';
+import {
+  type OzerAddonKey,
+  launchedWorkspaceAddons,
+} from '~/lib/billing/ozer-plan-catalog';
 
 const ADDON_OPEN_PATH: Partial<Record<OzerAddonKey, string>> = {
   addon_signatures: pathsConfig.app.accountSignaturesDashboard,
@@ -82,8 +81,8 @@ export function OzerAppsMarketplace({
         <div>
           <h2 className="text-lg font-semibold">Available add-ons</h2>
           <p className="text-muted-foreground text-sm">
-            Subscribe per workspace. Add-ons unlock when your workspace is active
-            (Business Lite is free).
+            Subscribe per workspace. Add-ons unlock when your workspace is
+            active (Business Lite is free).
           </p>
         </div>
 

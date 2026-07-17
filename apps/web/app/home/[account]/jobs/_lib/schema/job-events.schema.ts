@@ -100,8 +100,18 @@ export type GetJobEventInput = z.infer<typeof GetJobEventSchema>;
 export type CreateJobEventInput = z.infer<typeof CreateJobEventSchema>;
 export type UpdateJobEventInput = z.infer<typeof UpdateJobEventSchema>;
 export type DeleteJobEventInput = z.infer<typeof DeleteJobEventSchema>;
-export type ListJobEventAssignmentsInput = z.infer<typeof ListJobEventAssignmentsSchema>;
-export type ListJobEventAssignmentsForJobInput = z.infer<typeof ListJobEventAssignmentsForJobSchema>;
-export type AddJobEventAssignmentInput = z.infer<typeof AddJobEventAssignmentSchema>;
-export type RemoveJobEventAssignmentInput = z.infer<typeof RemoveJobEventAssignmentSchema>;
-export type SetJobEventAssignmentsInput = z.infer<typeof SetJobEventAssignmentsSchema>;
+export type ListJobEventAssignmentsInput = z.infer<
+  typeof ListJobEventAssignmentsSchema
+>;
+export type ListJobEventAssignmentsForJobInput = z.infer<
+  typeof ListJobEventAssignmentsForJobSchema
+>;
+export type AddJobEventAssignmentInput = z.infer<
+  typeof AddJobEventAssignmentSchema
+>;
+export type RemoveJobEventAssignmentInput = z.infer<
+  typeof RemoveJobEventAssignmentSchema
+>;
+export type SetJobEventAssignmentsInput = z.infer<
+  typeof SetJobEventAssignmentsSchema
+>;

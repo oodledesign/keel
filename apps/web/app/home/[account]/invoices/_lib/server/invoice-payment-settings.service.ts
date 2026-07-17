@@ -61,7 +61,9 @@ class InvoicePaymentSettingsService {
       .maybeSingle();
     if (error) throw new Error(error.message);
     if (data?.account_role !== 'owner' && data?.account_role !== 'admin') {
-      throw new Error('Only account owners and admins can manage payment settings');
+      throw new Error(
+        'Only account owners and admins can manage payment settings',
+      );
     }
     return user;
   }
@@ -105,7 +107,9 @@ class InvoicePaymentSettingsService {
     if (error) throw new Error(error.message);
 
     let max = 0;
-    for (const row of (data ?? []) as Array<{ invoice_number?: string | null }>) {
+    for (const row of (data ?? []) as Array<{
+      invoice_number?: string | null;
+    }>) {
       const parsed = parseInvoiceSequence(row.invoice_number);
       if (parsed != null && parsed > max) max = parsed;
     }
@@ -252,9 +256,8 @@ class InvoicePaymentSettingsService {
 export async function loadPaymentSettingsForPortal(
   accountId: string,
 ): Promise<AccountPaymentSettings | null> {
-  const { getSupabaseServerAdminClient } = await import(
-    '@kit/supabase/server-admin-client'
-  );
+  const { getSupabaseServerAdminClient } =
+    await import('@kit/supabase/server-admin-client');
   const admin = getSupabaseServerAdminClient() as SupabaseClient<Database>;
   const { data, error } = await admin
     .from('account_payment_settings')
@@ -265,7 +268,9 @@ export async function loadPaymentSettingsForPortal(
   return data as AccountPaymentSettings;
 }
 
-function parseInvoiceSequence(invoiceNumber: string | null | undefined): number | null {
+function parseInvoiceSequence(
+  invoiceNumber: string | null | undefined,
+): number | null {
   if (!invoiceNumber) return null;
   const match = /^INV-0*(\d+)$/i.exec(invoiceNumber.trim());
   if (!match?.[1]) return null;

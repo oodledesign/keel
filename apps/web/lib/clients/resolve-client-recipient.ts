@@ -86,11 +86,14 @@ export async function resolveClientRecipientEmail(
     .order('created_at', { ascending: true });
 
   if (linksError) {
-    console.error('[resolveClientRecipientEmail] client_contacts query failed', {
-      clientId,
-      purpose,
-      error: linksError,
-    });
+    console.error(
+      '[resolveClientRecipientEmail] client_contacts query failed',
+      {
+        clientId,
+        purpose,
+        error: linksError,
+      },
+    );
   }
 
   const rows = (!linksError ? (links as ContactLinkRow[] | null) : null) ?? [];

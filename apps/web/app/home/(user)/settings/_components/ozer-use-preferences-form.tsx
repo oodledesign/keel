@@ -101,7 +101,9 @@ export function OzerUsePreferencesForm(props: {
               <span
                 className={cn(
                   'flex h-10 w-10 shrink-0 items-center justify-center rounded-xl',
-                  on ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]' : 'bg-[var(--workspace-shell-sidebar-accent)]',
+                  on
+                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                    : 'bg-[var(--workspace-shell-sidebar-accent)]',
                 )}
               >
                 <Icon className="h-5 w-5" aria-hidden />

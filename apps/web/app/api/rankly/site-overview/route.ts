@@ -1,9 +1,14 @@
 import { type NextRequest } from 'next/server';
-import { z } from 'zod';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
+
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import {
   assertProjectForOverview,
   isSiteOverviewStale,
@@ -11,9 +16,6 @@ import {
   refreshSiteOverview,
 } from '~/lib/site-overview/db';
 import { projectCountryToCode } from '~/lib/site-overview/domain';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import { userIsAccountMember } from '~/lib/rankly/account-membership';
-import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;
@@ -40,8 +42,8 @@ async function assertAccess(
     return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
   }
 
-    const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
-    if (addonDenied) return addonDenied;
+  const addonDenied = await denyUnlessRanklyAddon(client, userId, accountId);
+  if (addonDenied) return addonDenied;
 
   const project = await assertProjectForOverview(client, projectId, accountId);
   if (!project) {
@@ -68,7 +70,12 @@ export async function GET(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return jsonErr('VALIDATION', 'Invalid query', 400, parsed.error.flatten());
+      return jsonErr(
+        'VALIDATION',
+        'Invalid query',
+        400,
+        parsed.error.flatten(),
+      );
     }
 
     const access = await assertAccess(
@@ -136,7 +143,9 @@ export async function POST(request: NextRequest) {
     console.error('[rankly] site-overview POST', error);
     return jsonErr(
       'INTERNAL',
-      error instanceof Error ? error.message : 'Failed to refresh site overview',
+      error instanceof Error
+        ? error.message
+        : 'Failed to refresh site overview',
       500,
     );
   }
