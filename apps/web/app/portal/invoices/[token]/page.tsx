@@ -16,6 +16,7 @@ interface PortalInvoicePageProps {
     paid?: string;
     cancelled?: string;
     session_id?: string;
+    checkout_error?: string;
   }>;
 }
 
@@ -77,7 +78,7 @@ export default async function PortalInvoicePage({
   searchParams,
 }: PortalInvoicePageProps) {
   const { token } = await params;
-  const { paid, cancelled, session_id } = await searchParams;
+  const { paid, cancelled, session_id, checkout_error } = await searchParams;
   if (!token) notFound();
 
   await markInvoiceReadByToken(token);
@@ -135,6 +136,11 @@ export default async function PortalInvoicePage({
       {cancelled === '1' ? (
         <div className="mb-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 px-4 py-3 text-[var(--workspace-shell-text-muted)]">
           Payment was cancelled.
+        </div>
+      ) : null}
+      {checkout_error ? (
+        <div className="mb-6 rounded-lg border border-red-500/40 bg-red-500/10 px-4 py-3 text-red-200">
+          {checkout_error}
         </div>
       ) : null}
       {isVoid ? (

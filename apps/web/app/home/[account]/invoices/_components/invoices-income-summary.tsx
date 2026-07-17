@@ -2,13 +2,15 @@
 
 import { useMemo } from 'react';
 
-import { formatPence } from '../_lib/invoice-totals';
+import { formatInvoiceMoney } from '../_lib/invoice-currency';
 
 type Summary = {
   issued_pence: number;
   paid_pence: number;
   unpaid_pence: number;
   overdue_pence: number;
+  currency?: string;
+  mixed_currencies?: boolean;
   chart: Array<{ date: string; amount_pence: number }>;
 };
 
@@ -23,6 +25,7 @@ export function InvoicesIncomeSummary({
     period: 'month_to_date' | 'last_30_days' | 'last_90_days',
   ) => void;
 }) {
+  const currency = summary?.currency ?? 'gbp';
   const maxBar = useMemo(
     () => Math.max(...(summary?.chart.map((d) => d.amount_pence) ?? [1]), 1),
     [summary?.chart],
@@ -54,6 +57,13 @@ export function InvoicesIncomeSummary({
         </select>
       </div>
 
+      {summary.mixed_currencies ? (
+        <p className="text-muted-foreground mt-2 text-xs">
+          Totals shown in your default invoice currency (
+          {currency.toUpperCase()}). Invoices in other currencies are excluded.
+        </p>
+      ) : null}
+
       <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           {
@@ -79,7 +89,7 @@ export function InvoicesIncomeSummary({
           >
             <p className="text-muted-foreground text-xs">{item.label}</p>
             <p className={`mt-1 text-lg font-semibold ${item.color}`}>
-              {formatPence(item.value)}
+              {formatInvoiceMoney(item.value, currency)}
             </p>
           </div>
         ))}
@@ -91,7 +101,7 @@ export function InvoicesIncomeSummary({
             <div
               key={point.date}
               className="group relative flex-1"
-              title={`${point.date}: ${formatPence(point.amount_pence)}`}
+              title={`${point.date}: ${formatInvoiceMoney(point.amount_pence, currency)}`}
             >
               <div
                 className="w-full rounded-t bg-[var(--ozer-accent)]/70 transition-all group-hover:bg-[var(--ozer-accent)]"

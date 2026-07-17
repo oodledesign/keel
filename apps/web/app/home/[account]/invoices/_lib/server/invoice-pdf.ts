@@ -81,12 +81,31 @@ const COLORS = {
   draft: rgb(0.72, 0.45, 0.18),
 };
 
+const CURRENCY_SYMBOLS: Record<string, string> = {
+  GBP: '£',
+  USD: '$',
+  EUR: '€',
+  AUD: 'A$',
+  CAD: 'CA$',
+  NZD: 'NZ$',
+  CHF: 'CHF ',
+};
+
+function currencySymbol(currency: string): string {
+  const code = currency.toUpperCase();
+  return CURRENCY_SYMBOLS[code] ?? `${code} `;
+}
+
 function formatAmount(pence: number): string {
   return (pence / 100).toFixed(2);
 }
 
+function formatCurrencyAmount(pence: number, currency: string): string {
+  return `${currencySymbol(currency)}${formatAmount(pence)}`;
+}
+
 function formatMoneyLabel(pence: number, currency: string): string {
-  return `${currency.toUpperCase()} ${formatAmount(pence)}`;
+  return formatCurrencyAmount(pence, currency);
 }
 
 function formatDateShort(iso: string | null | undefined): string {
@@ -237,27 +256,35 @@ function drawPayButton(
   page: PDFPage,
   label: string,
   x: number,
-  y: number,
+  topY: number,
   width: number,
   fontBold: PDFFont,
 ) {
-  const height = 28;
+  const height = 32;
+  const fontSize = 10;
+  const radius = 6;
+  const rectBottomY = topY - height;
+
   page.drawRectangle({
     x,
-    y: y - height + 6,
+    y: rectBottomY,
     width,
     height,
     color: COLORS.link,
+    borderRadius: radius,
   });
-  const textWidth = fontBold.widthOfTextAtSize(label, 10);
+
+  const textWidth = fontBold.widthOfTextAtSize(label, fontSize);
+  const textY = rectBottomY + (height - fontSize) / 2 + 1;
   page.drawText(label, {
     x: x + (width - textWidth) / 2,
-    y: y - height + 14,
-    size: 10,
+    y: textY,
+    size: fontSize,
     font: fontBold,
     color: rgb(1, 1, 1),
   });
-  return height + 8;
+
+  return height + 10;
 }
 
 export async function buildInvoicePdf(
@@ -332,7 +359,7 @@ export async function buildInvoicePdf(
   if (paymentLinkLines.length > 0) {
     paymentBlockHeight = Math.max(
       paymentBlockHeight,
-      36 +
+      42 +
         paymentLinkLines.length * 11 +
         (paymentFeeLines.length > 0 ? 6 + paymentFeeLines.length * 10 : 0),
     );
@@ -575,7 +602,7 @@ export async function buildInvoicePdf(
     });
     drawRightText(
       page,
-      formatAmount(row.unit_price_pence),
+      formatCurrencyAmount(row.unit_price_pence, currency),
       colRate + 52,
       y,
       10,
@@ -584,7 +611,7 @@ export async function buildInvoicePdf(
     );
     drawRightText(
       page,
-      formatAmount(row.total_pence),
+      formatCurrencyAmount(row.total_pence, currency),
       colAmount - 10,
       y,
       10,
@@ -618,7 +645,7 @@ export async function buildInvoicePdf(
   if ((invoice.discount_pence ?? 0) > 0) {
     drawRightText(
       page,
-      `Discount -${formatMoneyLabel(invoice.discount_pence ?? 0, currency)}`,
+      `Discount -${formatCurrencyAmount(invoice.discount_pence ?? 0, currency)}`,
       totalsX,
       y,
       10,
@@ -656,7 +683,7 @@ export async function buildInvoicePdf(
 
   drawRightText(
     page,
-    `Total due ${currency}`,
+    'Total due',
     totalsX,
     y,
     11,
@@ -666,7 +693,7 @@ export async function buildInvoicePdf(
   y -= 18;
   drawRightText(
     page,
-    formatAmount(invoice.total_pence),
+    formatCurrencyAmount(invoice.total_pence, currency),
     totalsX,
     y,
     18,

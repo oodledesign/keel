@@ -3,6 +3,7 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { normalizeInvoiceCurrency } from '../invoice-currency';
 import {
   DEFAULT_INVOICE_EMAIL_BODY,
   DEFAULT_INVOICE_EMAIL_SIGNATURE,
@@ -78,15 +79,33 @@ export async function getInvoiceSummary(
     from.setDate(from.getDate() - 90);
   }
 
-  const { data, error } = await client
-    .from('invoices')
-    .select(
-      'status, total_pence, amount_paid_pence, issued_at, due_at, archived_at',
-    )
-    .eq('account_id', accountId)
-    .is('archived_at', null)
-    .gte('issued_at', from.toISOString());
+  const [{ data, error }, { data: paymentSettings }] = await Promise.all([
+    client
+      .from('invoices')
+      .select(
+        'status, total_pence, amount_paid_pence, issued_at, due_at, archived_at, currency',
+      )
+      .eq('account_id', accountId)
+      .is('archived_at', null)
+      .gte('issued_at', from.toISOString()),
+    client
+      .from('account_payment_settings')
+      .select('default_invoice_currency')
+      .eq('account_id', accountId)
+      .maybeSingle(),
+  ]);
   if (error) throw new Error(error.message);
+
+  const displayCurrency = normalizeInvoiceCurrency(
+    paymentSettings?.default_invoice_currency,
+  );
+
+  const currencies = new Set(
+    (data ?? []).map((row: { currency?: string | null }) =>
+      normalizeInvoiceCurrency(row.currency),
+    ),
+  );
+  const mixedCurrencies = currencies.size > 1;
 
   let issued = 0;
   let paid = 0;
@@ -95,6 +114,11 @@ export async function getInvoiceSummary(
   const byDay = new Map<string, number>();
 
   for (const row of data ?? []) {
+    const rowCurrency = normalizeInvoiceCurrency(
+      (row as { currency?: string | null }).currency,
+    );
+    if (rowCurrency !== displayCurrency) continue;
+
     const total = row.total_pence ?? 0;
     const amountPaid = row.amount_paid_pence ?? 0;
     if (['sent', 'read', 'paid', 'overdue'].includes(row.status)) {
@@ -117,6 +141,8 @@ export async function getInvoiceSummary(
     paid_pence: paid,
     unpaid_pence: unpaid,
     overdue_pence: overdue,
+    currency: displayCurrency,
+    mixed_currencies: mixedCurrencies,
     chart: [...byDay.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
       .map(([date, amount_pence]) => ({ date, amount_pence })),
@@ -168,11 +194,13 @@ export async function duplicateInvoice(accountId: string, invoiceId: string) {
     notes: source.notes,
     title: source.title,
     reference_number: source.reference_number,
+    currency: normalizeInvoiceCurrency(source.currency),
   });
 
   await db()
     .from('invoices')
     .update({
+      currency: source.currency,
       discount_type: source.discount_type,
       discount_value: source.discount_value,
       tax_rate_bp: source.tax_rate_bp,
@@ -427,6 +455,7 @@ export async function processDueRecurringSeries() {
     const invoice = await service.createInvoice({
       accountId: series.account_id,
       client_id: series.client_id,
+      currency: normalizeInvoiceCurrency(series.currency),
       due_at: template.due_at ?? null,
       notes: template.notes ?? null,
       title: template.title ?? series.title,
@@ -437,7 +466,6 @@ export async function processDueRecurringSeries() {
       .from('invoices')
       .update({
         recurring_series_id: series.id,
-        currency: series.currency,
         discount_type: template.discount_type ?? null,
         discount_value: template.discount_value ?? 0,
         tax_rate_bp: template.tax_rate_bp ?? 0,

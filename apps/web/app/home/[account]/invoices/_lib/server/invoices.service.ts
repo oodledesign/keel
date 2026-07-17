@@ -8,6 +8,7 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { Database } from '~/lib/database.types';
 
+import { normalizeInvoiceCurrency } from '../invoice-currency';
 import {
   DEFAULT_INVOICE_EMAIL_BODY,
   DEFAULT_INVOICE_EMAIL_SIGNATURE,
@@ -279,6 +280,18 @@ class InvoicesService {
     );
     const invoice_number = await this.allocateInvoiceNumber(input.accountId);
 
+    let currency = normalizeInvoiceCurrency(input.currency);
+    if (!input.currency) {
+      const { data: paymentSettings } = await this.db
+        .from('account_payment_settings')
+        .select('default_invoice_currency')
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+      currency = normalizeInvoiceCurrency(
+        paymentSettings?.default_invoice_currency,
+      );
+    }
+
     const { data: invoice, error } = await this.db
       .from('invoices')
       .insert({
@@ -286,6 +299,7 @@ class InvoicesService {
         client_id: input.client_id,
         invoice_number,
         status: 'draft',
+        currency,
         due_at: input.due_at ?? null,
         subtotal_pence: 0,
         total_pence: 0,
@@ -336,6 +350,9 @@ class InvoicesService {
     if (input.title !== undefined) payload.title = input.title;
     if (input.reference_number !== undefined)
       payload.reference_number = input.reference_number;
+    if (input.currency !== undefined) {
+      payload.currency = normalizeInvoiceCurrency(input.currency);
+    }
     if (input.footer_message !== undefined)
       payload.footer_message = input.footer_message;
     if (input.private_note !== undefined)

@@ -1032,6 +1032,7 @@ export type Database = {
           bank_transfer_enabled: boolean;
           bank_transfer_instructions: string | null;
           created_at: string;
+          default_invoice_currency: string;
           invoice_starting_number: number;
           stripe_account_id: string | null;
           stripe_connect_enabled: boolean;
@@ -1048,6 +1049,7 @@ export type Database = {
           bank_transfer_enabled?: boolean;
           bank_transfer_instructions?: string | null;
           created_at?: string;
+          default_invoice_currency?: string;
           invoice_starting_number?: number;
           stripe_account_id?: string | null;
           stripe_connect_enabled?: boolean;
@@ -1064,6 +1066,7 @@ export type Database = {
           bank_transfer_enabled?: boolean;
           bank_transfer_instructions?: string | null;
           created_at?: string;
+          default_invoice_currency?: string;
           invoice_starting_number?: number;
           stripe_account_id?: string | null;
           stripe_connect_enabled?: boolean;

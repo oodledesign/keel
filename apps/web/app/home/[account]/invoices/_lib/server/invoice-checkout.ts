@@ -4,6 +4,10 @@ import Stripe from 'stripe';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  isSupportedInvoiceCurrency,
+  normalizeInvoiceCurrency,
+} from '../invoice-currency';
 import { sendInvoicePaidNotifications } from './invoice-notifications';
 import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
 import {
@@ -149,6 +153,13 @@ export async function createInvoiceCheckoutSessionByToken(
     throw new Error('Nothing left to pay on this invoice');
   }
 
+  if (!isSupportedInvoiceCurrency(invoice.currency)) {
+    throw new Error(
+      `This invoice currency (${String(invoice.currency ?? '').toUpperCase() || 'unknown'}) is not supported for card payments.`,
+    );
+  }
+  const currency = normalizeInvoiceCurrency(invoice.currency);
+
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
     process.env.VERCEL_URL ??
@@ -157,38 +168,56 @@ export async function createInvoiceCheckoutSessionByToken(
   const successUrl = `${baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`}${portalPath}?paid=1&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`}${portalPath}?cancelled=1`;
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'payment',
-    payment_method_types: ['card'],
-    line_items: [
-      {
-        price_data: {
-          currency: (invoice.currency ?? 'gbp').toLowerCase(),
-          unit_amount: amount,
-          product_data: {
-            name: `Invoice ${invoice.invoice_number}`,
-            description: options?.payDepositOnly
-              ? 'Deposit payment'
-              : 'Invoice payment',
+  let session: Stripe.Checkout.Session;
+  try {
+    session = await stripe.checkout.sessions.create({
+      mode: 'payment',
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency,
+            unit_amount: amount,
+            product_data: {
+              name: `Invoice ${invoice.invoice_number}`,
+              description: options?.payDepositOnly
+                ? 'Deposit payment'
+                : 'Invoice payment',
+            },
           },
+          quantity: 1,
         },
-        quantity: 1,
+      ],
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+      client_reference_id: invoice.id,
+      metadata: {
+        invoice_id: invoice.id,
+        account_id: invoice.account_id,
+        pay_deposit_only: options?.payDepositOnly ? '1' : '0',
       },
-    ],
-    success_url: successUrl,
-    cancel_url: cancelUrl,
-    client_reference_id: invoice.id,
-    metadata: {
-      invoice_id: invoice.id,
-      account_id: invoice.account_id,
-      pay_deposit_only: options?.payDepositOnly ? '1' : '0',
-    },
-    payment_intent_data: {
-      transfer_data: {
-        destination: paymentSettings.stripe_account_id,
+      payment_intent_data: {
+        transfer_data: {
+          destination: paymentSettings.stripe_account_id,
+        },
       },
-    },
-  });
+    });
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message.toLowerCase() : String(error);
+    if (
+      message.includes('currency') ||
+      message.includes('not supported') ||
+      message.includes('invalid')
+    ) {
+      throw new Error(
+        `Card payments are not available in ${currency.toUpperCase()} for this Stripe account. Ask the business to enable that currency in Stripe, or pay by bank transfer.`,
+      );
+    }
+    throw error instanceof Error
+      ? error
+      : new Error('Could not start card payment');
+  }
 
   if (!session.url) {
     throw new Error('Failed to create checkout session');

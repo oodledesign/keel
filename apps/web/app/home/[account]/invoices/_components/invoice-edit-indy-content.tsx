@@ -45,13 +45,19 @@ import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobo
 import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 
 import { getErrorMessage } from '../_lib/error-message';
+import {
+  INVOICE_CURRENCY_OPTIONS,
+  type InvoiceCurrency,
+  formatInvoiceMoney,
+  invoiceCurrencySymbol,
+  normalizeInvoiceCurrency,
+} from '../_lib/invoice-currency';
 import { DEFAULT_INVOICE_FOOTER_MESSAGE } from '../_lib/invoice-smart-fields';
 import {
   type DepositType,
   type DiscountType,
   type LateFeeType,
   computeInvoiceTotals,
-  formatPence,
 } from '../_lib/invoice-totals';
 import {
   getInvoicePortalLink,
@@ -244,6 +250,10 @@ export function InvoiceEditIndyContent({
       new Date().toISOString().slice(0, 10),
   );
   const [dueAt, setDueAt] = useState(toDateInputValue(invoice.due_at));
+  const [currency, setCurrency] = useState<InvoiceCurrency>(
+    normalizeInvoiceCurrency(invoice.currency),
+  );
+  const currencySymbol = invoiceCurrencySymbol(currency);
   const [clientId, setClientId] = useState(invoice.client_id ?? '');
   const [notes, setNotes] = useState(invoice.notes ?? '');
   const [footerMessage, setFooterMessage] = useState(
@@ -579,6 +589,7 @@ export function InvoiceEditIndyContent({
         invoiceId: invoice.id,
         client_id: clientId.trim(),
         due_at: dueAt ? new Date(dueAt).toISOString() : null,
+        currency,
         notes: notes.trim() || null,
         title: title.trim() || null,
         reference_number: referenceNumber.trim() || invoice.invoice_number,
@@ -628,6 +639,7 @@ export function InvoiceEditIndyContent({
     accountId,
     canModifyInvoice,
     clientId,
+    currency,
     dueAt,
     emailBody,
     emailSignature,
@@ -688,7 +700,7 @@ export function InvoiceEditIndyContent({
         accountId,
         client_id: clientId,
         title: title.trim() || `Invoice ${invoice.invoice_number}`,
-        currency: invoice.currency ?? 'gbp',
+        currency,
         frequency: recurringFrequency,
         next_issue_at: startDate.toISOString(),
         end_at: endAt,
@@ -738,12 +750,12 @@ export function InvoiceEditIndyContent({
     recurringFrequency,
     recurringDurationMode,
     recurringMonths,
+    currency,
     dueAt,
     emailBody,
     emailSignature,
     emailSubject,
     footerMessage,
-    invoice.currency,
     invoice.invoice_number,
     items,
     notes,
@@ -904,7 +916,7 @@ export function InvoiceEditIndyContent({
           <div>
             <h1 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
               Invoice #{invoice.invoice_number} ·{' '}
-              {formatPence(totals.total_pence, invoice.currency ?? 'GBP')}
+              {formatInvoiceMoney(totals.total_pence, currency)}
             </h1>
             {title.trim() ? (
               <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -961,7 +973,7 @@ export function InvoiceEditIndyContent({
             invoiceNumber={invoice.invoice_number}
             totalPence={totals.total_pence}
             dueAt={invoice.due_at}
-            currency={invoice.currency}
+            currency={currency}
             defaultEmail={defaultSendEmail}
             defaultRecipientName={
               invoice.preferred_send_name ??
@@ -1144,42 +1156,75 @@ export function InvoiceEditIndyContent({
                 </div>
               </div>
 
-              <div>
-                <Label className="text-[var(--workspace-shell-text-muted)]">
-                  Bill to
-                </Label>
-                <div className="mt-1">
-                  <ClientCombobox
-                    clients={clients}
-                    value={clientId}
-                    onValueChange={setClientId}
-                    loading={clientsLoading}
-                    disabled={readOnly}
-                    placeholder="Select client"
-                    addClientHref={pathsConfig.app.accountClients.replace(
-                      '[account]',
-                      accountSlug,
-                    )}
-                  />
-                </div>
-                {clientsError ? (
-                  <p className="mt-1.5 text-sm text-amber-600">
-                    {clientsError}
-                  </p>
-                ) : null}
-                {invoice.client && clientId === invoice.client_id ? (
-                  <div className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
-                    <p className="font-medium text-[var(--ozer-text-on-light)]">
-                      {clientDisplayName(invoice.client)}
-                    </p>
-                    {invoice.client.company_name ? (
-                      <p>{invoice.client.company_name}</p>
-                    ) : null}
-                    {invoice.client.email ? (
-                      <p>{invoice.client.email}</p>
-                    ) : null}
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div>
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Bill to
+                  </Label>
+                  <div className="mt-1">
+                    <ClientCombobox
+                      clients={clients}
+                      value={clientId}
+                      onValueChange={setClientId}
+                      loading={clientsLoading}
+                      disabled={readOnly}
+                      placeholder="Select client"
+                      addClientHref={pathsConfig.app.accountClients.replace(
+                        '[account]',
+                        accountSlug,
+                      )}
+                    />
                   </div>
-                ) : null}
+                  {clientsError ? (
+                    <p className="mt-1.5 text-sm text-amber-600">
+                      {clientsError}
+                    </p>
+                  ) : null}
+                  {invoice.client && clientId === invoice.client_id ? (
+                    <div className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+                      <p className="font-medium text-[var(--ozer-text-on-light)]">
+                        {clientDisplayName(invoice.client)}
+                      </p>
+                      {invoice.client.company_name ? (
+                        <p>{invoice.client.company_name}</p>
+                      ) : null}
+                      {invoice.client.email ? (
+                        <p>{invoice.client.email}</p>
+                      ) : null}
+                    </div>
+                  ) : null}
+                </div>
+                <div>
+                  <Label
+                    htmlFor="invoice-currency"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Currency
+                  </Label>
+                  {previewMode || readOnly ? (
+                    <p className="mt-1 text-sm font-medium text-[var(--ozer-text-on-light)]">
+                      {INVOICE_CURRENCY_OPTIONS.find(
+                        (o) => o.value === currency,
+                      )?.label ?? currency.toUpperCase()}
+                    </p>
+                  ) : (
+                    <select
+                      id="invoice-currency"
+                      value={currency}
+                      onChange={(e) =>
+                        setCurrency(e.target.value as InvoiceCurrency)
+                      }
+                      disabled={readOnly}
+                      className={`mt-1 flex h-10 w-full rounded-md border px-3 text-sm ${inputClassName}`}
+                    >
+                      {INVOICE_CURRENCY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                </div>
               </div>
 
               <div>
@@ -1294,9 +1339,9 @@ export function InvoiceEditIndyContent({
                               />
                             </td>
                             <td className="py-3 pr-2 text-right font-medium text-[var(--ozer-text-on-light)]">
-                              {formatPence(
+                              {formatInvoiceMoney(
                                 row.quantity * row.unit_price_pence,
-                                invoice.currency ?? 'GBP',
+                                currency,
                               )}
                             </td>
                             {!readOnly ? (
@@ -1389,7 +1434,9 @@ export function InvoiceEditIndyContent({
                         >
                           <option value="">Type</option>
                           <option value="percent">Percent</option>
-                          <option value="fixed">Fixed (£)</option>
+                          <option value="fixed">
+                            Fixed ({currencySymbol})
+                          </option>
                         </select>
                         <Input
                           value={discountValue}
@@ -1430,7 +1477,9 @@ export function InvoiceEditIndyContent({
                         >
                           <option value="">Type</option>
                           <option value="percent">Percent</option>
-                          <option value="fixed">Fixed (£)</option>
+                          <option value="fixed">
+                            Fixed ({currencySymbol})
+                          </option>
                         </select>
                         <Input
                           value={depositValue}
@@ -1457,7 +1506,9 @@ export function InvoiceEditIndyContent({
                         >
                           <option value="">Type</option>
                           <option value="percent">Percent</option>
-                          <option value="fixed">Fixed (£)</option>
+                          <option value="fixed">
+                            Fixed ({currencySymbol})
+                          </option>
                         </select>
                         <Input
                           value={lateFeeValue}
@@ -1481,21 +1532,14 @@ export function InvoiceEditIndyContent({
                       Subtotal
                     </dt>
                     <dd className="font-medium text-[var(--ozer-text-on-light)]">
-                      {formatPence(
-                        totals.subtotal_pence,
-                        invoice.currency ?? 'GBP',
-                      )}
+                      {formatInvoiceMoney(totals.subtotal_pence, currency)}
                     </dd>
                   </div>
                   {totals.discount_pence > 0 ? (
                     <div className="flex justify-between gap-4 text-emerald-700">
                       <dt>Discount</dt>
                       <dd>
-                        −
-                        {formatPence(
-                          totals.discount_pence,
-                          invoice.currency ?? 'GBP',
-                        )}
+                        −{formatInvoiceMoney(totals.discount_pence, currency)}
                       </dd>
                     </div>
                   ) : null}
@@ -1505,10 +1549,7 @@ export function InvoiceEditIndyContent({
                         Tax
                       </dt>
                       <dd className="font-medium text-[var(--ozer-text-on-light)]">
-                        {formatPence(
-                          totals.tax_pence,
-                          invoice.currency ?? 'GBP',
-                        )}
+                        {formatInvoiceMoney(totals.tax_pence, currency)}
                       </dd>
                     </div>
                   ) : null}
@@ -1516,10 +1557,7 @@ export function InvoiceEditIndyContent({
                     <div className="flex justify-between gap-4 text-amber-700">
                       <dt>Late fee</dt>
                       <dd>
-                        {formatPence(
-                          totals.late_fee_pence,
-                          invoice.currency ?? 'GBP',
-                        )}
+                        {formatInvoiceMoney(totals.late_fee_pence, currency)}
                       </dd>
                     </div>
                   ) : null}
@@ -1528,20 +1566,14 @@ export function InvoiceEditIndyContent({
                       Total
                     </dt>
                     <dd className="font-bold text-[var(--ozer-text-on-light)]">
-                      {formatPence(
-                        totals.total_pence,
-                        invoice.currency ?? 'GBP',
-                      )}
+                      {formatInvoiceMoney(totals.total_pence, currency)}
                     </dd>
                   </div>
                   {totals.deposit_due_pence > 0 ? (
                     <div className="flex justify-between gap-4 text-[var(--workspace-shell-text-muted)]">
                       <dt>Deposit due</dt>
                       <dd>
-                        {formatPence(
-                          totals.deposit_due_pence,
-                          invoice.currency ?? 'GBP',
-                        )}
+                        {formatInvoiceMoney(totals.deposit_due_pence, currency)}
                       </dd>
                     </div>
                   ) : null}

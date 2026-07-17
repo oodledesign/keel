@@ -7,6 +7,11 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import type { Database } from '~/lib/database.types';
 
+import {
+  type InvoiceCurrency,
+  normalizeInvoiceCurrency,
+} from '../invoice-currency';
+
 export type AccountPaymentSettings = {
   account_id: string;
   bank_account_name: string | null;
@@ -20,6 +25,7 @@ export type AccountPaymentSettings = {
   stripe_connect_enabled: boolean;
   stripe_pay_now_enabled: boolean;
   invoice_starting_number: number;
+  default_invoice_currency: InvoiceCurrency;
 };
 
 const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
@@ -34,6 +40,7 @@ const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
   stripe_connect_enabled: false,
   stripe_pay_now_enabled: true,
   invoice_starting_number: 1,
+  default_invoice_currency: 'gbp',
 };
 
 export function createInvoicePaymentSettingsService(
@@ -86,6 +93,11 @@ class InvoicePaymentSettingsService {
     const nextFromCounter =
       typeof counter?.next_number === 'number' ? counter.next_number : null;
 
+    const row = data as {
+      invoice_starting_number?: number;
+      default_invoice_currency?: string | null;
+    } | null;
+
     return {
       account_id: accountId,
       ...DEFAULT_SETTINGS,
@@ -93,9 +105,11 @@ class InvoicePaymentSettingsService {
       // Prefer live counter so the UI shows the real next number after invoices exist.
       invoice_starting_number:
         nextFromCounter ??
-        (data as { invoice_starting_number?: number } | null)
-          ?.invoice_starting_number ??
+        row?.invoice_starting_number ??
         DEFAULT_SETTINGS.invoice_starting_number,
+      default_invoice_currency: normalizeInvoiceCurrency(
+        row?.default_invoice_currency,
+      ),
     };
   }
 
@@ -127,6 +141,7 @@ class InvoicePaymentSettingsService {
     bank_transfer_instructions?: string | null;
     stripe_pay_now_enabled?: boolean;
     invoice_starting_number?: number;
+    default_invoice_currency?: InvoiceCurrency;
   }) {
     await this.ensureOwnerOrAdmin(input.accountId);
 
@@ -155,9 +170,16 @@ class InvoicePaymentSettingsService {
       ...(input.invoice_starting_number !== undefined
         ? { invoice_starting_number: input.invoice_starting_number }
         : {}),
+      ...(input.default_invoice_currency !== undefined
+        ? {
+            default_invoice_currency: normalizeInvoiceCurrency(
+              input.default_invoice_currency,
+            ),
+          }
+        : {}),
     };
 
-    const { data, error } = await this.db
+    const { error } = await this.db
       .from('account_payment_settings')
       .upsert(payload, { onConflict: 'account_id' })
       .select('*')
@@ -265,7 +287,20 @@ export async function loadPaymentSettingsForPortal(
     .eq('account_id', accountId)
     .maybeSingle();
   if (error || !data) return null;
-  return data as AccountPaymentSettings;
+  const row = data as {
+    default_invoice_currency?: string | null;
+    invoice_starting_number?: number;
+  } & Record<string, unknown>;
+  return {
+    ...DEFAULT_SETTINGS,
+    ...row,
+    account_id: accountId,
+    default_invoice_currency: normalizeInvoiceCurrency(
+      row.default_invoice_currency,
+    ),
+    invoice_starting_number:
+      row.invoice_starting_number ?? DEFAULT_SETTINGS.invoice_starting_number,
+  } as AccountPaymentSettings;
 }
 
 function parseInvoiceSequence(

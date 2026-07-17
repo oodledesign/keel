@@ -599,7 +599,7 @@ class ClientsService {
     const { data, error } = await this.db
       .from('invoices')
       .select(
-        'id, invoice_number, status, due_at, issued_at, paid_at, total_pence, public_token, created_at',
+        'id, invoice_number, status, due_at, issued_at, paid_at, currency, total_pence, public_token, created_at',
       )
       .eq('client_id', params.clientId)
       .eq('account_id', params.accountId)

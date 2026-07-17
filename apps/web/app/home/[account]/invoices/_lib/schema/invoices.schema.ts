@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { InvoiceCurrencySchema } from '../invoice-currency';
+
 const optionalString = z.string().optional();
 const optionalNullableString = z.string().nullable().optional();
 
@@ -51,6 +53,7 @@ export const CreateInvoiceSchema = z.object({
   notes: optionalNullableString,
   title: optionalNullableString,
   reference_number: optionalNullableString,
+  currency: InvoiceCurrencySchema.optional(),
 });
 
 export const UpdateInvoiceSchema = z.object({
@@ -61,6 +64,7 @@ export const UpdateInvoiceSchema = z.object({
   notes: optionalNullableString,
   title: optionalNullableString,
   reference_number: optionalNullableString,
+  currency: InvoiceCurrencySchema.optional(),
   footer_message: optionalNullableString,
   private_note: optionalNullableString,
   discount_type: discountType,
@@ -180,7 +184,7 @@ export const UpsertRecurringSeriesSchema = z.object({
   seriesId: z.string().uuid().optional(),
   client_id: z.string().uuid(),
   title: z.string().min(1),
-  currency: z.string().default('gbp'),
+  currency: InvoiceCurrencySchema.default('gbp'),
   frequency: z.enum([
     'weekly',
     'fortnightly',
@@ -212,6 +216,7 @@ export const SavePaymentSettingsSchema = z.object({
   bank_transfer_instructions: optionalNullableString,
   stripe_pay_now_enabled: z.boolean().optional(),
   invoice_starting_number: z.number().int().min(1).max(999999).optional(),
+  default_invoice_currency: InvoiceCurrencySchema.optional(),
 });
 
 export type ListInvoicesInput = z.infer<typeof ListInvoicesSchema>;

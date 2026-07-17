@@ -24,7 +24,7 @@ import { listClients } from '~/home/[account]/clients/_lib/server/server-actions
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 
 import { getErrorMessage } from '../_lib/error-message';
-import { formatPence } from '../_lib/invoice-totals';
+import { formatInvoiceMoney } from '../_lib/invoice-currency';
 import type { ListInvoicesInput } from '../_lib/schema/invoices.schema';
 import {
   createInvoice,
@@ -44,6 +44,7 @@ type InvoiceRow = {
   status: string;
   due_at: string | null;
   issued_at: string | null;
+  currency?: string | null;
   total_pence: number;
   amount_paid_pence?: number;
   recurring_series_id?: string | null;
@@ -576,7 +577,7 @@ export function InvoicesPageContent({
                       {formatDate(inv.due_at)}
                     </td>
                     <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
-                      {formatPence(inv.total_pence)}
+                      {formatInvoiceMoney(inv.total_pence, inv.currency)}
                     </td>
                     <td className="py-3 pr-4">
                       <InvoiceStatusBadge

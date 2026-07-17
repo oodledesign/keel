@@ -11,6 +11,7 @@ import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipi
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
+import { formatInvoiceMoney } from '../invoice-currency';
 import {
   DEFAULT_INVOICE_EMAIL_BODY,
   DEFAULT_INVOICE_EMAIL_SIGNATURE,
@@ -21,13 +22,6 @@ import { buildInvoicePdf } from './invoice-pdf';
 import { buildInvoicePdfPayload } from './invoice-pdf-payload';
 
 type PaymentMethod = 'stripe' | 'cash' | 'bank_transfer';
-
-function formatPence(pence: number) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-  }).format(pence / 100);
-}
 
 function getMethodLabel(method: PaymentMethod) {
   switch (method) {
@@ -41,7 +35,7 @@ function getMethodLabel(method: PaymentMethod) {
 }
 
 function buildInvoiceEmailFrom(accountName: string | null | undefined) {
-  return resolveTransactionalEmailFrom(accountName);
+  return resolveTransactionalEmailFrom(accountName ?? undefined);
 }
 
 function invoicePdfFilename(input: {
@@ -50,10 +44,11 @@ function invoicePdfFilename(input: {
   brandName?: string | null;
 }) {
   const party =
-    input.clientCompany?.trim() ||
-    input.brandName?.trim() ||
-    'Invoice';
-  const safeParty = party.replace(/[^\w\s-]/g, '').trim().replace(/\s+/g, ' ');
+    input.clientCompany?.trim() || input.brandName?.trim() || 'Invoice';
+  const safeParty = party
+    .replace(/[^\w\s-]/g, '')
+    .trim()
+    .replace(/\s+/g, ' ');
   const safeNumber = input.invoiceNumber.replace(/[^\w-]/g, '');
   return `Invoice_${safeParty}_${safeNumber}.pdf`.replace(/\s+/g, '_');
 }
@@ -74,7 +69,7 @@ export async function sendInvoicePaidNotifications(params: {
   const { data: invoice, error: invoiceError } = await admin
     .from('invoices')
     .select(
-      'id, account_id, client_id, invoice_number, total_pence, paid_at, public_token, sent_to_email',
+      'id, account_id, client_id, invoice_number, total_pence, currency, paid_at, public_token, sent_to_email',
     )
     .eq('id', params.invoiceId)
     .eq('account_id', params.accountId)
@@ -137,7 +132,7 @@ export async function sendInvoicePaidNotifications(params: {
     : { email: invoice.sent_to_email ?? null };
   const clientEmail =
     recipient.email ?? client?.email ?? invoice.sent_to_email ?? null;
-  const amount = formatPence(invoice.total_pence ?? 0);
+  const amount = formatInvoiceMoney(invoice.total_pence ?? 0, invoice.currency);
   const paidAt = invoice.paid_at
     ? new Date(invoice.paid_at).toLocaleString('en-GB')
     : new Date().toLocaleString('en-GB');
@@ -289,10 +284,13 @@ export async function sendInvoiceIssuedEmail(params: {
   if (recipient?.contactId) {
     const { data: contactRow } = await admin
       .from('contacts')
-      .select('first_name, last_name, full_name, email')
+      .select('full_name, email')
       .eq('id', recipient.contactId)
       .maybeSingle();
-    contact = contactRow ?? {
+    contact = (contactRow as {
+      full_name?: string | null;
+      email?: string | null;
+    } | null) ?? {
       full_name: recipient.contactName,
       email: recipient.email,
     };
@@ -328,10 +326,10 @@ export async function sendInvoiceIssuedEmail(params: {
   const dueDate = invoice.due_at
     ? new Date(invoice.due_at).toLocaleDateString('en-GB')
     : '—';
-  const amount = formatPence(invoice.total_pence ?? 0);
+  const amount = formatInvoiceMoney(invoice.total_pence ?? 0, invoice.currency);
 
   const pdfPayload = await buildInvoicePdfPayload(
-    invoice as Record<string, unknown>,
+    invoice,
     params.accountId,
     {},
     params.sender ?? null,

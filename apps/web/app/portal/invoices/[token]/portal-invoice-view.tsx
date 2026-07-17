@@ -8,7 +8,7 @@ import { Building2, CreditCard, Download, Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
-import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import { formatInvoiceMoney } from '~/home/[account]/invoices/_lib/invoice-currency';
 import type { AccountPaymentSettings } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 
 type InvoicePayload = {
@@ -85,6 +85,7 @@ export function PortalInvoiceView({
   const remaining = Math.max(0, data.total_pence - amountPaid);
   const depositDue = data.deposit_due_pence ?? 0;
   const hasDeposit = depositDue > 0 && amountPaid < depositDue;
+  const money = (pence: number) => formatInvoiceMoney(pence, data.currency);
 
   const isPayable = ['sent', 'read'].includes(data.status) && remaining > 0;
   const isPaid = data.status === 'paid';
@@ -148,7 +149,7 @@ export function PortalInvoiceView({
             {isPaid
               ? `Paid on ${formatDate(data.paid_at)}`
               : amountPaid > 0
-                ? `${formatPence(amountPaid)} paid · ${formatPence(remaining)} remaining`
+                ? `${money(amountPaid)} paid · ${money(remaining)} remaining`
                 : displayStatus === 'overdue'
                   ? 'Overdue'
                   : 'Awaiting payment'}
@@ -175,7 +176,7 @@ export function PortalInvoiceView({
                     <CreditCard className="mr-2 h-4 w-4" />
                   )}
                   Pay deposit (
-                  {formatPence(Math.min(depositDue - amountPaid, remaining))})
+                  {money(Math.min(depositDue - amountPaid, remaining))})
                 </Button>
               ) : null}
               <Button
@@ -271,10 +272,10 @@ export function PortalInvoiceView({
                 </td>
                 <td className="py-3 pr-4 text-right">{row.quantity}</td>
                 <td className="py-3 pr-4 text-right">
-                  {formatPence(row.unit_price_pence)}
+                  {money(row.unit_price_pence)}
                 </td>
                 <td className="py-3 pr-4 text-right">
-                  {formatPence(row.total_pence)}
+                  {money(row.total_pence)}
                 </td>
               </tr>
             ))}
@@ -284,30 +285,30 @@ export function PortalInvoiceView({
           {(data.discount_pence ?? 0) > 0 ? (
             <div className="flex justify-between">
               <span>Discount</span>
-              <span>-{formatPence(data.discount_pence ?? 0)}</span>
+              <span>-{money(data.discount_pence ?? 0)}</span>
             </div>
           ) : null}
           {(data.tax_pence ?? 0) > 0 ? (
             <div className="flex justify-between">
               <span>Tax</span>
-              <span>{formatPence(data.tax_pence ?? 0)}</span>
+              <span>{money(data.tax_pence ?? 0)}</span>
             </div>
           ) : null}
           {(data.late_fee_pence ?? 0) > 0 ? (
             <div className="flex justify-between text-amber-300">
               <span>Late fee</span>
-              <span>{formatPence(data.late_fee_pence ?? 0)}</span>
+              <span>{money(data.late_fee_pence ?? 0)}</span>
             </div>
           ) : null}
           <div className="flex justify-end pt-2">
             <p className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-              Total {formatPence(data.total_pence)}
+              Total {money(data.total_pence)}
             </p>
           </div>
           {hasDeposit ? (
             <div className="flex justify-between text-[#97D9AA]">
               <span>Deposit due</span>
-              <span>{formatPence(depositDue)}</span>
+              <span>{money(depositDue)}</span>
             </div>
           ) : null}
         </div>

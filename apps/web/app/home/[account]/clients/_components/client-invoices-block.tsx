@@ -8,6 +8,8 @@ import { ReceiptText } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
 
+import { formatInvoiceMoney } from '~/home/[account]/invoices/_lib/invoice-currency';
+
 import { listClientInvoices } from '../_lib/server/server-actions';
 
 type InvoiceRow = {
@@ -17,16 +19,10 @@ type InvoiceRow = {
   due_at: string | null;
   issued_at: string | null;
   paid_at: string | null;
+  currency?: string | null;
   total_pence: number | null;
   created_at: string;
 };
-
-function formatPence(pence: number | null) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-  }).format((pence ?? 0) / 100);
-}
 
 function formatDate(iso: string | null) {
   if (!iso) return '—';
@@ -140,7 +136,10 @@ export function ClientInvoicesBlock({
                   </span>
 
                   <span className="shrink-0 font-medium text-[var(--workspace-shell-text)]">
-                    {formatPence(invoice.total_pence)}
+                    {formatInvoiceMoney(
+                      invoice.total_pence ?? 0,
+                      invoice.currency,
+                    )}
                   </span>
                 </Link>
               </li>
