@@ -2,11 +2,14 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import type { Database } from '~/lib/database.types';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
 import { computeInvoiceTotals } from '../invoice-totals';
 import type { InvoiceForPdf } from './invoice-pdf';
 import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
+
+type InvoiceRow = Database['public']['Tables']['invoices']['Row'];
 
 export type InvoicePdfDisplayOptions = {
   show_reference?: boolean;
@@ -45,12 +48,12 @@ export function displayOptionsFromSearchParams(
 }
 
 async function ensurePublicToken(
-  admin: ReturnType<typeof getSupabaseServerAdminClient>,
-  invoice: { id: string; account_id: string; public_token?: string | null },
+  invoice: Pick<InvoiceRow, 'id' | 'account_id' | 'public_token'>,
 ) {
   if (invoice.public_token) return invoice.public_token;
   const { randomBytes } = await import('crypto');
   const token = randomBytes(32).toString('hex');
+  const admin = getSupabaseServerAdminClient();
   const { error } = await admin
     .from('invoices')
     .update({ public_token: token })
@@ -61,7 +64,7 @@ async function ensurePublicToken(
 }
 
 export async function buildInvoicePdfPayload(
-  invoice: Record<string, unknown>,
+  invoice: InvoiceRow,
   accountId: string,
   options: InvoicePdfDisplayOptions = {},
   sender?: {
@@ -76,7 +79,7 @@ export async function buildInvoicePdfPayload(
       client
         .from('invoice_items')
         .select('description, quantity, unit_price_pence, total_pence')
-        .eq('invoice_id', invoice.id as string)
+        .eq('invoice_id', invoice.id)
         .order('sort_order', { ascending: true }),
       invoice.client_id
         ? client
@@ -84,7 +87,7 @@ export async function buildInvoicePdfPayload(
             .select(
               'display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country',
             )
-            .eq('id', invoice.client_id as string)
+            .eq('id', invoice.client_id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
       client.from('accounts').select('name, email').eq('id', accountId).maybeSingle(),
@@ -92,23 +95,23 @@ export async function buildInvoicePdfPayload(
     ]);
 
   const totals = computeInvoiceTotals({
-    subtotal_pence: (invoice.subtotal_pence as number) ?? 0,
+    subtotal_pence: invoice.subtotal_pence ?? 0,
     discount_type: invoice.discount_type as 'percent' | 'fixed' | null,
-    discount_value: invoice.discount_value as number | null,
-    tax_rate_bp: invoice.tax_rate_bp as number | null,
+    discount_value: invoice.discount_value,
+    tax_rate_bp: invoice.tax_rate_bp,
     late_fee_type: invoice.late_fee_type as 'percent' | 'fixed' | null,
-    late_fee_value: invoice.late_fee_value as number | null,
+    late_fee_value: invoice.late_fee_value,
     deposit_type: invoice.deposit_type as 'percent' | 'fixed' | null,
-    deposit_value: invoice.deposit_value as number | null,
-    due_at: invoice.due_at as string | null,
-    status: invoice.status as string,
+    deposit_value: invoice.deposit_value,
+    due_at: invoice.due_at,
+    status: invoice.status,
   });
 
   const paymentSettings = await loadPaymentSettingsForPortal(accountId);
-  const token = await ensurePublicToken(client, {
-    id: invoice.id as string,
+  const token = await ensurePublicToken({
+    id: invoice.id,
     account_id: accountId,
-    public_token: invoice.public_token as string | null,
+    public_token: invoice.public_token,
   });
   const baseUrl = siteUrl();
   const paymentUrl = token
@@ -121,26 +124,30 @@ export async function buildInvoicePdfPayload(
     .trim();
 
   return {
-    invoice_number: invoice.invoice_number as string,
-    status: invoice.status as string,
-    due_at: invoice.due_at as string | null,
-    issued_at: (invoice.issued_at as string | null) ?? null,
-    title: (invoice.title as string | null) ?? null,
-    reference_number: (invoice.reference_number as string | null) ?? null,
+    invoice_number: invoice.invoice_number,
+    status: invoice.status,
+    due_at: invoice.due_at,
+    issued_at: invoice.issued_at ?? null,
+    title: invoice.title ?? null,
+    reference_number: invoice.reference_number ?? null,
     total_pence: totals.total_pence,
     subtotal_pence: totals.subtotal_pence,
     discount_pence: totals.discount_pence,
     tax_pence: totals.tax_pence,
     late_fee_pence: totals.late_fee_pence,
     deposit_due_pence: totals.deposit_due_pence,
-    currency: (invoice.currency as string) ?? 'gbp',
-    notes: invoice.notes as string | null,
-    footer_message: invoice.footer_message as string | null,
+    currency: invoice.currency ?? 'gbp',
+    notes: invoice.notes,
+    footer_message: invoice.footer_message ?? null,
     brand_name: account?.name ?? null,
     logo_url: brand?.logo_url ?? null,
     payment_url: paymentUrl,
     sender_name: senderName || null,
     sender_email: sender?.email?.trim() || account?.email?.trim() || null,
+    business_email:
+      brand?.contact_email?.trim() || account?.email?.trim() || null,
+    business_phone: brand?.phone?.trim() || null,
+    business_website: brand?.website_url?.trim() || null,
     show_reference: options.show_reference ?? true,
     show_due_date: options.show_due_date ?? true,
     show_issued_date: options.show_issued_date ?? true,

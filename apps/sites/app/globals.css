@@ -2,6 +2,7 @@
 @import '@kit/site-blocks-core/tokens.css';
 
 @source '../../../packages/site-blocks-core/src/**/*.{ts,tsx}';
+@source '../../../packages/site-blocks-workspaces/src/**/*.{ts,tsx}';
 @source '../**/*.{ts,tsx}';
 
 html,

@@ -20,6 +20,7 @@ import {
   getTeamAccountAccess,
 } from '../_lib/role-access';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+import { WorkspaceContactSettingsForm } from './_components/workspace-contact-settings-form';
 import { WorkspaceDashboardShortcutsSection } from './_components/workspace-dashboard-shortcuts-section';
 
 export const generateMetadata = async () => {
@@ -78,12 +79,24 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
     .maybeSingle();
 
   const isClient = membership?.company_role === 'client';
+  const canEditContact = access.isOwner || access.isAdmin;
   const features = {
     enableTeamDeletion: featuresFlagConfig.enableTeamDeletion,
   };
 
   return (
     <div className="flex flex-col gap-6">
+      {!isClient ? (
+        <WorkspaceContactSettingsForm
+          accountId={account.id}
+          canEdit={canEditContact}
+          initial={{
+            contact_email: brand.contact_email ?? data.email ?? null,
+            phone: brand.phone,
+            website_url: brand.website_url,
+          }}
+        />
+      ) : null}
       {!isClient ? (
         <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
           <div>

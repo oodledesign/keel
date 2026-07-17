@@ -100,7 +100,7 @@
   border: 0;
 }
 
-:global(html.ybbHasBanner) {
+html.ybbHasBanner {
   --ybb-banner-offset: 2em;
 }
 

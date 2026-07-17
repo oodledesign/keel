@@ -17,6 +17,8 @@ export type AccountBrandSettingsRow = {
   logo_url: string | null;
   website_url: string | null;
   address: string | null;
+  contact_email: string | null;
+  phone: string | null;
 };
 
 /**
@@ -30,6 +32,8 @@ export type AccountBrandResolved = {
   logo_url: string | null;
   website_url: string | null;
   address: string | null;
+  contact_email: string | null;
+  phone: string | null;
 };
 
 function resolveBrand(
@@ -44,6 +48,8 @@ function resolveBrand(
     logo_url: toSupabasePublicStorageUrl(row?.logo_url?.trim()) || null,
     website_url: row?.website_url?.trim() || null,
     address: row?.address?.trim() || null,
+    contact_email: row?.contact_email?.trim() || null,
+    phone: row?.phone?.trim() || null,
   };
 }
 
@@ -54,7 +60,7 @@ export async function loadAccountBrandResolved(
   const { data, error } = await admin
     .from('account_brand_settings')
     .select(
-      'account_id, primary_color, secondary_color, accent_color, logo_url, website_url, address',
+      'account_id, primary_color, secondary_color, accent_color, logo_url, website_url, address, contact_email, phone',
     )
     .eq('account_id', accountId)
     .maybeSingle();
@@ -83,6 +89,13 @@ export async function loadAccountBrandResolved(
   );
 }
 
+const HEX_COLOR_RE = /^#[0-9A-Fa-f]{3}(?:[0-9A-Fa-f]{3})?$/;
+
+/** Returns the value if it is a valid CSS hex colour, otherwise the fallback. */
+function safeCssColor(value: string, fallback: string): string {
+  return HEX_COLOR_RE.test(value) ? value : fallback;
+}
+
 /**
  * Wraps transactional email HTML with an optional brand bar + logo (table layout for clients).
  */
@@ -93,7 +106,11 @@ export function wrapEmailHtmlWithBrand(params: {
   contentColor?: string;
 }): string {
   const { brand, innerHtml } = params;
-  const contentColor = params.contentColor ?? '#09111F';
+  const contentColor = safeCssColor(
+    params.contentColor ?? '#09111F',
+    '#09111F',
+  );
+  const primaryColor = safeCssColor(brand.primary_color, DEFAULT_BRAND_PRIMARY);
   const logo =
     brand.logo_url &&
     `<img src="${brand.logo_url}" alt="" height="40" style="display:block;max-height:40px;width:auto;border:0;" />`;
@@ -101,7 +118,7 @@ export function wrapEmailHtmlWithBrand(params: {
   return `
 <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;mso-table-lspace:0pt;mso-table-rspace:0pt;">
   <tr>
-    <td style="background:${brand.primary_color};padding:16px 20px;">
+    <td style="background:${primaryColor};padding:16px 20px;">
       ${logo ?? ''}
     </td>
   </tr>
