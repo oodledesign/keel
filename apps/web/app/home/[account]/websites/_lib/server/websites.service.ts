@@ -5,6 +5,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  isMissingColumnError,
+  isMissingRelationError,
+  logMissingRelation,
+} from '../../../_lib/server/supabase-errors';
 import type {
   GetWebsiteInput,
   ListWebsitesInput,
@@ -13,11 +18,6 @@ import type {
   WebsiteStack,
   WebsiteStatus,
 } from '../schema/websites.schema';
-import {
-  isMissingColumnError,
-  isMissingRelationError,
-  logMissingRelation,
-} from '../../../_lib/server/supabase-errors';
 
 function slugifyClientOrg(name: string): string {
   const base =
@@ -146,10 +146,15 @@ function mapWebsiteWriteError(err: unknown): Error {
     );
   }
 
-  return err instanceof Error ? err : new Error(msg || 'Failed to save website');
+  return err instanceof Error
+    ? err
+    : new Error(msg || 'Failed to save website');
 }
 
-function mapWebsite(row: WebsiteRow, linkedClientId: string | null = null): Website {
+function mapWebsite(
+  row: WebsiteRow,
+  linkedClientId: string | null = null,
+): Website {
   const org = Array.isArray(row.client_orgs)
     ? row.client_orgs[0]
     : row.client_orgs;
@@ -254,11 +259,12 @@ class WebsitesService {
     let enriched = row;
 
     if (row.client_org_id && !row.client_orgs) {
+      const businessIds = await this.listBusinessIdsForAccount(accountId);
       const { data } = await this.db
         .from('client_orgs')
         .select('name')
         .eq('id', row.client_org_id)
-        .eq('business_id', accountId)
+        .in('business_id', businessIds)
         .maybeSingle();
 
       if (data) {
@@ -370,7 +376,9 @@ class WebsitesService {
     return user;
   }
 
-  private async listWebsiteRows(input: ListWebsitesInput): Promise<WebsiteRow[]> {
+  private async listWebsiteRows(
+    input: ListWebsitesInput,
+  ): Promise<WebsiteRow[]> {
     let query = this.db
       .from('websites')
       .select('*, client_orgs(name)')
@@ -413,6 +421,69 @@ class WebsitesService {
     return (fallback.data ?? []) as WebsiteRow[];
   }
 
+  private async resolveBusinessIdForAccount(accountId: string): Promise<string> {
+    const { data: existing, error: lookupError } = await this.adminDb
+      .from('businesses')
+      .select('id')
+      .eq('account_id', accountId)
+      .order('created_at', { ascending: true })
+      .limit(1)
+      .maybeSingle();
+
+    if (lookupError) throw lookupError;
+    if (existing?.id) return String(existing.id);
+
+    const { data: account, error: accountError } = await this.adminDb
+      .from('accounts')
+      .select('id, name, slug')
+      .eq('id', accountId)
+      .maybeSingle();
+
+    if (accountError) throw accountError;
+    if (!account) throw new Error('Workspace not found');
+
+    const accountRow = account as {
+      name?: string | null;
+      slug?: string | null;
+    };
+    const name =
+      accountRow.name?.trim() || accountRow.slug?.trim() || 'Workspace';
+    const slug =
+      accountRow.slug?.trim() ||
+      `workspace-${accountId.replace(/-/g, '').slice(0, 8)}`;
+
+    const { data: created, error: createError } = await this.adminDb
+      .from('businesses')
+      .insert({
+        name,
+        slug,
+        account_id: accountId,
+        type: 'other',
+      })
+      .select('id')
+      .single();
+
+    if (createError || !created) {
+      throw createError ?? new Error('Could not create business for workspace');
+    }
+
+    return String((created as { id: string }).id);
+  }
+
+  private async listBusinessIdsForAccount(accountId: string): Promise<string[]> {
+    const { data, error } = await this.adminDb
+      .from('businesses')
+      .select('id')
+      .eq('account_id', accountId);
+
+    if (error) throw error;
+
+    const ids = ((data ?? []) as Array<{ id: string }>).map((row) => row.id);
+    if (ids.length > 0) return ids;
+
+    return [await this.resolveBusinessIdForAccount(accountId)];
+  }
+
   private async resolveLinkedClientIds(
     accountId: string,
     orgIds: string[],
@@ -452,7 +523,12 @@ class WebsitesService {
     );
 
     return rows.map((row) =>
-      mapWebsite(row, row.client_org_id ? linkedClients.get(row.client_org_id) ?? null : null),
+      mapWebsite(
+        row,
+        row.client_org_id
+          ? (linkedClients.get(row.client_org_id) ?? null)
+          : null,
+      ),
     );
   }
 
@@ -476,7 +552,10 @@ class WebsitesService {
         .maybeSingle();
 
       if (fallback.error || !fallback.data) return null;
-      return this.enrichWebsiteRow(input.accountId, fallback.data as WebsiteRow);
+      return this.enrichWebsiteRow(
+        input.accountId,
+        fallback.data as WebsiteRow,
+      );
     }
 
     if (!data) return null;
@@ -487,10 +566,11 @@ class WebsitesService {
   async listClientOrgs(accountId: string): Promise<ClientOrgOption[]> {
     await this.ensureCanView(accountId);
 
+    const businessIds = await this.listBusinessIdsForAccount(accountId);
     const { data, error } = await this.db
       .from('client_orgs')
       .select('id, name')
-      .eq('business_id', accountId)
+      .in('business_id', businessIds)
       .order('name');
 
     if (error) {
@@ -581,9 +661,8 @@ class WebsitesService {
     if (clientError) throw clientError;
     if (!clientRow) throw new Error('CRM client not found');
 
-    const existingOrgId = (
-      clientRow as { client_org_id?: string | null }
-    ).client_org_id;
+    const existingOrgId = (clientRow as { client_org_id?: string | null })
+      .client_org_id;
 
     if (existingOrgId) {
       return { clientOrgId: existingOrgId, created: false };
@@ -595,11 +674,12 @@ class WebsitesService {
       'Client';
 
     const slug = slugifyClientOrg(displayName);
+    const businessId = await this.resolveBusinessIdForAccount(accountId);
 
     const { data: org, error: orgError } = await this.adminDb
       .from('client_orgs')
       .insert({
-        business_id: accountId,
+        business_id: businessId,
         name: displayName,
         slug,
         status: 'active',
