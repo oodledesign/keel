@@ -1,4 +1,5 @@
 import type { WorkspaceBlockPack } from './types';
+import { ybbPack } from './workspaces/ybb';
 
 /**
  * Static allowlist of workspace packs, keyed by `accounts.slug`.
@@ -9,7 +10,7 @@ import type { WorkspaceBlockPack } from './types';
  * 3. Redeploy `ozer` (editor) and `ozer-sites` (public renderer).
  */
 const WORKSPACE_PACKS: Record<string, WorkspaceBlockPack> = {
-  // Example: [ybbPack.slug]: ybbPack,
+  [ybbPack.slug]: ybbPack,
 };
 
 export function getWorkspacePack(

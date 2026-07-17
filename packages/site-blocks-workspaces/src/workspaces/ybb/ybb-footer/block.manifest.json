@@ -1,0 +1,45 @@
+{
+  "type": "YbbFooter",
+  "label": "YBB Footer",
+  "category": "ybb",
+  "fields": [
+    { "key": "pressHeading", "type": "textarea", "label": "Press heading" },
+    { "key": "logoWideUrl", "type": "image", "label": "Footer logo URL" },
+    { "key": "monogramUrl", "type": "image", "label": "Press monogram URL" },
+    { "key": "textureUrl", "type": "image", "label": "Footer texture URL" },
+    { "key": "cutoutImageUrl", "type": "image", "label": "Team cutout image URL" },
+    { "key": "email", "type": "text", "label": "Email address" },
+    { "key": "socialHandle", "type": "text", "label": "Social handle" },
+    { "key": "instagramUrl", "type": "link", "label": "Instagram URL" },
+    { "key": "tiktokUrl", "type": "link", "label": "TikTok URL" },
+    { "key": "copyrightTagline", "type": "text", "label": "Copyright tagline" },
+    {
+      "key": "navLinks",
+      "type": "array",
+      "label": "Footer links",
+      "itemLabel": "Link",
+      "itemFields": [
+        { "key": "label", "type": "text", "label": "Label" },
+        { "key": "href", "type": "link", "label": "URL" }
+      ]
+    }
+  ],
+  "defaults": {
+    "pressHeading": "The good stuff — awards, features & the brands we trust on your big day",
+    "logoWideUrl": "https://yourbridalbesties.co.uk/assets/images/branding/Artboard%2010%20copy.svg",
+    "monogramUrl": "https://yourbridalbesties.co.uk/assets/images/branding/Artboard%209%20copy.svg",
+    "textureUrl": "https://yourbridalbesties.co.uk/assets/images/branding/ybb_wallpaper-icons-pink-2.png",
+    "cutoutImageUrl": "https://yourbridalbesties.co.uk/assets/images/photos/footer-cutout.png",
+    "email": "BOOKINGS@YOURBRIDALBESTIES.CO.UK",
+    "socialHandle": "@YOURBRIDALBESTIESUK",
+    "instagramUrl": "https://instagram.com/YOURBRIDALBESTIESUK",
+    "tiktokUrl": "https://www.tiktok.com/@YOURBRIDALBESTIESUK",
+    "copyrightTagline": "Where glam meets girl gang.",
+    "navLinks": [
+      { "label": "About us", "href": "#about" },
+      { "label": "Services", "href": "#services" },
+      { "label": "Portfolio", "href": "#portfolio" },
+      { "label": "FAQ", "href": "#faq" }
+    ]
+  }
+}

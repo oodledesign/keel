@@ -1,0 +1,224 @@
+/* YBB Footer — ported from your-bridal-besties/src/components/Footer.astro */
+
+.ybbFooter {
+  position: relative;
+  background-color: var(--sb-canvas);
+  padding-bottom: var(--sb-space-8);
+  overflow: hidden;
+}
+
+.ybbFooter::before {
+  content: '';
+  position: absolute;
+  inset: -25%;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--ybb-footer-texture, none);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center top;
+  transform: rotate(14deg);
+  mix-blend-mode: lighten;
+}
+
+.ybbPress {
+  position: relative;
+  z-index: 1;
+  background: transparent;
+  padding-block: var(--sb-space-16);
+}
+
+.ybbPressInner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--sb-space-8);
+  text-align: center;
+  max-width: var(--sb-max);
+  margin-inline: auto;
+  padding-inline: var(--sb-space-6);
+}
+
+.ybbPressText {
+  font-family: var(--sb-font-display);
+  font-weight: var(--sb-font-weight-bold);
+  font-size: 1.125em;
+  max-width: 46em;
+  color: var(--sb-ink);
+}
+
+.ybbPressLogos {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--sb-space-6);
+  justify-content: center;
+  opacity: 0.5;
+}
+
+.ybbPressLogoPlaceholder {
+  width: 12.5em;
+  height: 3.5em;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px dashed var(--sb-border);
+}
+
+.ybbPressLogoPlaceholder img {
+  width: 3em;
+  height: auto;
+  opacity: 0.6;
+}
+
+.ybbFooterCardWrap {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-8);
+  position: relative;
+  z-index: 1;
+  max-width: var(--sb-max);
+  margin-inline: auto;
+  padding-inline: var(--sb-space-6);
+}
+
+.ybbFooterStage {
+  position: relative;
+  overflow: visible;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1.25em;
+}
+
+.ybbFooterCard {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1.2fr 1fr;
+  gap: var(--sb-space-16);
+  background-color: var(--sb-ink);
+  color: var(--sb-accent-contrast);
+  border: 1px solid var(--sb-border);
+  padding: var(--sb-space-12);
+  overflow: hidden;
+}
+
+.ybbFooterCard::before {
+  content: '';
+  position: absolute;
+  inset: -30%;
+  z-index: 0;
+  pointer-events: none;
+  background-image: var(--ybb-footer-texture, none);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: center top;
+  transform: rotate(14deg);
+  mix-blend-mode: screen;
+  mask-image: linear-gradient(
+    to right,
+    transparent 0%,
+    rgba(0, 0, 0, 0.12) 28%,
+    rgba(0, 0, 0, 0.55) 52%,
+    #000 78%
+  );
+}
+
+.ybbFooterCutout {
+  position: absolute;
+  right: max(var(--sb-space-6), calc(50% - 36em));
+  bottom: 0;
+  width: min(30em, 44vw);
+  height: auto;
+  z-index: 3;
+  pointer-events: none;
+  object-fit: contain;
+  object-position: bottom right;
+}
+
+.ybbFooterLinks {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--sb-space-8);
+}
+
+.ybbFooterLogo img {
+  width: 8.75em;
+  filter: brightness(0) invert(1);
+}
+
+.ybbFooterNav ul {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75em;
+  font-size: 1em;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.ybbFooterNav a {
+  color: inherit;
+  text-decoration: none;
+  transition: opacity 200ms ease;
+}
+
+.ybbFooterContact {
+  display: flex;
+  flex-direction: column;
+  gap: 0.65em;
+  font-size: 0.875em;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.ybbFooterContactLink {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65em;
+  width: fit-content;
+  color: inherit;
+  text-decoration: none;
+  transition: opacity 200ms ease;
+}
+
+.ybbFooterContactIcon {
+  width: 1.15em;
+  height: 1.15em;
+  flex-shrink: 0;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .ybbFooterNav a:hover,
+  .ybbFooterContactLink:hover {
+    opacity: 0.82;
+  }
+}
+
+.ybbFooterBottom {
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  font-size: 0.875em;
+  color: var(--sb-ink);
+}
+
+@media (max-width: 991px) {
+  .ybbFooterCard {
+    grid-template-columns: 1fr;
+  }
+
+  .ybbFooterBottom {
+    align-self: center;
+  }
+
+  .ybbFooterCutout {
+    right: 50%;
+    transform: translateX(50%);
+    width: min(22em, 72vw);
+    bottom: 0;
+  }
+}

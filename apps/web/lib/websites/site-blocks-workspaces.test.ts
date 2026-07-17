@@ -9,6 +9,7 @@ import {
   manifestToPuckConfig,
   resolveSiteBlocksConfig,
   templatePack,
+  ybbPack,
 } from '@kit/site-blocks-workspaces';
 
 describe('resolveSiteBlocksConfig', () => {
@@ -48,6 +49,19 @@ describe('resolveSiteBlocksConfig', () => {
 
   it('template pack is not registered in the workspace registry', () => {
     expect(getWorkspacePack('_template')).toBeNull();
+  });
+
+  it('ybb pack is registered for the oodle workspace slug', () => {
+    expect(getWorkspacePack('oodle')).toEqual(ybbPack);
+    expect(getWorkspacePack('ybb')).toBeNull();
+
+    const config = resolveSiteBlocksConfig('oodle');
+    expect(config.components.YbbHero).toBeTruthy();
+    expect(config.components.YbbFooter).toBeTruthy();
+    expect(
+      (config.categories as Record<string, { components: string[] }>).ybb
+        ?.components,
+    ).toEqual(['YbbHero', 'YbbFooter']);
   });
 
   it('extraComponents colliding with core types throw', () => {
