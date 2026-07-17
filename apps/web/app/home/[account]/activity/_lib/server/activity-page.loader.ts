@@ -2,19 +2,23 @@ import 'server-only';
 
 import { cache } from 'react';
 
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
-import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
+import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 import {
+  type ActivityAssignmentSummary,
+  type ActivityBlockListRow,
+  type ActivityLayoutMode,
+  type ActivityStatusFilter,
+  parseActivityFocusDate,
+  parseActivityLayoutMode,
   parseActivityStatusFilter,
   parseActivityView,
   resolveActivityDateRange,
+  resolveActivityLayoutDateRange,
   summarizeActivityAssignment,
-  type ActivityAssignmentSummary,
-  type ActivityBlockListRow,
-  type ActivityStatusFilter,
 } from '~/lib/activity/activity-history';
 import { getActivitySupabaseClient } from '~/lib/activity/activity-supabase';
 
@@ -160,6 +164,8 @@ export type ActivityPageData = {
   userId: string;
   dateFrom: string;
   dateTo: string;
+  focusDate: string;
+  layoutMode: ActivityLayoutMode;
   view: 'mine' | 'team';
   trackingEnabled: boolean;
   canViewTeamActivity: boolean;
@@ -184,6 +190,8 @@ async function loadActivityPageDataImpl(
   },
   viewInput?: string | null,
   statusInput?: string | null,
+  layoutInput?: string | null,
+  focusDateInput?: string | null,
 ): Promise<ActivityPageData> {
   const workspace = await loadTeamWorkspace(accountSlug);
   const accountId = workspace.account.id as string;
@@ -192,13 +200,19 @@ async function loadActivityPageDataImpl(
   const activityClient = getActivitySupabaseClient();
   const teamAccountsApi = createTeamAccountsApi(client);
 
-  const dateRange = resolveActivityDateRange({
-    from: dateInput?.from,
-    to: dateInput?.to,
-    range: dateInput?.range,
-  });
+  const layoutMode = parseActivityLayoutMode(layoutInput);
+  const focusDate = parseActivityFocusDate(focusDateInput);
+  const dateRange =
+    layoutMode === 'list'
+      ? resolveActivityDateRange({
+          from: dateInput?.from,
+          to: dateInput?.to,
+          range: dateInput?.range,
+        })
+      : resolveActivityLayoutDateRange(layoutMode, focusDate);
   const view = parseActivityView(viewInput);
-  const statusFilter = parseActivityStatusFilter(statusInput);
+  const statusFilter =
+    layoutMode === 'list' ? parseActivityStatusFilter(statusInput) : 'all';
 
   const blocksSelect = `
         id,
@@ -222,7 +236,10 @@ async function loadActivityPageDataImpl(
         clients:client_id ( id, display_name )
       `;
 
-  const fetchActivityBlocks = (filterUserId?: string, options?: { status?: ActivityStatusFilter }) => {
+  const fetchActivityBlocks = (
+    filterUserId?: string,
+    options?: { status?: ActivityStatusFilter },
+  ) => {
     const status = options?.status ?? statusFilter;
 
     let query = activityClient
@@ -325,6 +342,8 @@ async function loadActivityPageDataImpl(
     userId,
     dateFrom: dateRange.dateFrom,
     dateTo: dateRange.dateTo,
+    focusDate,
+    layoutMode,
     view: effectiveView,
     trackingEnabled:
       (privacyResult.data?.tracking_enabled as boolean | undefined) ?? false,

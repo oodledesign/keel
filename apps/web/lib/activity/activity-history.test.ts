@@ -1,23 +1,30 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  type ActivityBlockListRow,
   activityAppGroupKey,
   blockPageTitle,
   blockStatusLabel,
   blockUrlLabel,
+  filterBlocksForDay,
+  formatActivityFocusDateLabel,
   formatDuration,
   groupBlocksByApp,
   groupBlocksByDay,
+  parseActivityLayoutMode,
   parseActivityRange,
+  resolveActivityLayoutDateRange,
   resolveActivityDateRange,
   resolveRangeStart,
+  shiftActivityFocusDate,
   sortActivityAppGroups,
+  summarizeActivityWeekDays,
   sumActiveDuration,
-  type ActivityBlockListRow,
 } from '~/lib/activity/activity-history';
 
 function makeBlock(
-  overrides: Partial<ActivityBlockListRow> & Pick<ActivityBlockListRow, 'id' | 'startedAt'>,
+  overrides: Partial<ActivityBlockListRow> &
+    Pick<ActivityBlockListRow, 'id' | 'startedAt'>,
 ): ActivityBlockListRow {
   return {
     userId: 'user-1',
@@ -86,7 +93,9 @@ describe('activity history helpers', () => {
     expect(groups[1]?.appName).toBe('Google Chrome');
     expect(groups[1]?.blocks).toHaveLength(2);
     expect(groups[1]?.totalDurationSeconds).toBe(900);
-    expect(activityAppGroupKey(groups[1]!.blocks[0]!)).toBe('com.google.Chrome');
+    expect(activityAppGroupKey(groups[1]!.blocks[0]!)).toBe(
+      'com.google.Chrome',
+    );
   });
 
   it('groups browser blocks by domain when domain data is present', () => {
@@ -118,12 +127,12 @@ describe('activity history helpers', () => {
     ]);
 
     expect(groups).toHaveLength(2);
-    expect(groups.find((group) => group.domainLabel === 'linear.app')?.blocks).toHaveLength(
-      1,
-    );
-    expect(groups.find((group) => group.domainLabel === 'github.com')?.blocks).toHaveLength(
-      2,
-    );
+    expect(
+      groups.find((group) => group.domainLabel === 'linear.app')?.blocks,
+    ).toHaveLength(1);
+    expect(
+      groups.find((group) => group.domainLabel === 'github.com')?.blocks,
+    ).toHaveLength(2);
     expect(groups[0]?.sessionGroups.length).toBeGreaterThan(0);
   });
 
@@ -152,7 +161,9 @@ describe('activity history helpers', () => {
       }),
     ]);
 
-    const githubGroup = groups.find((group) => group.domainLabel === 'github.com');
+    const githubGroup = groups.find(
+      (group) => group.domainLabel === 'github.com',
+    );
     expect(githubGroup?.sessionGroups).toHaveLength(2);
     expect(
       githubGroup?.sessionGroups.find((session) => session.blocks.length === 2)
@@ -205,12 +216,20 @@ describe('activity history helpers', () => {
   it('derives block status labels', () => {
     expect(
       blockStatusLabel(
-        makeBlock({ id: 'a', startedAt: '2026-07-07T10:00:00.000Z', isExcluded: true }),
+        makeBlock({
+          id: 'a',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          isExcluded: true,
+        }),
       ),
     ).toBe('excluded');
     expect(
       blockStatusLabel(
-        makeBlock({ id: 'b', startedAt: '2026-07-07T10:00:00.000Z', isConfirmed: true }),
+        makeBlock({
+          id: 'b',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          isConfirmed: true,
+        }),
       ),
     ).toBe('confirmed');
     expect(
@@ -227,7 +246,11 @@ describe('activity history helpers', () => {
   it('sums active duration excluding excluded blocks', () => {
     expect(
       sumActiveDuration([
-        makeBlock({ id: 'a', startedAt: '2026-07-07T10:00:00.000Z', durationSeconds: 100 }),
+        makeBlock({
+          id: 'a',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          durationSeconds: 100,
+        }),
         makeBlock({
           id: 'b',
           startedAt: '2026-07-07T11:00:00.000Z',
@@ -286,5 +309,59 @@ describe('activity history helpers', () => {
       'Cursor',
       'Google Chrome',
     ]);
+  });
+
+  it('parses layout modes with day default', () => {
+    expect(parseActivityLayoutMode(null)).toBe('day');
+    expect(parseActivityLayoutMode('week')).toBe('week');
+    expect(parseActivityLayoutMode('list')).toBe('list');
+  });
+
+  it('resolves day and week layout date ranges', () => {
+    const now = new Date('2026-07-17T15:00:00.000Z');
+
+    expect(
+      resolveActivityLayoutDateRange('day', '2026-07-17', now),
+    ).toMatchObject({
+      dateFrom: '2026-07-17',
+      dateTo: '2026-07-17',
+    });
+
+    expect(
+      resolveActivityLayoutDateRange('week', '2026-07-17', now),
+    ).toMatchObject({
+      dateFrom: '2026-07-13',
+      dateTo: '2026-07-19',
+    });
+  });
+
+  it('summarizes week days and filters by day', () => {
+    const blocks = [
+      makeBlock({
+        id: 'a',
+        startedAt: '2026-07-17T10:00:00.000Z',
+        durationSeconds: 600,
+      }),
+      makeBlock({
+        id: 'b',
+        startedAt: '2026-07-16T10:00:00.000Z',
+        durationSeconds: 300,
+      }),
+    ];
+
+    expect(filterBlocksForDay(blocks, '2026-07-17')).toHaveLength(1);
+    expect(summarizeActivityWeekDays(blocks, '2026-07-17')).toHaveLength(7);
+    expect(
+      summarizeActivityWeekDays(blocks, '2026-07-17').find(
+        (day) => day.dayKey === '2026-07-17',
+      )?.durationSeconds,
+    ).toBe(600);
+  });
+
+  it('shifts focus dates and formats labels', () => {
+    expect(shiftActivityFocusDate('2026-07-17', -1)).toBe('2026-07-16');
+    expect(
+      formatActivityFocusDateLabel('2026-07-17', new Date('2026-07-17T12:00:00.000Z')),
+    ).toBe('Today');
   });
 });

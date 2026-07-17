@@ -3,7 +3,10 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
-import { getDefaultAccountPath, getTeamAccountAccess } from '../_lib/role-access';
+import {
+  getDefaultAccountPath,
+  getTeamAccountAccess,
+} from '../_lib/role-access';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { ActivityPageContent } from './_components/activity-page-content';
@@ -57,6 +60,8 @@ async function ActivityPage({ params, searchParams }: ActivityPageProps) {
     },
     readSearchParam(query.view),
     readSearchParam(query.status),
+    readSearchParam(query.layout),
+    readSearchParam(query.date),
   );
 
   return (

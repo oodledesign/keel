@@ -1,10 +1,12 @@
 import {
+  addDays,
   endOfDay,
   format,
   isToday,
   isYesterday,
   parseISO,
   startOfDay,
+  startOfWeek,
 } from 'date-fns';
 
 import {
@@ -24,6 +26,17 @@ export {
 } from './activity-app-context';
 
 export type ActivityRangeKey = 'today' | '7d' | '30d';
+
+export type ActivityLayoutMode = 'day' | 'week' | 'list';
+
+export type ActivityWeekDaySummary = {
+  dayKey: string;
+  label: string;
+  shortLabel: string;
+  isToday: boolean;
+  durationSeconds: number;
+  blockCount: number;
+};
 
 export type ActivityBlockStatus =
   | 'excluded'
@@ -121,9 +134,12 @@ export function sortActivityBlocks(
   return [...blocks].sort((left, right) => {
     switch (sortKey) {
       case 'app':
-        return factor * left.appName.localeCompare(right.appName, undefined, {
-          sensitivity: 'base',
-        });
+        return (
+          factor *
+          left.appName.localeCompare(right.appName, undefined, {
+            sensitivity: 'base',
+          })
+        );
       case 'duration':
         return factor * (left.durationSeconds - right.durationSeconds);
       case 'time':
@@ -147,12 +163,17 @@ export function sortActivityAppGroups(
         case 'app': {
           const leftLabel = left.domainLabel ?? left.appName;
           const rightLabel = right.domainLabel ?? right.appName;
-          return factor * leftLabel.localeCompare(rightLabel, undefined, {
-            sensitivity: 'base',
-          });
+          return (
+            factor *
+            leftLabel.localeCompare(rightLabel, undefined, {
+              sensitivity: 'base',
+            })
+          );
         }
         case 'duration':
-          return factor * (left.totalDurationSeconds - right.totalDurationSeconds);
+          return (
+            factor * (left.totalDurationSeconds - right.totalDurationSeconds)
+          );
         case 'time': {
           const leftTime = left.blocks[0]?.startedAt ?? '';
           const rightTime = right.blocks[0]?.startedAt ?? '';
@@ -168,7 +189,9 @@ export function sortActivityAppGroups(
     }));
 }
 
-export function parseActivityRange(value: string | null | undefined): ActivityRangeKey {
+export function parseActivityRange(
+  value: string | null | undefined,
+): ActivityRangeKey {
   if (value === 'today' || value === '30d') {
     return value;
   }
@@ -180,6 +203,164 @@ export function parseActivityView(
   value: string | null | undefined,
 ): 'mine' | 'team' {
   return value === 'team' ? 'team' : 'mine';
+}
+
+export function parseActivityLayoutMode(
+  value: string | null | undefined,
+): ActivityLayoutMode {
+  switch (value?.trim()) {
+    case 'week':
+      return 'week';
+    case 'list':
+      return 'list';
+    default:
+      return 'day';
+  }
+}
+
+const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
+
+export function parseActivityFocusDate(
+  value: string | null | undefined,
+  now = new Date(),
+): string {
+  const trimmed = value?.trim();
+
+  if (trimmed && ISO_DATE_PATTERN.test(trimmed)) {
+    return trimmed;
+  }
+
+  return format(now, 'yyyy-MM-dd');
+}
+
+export function resolveActivityLayoutDateRange(
+  layout: ActivityLayoutMode,
+  focusDate: string,
+  now = new Date(),
+): ActivityDateRange {
+  if (layout === 'list') {
+    return resolveActivityDateRange({}, now);
+  }
+
+  const anchor = parseISO(focusDate);
+
+  if (layout === 'day') {
+    const dayStart = startOfDay(anchor);
+    const dayEnd = endOfDay(anchor);
+
+    return {
+      dateFrom: focusDate,
+      dateTo: focusDate,
+      rangeStart: dayStart.toISOString(),
+      rangeEnd: dayEnd.toISOString(),
+    };
+  }
+
+  const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
+  const weekEnd = endOfDay(addDays(weekStart, 6));
+  const dateFrom = format(weekStart, 'yyyy-MM-dd');
+  const dateTo = format(weekEnd, 'yyyy-MM-dd');
+
+  return {
+    dateFrom,
+    dateTo,
+    rangeStart: weekStart.toISOString(),
+    rangeEnd: weekEnd.toISOString(),
+  };
+}
+
+export function formatActivityFocusDateLabel(
+  dayKey: string,
+  now = new Date(),
+): string {
+  const date = parseISO(`${dayKey}T12:00:00`);
+
+  if (isToday(date)) {
+    return 'Today';
+  }
+
+  if (isYesterday(date)) {
+    return 'Yesterday';
+  }
+
+  return format(date, 'EEEE, d MMMM');
+}
+
+export function shiftActivityFocusDate(dayKey: string, deltaDays: number): string {
+  const date = parseISO(`${dayKey}T12:00:00`);
+  return format(addDays(date, deltaDays), 'yyyy-MM-dd');
+}
+
+export function filterBlocksForDay(
+  blocks: ActivityBlockListRow[],
+  dayKey: string,
+): ActivityBlockListRow[] {
+  return blocks.filter(
+    (block) => format(parseISO(block.startedAt), 'yyyy-MM-dd') === dayKey,
+  );
+}
+
+export function summarizeActivityWeekDays(
+  blocks: ActivityBlockListRow[],
+  focusDate: string,
+): ActivityWeekDaySummary[] {
+  const anchor = parseISO(`${focusDate}T12:00:00`);
+  const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
+  const totals = new Map<string, { durationSeconds: number; blockCount: number }>();
+
+  for (const block of blocks) {
+    if (block.isExcluded) {
+      continue;
+    }
+
+    const dayKey = format(parseISO(block.startedAt), 'yyyy-MM-dd');
+    const existing = totals.get(dayKey) ?? { durationSeconds: 0, blockCount: 0 };
+    existing.durationSeconds += block.durationSeconds;
+    existing.blockCount += 1;
+    totals.set(dayKey, existing);
+  }
+
+  return Array.from({ length: 7 }, (_, index) => {
+    const date = addDays(weekStart, index);
+    const dayKey = format(date, 'yyyy-MM-dd');
+    const dayTotals = totals.get(dayKey) ?? {
+      durationSeconds: 0,
+      blockCount: 0,
+    };
+
+    return {
+      dayKey,
+      label: format(date, 'EEE d MMM'),
+      shortLabel: format(date, 'EEE'),
+      isToday: isToday(date),
+      durationSeconds: dayTotals.durationSeconds,
+      blockCount: dayTotals.blockCount,
+    };
+  });
+}
+
+export function blockTimelinePosition(
+  block: ActivityBlockListRow,
+  dayKey: string,
+): { topPercent: number; heightPercent: number } | null {
+  const blockDay = format(parseISO(block.startedAt), 'yyyy-MM-dd');
+
+  if (blockDay !== dayKey) {
+    return null;
+  }
+
+  const dayStart = startOfDay(parseISO(`${dayKey}T00:00:00`));
+  const dayEnd = endOfDay(dayStart);
+  const dayMs = dayEnd.getTime() - dayStart.getTime();
+  const startMs = parseISO(block.startedAt).getTime() - dayStart.getTime();
+  const endMs = parseISO(block.endedAt).getTime() - dayStart.getTime();
+  const topPercent = Math.max(0, Math.min(100, (startMs / dayMs) * 100));
+  const heightPercent = Math.max(
+    0.8,
+    Math.min(100 - topPercent, ((endMs - startMs) / dayMs) * 100),
+  );
+
+  return { topPercent, heightPercent };
 }
 
 export function resolveActivityDateRange(
@@ -260,7 +441,9 @@ export function formatTimeRange(startIso: string, endIso: string): string {
   return `${format(start, 'HH:mm')}–${format(end, 'HH:mm')}`;
 }
 
-export function blockStatusLabel(block: ActivityBlockListRow): ActivityBlockStatus {
+export function blockStatusLabel(
+  block: ActivityBlockListRow,
+): ActivityBlockStatus {
   if (block.isExcluded) {
     return 'excluded';
   }
@@ -328,7 +511,8 @@ export function blockPrimaryLabel(block: ActivityBlockListRow): string {
 
 export function sumActiveDuration(blocks: ActivityBlockListRow[]): number {
   return blocks.reduce(
-    (total, block) => (block.isExcluded ? total : total + block.durationSeconds),
+    (total, block) =>
+      block.isExcluded ? total : total + block.durationSeconds,
     0,
   );
 }
@@ -482,12 +666,14 @@ export function groupBlocksBySession(
       const sortedBlocks = sessionBlocks.sort((left, right) =>
         right.startedAt.localeCompare(left.startedAt),
       );
-      const earliest = sortedBlocks.reduce((min, block) =>
-        block.startedAt < min ? block.startedAt : min,
-      sortedBlocks[0]!.startedAt);
-      const latest = sortedBlocks.reduce((max, block) =>
-        block.endedAt > max ? block.endedAt : max,
-      sortedBlocks[0]!.endedAt);
+      const earliest = sortedBlocks.reduce(
+        (min, block) => (block.startedAt < min ? block.startedAt : min),
+        sortedBlocks[0]!.startedAt,
+      );
+      const latest = sortedBlocks.reduce(
+        (max, block) => (block.endedAt > max ? block.endedAt : max),
+        sortedBlocks[0]!.endedAt,
+      );
 
       return {
         sessionKey,
@@ -536,7 +722,9 @@ export function groupBlocksByApp(
         totalDurationSeconds: sumActiveDuration(sortedBlocks),
       };
     })
-    .sort((left, right) => right.totalDurationSeconds - left.totalDurationSeconds);
+    .sort(
+      (left, right) => right.totalDurationSeconds - left.totalDurationSeconds,
+    );
 }
 
 export type ActivityReportRow = {
@@ -665,7 +853,11 @@ export function aggregateActivityByApp(
   });
 }
 
-export type ActivityStatusFilter = 'all' | 'needs_review' | 'unassigned' | 'confirmed';
+export type ActivityStatusFilter =
+  | 'all'
+  | 'needs_review'
+  | 'unassigned'
+  | 'confirmed';
 
 export function parseActivityStatusFilter(
   value: string | null | undefined,
@@ -793,7 +985,9 @@ export function groupBlocksByDay(
       return {
         dayKey,
         label,
-        blocks: dayBlocks.sort((a, b) => b.startedAt.localeCompare(a.startedAt)),
+        blocks: dayBlocks.sort((a, b) =>
+          b.startedAt.localeCompare(a.startedAt),
+        ),
         totalDurationSeconds: sumActiveDuration(dayBlocks),
       };
     });

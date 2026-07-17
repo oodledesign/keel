@@ -16,17 +16,12 @@ import {
   ChevronDown,
   ChevronRight,
   Loader2,
-  Sparkles,
   Settings2,
+  Sparkles,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@kit/ui/popover';
 import {
   Select,
   SelectContent,
@@ -34,6 +29,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 import {
   Table,
   TableBody,
@@ -43,12 +39,11 @@ import {
   TableRow,
 } from '@kit/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@kit/ui/tabs';
-import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
 import { AnalyticsDateRangePicker } from '~/components/date-range/analytics-date-range-picker';
-import type { DateRangeSelection } from '~/lib/date-range/analytics-date-range';
+import pathsConfig from '~/config/paths.config';
+import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
   applyActivitySuggestionsAction,
   suggestActivityAssignmentsAction,
@@ -57,23 +52,27 @@ import {
   bulkExcludeActivityBlocksAction,
   bulkUpdateActivityBlocksAction,
   createActivityRuleAction,
-  excludeActivityBlockAction,
-  updateActivityBlockAction,
 } from '~/home/[account]/activity/_lib/server/activity-blocks-actions';
 import type { ActivityPageData } from '~/home/[account]/activity/_lib/server/activity-page.loader';
-import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import {
+  type ActivityRuleMatch,
   activityRuleMatchKey,
   blockContextLabel,
   findActivityRuleMatchByKey,
-  getActivityRuleMatchOptions,
   intersectActivityRuleMatchOptions,
   parseActivityAppContext,
   resolveIdeRepoName,
-  type ActivityRuleMatch,
 } from '~/lib/activity/activity-app-context';
 import { faviconUrlForDomain } from '~/lib/activity/activity-app-icons';
 import {
+  type ActivityAppGroup,
+  type ActivityBlockListRow,
+  type ActivityDayGroup,
+  type ActivitySessionGroup,
+  type ActivitySortDir,
+  type ActivitySortKey,
+  type ActivityLayoutMode,
+  type ActivityStatusFilter,
   aggregateActivityByApp,
   blockPageTitle,
   blockUrlLabel,
@@ -82,54 +81,26 @@ import {
   groupBlocksByApp,
   groupBlocksByDay,
   sortActivityAppGroups,
+  shiftActivityFocusDate,
   sumActiveDuration,
   sumTodayActiveDuration,
-  type ActivityAppGroup,
-  type ActivityBlockListRow,
-  type ActivityDayGroup,
-  type ActivitySessionGroup,
-  type ActivitySortDir,
-  type ActivitySortKey,
-  type ActivityStatusFilter,
 } from '~/lib/activity/activity-history';
+import type { DateRangeSelection } from '~/lib/date-range/analytics-date-range';
 
 import { ActivityAppIcon } from './activity-app-icon';
+import {
+  ActivityBlockAssignmentCell,
+  ActivityRememberRuleSelector,
+  type WorkClassification,
+} from './activity-block-assignment-cell';
+import { ActivityDayView } from './activity-day-view';
+import { ActivityLayoutNav } from './activity-layout-nav';
 import { ActivityReviewDigest } from './activity-review-digest';
+import { ActivityWeekView } from './activity-week-view';
 
 type Props = {
   data: ActivityPageData;
 };
-
-type WorkClassification = 'billable' | 'internal' | 'neutral';
-
-const WORK_CLASSIFICATION_LABELS: Record<WorkClassification, string> = {
-  neutral: 'Neutral',
-  billable: 'Billable',
-  internal: 'Internal',
-};
-
-function WorkClassificationBadge({
-  classification,
-}: {
-  classification?: WorkClassification;
-}) {
-  if (!classification || classification === 'neutral') {
-    return null;
-  }
-
-  return (
-    <span
-      className={cn(
-        'inline-flex shrink-0 rounded px-1 py-0.5 text-[9px] font-medium uppercase tracking-wide',
-        classification === 'billable'
-          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300'
-          : 'bg-sky-500/15 text-sky-700 dark:text-sky-300',
-      )}
-    >
-      {WORK_CLASSIFICATION_LABELS[classification]}
-    </span>
-  );
-}
 
 function domainFromUrl(url: string): string | null {
   try {
@@ -143,7 +114,11 @@ function ActivityUrlCell({ block }: { block: ActivityBlockListRow }) {
   const urlLabel = blockUrlLabel(block);
 
   if (!urlLabel) {
-    return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+    return (
+      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+        —
+      </span>
+    );
   }
 
   const domain =
@@ -256,53 +231,6 @@ function SortableTableHead({
   );
 }
 
-function ActivityAssignmentDisplay({
-  block,
-  interactive = false,
-}: {
-  block: ActivityBlockListRow;
-  interactive?: boolean;
-}) {
-  const hasAssignment = Boolean(block.clientName || block.projectName);
-
-  if (!hasAssignment) {
-    return (
-      <span
-        className={cn(
-          'text-xs text-[var(--workspace-shell-text-muted)]',
-          interactive && 'underline-offset-2 group-hover:underline',
-        )}
-      >
-        Assign client or project
-      </span>
-    );
-  }
-
-  return (
-    <div className="min-w-0">
-      <span
-        className="flex items-center gap-1 truncate text-xs font-medium text-[var(--workspace-shell-text)]"
-        title={block.clientName ?? undefined}
-      >
-        {block.isConfirmed ? (
-          <Check
-            className="h-3 w-3 shrink-0 text-emerald-600 dark:text-emerald-400"
-            aria-label="Confirmed"
-          />
-        ) : null}
-        {block.clientName ?? 'No client'}
-        <WorkClassificationBadge classification={block.workClassification} />
-      </span>
-      <span
-        className="block truncate text-[10px] text-[var(--workspace-shell-text-muted)]"
-        title={block.projectName ?? undefined}
-      >
-        {block.projectName ?? 'No project'}
-      </span>
-    </div>
-  );
-}
-
 function buildActivityUrl(
   accountSlug: string,
   params: {
@@ -310,6 +238,8 @@ function buildActivityUrl(
     to: string;
     view: 'mine' | 'team';
     status?: ActivityStatusFilter;
+    layout?: ActivityLayoutMode;
+    date?: string;
   },
 ) {
   const search = new URLSearchParams({
@@ -317,6 +247,14 @@ function buildActivityUrl(
     to: params.to,
     view: params.view,
   });
+
+  if (params.layout) {
+    search.set('layout', params.layout);
+  }
+
+  if (params.date) {
+    search.set('date', params.date);
+  }
 
   if (params.status && params.status !== 'all') {
     search.set('status', params.status);
@@ -366,11 +304,18 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
     const file = appContext.detail?.trim() ?? null;
     const primary = repo ?? workspace ?? file;
     const secondary = repo
-      ? file ?? (workspace && workspace.toLowerCase() !== repo.toLowerCase() ? workspace : null)
+      ? (file ??
+        (workspace && workspace.toLowerCase() !== repo.toLowerCase()
+          ? workspace
+          : null))
       : file;
 
     if (!primary) {
-      return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+      return (
+        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+          —
+        </span>
+      );
     }
 
     return (
@@ -394,7 +339,11 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
   }
 
   if (!appContext?.item) {
-    return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+    return (
+      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+        —
+      </span>
+    );
   }
 
   return (
@@ -414,338 +363,15 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
   );
 }
 
-function ActivityRememberRuleSelector({
-  options,
-  selectedKey,
-  onSelectedKeyChange,
-  rememberRule,
-  onRememberRuleChange,
-  disabled = false,
-}: {
-  options: ActivityRuleMatch[];
-  selectedKey: string;
-  onSelectedKeyChange: (key: string) => void;
-  rememberRule: boolean;
-  onRememberRuleChange: (checked: boolean) => void;
-  disabled?: boolean;
-}) {
-  const selectedRule = findActivityRuleMatchByKey(options, selectedKey) ?? options[0];
-
-  if (options.length === 0) {
-    return null;
-  }
-
-  return (
-    <div className="space-y-2">
-      <label className="flex items-start gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
-        <Checkbox
-          checked={rememberRule}
-          onCheckedChange={(checked) => onRememberRuleChange(checked === true)}
-          disabled={disabled}
-        />
-        <span>Remember for future sessions</span>
-      </label>
-      {rememberRule ? (
-        options.length > 1 ? (
-          <Select
-            value={selectedKey}
-            onValueChange={onSelectedKeyChange}
-            disabled={disabled}
-          >
-            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
-              <SelectValue placeholder="Choose what to remember" />
-            </SelectTrigger>
-            <SelectContent>
-              {options.map((option) => (
-                <SelectItem
-                  key={activityRuleMatchKey(option)}
-                  value={activityRuleMatchKey(option)}
-                >
-                  <span className="block truncate">
-                    {option.description}: {option.label}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        ) : (
-          <p className="pl-6 text-xs text-[var(--workspace-shell-text-muted)]">
-            {selectedRule?.description}:{' '}
-            <strong className="text-[var(--workspace-shell-text)]">
-              {selectedRule?.label}
-            </strong>
-          </p>
-        )
-      ) : null}
-    </div>
-  );
-}
-
-function ActivityBlockAssignmentCell({
-  block,
-  canEdit,
-  projects,
-  clients,
-  accountId,
-  accountSlug,
-  onUpdated,
-}: {
-  block: ActivityBlockListRow;
-  canEdit: boolean;
-  projects: ActivityPageData['projects'];
-  clients: ActivityPageData['clients'];
-  accountId: string;
-  accountSlug: string;
-  onUpdated: (block: ActivityBlockListRow) => void;
-}) {
-  const [open, setOpen] = useState(false);
-  const [pending, startTransition] = useTransition();
-  const [projectId, setProjectId] = useState(block.projectId ?? 'none');
-  const [clientId, setClientId] = useState(block.clientId ?? 'none');
-  const [workClassification, setWorkClassification] = useState<WorkClassification>(
-    block.workClassification ?? 'neutral',
-  );
-  const [rememberRule, setRememberRule] = useState(true);
-  const ruleOptions = useMemo(
-    () => getActivityRuleMatchOptions(block),
-    [block],
-  );
-  const [selectedRuleKey, setSelectedRuleKey] = useState('');
-  const selectedRule = findActivityRuleMatchByKey(ruleOptions, selectedRuleKey);
-
-  useEffect(() => {
-    if (!open) {
-      return;
-    }
-
-    const nextOptions = getActivityRuleMatchOptions(block);
-    const preferredDomain = nextOptions.find((option) => option.level === 'domain');
-    const defaultOption = preferredDomain ?? nextOptions[0];
-
-    if (defaultOption) {
-      setSelectedRuleKey(activityRuleMatchKey(defaultOption));
-    }
-  }, [open, block]);
-
-  async function maybeCreateRule(
-    nextProjectId: string | null,
-    nextClientId: string | null,
-  ): Promise<boolean> {
-    if (!rememberRule || !selectedRule) {
-      return false;
-    }
-
-    if (!nextProjectId && !nextClientId) {
-      return false;
-    }
-
-    const result = await createActivityRuleAction({
-      accountId,
-      accountSlug,
-      matchType: selectedRule.matchType,
-      matchValue: selectedRule.matchValue,
-      projectId: nextProjectId,
-      clientId: nextClientId,
-      backfill: true,
-    });
-
-    if (!result.success) {
-      toast.error(result.error ?? 'Could not save rule');
-      return false;
-    }
-
-    if (result.backfilled && result.backfilled > 0) {
-      toast.success(
-        `Saved rule for ${selectedRule.label} and updated ${result.backfilled} matching sessions`,
-      );
-    } else {
-      toast.success(`Saved rule for ${selectedRule.label}`);
-    }
-
-    if (result.error) {
-      toast.warning(result.error);
-    }
-
-    return true;
-  }
-
-  function runAction(
-    action: () => Promise<{ success: boolean; error?: string }>,
-    nextBlock: ActivityBlockListRow,
-    options?: {
-      projectId?: string | null;
-      clientId?: string | null;
-    },
-  ) {
-    startTransition(async () => {
-      const result = await action();
-
-      if (!result.success) {
-        toast.error(result.error ?? 'Update failed');
-        return;
-      }
-
-      const ruleSaved = await maybeCreateRule(
-        options?.projectId ?? nextBlock.projectId,
-        options?.clientId ?? nextBlock.clientId,
-      );
-
-      if (!ruleSaved) {
-        toast.success('Activity updated');
-      }
-
-      onUpdated(nextBlock);
-      setOpen(false);
-    });
-  }
-
-  if (!canEdit || block.isExcluded) {
-    return (
-      <ActivityAssignmentDisplay block={block} />
-    );
-  }
-
-  return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <button
-          type="button"
-          className="group min-w-0 max-w-full rounded-md px-1 py-0.5 text-left transition-colors hover:bg-[var(--workspace-control-surface)]/60"
-          disabled={pending}
-        >
-          <ActivityAssignmentDisplay block={block} interactive />
-        </button>
-      </PopoverTrigger>
-      <PopoverContent align="start" className="w-80 space-y-3 p-3">
-        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-          Assign block
-        </p>
-        <div className="space-y-2">
-          <Select value={clientId} onValueChange={setClientId} disabled={pending}>
-            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
-              <SelectValue placeholder="Client" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No client</SelectItem>
-              {clients.map((client) => (
-                <SelectItem key={client.id} value={client.id}>
-                  {client.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select value={projectId} onValueChange={setProjectId} disabled={pending}>
-            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
-              <SelectValue placeholder="Project" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">No project</SelectItem>
-              {projects.map((project) => (
-                <SelectItem key={project.id} value={project.id}>
-                  {project.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Select
-            value={workClassification}
-            onValueChange={(value) =>
-              setWorkClassification(value as WorkClassification)
-            }
-            disabled={pending}
-          >
-            <SelectTrigger className="h-8 bg-[var(--workspace-control-surface)] text-xs">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="neutral">Neutral</SelectItem>
-              <SelectItem value="billable">Billable</SelectItem>
-              <SelectItem value="internal">Internal</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <ActivityRememberRuleSelector
-          options={ruleOptions}
-          selectedKey={selectedRuleKey}
-          onSelectedKeyChange={setSelectedRuleKey}
-          rememberRule={rememberRule}
-          onRememberRuleChange={setRememberRule}
-          disabled={pending}
-        />
-        <div className="flex gap-2">
-          <Button
-            type="button"
-            size="sm"
-            className="ozer-gradient-btn flex-1"
-            disabled={pending}
-            onClick={() =>
-              runAction(
-                () =>
-                  updateActivityBlockAction({
-                    accountId,
-                    accountSlug,
-                    blockId: block.id,
-                    projectId: projectId === 'none' ? null : projectId,
-                    clientId: clientId === 'none' ? null : clientId,
-                    isConfirmed: true,
-                    workClassification,
-                  }),
-                {
-                  ...block,
-                  projectId: projectId === 'none' ? null : projectId,
-                  clientId: clientId === 'none' ? null : clientId,
-                  projectName:
-                    projects.find((project) => project.id === projectId)?.name ??
-                    null,
-                  clientName:
-                    clients.find((client) => client.id === clientId)?.name ?? null,
-                  isConfirmed: true,
-                  workClassification,
-                },
-                {
-                  projectId: projectId === 'none' ? null : projectId,
-                  clientId: clientId === 'none' ? null : clientId,
-                },
-              )
-            }
-          >
-            {pending ? (
-              <Loader2 className="mr-1.5 h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <Check className="mr-1.5 h-3.5 w-3.5" />
-            )}
-            Confirm
-          </Button>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            disabled={pending}
-            onClick={() =>
-              runAction(
-                () =>
-                  excludeActivityBlockAction({
-                    accountId,
-                    accountSlug,
-                    blockId: block.id,
-                  }),
-                { ...block, isExcluded: true },
-              )
-            }
-          >
-            <Ban className="h-3.5 w-3.5" />
-          </Button>
-        </div>
-      </PopoverContent>
-    </Popover>
-  );
-}
-
 function AppDetailCell({ block }: { block: ActivityBlockListRow }) {
   const appContext = parseActivityAppContext(block);
 
   if (!appContext?.detail) {
-    return <span className="text-xs text-[var(--workspace-shell-text-muted)]">—</span>;
+    return (
+      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+        —
+      </span>
+    );
   }
 
   return (
@@ -814,7 +440,7 @@ function ActivityBlockTableRow({
         <TableCell
           className={cn(
             'max-w-[9rem] py-2 align-top',
-            nested ? 'pl-8 pr-3' : 'px-3',
+            nested ? 'pr-3 pl-8' : 'px-3',
           )}
         >
           <AppNameCell block={block} nested={nested} />
@@ -822,10 +448,10 @@ function ActivityBlockTableRow({
       ) : (
         <TableCell className="max-w-[9rem] px-3 py-2 align-top" aria-hidden />
       )}
-      <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-medium text-[var(--workspace-shell-text)]">
+      <TableCell className="px-3 py-2 align-top text-xs font-medium whitespace-nowrap text-[var(--workspace-shell-text)]">
         {formatDuration(block.durationSeconds)}
       </TableCell>
-      <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
+      <TableCell className="px-3 py-2 align-top text-xs whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
         {formatTimeRange(block.startedAt, block.endedAt)}
       </TableCell>
       <TableCell className="max-w-[8rem] px-3 py-2 align-top">
@@ -927,7 +553,9 @@ function ActivitySessionGroupRows({
   onUpdated: (block: ActivityBlockListRow) => void;
 }) {
   const representativeBlock = sessionGroup.blocks[0]!;
-  const selectableBlocks = sessionGroup.blocks.filter((block) => !block.isExcluded);
+  const selectableBlocks = sessionGroup.blocks.filter(
+    (block) => !block.isExcluded,
+  );
   const selectedCount = selectableBlocks.filter((block) =>
     selectedBlockIds.has(block.id),
   ).length;
@@ -992,13 +620,16 @@ function ActivitySessionGroupRows({
             ) : (
               <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
             )}
-            <SessionUrlCell block={representativeBlock} label={sessionGroup.label} />
+            <SessionUrlCell
+              block={representativeBlock}
+              label={sessionGroup.label}
+            />
           </button>
         </TableCell>
-        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-semibold text-[var(--workspace-shell-text)]">
+        <TableCell className="px-3 py-2 align-top text-xs font-semibold whitespace-nowrap text-[var(--workspace-shell-text)]">
           {formatDuration(sessionGroup.totalDurationSeconds)}
         </TableCell>
-        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
+        <TableCell className="px-3 py-2 align-top text-xs whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
           {formatTimeRange(sessionGroup.startedAt, sessionGroup.endedAt)}
         </TableCell>
         <TableCell
@@ -1141,18 +772,19 @@ function ActivityAppGroupRows({
             />
           </button>
         </TableCell>
-        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs font-semibold text-[var(--workspace-shell-text)]">
+        <TableCell className="px-3 py-2 align-top text-xs font-semibold whitespace-nowrap text-[var(--workspace-shell-text)]">
           {formatDuration(appGroup.totalDurationSeconds)}
         </TableCell>
-        <TableCell className="whitespace-nowrap px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]">
+        <TableCell className="px-3 py-2 align-top text-xs whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
           {sessionLabel}
         </TableCell>
         <TableCell
           colSpan={showMember ? (selectable ? 7 : 6) : selectable ? 6 : 5}
           className="px-3 py-2 align-top text-xs text-[var(--workspace-shell-text-muted)]"
         >
-          {appGroup.sessionGroups.length} URL{appGroup.sessionGroups.length === 1 ? '' : 's'} ·{' '}
-          {sessionLabel} · click to {expanded ? 'collapse' : 'expand'}
+          {appGroup.sessionGroups.length} URL
+          {appGroup.sessionGroups.length === 1 ? '' : 's'} · {sessionLabel} ·
+          click to {expanded ? 'collapse' : 'expand'}
         </TableCell>
       </TableRow>
       {expanded
@@ -1165,7 +797,9 @@ function ActivityAppGroupRows({
                 `${appGroup.appKey}::${sessionGroup.sessionKey}`,
               )}
               onToggle={() =>
-                onToggleSession(`${appGroup.appKey}::${sessionGroup.sessionKey}`)
+                onToggleSession(
+                  `${appGroup.appKey}::${sessionGroup.sessionKey}`,
+                )
               }
               canEdit={canEdit}
               showMember={showMember}
@@ -1219,10 +853,13 @@ function ActivityDayTable({
   onUpdated: (block: ActivityBlockListRow) => void;
 }) {
   const appGroups = useMemo(
-    () => sortActivityAppGroups(groupBlocksByApp(group.blocks), sortKey, sortDir),
+    () =>
+      sortActivityAppGroups(groupBlocksByApp(group.blocks), sortKey, sortDir),
     [group.blocks, sortDir, sortKey],
   );
-  const [expandedApps, setExpandedApps] = useState<Set<string>>(() => new Set());
+  const [expandedApps, setExpandedApps] = useState<Set<string>>(
+    () => new Set(),
+  );
   const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
     () => new Set(),
   );
@@ -1387,7 +1024,9 @@ function ActivityBulkActionBar({
     useState<WorkClassification>('neutral');
   const [rememberRule, setRememberRule] = useState(true);
   const [selectedRuleKey, setSelectedRuleKey] = useState(() => {
-    const preferredDomain = ruleOptions.find((option) => option.level === 'domain');
+    const preferredDomain = ruleOptions.find(
+      (option) => option.level === 'domain',
+    );
     const defaultOption = preferredDomain ?? ruleOptions[0];
     return defaultOption ? activityRuleMatchKey(defaultOption) : '';
   });
@@ -1599,10 +1238,7 @@ export function ActivityPageContent({ data }: Props) {
   }, [data.blocks]);
 
   const selectable = data.canEdit;
-  const selectedIds = useMemo(
-    () => [...selectedBlockIds],
-    [selectedBlockIds],
-  );
+  const selectedIds = useMemo(() => [...selectedBlockIds], [selectedBlockIds]);
   const selectedBlocks = useMemo(
     () => rows.filter((row) => selectedBlockIds.has(row.id)),
     [rows, selectedBlockIds],
@@ -1655,6 +1291,8 @@ export function ActivityPageContent({ data }: Props) {
     to: data.dateTo,
     view: data.view,
     status: 'needs_review',
+    layout: 'list',
+    date: data.focusDate,
   });
   const [suggestPending, startSuggestTransition] = useTransition();
 
@@ -1801,6 +1439,8 @@ export function ActivityPageContent({ data }: Props) {
     to?: string;
     view?: 'mine' | 'team';
     status?: ActivityStatusFilter;
+    layout?: ActivityLayoutMode;
+    date?: string;
   }) {
     startTransition(() => {
       router.push(
@@ -1809,14 +1449,23 @@ export function ActivityPageContent({ data }: Props) {
           to: next.to ?? data.dateTo,
           view: next.view ?? data.view,
           status: next.status ?? data.statusFilter,
+          layout: next.layout ?? data.layoutMode,
+          date: next.date ?? data.focusDate,
         }),
       );
     });
   }
 
-  function onDateRangeApply(from: string, to: string, _selection: DateRangeSelection) {
+  function onDateRangeApply(
+    from: string,
+    to: string,
+    _selection: DateRangeSelection,
+  ) {
     navigate({ from, to });
   }
+
+  const isListLayout = data.layoutMode === 'list';
+  const layoutTotalDuration = useMemo(() => sumActiveDuration(rows), [rows]);
 
   return (
     <div
@@ -1825,30 +1474,36 @@ export function ActivityPageContent({ data }: Props) {
         isPending && 'pointer-events-none opacity-60',
       )}
     >
-      <div className="grid gap-3 sm:grid-cols-2">
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">Today</p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
-            {formatDuration(todayDuration)}
-          </p>
+      {isListLayout ? (
+        <div className="grid gap-3 sm:grid-cols-2">
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Today
+            </p>
+            <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
+              {formatDuration(todayDuration)}
+            </p>
+          </div>
+          <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Selected range
+            </p>
+            <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
+              {formatDuration(activeDuration)}
+            </p>
+          </div>
         </div>
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Selected range
-          </p>
-          <p className="mt-1 text-2xl font-semibold text-[var(--workspace-shell-text)]">
-            {formatDuration(activeDuration)}
-          </p>
-        </div>
-      </div>
+      ) : null}
 
-      <ActivityReviewDigest
-        assignment={data.assignment}
-        topUnassignedApps={topUnassignedApps}
-        reviewHref={reviewHref}
-        onSuggest={data.canEdit ? onSuggestAssignments : undefined}
-        suggestPending={suggestPending}
-      />
+      {isListLayout ? (
+        <ActivityReviewDigest
+          assignment={data.assignment}
+          topUnassignedApps={topUnassignedApps}
+          reviewHref={reviewHref}
+          onSuggest={data.canEdit ? onSuggestAssignments : undefined}
+          suggestPending={suggestPending}
+        />
+      ) : null}
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         <Tabs
@@ -1866,12 +1521,14 @@ export function ActivityPageContent({ data }: Props) {
         </Tabs>
 
         <div className="flex flex-wrap items-center gap-2">
-          <AnalyticsDateRangePicker
-            fromIso={data.dateFrom}
-            toIso={data.dateTo}
-            isLoading={isPending}
-            onApply={onDateRangeApply}
-          />
+          {isListLayout ? (
+            <AnalyticsDateRangePicker
+              fromIso={data.dateFrom}
+              toIso={data.dateTo}
+              isLoading={isPending}
+              onApply={onDateRangeApply}
+            />
+          ) : null}
           <Button asChild type="button" size="sm" variant="outline">
             <Link href={reportsPath}>
               <BarChart3 className="mr-2 h-4 w-4" />
@@ -1887,33 +1544,57 @@ export function ActivityPageContent({ data }: Props) {
         </div>
       </div>
 
-      <Tabs
-        value={data.statusFilter}
-        onValueChange={(value) =>
+      <ActivityLayoutNav
+        layoutMode={data.layoutMode}
+        focusDate={data.focusDate}
+        dateFrom={data.dateFrom}
+        dateTo={data.dateTo}
+        totalDurationSeconds={layoutTotalDuration}
+        isPending={isPending}
+        onLayoutChange={(layout) =>
           navigate({
-            status: value as ActivityStatusFilter,
+            layout,
+            status: layout === 'list' ? data.statusFilter : 'all',
           })
         }
-      >
-        <TabsList className="bg-[var(--workspace-shell-panel)]">
-          <TabsTrigger value="all">
-            All ({data.assignment.totalActiveCount}
-            {countSuffix})
-          </TabsTrigger>
-          <TabsTrigger value="needs_review">
-            Needs review ({data.assignment.needsReviewCount}
-            {countSuffix})
-          </TabsTrigger>
-          <TabsTrigger value="unassigned">
-            Unassigned ({data.assignment.unassignedCount}
-            {countSuffix})
-          </TabsTrigger>
-          <TabsTrigger value="confirmed">
-            Confirmed ({data.assignment.confirmedCount}
-            {countSuffix})
-          </TabsTrigger>
-        </TabsList>
-      </Tabs>
+        onFocusDateChange={(date) => navigate({ date, layout: data.layoutMode })}
+        onShiftFocusDate={(deltaDays) =>
+          navigate({
+            date: shiftActivityFocusDate(data.focusDate, deltaDays),
+            layout: data.layoutMode,
+          })
+        }
+      />
+
+      {isListLayout ? (
+        <Tabs
+          value={data.statusFilter}
+          onValueChange={(value) =>
+            navigate({
+              status: value as ActivityStatusFilter,
+            })
+          }
+        >
+          <TabsList className="bg-[var(--workspace-shell-panel)]">
+            <TabsTrigger value="all">
+              All ({data.assignment.totalActiveCount}
+              {countSuffix})
+            </TabsTrigger>
+            <TabsTrigger value="needs_review">
+              Needs review ({data.assignment.needsReviewCount}
+              {countSuffix})
+            </TabsTrigger>
+            <TabsTrigger value="unassigned">
+              Unassigned ({data.assignment.unassignedCount}
+              {countSuffix})
+            </TabsTrigger>
+            <TabsTrigger value="confirmed">
+              Confirmed ({data.assignment.confirmedCount}
+              {countSuffix})
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
 
       {data.blockLimitReached ? (
         <p className="rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -1943,7 +1624,7 @@ export function ActivityPageContent({ data }: Props) {
         </div>
       ) : null}
 
-      {rows.length === 0 ? (
+      {rows.length === 0 && data.layoutMode === 'list' ? (
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-center">
           <Activity className="mx-auto h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
           <p className="mt-3 text-lg font-medium text-[var(--workspace-shell-text)]">
@@ -1955,7 +1636,28 @@ export function ActivityPageContent({ data }: Props) {
               : 'Enable tracking in settings, then upload from KeelAssistant.'}
           </p>
         </div>
-      ) : (
+      ) : data.layoutMode === 'day' ? (
+        <ActivityDayView
+          blocks={rows}
+          focusDate={data.focusDate}
+          showMember={data.view === 'team'}
+          canEdit={data.canEdit}
+          projects={data.projects}
+          clients={data.clients}
+          accountId={data.accountId}
+          accountSlug={data.accountSlug}
+          onUpdated={updateBlock}
+        />
+      ) : data.layoutMode === 'week' ? (
+        <ActivityWeekView
+          data={data}
+          blocks={rows}
+          focusDate={data.focusDate}
+          onSelectDay={(dayKey) =>
+            navigate({ layout: 'day', date: dayKey })
+          }
+        />
+      ) : rows.length === 0 ? null : (
         <div className="space-y-5 pb-4">
           {dayGroups.map((group) => (
             <ActivityDayTable
