@@ -5,6 +5,7 @@ import type { CSSProperties } from 'react';
 import {
   Render,
   type ResolvableStyleTokens,
+  SiteStudioFontFaces,
   type SiteBlockLayoutPreset,
   WireframeModeProvider,
   buildConfig,
@@ -68,6 +69,9 @@ export function WireframePuckPage({
 
   return (
     <WireframeModeProvider wireframe={wireframe}>
+      {!wireframe && styleTokens ? (
+        <SiteStudioFontFaces tokens={styleTokens} />
+      ) : null}
       <div
         className={cn(
           'sb-root overflow-hidden',

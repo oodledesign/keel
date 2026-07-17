@@ -18,6 +18,7 @@ const ALLOWED_MIME = new Set([
   'image/webp',
   'image/gif',
   'image/avif',
+  'image/svg+xml',
 ]);
 const MIME_TO_EXT: Record<string, string> = {
   'image/jpeg': 'jpg',
@@ -25,6 +26,7 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/webp': 'webp',
   'image/gif': 'gif',
   'image/avif': 'avif',
+  'image/svg+xml': 'svg',
 };
 
 async function canUpload(userId: string, accountId: string): Promise<boolean> {

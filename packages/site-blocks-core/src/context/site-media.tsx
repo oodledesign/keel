@@ -71,13 +71,23 @@ export function SiteImageField({
         placeholder="https://…"
       />
       {upload ? (
-        <input
-          type="file"
-          accept="image/*"
-          disabled={uploading}
-          onChange={(event) => void onFile(event.target.files?.[0] ?? null)}
-        />
-      ) : null}
+        <label className="flex cursor-pointer flex-col gap-1">
+          <span className="text-xs text-[var(--sb-ink-muted,#6b6862)]">
+            {uploading ? 'Uploading…' : 'Upload image (PNG, JPG, WebP, AVIF, SVG — max 5 MB)'}
+          </span>
+          <input
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif,image/avif,image/svg+xml"
+            disabled={uploading}
+            className="text-xs"
+            onChange={(event) => void onFile(event.target.files?.[0] ?? null)}
+          />
+        </label>
+      ) : (
+        <p className="text-xs text-[var(--sb-ink-muted,#6b6862)]">
+          Paste a URL above, or open this page in Site Studio to upload.
+        </p>
+      )}
       {error ? <p className="text-xs text-red-600">{error}</p> : null}
     </div>
   );

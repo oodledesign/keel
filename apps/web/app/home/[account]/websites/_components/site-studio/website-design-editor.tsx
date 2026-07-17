@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState, useTransition, useEffect } from 'react';
 
 import { Lock, LockOpen, Plus, Sparkles, Trash2 } from 'lucide-react';
 
@@ -18,11 +18,11 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import {
-  emptyWebsiteStyleSystem,
   type WebsiteSitemapPage,
   type WebsiteStyleSystem,
   type WebsiteStyleTokens,
   type WebsiteWireframePage,
+  emptyWebsiteStyleSystem,
 } from '~/lib/websites/planning-types';
 
 import {
@@ -74,6 +74,7 @@ export function WebsiteDesignEditor({
   sitemap,
   wireframes,
   canEdit,
+  onStyleChange,
 }: {
   accountId: string;
   websiteId: string;
@@ -81,6 +82,7 @@ export function WebsiteDesignEditor({
   sitemap: WebsiteSitemapPage[];
   wireframes: WebsiteWireframePage[];
   canEdit: boolean;
+  onStyleChange?: (tokens: WebsiteStyleTokens) => void;
 }) {
   const [style, setStyle] = useState<WebsiteStyleSystem>(
     initialStyle ?? emptyWebsiteStyleSystem(),
@@ -90,6 +92,10 @@ export function WebsiteDesignEditor({
   );
   const [isSaving, startSaving] = useTransition();
   const [isSuggesting, startSuggesting] = useTransition();
+
+  useEffect(() => {
+    onStyleChange?.(style.tokens);
+  }, [onStyleChange, style.tokens]);
 
   const previewPage = useMemo(() => {
     const match =

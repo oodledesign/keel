@@ -1,6 +1,8 @@
-import type { ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 
 import type { ComponentConfig, Field } from '@puckeditor/core';
+
+import { SiteImageField } from '@kit/site-blocks-core';
 
 import type { BlockManifest, BlockManifestField } from './types';
 
@@ -18,8 +20,17 @@ function fieldToPuckField(field: BlockManifestField): Field {
         label: field.label,
         options: field.options ?? [],
       };
-    // v1: images and links are edited as plain URLs / hrefs.
     case 'image':
+      return {
+        type: 'custom',
+        label: field.label,
+        render: ({ value, onChange }) =>
+          createElement(SiteImageField, {
+            value: String(value ?? ''),
+            onChange,
+            label: field.label,
+          }),
+      };
     case 'link':
       return { type: 'text', label: field.label };
     case 'array': {

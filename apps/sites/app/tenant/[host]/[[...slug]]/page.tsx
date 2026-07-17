@@ -1,6 +1,10 @@
 import { notFound } from 'next/navigation';
 
-import { resolveTokensStyle } from '@kit/site-blocks-core';
+import {
+  coerceResolvableStyleTokens,
+  resolveTokensStyle,
+  siteStudioFontStylesheetUrls,
+} from '@kit/site-blocks-core';
 
 import { PublishedSiteView } from '~/components/published-site-view';
 import { loadPublishedPage } from '~/lib/resolve-site';
@@ -18,13 +22,28 @@ export default async function SitesCatchAllPage({ params }: PageProps) {
     notFound();
   }
 
-  const style = resolveTokensStyle(resolved.themeTokens as never);
+  const themeTokens = coerceResolvableStyleTokens(resolved.themeTokens);
+  const style = resolveTokensStyle(themeTokens);
+  const fontUrls = siteStudioFontStylesheetUrls({
+    displayFamily: themeTokens.typography?.displayFamily,
+    bodyFamily: themeTokens.typography?.bodyFamily,
+    weights: themeTokens.typography?.weights
+      ? [
+          themeTokens.typography.weights.regular,
+          themeTokens.typography.weights.medium,
+          themeTokens.typography.weights.bold,
+        ]
+      : undefined,
+  });
 
   return (
     <html lang="en-GB">
       <head>
         <title>{resolved.title || resolved.siteName}</title>
         <meta name="viewport" content="width=device-width, initial-scale=1" />
+        {fontUrls.map((href) => (
+          <link key={href} rel="stylesheet" href={href} />
+        ))}
       </head>
       <body className="sb-root" style={style}>
         <PublishedSiteView

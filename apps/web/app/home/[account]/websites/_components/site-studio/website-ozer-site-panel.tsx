@@ -16,8 +16,12 @@ import { ExternalLink, Loader2, X } from 'lucide-react';
 
 import {
   SiteMediaUploadProvider,
+  SiteStudioFontFaces,
+  coerceResolvableStyleTokens,
+  type ResolvableStyleTokens,
   resolveTokensStyle,
 } from '@kit/site-blocks-core';
+import '@kit/site-blocks-core/tokens.css';
 import { resolveSiteBlocksConfig } from '@kit/site-blocks-workspaces';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -34,6 +38,7 @@ import {
   ozerSitePreviewUrl,
   resolveOzerSitePuckPermissions,
 } from '~/lib/websites/ozer-sites-types';
+import type { WebsiteStyleTokens } from '~/lib/websites/style-tokens';
 
 import {
   getOzerSiteBundle,
@@ -51,7 +56,20 @@ type Props = {
   canEdit: boolean;
   role?: OzerSiteEditorRole;
   clientOrgId?: string;
+  /** Live Design tab tokens — preferred over published site.themeTokens in Puck. */
+  liveStyleTokens?: WebsiteStyleTokens | null;
 };
+
+function resolvePuckThemeTokens(
+  live: WebsiteStyleTokens | null | undefined,
+  published: Record<string, unknown>,
+): ResolvableStyleTokens {
+  if (live?.colors) {
+    return coerceResolvableStyleTokens(live);
+  }
+
+  return coerceResolvableStyleTokens(published);
+}
 
 async function uploadSiteMedia(accountId: string, file: File): Promise<string> {
   const body = new FormData();
@@ -85,7 +103,7 @@ function OzerSitePuckEditor({
   role: OzerSiteEditorRole;
   clientOrgId?: string;
   settings: OzerSiteSettings;
-  themeTokens: Record<string, unknown>;
+  themeTokens: ResolvableStyleTokens;
   onClose: () => void;
   onSaved: (page: OzerSitePageRecord) => void;
 }) {
@@ -105,7 +123,7 @@ function OzerSitePuckEditor({
     [accountSlug],
   );
   const tokenStyle = useMemo(
-    () => resolveTokensStyle(themeTokens as never),
+    () => resolveTokensStyle(themeTokens),
     [themeTokens],
   );
 
@@ -224,7 +242,8 @@ function OzerSitePuckEditor({
           </Button>
         </div>
       </div>
-      <div className="min-h-0 flex-1" style={tokenStyle as CSSProperties}>
+      <div className="sb-root min-h-0 flex-1" style={tokenStyle as CSSProperties}>
+        <SiteStudioFontFaces tokens={themeTokens} />
         <SiteMediaUploadProvider
           upload={(file) => uploadSiteMedia(accountId, file)}
         >
@@ -247,6 +266,7 @@ export function WebsiteOzerSitePanel({
   canEdit,
   role = 'agency',
   clientOrgId,
+  liveStyleTokens,
 }: Props) {
   const [bundle, setBundle] = useState<OzerSiteBundle | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
@@ -280,6 +300,15 @@ export function WebsiteOzerSitePanel({
 
   const activePage =
     bundle?.pages.find((page) => page.id === activePageId) ?? null;
+
+  const puckThemeTokens = useMemo(
+    () =>
+      resolvePuckThemeTokens(
+        liveStyleTokens,
+        (bundle?.site?.themeTokens as Record<string, unknown>) ?? {},
+      ),
+    [bundle?.site?.themeTokens, liveStyleTokens],
+  );
 
   function publishFromStudio(extra?: Record<string, 'overwrite' | 'skip'>) {
     const nextResolutions = { ...resolutions, ...extra };
@@ -493,7 +522,7 @@ export function WebsiteOzerSitePanel({
           role={role}
           clientOrgId={clientOrgId}
           settings={site.settings}
-          themeTokens={site.themeTokens as Record<string, unknown>}
+          themeTokens={puckThemeTokens}
           onClose={() => setActivePageId(null)}
           onSaved={(saved) => {
             setBundle((current) =>

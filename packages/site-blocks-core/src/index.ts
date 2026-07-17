@@ -1,7 +1,9 @@
 import registryJson from './registry/site-blocks-registry.json';
 
-export { resolveTokens, resolveTokensStyle } from './tokens/resolve-tokens';
+export { resolveTokens, resolveTokensStyle, coerceResolvableStyleTokens, DEFAULT_RESOLVABLE_STYLE_TOKENS } from './tokens/resolve-tokens';
 export type { ResolvableStyleTokens } from './tokens/resolve-tokens';
+export { siteStudioFontStylesheetUrls } from './tokens/font-links';
+export { SiteStudioFontFaces } from './tokens/site-studio-font-faces';
 
 export { buildConfig, defaultSiteBlocksConfig } from './config';
 export type {

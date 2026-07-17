@@ -15,7 +15,9 @@ import {
   type SiteStudioBundle,
   type WebsitePlanningTab,
   type WebsiteSitemapPage,
+  type WebsiteStyleTokens,
   type WebsiteWireframePage,
+  emptyWebsiteStyleSystem,
 } from '~/lib/websites/planning-types';
 import { isSiteStudioGatedTab } from '~/lib/websites/site-studio-tabs';
 
@@ -64,6 +66,7 @@ export function WebsitePlanningPanel({
   siteStudio,
   canEdit,
   initialTab = 'overview',
+  onTabChange,
   linkedJobTitle,
   clientName,
   clientHref,
@@ -81,6 +84,7 @@ export function WebsitePlanningPanel({
   siteStudio: SiteStudioBundle;
   canEdit: boolean;
   initialTab?: WebsitePlanningTab;
+  onTabChange?: (tab: WebsitePlanningTab) => void;
   linkedJobTitle?: string | null;
   clientName?: string | null;
   clientHref?: string | null;
@@ -105,6 +109,9 @@ export function WebsitePlanningPanel({
   );
   const [wireframes, setWireframes] = useState<WebsiteWireframePage[]>(
     () => planning.wireframes,
+  );
+  const [styleTokens, setStyleTokens] = useState<WebsiteStyleTokens>(
+    () => siteStudio.style?.tokens ?? emptyWebsiteStyleSystem().tokens,
   );
 
   const jobHref = useMemo(() => {
@@ -157,7 +164,10 @@ export function WebsitePlanningPanel({
                   role="tab"
                   aria-selected={tab === item}
                   aria-disabled={itemLocked || undefined}
-                  onClick={() => setTab(item)}
+                  onClick={() => {
+                    setTab(item);
+                    onTabChange?.(item);
+                  }}
                   className={cn(
                     'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors',
                     tab === item
@@ -278,16 +288,19 @@ export function WebsitePlanningPanel({
           />
         </div>
 
-        {!locked && tab === 'design' && siteStudioEnabled ? (
-          <WebsiteDesignEditor
-            accountId={accountId}
-            websiteId={planning.websiteId}
-            initialStyle={siteStudio.style}
-            sitemap={sitemap}
-            wireframes={wireframes}
-            canEdit={canEdit}
-          />
-        ) : null}
+        <div className={cn(!locked && tab === 'design' ? 'block' : 'hidden')}>
+          {siteStudioEnabled ? (
+            <WebsiteDesignEditor
+              accountId={accountId}
+              websiteId={planning.websiteId}
+              initialStyle={siteStudio.style}
+              sitemap={sitemap}
+              wireframes={wireframes}
+              canEdit={canEdit}
+              onStyleChange={setStyleTokens}
+            />
+          ) : null}
+        </div>
 
         {!locked && tab === 'seo' && siteStudioEnabled ? (
           <WebsiteSeoEditor
@@ -308,6 +321,7 @@ export function WebsitePlanningPanel({
             accountSlug={accountSlug}
             canEdit={canEdit}
             role="agency"
+            liveStyleTokens={styleTokens}
           />
         ) : null}
 

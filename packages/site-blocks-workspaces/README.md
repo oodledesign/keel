@@ -61,8 +61,8 @@ src/workspaces/{accountSlug}/{block-name}/
 ```
 
 Supported field types: `text`, `textarea`, `number`, `select` (with
-`options`), `image` (v1: URL string), `link` (v1: href string), `array`
-(with `itemFields`).
+`options`), `image` (URL + file upload in Site Studio Puck), `link` (v1:
+href string), `array` (with `itemFields`).
 
 Naming: block `type` is PascalCase and workspace-prefixed (`YbbHero`,
 `YbbProjectShowcase`) so it can never collide with core block types.

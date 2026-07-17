@@ -1,16 +1,16 @@
 /** Default content and asset URLs from the YBB Astro site (editable in Puck). */
 
+/** YBB Design tab mapping: primary #CC848A, N2 (atmosphere) #F9DADA, buttons pill. */
 export const YBB_DEFAULTS = {
   heroVideoUrl:
     'https://vz-e8a4ebea-688.b-cdn.net/d3fca904-7a68-421f-9341-e6e7541d75d1/play_720p.mp4',
   heroVideoAlt: 'Your Bridal Besties wedding morning video',
-  logoUrl: 'https://yourbridalbesties.co.uk/assets/images/branding/Artboard%2010%20copy.svg',
-  logoWideUrl:
-    'https://yourbridalbesties.co.uk/assets/images/branding/Artboard%2010%20copy.svg',
-  monogramUrl:
-    'https://yourbridalbesties.co.uk/assets/images/branding/Artboard%209%20copy.svg',
-  heroTextureUrl:
-    'https://yourbridalbesties.co.uk/assets/images/backgrounds/faq-texture.avif',
+  /** Bundled in apps/web/public/workspace-assets/ybb/ — upload via Site media to override. */
+  logoUrl: '/workspace-assets/ybb/hero-logo.svg',
+  logoWideUrl: '/workspace-assets/ybb/logo-wide.svg',
+  monogramUrl: '/workspace-assets/ybb/hero-logo.svg',
+  /** Upload a floral texture in Puck when ready — production YBB asset not bundled yet. */
+  heroTextureUrl: '',
   footerTextureUrl:
     'https://yourbridalbesties.co.uk/assets/images/branding/ybb_wallpaper-icons-pink-2.png',
   footerCutoutUrl:
