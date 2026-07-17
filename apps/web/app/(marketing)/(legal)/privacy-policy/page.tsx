@@ -1,10 +1,11 @@
 import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
-import { PrivacyPolicyContent } from '../_components/legal-content';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { breadcrumbJsonLd, schemaGraph, webPageJsonLd } from '~/lib/seo/schema';
+
+import { PrivacyPolicyContent } from '../_components/legal-content';
 
 export async function generateMetadata() {
   return buildMarketingMetadata({

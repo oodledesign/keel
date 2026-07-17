@@ -6,8 +6,8 @@ import { CsrfError, createCsrfProtect } from '@edge-csrf/nextjs';
 import { isSuperAdmin } from '@kit/admin';
 import { getSafeRedirectPath } from '@kit/shared/utils';
 import { checkRequiresMultiFactorAuthentication } from '@kit/supabase/check-requires-mfa';
-import { createMiddlewareClient } from '@kit/supabase/middleware-client';
 import { getSupabaseAuthCookieDomain } from '@kit/supabase/get-supabase-auth-cookie-options';
+import { createMiddlewareClient } from '@kit/supabase/middleware-client';
 
 import appConfig from '~/config/app.config';
 import pathsConfig from '~/config/paths.config';
@@ -17,21 +17,24 @@ import {
   extractAgencyPortalSlug,
 } from '~/lib/agency-portal-host';
 import {
+  getAppSiteOrigin,
+  getMarketingSiteOrigin,
+} from '~/lib/app-host-routing';
+import {
   isAppRoute,
   isMarketingRoute,
   resolveAppSubdomainRedirect,
 } from '~/lib/app-subdomain-host';
-import { getAppSiteOrigin, getMarketingSiteOrigin } from '~/lib/app-host-routing';
 import { getUserDefaultLandingPath } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import {
   isExplicitPersonalHomeRequest,
   isPersonalDashboardRoot,
 } from '~/lib/dashboard-shortcuts/personal-home-url';
+import { applyNoIndexResponseHeader } from '~/lib/seo/search-indexing';
 import {
   getMiddlewareAuthenticatedUser,
   getMiddlewareSessionUser,
 } from '~/lib/server/middleware-auth';
-import { applyNoIndexResponseHeader } from '~/lib/seo/search-indexing';
 
 const CSRF_SECRET_COOKIE = 'csrfSecret';
 const NEXT_ACTION_HEADER = 'next-action';
@@ -55,10 +58,7 @@ function createForwardHeaders(request: NextRequest) {
   return requestHeaders;
 }
 
-function createNextResponse(
-  request: NextRequest,
-  init?: ResponseInit,
-) {
+function createNextResponse(request: NextRequest, init?: ResponseInit) {
   return NextResponse.next({
     ...init,
     request: {
@@ -168,13 +168,16 @@ export async function proxy(request: NextRequest) {
 
     // if a pattern handler returns a response, return it
     if (patternHandlerResponse) {
-      return applyNoIndexResponseHeader(patternHandlerResponse);
+      return applyNoIndexResponseHeader(
+        patternHandlerResponse,
+        request.nextUrl.pathname,
+      );
     }
   }
 
   // if no pattern handler returned a response,
   // return the session response
-  return applyNoIndexResponseHeader(csrfResponse);
+  return applyNoIndexResponseHeader(csrfResponse, request.nextUrl.pathname);
 }
 
 async function withCsrfMiddleware(
@@ -200,7 +203,7 @@ async function withCsrfMiddleware(
   try {
     await csrfProtect(request, response);
 
-    return applyNoIndexResponseHeader(response);
+    return applyNoIndexResponseHeader(response, request.nextUrl.pathname);
   } catch (error) {
     // if there is a CSRF error, return a 403 response
     if (error instanceof CsrfError) {
@@ -282,10 +285,7 @@ async function personalAppAuthHandler(req: NextRequest, res: NextResponse) {
     return NextResponse.redirect(verifyUrl.href);
   }
 
-  if (
-    !user.email_confirmed_at &&
-    next !== pathsConfig.auth.verifyEmail
-  ) {
+  if (!user.email_confirmed_at && next !== pathsConfig.auth.verifyEmail) {
     return NextResponse.redirect(
       new URL(pathsConfig.auth.verifyEmail, origin).href,
     );
@@ -355,7 +355,10 @@ async function getPatterns() {
             nextPath === '/'
           ) {
             try {
-              nextPath = await getUserDefaultLandingPath(client, sessionUser.id);
+              nextPath = await getUserDefaultLandingPath(
+                client,
+                sessionUser.id,
+              );
             } catch {
               nextPath = pathsConfig.app.home;
             }

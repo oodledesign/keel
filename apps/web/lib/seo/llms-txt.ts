@@ -2,7 +2,10 @@ import 'server-only';
 
 import appConfig from '~/config/app.config';
 import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
-import { APP_LANDING_SLUGS, APP_LANDING_PAGES } from '~/lib/marketing/app-landing-pages';
+import {
+  APP_LANDING_PAGES,
+  APP_LANDING_SLUGS,
+} from '~/lib/marketing/app-landing-pages';
 import { SEGMENT_LANDING_PAGES } from '~/lib/marketing/segment-landing-pages';
 
 import { buildMarketingSitemap } from './marketing-sitemap';
@@ -58,6 +61,7 @@ export async function buildLlmsTxt(): Promise<string> {
     '## Policies',
     `- [Privacy policy](${url(base, '/privacy-policy')})`,
     `- [Terms of service](${url(base, '/terms-of-service')})`,
+    `- [Data Processing Agreement](${url(base, '/dpa')})`,
     `- [Cookie policy](${url(base, '/cookie-policy')})`,
     '',
     ...(contentLines.length > 0

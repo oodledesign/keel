@@ -6,12 +6,17 @@ import { createCmsClient } from '@kit/cms';
 
 import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
 import { getPublishedBlogPostsForSitemap } from '~/lib/blog';
-import { FEATURE_SITEMAP_PATHS } from '~/lib/marketing/feature-landing-pages';
 import { APP_LANDING_SLUGS } from '~/lib/marketing/app-landing-pages';
 import { COMPARISON_SLUGS } from '~/lib/marketing/compare';
+import { FEATURE_SITEMAP_PATHS } from '~/lib/marketing/feature-landing-pages';
 import type { SegmentSlug } from '~/lib/marketing/segment-landing-pages';
 
-const SEGMENT_SLUGS: SegmentSlug[] = ['personal', 'work', 'property', 'community'];
+const SEGMENT_SLUGS: SegmentSlug[] = [
+  'personal',
+  'work',
+  'property',
+  'community',
+];
 
 const STATIC_MARKETING_PATHS: Array<{
   path: string;
@@ -21,7 +26,11 @@ const STATIC_MARKETING_PATHS: Array<{
   { path: '', priority: 1, changeFrequency: 'weekly' },
   { path: '/pricing', priority: 0.8, changeFrequency: 'monthly' },
   { path: '/pricing/explained', priority: 0.85, changeFrequency: 'monthly' },
-  { path: '/tools/stack-cost-calculator', priority: 0.8, changeFrequency: 'monthly' },
+  {
+    path: '/tools/stack-cost-calculator',
+    priority: 0.8,
+    changeFrequency: 'monthly',
+  },
   { path: '/faq', priority: 0.7, changeFrequency: 'monthly' },
   { path: '/contact', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/blog', priority: 0.8, changeFrequency: 'weekly' },
@@ -32,6 +41,7 @@ const STATIC_MARKETING_PATHS: Array<{
   { path: '/compare', priority: 0.85, changeFrequency: 'monthly' },
   { path: '/privacy-policy', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/terms-of-service', priority: 0.3, changeFrequency: 'yearly' },
+  { path: '/dpa', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/cookie-policy', priority: 0.3, changeFrequency: 'yearly' },
   { path: '/trust', priority: 0.4, changeFrequency: 'monthly' },
 ];
@@ -93,7 +103,10 @@ export async function buildMarketingSitemap(): Promise<MetadataRoute.Sitemap> {
       entry(base, `/${slug}`, { priority: 0.9, changeFrequency: 'weekly' }),
     ),
     ...APP_LANDING_SLUGS.map((slug) =>
-      entry(base, `/apps/${slug}`, { priority: 0.8, changeFrequency: 'monthly' }),
+      entry(base, `/apps/${slug}`, {
+        priority: 0.8,
+        changeFrequency: 'monthly',
+      }),
     ),
     ...COMPARISON_SLUGS.map((slug) =>
       entry(base, `/compare/${slug}`, {
@@ -124,5 +137,11 @@ export async function buildMarketingSitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
 
-  return [...staticEntries, ...featureEntries, ...blogEntries, ...docs, ...changelog];
+  return [
+    ...staticEntries,
+    ...featureEntries,
+    ...blogEntries,
+    ...docs,
+    ...changelog,
+  ];
 }

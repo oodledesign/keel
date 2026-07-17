@@ -1,8 +1,8 @@
 import type { Metadata } from 'next';
 
 import appConfig from '~/config/app.config';
-import { getSearchIndexingRobots } from '~/lib/seo/search-indexing';
 import { absoluteUrl } from '~/lib/seo/schema';
+import { getSearchIndexingRobots } from '~/lib/seo/search-indexing';
 
 export type OgImageType =
   | 'default'
@@ -62,9 +62,7 @@ export function buildMarketingMetadata(input: {
           alt: title,
         },
       ],
-      ...(input.publishedTime
-        ? { publishedTime: input.publishedTime }
-        : {}),
+      ...(input.publishedTime ? { publishedTime: input.publishedTime } : {}),
       ...(input.authors ? { authors: input.authors } : {}),
     },
     twitter: {
@@ -73,7 +71,7 @@ export function buildMarketingMetadata(input: {
       description,
       images: [image],
     },
-    robots: getSearchIndexingRobots(),
+    robots: getSearchIndexingRobots({ path: input.path }),
   };
 }
 

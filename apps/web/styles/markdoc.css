@@ -101,6 +101,24 @@
   @apply border-border mt-8 mb-6;
 }
 
+/* Legal pages — markdown sources in public/legal/ */
+.markdoc.legal-doc {
+  @apply text-sm leading-relaxed;
+}
+
+.markdoc.legal-doc h2 {
+  @apply mt-10 text-lg;
+}
+
+.markdoc.legal-doc h3 {
+  @apply mt-8 text-base;
+}
+
+.markdoc.legal-doc p,
+.markdoc.legal-doc li {
+  @apply text-sm/7;
+}
+
 .markdoc [role='alert'] {
   @apply m-0 my-8 py-4;
 }
