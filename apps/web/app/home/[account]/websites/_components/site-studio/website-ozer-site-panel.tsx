@@ -15,11 +15,11 @@ import '@puckeditor/core/puck.css';
 import { ExternalLink, Loader2, X } from 'lucide-react';
 
 import {
+  type ResolvableStyleTokens,
   SiteMediaUploadProvider,
   SiteStudioFontFaces,
   SiteStudioTokensProvider,
   coerceResolvableStyleTokens,
-  type ResolvableStyleTokens,
   resolveTokensStyle,
   withSiteStudioRootConfig,
 } from '@kit/site-blocks-core';
@@ -53,11 +53,11 @@ import {
   saveOzerSitePageDraft,
   updateOzerSiteSettings,
 } from '../../_lib/server/ozer-sites-actions';
-import { WebsiteBlockLibraryCard } from './website-block-library-card';
 import { createSiteMediaLibraryPlugin } from './site-media-library-plugin';
 import { createSiteOutlinePlugin } from './site-outline-plugin';
 import { SiteStyleLiveProvider } from './site-style-live-context';
 import { createSiteTypographyPlugin } from './site-typography-plugin';
+import { WebsiteBlockLibraryCard } from './website-block-library-card';
 
 type Props = {
   accountId: string;
@@ -323,8 +323,14 @@ function OzerSitePuckEditor({
           </Button>
         </div>
       </div>
+      {/*
+        Do not put `sb-root` on this wrapper — that class styles h1–h4 and would
+        restyle Puck chrome (header title, "Page" panel heading). Site tokens
+        apply only inside SiteStudioTokenRoot (canvas) via withSiteStudioRootConfig.
+        CSS vars stay here so Type/Design plugins can still preview tokens.
+      */}
       <div
-        className="sb-root h-full min-h-0 flex-1 overflow-hidden"
+        className="h-full min-h-0 flex-1 overflow-hidden"
         style={tokenStyle as CSSProperties}
       >
         <SiteStudioFontFaces tokens={themeTokens} />
