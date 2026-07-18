@@ -237,17 +237,16 @@ function FeatureNodeChip({ node }: { node: FeatureNodeDef }) {
 }
 
 /* ──────────────────────────────────────────────────────────────
- * Dashboard screen mockup — fixed dark app frame, colour-blocked
- * cards. Built in code so it stays crisp and animates.
+ * Dashboard screen mockup — light personal home (matches OzerDashboard).
  * ────────────────────────────────────────────────────────────── */
 
 const SIDEBAR_NAV = [
-  { label: 'Today', icon: LayoutDashboard, active: true },
+  { label: 'Home', icon: LayoutDashboard, active: true },
   { label: 'Planner', icon: CalendarDays, active: false },
   { label: 'Tasks', icon: ListChecks, active: false },
-  { label: 'Activity', icon: Activity, active: false },
+  { label: 'People', icon: Contact, active: false },
   { label: 'Notes', icon: StickyNote, active: false },
-  { label: 'Finances', icon: CreditCard, active: false },
+  { label: 'Activity', icon: Activity, active: false },
 ] as const;
 
 const SIDEBAR_SPACES = [
@@ -256,37 +255,37 @@ const SIDEBAR_SPACES = [
   { label: 'Family', color: 'var(--ozer-sage-500)' },
 ] as const;
 
-const PLANNER_BLOCKS = [
-  {
-    time: '09:00',
-    text: 'School run, then deep work',
-    tag: 'Personal',
-    bg: 'var(--ozer-sage-100)',
-    dot: 'var(--ozer-sage-500)',
-  },
-  {
-    time: '10:30',
-    text: 'Acme kickoff call',
-    tag: 'Business',
-    bg: 'var(--ozer-coral-50)',
-    dot: 'var(--ozer-accent)',
-  },
-  {
-    time: '14:00',
-    text: 'Invoice follow-up',
-    tag: 'Business',
-    bg: 'var(--ozer-sky-100)',
-    dot: 'var(--ozer-info)',
-  },
+const FOCUS_TASKS = [
+  { text: 'Send Acme proposal', space: 'Business', done: false },
+  { text: 'Book boiler service', space: 'Personal', done: false },
+  { text: 'School pick-up reminder', space: 'Family', done: true },
 ] as const;
 
-const TASK_ROWS = [
-  { text: 'Send Acme proposal', done: true },
-  { text: 'Chase invoice #204', done: false },
-  { text: 'Book boiler service', done: false },
+const UPCOMING_TASKS = [
+  { text: 'Chase invoice #204', space: 'Business' },
+  { text: 'Plan weekend meals', space: 'Family' },
 ] as const;
 
-const FINANCE_BARS = [34, 55, 42, 70, 58, 86] as const;
+const PEOPLE_ROWS = [
+  { name: 'Sam Rivera', label: 'Catch-up due Fri' },
+  { name: 'Maya Chen', label: 'Birthday in 4 days' },
+] as const;
+
+const MY_DAY = [
+  { time: '09:00', text: 'School run', space: 'Family' },
+  { time: '10:30', text: 'Acme kickoff', space: 'Business' },
+  { time: '14:00', text: 'Deep work block', space: 'Personal' },
+] as const;
+
+const NOTE_CARDS = [
+  { title: 'Acme kickoff — decisions', space: 'Business' },
+  { title: 'Weekend trip ideas', space: 'Personal' },
+] as const;
+
+const WORKSPACE_CARDS = [
+  { name: 'Business', stats: ['12 open', '£4.8k'] },
+  { name: 'Family', stats: ['3 tasks', '2 events'] },
+] as const;
 
 function DashboardScreen({
   animate,
@@ -305,15 +304,15 @@ function DashboardScreen({
   });
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-950)] shadow-[0_24px_80px_var(--ozer-plum-alpha-18)]">
+    <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] shadow-[0_24px_80px_var(--ozer-plum-alpha-12)]">
       {/* Browser chrome */}
-      <div className="flex items-center gap-3 border-b border-[color:var(--ozer-border-on-dark)] px-4 py-2.5">
+      <div className="flex items-center gap-3 border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-2.5">
         <span className="flex gap-1.5" aria-hidden>
           <span className="h-2.5 w-2.5 rounded-full bg-[var(--ozer-coral-400)]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[var(--ozer-lime-400)]" />
           <span className="h-2.5 w-2.5 rounded-full bg-[var(--ozer-sage-500)]" />
         </span>
-        <span className="flex items-center gap-1.5 rounded-md bg-[var(--ozer-plum-800)] px-3 py-1 text-[10px] text-[var(--ozer-text-on-dark-muted)]">
+        <span className="flex items-center gap-1.5 rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1 text-[10px] text-[var(--workspace-shell-text-muted)]">
           <Search className="h-2.5 w-2.5" aria-hidden />
           ozer.so/home
         </span>
@@ -321,7 +320,7 @@ function DashboardScreen({
 
       <div className="flex">
         {/* Sidebar */}
-        <div className="hidden w-[150px] shrink-0 flex-col gap-4 border-r border-[color:var(--ozer-border-on-dark)] p-3.5 sm:flex lg:w-[170px]">
+        <div className="hidden w-[150px] shrink-0 flex-col gap-4 border-r border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3.5 sm:flex lg:w-[170px]">
           <div className="space-y-1">
             {SIDEBAR_NAV.map((item) => (
               <div
@@ -329,8 +328,8 @@ function DashboardScreen({
                 className={cn(
                   'flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-medium',
                   item.active
-                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-400)]'
-                    : 'text-[var(--ozer-text-on-dark-muted)]',
+                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]'
+                    : 'text-[var(--workspace-shell-text-muted)]',
                 )}
               >
                 <item.icon className="h-3 w-3" aria-hidden />
@@ -339,14 +338,14 @@ function DashboardScreen({
             ))}
           </div>
           <div>
-            <p className="px-2 text-[9px] font-semibold tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)] uppercase">
+            <p className="px-2 text-[9px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
               Workspaces
             </p>
             <div className="mt-1.5 space-y-1">
               {SIDEBAR_SPACES.map((space) => (
                 <div
                   key={space.label}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1 text-[11px] text-[var(--ozer-text-on-dark-muted)]"
+                  className="flex items-center gap-2 rounded-lg px-2 py-1 text-[11px] text-[var(--workspace-shell-text-muted)]"
                 >
                   <span
                     className="h-1.5 w-1.5 rounded-full"
@@ -359,167 +358,221 @@ function DashboardScreen({
           </div>
         </div>
 
-        {/* Main content */}
-        <div className="min-w-0 flex-1 bg-[var(--ozer-plum-900)] p-4 lg:p-5">
+        {/* Main — personal dashboard layout */}
+        <div className="min-w-0 flex-1 bg-[var(--workspace-shell-canvas)] p-4 lg:p-5">
           <div className="flex items-baseline justify-between gap-3">
-            <p className="font-heading text-sm font-bold text-[var(--ozer-text-on-dark)] lg:text-base">
-              Today
-            </p>
-            <p className="text-[10px] text-[var(--ozer-text-on-dark-muted)]">
-              Tasks and plans from every workspace
-            </p>
+            <div>
+              <p className="font-heading text-sm font-bold text-[var(--workspace-shell-text)] lg:text-base">
+                Good morning, Alex
+              </p>
+              <p className="text-[10px] text-[var(--workspace-shell-text-muted)]">
+                Friday, 18 July
+              </p>
+            </div>
+            <span
+              className={cn(
+                'rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[9px] font-semibold text-[var(--ozer-coral-600)]',
+                live && 'animate-pulse',
+              )}
+            >
+              Live across spaces
+            </span>
           </div>
 
           <div className="mt-3 grid gap-3 lg:grid-cols-5">
-            {/* Planner */}
-            <motion.div
-              className="relative rounded-xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] p-3 lg:col-span-3"
-              {...reveal(0.05)}
-            >
-              <div className="mb-2 flex items-center justify-between">
-                <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)] uppercase">
-                  Planner
+            {/* Left stack: focus, upcoming, people */}
+            <div className="flex flex-col gap-3 lg:col-span-3">
+              <motion.div
+                className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
+                {...reveal(0.05)}
+              >
+                <p className="mb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+                  Today&apos;s Focus
                 </p>
-                <Sparkles
-                  className="h-3 w-3 text-[var(--ozer-coral-400)]"
-                  aria-hidden
-                />
-              </div>
-              <div className="relative space-y-1.5">
-                {PLANNER_BLOCKS.map((block) => (
-                  <div
-                    key={block.text}
-                    className="flex items-center gap-2 rounded-lg px-2.5 py-2"
-                    style={{ backgroundColor: block.bg }}
-                  >
-                    <span className="font-mono text-[9px] font-semibold text-[var(--ozer-plum-600)]">
-                      {block.time}
-                    </span>
-                    <span className="min-w-0 truncate text-[11px] font-medium text-[var(--ozer-text-on-light)]">
-                      {block.text}
-                    </span>
-                    <span className="ml-auto flex shrink-0 items-center gap-1 text-[9px] text-[var(--ozer-plum-600)]">
+                <div className="space-y-1.5">
+                  {FOCUS_TASKS.map((task) => (
+                    <div key={task.text} className="flex items-center gap-2">
                       <span
-                        className="h-1 w-1 rounded-full"
-                        style={{ backgroundColor: block.dot }}
-                      />
-                      {block.tag}
-                    </span>
-                  </div>
-                ))}
-                {/* "Now" line */}
-                <div
-                  className="pointer-events-none absolute inset-x-0 top-[52%] flex items-center gap-1"
-                  aria-hidden
-                >
-                  <span
-                    className={cn(
-                      'h-1.5 w-1.5 rounded-full bg-[var(--ozer-accent)]',
-                      live && 'animate-pulse',
-                    )}
-                  />
-                  <span className="h-px flex-1 bg-[var(--ozer-accent)] opacity-70" />
-                </div>
-              </div>
-            </motion.div>
-
-            {/* Tasks */}
-            <motion.div
-              className="rounded-xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-950)] p-3 lg:col-span-2"
-              {...reveal(0.12)}
-            >
-              <p className="mb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)] uppercase">
-                Tasks
-              </p>
-              <div className="space-y-1.5">
-                {TASK_ROWS.map((task) => (
-                  <div key={task.text} className="flex items-center gap-2">
-                    <span
-                      className={cn(
-                        'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
-                        task.done
-                          ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent)]'
-                          : 'border-[color:var(--ozer-border-on-dark-strong)]',
-                      )}
-                    >
-                      {task.done ? (
-                        <Check
-                          className="h-2.5 w-2.5 text-[var(--ozer-plum-950)]"
-                          strokeWidth={3}
-                          aria-hidden
-                        />
-                      ) : null}
-                    </span>
-                    <span
-                      className={cn(
-                        'truncate text-[11px]',
-                        task.done
-                          ? 'text-[var(--ozer-text-on-dark-muted)] line-through'
-                          : 'text-[var(--ozer-text-on-dark)]',
-                      )}
-                    >
-                      {task.text}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </motion.div>
-
-            {/* Notes */}
-            <motion.div
-              className="rounded-xl bg-[var(--ozer-lime-100)] p-3 lg:col-span-2"
-              {...reveal(0.18)}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--ozer-plum-600)] uppercase">
-                  Notes
-                </p>
-                <StickyNote
-                  className="h-3 w-3 text-[var(--ozer-plum-600)]"
-                  aria-hidden
-                />
-              </div>
-              <p className="mt-1.5 text-[11px] font-semibold text-[var(--ozer-text-on-light)]">
-                Acme kickoff — decisions
-              </p>
-              <div className="mt-1.5 space-y-1" aria-hidden>
-                <span className="block h-1 w-11/12 rounded-full bg-[var(--ozer-plum-alpha-12)]" />
-                <span className="block h-1 w-4/5 rounded-full bg-[var(--ozer-plum-alpha-12)]" />
-                <span className="block h-1 w-3/5 rounded-full bg-[var(--ozer-plum-alpha-12)]" />
-              </div>
-            </motion.div>
-
-            {/* Finances */}
-            <motion.div
-              className="rounded-xl bg-[var(--ozer-sky-100)] p-3 lg:col-span-3"
-              {...reveal(0.24)}
-            >
-              <div className="flex items-center justify-between">
-                <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--ozer-plum-600)] uppercase">
-                  Finances
-                </p>
-                <span className="rounded-full bg-[var(--ozer-plum-950)] px-2 py-0.5 text-[9px] font-semibold text-[var(--ozer-cream-50)]">
-                  Invoice #204 paid
-                </span>
-              </div>
-              <div className="mt-2 flex items-end justify-between gap-3">
-                <div>
-                  <p className="font-heading text-lg font-bold text-[var(--ozer-text-on-light)]">
-                    £4,820
-                  </p>
-                  <p className="text-[9px] text-[var(--ozer-plum-600)]">
-                    Invoiced this month
-                  </p>
-                </div>
-                <div className="flex h-10 items-end gap-1" aria-hidden>
-                  {FINANCE_BARS.map((height, index) => (
-                    <span
-                      key={index}
-                      className="w-2.5 rounded-sm bg-[var(--ozer-slate-blue)]"
-                      style={{ height: `${height}%` }}
-                    />
+                        className={cn(
+                          'flex h-3.5 w-3.5 shrink-0 items-center justify-center rounded border',
+                          task.done
+                            ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent)]'
+                            : 'border-[color:var(--workspace-shell-border)]',
+                        )}
+                      >
+                        {task.done ? (
+                          <Check
+                            className="h-2.5 w-2.5 text-[var(--ozer-cream-50)]"
+                            strokeWidth={3}
+                            aria-hidden
+                          />
+                        ) : null}
+                      </span>
+                      <span
+                        className={cn(
+                          'min-w-0 flex-1 truncate text-[11px]',
+                          task.done
+                            ? 'text-[var(--workspace-shell-text-muted)] line-through'
+                            : 'text-[var(--workspace-shell-text)]',
+                        )}
+                      >
+                        {task.text}
+                      </span>
+                      <span className="shrink-0 text-[9px] text-[var(--workspace-shell-text-muted)]">
+                        {task.space}
+                      </span>
+                    </div>
                   ))}
                 </div>
+              </motion.div>
+
+              <motion.div
+                className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
+                {...reveal(0.1)}
+              >
+                <p className="mb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+                  Upcoming
+                </p>
+                <div className="space-y-1.5">
+                  {UPCOMING_TASKS.map((task) => (
+                    <div
+                      key={task.text}
+                      className="flex items-center justify-between gap-2"
+                    >
+                      <span className="truncate text-[11px] text-[var(--workspace-shell-text)]">
+                        {task.text}
+                      </span>
+                      <span className="shrink-0 text-[9px] text-[var(--workspace-shell-text-muted)]">
+                        {task.space}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+
+              <motion.div
+                className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
+                {...reveal(0.14)}
+              >
+                <p className="mb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+                  People focus
+                </p>
+                <div className="space-y-1.5">
+                  {PEOPLE_ROWS.map((person) => (
+                    <div key={person.name} className="flex items-center gap-2">
+                      <span className="flex size-6 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-[9px] font-semibold text-[var(--ozer-coral-600)]">
+                        {person.name.slice(0, 1)}
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-[11px] font-medium text-[var(--workspace-shell-text)]">
+                          {person.name}
+                        </p>
+                        <p className="truncate text-[9px] text-[var(--workspace-shell-text-muted)]">
+                          {person.label}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            </div>
+
+            {/* My Day */}
+            <motion.div
+              className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 lg:col-span-2"
+              {...reveal(0.08)}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+                  My Day
+                </p>
+                <Sparkles
+                  className="h-3 w-3 text-[var(--ozer-accent)]"
+                  aria-hidden
+                />
+              </div>
+              <div className="space-y-1.5">
+                {MY_DAY.map((event) => (
+                  <div
+                    key={event.text}
+                    className="flex items-start gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5"
+                  >
+                    <span className="w-9 shrink-0 font-mono text-[9px] font-semibold text-[var(--ozer-accent)]">
+                      {event.time}
+                    </span>
+                    <div className="min-w-0">
+                      <p className="truncate text-[11px] font-medium text-[var(--workspace-shell-text)]">
+                        {event.text}
+                      </p>
+                      <p className="text-[9px] text-[var(--workspace-shell-text-muted)]">
+                        {event.space}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Notes — half width */}
+            <motion.div
+              className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 lg:col-span-2"
+              {...reveal(0.18)}
+            >
+              <div className="mb-2 flex items-center justify-between">
+                <p className="text-[10px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+                  Recent notes
+                </p>
+                <StickyNote
+                  className="h-3 w-3 text-[var(--ozer-accent)]"
+                  aria-hidden
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-2">
+                {NOTE_CARDS.map((note) => (
+                  <div
+                    key={note.title}
+                    className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2"
+                  >
+                    <p className="line-clamp-2 text-[10px] font-semibold text-[var(--workspace-shell-text)]">
+                      {note.title}
+                    </p>
+                    <p className="mt-1 text-[9px] text-[var(--workspace-shell-text-muted)]">
+                      {note.space}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </motion.div>
+
+            {/* Workspace overview */}
+            <motion.div
+              className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 lg:col-span-3"
+              {...reveal(0.22)}
+            >
+              <p className="mb-2 text-[10px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+                Workspace overview
+              </p>
+              <div className="grid grid-cols-2 gap-2">
+                {WORKSPACE_CARDS.map((card) => (
+                  <div
+                    key={card.name}
+                    className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-2.5"
+                  >
+                    <p className="text-[11px] font-semibold text-[var(--workspace-shell-text)]">
+                      {card.name}
+                    </p>
+                    <div className="mt-1.5 flex gap-2">
+                      {card.stats.map((stat) => (
+                        <span
+                          key={stat}
+                          className="rounded-md bg-[var(--workspace-shell-panel)] px-1.5 py-0.5 text-[9px] text-[var(--workspace-shell-text-muted)]"
+                        >
+                          {stat}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                ))}
               </div>
             </motion.div>
           </div>

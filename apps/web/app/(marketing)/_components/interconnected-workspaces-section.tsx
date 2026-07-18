@@ -1,13 +1,15 @@
 import Link from 'next/link';
 
-import { ArrowRight, Check, Link2, X } from 'lucide-react';
+import { ArrowRight, Link2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
+import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
 import {
   INTERCONNECTED_WORKSPACES_MARKETING,
-  type InterconnectedBenefit,
+  type InterconnectedBentoTile,
+  type InterconnectedBentoVisual,
 } from '~/lib/marketing/interconnected-workspaces';
 import {
   marketingBtnOutline,
@@ -15,6 +17,11 @@ import {
 } from '~/lib/marketing/marketing-ui';
 import type { PricingTone } from '~/lib/marketing/pricing-theme';
 
+import {
+  MarketingBentoAccentCta,
+  MarketingBentoGrid,
+  MarketingBentoTile,
+} from './marketing-bento';
 import { WorkspaceOrbitDiagram } from './workspace-orbit-diagram';
 
 type Props = {
@@ -97,11 +104,35 @@ export function InterconnectedWorkspacesSection({
         </div>
 
         <div className="mt-14 lg:mt-16">
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {m.benefits.map((benefit) => (
-              <BenefitCard key={benefit.title} benefit={benefit} tone={tone} />
-            ))}
+          <div className="mb-8 max-w-2xl">
+            <h3
+              className={cn(
+                'font-heading text-2xl font-semibold md:text-3xl',
+                isLight
+                  ? 'text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--ozer-text-on-dark)]',
+              )}
+            >
+              {m.bentoHeading}
+            </h3>
+            <p
+              className={cn(
+                'mt-2 text-sm leading-relaxed md:text-base',
+                isLight
+                  ? 'text-[var(--workspace-shell-text-muted)]'
+                  : 'text-[var(--ozer-text-on-dark-muted)]',
+              )}
+            >
+              {m.bentoSubheading}
+            </p>
           </div>
+
+          <MarketingBentoGrid>
+            {m.bentoTiles.map((tile) => (
+              <BentoTile key={tile.id} tile={tile} isLight={isLight} />
+            ))}
+          </MarketingBentoGrid>
+
           <div className="mt-8 flex justify-center">
             <Button
               asChild
@@ -115,48 +146,17 @@ export function InterconnectedWorkspacesSection({
             >
               <Link href="/features">
                 All features
-                <ArrowRight className="ml-1.5 h-4 w-4" />
+                <ArrowRight className="ml-1.5 h-4 w-4" aria-hidden />
               </Link>
             </Button>
           </div>
-        </div>
 
-        <div
-          className={cn(
-            'mt-16 rounded-3xl border p-6 md:p-10',
-            isLight
-              ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]'
-              : 'border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)]',
-          )}
-        >
-          <h3
-            className={cn(
-              'font-heading text-center text-2xl font-semibold md:text-3xl',
-              isLight
-                ? 'text-[var(--workspace-shell-text)]'
-                : 'text-[var(--ozer-text-on-light)]',
-            )}
-          >
-            {m.comparison.heading}
-          </h3>
-          <div className="mt-8 grid gap-6 md:grid-cols-2">
-            <ComparisonColumn
-              label={m.comparison.traditionalLabel}
-              items={m.comparison.traditional}
-              tone="muted"
-            />
-            <ComparisonColumn
-              label={m.comparison.ozerLabel}
-              items={m.comparison.ozer}
-              tone="ozer"
-            />
-          </div>
           <p
             className={cn(
               'mt-8 text-center text-sm font-medium md:text-base',
               isLight
                 ? 'text-[var(--workspace-shell-text-muted)]'
-                : 'text-[var(--ozer-plum-700)]',
+                : 'text-[var(--ozer-text-on-dark-muted)]',
             )}
           >
             {m.ctaLine}
@@ -167,120 +167,215 @@ export function InterconnectedWorkspacesSection({
   );
 }
 
-function BenefitCard({
-  benefit,
-  tone = 'dark',
+function BentoTile({
+  tile,
+  isLight,
 }: {
-  benefit: InterconnectedBenefit;
-  tone?: PricingTone;
+  tile: InterconnectedBentoTile;
+  isLight: boolean;
 }) {
-  const Icon = benefit.icon;
-  const isLight = tone === 'light';
-
-  const className = cn(
-    'flex h-full flex-col rounded-2xl border p-4 md:p-5',
-    isLight
-      ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]'
-      : 'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-800)]',
-    benefit.href &&
-      'transition-[border-color,background-color] duration-200 hover:border-[var(--ozer-accent)]/35',
-  );
-
-  const content = (
-    <>
-      <Icon
-        className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]"
-        aria-hidden
+  if (tile.variant === 'accent') {
+    return (
+      <MarketingBentoAccentCta
+        title={tile.title}
+        description={tile.description}
+        href={tile.href ?? MARKETING_FREE_SIGNUP_URL}
+        ctaLabel={tile.ctaLabel}
       />
+    );
+  }
+
+  const Icon = tile.icon;
+  const tileVariant = tile.variant === 'visual' ? 'cream' : 'muted';
+  const onDarkCream = !isLight && tileVariant === 'cream';
+
+  return (
+    <MarketingBentoTile
+      span={tile.span === 'lg' ? 'wide' : tile.span === 'md' ? 'tall' : 'sm'}
+      variant={tileVariant}
+      href={tile.href}
+      className={cn(
+        onDarkCream &&
+          'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-800)]',
+        !isLight &&
+          tileVariant === 'muted' &&
+          'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-plum-900)]',
+      )}
+      visual={
+        tile.visual && tile.visual !== 'none' ? (
+          <BentoVisual kind={tile.visual} accent={!isLight} />
+        ) : Icon ? (
+          <div className="flex w-full justify-start">
+            <span
+              className={cn(
+                'inline-flex size-11 items-center justify-center rounded-2xl border',
+                isLight
+                  ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--ozer-accent)]'
+                  : 'border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-06)] text-[var(--ozer-coral-400)]',
+              )}
+            >
+              <Icon className="size-5" aria-hidden />
+            </span>
+          </div>
+        ) : undefined
+      }
+    >
       <h3
         className={cn(
-          'font-heading mt-3 text-base leading-snug font-semibold md:text-lg',
+          'font-heading text-lg leading-snug font-semibold md:text-xl',
           isLight
             ? 'text-[var(--workspace-shell-text)]'
             : 'text-[var(--ozer-text-on-dark)]',
         )}
       >
-        {benefit.title}
+        {tile.title}
       </h3>
       <p
         className={cn(
-          'mt-2 flex-1 text-sm leading-relaxed',
+          'mt-2 text-sm leading-relaxed',
           isLight
             ? 'text-[var(--workspace-shell-text-muted)]'
             : 'text-[var(--ozer-text-on-dark-muted)]',
         )}
       >
-        {benefit.description}
+        {tile.description}
       </p>
-    </>
+    </MarketingBentoTile>
   );
+}
 
-  if (benefit.href) {
+function BentoVisual({
+  kind,
+  accent,
+}: {
+  kind: Exclude<InterconnectedBentoVisual, 'none'>;
+  accent?: boolean;
+}) {
+  const bar = accent ? 'var(--ozer-coral-400)' : 'var(--ozer-coral-500)';
+  const soft = accent
+    ? 'color-mix(in srgb, var(--ozer-coral-400) 35%, transparent)'
+    : 'var(--ozer-coral-alpha-15)';
+
+  if (kind === 'tasks') {
     return (
-      <Link href={benefit.href} className={className}>
-        {content}
-      </Link>
+      <div
+        aria-hidden
+        className="flex h-28 w-full items-end justify-center gap-2 px-4"
+      >
+        {[40, 70, 55, 88, 62].map((h, i) => (
+          <span
+            key={`bar-${h}-${i}`}
+            className="w-3 rounded-full shadow-[0_0_18px_var(--ozer-coral-alpha-45)]"
+            style={{
+              height: `${h}%`,
+              background: `linear-gradient(180deg, ${bar}, ${soft})`,
+            }}
+          />
+        ))}
+      </div>
     );
   }
 
-  return <article className={className}>{content}</article>;
-}
+  if (kind === 'team') {
+    const rings = [
+      'var(--ozer-coral-500)',
+      'var(--ozer-sky-100)',
+      'var(--ozer-sage-500)',
+      'var(--ozer-coral-400)',
+    ];
+    return (
+      <div
+        aria-hidden
+        className="relative flex h-24 w-full items-center justify-center"
+      >
+        <div className="flex -space-x-3">
+          {rings.map((color) => (
+            <span
+              key={color}
+              className="size-12 rounded-full border-2 border-[var(--workspace-shell-panel)] shadow-[0_0_20px_var(--ozer-coral-alpha-15)]"
+              style={{ background: color }}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
-function ComparisonColumn({
-  label,
-  items,
-  tone,
-}: {
-  label: string;
-  items: readonly string[];
-  tone: 'muted' | 'ozer';
-}) {
-  const isOzer = tone === 'ozer';
+  if (kind === 'spark') {
+    return (
+      <div
+        aria-hidden
+        className="relative flex h-28 w-full items-center justify-center"
+      >
+        <span
+          className="absolute size-24 rounded-full border border-[var(--ozer-coral-alpha-15)]"
+        />
+        <span
+          className="absolute size-16 rounded-full border border-[var(--ozer-coral-alpha-45)]"
+        />
+        <svg
+          viewBox="0 0 48 48"
+          className="relative size-14 text-[var(--ozer-coral-500)] drop-shadow-[0_0_18px_var(--ozer-coral-alpha-45)]"
+        >
+          <path
+            fill="currentColor"
+            d="M27.5 4 12 26h10l-2.5 18L36 22H26l1.5-18Z"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  if (kind === 'activity') {
+    return (
+      <div aria-hidden className="relative flex h-24 w-full items-center px-2">
+        <svg
+          viewBox="0 0 220 80"
+          className="h-full w-full"
+          fill="none"
+        >
+          <path
+            d="M4 58 C 30 58, 36 22, 58 22 S 90 62, 112 48 S 150 12, 170 28 S 200 54, 216 40"
+            stroke={bar}
+            strokeWidth="3"
+            strokeLinecap="round"
+            className="drop-shadow-[0_0_10px_var(--ozer-coral-alpha-45)]"
+          />
+          <circle cx="170" cy="28" r="6" fill={bar} />
+          <circle
+            cx="170"
+            cy="28"
+            r="12"
+            stroke={soft}
+            strokeWidth="2"
+            fill="none"
+          />
+        </svg>
+      </div>
+    );
+  }
+
+  // support — chat pill
   return (
     <div
-      className={cn(
-        'rounded-2xl border p-5 md:p-6',
-        isOzer
-          ? 'border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)]'
-          : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
-      )}
-    >
-      <p
+      aria-hidden
+      className="flex h-24 w-full items-center justify-center px-2"
+    >      <div
         className={cn(
-          'text-sm font-semibold tracking-wide uppercase',
-          isOzer
-            ? 'text-[var(--ozer-coral-600)]'
-            : 'text-[var(--ozer-plum-700)]',
+          'flex max-w-[16rem] items-center gap-3 rounded-full border px-3 py-2 shadow-[0_10px_30px_var(--ozer-plum-alpha-12)]',
+          'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
         )}
       >
-        {label}
-      </p>
-      <ul className="mt-4 space-y-3">
-        {items.map((item) => (
-          <li key={item} className="flex gap-2.5 text-sm leading-relaxed">
-            {isOzer ? (
-              <Check
-                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]"
-                aria-hidden
-              />
-            ) : (
-              <X
-                className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]"
-                aria-hidden
-              />
-            )}
-            <span
-              className={
-                isOzer
-                  ? 'text-[var(--ozer-text-on-light)]'
-                  : 'text-[var(--ozer-text-on-light-muted)]'
-              }
-            >
-              {item}
-            </span>
-          </li>
-        ))}
-      </ul>
+        <span className="size-9 shrink-0 rounded-full bg-[linear-gradient(135deg,var(--ozer-coral-500),var(--ozer-coral-400))]" />
+        <div className="min-w-0 text-left">
+          <p className="truncate text-xs font-semibold text-[var(--workspace-shell-text)]">
+            Ozer Assistant
+          </p>
+          <p className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
+            Tasks ready from your last call.
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

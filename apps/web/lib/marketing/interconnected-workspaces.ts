@@ -1,4 +1,4 @@
-// Task A: Life CRM → OS copy (section title, comparison label, ctaLine).
+// Task A: Life CRM → OS copy (section title, bento framing, ctaLine).
 // Task B: Meeting Assistant benefit card (marketing features grid).
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -70,32 +70,36 @@ export type InterconnectedWorkspaceNode = {
   examples: string;
 };
 
+export type InterconnectedBentoVisual =
+  | 'tasks'
+  | 'team'
+  | 'spark'
+  | 'activity'
+  | 'support'
+  | 'none';
+
+export type InterconnectedBentoTile = {
+  id: string;
+  title: string;
+  description: string;
+  icon?: LucideIcon;
+  href?: string;
+  /** Grid placement hints for the bento layout */
+  span: 'sm' | 'md' | 'lg' | 'cta';
+  variant: 'cream' | 'accent' | 'visual';
+  visual?: InterconnectedBentoVisual;
+  ctaLabel?: string;
+};
+
 export const INTERCONNECTED_WORKSPACES_MARKETING = {
   eyebrow: 'Why Ozer is different',
   title: 'One Workspace OS.',
   titleAccent: 'Every space connected.',
   subtitle:
     'A small studio should not need seven tools and Zapier. Ozer links studio work, personal life, and family workspaces — with assistants and a planner that share one home.',
-  comparison: {
-    heading: 'Not another siloed CRM',
-    traditionalLabel: 'Typical stack',
-    ozerLabel: 'Ozer',
-    traditional: [
-      'Work in one product; life in three others',
-      'Separate logins and mental models',
-      'Tasks trapped inside each tool',
-      'No shared “today” across work and home',
-      'Add-ons bolted on, never truly joined',
-    ],
-    ozer: [
-      'Personal home sees tasks across every workspace',
-      'One login — switch spaces without context loss',
-      'One planner, today view, and task list',
-      'Activity on your Mac — assigned to clients and projects',
-      'Shortcuts to any page in any workspace',
-      'Turn workspace tasks off when you need focus',
-    ],
-  },
+  bentoHeading: 'Not another siloed CRM',
+  bentoSubheading:
+    'One login, one today view, and workspaces that stay connected — without the comparison chart.',
   hubLabel: 'Your personal home',
   hubCaption: 'Today · Planner · Tasks · Activity · Shortcuts',
   workspaceNodes: [
@@ -112,6 +116,103 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       examples: 'Calendar, meals, shopping',
     },
   ] satisfies InterconnectedWorkspaceNode[],
+  bentoTiles: [
+    {
+      id: 'tasks',
+      title: 'All tasks, one list',
+      description:
+        'See what is due today across personal life and every workspace — filter by space when you need focus.',
+      icon: ListTodo,
+      span: 'md',
+      variant: 'visual',
+      visual: 'tasks',
+    },
+    {
+      id: 'spaces',
+      title: 'One login, every space',
+      description:
+        'Switch between business, family, and personal without losing context — same account, same mental model.',
+      icon: Layers,
+      span: 'sm',
+      variant: 'cream',
+      visual: 'team',
+    },
+    {
+      id: 'cta',
+      title: 'Start free — personal home included',
+      description:
+        'Your free hub already sees tasks and today across every workspace you join.',
+      span: 'cta',
+      variant: 'accent',
+      visual: 'none',
+      ctaLabel: 'Start free',
+      href: '/start',
+    },
+    {
+      id: 'meeting',
+      title: 'Meeting Assistant for Mac',
+      description:
+        'Record any call, label speakers, extract tasks, and sync to the right workspace. Audio stays on your Mac.',
+      icon: Mic,
+      href: '/features/desktop-assistant',
+      span: 'md',
+      variant: 'cream',
+      visual: 'support',
+    },
+    {
+      id: 'spark',
+      title: 'Planner and today',
+      description:
+        'Today pulls open tasks and calendar from every space you belong to.',
+      icon: Sparkles,
+      span: 'sm',
+      variant: 'visual',
+      visual: 'spark',
+    },
+    {
+      id: 'activity',
+      title: 'Activity on your Mac',
+      description:
+        'Capture app and website sessions — assign time to clients and projects from one view.',
+      icon: Activity,
+      href: '/features/activity',
+      span: 'lg',
+      variant: 'visual',
+      visual: 'activity',
+    },
+    {
+      id: 'shortcuts',
+      title: 'Shortcuts anywhere',
+      description:
+        'Pin invoices, a client, or the family calendar to your personal home and phone bar.',
+      icon: LayoutDashboard,
+      span: 'sm',
+      variant: 'cream',
+      visual: 'none',
+    },
+    {
+      id: 'dictation',
+      title: 'Dictation',
+      description:
+        'Press fn on your Mac and speak into any app. Punctuated text, included with Assistant.',
+      icon: Keyboard,
+      href: '/features/dictation',
+      span: 'sm',
+      variant: 'cream',
+      visual: 'none',
+    },
+    {
+      id: 'mobile',
+      title: 'Mobile, still connected',
+      description:
+        'Home, Menu, and up to three pins reach any workspace from your phone.',
+      icon: Smartphone,
+      span: 'sm',
+      variant: 'cream',
+      visual: 'none',
+    },
+  ] satisfies InterconnectedBentoTile[],
+  /** Kept for segment pages / orbit captions that still reference benefit cards. */
   benefits: [
     {
       icon: ListTodo,

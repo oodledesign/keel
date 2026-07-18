@@ -77,22 +77,6 @@ export function OzerDashboard({ data }: Props) {
         ) : null}
       </header>
 
-      {data.recentNotes.length > 0 ? (
-        <DashboardSection
-          title="Recent notes"
-          subtitle="Latest from personal and your workspaces"
-        >
-          <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:snap-none md:grid-cols-2 md:overflow-visible lg:grid-cols-3 [&::-webkit-scrollbar]:hidden">
-            {data.recentNotes.map((note) => (
-              <RecentNoteCard
-                key={`${note.workspaceSlug}-${note.id}`}
-                note={note}
-              />
-            ))}
-          </div>
-        </DashboardSection>
-      ) : null}
-
       <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
         <div className="flex min-w-0 flex-col gap-6">
           <TaskPreviewSection
@@ -117,9 +101,9 @@ export function OzerDashboard({ data }: Props) {
             emptyMessage="No upcoming tasks scheduled."
           />
 
-          <DashboardSection title="Upcoming with people">
+          <DashboardSection title="People focus">
             {data.peopleUpcoming.length > 0 ? (
-              <div className={`${panelClass} divide-y divide-white/[0.06]`}>
+              <div className={`${panelClass} divide-y divide-[color:var(--workspace-shell-border)]`}>
                 {data.peopleUpcoming.map((item) => (
                   <PeopleUpcomingRow key={item.id} item={item} />
                 ))}
@@ -141,7 +125,7 @@ export function OzerDashboard({ data }: Props) {
         <div className="min-w-0">
           <DashboardSection title="My Day">
             {data.myDayEvents.length > 0 ? (
-              <div className={`${panelClass} divide-y divide-white/[0.06]`}>
+              <div className={`${panelClass} divide-y divide-[color:var(--workspace-shell-border)]`}>
                 {data.myDayEvents.map((event) => (
                   <CalendarEventRow key={event.id} event={event} />
                 ))}
@@ -152,6 +136,24 @@ export function OzerDashboard({ data }: Props) {
           </DashboardSection>
         </div>
       </div>
+
+      {data.recentNotes.length > 0 ? (
+        <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-2 xl:items-start">
+          <DashboardSection
+            title="Recent notes"
+            subtitle="Latest from personal and your workspaces"
+          >
+            <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:snap-none md:grid-cols-2 md:overflow-visible [&::-webkit-scrollbar]:hidden">
+              {data.recentNotes.map((note) => (
+                <RecentNoteCard
+                  key={`${note.workspaceSlug}-${note.id}`}
+                  note={note}
+                />
+              ))}
+            </div>
+          </DashboardSection>
+        </div>
+      ) : null}
 
       <DashboardSection title="Workspace overview">
         {data.workspaceOverview.length > 0 ? (

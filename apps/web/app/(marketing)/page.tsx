@@ -25,7 +25,6 @@ import {
   marketingBtnGradient,
   marketingBtnOutline,
   marketingFeatureCard,
-  marketingSectionMuted,
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
 import { JsonLd } from '~/lib/seo/json-ld';
@@ -38,6 +37,11 @@ import {
 
 import { ComingSoon } from './_components/coming-soon';
 import { InterconnectedWorkspacesSection } from './_components/interconnected-workspaces-section';
+import {
+  MarketingBentoGrid,
+  MarketingBentoTile,
+} from './_components/marketing-bento';
+import { MarketingFinalCta } from './_components/marketing-final-cta';
 import { MarketingHomeHero } from './_components/marketing-home-hero';
 
 export const metadata = buildMarketingMetadata({
@@ -54,30 +58,34 @@ export const metadata = buildMarketingMetadata({
   ],
 });
 
-const features = [
+const lifeFeatures = [
   {
     icon: Users,
     title: 'People on the record',
     description:
       'Clients, collaborators, and family contacts — context stays with the relationship.',
+    span: 'sm' as const,
   },
   {
     icon: Calendar,
     title: 'One plan for the day',
     description:
       'Work priorities and personal plans on one timeline, not three calendars.',
+    span: 'tall' as const,
   },
   {
     icon: CreditCard,
     title: 'Money next to the work',
     description:
       'Invoices and outstanding amounts sit on the job — Ozer surfaces what to chase.',
+    span: 'sm' as const,
   },
   {
     icon: MessagesSquare,
     title: 'Chat on the project',
     description:
       'Updates and next steps live on the job record, not in personal WhatsApp.',
+    span: 'sm' as const,
   },
   {
     icon: Activity,
@@ -85,6 +93,7 @@ const features = [
     description:
       'Ozer Assistant captures app and website sessions — assign time to clients and projects from one view.',
     href: '/features/activity',
+    span: 'wide' as const,
   },
 ];
 
@@ -119,94 +128,81 @@ function Home() {
       <JsonLd data={schema} />
 
       {/* Tighter top padding so the connection map peeks above the fold */}
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pt-14 pb-14 md:pt-20 md:pb-20">
-        <MarketingHomeHero />
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col overflow-hidden px-6 pt-14 pb-14 md:pt-20 md:pb-20">
+        {/* Soft coral orbs behind the hero */}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-0 -z-0 overflow-hidden"
+        >
+          <div className="absolute top-[-12%] left-[8%] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--ozer-coral-400)_55%,transparent)_0%,transparent_68%)] blur-2xl md:h-[34rem] md:w-[34rem]" />
+          <div className="absolute top-[18%] right-[-8%] h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--ozer-coral-500)_40%,transparent)_0%,transparent_70%)] blur-3xl md:h-[28rem] md:w-[28rem]" />
+          <div className="absolute bottom-[-10%] left-[35%] h-[18rem] w-[18rem] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,#ffb48c_50%,transparent)_0%,transparent_72%)] blur-3xl" />
+        </div>
+        <div className="relative z-10">
+          <MarketingHomeHero />
+        </div>
       </section>
 
       <InterconnectedWorkspacesSection tone="light" />
 
       <section className="relative mx-auto w-full max-w-7xl px-6 pt-16 pb-24 md:pt-24">
-        <div className="mb-8">
+        <div className="mb-8 max-w-2xl">
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
             Your life connects too — free forever
           </h2>
-          <p className="mt-3 max-w-2xl text-[var(--workspace-shell-text-muted)]">
+          <p className="mt-3 text-[var(--workspace-shell-text-muted)]">
             Every other tool stops at the office door. Ozer&apos;s personal and
             family workspaces are free forever, and they share one planner and
             one today view with your studio — school runs and client calls on
             the same timeline.
           </p>
         </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {features.map((feature) => {
-            const card = (
-              <>
-                <feature.icon
-                  className="h-5 w-5 text-[var(--ozer-accent)]"
-                  aria-hidden
-                />
-                <h3 className="font-heading mt-4 text-xl font-semibold text-[var(--workspace-shell-text)]">
+
+        <MarketingBentoGrid>
+          {lifeFeatures.map((feature) => {
+            const Icon = feature.icon;
+            return (
+              <MarketingBentoTile
+                key={feature.title}
+                span={feature.span}
+                variant={feature.span === 'wide' ? 'cream' : 'muted'}
+                href={'href' in feature ? feature.href : undefined}
+                visual={
+                  <div className="flex w-full justify-start">
+                    <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--ozer-accent)]">
+                      <Icon className="size-5" aria-hidden />
+                    </span>
+                  </div>
+                }
+              >
+                <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">
                   {feature.title}
                 </h3>
                 <p className="mt-2 text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
                   {feature.description}
                 </p>
-              </>
-            );
-
-            if ('href' in feature && feature.href) {
-              return (
-                <Link
-                  key={feature.title}
-                  href={feature.href}
-                  className={cn(
-                    marketingFeatureCard,
-                    'block p-6 transition-[border-color] duration-200 hover:border-[var(--ozer-accent)]/25',
-                  )}
-                >
-                  {card}
-                </Link>
-              );
-            }
-
-            return (
-              <article
-                key={feature.title}
-                className={cn(marketingFeatureCard, 'p-6')}
-              >
-                {card}
-              </article>
+              </MarketingBentoTile>
             );
           })}
-        </div>
 
-        <div className="mt-12 grid gap-4 md:grid-cols-2">
-          {[
-            {
-              href: '/personal',
-              title: 'Personal & family',
-              copy: 'Free hub — tasks and planner across every workspace.',
-            },
-            {
-              href: '/work',
-              title: 'Business',
-              copy: 'Clients, jobs, and invoices inside the Workspace OS.',
-            },
-          ].map((item) => (
-            <Link
-              key={item.href}
-              href={item.href}
-              className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5 transition-[border-color,background-color] duration-200 ease-[cubic-bezier(0.23,1,0.32,1)] hover:border-[var(--ozer-accent)]/25 hover:bg-[var(--workspace-shell-sidebar-accent)]"
-            >
-              <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
-                {item.title}
-              </h3>
-              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
-                {item.copy}
-              </p>
-            </Link>
-          ))}
-        </div>
+          <MarketingBentoTile span="sm" variant="cream" href="/personal">
+            <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
+              Personal &amp; family
+            </h3>
+            <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+              Free hub — tasks and planner across every workspace.
+            </p>
+          </MarketingBentoTile>
+
+          <MarketingBentoTile span="sm" variant="cream" href="/work">
+            <h3 className="font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
+              Business
+            </h3>
+            <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+              Clients, jobs, and invoices inside the Workspace OS.
+            </p>
+          </MarketingBentoTile>
+        </MarketingBentoGrid>
       </section>
 
       <section
@@ -216,7 +212,7 @@ function Home() {
       >
         <div
           className={cn(
-            'rounded-2xl border border-[color:var(--workspace-shell-border)] p-8 text-center',
+            'rounded-[1.75rem] border border-[color:var(--workspace-shell-border)] p-8 text-center md:p-10',
             marketingFeatureCard,
           )}
         >
@@ -253,24 +249,11 @@ function Home() {
 
       <ComingSoon />
 
-      <section className={cn('py-20', marketingSectionMuted)}>
-        <div className="mx-auto flex w-full max-w-7xl flex-col items-center gap-4 px-6 text-center">
-          <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
-            Run the studio from one home
-          </h2>
-          <p className="max-w-2xl text-[var(--workspace-shell-text-muted)]">
-            If your stack is fragmented, Ozer brings projects, people, plans,
-            and priorities into one calm workspace.
-          </p>
-          <Button
-            asChild
-            size="lg"
-            className={cn('mt-2', marketingBtnGradient)}
-          >
-            <Link href={MARKETING_FREE_SIGNUP_URL}>Start free</Link>
-          </Button>
-        </div>
-      </section>
+      <MarketingFinalCta
+        heading="Run the studio from one home"
+        subheading="If your stack is fragmented, Ozer brings projects, people, plans, and priorities into one calm workspace."
+        cta={{ label: 'Start free', href: MARKETING_FREE_SIGNUP_URL }}
+      />
     </main>
   );
 }
