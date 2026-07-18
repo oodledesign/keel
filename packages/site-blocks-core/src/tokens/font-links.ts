@@ -8,7 +8,7 @@ const FONTSHARE_SLUG: Record<string, string> = {
   'general sans': 'general-sans',
   satoshi: 'satoshi',
   'clash display': 'clash-display',
-  'switzer': 'switzer',
+  switzer: 'switzer',
 };
 
 function normalizeFamily(name: string) {

@@ -37,7 +37,11 @@
     },
     { "key": "backgroundColor", "type": "color", "label": "Custom background" },
     { "key": "textColor", "type": "color", "label": "Text colour" },
-    { "key": "maskFillColor", "type": "color", "label": "Star mask fill (behind photo)" }
+    {
+      "key": "maskFillColor",
+      "type": "color",
+      "label": "Star mask fill (behind photo)"
+    }
   ],
   "defaults": {
     "sectionId": "team",

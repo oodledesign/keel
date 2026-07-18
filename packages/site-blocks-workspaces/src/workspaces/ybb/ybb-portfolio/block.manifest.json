@@ -28,10 +28,18 @@
         { "key": "tilt", "type": "text", "label": "Tilt (degrees, e.g. 3.9)" }
       ]
     },
-    { "key": "showArrows", "type": "boolean", "label": "Show prev/next arrows" },
+    {
+      "key": "showArrows",
+      "type": "boolean",
+      "label": "Show prev/next arrows"
+    },
     { "key": "showDots", "type": "boolean", "label": "Show dot navigation" },
     { "key": "autoplay", "type": "boolean", "label": "Autoplay carousel" },
-    { "key": "autoplayMs", "type": "number", "label": "Autoplay interval (ms)" },
+    {
+      "key": "autoplayMs",
+      "type": "number",
+      "label": "Autoplay interval (ms)"
+    },
     { "key": "showFooterCta", "type": "boolean", "label": "Show footer CTA" },
     { "key": "footerCtaLabel", "type": "text", "label": "Footer CTA label" },
     { "key": "footerCtaHref", "type": "link", "label": "Footer CTA link" },

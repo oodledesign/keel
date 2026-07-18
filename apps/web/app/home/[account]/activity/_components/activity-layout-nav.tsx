@@ -1,7 +1,7 @@
 'use client';
 
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@kit/ui/tabs';
@@ -62,9 +62,7 @@ export function ActivityLayoutNav({
       <div className="flex flex-wrap items-center gap-3">
         <Tabs
           value={layoutMode}
-          onValueChange={(value) =>
-            onLayoutChange(value as ActivityLayoutMode)
-          }
+          onValueChange={(value) => onLayoutChange(value as ActivityLayoutMode)}
         >
           <TabsList className="h-9 bg-[var(--workspace-control-surface)]">
             <TabsTrigger value="day" className="px-3 text-xs">

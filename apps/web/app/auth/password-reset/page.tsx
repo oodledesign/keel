@@ -5,6 +5,7 @@ import { Button } from '@kit/ui/button';
 import { Heading } from '@kit/ui/heading';
 import { Trans } from '@kit/ui/trans';
 
+import { AppLogo } from '~/components/app-logo';
 import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
@@ -25,6 +26,9 @@ const redirectPath = `${callback}?next=${passwordUpdate}`;
 function PasswordResetPage() {
   return (
     <AuthFormCard>
+      <div className="flex justify-center">
+        <AppLogo className="h-7 w-auto" />
+      </div>
       <div className="flex flex-col items-center gap-1 text-center">
         <Heading level={4} className="tracking-tight">
           <Trans i18nKey={'auth:passwordResetLabel'} />

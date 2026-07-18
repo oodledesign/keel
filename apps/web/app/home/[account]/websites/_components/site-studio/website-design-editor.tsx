@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition, useEffect } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { Lock, LockOpen, Plus, Sparkles, Trash2 } from 'lucide-react';
 

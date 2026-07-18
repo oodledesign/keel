@@ -4,18 +4,18 @@ import ybbAnnouncementBannerManifest from './ybb-announcement-banner/block.manif
 import { YbbAnnouncementBanner } from './ybb-announcement-banner/component';
 import ybbFooterManifest from './ybb-footer/block.manifest.json';
 import { YbbFooter } from './ybb-footer/component';
+import ybbFoundersManifest from './ybb-founders/block.manifest.json';
+import { YbbFounders } from './ybb-founders/component';
+import ybbGlamGirlsManifest from './ybb-glam-girls/block.manifest.json';
+import { YbbGlamGirls } from './ybb-glam-girls/component';
 import ybbHeroManifest from './ybb-hero/block.manifest.json';
 import { YbbHero } from './ybb-hero/component';
 import ybbNavbarManifest from './ybb-navbar/block.manifest.json';
 import { YbbNavbar } from './ybb-navbar/component';
-import ybbScallopSectionManifest from './ybb-scallop-section/block.manifest.json';
-import { YbbScallopSection } from './ybb-scallop-section/component';
-import ybbGlamGirlsManifest from './ybb-glam-girls/block.manifest.json';
-import { YbbGlamGirls } from './ybb-glam-girls/component';
-import ybbFoundersManifest from './ybb-founders/block.manifest.json';
-import { YbbFounders } from './ybb-founders/component';
 import ybbPortfolioManifest from './ybb-portfolio/block.manifest.json';
 import { YbbPortfolio } from './ybb-portfolio/component';
+import ybbScallopSectionManifest from './ybb-scallop-section/block.manifest.json';
+import { YbbScallopSection } from './ybb-scallop-section/component';
 
 const YBB_COMPONENT_ORDER = [
   ybbAnnouncementBannerManifest.type,

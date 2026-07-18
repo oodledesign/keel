@@ -143,7 +143,10 @@ export function OzerDashboard({ data }: Props) {
             title="Recent notes"
             subtitle="Latest from personal and your workspaces"
           >
-            <div className="-mx-1 flex snap-x snap-mandatory gap-3 overflow-x-auto px-1 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:snap-none md:grid-cols-2 md:overflow-visible [&::-webkit-scrollbar]:hidden">
+            <div
+              data-horizontal-scroll
+              className="-mx-1 flex touch-pan-x snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-1 pb-1 [scrollbar-width:none] md:mx-0 md:grid md:snap-none md:grid-cols-2 md:overflow-visible [&::-webkit-scrollbar]:hidden"
+            >
               {data.recentNotes.map((note) => (
                 <RecentNoteCard
                   key={`${note.workspaceSlug}-${note.id}`}

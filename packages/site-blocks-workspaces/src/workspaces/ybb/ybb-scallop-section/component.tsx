@@ -3,9 +3,8 @@
 import type { CSSProperties } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
-import { resolveYbbColorVar, ybbCtaClassName } from '../ybb-styles';
-
 import '../ybb-buttons.css';
+import { resolveYbbColorVar, ybbCtaClassName } from '../ybb-styles';
 import './ybb-scallop-section.css';
 
 export type YbbScallopSectionProps = {
@@ -39,8 +38,7 @@ export function YbbScallopSection(props: YbbScallopSectionProps) {
   const scriptLine = props.scriptLine ?? YBB_DEFAULTS.scallopScriptLine;
   const headingBefore = props.headingBefore ?? "We're the girlies you ";
   const headingAccent = props.headingAccent ?? 'actually want';
-  const headingAfter =
-    props.headingAfter ?? ' around on your wedding morning';
+  const headingAfter = props.headingAfter ?? ' around on your wedding morning';
   const body = props.body ?? YBB_DEFAULTS.scallopBody;
   const bandBackgroundToken = props.bandBackgroundToken ?? 'custom';
   const bandBackgroundColor =
@@ -78,7 +76,7 @@ export function YbbScallopSection(props: YbbScallopSectionProps) {
   return (
     <section
       id={sectionId || undefined}
-      className={`ybbScallopSection${overlapPrevious ? ' ybbScallopSectionOverlap' : ''}`}
+      className={`ybbScallopSection${overlapPrevious ? 'ybbScallopSectionOverlap' : ''}`}
       style={sectionStyle}
       aria-labelledby={`${sectionId}-heading`}
     >

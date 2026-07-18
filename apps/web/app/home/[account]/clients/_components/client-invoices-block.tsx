@@ -7,7 +7,6 @@ import Link from 'next/link';
 import { ReceiptText } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
-
 import { formatInvoiceMoney } from '~/home/[account]/invoices/_lib/invoice-currency';
 
 import { listClientInvoices } from '../_lib/server/server-actions';

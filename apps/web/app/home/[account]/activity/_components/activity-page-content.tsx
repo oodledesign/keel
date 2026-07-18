@@ -68,10 +68,10 @@ import {
   type ActivityAppGroup,
   type ActivityBlockListRow,
   type ActivityDayGroup,
+  type ActivityLayoutMode,
   type ActivitySessionGroup,
   type ActivitySortDir,
   type ActivitySortKey,
-  type ActivityLayoutMode,
   type ActivityStatusFilter,
   aggregateActivityByApp,
   blockPageTitle,
@@ -80,8 +80,8 @@ import {
   formatTimeRange,
   groupBlocksByApp,
   groupBlocksByDay,
-  sortActivityAppGroups,
   shiftActivityFocusDate,
+  sortActivityAppGroups,
   sumActiveDuration,
   sumTodayActiveDuration,
 } from '~/lib/activity/activity-history';
@@ -1557,7 +1557,9 @@ export function ActivityPageContent({ data }: Props) {
             status: layout === 'list' ? data.statusFilter : 'all',
           })
         }
-        onFocusDateChange={(date) => navigate({ date, layout: data.layoutMode })}
+        onFocusDateChange={(date) =>
+          navigate({ date, layout: data.layoutMode })
+        }
         onShiftFocusDate={(deltaDays) =>
           navigate({
             date: shiftActivityFocusDate(data.focusDate, deltaDays),
@@ -1653,9 +1655,7 @@ export function ActivityPageContent({ data }: Props) {
           data={data}
           blocks={rows}
           focusDate={data.focusDate}
-          onSelectDay={(dayKey) =>
-            navigate({ layout: 'day', date: dayKey })
-          }
+          onSelectDay={(dayKey) => navigate({ layout: 'day', date: dayKey })}
         />
       ) : rows.length === 0 ? null : (
         <div className="space-y-5 pb-4">

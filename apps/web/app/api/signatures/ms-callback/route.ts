@@ -4,23 +4,22 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { assertAccountAdmin } from '~/lib/signatures/account-access';
-import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
+import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import {
   loadIntegrationInviteById,
   markIntegrationInviteUsed,
 } from '~/lib/signatures/integration-invite';
-import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import { decodeMsOAuthState } from '~/lib/signatures/ms-oauth-state';
-import { sendSignatureConnectionCompletedEmail } from '~/lib/signatures/sync-notifications';
+import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
 import {
   signSignaturesMsOAuthState,
   verifySignaturesMsOAuthState,
 } from '~/lib/signatures/signatures-oauth-state';
+import { sendSignatureConnectionCompletedEmail } from '~/lib/signatures/sync-notifications';
 
 export const dynamic = 'force-dynamic';
 
-const MS_TOKEN =
-  'https://login.microsoftonline.com/common/oauth2/v2.0/token';
+const MS_TOKEN = 'https://login.microsoftonline.com/common/oauth2/v2.0/token';
 
 function absoluteUrl(path: string) {
   const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
@@ -113,9 +112,7 @@ export async function GET(request: NextRequest) {
   const adminConsent = url.searchParams.get('admin_consent');
   const adminTenant = url.searchParams.get('tenant');
 
-  const signedState = stateRaw
-    ? verifySignaturesMsOAuthState(stateRaw)
-    : null;
+  const signedState = stateRaw ? verifySignaturesMsOAuthState(stateRaw) : null;
   const legacyState = !signedState ? decodeMsOAuthState(stateRaw) : null;
   const accountId = signedState?.accountId ?? legacyState?.accountId ?? null;
   const slug = await resolveSlug(
@@ -186,7 +183,9 @@ export async function GET(request: NextRequest) {
       } catch (e) {
         const msg = e instanceof Error ? e.message : 'Microsoft connect failed';
         return NextResponse.redirect(
-          absoluteUrl(`/connect/signatures/error?message=${encodeURIComponent(msg)}`),
+          absoluteUrl(
+            `/connect/signatures/error?message=${encodeURIComponent(msg)}`,
+          ),
         );
       }
 
@@ -218,7 +217,11 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const addonDenied = await denyUnlessSignaturesAddon(client, user.id, accountId);
+  const addonDenied = await denyUnlessSignaturesAddon(
+    client,
+    user.id,
+    accountId,
+  );
   if (addonDenied) {
     return NextResponse.redirect(
       `${returnBase}?signatures_error=${encodeURIComponent('Signatures add-on required')}`,
@@ -282,8 +285,7 @@ export async function GET(request: NextRequest) {
 
     const claims = decodeJwtPayload(tokenJson.access_token);
     const tid = claims?.tid;
-    const msTenantId =
-      typeof tid === 'string' && tid.length > 0 ? tid : null;
+    const msTenantId = typeof tid === 'string' && tid.length > 0 ? tid : null;
 
     if (!msTenantId) {
       throw new Error('Could not read tenant id from token');

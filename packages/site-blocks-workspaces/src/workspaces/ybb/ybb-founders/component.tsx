@@ -3,9 +3,8 @@
 import type { CSSProperties } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
-import { resolveYbbColorVar, ybbCtaClassName } from '../ybb-styles';
-
 import '../ybb-buttons.css';
+import { resolveYbbColorVar, ybbCtaClassName } from '../ybb-styles';
 import './ybb-founders.css';
 
 function cssUrl(value: string): string {
@@ -42,10 +41,8 @@ export function YbbFounders(props: YbbFoundersProps) {
   const photoUrl = props.photoUrl ?? YBB_DEFAULTS.foundersPhotoUrl;
   const photoAlt =
     props.photoAlt ?? 'Zoe and Eloise — Your Bridal Besties founders';
-  const starOuterUrl =
-    props.starOuterUrl ?? YBB_DEFAULTS.foundersStarOuterUrl;
-  const starInnerUrl =
-    props.starInnerUrl ?? YBB_DEFAULTS.foundersStarInnerUrl;
+  const starOuterUrl = props.starOuterUrl ?? YBB_DEFAULTS.foundersStarOuterUrl;
+  const starInnerUrl = props.starInnerUrl ?? YBB_DEFAULTS.foundersStarInnerUrl;
   const starMaskUrl = props.starMaskUrl ?? YBB_DEFAULTS.foundersStarMaskUrl;
 
   const background = resolveYbbColorVar({
@@ -111,11 +108,7 @@ export function YbbFounders(props: YbbFoundersProps) {
               <div className="ybbFoundersPhotoMask">
                 <div className="ybbFoundersPhotoClip">
                   {photoUrl ? (
-                    <img
-                      src={photoUrl}
-                      alt={photoAlt}
-                      loading="lazy"
-                    />
+                    <img src={photoUrl} alt={photoAlt} loading="lazy" />
                   ) : (
                     <div className="ybbFoundersPhotoPlaceholder" aria-hidden />
                   )}

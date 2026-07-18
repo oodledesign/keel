@@ -104,7 +104,10 @@ export function ActivityWeekView({
                   <div className="h-16 w-full overflow-hidden rounded-md bg-[var(--workspace-control-surface)]">
                     <div
                       className="w-full rounded-md bg-[var(--ozer-accent)] transition-all group-hover:bg-[var(--ozer-accent-hover)]"
-                      style={{ height: `${barHeight}%`, marginTop: `${100 - barHeight}%` }}
+                      style={{
+                        height: `${barHeight}%`,
+                        marginTop: `${100 - barHeight}%`,
+                      }}
                     />
                   </div>
                 </div>

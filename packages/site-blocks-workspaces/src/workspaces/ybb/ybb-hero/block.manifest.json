@@ -41,9 +41,21 @@
         { "label": "Text link", "value": "text" }
       ]
     },
-    { "key": "showSecondaryCta", "type": "boolean", "label": "Show secondary CTA" },
-    { "key": "secondaryCtaLabel", "type": "text", "label": "Secondary CTA label" },
-    { "key": "secondaryCtaHref", "type": "link", "label": "Secondary CTA link" },
+    {
+      "key": "showSecondaryCta",
+      "type": "boolean",
+      "label": "Show secondary CTA"
+    },
+    {
+      "key": "secondaryCtaLabel",
+      "type": "text",
+      "label": "Secondary CTA label"
+    },
+    {
+      "key": "secondaryCtaHref",
+      "type": "link",
+      "label": "Secondary CTA link"
+    },
     {
       "key": "secondaryCtaVariant",
       "type": "select",

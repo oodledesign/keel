@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from 'react';
+import { type RefObject, useEffect } from 'react';
 
 const AUTOPLAY_MS_DEFAULT = 3200;
 
@@ -30,7 +30,9 @@ export function useYbbPortfolioCarousel(
 
     const stage = root;
 
-    const track = stage.querySelector<HTMLElement>('[data-ybb-portfolio-track]');
+    const track = stage.querySelector<HTMLElement>(
+      '[data-ybb-portfolio-track]',
+    );
     const viewport = stage.querySelector<HTMLElement>('.ybbPortfolioViewport');
     const allSlides = [
       ...stage.querySelectorAll<HTMLElement>('[data-ybb-portfolio-slide]'),
@@ -63,9 +65,10 @@ export function useYbbPortfolioCarousel(
     let dragging = false;
     let resizeTimer = 0;
 
-    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const intervalMs =
-      autoplayMs > 500 ? autoplayMs : AUTOPLAY_MS_DEFAULT;
+    const reduced = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    ).matches;
+    const intervalMs = autoplayMs > 500 ? autoplayMs : AUTOPLAY_MS_DEFAULT;
 
     function logicalIndex(i: number) {
       return ((i % count) + count) % count;
@@ -94,7 +97,9 @@ export function useYbbPortfolioCarousel(
     function setTransform(i: number, immediate = false) {
       const x = offsetFor(i) + dragOffset;
       track!.style.transition =
-        immediate || reduced ? 'none' : 'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)';
+        immediate || reduced
+          ? 'none'
+          : 'transform 0.55s cubic-bezier(0.22, 1, 0.36, 1)';
       track!.style.transform = `translate3d(${x}px, 0, 0)`;
     }
 

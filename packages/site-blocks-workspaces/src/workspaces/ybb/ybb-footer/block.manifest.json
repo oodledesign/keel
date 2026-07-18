@@ -7,7 +7,11 @@
     { "key": "logoWideUrl", "type": "image", "label": "Footer logo URL" },
     { "key": "monogramUrl", "type": "image", "label": "Press monogram URL" },
     { "key": "textureUrl", "type": "image", "label": "Footer texture URL" },
-    { "key": "cutoutImageUrl", "type": "image", "label": "Team cutout image URL" },
+    {
+      "key": "cutoutImageUrl",
+      "type": "image",
+      "label": "Team cutout image URL"
+    },
     { "key": "email", "type": "text", "label": "Email address" },
     { "key": "socialHandle", "type": "text", "label": "Social handle" },
     { "key": "instagramUrl", "type": "link", "label": "Instagram URL" },

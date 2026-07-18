@@ -4,8 +4,16 @@
   "category": "ybb",
   "fields": [
     { "key": "sectionId", "type": "text", "label": "Section ID (anchor)" },
-    { "key": "overlapScallop", "type": "boolean", "label": "Overlap scallop section above" },
-    { "key": "title", "type": "textarea", "label": "Heading (line breaks allowed)" },
+    {
+      "key": "overlapScallop",
+      "type": "boolean",
+      "label": "Overlap scallop section above"
+    },
+    {
+      "key": "title",
+      "type": "textarea",
+      "label": "Heading (line breaks allowed)"
+    },
     { "key": "kicker", "type": "text", "label": "Script kicker" },
     {
       "key": "backgroundToken",
@@ -20,7 +28,11 @@
       ]
     },
     { "key": "backgroundColor", "type": "color", "label": "Custom background" },
-    { "key": "kickerColor", "type": "color", "label": "Kicker & heading accent colour" },
+    {
+      "key": "kickerColor",
+      "type": "color",
+      "label": "Kicker & heading accent colour"
+    },
     {
       "key": "cards",
       "type": "array",
@@ -55,9 +67,21 @@
             { "label": "Cress", "value": "cress" }
           ]
         },
-        { "key": "tilt", "type": "text", "label": "Polaroid tilt (degrees, e.g. -2.5)" },
-        { "key": "featured", "type": "boolean", "label": "Featured (taller center polaroid)" },
-        { "key": "squarePhoto", "type": "boolean", "label": "Square photo crop" },
+        {
+          "key": "tilt",
+          "type": "text",
+          "label": "Polaroid tilt (degrees, e.g. -2.5)"
+        },
+        {
+          "key": "featured",
+          "type": "boolean",
+          "label": "Featured (taller center polaroid)"
+        },
+        {
+          "key": "squarePhoto",
+          "type": "boolean",
+          "label": "Square photo crop"
+        },
         { "key": "linkLabel", "type": "text", "label": "Speech link label" },
         { "key": "linkHref", "type": "link", "label": "Speech link URL" }
       ]

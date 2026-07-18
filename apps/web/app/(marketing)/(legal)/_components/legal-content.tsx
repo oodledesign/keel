@@ -38,7 +38,7 @@ async function LegalMarkdown({ filename }: { filename: string }) {
           table({ children }) {
             return (
               <div className="my-6 overflow-x-auto">
-                <table className="w-full min-w-[640px] border-collapse text-left text-xs [&_td]:border [&_td]:border-border [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:border-border [&_th]:bg-muted/40 [&_th]:px-2 [&_th]:py-1.5 [&_th]:font-medium">
+                <table className="[&_td]:border-border [&_th]:border-border [&_th]:bg-muted/40 w-full min-w-[640px] border-collapse text-left text-xs [&_td]:border [&_td]:px-2 [&_td]:py-1.5 [&_th]:border [&_th]:px-2 [&_th]:py-1.5 [&_th]:font-medium">
                   {children}
                 </table>
               </div>

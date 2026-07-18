@@ -23,8 +23,8 @@ import {
   sumActiveDuration,
 } from '~/lib/activity/activity-history';
 
-import { ActivityBlockAssignmentCell } from './activity-block-assignment-cell';
 import { ActivityAppIcon } from './activity-app-icon';
+import { ActivityBlockAssignmentCell } from './activity-block-assignment-cell';
 import { ActivitySummaryBreakdown } from './activity-summary-breakdown';
 
 type Props = {
@@ -291,14 +291,13 @@ export function ActivityDayView({
 }: Props) {
   const dayBlocks = useMemo(
     () =>
-      filterBlocksForDay(blocks, focusDate).filter((block) => !block.isExcluded),
+      filterBlocksForDay(blocks, focusDate).filter(
+        (block) => !block.isExcluded,
+      ),
     [blocks, focusDate],
   );
   const dayTotal = useMemo(() => sumActiveDuration(dayBlocks), [dayBlocks]);
-  const topApps = useMemo(
-    () => aggregateActivityByApp(dayBlocks),
-    [dayBlocks],
-  );
+  const topApps = useMemo(() => aggregateActivityByApp(dayBlocks), [dayBlocks]);
   const topClients = useMemo(
     () => aggregateActivityByClient(dayBlocks),
     [dayBlocks],

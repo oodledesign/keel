@@ -1,4 +1,4 @@
-import { createElement, type ChangeEvent, type ReactNode } from 'react';
+import { type ChangeEvent, type ReactNode, createElement } from 'react';
 
 import type { ComponentConfig, Field } from '@puckeditor/core';
 

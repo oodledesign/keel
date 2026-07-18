@@ -4,11 +4,27 @@
   "category": "ybb",
   "fields": [
     { "key": "sectionId", "type": "text", "label": "Section ID (anchor)" },
-    { "key": "overlapPrevious", "type": "boolean", "label": "Overlap previous section (hero scallop join)" },
+    {
+      "key": "overlapPrevious",
+      "type": "boolean",
+      "label": "Overlap previous section (hero scallop join)"
+    },
     { "key": "scriptLine", "type": "text", "label": "Background script line" },
-    { "key": "headingBefore", "type": "text", "label": "Heading — before accent" },
-    { "key": "headingAccent", "type": "text", "label": "Heading — accent phrase" },
-    { "key": "headingAfter", "type": "text", "label": "Heading — after accent" },
+    {
+      "key": "headingBefore",
+      "type": "text",
+      "label": "Heading — before accent"
+    },
+    {
+      "key": "headingAccent",
+      "type": "text",
+      "label": "Heading — accent phrase"
+    },
+    {
+      "key": "headingAfter",
+      "type": "text",
+      "label": "Heading — after accent"
+    },
     { "key": "body", "type": "textarea", "label": "Body copy" },
     { "key": "photoLeftUrl", "type": "image", "label": "Left photo" },
     { "key": "photoRightUrl", "type": "image", "label": "Right photo" },
@@ -24,7 +40,11 @@
         { "label": "Custom colour", "value": "custom" }
       ]
     },
-    { "key": "bandBackgroundColor", "type": "color", "label": "Custom band colour" },
+    {
+      "key": "bandBackgroundColor",
+      "type": "color",
+      "label": "Custom band colour"
+    },
     {
       "key": "scallopFillToken",
       "type": "select",
@@ -36,7 +56,11 @@
         { "label": "Custom colour", "value": "custom" }
       ]
     },
-    { "key": "scallopFillColor", "type": "color", "label": "Custom scallop fill" },
+    {
+      "key": "scallopFillColor",
+      "type": "color",
+      "label": "Custom scallop fill"
+    },
     { "key": "showPrimaryCta", "type": "boolean", "label": "Show primary CTA" },
     { "key": "primaryCtaLabel", "type": "text", "label": "Primary CTA label" },
     { "key": "primaryCtaHref", "type": "link", "label": "Primary CTA link" },
@@ -51,9 +75,21 @@
         { "label": "Text link", "value": "text" }
       ]
     },
-    { "key": "showSecondaryCta", "type": "boolean", "label": "Show secondary CTA" },
-    { "key": "secondaryCtaLabel", "type": "text", "label": "Secondary CTA label" },
-    { "key": "secondaryCtaHref", "type": "link", "label": "Secondary CTA link" },
+    {
+      "key": "showSecondaryCta",
+      "type": "boolean",
+      "label": "Show secondary CTA"
+    },
+    {
+      "key": "secondaryCtaLabel",
+      "type": "text",
+      "label": "Secondary CTA label"
+    },
+    {
+      "key": "secondaryCtaHref",
+      "type": "link",
+      "label": "Secondary CTA link"
+    },
     {
       "key": "secondaryCtaVariant",
       "type": "select",

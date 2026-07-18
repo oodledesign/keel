@@ -47,6 +47,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
   );
 
   const scrollRef = useRef<HTMLDivElement>(null);
+  const startXRef = useRef(0);
   const startYRef = useRef(0);
   const pullingRef = useRef(false);
   const pullDistanceRef = useRef(0);
@@ -102,7 +103,8 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
       const target = event.target;
       if (
         target instanceof HTMLElement &&
-        target.closest('textarea, input, select, [contenteditable="true"]')
+        (target.closest('textarea, input, select, [contenteditable="true"]') ||
+          target.closest('[data-horizontal-scroll]'))
       ) {
         pullingRef.current = false;
         return;
@@ -113,6 +115,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
         return;
       }
 
+      startXRef.current = event.touches[0]?.clientX ?? 0;
       startYRef.current = event.touches[0]?.clientY ?? 0;
       pullingRef.current = true;
       setIsDragging(true);
@@ -131,8 +134,18 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
         return;
       }
 
+      const currentX = event.touches[0]?.clientX ?? 0;
       const currentY = event.touches[0]?.clientY ?? 0;
+      const deltaX = currentX - startXRef.current;
       const delta = currentY - startYRef.current;
+
+      // Let horizontal carousels (e.g. recent notes) own sideways gestures.
+      if (Math.abs(deltaX) > Math.abs(delta) && Math.abs(deltaX) > 8) {
+        pullingRef.current = false;
+        setIsDragging(false);
+        setPullDistance(0);
+        return;
+      }
 
       if (delta <= 0) {
         setPullDistance(0);
@@ -246,7 +259,7 @@ export function PullToRefresh({ children, className }: PullToRefreshProps) {
 
       <div
         ref={scrollRef}
-        className="min-h-0 flex-1 [touch-action:pan-y] overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
+        className="min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]"
       >
         <div
           className={cn(

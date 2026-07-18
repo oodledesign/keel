@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
 import { resolveYbbBackgroundStyle } from '../ybb-styles';
-
 import './ybb-announcement-banner.css';
 
 export type YbbAnnouncementBannerProps = {
@@ -29,8 +28,7 @@ export function YbbAnnouncementBanner(props: YbbAnnouncementBannerProps) {
   const showForm = props.showForm ?? true;
   const emailPlaceholder =
     props.emailPlaceholder ?? YBB_DEFAULTS.announcementEmailPlaceholder;
-  const buttonLabel =
-    props.buttonLabel ?? YBB_DEFAULTS.announcementButtonLabel;
+  const buttonLabel = props.buttonLabel ?? YBB_DEFAULTS.announcementButtonLabel;
   const formAction = props.formAction ?? YBB_DEFAULTS.announcementFormAction;
   const dismissible = props.dismissible ?? true;
   const backgroundToken = props.backgroundToken ?? 'custom';

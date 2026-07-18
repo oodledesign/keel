@@ -286,7 +286,10 @@ export function formatActivityFocusDateLabel(
   return format(date, 'EEEE, d MMMM');
 }
 
-export function shiftActivityFocusDate(dayKey: string, deltaDays: number): string {
+export function shiftActivityFocusDate(
+  dayKey: string,
+  deltaDays: number,
+): string {
   const date = parseISO(`${dayKey}T12:00:00`);
   return format(addDays(date, deltaDays), 'yyyy-MM-dd');
 }
@@ -306,7 +309,10 @@ export function summarizeActivityWeekDays(
 ): ActivityWeekDaySummary[] {
   const anchor = parseISO(`${focusDate}T12:00:00`);
   const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
-  const totals = new Map<string, { durationSeconds: number; blockCount: number }>();
+  const totals = new Map<
+    string,
+    { durationSeconds: number; blockCount: number }
+  >();
 
   for (const block of blocks) {
     if (block.isExcluded) {
@@ -314,7 +320,10 @@ export function summarizeActivityWeekDays(
     }
 
     const dayKey = format(parseISO(block.startedAt), 'yyyy-MM-dd');
-    const existing = totals.get(dayKey) ?? { durationSeconds: 0, blockCount: 0 };
+    const existing = totals.get(dayKey) ?? {
+      durationSeconds: 0,
+      blockCount: 0,
+    };
     existing.durationSeconds += block.durationSeconds;
     existing.blockCount += 1;
     totals.set(dayKey, existing);

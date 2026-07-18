@@ -3,10 +3,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
+import '../ybb-buttons.css';
 import { YBB_DEFAULT_NAV_LINKS, type YbbNavLink } from '../ybb-nav-types';
 import { ybbCtaClassName } from '../ybb-styles';
-
-import '../ybb-buttons.css';
 import './ybb-navbar.css';
 
 export type YbbNavbarProps = {
@@ -29,7 +28,11 @@ function luminance(rgb: number[]) {
     const value = (channel ?? 0) / 255;
     return value <= 0.03928 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
   });
-  return 0.2126 * (channels[0] ?? 0) + 0.7152 * (channels[1] ?? 0) + 0.0722 * (channels[2] ?? 0);
+  return (
+    0.2126 * (channels[0] ?? 0) +
+    0.7152 * (channels[1] ?? 0) +
+    0.0722 * (channels[2] ?? 0)
+  );
 }
 
 function getEffectiveBackground(element: Element | null) {
@@ -79,7 +82,9 @@ export function YbbNavbar(props: YbbNavbarProps) {
 
     const rect = adaptive.getBoundingClientRect();
     const y = rect.top + rect.height / 2;
-    const sampleX = [0.2, 0.5, 0.8].map((ratio) => rect.left + rect.width * ratio);
+    const sampleX = [0.2, 0.5, 0.8].map(
+      (ratio) => rect.left + rect.width * ratio,
+    );
     let total = 0;
     let count = 0;
 
@@ -114,7 +119,7 @@ export function YbbNavbar(props: YbbNavbarProps) {
   return (
     <header
       ref={headerRef}
-      className={`ybbNavbar${onDark ? ' ybbNavbarOnDark' : ' ybbNavbarOnLight'}`}
+      className={`ybbNavbar${onDark ? 'ybbNavbarOnDark' : 'ybbNavbarOnLight'}`}
     >
       <div className="ybbNavbarFloat">
         <div className="ybbNavbarPill">
@@ -180,7 +185,10 @@ export function YbbNavbar(props: YbbNavbarProps) {
             {navLinks.map((link) =>
               link.label ? (
                 <li key={`mobile-${link.label}-${link.href}`}>
-                  <a href={link.href || '#'} onClick={() => setMobileOpen(false)}>
+                  <a
+                    href={link.href || '#'}
+                    onClick={() => setMobileOpen(false)}
+                  >
                     {link.label}
                   </a>
                 </li>

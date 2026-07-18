@@ -421,7 +421,9 @@ class WebsitesService {
     return (fallback.data ?? []) as WebsiteRow[];
   }
 
-  private async resolveBusinessIdForAccount(accountId: string): Promise<string> {
+  private async resolveBusinessIdForAccount(
+    accountId: string,
+  ): Promise<string> {
     const { data: existing, error: lookupError } = await this.adminDb
       .from('businesses')
       .select('id')
@@ -470,7 +472,9 @@ class WebsitesService {
     return String((created as { id: string }).id);
   }
 
-  private async listBusinessIdsForAccount(accountId: string): Promise<string[]> {
+  private async listBusinessIdsForAccount(
+    accountId: string,
+  ): Promise<string[]> {
     const { data, error } = await this.adminDb
       .from('businesses')
       .select('id')

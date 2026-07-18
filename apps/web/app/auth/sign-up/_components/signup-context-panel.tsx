@@ -4,6 +4,7 @@ import { cn } from '@kit/ui/utils';
 
 import type { SignupContext } from '~/lib/auth/signup-context';
 
+/** Highlights for the light orb brand panel (dark text on cream). */
 export function SignupContextPanel({
   context,
   className,
@@ -21,17 +22,17 @@ export function SignupContextPanel({
       className={cn('w-full text-left', className)}
     >
       {context.badge ? (
-        <p className="mb-3 text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--ozer-coral-400)] uppercase">
+        <p className="mb-3 text-[0.7rem] font-semibold tracking-[0.14em] text-[var(--ozer-coral-600)] uppercase">
           {context.badge}
         </p>
       ) : null}
-      <ul className="space-y-3">
+      <ul className="space-y-2.5">
         {context.highlights.map((item) => (
           <li
             key={item}
-            className="flex items-start gap-3 text-sm leading-snug text-[var(--ozer-text-on-dark-muted)]"
+            className="flex items-start gap-2.5 text-sm leading-snug text-[var(--workspace-shell-text-muted)]"
           >
-            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)]">
+            <span className="mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-cream-50)]">
               <Check className="h-3 w-3" aria-hidden />
             </span>
             <span>{item}</span>

@@ -206,7 +206,10 @@ export function BusinessDashboardMobile({
             No notes yet.
           </div>
         ) : (
-          <div className="-mx-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          <div
+            data-horizontal-scroll
+            className="-mx-3 flex touch-pan-x snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
             {recentNotes.map((note) => (
               <HapticLink
                 key={note.id}

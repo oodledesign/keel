@@ -3,18 +3,14 @@
 import { useMemo, useRef } from 'react';
 import type { CSSProperties } from 'react';
 
-import {
-  YBB_DEFAULTS,
-  YBB_DEFAULT_PORTFOLIO_TILTS,
-} from '../defaults';
-import { resolveYbbBackgroundStyle, ybbCtaClassName } from '../ybb-styles';
-
+import { YBB_DEFAULTS, YBB_DEFAULT_PORTFOLIO_TILTS } from '../defaults';
 import '../ybb-buttons.css';
-import './ybb-portfolio.css';
+import { resolveYbbBackgroundStyle, ybbCtaClassName } from '../ybb-styles';
 import {
   sanitizeTiltDegrees,
   useYbbPortfolioCarousel,
 } from './use-ybb-portfolio-carousel';
+import './ybb-portfolio.css';
 
 export type YbbPortfolioSlide = {
   imageUrl?: string;
@@ -46,7 +42,8 @@ function slideAlt(slide: YbbPortfolioSlide, index: number): string {
 }
 
 function slideTilt(slide: YbbPortfolioSlide, index: number): string {
-  const preset = YBB_DEFAULT_PORTFOLIO_TILTS[index % YBB_DEFAULT_PORTFOLIO_TILTS.length];
+  const preset =
+    YBB_DEFAULT_PORTFOLIO_TILTS[index % YBB_DEFAULT_PORTFOLIO_TILTS.length];
   return sanitizeTiltDegrees(slide.tilt?.trim() ? slide.tilt : preset);
 }
 
@@ -179,7 +176,7 @@ export function YbbPortfolio(props: YbbPortfolioProps) {
               {slides.map((_, index) => (
                 <button
                   key={index}
-                  className={`ybbPortfolioDot${index === 0 ? ' ybbPortfolioDotActive' : ''}`}
+                  className={`ybbPortfolioDot${index === 0 ? 'ybbPortfolioDotActive' : ''}`}
                   type="button"
                   role="tab"
                   aria-label={`Go to photo ${index + 1}`}

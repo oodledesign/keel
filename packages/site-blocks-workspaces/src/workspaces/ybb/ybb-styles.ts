@@ -47,7 +47,9 @@ export function resolveYbbBackgroundStyle(input: {
       ? { background: input.backgroundColor.trim() }
       : { background: BACKGROUND_VAR.atmosphere };
   }
-  const resolved = BACKGROUND_VAR[token as Exclude<YbbBackgroundToken, 'custom'>] ?? BACKGROUND_VAR.atmosphere;
+  const resolved =
+    BACKGROUND_VAR[token as Exclude<YbbBackgroundToken, 'custom'>] ??
+    BACKGROUND_VAR.atmosphere;
   return { background: resolved };
 }
 

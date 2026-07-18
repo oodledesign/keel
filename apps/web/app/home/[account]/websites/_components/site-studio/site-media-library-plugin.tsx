@@ -5,10 +5,7 @@ import { useCallback, useEffect, useState } from 'react';
 import type { Plugin } from '@puckeditor/core';
 import { Images, Loader2, Upload } from 'lucide-react';
 
-import {
-  type SiteMediaItem,
-  useSiteMedia,
-} from '@kit/site-blocks-core';
+import { type SiteMediaItem, useSiteMedia } from '@kit/site-blocks-core';
 
 function SiteMediaLibraryPanel() {
   const media = useSiteMedia();

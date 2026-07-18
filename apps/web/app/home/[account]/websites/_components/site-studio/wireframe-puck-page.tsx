@@ -5,8 +5,8 @@ import type { CSSProperties } from 'react';
 import {
   Render,
   type ResolvableStyleTokens,
-  SiteStudioFontFaces,
   type SiteBlockLayoutPreset,
+  SiteStudioFontFaces,
   WireframeModeProvider,
   buildConfig,
   resolveLayoutPreset,

@@ -121,7 +121,10 @@ export async function GET(request: Request) {
   }
 
   const { searchParams } = new URL(request.url);
-  const accountIdParsed = z.string().uuid().safeParse(searchParams.get('accountId'));
+  const accountIdParsed = z
+    .string()
+    .uuid()
+    .safeParse(searchParams.get('accountId'));
   const websiteIdParsed = z
     .string()
     .uuid()

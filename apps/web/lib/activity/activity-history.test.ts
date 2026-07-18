@@ -13,13 +13,13 @@ import {
   groupBlocksByDay,
   parseActivityLayoutMode,
   parseActivityRange,
-  resolveActivityLayoutDateRange,
   resolveActivityDateRange,
+  resolveActivityLayoutDateRange,
   resolveRangeStart,
   shiftActivityFocusDate,
   sortActivityAppGroups,
-  summarizeActivityWeekDays,
   sumActiveDuration,
+  summarizeActivityWeekDays,
 } from '~/lib/activity/activity-history';
 
 function makeBlock(
@@ -361,7 +361,10 @@ describe('activity history helpers', () => {
   it('shifts focus dates and formats labels', () => {
     expect(shiftActivityFocusDate('2026-07-17', -1)).toBe('2026-07-16');
     expect(
-      formatActivityFocusDateLabel('2026-07-17', new Date('2026-07-17T12:00:00.000Z')),
+      formatActivityFocusDateLabel(
+        '2026-07-17',
+        new Date('2026-07-17T12:00:00.000Z'),
+      ),
     ).toBe('Today');
   });
 });

@@ -4,11 +4,11 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { buildInvoicePdf } from '~/home/[account]/invoices/_lib/server/invoice-pdf';
 import {
   buildInvoicePdfPayload,
   displayOptionsFromSearchParams,
 } from '~/home/[account]/invoices/_lib/server/invoice-pdf-payload';
-import { buildInvoicePdf } from '~/home/[account]/invoices/_lib/server/invoice-pdf';
 
 /**
  * GET /api/invoices/pdf?token=xxx  — Portal: load by public token, no auth. Returns PDF.

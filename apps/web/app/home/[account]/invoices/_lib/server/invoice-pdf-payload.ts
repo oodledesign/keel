@@ -2,12 +2,12 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import type { Database } from '~/lib/database.types';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import type { Database } from '~/lib/database.types';
 
 import { computeInvoiceTotals } from '../invoice-totals';
-import type { InvoiceForPdf } from './invoice-pdf';
 import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
+import type { InvoiceForPdf } from './invoice-pdf';
 
 type InvoiceRow = Database['public']['Tables']['invoices']['Row'];
 
@@ -90,7 +90,11 @@ export async function buildInvoicePdfPayload(
             .eq('id', invoice.client_id)
             .maybeSingle()
         : Promise.resolve({ data: null }),
-      client.from('accounts').select('name, email').eq('id', accountId).maybeSingle(),
+      client
+        .from('accounts')
+        .select('name, email')
+        .eq('id', accountId)
+        .maybeSingle(),
       loadAccountBrandResolved(accountId).catch(() => null),
     ]);
 

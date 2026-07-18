@@ -1,11 +1,10 @@
 'use client';
 
-import { useEffect, useRef, type CSSProperties } from 'react';
+import { type CSSProperties, useEffect, useRef } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
-import { resolveYbbBackgroundStyle, ybbCtaClassName } from '../ybb-styles';
-
 import '../ybb-buttons.css';
+import { resolveYbbBackgroundStyle, ybbCtaClassName } from '../ybb-styles';
 import './ybb-hero.css';
 
 export type YbbHeroProps = {

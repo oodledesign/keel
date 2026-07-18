@@ -124,23 +124,12 @@ function Home() {
   ]);
 
   return (
-    <main className={cn('relative overflow-hidden', marketingShellClass)}>
+    <main className={cn('relative', marketingShellClass)}>
       <JsonLd data={schema} />
 
       {/* Tighter top padding so the connection map peeks above the fold */}
-      <section className="relative mx-auto flex w-full max-w-7xl flex-col overflow-hidden px-6 pt-14 pb-14 md:pt-20 md:pb-20">
-        {/* Soft coral orbs behind the hero */}
-        <div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 -z-0 overflow-hidden"
-        >
-          <div className="absolute top-[-12%] left-[8%] h-[28rem] w-[28rem] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--ozer-coral-400)_55%,transparent)_0%,transparent_68%)] blur-2xl md:h-[34rem] md:w-[34rem]" />
-          <div className="absolute top-[18%] right-[-8%] h-[22rem] w-[22rem] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,var(--ozer-coral-500)_40%,transparent)_0%,transparent_70%)] blur-3xl md:h-[28rem] md:w-[28rem]" />
-          <div className="absolute bottom-[-10%] left-[35%] h-[18rem] w-[18rem] rounded-full bg-[radial-gradient(circle,color-mix(in_srgb,#ffb48c_50%,transparent)_0%,transparent_72%)] blur-3xl" />
-        </div>
-        <div className="relative z-10">
-          <MarketingHomeHero />
-        </div>
+      <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pt-14 pb-14 md:pt-20 md:pb-20">
+        <MarketingHomeHero />
       </section>
 
       <InterconnectedWorkspacesSection tone="light" />

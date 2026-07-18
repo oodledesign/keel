@@ -123,7 +123,9 @@ export function SiteImageField({
         className="w-full rounded border px-2 py-1 text-sm"
         value={value ?? ''}
         onChange={(event) =>
-          onChange(normalizeSiteMediaUrl(event.target.value) ?? event.target.value)
+          onChange(
+            normalizeSiteMediaUrl(event.target.value) ?? event.target.value,
+          )
         }
         placeholder="https://…"
       />

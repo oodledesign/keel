@@ -319,8 +319,8 @@ function DashboardScreen({
       </div>
 
       <div className="flex">
-        {/* Sidebar */}
-        <div className="hidden w-[150px] shrink-0 flex-col gap-4 border-r border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3.5 sm:flex lg:w-[170px]">
+        {/* Sidebar — coral to separate from the cream content */}
+        <div className="hidden w-[150px] shrink-0 flex-col gap-4 bg-[var(--ozer-coral-500)] p-3.5 sm:flex lg:w-[170px]">
           <div className="space-y-1">
             {SIDEBAR_NAV.map((item) => (
               <div
@@ -328,8 +328,8 @@ function DashboardScreen({
                 className={cn(
                   'flex items-center gap-2 rounded-lg px-2 py-1.5 text-[11px] font-medium',
                   item.active
-                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-coral-600)]'
-                    : 'text-[var(--workspace-shell-text-muted)]',
+                    ? 'bg-[var(--ozer-cream-50)] text-[var(--ozer-coral-600)]'
+                    : 'text-[var(--ozer-cream-50)]/90',
                 )}
               >
                 <item.icon className="h-3 w-3" aria-hidden />
@@ -338,17 +338,17 @@ function DashboardScreen({
             ))}
           </div>
           <div>
-            <p className="px-2 text-[9px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+            <p className="px-2 text-[9px] font-semibold tracking-[0.12em] text-[var(--ozer-cream-50)]/70 uppercase">
               Workspaces
             </p>
             <div className="mt-1.5 space-y-1">
               {SIDEBAR_SPACES.map((space) => (
                 <div
                   key={space.label}
-                  className="flex items-center gap-2 rounded-lg px-2 py-1 text-[11px] text-[var(--workspace-shell-text-muted)]"
+                  className="flex items-center gap-2 rounded-lg px-2 py-1 text-[11px] text-[var(--ozer-cream-50)]/90"
                 >
                   <span
-                    className="h-1.5 w-1.5 rounded-full"
+                    className="h-1.5 w-1.5 rounded-full ring-1 ring-[var(--ozer-cream-50)]/40"
                     style={{ backgroundColor: space.color }}
                   />
                   {space.label}
@@ -636,7 +636,7 @@ function DesktopConnectionMap({
         ))}
       </div>
 
-      {/* Dashboard screen — lines land on its top edge */}
+      {/* Dashboard screen — one large orb behind the mockup */}
       <motion.div
         className="relative z-10 mx-auto w-full"
         initial={{ opacity: 0, y: 24 }}
@@ -647,6 +647,12 @@ function DesktopConnectionMap({
             : { duration: 0, delay: 0 }
         }
       >
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[min(120%,56rem)] w-[min(140%,64rem)] -translate-x-1/2 -translate-y-[42%]"
+        >
+          <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--ozer-coral-400)_58%,transparent)_0%,color-mix(in_srgb,var(--ozer-coral-500)_32%,transparent)_38%,transparent_72%)] blur-3xl" />
+        </div>
         <DashboardScreen animate={animate} live={live} />
       </motion.div>
     </div>
@@ -705,7 +711,15 @@ function MobileConnectionMap({
 
       <MobileConnector live={live} />
 
-      <DashboardScreen animate={animate} live={live} />
+      <div className="relative">
+        <div
+          aria-hidden
+          className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[min(110%,36rem)] w-[min(130%,40rem)] -translate-x-1/2 -translate-y-[45%]"
+        >
+          <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--ozer-coral-400)_55%,transparent)_0%,color-mix(in_srgb,var(--ozer-coral-500)_28%,transparent)_40%,transparent_72%)] blur-3xl" />
+        </div>
+        <DashboardScreen animate={animate} live={live} />
+      </div>
     </div>
   );
 }

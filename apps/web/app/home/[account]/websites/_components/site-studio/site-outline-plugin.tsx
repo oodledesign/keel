@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { createUsePuck, type Plugin } from '@puckeditor/core';
+import { type Plugin, createUsePuck } from '@puckeditor/core';
 import { GripVertical, Layers } from 'lucide-react';
 
 const usePuck = createUsePuck();
@@ -13,7 +13,9 @@ function DraggableOutlinePanel() {
   const dispatch = usePuck((s) => s.dispatch);
   const content = usePuck((s) => s.appState.data.content);
   const config = usePuck((s) => s.config);
-  const selectedId = usePuck((s) => s.selectedItem?.props?.id as string | undefined);
+  const selectedId = usePuck(
+    (s) => s.selectedItem?.props?.id as string | undefined,
+  );
   const getPermissions = usePuck((s) => s.getPermissions);
   const canDrag = Boolean(getPermissions().drag);
   const [dragIndex, setDragIndex] = useState<number | null>(null);

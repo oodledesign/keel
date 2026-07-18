@@ -1,11 +1,6 @@
 'use client';
 
-import {
-  type ImgHTMLAttributes,
-  useEffect,
-  useMemo,
-  useState,
-} from 'react';
+import { type ImgHTMLAttributes, useEffect, useMemo, useState } from 'react';
 
 /**
  * Normalize legacy authenticated Supabase storage paths to public URLs.

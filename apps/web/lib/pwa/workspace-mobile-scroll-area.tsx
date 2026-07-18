@@ -21,7 +21,7 @@ export function WorkspaceMobileScrollArea({
         className,
       )}
     >
-      <div className="min-h-0 flex-1 overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch] [touch-action:pan-y]">
+      <div className="min-h-0 flex-1 touch-manipulation overflow-x-hidden overflow-y-auto overscroll-y-contain [-webkit-overflow-scrolling:touch]">
         <div className="min-h-full bg-[var(--workspace-shell-canvas)]">
           <div className={cn(MOBILE_FLOATING_CHROME_SCROLL_PB, 'lg:pb-0')}>
             {children}

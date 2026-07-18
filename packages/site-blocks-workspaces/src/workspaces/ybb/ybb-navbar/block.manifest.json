@@ -13,7 +13,11 @@
       "itemFields": [
         { "key": "label", "type": "text", "label": "Label" },
         { "key": "href", "type": "link", "label": "URL" },
-        { "key": "hasDropdown", "type": "boolean", "label": "Show dropdown chevron" }
+        {
+          "key": "hasDropdown",
+          "type": "boolean",
+          "label": "Show dropdown chevron"
+        }
       ]
     },
     { "key": "ctaLabel", "type": "text", "label": "CTA label" },

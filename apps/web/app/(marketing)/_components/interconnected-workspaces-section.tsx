@@ -277,26 +277,69 @@ function BentoVisual({
   }
 
   if (kind === 'team') {
-    const rings = [
-      'var(--ozer-coral-500)',
-      'var(--ozer-sky-100)',
-      'var(--ozer-sage-500)',
-      'var(--ozer-coral-400)',
-    ];
+    const petals = [
+      { label: 'Personal', color: 'var(--ozer-coral-500)', angle: 0 },
+      { label: 'Business', color: 'var(--ozer-sky-200)', angle: 72 },
+      { label: 'Family', color: 'var(--ozer-sage-500)', angle: 144 },
+      { label: 'Property', color: 'var(--ozer-info)', angle: 216 },
+      { label: 'Community', color: 'var(--ozer-coral-400)', angle: 288 },
+    ] as const;
+
     return (
       <div
         aria-hidden
-        className="relative flex h-24 w-full items-center justify-center"
+        className="relative flex h-28 w-full items-center justify-center"
       >
-        <div className="flex -space-x-3">
-          {rings.map((color) => (
-            <span
-              key={color}
-              className="size-12 rounded-full border-2 border-[var(--workspace-shell-panel)] shadow-[0_0_20px_var(--ozer-coral-alpha-15)]"
-              style={{ background: color }}
+        <svg
+          viewBox="0 0 120 120"
+          className="h-[7.25rem] w-[7.25rem] drop-shadow-[0_0_18px_var(--ozer-coral-alpha-15)]"
+        >
+          <g transform="translate(60 60)">
+            {petals.map((petal) => (
+              <g key={petal.label} transform={`rotate(${petal.angle})`}>
+                {/* Arm connecting tip to centre */}
+                <line
+                  x1="0"
+                  y1="-8"
+                  x2="0"
+                  y2="-34"
+                  stroke={petal.color}
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                  opacity="0.55"
+                />
+                {/* Petal / star arm */}
+                <ellipse
+                  cx="0"
+                  cy="-26"
+                  rx="11"
+                  ry="20"
+                  fill={petal.color}
+                  opacity="0.92"
+                />
+                {/* Workspace node at the tip */}
+                <circle
+                  cx="0"
+                  cy="-42"
+                  r="6.5"
+                  fill={petal.color}
+                  stroke="var(--workspace-shell-panel)"
+                  strokeWidth="2"
+                />
+              </g>
+            ))}
+            {/* Centre hub — one login */}
+            <circle
+              cx="0"
+              cy="0"
+              r="14"
+              fill="var(--ozer-coral-500)"
+              stroke="var(--workspace-shell-panel)"
+              strokeWidth="3"
             />
-          ))}
-        </div>
+            <circle cx="0" cy="0" r="5.5" fill="var(--ozer-cream-50)" />
+          </g>
+        </svg>
       </div>
     );
   }
