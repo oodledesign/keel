@@ -1,6 +1,9 @@
 import { describe, expect, it } from 'vitest';
 
-import { resolveTokens } from '@kit/site-blocks-core';
+import {
+  buildTokensResponsiveStyleSheet,
+  resolveTokens,
+} from '@kit/site-blocks-core';
 
 import {
   normalizeWebsiteStyleTokens,
@@ -57,6 +60,34 @@ describe('normalizeWebsiteStyleTokens', () => {
     expect(resolveTokens(tokens)['--sb-font-size-h1']).toBe('48px');
     expect(resolveTokens(tokens)['--sb-font-weight-h1']).toBe('700');
   });
+
+  it('preserves responsive heading overrides', () => {
+    const tokens = normalizeWebsiteStyleTokens({
+      ...seedStyleTokensBrandA(),
+      typography: {
+        ...seedStyleTokensBrandA().typography,
+        headings: {
+          h1: {
+            sizePx: 56,
+            tabletSizePx: 40,
+            mobileSizePx: 28,
+            weight: 700,
+            tabletWeight: 600,
+          },
+          h2: {},
+          h3: {},
+        },
+      },
+    });
+
+    expect(tokens.typography.headings.h1).toEqual({
+      sizePx: 56,
+      tabletSizePx: 40,
+      mobileSizePx: 28,
+      weight: 700,
+      tabletWeight: 600,
+    });
+  });
 });
 
 describe('resolveTokens brand differentiation', () => {
@@ -68,5 +99,27 @@ describe('resolveTokens brand differentiation', () => {
     expect(a['--sb-font-display']).not.toBe(b['--sb-font-display']);
     expect(a['--sb-button-radius']).not.toBe(b['--sb-button-radius']);
     expect(a['--sb-space-8']).not.toBe(b['--sb-space-8']);
+  });
+});
+
+describe('buildTokensResponsiveStyleSheet', () => {
+  it('emits tablet and mobile media queries when set', () => {
+    const tokens = normalizeWebsiteStyleTokens({
+      ...seedStyleTokensBrandA(),
+      typography: {
+        ...seedStyleTokensBrandA().typography,
+        headings: {
+          h1: { sizePx: 56, tabletSizePx: 40, mobileSizePx: 28 },
+          h2: {},
+          h3: {},
+        },
+      },
+    });
+
+    const css = buildTokensResponsiveStyleSheet(tokens, '.sb-root');
+    expect(css).toContain('@media (max-width:1023px)');
+    expect(css).toContain('@media (max-width:767px)');
+    expect(css).toContain('--sb-font-size-h1:40px');
+    expect(css).toContain('--sb-font-size-h1:28px');
   });
 });

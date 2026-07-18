@@ -21,10 +21,16 @@ export type WebsiteStyleColors = {
 };
 
 export type WebsiteStyleHeadingLevel = {
-  /** Explicit size in px. Omit / null to derive from the type scale. */
+  /** Desktop size in px. Omit / null to derive from the type scale. */
   sizePx?: number | null;
-  /** Explicit weight. Omit / null to use the bold weight. */
+  /** Tablet size (≤1023px). Omit to keep desktop size. */
+  tabletSizePx?: number | null;
+  /** Mobile size (≤767px). Omit to keep tablet/desktop size. */
+  mobileSizePx?: number | null;
+  /** Desktop weight. Omit / null to use the bold weight. */
   weight?: number | null;
+  tabletWeight?: number | null;
+  mobileWeight?: number | null;
 };
 
 export type WebsiteStyleTypography = {
@@ -223,17 +229,32 @@ function normalizeHeadingLevel(
   value: WebsiteStyleHeadingLevel | undefined,
 ): WebsiteStyleHeadingLevel {
   if (!value || typeof value !== 'object') return {};
-  const sizePx =
-    value.sizePx == null || Number.isNaN(Number(value.sizePx))
-      ? null
-      : Number(value.sizePx);
-  const weight =
-    value.weight == null || Number.isNaN(Number(value.weight))
-      ? null
-      : Number(value.weight);
+
+  const pickSize = (raw: number | null | undefined) => {
+    if (raw == null || Number.isNaN(Number(raw))) return null;
+    const n = Number(raw);
+    return n > 0 ? n : null;
+  };
+  const pickWeight = (raw: number | null | undefined) => {
+    if (raw == null || Number.isNaN(Number(raw))) return null;
+    const n = Number(raw);
+    return n > 0 ? n : null;
+  };
+
+  const sizePx = pickSize(value.sizePx);
+  const tabletSizePx = pickSize(value.tabletSizePx);
+  const mobileSizePx = pickSize(value.mobileSizePx);
+  const weight = pickWeight(value.weight);
+  const tabletWeight = pickWeight(value.tabletWeight);
+  const mobileWeight = pickWeight(value.mobileWeight);
+
   return {
-    ...(sizePx != null && sizePx > 0 ? { sizePx } : {}),
-    ...(weight != null && weight > 0 ? { weight } : {}),
+    ...(sizePx != null ? { sizePx } : {}),
+    ...(tabletSizePx != null ? { tabletSizePx } : {}),
+    ...(mobileSizePx != null ? { mobileSizePx } : {}),
+    ...(weight != null ? { weight } : {}),
+    ...(tabletWeight != null ? { tabletWeight } : {}),
+    ...(mobileWeight != null ? { mobileWeight } : {}),
   };
 }
 

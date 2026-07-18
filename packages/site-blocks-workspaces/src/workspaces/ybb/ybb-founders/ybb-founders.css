@@ -32,8 +32,8 @@
 
 .ybbFoundersTitle {
   font-family: var(--sb-font-display, var(--sb-font-heading));
-  font-size: clamp(2.5em, 4vw, 3.5em);
-  font-weight: var(--sb-font-weight-bold, 700);
+  font-size: var(--sb-font-size-h1, clamp(2.5em, 4vw, 3.5em));
+  font-weight: var(--sb-font-weight-h1, var(--sb-font-weight-bold, 700));
   color: var(--ybb-founders-text, #2c4f35);
   line-height: 1;
   margin: 0;

@@ -32,6 +32,7 @@ import {
   type WebsiteShareScope,
   type WebsiteSitemapPage,
   type WebsiteStyleSystem,
+  type WebsiteStyleTokens,
   type WebsiteWireframePage,
   createPlanningId,
   emptySiteStudioBundle,
@@ -1024,7 +1025,32 @@ class SiteStudioService {
     );
 
     if (error) throw error;
+
+    // Keep the live Ozer Sites renderer in sync — it reads site_sites.theme_tokens,
+    // not website_style_systems. Page publish alone does not update theme.
+    await this.syncSiteThemeTokens(accountId, websiteId, normalised.tokens);
+
     return { ok: true as const };
+  }
+
+  /** Best-effort sync — no row is fine if the site has not been published yet. */
+  private async syncSiteThemeTokens(
+    accountId: string,
+    websiteId: string,
+    tokens: WebsiteStyleTokens,
+  ) {
+    const { error } = await this.adminDb
+      .from('site_sites')
+      .update({
+        theme_tokens: tokens as unknown as Record<string, unknown>,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('website_id', websiteId)
+      .eq('account_id', accountId);
+
+    if (error) {
+      console.error('[site-studio] theme_tokens sync failed', error);
+    }
   }
 
   async suggestStyle(
@@ -1107,6 +1133,7 @@ class SiteStudioService {
     );
 
     if (error) throw error;
+    await this.syncSiteThemeTokens(accountId, websiteId, style.tokens);
     return style;
   }
 

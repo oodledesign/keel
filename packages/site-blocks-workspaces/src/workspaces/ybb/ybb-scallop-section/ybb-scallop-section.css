@@ -16,7 +16,8 @@
 .ybbScallopBand {
   position: relative;
   background: var(--ybb-scallop-band, var(--sb-color-primary));
-  padding-block: calc(5.5em + var(--ybb-scallop-r)) calc(4em + var(--ybb-scallop-r));
+  padding-block: calc(5.5em + var(--ybb-scallop-r))
+    calc(4em + var(--ybb-scallop-r));
   overflow: visible;
 }
 
@@ -105,7 +106,11 @@
   transform: translate(-50%, -55%) rotate(-3.5deg);
   font-family: var(--sb-font-display);
   font-size: clamp(5em, 14vw, 10.875em);
-  color: color-mix(in srgb, var(--ybb-scallop-fill, var(--sb-atmosphere)) 22%, transparent);
+  color: color-mix(
+    in srgb,
+    var(--ybb-scallop-fill, var(--sb-atmosphere)) 22%,
+    transparent
+  );
   white-space: nowrap;
   pointer-events: none;
   z-index: 0;
@@ -138,9 +143,9 @@
 
 .ybbScallopHeading {
   font-family: var(--sb-font-display);
-  font-size: clamp(2em, 4.5vw, 3.5em);
+  font-size: var(--sb-font-size-h1, clamp(2em, 4.5vw, 3.5em));
   line-height: 1.1;
-  font-weight: var(--sb-font-weight-medium);
+  font-weight: var(--sb-font-weight-h1, var(--sb-font-weight-medium));
   margin: 0;
 }
 
@@ -225,7 +230,8 @@
   }
 
   .ybbScallopBand {
-    padding-block: calc(4em + var(--ybb-scallop-r)) calc(3em + var(--ybb-scallop-r));
+    padding-block: calc(4em + var(--ybb-scallop-r))
+      calc(3em + var(--ybb-scallop-r));
   }
 }
 

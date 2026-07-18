@@ -2,6 +2,7 @@ import { notFound } from 'next/navigation';
 
 import {
   coerceResolvableStyleTokens,
+  buildTokensResponsiveStyleSheet,
   resolveTokensStyle,
   siteStudioFontStylesheetUrls,
 } from '@kit/site-blocks-core';
@@ -24,6 +25,7 @@ export default async function SitesCatchAllPage({ params }: PageProps) {
 
   const themeTokens = coerceResolvableStyleTokens(resolved.themeTokens);
   const style = resolveTokensStyle(themeTokens);
+  const responsiveCss = buildTokensResponsiveStyleSheet(themeTokens, 'body.sb-root');
   const fontUrls = siteStudioFontStylesheetUrls({
     displayFamily: themeTokens.typography?.displayFamily,
     bodyFamily: themeTokens.typography?.bodyFamily,
@@ -44,6 +46,7 @@ export default async function SitesCatchAllPage({ params }: PageProps) {
         {fontUrls.map((href) => (
           <link key={href} rel="stylesheet" href={href} />
         ))}
+        {responsiveCss ? <style>{responsiveCss}</style> : null}
       </head>
       <body className="sb-root" style={style}>
         <PublishedSiteView

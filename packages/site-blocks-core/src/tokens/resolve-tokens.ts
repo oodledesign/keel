@@ -7,7 +7,11 @@ import type { CSSProperties } from 'react';
  */
 export type ResolvableHeadingLevel = {
   sizePx?: number | null;
+  tabletSizePx?: number | null;
+  mobileSizePx?: number | null;
   weight?: number | null;
+  tabletWeight?: number | null;
+  mobileWeight?: number | null;
 };
 
 export type ResolvableStyleTokens = {
@@ -76,17 +80,32 @@ function normalizeHeadingLevel(
   value: ResolvableHeadingLevel | undefined,
 ): ResolvableHeadingLevel {
   if (!value || typeof value !== 'object') return {};
-  const sizePx =
-    value.sizePx == null || Number.isNaN(Number(value.sizePx))
-      ? null
-      : Number(value.sizePx);
-  const weight =
-    value.weight == null || Number.isNaN(Number(value.weight))
-      ? null
-      : Number(value.weight);
+
+  const pickSize = (raw: number | null | undefined) => {
+    if (raw == null || Number.isNaN(Number(raw))) return null;
+    const n = Number(raw);
+    return n > 0 ? n : null;
+  };
+  const pickWeight = (raw: number | null | undefined) => {
+    if (raw == null || Number.isNaN(Number(raw))) return null;
+    const n = Number(raw);
+    return n > 0 ? n : null;
+  };
+
+  const sizePx = pickSize(value.sizePx);
+  const tabletSizePx = pickSize(value.tabletSizePx);
+  const mobileSizePx = pickSize(value.mobileSizePx);
+  const weight = pickWeight(value.weight);
+  const tabletWeight = pickWeight(value.tabletWeight);
+  const mobileWeight = pickWeight(value.mobileWeight);
+
   return {
-    ...(sizePx != null && sizePx > 0 ? { sizePx } : {}),
-    ...(weight != null && weight > 0 ? { weight } : {}),
+    ...(sizePx != null ? { sizePx } : {}),
+    ...(tabletSizePx != null ? { tabletSizePx } : {}),
+    ...(mobileSizePx != null ? { mobileSizePx } : {}),
+    ...(weight != null ? { weight } : {}),
+    ...(tabletWeight != null ? { tabletWeight } : {}),
+    ...(mobileWeight != null ? { mobileWeight } : {}),
   };
 }
 
@@ -278,10 +297,7 @@ export function resolveTokens(
     '--sb-radius-md': resolved.radius.md,
     '--sb-radius-lg': resolved.radius.lg,
     '--sb-radius-full': resolved.radius.full,
-    '--sb-button-radius': buttonRadius(
-      resolved.buttons.style,
-      resolved.radius,
-    ),
+    '--sb-button-radius': buttonRadius(resolved.buttons.style, resolved.radius),
 
     ...spacingScale(resolved.spacingDensity),
   };
@@ -291,6 +307,59 @@ export function resolveTokensStyle(
   tokens: ResolvableStyleTokens,
 ): CSSProperties {
   return resolveTokens(tokens) as CSSProperties;
+}
+
+const TABLET_MAX = 1023;
+const MOBILE_MAX = 767;
+
+function cssDecls(map: Record<string, string>): string {
+  return Object.entries(map)
+    .map(([key, value]) => `${key}:${value};`)
+    .join('');
+}
+
+/**
+ * Responsive heading overrides as a stylesheet (media queries can't live in
+ * inline styles). Desktop values remain on the element via resolveTokensStyle.
+ */
+export function buildTokensResponsiveStyleSheet(
+  tokens: ResolvableStyleTokens,
+  selector = '.sb-root',
+): string {
+  const resolved = coerceResolvableStyleTokens(tokens);
+  const { headings } = resolved.typography;
+
+  const tablet: Record<string, string> = {};
+  const mobile: Record<string, string> = {};
+
+  for (const level of ['h1', 'h2', 'h3'] as const) {
+    const heading = headings[level];
+    if (heading.tabletSizePx != null && heading.tabletSizePx > 0) {
+      tablet[`--sb-font-size-${level}`] = `${heading.tabletSizePx}px`;
+    }
+    if (heading.tabletWeight != null && heading.tabletWeight > 0) {
+      tablet[`--sb-font-weight-${level}`] = String(heading.tabletWeight);
+    }
+    if (heading.mobileSizePx != null && heading.mobileSizePx > 0) {
+      mobile[`--sb-font-size-${level}`] = `${heading.mobileSizePx}px`;
+    }
+    if (heading.mobileWeight != null && heading.mobileWeight > 0) {
+      mobile[`--sb-font-weight-${level}`] = String(heading.mobileWeight);
+    }
+  }
+
+  const chunks: string[] = [];
+  if (Object.keys(tablet).length > 0) {
+    chunks.push(
+      `@media (max-width:${TABLET_MAX}px){${selector}{${cssDecls(tablet)}}}`,
+    );
+  }
+  if (Object.keys(mobile).length > 0) {
+    chunks.push(
+      `@media (max-width:${MOBILE_MAX}px){${selector}{${cssDecls(mobile)}}}`,
+    );
+  }
+  return chunks.join('\n');
 }
 
 /** Default px sizes derived from the modular scale (for editor UI placeholders). */
