@@ -29,6 +29,7 @@ import {
   saveWebsiteStyleSystem,
   suggestWebsiteStyle,
 } from '../../_lib/server/site-studio-actions';
+import { HeadingControls } from './site-typography-plugin';
 import { WireframePuckPage } from './wireframe-puck-page';
 
 const inputClass =
@@ -411,6 +412,21 @@ export function WebsiteDesignEditor({
                 </SelectContent>
               </Select>
             </div>
+          </div>
+
+          <div className="space-y-3">
+            <Label className="text-[var(--workspace-shell-text)]">
+              Heading sizes (H1–H3)
+            </Label>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Leave blank to follow the type scale, or set explicit pixel sizes
+              and weights. Also editable from the Type tab in the page editor.
+            </p>
+            <HeadingControls
+              tokens={tokens}
+              disabled={disabled}
+              onChange={(typography) => patchTokens({ typography })}
+            />
           </div>
 
           <div className="grid gap-4 md:grid-cols-2">

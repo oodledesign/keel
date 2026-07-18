@@ -322,6 +322,8 @@ export function WebsitePlanningPanel({
             canEdit={canEdit}
             role="agency"
             liveStyleTokens={styleTokens}
+            styleSystem={siteStudio.style}
+            onLiveStyleTokensChange={setStyleTokens}
           />
         ) : null}
 

@@ -1,11 +1,24 @@
 import registryJson from './registry/site-blocks-registry.json';
 
-export { resolveTokens, resolveTokensStyle, coerceResolvableStyleTokens, DEFAULT_RESOLVABLE_STYLE_TOKENS } from './tokens/resolve-tokens';
-export type { ResolvableStyleTokens } from './tokens/resolve-tokens';
+export {
+  resolveTokens,
+  resolveTokensStyle,
+  coerceResolvableStyleTokens,
+  derivedHeadingSizes,
+  DEFAULT_RESOLVABLE_STYLE_TOKENS,
+} from './tokens/resolve-tokens';
+export type {
+  ResolvableStyleTokens,
+  ResolvableHeadingLevel,
+} from './tokens/resolve-tokens';
 export { siteStudioFontStylesheetUrls } from './tokens/font-links';
 export { SiteStudioFontFaces } from './tokens/site-studio-font-faces';
 export { SiteStudioTokenRoot } from './tokens/site-studio-token-root';
-export { withSiteStudioRootConfig } from './tokens/with-site-studio-root';
+export {
+  withSiteStudioRootConfig,
+  SiteStudioTokensProvider,
+  useSiteStudioTokens,
+} from './tokens/with-site-studio-root';
 
 export { buildConfig, defaultSiteBlocksConfig } from './config';
 export type {
@@ -35,10 +48,15 @@ export {
 export {
   SiteMediaUploadProvider,
   useSiteMediaUploader,
+  useSiteMedia,
   SiteImageField,
 } from './context/site-media';
+export type { SiteMediaUploader, SiteMediaItem } from './context/site-media';
+export {
+  SiteMediaImg,
+  normalizeSiteMediaUrl,
+} from './context/site-media-img';
 export { SiteColorField } from './context/site-color-field';
-export type { SiteMediaUploader } from './context/site-media';
 
 export { Render } from '@puckeditor/core';
 

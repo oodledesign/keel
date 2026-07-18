@@ -17,6 +17,7 @@ import { ExternalLink, Loader2, X } from 'lucide-react';
 import {
   SiteMediaUploadProvider,
   SiteStudioFontFaces,
+  SiteStudioTokensProvider,
   coerceResolvableStyleTokens,
   type ResolvableStyleTokens,
   resolveTokensStyle,
@@ -39,7 +40,11 @@ import {
   ozerSitePreviewUrl,
   resolveOzerSitePuckPermissions,
 } from '~/lib/websites/ozer-sites-types';
-import type { WebsiteStyleTokens } from '~/lib/websites/style-tokens';
+import type {
+  WebsiteStyleSystem,
+  WebsiteStyleTokens,
+} from '~/lib/websites/style-tokens';
+import { emptyWebsiteStyleTokens } from '~/lib/websites/style-tokens';
 
 import {
   getOzerSiteBundle,
@@ -49,6 +54,10 @@ import {
   updateOzerSiteSettings,
 } from '../../_lib/server/ozer-sites-actions';
 import { WebsiteBlockLibraryCard } from './website-block-library-card';
+import { createSiteMediaLibraryPlugin } from './site-media-library-plugin';
+import { createSiteOutlinePlugin } from './site-outline-plugin';
+import { SiteStyleLiveProvider } from './site-style-live-context';
+import { createSiteTypographyPlugin } from './site-typography-plugin';
 
 type Props = {
   accountId: string;
@@ -59,6 +68,8 @@ type Props = {
   clientOrgId?: string;
   /** Live Design tab tokens — preferred over published site.themeTokens in Puck. */
   liveStyleTokens?: WebsiteStyleTokens | null;
+  styleSystem?: WebsiteStyleSystem | null;
+  onLiveStyleTokensChange?: (tokens: WebsiteStyleTokens) => void;
 };
 
 function resolvePuckThemeTokens(
@@ -72,9 +83,14 @@ function resolvePuckThemeTokens(
   return coerceResolvableStyleTokens(published);
 }
 
-async function uploadSiteMedia(accountId: string, file: File): Promise<string> {
+async function uploadSiteMedia(
+  accountId: string,
+  file: File,
+  websiteId: string,
+): Promise<string> {
   const body = new FormData();
   body.set('accountId', accountId);
+  body.set('websiteId', websiteId);
   body.set('file', file);
   const res = await fetch('/api/websites/site-media', {
     method: 'POST',
@@ -87,24 +103,52 @@ async function uploadSiteMedia(accountId: string, file: File): Promise<string> {
   return json.url;
 }
 
+async function listSiteMedia(accountId: string, websiteId: string) {
+  const params = new URLSearchParams({ accountId, websiteId });
+  const res = await fetch(`/api/websites/site-media?${params.toString()}`);
+  const json = (await res.json()) as {
+    items?: Array<{
+      url: string;
+      path: string;
+      name: string;
+      updatedAt?: string | null;
+    }>;
+    error?: string;
+  };
+  if (!res.ok) {
+    throw new Error(json.error || 'Could not load media library');
+  }
+  return json.items ?? [];
+}
+
 function OzerSitePuckEditor({
   accountId,
+  websiteId,
   accountSlug,
   page,
   role,
   clientOrgId,
   settings,
   themeTokens,
+  styleTokens,
+  styleSystem,
+  canEdit,
+  onStyleTokensChange,
   onClose,
   onSaved,
 }: {
   accountId: string;
+  websiteId: string;
   accountSlug: string;
   page: OzerSitePageRecord;
   role: OzerSiteEditorRole;
   clientOrgId?: string;
   settings: OzerSiteSettings;
   themeTokens: ResolvableStyleTokens;
+  styleTokens: WebsiteStyleTokens;
+  styleSystem?: WebsiteStyleSystem | null;
+  canEdit: boolean;
+  onStyleTokensChange?: (tokens: WebsiteStyleTokens) => void;
   onClose: () => void;
   onSaved: (page: OzerSitePageRecord) => void;
 }) {
@@ -120,16 +164,48 @@ function OzerSitePuckEditor({
   }, [data]);
 
   const config = useMemo(
-    () =>
-      withSiteStudioRootConfig(
-        resolveSiteBlocksConfig(accountSlug),
-        themeTokens,
-      ),
-    [accountSlug, themeTokens],
+    () => withSiteStudioRootConfig(resolveSiteBlocksConfig(accountSlug)),
+    [accountSlug],
   );
   const tokenStyle = useMemo(
     () => resolveTokensStyle(themeTokens),
     [themeTokens],
+  );
+
+  const upload = useCallback(
+    (file: File) => uploadSiteMedia(accountId, file, websiteId),
+    [accountId, websiteId],
+  );
+  const listMedia = useCallback(
+    () => listSiteMedia(accountId, websiteId),
+    [accountId, websiteId],
+  );
+  const plugins = useMemo(
+    () => [
+      createSiteOutlinePlugin(),
+      createSiteMediaLibraryPlugin(),
+      createSiteTypographyPlugin(),
+    ],
+    [],
+  );
+
+  const styleLiveValue = useMemo(
+    () => ({
+      accountId,
+      websiteId,
+      tokens: styleTokens,
+      styleBase: styleSystem,
+      canEdit,
+      onTokensChange: onStyleTokensChange ?? (() => undefined),
+    }),
+    [
+      accountId,
+      websiteId,
+      styleTokens,
+      styleSystem,
+      canEdit,
+      onStyleTokensChange,
+    ],
   );
 
   const persistDraft = useCallback(
@@ -247,18 +323,30 @@ function OzerSitePuckEditor({
           </Button>
         </div>
       </div>
-      <div className="sb-root min-h-0 flex-1" style={tokenStyle as CSSProperties}>
+      <div
+        className="sb-root h-full min-h-0 flex-1 overflow-hidden"
+        style={tokenStyle as CSSProperties}
+      >
         <SiteStudioFontFaces tokens={themeTokens} />
-        <SiteMediaUploadProvider
-          upload={(file) => uploadSiteMedia(accountId, file)}
-        >
-          <Puck
-            config={config}
-            data={data}
-            permissions={permissions}
-            onChange={scheduleAutosave}
-          />
-        </SiteMediaUploadProvider>
+        <SiteStudioTokensProvider tokens={themeTokens}>
+          <SiteStyleLiveProvider value={styleLiveValue}>
+            <SiteMediaUploadProvider upload={upload} list={listMedia}>
+              <Puck
+                config={config}
+                data={data}
+                permissions={permissions}
+                plugins={plugins}
+                height="100%"
+                overrides={{
+                  // Keel chrome already has Save draft + Publish; Puck's default
+                  // Publish is inert without onPublish.
+                  headerActions: () => <></>,
+                }}
+                onChange={scheduleAutosave}
+              />
+            </SiteMediaUploadProvider>
+          </SiteStyleLiveProvider>
+        </SiteStudioTokensProvider>
       </div>
     </div>
   );
@@ -272,6 +360,8 @@ export function WebsiteOzerSitePanel({
   role = 'agency',
   clientOrgId,
   liveStyleTokens,
+  styleSystem,
+  onLiveStyleTokensChange,
 }: Props) {
   const [bundle, setBundle] = useState<OzerSiteBundle | null>(null);
   const [activePageId, setActivePageId] = useState<string | null>(null);
@@ -522,12 +612,17 @@ export function WebsiteOzerSitePanel({
         <OzerSitePuckEditor
           key={activePage.id}
           accountId={accountId}
+          websiteId={websiteId}
           accountSlug={accountSlug}
           page={activePage}
           role={role}
           clientOrgId={clientOrgId}
           settings={site.settings}
           themeTokens={puckThemeTokens}
+          styleTokens={liveStyleTokens ?? emptyWebsiteStyleTokens()}
+          styleSystem={styleSystem}
+          canEdit={canEdit}
+          onStyleTokensChange={onLiveStyleTokensChange}
           onClose={() => setActivePageId(null)}
           onSaved={(saved) => {
             setBundle((current) =>

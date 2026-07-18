@@ -58,6 +58,12 @@
   --sb-font-size-lg: 20px;
   --sb-font-size-xl: 25px;
   --sb-font-size-2xl: 31.25px;
+  --sb-font-size-h1: var(--sb-font-size-2xl);
+  --sb-font-size-h2: var(--sb-font-size-xl);
+  --sb-font-size-h3: var(--sb-font-size-lg);
+  --sb-font-weight-h1: var(--sb-font-weight-bold);
+  --sb-font-weight-h2: var(--sb-font-weight-bold);
+  --sb-font-weight-h3: var(--sb-font-weight-bold);
   --sb-type-ratio: 1.25;
 
   --sb-max: 72rem;
@@ -76,20 +82,22 @@
 .sb-root h3,
 .sb-root h4 {
   font-family: var(--sb-font-display);
-  font-weight: var(--sb-font-weight-bold);
   letter-spacing: -0.02em;
 }
 
 .sb-root h1 {
-  font-size: var(--sb-font-size-2xl);
+  font-size: var(--sb-font-size-h1);
+  font-weight: var(--sb-font-weight-h1);
 }
 
 .sb-root h2 {
-  font-size: var(--sb-font-size-xl);
+  font-size: var(--sb-font-size-h2);
+  font-weight: var(--sb-font-weight-h2);
 }
 
 .sb-root h3 {
-  font-size: var(--sb-font-size-lg);
+  font-size: var(--sb-font-size-h3);
+  font-weight: var(--sb-font-weight-h3);
 }
 
 /** Greyscale wireframe fidelity — ignores brand tokens. */

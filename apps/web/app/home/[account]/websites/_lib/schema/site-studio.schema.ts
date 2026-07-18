@@ -205,6 +205,28 @@ const StyleTokensSchema = z.object({
       medium: z.number().int().min(100).max(900),
       bold: z.number().int().min(100).max(900),
     }),
+    headings: z
+      .object({
+        h1: z
+          .object({
+            sizePx: z.number().min(10).max(120).nullable().optional(),
+            weight: z.number().int().min(100).max(900).nullable().optional(),
+          })
+          .default({}),
+        h2: z
+          .object({
+            sizePx: z.number().min(10).max(120).nullable().optional(),
+            weight: z.number().int().min(100).max(900).nullable().optional(),
+          })
+          .default({}),
+        h3: z
+          .object({
+            sizePx: z.number().min(10).max(120).nullable().optional(),
+            weight: z.number().int().min(100).max(900).nullable().optional(),
+          })
+          .default({}),
+      })
+      .default({ h1: {}, h2: {}, h3: {} }),
   }),
   radius: z.object({
     none: z.string().max(40),

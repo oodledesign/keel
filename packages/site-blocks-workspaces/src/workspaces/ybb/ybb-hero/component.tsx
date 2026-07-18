@@ -59,6 +59,9 @@ export function YbbHero(props: YbbHeroProps) {
     const hero = heroRef.current;
     if (!pin || !hero) return;
 
+    // Puck preview iframe is shorter than the pin — don't hide the hero there.
+    if (hero.closest('[data-puck-entry]')) return;
+
     if (window.matchMedia('(max-width: 991px)').matches) return;
 
     const setPassed = (passed: boolean) => {

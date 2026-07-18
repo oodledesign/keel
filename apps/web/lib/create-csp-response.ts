@@ -74,6 +74,15 @@ export async function createCspResponse() {
         imgSrc: [
           ...noseconeConfig.contentSecurityPolicy.directives.imgSrc,
           ...IMG_SRC_ORIGINS,
+          // Site Studio / YBB blocks often reference HTTPS CDNs and client sites.
+          'https:',
+        ],
+        mediaSrc: [
+          ...(noseconeConfig.contentSecurityPolicy.directives.mediaSrc ?? [
+            "'self'",
+          ]),
+          'https:',
+          'blob:',
         ],
         upgradeInsecureRequests: UPGRADE_INSECURE_REQUESTS,
       },

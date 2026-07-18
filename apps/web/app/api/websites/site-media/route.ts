@@ -29,7 +29,10 @@ const MIME_TO_EXT: Record<string, string> = {
   'image/svg+xml': 'svg',
 };
 
-async function canUpload(userId: string, accountId: string): Promise<boolean> {
+async function canAccessSiteMedia(
+  userId: string,
+  accountId: string,
+): Promise<boolean> {
   const client = getSupabaseServerClient();
   const api = createTeamAccountsApi(client);
   const permitted = await api.hasPermission({
@@ -48,7 +51,6 @@ async function canUpload(userId: string, accountId: string): Promise<boolean> {
   const role = membership?.account_role;
   if (role === 'owner' || role === 'admin' || role === 'staff') return true;
 
-  // Portal clients linked to an org under this account.
   const { data: orgs } = await client
     .from('client_orgs')
     .select('id')
@@ -67,6 +69,100 @@ async function canUpload(userId: string, accountId: string): Promise<boolean> {
   return Boolean(member);
 }
 
+function publicUrlForPath(path: string) {
+  const admin = getSupabaseServerAdminClient();
+  return toSupabasePublicStorageUrl(
+    admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl,
+  );
+}
+
+type ListedMedia = {
+  url: string;
+  path: string;
+  name: string;
+  updatedAt: string | null;
+};
+
+async function listPrefix(prefix: string): Promise<ListedMedia[]> {
+  const admin = getSupabaseServerAdminClient();
+  const { data, error } = await admin.storage.from(BUCKET).list(prefix, {
+    limit: 200,
+    sortBy: { column: 'updated_at', order: 'desc' },
+  });
+
+  if (error || !data) return [];
+
+  return data
+    .filter((item) => Boolean(item.name) && !item.name.endsWith('/'))
+    .filter((item) => {
+      // Skip nested folders when listing the legacy account-level prefix.
+      const meta = item.metadata as { mimetype?: string } | null;
+      return Boolean(meta?.mimetype || item.id);
+    })
+    .map((item) => {
+      const path = `${prefix}/${item.name}`;
+      return {
+        name: item.name,
+        path,
+        url: publicUrlForPath(path) ?? '',
+        updatedAt: item.updated_at ?? null,
+      };
+    })
+    .filter((item) => Boolean(item.url));
+}
+
+export async function GET(request: Request) {
+  const client = getSupabaseServerClient();
+  const {
+    data: { user },
+  } = await client.auth.getUser();
+  if (!user) {
+    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
+  }
+
+  const { searchParams } = new URL(request.url);
+  const accountIdParsed = z.string().uuid().safeParse(searchParams.get('accountId'));
+  const websiteIdParsed = z
+    .string()
+    .uuid()
+    .safeParse(searchParams.get('websiteId'));
+
+  if (!accountIdParsed.success) {
+    return NextResponse.json({ error: 'Invalid accountId' }, { status: 400 });
+  }
+
+  const accountId = accountIdParsed.data;
+  if (!(await canAccessSiteMedia(user.id, accountId))) {
+    return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+  }
+
+  const websiteId = websiteIdParsed.success ? websiteIdParsed.data : null;
+  const sitePrefix = websiteId
+    ? `${accountId}/sites/${websiteId}`
+    : `${accountId}/sites`;
+  const legacyPrefix = `${accountId}/sites`;
+
+  const [siteItems, legacyItems] = await Promise.all([
+    listPrefix(sitePrefix),
+    websiteId ? listPrefix(legacyPrefix) : Promise.resolve([]),
+  ]);
+
+  // Prefer site-scoped assets; include legacy account-level files that are
+  // direct objects (not folders) for older uploads.
+  const byPath = new Map<string, ListedMedia>();
+  for (const item of [...legacyItems, ...siteItems]) {
+    // Skip directory placeholders returned when listing account/sites.
+    if (!item.name.includes('.')) continue;
+    byPath.set(item.path, item);
+  }
+
+  const items = Array.from(byPath.values()).sort((a, b) =>
+    (b.updatedAt ?? '').localeCompare(a.updatedAt ?? ''),
+  );
+
+  return NextResponse.json({ items });
+}
+
 export async function POST(request: Request) {
   const client = getSupabaseServerClient();
   const {
@@ -78,6 +174,7 @@ export async function POST(request: Request) {
 
   const form = await request.formData();
   const accountIdParsed = z.string().uuid().safeParse(form.get('accountId'));
+  const websiteIdParsed = z.string().uuid().safeParse(form.get('websiteId'));
   const file = form.get('file');
 
   if (!accountIdParsed.success || !(file instanceof File)) {
@@ -85,8 +182,9 @@ export async function POST(request: Request) {
   }
 
   const accountId = accountIdParsed.data;
+  const websiteId = websiteIdParsed.success ? websiteIdParsed.data : null;
 
-  if (!(await canUpload(user.id, accountId))) {
+  if (!(await canAccessSiteMedia(user.id, accountId))) {
     return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
   }
 
@@ -102,7 +200,10 @@ export async function POST(request: Request) {
   }
 
   const ext = MIME_TO_EXT[file.type] ?? 'jpg';
-  const path = `${accountId}/sites/${crypto.randomUUID()}.${ext}`;
+  const folder = websiteId
+    ? `${accountId}/sites/${websiteId}`
+    : `${accountId}/sites`;
+  const path = `${folder}/${crypto.randomUUID()}.${ext}`;
   const admin = getSupabaseServerAdminClient();
   const bytes = new Uint8Array(await file.arrayBuffer());
   const { error } = await admin.storage.from(BUCKET).upload(path, bytes, {
@@ -114,8 +215,12 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  const url = toSupabasePublicStorageUrl(
-    admin.storage.from(BUCKET).getPublicUrl(path).data.publicUrl,
-  );
+  const url = publicUrlForPath(path);
+  if (!url) {
+    return NextResponse.json(
+      { error: 'Could not generate public URL' },
+      { status: 500 },
+    );
+  }
   return NextResponse.json({ url, path });
 }

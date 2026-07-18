@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { Building2, CreditCard, Download, Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 
 import { formatInvoiceMoney } from '~/home/[account]/invoices/_lib/invoice-currency';
 import type { AccountPaymentSettings } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
@@ -41,6 +42,7 @@ type InvoicePayload = {
     last_name?: string | null;
     company_name?: string | null;
     email?: string | null;
+    picture_url?: string | null;
     address_line_1?: string | null;
     address_line_2?: string | null;
     city?: string | null;
@@ -155,51 +157,53 @@ export function PortalInvoiceView({
                   : 'Awaiting payment'}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" asChild>
-            <a href={pdfUrl}>
-              <Download className="mr-2 h-4 w-4" />
-              Download PDF
-            </a>
-          </Button>
-          {isPayable && cardEnabled ? (
-            <>
-              {hasDeposit ? (
+        <div className="flex flex-col items-stretch gap-2 sm:items-end">
+          <div className="flex flex-wrap gap-2 sm:justify-end">
+            <Button variant="outline" size="sm" asChild>
+              <a href={pdfUrl}>
+                <Download className="mr-2 h-4 w-4" />
+                Download PDF
+              </a>
+            </Button>
+            {isPayable && cardEnabled ? (
+              <>
+                {hasDeposit ? (
+                  <Button
+                    size="sm"
+                    onClick={() => handlePay(true)}
+                    disabled={paying != null}
+                  >
+                    {paying === 'deposit' ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <CreditCard className="mr-2 h-4 w-4" />
+                    )}
+                    Pay deposit (
+                    {money(Math.min(depositDue - amountPaid, remaining))})
+                  </Button>
+                ) : null}
                 <Button
                   size="sm"
-                  onClick={() => handlePay(true)}
+                  onClick={() => handlePay(false)}
                   disabled={paying != null}
+                  className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]"
                 >
-                  {paying === 'deposit' ? (
+                  {paying === 'full' ? (
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   ) : (
                     <CreditCard className="mr-2 h-4 w-4" />
                   )}
-                  Pay deposit (
-                  {money(Math.min(depositDue - amountPaid, remaining))})
+                  {hasDeposit ? 'Pay in full' : 'Pay now'}
                 </Button>
-              ) : null}
-              <Button
-                size="sm"
-                onClick={() => handlePay(false)}
-                disabled={paying != null}
-                className="bg-[var(--ozer-accent)] text-[#09111F] hover:bg-[#6BD48F]"
-              >
-                {paying === 'full' ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <CreditCard className="mr-2 h-4 w-4" />
-                )}
-                {hasDeposit ? 'Pay in full' : 'Pay now'}
-              </Button>
-            </>
+              </>
+            ) : null}
+          </div>
+          {isPayable && cardEnabled ? (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)] sm:text-right">
+              Paying by card may incur a small processing fee.
+            </p>
           ) : null}
         </div>
-        {isPayable && cardEnabled ? (
-          <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
-            Paying by card may incur a small processing fee.
-          </p>
-        ) : null}
       </div>
 
       {data.client ? (
@@ -207,19 +211,29 @@ export function PortalInvoiceView({
           <h2 className="text-sm font-medium text-[var(--workspace-shell-text-muted)]">
             Bill to
           </h2>
-          <p className="mt-1 font-medium text-[var(--workspace-shell-text)]">
-            {clientName}
-          </p>
-          {data.client.company_name ? (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              {data.client.company_name}
-            </p>
-          ) : null}
-          {data.client.email ? (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              {data.client.email}
-            </p>
-          ) : null}
+          <div className="mt-2 flex items-center gap-3">
+            <ProfileAvatar
+              displayName={clientName === '—' ? 'Client' : clientName}
+              pictureUrl={data.client.picture_url ?? null}
+              className="h-10 w-10"
+              fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-sm text-[var(--workspace-shell-text)]"
+            />
+            <div className="min-w-0">
+              <p className="font-medium text-[var(--workspace-shell-text)]">
+                {clientName}
+              </p>
+              {data.client.company_name ? (
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  {data.client.company_name}
+                </p>
+              ) : null}
+              {data.client.email ? (
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  {data.client.email}
+                </p>
+              ) : null}
+            </div>
+          </div>
         </div>
       ) : null}
 

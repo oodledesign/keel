@@ -20,6 +20,13 @@ export type WebsiteStyleColors = {
   danger: string;
 };
 
+export type WebsiteStyleHeadingLevel = {
+  /** Explicit size in px. Omit / null to derive from the type scale. */
+  sizePx?: number | null;
+  /** Explicit weight. Omit / null to use the bold weight. */
+  weight?: number | null;
+};
+
 export type WebsiteStyleTypography = {
   displayFamily: string;
   bodyFamily: string;
@@ -33,6 +40,11 @@ export type WebsiteStyleTypography = {
     regular: number;
     medium: number;
     bold: number;
+  };
+  headings: {
+    h1: WebsiteStyleHeadingLevel;
+    h2: WebsiteStyleHeadingLevel;
+    h3: WebsiteStyleHeadingLevel;
   };
 };
 
@@ -98,6 +110,7 @@ export function emptyWebsiteStyleTokens(): WebsiteStyleTokens {
       bodyFamily: 'General Sans',
       typeScale: { base: 16, ratio: 1.25 },
       weights: { regular: 400, medium: 500, bold: 700 },
+      headings: { h1: {}, h2: {}, h3: {} },
     },
     radius: {
       none: '0px',
@@ -206,6 +219,34 @@ function typeScaleFromLegacy(
   }
 }
 
+function normalizeHeadingLevel(
+  value: WebsiteStyleHeadingLevel | undefined,
+): WebsiteStyleHeadingLevel {
+  if (!value || typeof value !== 'object') return {};
+  const sizePx =
+    value.sizePx == null || Number.isNaN(Number(value.sizePx))
+      ? null
+      : Number(value.sizePx);
+  const weight =
+    value.weight == null || Number.isNaN(Number(value.weight))
+      ? null
+      : Number(value.weight);
+  return {
+    ...(sizePx != null && sizePx > 0 ? { sizePx } : {}),
+    ...(weight != null && weight > 0 ? { weight } : {}),
+  };
+}
+
+function normalizeHeadings(
+  value: WebsiteStyleTypography['headings'] | undefined,
+): WebsiteStyleTypography['headings'] {
+  return {
+    h1: normalizeHeadingLevel(value?.h1),
+    h2: normalizeHeadingLevel(value?.h2),
+    h3: normalizeHeadingLevel(value?.h3),
+  };
+}
+
 /**
  * Migrate legacy 4-role tokens (or partial D1) into the D1 StyleTokens shape.
  */
@@ -257,6 +298,7 @@ export function normalizeWebsiteStyleTokens(
           medium: Number(raw.typography?.weights?.medium) || 500,
           bold: Number(raw.typography?.weights?.bold) || 700,
         },
+        headings: normalizeHeadings(raw.typography?.headings),
       },
       radius: radiusFromLegacy(raw.radius),
       spacingDensity: spacingFromLegacy(raw.spacingDensity),
@@ -301,6 +343,7 @@ export function normalizeWebsiteStyleTokens(
       bodyFamily: String(raw.bodyFont || empty.typography.bodyFamily),
       typeScale: typeScaleFromLegacy(raw.typeScale),
       weights: empty.typography.weights,
+      headings: empty.typography.headings,
     },
     radius: radiusFromLegacy(raw.radius),
     spacingDensity: spacingFromLegacy(raw.spacingDensity),
@@ -409,6 +452,7 @@ export function seedStyleTokensBrandA(): WebsiteStyleTokens {
       bodyFamily: 'General Sans',
       typeScale: { base: 16, ratio: 1.333 },
       weights: { regular: 400, medium: 500, bold: 700 },
+      headings: { h1: {}, h2: {}, h3: {} },
     },
     spacingDensity: 'spacious',
     photographyDirection:
@@ -443,6 +487,7 @@ export function seedStyleTokensBrandB(): WebsiteStyleTokens {
       bodyFamily: 'Source Sans 3',
       typeScale: { base: 15, ratio: 1.2 },
       weights: { regular: 400, medium: 600, bold: 700 },
+      headings: { h1: {}, h2: {}, h3: {} },
     },
     radius: {
       none: '0px',

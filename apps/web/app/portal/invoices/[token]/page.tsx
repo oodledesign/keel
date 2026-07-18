@@ -7,8 +7,24 @@ import { computeInvoiceTotals } from '~/home/[account]/invoices/_lib/invoice-tot
 import { reconcileInvoicePaymentByCheckoutSession } from '~/home/[account]/invoices/_lib/server/invoice-checkout';
 import { loadPaymentSettingsForPortal } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 import { markInvoiceReadByToken } from '~/home/[account]/invoices/_lib/server/invoice-v2.server';
+import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 import { PortalInvoiceView } from './portal-invoice-view';
+
+type ClientPortalRow = {
+  display_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  company_name?: string | null;
+  email?: string | null;
+  picture_url?: string | null;
+  address_line_1?: string | null;
+  address_line_2?: string | null;
+  city?: string | null;
+  postcode?: string | null;
+  country?: string | null;
+};
 
 interface PortalInvoicePageProps {
   params: Promise<{ token: string }>;
@@ -33,7 +49,7 @@ async function getInvoiceByToken(token: string) {
     return null;
   }
 
-  const [{ data: items }, { data: clientData }] = await Promise.all([
+  const [{ data: items }, clientResult] = await Promise.all([
     client
       .from('invoice_items')
       .select(
@@ -45,32 +61,54 @@ async function getInvoiceByToken(token: string) {
       ? client
           .from('clients')
           .select(
-            'display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country',
+            'display_name, first_name, last_name, company_name, email, picture_url, address_line_1, address_line_2, city, postcode, country',
           )
           .eq('id', invoice.client_id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
 
+  const clientData = (clientResult.data ?? null) as ClientPortalRow | null;
+
   const totals = computeInvoiceTotals({
     subtotal_pence: invoice.subtotal_pence ?? 0,
-    discount_type: invoice.discount_type,
+    discount_type: invoice.discount_type as 'percent' | 'fixed' | null,
     discount_value: invoice.discount_value,
     tax_rate_bp: invoice.tax_rate_bp,
-    late_fee_type: invoice.late_fee_type,
+    late_fee_type: invoice.late_fee_type as 'percent' | 'fixed' | null,
     late_fee_value: invoice.late_fee_value,
-    deposit_type: invoice.deposit_type,
+    deposit_type: invoice.deposit_type as 'percent' | 'fixed' | null,
     deposit_value: invoice.deposit_value,
     due_at: invoice.due_at,
     status: invoice.status,
   });
 
+  const normalizedClient = clientData
+    ? {
+        ...clientData,
+        picture_url: toSupabasePublicStorageUrl(clientData.picture_url),
+      }
+    : null;
+
   return {
     ...invoice,
     ...totals,
     items: items ?? [],
-    client: clientData ?? null,
+    client: normalizedClient,
   } as Record<string, unknown>;
+}
+
+async function loadBusinessBranding(accountId: string) {
+  const admin = getSupabaseServerAdminClient();
+  const [brand, accountResult] = await Promise.all([
+    loadAccountBrandResolved(accountId).catch(() => null),
+    admin.from('accounts').select('name').eq('id', accountId).maybeSingle(),
+  ]);
+
+  return {
+    logoUrl: brand?.logo_url ?? null,
+    name: accountResult.data?.name?.trim() || null,
+  };
 }
 
 export default async function PortalInvoicePage({
@@ -103,9 +141,12 @@ export default async function PortalInvoicePage({
   const accountId = String(
     (invoice as { account_id?: string }).account_id ?? '',
   );
-  const paymentSettings = accountId
-    ? await loadPaymentSettingsForPortal(accountId)
-    : null;
+  const [paymentSettings, business] = await Promise.all([
+    accountId ? loadPaymentSettingsForPortal(accountId) : Promise.resolve(null),
+    accountId
+      ? loadBusinessBranding(accountId)
+      : Promise.resolve({ logoUrl: null, name: null }),
+  ]);
 
   const invoiceStatus = String((invoice as { status?: string }).status ?? '');
   const isPaid = invoiceStatus === 'paid';
@@ -115,9 +156,23 @@ export default async function PortalInvoicePage({
     <div className="min-h-screen bg-gradient-to-b from-[var(--ozer-coral-500)] to-[var(--ozer-coral-600)]">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
+          {business.logoUrl ? (
+            <div className="inline-flex rounded-lg bg-[var(--ozer-cream-50)]/95 px-3 py-2 shadow-sm">
+              {/* eslint-disable-next-line @next/next/no-img-element -- remote brand asset from storage */}
+              <img
+                src={business.logoUrl}
+                alt={business.name ?? 'Business logo'}
+                className="h-9 w-auto max-w-[180px] object-contain object-left sm:h-10"
+              />
+            </div>
+          ) : business.name ? (
+            <p className="font-heading text-xl font-bold text-[var(--ozer-cream-50)]">
+              {business.name}
+            </p>
+          ) : null}
           <Link
             href="/"
-            className="text-sm text-[var(--ozer-cream-50)]/90 hover:text-[var(--ozer-cream-50)]"
+            className="mt-3 inline-block text-sm text-[var(--ozer-cream-50)]/90 hover:text-[var(--ozer-cream-50)]"
           >
             ← Back to home
           </Link>

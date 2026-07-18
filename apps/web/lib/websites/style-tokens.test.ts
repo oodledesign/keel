@@ -37,6 +37,25 @@ describe('normalizeWebsiteStyleTokens', () => {
     const tokens = normalizeWebsiteStyleTokens(brandA);
     expect(tokens.colors.primary).toBe(brandA.colors.primary);
     expect(tokens.colors.neutrals.length).toBeGreaterThanOrEqual(5);
+    expect(tokens.typography.headings).toEqual({ h1: {}, h2: {}, h3: {} });
+  });
+
+  it('preserves explicit heading sizes', () => {
+    const tokens = normalizeWebsiteStyleTokens({
+      ...seedStyleTokensBrandA(),
+      typography: {
+        ...seedStyleTokensBrandA().typography,
+        headings: {
+          h1: { sizePx: 48, weight: 700 },
+          h2: { sizePx: 32 },
+          h3: {},
+        },
+      },
+    });
+    expect(tokens.typography.headings.h1).toEqual({ sizePx: 48, weight: 700 });
+    expect(tokens.typography.headings.h2).toEqual({ sizePx: 32 });
+    expect(resolveTokens(tokens)['--sb-font-size-h1']).toBe('48px');
+    expect(resolveTokens(tokens)['--sb-font-weight-h1']).toBe('700');
   });
 });
 

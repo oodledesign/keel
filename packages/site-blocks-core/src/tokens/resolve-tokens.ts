@@ -5,6 +5,11 @@ import type { CSSProperties } from 'react';
  * Matches apps/web WebsiteStyleTokens (D1) — kept local so the package
  * does not depend on the web app.
  */
+export type ResolvableHeadingLevel = {
+  sizePx?: number | null;
+  weight?: number | null;
+};
+
 export type ResolvableStyleTokens = {
   colors: {
     primary: string;
@@ -20,6 +25,11 @@ export type ResolvableStyleTokens = {
     bodyFamily: string;
     typeScale: { base: number; ratio: number };
     weights: { regular: number; medium: number; bold: number };
+    headings: {
+      h1: ResolvableHeadingLevel;
+      h2: ResolvableHeadingLevel;
+      h3: ResolvableHeadingLevel;
+    };
   };
   radius: {
     none: string;
@@ -62,6 +72,24 @@ function sanitizeFontFamily(name: string) {
   return name.replace(/["\\;]/g, '').trim() || 'ui-sans-serif';
 }
 
+function normalizeHeadingLevel(
+  value: ResolvableHeadingLevel | undefined,
+): ResolvableHeadingLevel {
+  if (!value || typeof value !== 'object') return {};
+  const sizePx =
+    value.sizePx == null || Number.isNaN(Number(value.sizePx))
+      ? null
+      : Number(value.sizePx);
+  const weight =
+    value.weight == null || Number.isNaN(Number(value.weight))
+      ? null
+      : Number(value.weight);
+  return {
+    ...(sizePx != null && sizePx > 0 ? { sizePx } : {}),
+    ...(weight != null && weight > 0 ? { weight } : {}),
+  };
+}
+
 export const DEFAULT_RESOLVABLE_STYLE_TOKENS: ResolvableStyleTokens = {
   colors: {
     primary: '#2F5D50',
@@ -85,6 +113,7 @@ export const DEFAULT_RESOLVABLE_STYLE_TOKENS: ResolvableStyleTokens = {
     bodyFamily: 'General Sans',
     typeScale: { base: 16, ratio: 1.25 },
     weights: { regular: 400, medium: 500, bold: 700 },
+    headings: { h1: {}, h2: {}, h3: {} },
   },
   radius: {
     none: '0px',
@@ -98,7 +127,9 @@ export const DEFAULT_RESOLVABLE_STYLE_TOKENS: ResolvableStyleTokens = {
 };
 
 /** Merge partial / legacy theme JSON into a complete ResolvableStyleTokens shape. */
-export function coerceResolvableStyleTokens(input: unknown): ResolvableStyleTokens {
+export function coerceResolvableStyleTokens(
+  input: unknown,
+): ResolvableStyleTokens {
   const defaults = DEFAULT_RESOLVABLE_STYLE_TOKENS;
   if (!input || typeof input !== 'object') return defaults;
 
@@ -131,6 +162,17 @@ export function coerceResolvableStyleTokens(input: unknown): ResolvableStyleToke
         ...defaults.typography.weights,
         ...raw.typography?.weights,
       },
+      headings: {
+        h1: normalizeHeadingLevel(
+          raw.typography?.headings?.h1 ?? defaults.typography.headings.h1,
+        ),
+        h2: normalizeHeadingLevel(
+          raw.typography?.headings?.h2 ?? defaults.typography.headings.h2,
+        ),
+        h3: normalizeHeadingLevel(
+          raw.typography?.headings?.h3 ?? defaults.typography.headings.h3,
+        ),
+      },
       displayFamily: sanitizeFontFamily(
         raw.typography?.displayFamily ?? defaults.typography.displayFamily,
       ),
@@ -142,6 +184,24 @@ export function coerceResolvableStyleTokens(input: unknown): ResolvableStyleToke
     spacingDensity: raw.spacingDensity ?? defaults.spacingDensity,
     buttons: { ...defaults.buttons, ...raw.buttons },
   };
+}
+
+function headingSizePx(
+  level: ResolvableHeadingLevel,
+  fallbackPx: number,
+): string {
+  const explicit = level.sizePx;
+  if (explicit != null && explicit > 0) return `${explicit}px`;
+  return `${fallbackPx.toFixed(2)}px`;
+}
+
+function headingWeight(
+  level: ResolvableHeadingLevel,
+  fallback: number,
+): string {
+  const explicit = level.weight;
+  if (explicit != null && explicit > 0) return String(explicit);
+  return String(fallback);
 }
 
 /**
@@ -162,7 +222,11 @@ export function resolveTokens(
   const n6 = neutrals[neutrals.length - 1] ?? '#1C1B1A';
 
   const { base, ratio } = resolved.typography.typeScale;
-  const step = (n: number) => `${(base * Math.pow(ratio, n)).toFixed(2)}px`;
+  const step = (n: number) => base * Math.pow(ratio, n);
+  const { headings, weights } = resolved.typography;
+  const h1Size = headingSizePx(headings.h1, step(3));
+  const h2Size = headingSizePx(headings.h2, step(2));
+  const h3Size = headingSizePx(headings.h3, step(1));
 
   return {
     '--sb-color-primary': resolved.colors.primary,
@@ -193,14 +257,20 @@ export function resolveTokens(
     '--sb-font-display': `"${resolved.typography.displayFamily}", ui-sans-serif, system-ui, sans-serif`,
     '--sb-font-heading': `"${resolved.typography.displayFamily}", ui-sans-serif, system-ui, sans-serif`,
     '--sb-font-body': `"${resolved.typography.bodyFamily}", ui-sans-serif, system-ui, sans-serif`,
-    '--sb-font-weight-regular': String(resolved.typography.weights.regular),
-    '--sb-font-weight-medium': String(resolved.typography.weights.medium),
-    '--sb-font-weight-bold': String(resolved.typography.weights.bold),
+    '--sb-font-weight-regular': String(weights.regular),
+    '--sb-font-weight-medium': String(weights.medium),
+    '--sb-font-weight-bold': String(weights.bold),
     '--sb-font-size-base': `${base}px`,
-    '--sb-font-size-sm': step(-1),
-    '--sb-font-size-lg': step(1),
-    '--sb-font-size-xl': step(2),
-    '--sb-font-size-2xl': step(3),
+    '--sb-font-size-sm': `${step(-1).toFixed(2)}px`,
+    '--sb-font-size-lg': `${step(1).toFixed(2)}px`,
+    '--sb-font-size-xl': `${step(2).toFixed(2)}px`,
+    '--sb-font-size-2xl': `${step(3).toFixed(2)}px`,
+    '--sb-font-size-h1': h1Size,
+    '--sb-font-size-h2': h2Size,
+    '--sb-font-size-h3': h3Size,
+    '--sb-font-weight-h1': headingWeight(headings.h1, weights.bold),
+    '--sb-font-weight-h2': headingWeight(headings.h2, weights.bold),
+    '--sb-font-weight-h3': headingWeight(headings.h3, weights.bold),
     '--sb-type-ratio': String(ratio),
 
     '--sb-radius-none': resolved.radius.none,
@@ -221,4 +291,20 @@ export function resolveTokensStyle(
   tokens: ResolvableStyleTokens,
 ): CSSProperties {
   return resolveTokens(tokens) as CSSProperties;
+}
+
+/** Default px sizes derived from the modular scale (for editor UI placeholders). */
+export function derivedHeadingSizes(tokens: ResolvableStyleTokens): {
+  h1: number;
+  h2: number;
+  h3: number;
+} {
+  const resolved = coerceResolvableStyleTokens(tokens);
+  const { base, ratio } = resolved.typography.typeScale;
+  const step = (n: number) => Number((base * Math.pow(ratio, n)).toFixed(2));
+  return {
+    h1: resolved.typography.headings.h1.sizePx ?? step(3),
+    h2: resolved.typography.headings.h2.sizePx ?? step(2),
+    h3: resolved.typography.headings.h3.sizePx ?? step(1),
+  };
 }
