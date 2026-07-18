@@ -262,10 +262,10 @@ export function WorkspaceMobileNewMenu(props: WorkspaceNewMenuProps) {
         type="button"
         aria-label="Create new"
         aria-expanded={open}
-        className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] shadow-sm hover:bg-[var(--ozer-accent-hover)]"
+        className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-white)] shadow-[0_8px_32px_rgba(0,0,0,0.5)] hover:bg-[var(--ozer-accent-hover)]"
         onClick={() => setOpen(true)}
       >
-        <Plus className="h-[21px] w-[21px]" />
+        <Plus className="h-6 w-6" />
       </HapticButton>
 
       {visible ? (

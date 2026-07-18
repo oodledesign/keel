@@ -84,6 +84,7 @@ export function PersonalHomeMobileChrome({
         open={menuOpen}
         onOpenChange={setMenuOpen}
         variant="personal"
+        helpDefaultAccountId={workspace.workspace?.id ?? null}
       />
 
       <WorkspaceMobileBottomNav
@@ -94,7 +95,6 @@ export function PersonalHomeMobileChrome({
         settingsHref={pathsConfig.app.personalAccountSettings}
         settingsLabel="Personal settings"
         newMenu={<WorkspaceMobileNewMenu variant="personal" />}
-        helpDefaultAccountId={workspace.workspace?.id ?? null}
       />
     </>
   );

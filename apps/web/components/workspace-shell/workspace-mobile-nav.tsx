@@ -2,18 +2,17 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
-import { Menu, Settings, X } from 'lucide-react';
+import { LifeBuoy, Menu, Settings, X } from 'lucide-react';
 
 import { Trans } from '@kit/ui/trans';
 import { cn } from '@kit/ui/utils';
 
 import { HapticButton, HapticLink } from '~/components/haptic-link';
 import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
+import { PlatformSupportTicketDialog } from '~/components/workspace-shell/platform-support-ticket-dialog';
 import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
-import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import { WorkspaceMobileBackButton } from '~/components/workspace-shell/workspace-mobile-back-button';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import { navHrefPathname } from '~/lib/dashboard-shortcuts/personal-home-url';
@@ -37,6 +36,7 @@ type WorkspaceMobileMenuProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   variant?: 'personal' | 'team';
+  helpDefaultAccountId?: string | null;
 };
 
 export function WorkspaceMobileMenu({
@@ -47,9 +47,11 @@ export function WorkspaceMobileMenu({
   open,
   onOpenChange,
   variant = 'team',
+  helpDefaultAccountId = null,
 }: WorkspaceMobileMenuProps) {
   const pathname = usePathname();
   const [visible, setVisible] = useState(open);
+  const [supportOpen, setSupportOpen] = useState(false);
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -67,10 +69,14 @@ export function WorkspaceMobileMenu({
     return () => window.clearTimeout(timer);
   }, [open]);
 
-  if (!visible && !open) return null;
+  if (!visible && !open && !supportOpen) return null;
+
+  const showMenu = visible || open;
 
   return (
     <>
+      {showMenu ? (
+        <>
       <div
         className={cn(
           'fixed inset-0 z-[100] bg-[#060a12]/92 backdrop-blur-md transition-opacity duration-200 lg:hidden',
@@ -154,14 +160,38 @@ export function WorkspaceMobileMenu({
           </ul>
         </nav>
 
-        {variant === 'personal' ? (
-          <div className="border-t border-[color:var(--workspace-shell-border)] px-3 py-4 lg:hidden">
-            <p className="px-4 text-xs text-[var(--workspace-shell-text-muted)]">
+        <div className="border-t border-[color:var(--workspace-shell-border)] px-3 py-4">
+          <HapticButton
+            type="button"
+            className="flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-[var(--workspace-shell-text)] hover:bg-white/6"
+            onClick={() => {
+              close();
+              setSupportOpen(true);
+            }}
+          >
+            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[var(--ozer-accent)]">
+              <LifeBuoy className="h-5 w-5" />
+            </span>
+                <Trans
+                  i18nKey="common:helpAndSupport"
+                  defaults="Help & support"
+                />
+              </HapticButton>
+          {variant === 'personal' ? (
+            <p className="mt-2 px-4 text-xs text-[var(--workspace-shell-text-muted)]">
               Personal settings are in the bottom bar while the menu is open.
             </p>
-          </div>
-        ) : null}
+          ) : null}
+        </div>
       </div>
+        </>
+      ) : null}
+
+      <PlatformSupportTicketDialog
+        open={supportOpen}
+        onOpenChange={setSupportOpen}
+        defaultAccountId={helpDefaultAccountId}
+      />
     </>
   );
 }
@@ -174,7 +204,6 @@ type WorkspaceMobileBottomNavProps = {
   settingsHref: string;
   settingsLabel: string;
   newMenu?: React.ReactNode;
-  helpDefaultAccountId?: string | null;
 };
 
 const MOBILE_NAV_ICON_CLASS = 'h-[21px] w-[21px]';
@@ -189,7 +218,6 @@ export function WorkspaceMobileBottomNav({
   settingsHref,
   settingsLabel,
   newMenu,
-  helpDefaultAccountId = null,
 }: WorkspaceMobileBottomNavProps) {
   const pathname = usePathname();
   const homePathname = navHrefPathname(homePath);
@@ -291,8 +319,6 @@ export function WorkspaceMobileBottomNav({
           );
         })}
 
-        {newMenu}
-
         <HapticButton
           type="button"
           aria-expanded={menuOpen}
@@ -307,12 +333,7 @@ export function WorkspaceMobileBottomNav({
         </HapticButton>
       </div>
 
-      <div className="pointer-events-auto flex justify-end">
-        <WorkspaceHelpButton
-          defaultAccountId={helpDefaultAccountId}
-          variant="inline"
-        />
-      </div>
+      <div className="pointer-events-auto flex justify-end">{newMenu}</div>
     </nav>
   );
 }

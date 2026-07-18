@@ -116,6 +116,7 @@ export function TeamWorkspaceMobileChrome({
         open={menuOpen}
         onOpenChange={setMenuOpen}
         variant="team"
+        helpDefaultAccountId={accountId}
       />
 
       <WorkspaceMobileBottomNav
@@ -125,7 +126,6 @@ export function TeamWorkspaceMobileChrome({
         onMenuOpenChange={setMenuOpen}
         settingsHref={settingsHref}
         settingsLabel="Workspace settings"
-        helpDefaultAccountId={accountId}
         newMenu={
           showNewMenu ? (
             <WorkspaceMobileNewMenu
@@ -138,6 +138,7 @@ export function TeamWorkspaceMobileChrome({
       />
 
       <WorkspaceCreateTaskHost accountId={accountId} accountSlug={account} />
+      {/* Desktop-only floating help; mobile support lives in the hamburger menu. */}
       <WorkspaceHelpButton defaultAccountId={accountId} />
     </>
   );
