@@ -66,31 +66,9 @@
 }
 
 /*
- * Puck editor preview — disable fixed hero pin, restore natural document flow,
- * and show desktop-only decorative photos so the canvas matches the live site.
+ * Puck editor preview — show desktop-only decorative photos in the canvas,
+ * and soften scallop overlap so stacked sections stay editable.
  */
-[data-puck-entry] .ybbHeroPin {
-  height: auto !important;
-  min-height: 0 !important;
-}
-
-[data-puck-entry] .ybbHero {
-  position: relative !important;
-  top: auto !important;
-  left: auto !important;
-  right: auto !important;
-  width: auto !important;
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-[data-puck-entry] .ybbHeroGrid {
-  min-height: 0 !important;
-}
-
 [data-puck-entry] .ybbScallopPhoto {
   display: block !important;
 }

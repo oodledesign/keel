@@ -4,7 +4,7 @@
   --ybb-scallop-r: 3.977em;
   --ybb-nav-height: 4.5em;
   --ybb-hero-max-height: min(100vh, 54em);
-  height: calc(var(--ybb-hero-max-height) + var(--ybb-scallop-r) + 1.5em);
+  height: auto;
   position: relative;
   z-index: 1;
 }
@@ -56,16 +56,7 @@
 }
 
 @media (min-width: 992px) {
-  .ybbHeroPin {
-    height: calc(var(--ybb-hero-max-height) + var(--ybb-scallop-r) + 1.5em);
-  }
-
   .ybbHero {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    width: 100%;
     align-items: flex-start;
     padding-top: calc(
       var(--ybb-banner-offset, 0px) + var(--ybb-nav-height) + var(--sb-space-4)
@@ -87,11 +78,6 @@
     margin-top: 1.85em;
     transform: translateY(-0.35vh);
   }
-}
-
-.ybbHeroPassed {
-  visibility: hidden;
-  pointer-events: none;
 }
 
 .ybbHeroMedia {
@@ -321,15 +307,9 @@
 }
 
 @media (max-width: 991px) {
-  .ybbHeroPin {
-    height: auto;
-  }
-
   .ybbHero {
-    position: relative;
-    height: auto;
-    max-height: none;
     display: block;
+    max-height: none;
     padding-top: calc(
       var(--ybb-banner-offset, 0px) + var(--ybb-nav-height) + var(--sb-space-4)
     );

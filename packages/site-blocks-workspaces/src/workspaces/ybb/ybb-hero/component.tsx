@@ -45,40 +45,12 @@ export function YbbHero(props: YbbHeroProps) {
     props.secondaryCtaHref ?? YBB_DEFAULTS.secondaryCtaHref;
   const secondaryCtaVariant = props.secondaryCtaVariant ?? 'secondary';
 
-  const pinRef = useRef<HTMLDivElement>(null);
-  const heroRef = useRef<HTMLElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const heroBackgroundStyle = resolveYbbBackgroundStyle({
     backgroundToken,
     backgroundColor,
   });
-
-  useEffect(() => {
-    const pin = pinRef.current;
-    const hero = heroRef.current;
-    if (!pin || !hero) return;
-
-    // Puck preview iframe is shorter than the pin — don't hide the hero there.
-    if (hero.closest('[data-puck-entry]')) return;
-
-    if (window.matchMedia('(max-width: 991px)').matches) return;
-
-    const setPassed = (passed: boolean) => {
-      hero.classList.toggle('ybbHeroPassed', passed);
-    };
-
-    if ('IntersectionObserver' in window) {
-      const io = new IntersectionObserver(
-        ([entry]) => {
-          if (entry) setPassed(!entry.isIntersecting);
-        },
-        { threshold: 0, rootMargin: '0px' },
-      );
-      io.observe(pin);
-      return () => io.disconnect();
-    }
-  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -95,7 +67,6 @@ export function YbbHero(props: YbbHeroProps) {
 
   return (
     <div
-      ref={pinRef}
       className="ybbHeroPin"
       style={
         textureUrl
@@ -106,7 +77,6 @@ export function YbbHero(props: YbbHeroProps) {
       }
     >
       <section
-        ref={heroRef}
         className="ybbHero"
         style={heroBackgroundStyle}
         aria-labelledby="ybb-hero-heading"

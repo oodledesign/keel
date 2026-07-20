@@ -176,7 +176,7 @@ export function YbbPortfolio(props: YbbPortfolioProps) {
               {slides.map((_, index) => (
                 <button
                   key={index}
-                  className={`ybbPortfolioDot${index === 0 ? 'ybbPortfolioDotActive' : ''}`}
+                  className={`ybbPortfolioDot${index === 0 ? ' ybbPortfolioDotActive' : ''}`}
                   type="button"
                   role="tab"
                   aria-label={`Go to photo ${index + 1}`}

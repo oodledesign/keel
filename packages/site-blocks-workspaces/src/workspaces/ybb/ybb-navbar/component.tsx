@@ -119,7 +119,7 @@ export function YbbNavbar(props: YbbNavbarProps) {
   return (
     <header
       ref={headerRef}
-      className={`ybbNavbar${onDark ? 'ybbNavbarOnDark' : 'ybbNavbarOnLight'}`}
+      className={`ybbNavbar ${onDark ? 'ybbNavbarOnDark' : 'ybbNavbarOnLight'}`}
     >
       <div className="ybbNavbarFloat">
         <div className="ybbNavbarPill">

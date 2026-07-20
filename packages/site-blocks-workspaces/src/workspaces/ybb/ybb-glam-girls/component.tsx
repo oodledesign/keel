@@ -96,7 +96,7 @@ function Polaroid({
   return (
     <article className="ybbGlamCell ybbGlamCellPolaroid">
       <div
-        className={`ybbGlamPolaroid${card.featured ? 'ybbGlamPolaroidFeatured' : ''}`}
+        className={`ybbGlamPolaroid${card.featured ? ' ybbGlamPolaroidFeatured' : ''}`}
         style={
           {
             ['--ybb-glam-tilt' as string]: tilt,
@@ -107,7 +107,7 @@ function Polaroid({
         <div className="ybbGlamPolaroidMedia">
           {card.imageUrl ? (
             <figure
-              className={`ybbGlamPolaroidPhoto${card.squarePhoto ? 'ybbGlamPolaroidPhotoSquare' : ''}`}
+              className={`ybbGlamPolaroidPhoto${card.squarePhoto ? ' ybbGlamPolaroidPhotoSquare' : ''}`}
             >
               <YbbImage
                 src={card.imageUrl}
@@ -117,7 +117,7 @@ function Polaroid({
             </figure>
           ) : (
             <figure
-              className={`ybbGlamPolaroidPhoto ybbGlamPolaroidPhotoEmpty${card.squarePhoto ? 'ybbGlamPolaroidPhotoSquare' : ''}`}
+              className={`ybbGlamPolaroidPhoto ybbGlamPolaroidPhotoEmpty${card.squarePhoto ? ' ybbGlamPolaroidPhotoSquare' : ''}`}
               aria-hidden
             />
           )}
@@ -210,7 +210,7 @@ export function YbbGlamGirls(props: YbbGlamGirlsProps) {
   return (
     <section
       id={sectionId || undefined}
-      className={`ybbGlamGirls${overlapScallop ? 'ybbGlamGirlsOverlap' : ''}`}
+      className={`ybbGlamGirls${overlapScallop ? ' ybbGlamGirlsOverlap' : ''}`}
       style={sectionStyle}
       aria-labelledby={`${sectionId}-heading`}
     >
