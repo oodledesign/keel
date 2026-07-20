@@ -1,18 +1,31 @@
+import Link from 'next/link';
+
 import { AlertCircle, CheckCircle2, Clock, Users } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import pathsConfig from '~/config/paths.config';
 import { countOpenChangeRequestsByStaff } from '~/lib/signatures/change-requests';
 
 import { ModuleDataSection } from '../../_components/module-data-section';
+import { SignaturesStaffSearch } from '../_components/signatures-staff-search';
 import { SignaturesStaffTable } from '../_components/signatures-staff-table';
+import {
+  SIGNATURES_DASHBOARD_STAFF_PAGE_SIZE,
+  parseStaffListPage,
+} from '../_lib/signatures-staff-pagination';
 import {
   loadSignaturesDashboard,
   loadSignaturesWorkspace,
+  type StaffListFilters,
 } from '../_lib/server/signatures-data';
 
 type SignaturesDashboardPageProps = {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{
+    q?: string;
+    page?: string;
+  }>;
 };
 
 const cards = [
@@ -29,14 +42,31 @@ const cards = [
 
 export default async function SignaturesDashboardPage({
   params,
+  searchParams,
 }: SignaturesDashboardPageProps) {
   const { account } = await params;
+  const query = await searchParams;
+  const filters: StaffListFilters = {
+    search: query.q ?? null,
+  };
+  const page = parseStaffListPage(query.page);
+
   const workspace = await loadSignaturesWorkspace(account);
   const accountId = workspace.account.id as string;
-  const [{ summary, staff }, openRequestCounts] = await Promise.all([
-    loadSignaturesDashboard(accountId),
-    countOpenChangeRequestsByStaff(accountId),
-  ]);
+  const [{ summary, staff, totalCount, pageSize }, openRequestCounts] =
+    await Promise.all([
+      loadSignaturesDashboard(accountId, {
+        ...filters,
+        page,
+        pageSize: SIGNATURES_DASHBOARD_STAFF_PAGE_SIZE,
+      }),
+      countOpenChangeRequestsByStaff(accountId),
+    ]);
+
+  const staffListPath = pathsConfig.app.accountSignaturesStaff.replace(
+    '[account]',
+    account,
+  );
 
   return (
     <div className="space-y-8">
@@ -66,15 +96,36 @@ export default async function SignaturesDashboardPage({
 
       <ModuleDataSection
         title="Staff signatures"
-        description="A quick view of synced staff, assigned templates, and the last push state."
+        description="Search staff, browse pages, or open the full staff list for bulk editing."
       >
-        <SignaturesStaffTable
-          accountId={accountId}
-          accountSlug={account}
-          staff={staff}
-          openRequestCounts={Object.fromEntries(openRequestCounts)}
-          compact
-        />
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div className="min-w-[220px] flex-1">
+              <SignaturesStaffSearch placeholder="Search staff on dashboard…" />
+            </div>
+            <Link
+              href={staffListPath}
+              className="text-sm font-medium text-[#39AEB3] hover:underline"
+            >
+              Open full staff list
+            </Link>
+          </div>
+          <SignaturesStaffTable
+            accountId={accountId}
+            accountSlug={account}
+            staff={staff}
+            openRequestCounts={Object.fromEntries(openRequestCounts)}
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            paginationPageSizes={[SIGNATURES_DASHBOARD_STAFF_PAGE_SIZE]}
+            emptyMessage={
+              totalCount === 0
+                ? 'No staff match your search.'
+                : 'No staff on this page.'
+            }
+          />
+        </div>
       </ModuleDataSection>
     </div>
   );

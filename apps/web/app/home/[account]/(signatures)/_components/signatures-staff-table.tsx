@@ -23,6 +23,7 @@ import { staffSourceLabel } from '~/lib/signatures/staff-source';
 
 import type { SignatureStaff } from '../_lib/server/signatures-data';
 import { sendSignatureInstallInstructionsAction } from '../_lib/server/signatures-module-actions';
+import { SignaturesStaffTablePagination } from './signatures-staff-table-pagination';
 import { SignaturesStatusBadge } from './signatures-status-badge';
 
 function formatDate(value: string | null) {
@@ -42,26 +43,34 @@ export function SignaturesStaffTable({
   accountSlug,
   staff,
   openRequestCounts = {},
-  compact = false,
+  page,
+  pageSize,
+  totalCount,
+  paginationPageSizes,
+  emptyMessage = 'No staff yet. Sync from Microsoft 365 or Google Workspace, add people manually, or import a CSV from the toolbar above.',
 }: {
   accountId: string;
   accountSlug: string;
   staff: SignatureStaff[];
   openRequestCounts?: Record<string, number>;
-  compact?: boolean;
+  page?: number;
+  pageSize?: number;
+  totalCount?: number;
+  paginationPageSizes?: readonly number[];
+  emptyMessage?: string;
 }) {
   const [emailingId, setEmailingId] = useState<string | null>(null);
 
   if (!staff.length) {
     return (
       <div className="text-muted-foreground rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-8 text-sm">
-        No staff yet. Sync from Microsoft 365 or Google Workspace, add people
-        manually, or import a CSV from the toolbar above.
+        {emptyMessage}
       </div>
     );
   }
 
-  const visibleStaff = compact ? staff.slice(0, 8) : staff;
+  const showPagination =
+    page != null && pageSize != null && totalCount != null && totalCount > 0;
 
   const emailInstall = async (row: SignatureStaff) => {
     if (!row.template_id) {
@@ -100,7 +109,7 @@ export function SignaturesStaffTable({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {visibleStaff.map((row) => {
+          {staff.map((row) => {
             const detailPath = pathsConfig.app.accountSignaturesStaffDetail
               .replace('[account]', accountSlug)
               .replace('[staffId]', row.id);
@@ -182,6 +191,14 @@ export function SignaturesStaffTable({
           })}
         </TableBody>
       </Table>
+      {showPagination ? (
+        <SignaturesStaffTablePagination
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          pageSizes={paginationPageSizes}
+        />
+      ) : null}
     </div>
   );
 }

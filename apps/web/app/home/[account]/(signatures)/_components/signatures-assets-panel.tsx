@@ -253,7 +253,7 @@ export function SignaturesAssetsPanel({
                 placeholder={
                   kind === 'custom_text'
                     ? 'e.g. Legal disclaimer'
-                    : 'e.g. CoStar 2024'
+                    : 'e.g. Industry award 2024'
                 }
               />
             </div>
@@ -358,7 +358,7 @@ export function SignaturesAssetsPanel({
                     setBadgeDataUrl(null);
                   }}
                   disabled={Boolean(badgeDataUrl) || saving}
-                  placeholder="https://cdn.example.com/awards/costar.png"
+                  placeholder="https://cdn.example.com/awards/badge.png"
                 />
               </div>
             </div>

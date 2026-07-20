@@ -231,8 +231,8 @@ export function SignaturesStaffBulkEditor({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="text-muted-foreground flex items-center gap-2 text-sm">
           <Table2 className="h-4 w-4 text-[var(--ozer-accent)]" />
-          Profile fields are read-only for synced staff. Branch, template, and
-          phone overrides remain editable.
+          Profile fields are read-only for synced staff. Photos, branch,
+          template, and phone overrides remain editable.
         </div>
         <Button
           type="button"
@@ -277,58 +277,49 @@ export function SignaturesStaffBulkEditor({
                   )}
                 >
                   <td className="px-3 py-2">
-                    {editableProfile ? (
-                      <>
-                        <button
-                          type="button"
-                          className="group relative h-12 w-12 overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10"
-                          onClick={() => fileRefs.current[row.staffId]?.click()}
-                          title="Change photo"
-                        >
-                          {photoSrc ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
-                              src={photoSrc}
-                              alt=""
-                              className="h-full w-full object-cover"
-                            />
-                          ) : (
-                            <span className="text-muted-foreground text-[10px]">
-                              Add
-                            </span>
-                          )}
-                          <span className="absolute inset-0 hidden items-center justify-center bg-black/50 text-[10px] text-white group-hover:flex">
-                            Edit
+                    <>
+                      <button
+                        type="button"
+                        className="group relative h-12 w-12 overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10"
+                        onClick={() => fileRefs.current[row.staffId]?.click()}
+                        title={
+                          editableProfile
+                            ? 'Change photo'
+                            : 'Override directory photo'
+                        }
+                      >
+                        {photoSrc ? (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img
+                            src={photoSrc}
+                            alt=""
+                            className="h-full w-full object-cover"
+                          />
+                        ) : (
+                          <span className="text-muted-foreground text-[10px]">
+                            Add
                           </span>
-                        </button>
-                        <input
-                          ref={(el) => {
-                            fileRefs.current[row.staffId] = el;
-                          }}
-                          type="file"
-                          accept="image/png,image/jpeg,image/webp"
-                          className="hidden"
-                          onChange={(event) => {
-                            void onPhoto(
-                              row.staffId,
-                              event.target.files?.[0] ?? null,
-                            );
-                            event.target.value = '';
-                          }}
-                        />
-                      </>
-                    ) : photoSrc ? (
-                      // eslint-disable-next-line @next/next/no-img-element
-                      <img
-                        src={photoSrc}
-                        alt=""
-                        className="h-12 w-12 rounded-lg border border-[color:var(--workspace-shell-border)] object-cover"
+                        )}
+                        <span className="absolute inset-0 hidden items-center justify-center bg-black/50 text-[10px] text-white group-hover:flex">
+                          Edit
+                        </span>
+                      </button>
+                      <input
+                        ref={(el) => {
+                          fileRefs.current[row.staffId] = el;
+                        }}
+                        type="file"
+                        accept="image/png,image/jpeg,image/webp"
+                        className="hidden"
+                        onChange={(event) => {
+                          void onPhoto(
+                            row.staffId,
+                            event.target.files?.[0] ?? null,
+                          );
+                          event.target.value = '';
+                        }}
                       />
-                    ) : (
-                      <span className="text-muted-foreground text-[10px]">
-                        Synced
-                      </span>
-                    )}
+                    </>
                   </td>
                   <td className="px-1 py-1">
                     <CellInput

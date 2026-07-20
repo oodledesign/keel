@@ -4,6 +4,11 @@ import type { SignatureStaff } from '../_lib/server/signatures-data';
 import { SignaturesAddStaffButton } from './signatures-add-staff-dialog';
 import { SignaturesStaffImportFlow } from './signatures-staff-import-flow';
 
+type StaffImportRow = Pick<
+  SignatureStaff,
+  'id' | 'email' | 'source' | 'full_name'
+>;
+
 export function SignaturesStaffToolbar({
   accountId,
   accountSlug,
@@ -11,7 +16,7 @@ export function SignaturesStaffToolbar({
 }: {
   accountId: string;
   accountSlug: string;
-  staff: SignatureStaff[];
+  staff: StaffImportRow[];
 }) {
   return (
     <div className="flex flex-wrap gap-2">

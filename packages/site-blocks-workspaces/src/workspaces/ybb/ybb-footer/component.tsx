@@ -3,6 +3,8 @@
 import type { CSSProperties } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
+import '../ybb-buttons.css';
+import { resolveYbbBackgroundStyle, resolveYbbColorVar } from '../ybb-styles';
 import './ybb-footer.css';
 
 export type YbbFooterNavLink = {
@@ -22,6 +24,10 @@ export type YbbFooterProps = {
   tiktokUrl?: string;
   copyrightTagline?: string;
   navLinks?: YbbFooterNavLink[];
+  backgroundToken?: string;
+  backgroundColor?: string;
+  cardBackgroundToken?: string;
+  cardBackgroundColor?: string;
 };
 
 function MailIcon() {
@@ -100,8 +106,29 @@ export function YbbFooter(props: YbbFooterProps) {
       } as CSSProperties)
     : undefined;
 
+  const footerStyle = {
+    ...resolveYbbBackgroundStyle({
+      backgroundToken: props.backgroundToken ?? 'custom',
+      backgroundColor:
+        props.backgroundColor?.trim() || YBB_DEFAULTS.footerBackgroundColor,
+      fallbackColor: YBB_DEFAULTS.footerBackgroundColor,
+    }),
+    ...textureStyle,
+  } as CSSProperties;
+
+  const cardStyle = {
+    background: resolveYbbColorVar({
+      token: props.cardBackgroundToken ?? 'custom',
+      customColor:
+        props.cardBackgroundColor?.trim() ||
+        YBB_DEFAULTS.footerCardBackgroundColor,
+      fallback: YBB_DEFAULTS.footerCardBackgroundColor,
+    }),
+    ...textureStyle,
+  } as CSSProperties;
+
   return (
-    <footer className="ybbFooter" style={textureStyle}>
+    <footer className="ybbFooter" style={footerStyle}>
       <section className="ybbPress" aria-labelledby="ybb-press-heading">
         <div className="ybbPressInner">
           <p className="ybbPressText" id="ybb-press-heading">
@@ -129,7 +156,7 @@ export function YbbFooter(props: YbbFooterProps) {
 
       <div className="ybbFooterCardWrap">
         <div className="ybbFooterStage">
-          <div className="ybbFooterCard" style={textureStyle}>
+          <div className="ybbFooterCard" style={cardStyle}>
             <div className="ybbFooterLinks">
               <a href="/" className="ybbFooterLogo">
                 {logoWideUrl ? (

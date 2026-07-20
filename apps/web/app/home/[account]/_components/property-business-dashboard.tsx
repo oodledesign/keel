@@ -21,7 +21,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
 import pathsConfig from '~/config/paths.config';
-import { workspaceIconChip, workspacePanelCard } from '~/lib/workspace-ui';
+import { workspaceIconChip, workspacePanelCard, workspaceLinkAccent, workspaceTabActive, workspaceTextMuted, workspaceTextSubtle } from '~/lib/workspace-ui';
 
 import type {
   GroupMember,
@@ -47,10 +47,10 @@ const iconChip = workspaceIconChip;
 
 const priorityColour: Record<string, string> = {
   urgent: 'bg-rose-500/15 text-rose-700 dark:text-rose-300',
-  high: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]',
+  high: 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]',
   medium:
     'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
-  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/50',
+  low: `bg-[var(--workspace-shell-sidebar-accent)] ${workspaceTextSubtle}`,
 };
 
 function accountPath(accountSlug: string, template: string) {
@@ -116,7 +116,7 @@ export function PropertyBusinessDashboard({
               <p className="text-xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
                 {c.value}
               </p>
-              <p className="mt-0.5 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
+              <p className={`mt-0.5 text-[10px] font-medium tracking-wide uppercase ${workspaceTextMuted}`}>
                 {c.label}
               </p>
             </CardContent>
@@ -171,13 +171,13 @@ export function PropertyBusinessDashboard({
             <TabsList className="h-10 w-full justify-start rounded-none border-0 bg-transparent p-0 md:w-auto">
               <TabsTrigger
                 value="tasks"
-                className="rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--ozer-accent-muted)]"
+                className={`rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent ${workspaceTabActive}`}
               >
                 Tasks
               </TabsTrigger>
               <TabsTrigger
                 value="members"
-                className="rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--ozer-accent-muted)]"
+                className={`rounded-t-lg data-[state=active]:border-b-2 data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent ${workspaceTabActive}`}
               >
                 Members
               </TabsTrigger>
@@ -216,7 +216,7 @@ function FinanceOverviewPanel({
           <CardTitle className="text-base font-semibold text-[var(--workspace-shell-text)]">
             Finances this month
           </CardTitle>
-          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/45">
+          <p className={`mt-1 text-xs ${workspaceTextMuted}`}>
             {summary.hasFinanceData
               ? 'Track income and expenses — connect FreeAgent for automatic sync'
               : 'Import transactions or connect FreeAgent to get started'}
@@ -224,7 +224,7 @@ function FinanceOverviewPanel({
         </div>
         <Link
           href={financesPath}
-          className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:underline"
+          className={`text-xs font-medium hover:underline ${workspaceLinkAccent}`}
         >
           Open finances →
         </Link>
@@ -250,17 +250,24 @@ function FinanceOverviewPanel({
         </div>
         {summary.financeTrend.length > 0 ? (
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
-            <FinanceTrendBarChart data={summary.financeTrend} />
+            <div className="h-52">
+              <FinanceTrendBarChart
+                data={summary.financeTrend}
+                variant="grouped"
+                surface="workspace"
+                compact
+              />
+            </div>
           </div>
         ) : (
           <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] py-8 text-center">
-            <Wallet className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
-            <p className="text-sm text-[var(--workspace-shell-text)]/40">
+            <Wallet className={`mx-auto mb-2 h-8 w-8 ${workspaceTextSubtle}`} />
+            <p className={`text-sm ${workspaceTextMuted}`}>
               No transactions yet
             </p>
             <Link
               href={financesPath}
-              className="mt-2 inline-block text-xs text-[var(--ozer-accent-muted)] hover:underline"
+              className={`mt-2 inline-block text-xs hover:underline ${workspaceLinkAccent}`}
             >
               Set up finances or connect FreeAgent
             </Link>
@@ -290,7 +297,7 @@ function FinanceStatCard({
         >
           <Icon className="h-3.5 w-3.5" />
         </span>
-        <p className="text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
+        <p className={`text-[10px] font-medium tracking-wide uppercase ${workspaceTextMuted}`}>
           {label}
         </p>
       </div>
@@ -341,7 +348,7 @@ function ShortcutCard({
             <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
               {title}
             </p>
-            <p className="text-xs text-[var(--workspace-shell-text)]/50">
+            <p className={`text-xs ${workspaceTextMuted}`}>
               {description}
             </p>
           </div>
@@ -361,10 +368,8 @@ function TasksPanel({
   if (tasks.length === 0) {
     return (
       <div className="py-8 text-center">
-        <CheckSquare className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
-        <p className="text-sm text-[var(--workspace-shell-text)]/40">
-          No open tasks
-        </p>
+        <CheckSquare className={`mx-auto mb-2 h-8 w-8 ${workspaceTextSubtle}`} />
+        <p className={`text-sm ${workspaceTextMuted}`}>No open tasks</p>
       </div>
     );
   }
@@ -379,20 +384,16 @@ function TasksPanel({
           className="flex items-center justify-between rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5"
         >
           <div className="min-w-0">
-            <p className="truncate text-sm text-[var(--workspace-shell-text)]/80">
+            <p className="truncate text-sm text-[var(--workspace-shell-text)]">
               {task.title}
             </p>
             {task.projectName ? (
-              <p className="text-xs text-[var(--workspace-shell-text)]/40">
-                {task.projectName}
-              </p>
+              <p className={`text-xs ${workspaceTextMuted}`}>{task.projectName}</p>
             ) : null}
           </div>
           <div className="ml-3 flex flex-shrink-0 items-center gap-2">
             {task.dueDate ? (
-              <span className="text-xs text-[var(--workspace-shell-text)]/40">
-                {task.dueDate}
-              </span>
+              <span className={`text-xs ${workspaceTextMuted}`}>{task.dueDate}</span>
             ) : null}
             <Badge
               className={`text-[10px] ${priorityColour[task.priority] ?? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/50'}`}
@@ -405,7 +406,7 @@ function TasksPanel({
       {tasks.length > 8 ? (
         <Link
           href={tasksPath}
-          className="block pt-1 text-center text-xs text-[var(--workspace-shell-text)]/40 hover:text-[var(--ozer-accent-muted)]"
+          className={`block pt-1 text-center text-xs hover:underline ${workspaceLinkAccent}`}
         >
           View all tasks →
         </Link>
@@ -418,10 +419,8 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
   if (members.length === 0) {
     return (
       <div className="py-8 text-center">
-        <Users className="mx-auto mb-2 h-8 w-8 text-[var(--workspace-shell-text)]/20" />
-        <p className="text-sm text-[var(--workspace-shell-text)]/40">
-          No team members yet
-        </p>
+        <Users className={`mx-auto mb-2 h-8 w-8 ${workspaceTextSubtle}`} />
+        <p className={`text-sm ${workspaceTextMuted}`}>No team members yet</p>
       </div>
     );
   }
@@ -433,20 +432,18 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
           key={m.id}
           className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5"
         >
-          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-xs font-semibold text-[var(--ozer-accent-muted)]">
+          <span className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-xs font-semibold text-[var(--workspace-shell-accent-text)]">
             {m.displayName.slice(0, 2).toUpperCase()}
           </span>
           <div className="min-w-0">
-            <p className="truncate text-sm text-[var(--workspace-shell-text)]/80">
+            <p className="truncate text-sm text-[var(--workspace-shell-text)]">
               {m.displayName}
             </p>
             {m.email ? (
-              <p className="truncate text-xs text-[var(--workspace-shell-text)]/40">
-                {m.email}
-              </p>
+              <p className={`truncate text-xs ${workspaceTextMuted}`}>{m.email}</p>
             ) : null}
           </div>
-          <span className="ml-auto flex-shrink-0 text-xs text-[var(--workspace-shell-text)]/40 capitalize">
+          <span className={`ml-auto flex-shrink-0 text-xs capitalize ${workspaceTextMuted}`}>
             {m.role}
           </span>
         </div>

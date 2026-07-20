@@ -43,6 +43,8 @@ export const workspaceText = 'text-[var(--workspace-shell-text)]';
 
 export const workspaceTextMuted = 'text-[var(--workspace-shell-text-muted)]';
 
+export const workspaceTextSubtle = 'text-[var(--workspace-shell-text-subtle)]';
+
 export const workspaceBorder = 'border-[color:var(--workspace-shell-border)]';
 
 export const workspaceControlSurface = 'bg-[var(--workspace-control-surface)]';
@@ -55,7 +57,7 @@ export const workspacePanelCard =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.05),0_4px_14px_rgba(42,23,32,0.05)]';
 
 export const workspaceIconChip =
-  'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]';
+  'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';
 
 export const workspaceSubtleFill = 'bg-[var(--workspace-shell-sidebar-accent)]';
 

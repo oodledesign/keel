@@ -12221,6 +12221,7 @@ export type Database = {
           phone_direct: string | null;
           phone_mobile: string | null;
           photo_url: string | null;
+          photo_overridden: boolean;
           signature_email: string | null;
           signature_pushed_at: string | null;
           signature_status: string;
@@ -12240,6 +12241,7 @@ export type Database = {
           phone_direct?: string | null;
           phone_mobile?: string | null;
           photo_url?: string | null;
+          photo_overridden?: boolean;
           signature_email?: string | null;
           signature_pushed_at?: string | null;
           signature_status?: string;
@@ -12259,6 +12261,7 @@ export type Database = {
           phone_direct?: string | null;
           phone_mobile?: string | null;
           photo_url?: string | null;
+          photo_overridden?: boolean;
           signature_email?: string | null;
           signature_pushed_at?: string | null;
           signature_status?: string;

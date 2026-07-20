@@ -212,6 +212,7 @@ export const updateStaffActionSchema = z.object({
     .max(3_500_000, 'Photo is too large. Try a smaller image.')
     .optional()
     .nullable(),
+  clearPhotoOverride: z.boolean().optional(),
   templateId: z.string().uuid().nullable().optional(),
 });
 

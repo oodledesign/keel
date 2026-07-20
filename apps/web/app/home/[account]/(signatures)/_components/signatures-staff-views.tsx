@@ -20,16 +20,24 @@ export function SignaturesStaffViews({
   accountId,
   accountSlug,
   staff,
+  bulkStaff,
   templates,
   branches,
   openRequestCounts = {},
+  page,
+  pageSize,
+  totalCount,
 }: {
   accountId: string;
   accountSlug: string;
   staff: SignatureStaff[];
+  bulkStaff: SignatureStaff[];
   templates: SignatureTemplate[];
   branches: AccountBranch[];
   openRequestCounts?: Record<string, number>;
+  page: number;
+  pageSize: number;
+  totalCount: number;
 }) {
   const [mode, setMode] = useState<'list' | 'bulk'>('bulk');
 
@@ -71,9 +79,9 @@ export function SignaturesStaffViews({
 
       {mode === 'bulk' ? (
         <SignaturesStaffBulkEditor
-          key={staff.map((row) => row.id).join(',')}
+          key={bulkStaff.map((row) => row.id).join(',')}
           accountId={accountId}
-          staff={staff}
+          staff={bulkStaff}
           templates={templates}
           branches={branches}
         />
@@ -83,6 +91,14 @@ export function SignaturesStaffViews({
           accountSlug={accountSlug}
           staff={staff}
           openRequestCounts={openRequestCounts}
+          page={page}
+          pageSize={pageSize}
+          totalCount={totalCount}
+          emptyMessage={
+            totalCount === 0
+              ? 'No staff match your search or filters.'
+              : 'No staff on this page.'
+          }
         />
       )}
     </div>

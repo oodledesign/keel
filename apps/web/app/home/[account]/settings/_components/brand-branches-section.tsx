@@ -159,7 +159,7 @@ export function BrandBranchesSection({
                 <Input
                   value={branch.name}
                   onChange={(e) => updateRow(index, { name: e.target.value })}
-                  placeholder="Tonbridge"
+                  placeholder="Main office"
                   disabled={!canEdit}
                 />
               </div>
@@ -170,7 +170,7 @@ export function BrandBranchesSection({
                   onChange={(e) =>
                     updateRow(index, { address: e.target.value })
                   }
-                  placeholder="123 High Street, Tonbridge, TN9 1AB"
+                  placeholder="123 High Street, London, SW1A 1AA"
                   disabled={!canEdit}
                 />
               </div>
@@ -179,7 +179,7 @@ export function BrandBranchesSection({
                 <Input
                   value={branch.phone}
                   onChange={(e) => updateRow(index, { phone: e.target.value })}
-                  placeholder="01732 123456"
+                  placeholder="020 7946 0958"
                   disabled={!canEdit}
                 />
               </div>
@@ -189,7 +189,7 @@ export function BrandBranchesSection({
                   type="email"
                   value={branch.email}
                   onChange={(e) => updateRow(index, { email: e.target.value })}
-                  placeholder="tonbridge@bracketts.co.uk"
+                  placeholder="office@example.com"
                   disabled={!canEdit}
                 />
               </div>

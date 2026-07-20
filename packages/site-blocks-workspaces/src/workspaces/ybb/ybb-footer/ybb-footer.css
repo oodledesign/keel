@@ -2,7 +2,8 @@
 
 .ybbFooter {
   position: relative;
-  background-color: var(--sb-canvas);
+  /* background from inline style — ivory fallback matches YBB brand */
+  background-color: #fffff3;
   padding-bottom: var(--sb-space-8);
   overflow: hidden;
 }
@@ -97,8 +98,9 @@
   display: grid;
   grid-template-columns: 1.2fr 1fr;
   gap: var(--sb-space-16);
-  background-color: var(--sb-ink);
-  color: var(--sb-accent-contrast);
+  /* background from inline style — maroon-dark fallback matches YBB brand */
+  background-color: #550100;
+  color: var(--sb-canvas, #fffff3);
   border: 1px solid var(--sb-border);
   padding: var(--sb-space-12);
   overflow: hidden;

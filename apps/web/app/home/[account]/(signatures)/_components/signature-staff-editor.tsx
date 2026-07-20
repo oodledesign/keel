@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -118,6 +118,7 @@ export function SignatureStaffEditor({
     return keys;
   }, [openRequests]);
   const router = useRouter();
+  const formRef = useRef<HTMLFormElement>(null);
   const manualEntry = isManualStaffSource(staff.source);
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
@@ -170,24 +171,59 @@ export function SignatureStaffEditor({
     }
   };
 
+  const buildStaffUpdatePayload = (
+    formData: FormData,
+    options?: { photoDataUrl?: string | null; clearPhotoOverride?: boolean },
+  ) => ({
+    accountId,
+    staffId: staff.id,
+    full_name: String(formData.get('full_name') ?? ''),
+    job_title: String(formData.get('job_title') ?? ''),
+    department: String(formData.get('department') ?? ''),
+    phone_direct: String(formData.get('phone_direct') ?? ''),
+    phone_mobile: String(formData.get('phone_mobile') ?? ''),
+    signature_email: String(formData.get('signature_email') ?? ''),
+    branch_id: branchId === NO_BRANCH ? null : branchId,
+    photoDataUrl:
+      options?.clearPhotoOverride === true
+        ? null
+        : (options?.photoDataUrl ?? photoDataUrl),
+    clearPhotoOverride: options?.clearPhotoOverride,
+    templateId: templateId === NO_TEMPLATE ? null : templateId,
+  });
+
   const save = async (formData: FormData) => {
     setSaving(true);
     try {
-      await updateSignatureStaff({
-        accountId,
-        staffId: staff.id,
-        full_name: String(formData.get('full_name') ?? ''),
-        job_title: String(formData.get('job_title') ?? ''),
-        department: String(formData.get('department') ?? ''),
-        phone_direct: String(formData.get('phone_direct') ?? ''),
-        phone_mobile: String(formData.get('phone_mobile') ?? ''),
-        signature_email: String(formData.get('signature_email') ?? ''),
-        branch_id: branchId === NO_BRANCH ? null : branchId,
-        photoDataUrl,
-        templateId: templateId === NO_TEMPLATE ? null : templateId,
-      });
+      await updateSignatureStaff(buildStaffUpdatePayload(formData));
       setPhotoDataUrl(null);
       toast.success('Staff member saved');
+      router.refresh();
+    } catch (e) {
+      toast.error(getErrorMessage(e));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetPhotoToDirectory = async () => {
+    const form = formRef.current;
+    if (!form) {
+      return;
+    }
+
+    setSaving(true);
+    try {
+      await updateSignatureStaff(
+        buildStaffUpdatePayload(new FormData(form), {
+          photoDataUrl: null,
+          clearPhotoOverride: true,
+        }),
+      );
+      setPhotoDataUrl(null);
+      toast.success(
+        'Photo override cleared — run directory sync to refresh from Microsoft/Google.',
+      );
       router.refresh();
     } catch (e) {
       toast.error(getErrorMessage(e));
@@ -242,7 +278,7 @@ export function SignatureStaffEditor({
             <p className="text-muted-foreground mt-1 text-xs">
               Source: {staffSourceLabel(staff.source)}
               {!manualEntry
-                ? ' · profile fields sync from your directory; branch, template, and overrides remain editable here.'
+                ? ' · name and title sync from your directory; you can override the photo, branch, phones, and template here.'
                 : ' · fully editable in Ozer.'}
             </p>
           </div>
@@ -281,7 +317,7 @@ export function SignatureStaffEditor({
           ) : null}
         </CardHeader>
         <CardContent>
-          <form action={save} className="space-y-5">
+          <form ref={formRef} action={save} className="space-y-5">
             {openRequests.length ? (
               <div className="space-y-2 rounded-xl border border-amber-500/30 bg-amber-500/10 p-4">
                 <p className="flex items-center gap-2 text-sm font-semibold text-amber-900 dark:text-amber-100">
@@ -385,57 +421,68 @@ export function SignatureStaffEditor({
               Login email: {staff.email}
             </p>
 
-            {manualEntry ? (
-              <div
-                className={cn(
-                  'space-y-2 rounded-lg p-1',
-                  requestedFields.has('photo') &&
-                    'border border-amber-500/35 bg-amber-500/5 p-3',
-                )}
-              >
-                <Label className="inline-flex items-center gap-1.5">
-                  Photo upload
-                  {requestedFields.has('photo') ? (
-                    <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
-                  ) : null}
-                </Label>
-                <div className="flex flex-wrap items-center gap-4">
-                  {photoPreview ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={photoPreview}
-                      alt={staff.full_name ?? 'Staff photo'}
-                      className="h-20 w-20 rounded-lg border border-[color:var(--workspace-shell-border)] object-cover"
-                    />
-                  ) : (
-                    <div className="text-muted-foreground flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] text-xs">
-                      No photo
-                    </div>
-                  )}
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Input
-                      type="file"
-                      accept="image/png,image/jpeg,image/webp"
-                      disabled={processingPhoto || saving}
-                      onChange={(event) =>
-                        void onPhoto(event.target.files?.[0] ?? null)
-                      }
-                    />
-                    <p className="text-muted-foreground text-xs">
-                      {processingPhoto
-                        ? 'Preparing photo…'
-                        : photoDataUrl
-                          ? 'New photo ready — click Save changes to upload.'
-                          : 'Upload a profile photo for this person.'}
-                    </p>
+            <div
+              className={cn(
+                'space-y-2 rounded-lg p-1',
+                requestedFields.has('photo') &&
+                  'border border-amber-500/35 bg-amber-500/5 p-3',
+              )}
+            >
+              <Label className="inline-flex items-center gap-1.5">
+                {manualEntry ? 'Photo upload' : 'Photo override'}
+                {requestedFields.has('photo') ? (
+                  <AlertTriangle className="h-3.5 w-3.5 text-amber-600" />
+                ) : null}
+              </Label>
+              <div className="flex flex-wrap items-center gap-4">
+                {photoPreview ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={photoPreview}
+                    alt={staff.full_name ?? 'Staff photo'}
+                    className="h-20 w-20 rounded-lg border border-[color:var(--workspace-shell-border)] object-cover"
+                  />
+                ) : (
+                  <div className="text-muted-foreground flex h-20 w-20 items-center justify-center rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] text-xs">
+                    No photo
                   </div>
+                )}
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Input
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    disabled={processingPhoto || saving}
+                    onChange={(event) =>
+                      void onPhoto(event.target.files?.[0] ?? null)
+                    }
+                  />
+                  <p className="text-muted-foreground text-xs">
+                    {processingPhoto
+                      ? 'Preparing photo…'
+                      : photoDataUrl
+                        ? 'New photo ready — click Save changes to upload.'
+                        : manualEntry
+                          ? 'Upload a profile photo for this person.'
+                          : staff.photo_overridden
+                            ? 'Using a custom photo in Ozer. Directory sync will not replace it.'
+                            : 'Upload to override the directory photo for signatures.'}
+                  </p>
+                  {!manualEntry &&
+                  (staff.photo_overridden || photoDataUrl) ? (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto px-0 text-xs"
+                      disabled={saving || processingPhoto}
+                      onClick={() => void resetPhotoToDirectory()}
+                    >
+                      Use directory photo instead
+                    </Button>
+                  ) : null}
                 </div>
               </div>
-            ) : (
-              <p className="text-muted-foreground text-xs">
-                Profile photos for synced staff are refreshed by directory sync.
-              </p>
-            )}
+            </div>
 
             <div className="space-y-2">
               <Label>Template</Label>

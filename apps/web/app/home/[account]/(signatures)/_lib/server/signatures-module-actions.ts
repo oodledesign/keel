@@ -218,15 +218,11 @@ export const updateSignatureStaff = enhanceAction(
     const manualEntry = isManualStaffSource(source);
 
     let photoUrl: string | null | undefined;
-    if (input.photoDataUrl && manualEntry) {
+    if (input.photoDataUrl) {
       photoUrl = await uploadPhotoFromDataUrl(
         input.accountId,
         input.staffId,
         input.photoDataUrl,
-      );
-    } else if (input.photoDataUrl && isSyncedStaffSource(source)) {
-      throw new Error(
-        'Profile photos for synced staff are updated by directory sync.',
       );
     }
 
@@ -252,7 +248,7 @@ export const updateSignatureStaff = enhanceAction(
           branch_id: input.branch_id ?? null,
           branch: branchName,
           signature_email: input.signature_email,
-          ...(photoUrl ? { photo_url: photoUrl } : {}),
+          ...(photoUrl ? { photo_url: photoUrl, photo_overridden: false } : {}),
         }
       : {
           branch_id: input.branch_id ?? null,
@@ -260,6 +256,11 @@ export const updateSignatureStaff = enhanceAction(
           signature_email: input.signature_email,
           phone_direct: input.phone_direct,
           phone_mobile: input.phone_mobile,
+          ...(input.clearPhotoOverride
+            ? { photo_url: null, photo_overridden: false }
+            : photoUrl
+              ? { photo_url: photoUrl, photo_overridden: true }
+              : {}),
         };
 
     const { data: staff, error } = await db
@@ -363,15 +364,11 @@ export const bulkUpdateSignatureStaff = enhanceAction(
       const manualEntry = isManualStaffSource(source);
 
       let photoUrl: string | null | undefined;
-      if (row.photoDataUrl && manualEntry) {
+      if (row.photoDataUrl) {
         photoUrl = await uploadPhotoFromDataUrl(
           input.accountId,
           row.staffId,
           row.photoDataUrl,
-        );
-      } else if (row.photoDataUrl && isSyncedStaffSource(source)) {
-        throw new Error(
-          `Profile photos for synced staff (${row.staffId}) are updated by directory sync.`,
         );
       }
 
@@ -387,7 +384,7 @@ export const bulkUpdateSignatureStaff = enhanceAction(
               ? (branchCache.get(row.branch_id) ?? null)
               : null,
             signature_email: row.signature_email,
-            ...(photoUrl ? { photo_url: photoUrl } : {}),
+            ...(photoUrl ? { photo_url: photoUrl, photo_overridden: false } : {}),
           }
         : {
             branch_id: row.branch_id,
@@ -397,6 +394,7 @@ export const bulkUpdateSignatureStaff = enhanceAction(
             signature_email: row.signature_email,
             phone_direct: row.phone_direct,
             phone_mobile: row.phone_mobile,
+            ...(photoUrl ? { photo_url: photoUrl, photo_overridden: true } : {}),
           };
 
       const { data: staff, error } = await db

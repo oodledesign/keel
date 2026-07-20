@@ -2,14 +2,20 @@
 
 import { useMemo, useState } from 'react';
 
-import { ExternalLink, Moon, Sun } from 'lucide-react';
+import { ExternalLink } from 'lucide-react';
 
-import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
-import { SignatureInstallSteps } from './signature-install-steps';
+import {
+  SignaturePreviewThemeControls,
+  SignaturePreviewViewportControls,
+  type SignaturePreviewTheme,
+  type SignaturePreviewViewport,
+  resolveSignaturePreviewViewport,
+  signaturePreviewViewportStyle,
+} from '~/home/[account]/(signatures)/_components/signature-preview-frame';
 
-type Theme = 'light' | 'dark';
+import { SignatureInstallSteps } from './signature-install-steps';
 
 export function SignatureEmailMockup({
   templateName,
@@ -31,8 +37,11 @@ export function SignatureEmailMockup({
   /** When false, hide Outlook install steps and show only the mock email. */
   showInstructions?: boolean;
 }) {
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<SignaturePreviewTheme>('light');
+  const [viewport, setViewport] =
+    useState<SignaturePreviewViewport>('desktop');
   const isDark = theme === 'dark';
+  const activeViewport = resolveSignaturePreviewViewport(viewport);
 
   const iframeSrcDoc = useMemo(() => {
     const text = isDark ? '#f5f5f7' : '#1d1d1f';
@@ -68,14 +77,16 @@ export function SignatureEmailMockup({
   const subtitle = showInstructions
     ? isPersonalShare
       ? accountName
-        ? `${accountName} · preview, download, and install in Outlook`
-        : 'Preview, download, and install in Outlook'
+        ? `${accountName} · preview at mobile, tablet, or desktop width, then install in Outlook`
+        : 'Preview at mobile, tablet, or desktop width, then install in Outlook'
       : accountName
         ? `${accountName} · mock email with this signature applied`
         : 'Mock email with this signature applied'
     : accountName
       ? `${accountName} · mock email with this signature applied`
       : 'Mock email with this signature applied';
+
+  const isDeviceViewport = activeViewport.id !== 'desktop';
 
   return (
     <div className="min-h-svh w-full bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-900)]">
@@ -115,86 +126,100 @@ export function SignatureEmailMockup({
             />
           ) : null}
 
-          <section
-            className={cn(
-              'overflow-hidden rounded-2xl border shadow-[0_1px_2px_rgba(42,23,32,0.05),0_4px_14px_rgba(42,23,32,0.05)]',
-              isDark
-                ? 'border-[#2c2c2e] bg-[#1c1c1e] text-[#f5f5f7]'
-                : 'border-[#e5e5ea] bg-white text-[#1d1d1f]',
-            )}
-            aria-label="Mock email"
-          >
+          <div className="min-w-0 space-y-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <SignaturePreviewViewportControls
+                viewport={viewport}
+                onViewportChange={setViewport}
+                appearance="inbox"
+                isDark={false}
+              />
+              <SignaturePreviewThemeControls
+                theme={theme}
+                onThemeChange={setTheme}
+                appearance="inbox"
+                isDark={false}
+              />
+            </div>
+
             <div
               className={cn(
-                'flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3',
-                isDark ? 'border-[#2c2c2e]' : 'border-[#e5e5ea]',
+                'overflow-x-auto rounded-2xl p-2',
+                isDark ? 'bg-[#121214]' : 'bg-[#f5f5f7]',
               )}
             >
-              <p className="text-xs font-medium tracking-wide uppercase opacity-60">
-                Email preview
-              </p>
-              <div
+              <section
                 className={cn(
-                  'inline-flex rounded-lg border p-0.5',
-                  isDark
-                    ? 'border-[#3a3a3c] bg-[#2c2c2e]'
-                    : 'border-[#e5e5ea] bg-[#f5f5f7]',
+                  'mx-auto min-w-0 transition-[max-width] duration-200 ease-out',
+                  isDeviceViewport &&
+                    'overflow-hidden shadow-[0_12px_40px_rgba(42,23,32,0.12)]',
+                  activeViewport.id === 'mobile' &&
+                    'rounded-[1.75rem] border-[9px] border-[#1d1d1f]',
+                  activeViewport.id === 'tablet' &&
+                    'rounded-2xl border-[6px] border-[#1d1d1f]/90',
                 )}
+                style={signaturePreviewViewportStyle(viewport)}
+                aria-label="Mock email"
               >
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
+                <div
                   className={cn(
-                    'h-8 gap-1.5 px-2.5',
-                    isDark ? 'text-[#f5f5f7]' : 'text-[#1d1d1f]',
-                    theme === 'light' && (isDark ? 'bg-[#3a3a3c]' : 'bg-white'),
+                    'overflow-hidden rounded-[inherit]',
+                    isDark
+                      ? 'border-[#2c2c2e] bg-[#1c1c1e] text-[#f5f5f7]'
+                      : 'border-[#e5e5ea] bg-white text-[#1d1d1f]',
+                    !isDeviceViewport &&
+                      'rounded-2xl border shadow-[0_1px_2px_rgba(42,23,32,0.05),0_4px_14px_rgba(42,23,32,0.05)]',
                   )}
-                  onClick={() => setTheme('light')}
-                  aria-pressed={theme === 'light'}
                 >
-                  <Sun className="h-3.5 w-3.5" />
-                  Light
-                </Button>
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="ghost"
-                  className={cn(
-                    'h-8 gap-1.5 px-2.5',
-                    isDark ? 'text-[#f5f5f7]' : 'text-[#1d1d1f]',
-                    theme === 'dark' && (isDark ? 'bg-[#3a3a3c]' : 'bg-white'),
-                  )}
-                  onClick={() => setTheme('dark')}
-                  aria-pressed={theme === 'dark'}
-                >
-                  <Moon className="h-3.5 w-3.5" />
-                  Dark
-                </Button>
-              </div>
+                  <div
+                    className={cn(
+                      'flex flex-wrap items-center justify-between gap-3 border-b px-5 py-3',
+                      isDark ? 'border-[#2c2c2e]' : 'border-[#e5e5ea]',
+                    )}
+                  >
+                    <p className="text-xs font-medium tracking-wide uppercase opacity-60">
+                      Email preview
+                    </p>
+                    <p className="text-xs opacity-60">
+                      {activeViewport.widthPx
+                        ? `${activeViewport.widthPx}px`
+                        : 'Desktop'}
+                    </p>
+                  </div>
+
+                  <div
+                    className={cn(
+                      'space-y-2 border-b px-5 py-4 text-sm',
+                      isDark ? 'border-[#2c2c2e]' : 'border-[#e5e5ea]',
+                    )}
+                  >
+                    <MetaRow label="From" value={`${fromName} <${fromEmail}>`} />
+                    <MetaRow label="To" value="you@company.com" />
+                    <MetaRow
+                      label="Subject"
+                      value="Quick update on the proposal"
+                    />
+                  </div>
+
+                  <iframe
+                    title="Email body with signature"
+                    srcDoc={iframeSrcDoc}
+                    sandbox=""
+                    className={cn(
+                      'h-[560px] w-full min-w-0 border-0 sm:h-[620px]',
+                      isDark ? 'bg-[#1c1c1e]' : 'bg-white',
+                    )}
+                  />
+                </div>
+              </section>
             </div>
 
-            <div
-              className={cn(
-                'space-y-2 border-b px-5 py-4 text-sm',
-                isDark ? 'border-[#2c2c2e]' : 'border-[#e5e5ea]',
-              )}
-            >
-              <MetaRow label="From" value={`${fromName} <${fromEmail}>`} />
-              <MetaRow label="To" value="you@company.com" />
-              <MetaRow label="Subject" value="Quick update on the proposal" />
-            </div>
-
-            <iframe
-              title="Email body with signature"
-              srcDoc={iframeSrcDoc}
-              sandbox=""
-              className={cn(
-                'h-[560px] w-full border-0 sm:h-[620px]',
-                isDark ? 'bg-[#1c1c1e]' : 'bg-white',
-              )}
-            />
-          </section>
+            <p className="text-xs text-[var(--ozer-plum-900)]/60">
+              {activeViewport.widthPx
+                ? `Previewing at ${activeViewport.widthPx}px (${activeViewport.label.toLowerCase()} reading width). Wide signatures may scroll horizontally on smaller screens.`
+                : 'Previewing at full desktop width.'}
+            </p>
+          </div>
         </div>
 
         <footer className="flex flex-wrap items-center justify-between gap-3 text-xs text-[var(--ozer-plum-900)]/60">

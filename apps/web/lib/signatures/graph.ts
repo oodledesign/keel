@@ -252,10 +252,14 @@ export async function syncStaffFromM365(
         };
 
         if (existing?.id) {
+          const photoOverridden = Boolean(existing.photo_overridden);
           const { error: updErr } = await db
             .from('staff')
             .update({
               ...baseRow,
+              photo_url: photoOverridden
+                ? ((existing.photo_url as string | null) ?? photoUrl)
+                : photoUrl,
               branch_id: (existing.branch_id as string | null) ?? null,
               signature_email:
                 (existing.signature_email as string | null) ?? null,

@@ -24,6 +24,8 @@ export const YBB_DEFAULTS = {
     '/assets/images/branding/ybb_wallpaper-icons-pink-2.png',
   ),
   footerCutoutUrl: ybbSiteAsset('/assets/images/photos/footer-cutout.png'),
+  footerBackgroundColor: '#FFFFF3',
+  footerCardBackgroundColor: '#550100',
   tagline: 'With a brush in one hand and a prosecco for you in the other!',
   primaryCtaLabel: 'Enquire now',
   primaryCtaHref: 'mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK',

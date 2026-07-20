@@ -124,6 +124,7 @@ export type SignatureStaff = {
   branch_name?: string | null;
   signature_email: string | null;
   photo_url: string | null;
+  photo_overridden?: boolean;
   signature_status: SignatureStatus;
   signature_pushed_at: string | null;
   created_at: string | null;
@@ -233,7 +234,7 @@ export async function loadDepartmentBadges(accountId: string) {
   return (data ?? []) as SignatureDepartmentBadge[];
 }
 
-export async function loadDepartments(accountId: string) {
+export async function loadDepartments(accountId: string): Promise<string[]> {
   const { data, error } = await signaturesClient()
     .from('staff')
     .select('department')
@@ -245,19 +246,158 @@ export async function loadDepartments(accountId: string) {
   }
 
   return [
-    ...new Set((data ?? []).map((row: any) => String(row.department).trim())),
+    ...new Set(
+      (data ?? []).map((row) => String(row.department).trim()),
+    ),
   ]
     .filter(Boolean)
-    .sort((a: string, b: string) => a.localeCompare(b));
+    .sort((a, b) => a.localeCompare(b));
+}
+
+export type StaffListFilters = {
+  branch?: string | null;
+  department?: string | null;
+  status?: string | null;
+  search?: string | null;
+};
+
+export type StaffListPageOptions = StaffListFilters & {
+  page?: number;
+  pageSize?: number;
+};
+
+function applyStaffListFilters<
+  T extends {
+    eq: (col: string, val: string) => T;
+    or?: (filters: string) => T;
+  },
+>(query: T, filters?: StaffListFilters) {
+  let next = query;
+  if (filters?.branch) {
+    next = next.eq('branch_id', filters.branch);
+  }
+  if (filters?.department) {
+    next = next.eq('department', filters.department);
+  }
+  if (filters?.status) {
+    next = next.eq('signature_status', filters.status);
+  }
+
+  const term = filters?.search?.trim();
+  if (term && typeof next.or === 'function') {
+    const escaped = term.replace(/[%_\\]/g, '\\$&');
+    next = next.or(
+      `full_name.ilike.%${escaped}%,email.ilike.%${escaped}%,job_title.ilike.%${escaped}%,department.ilike.%${escaped}%`,
+    );
+  }
+
+  return next;
+}
+
+export async function loadStaffImportRows(accountId: string) {
+  const { data, error } = await signaturesClient()
+    .from('staff')
+    .select('id, email, source, full_name')
+    .eq('account_id', accountId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data ?? []) as Array<
+    Pick<SignatureStaff, 'id' | 'email' | 'source' | 'full_name'>
+  >;
+}
+
+export async function loadStaffPage(
+  accountId: string,
+  options: StaffListPageOptions = {},
+) {
+  const page = Math.max(1, options.page ?? 1);
+  const pageSize = Math.max(1, options.pageSize ?? 50);
+  const offset = (page - 1) * pageSize;
+
+  let countQuery = signaturesClient()
+    .from('staff')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', accountId);
+
+  let dataQuery = signaturesClient()
+    .from('staff')
+    .select('*')
+    .eq('account_id', accountId)
+    .order('full_name', { ascending: true })
+    .range(offset, offset + pageSize - 1);
+
+  countQuery = applyStaffListFilters(countQuery, options);
+  dataQuery = applyStaffListFilters(dataQuery, options);
+
+  const [{ count, error: countError }, { data, error }] = await Promise.all([
+    countQuery,
+    dataQuery,
+  ]);
+
+  if (countError) {
+    throw new Error(countError.message);
+  }
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const { loadAccountBranches } = await import('~/lib/brand/account-branches');
+  const branches = await loadAccountBranches(accountId);
+  const branchNameById = new Map(branches.map((b) => [b.id, b.name]));
+
+  const rows = ((data ?? []) as SignatureStaff[]).map((row) => ({
+    ...row,
+    branch_name: row.branch_id
+      ? (branchNameById.get(row.branch_id) ?? null)
+      : null,
+    branch: row.branch_id
+      ? (branchNameById.get(row.branch_id) ?? row.branch)
+      : row.branch,
+  }));
+
+  const decorated = await decorateStaffWithTemplates(rows);
+
+  return {
+    rows: decorated,
+    totalCount: count ?? 0,
+    page,
+    pageSize,
+  };
+}
+
+export async function loadStaffSummaryCounts(accountId: string) {
+  const base = () =>
+    signaturesClient()
+      .from('staff')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId);
+
+  const [
+    { count: total },
+    { count: pushed },
+    { count: pending },
+    { count: errors },
+  ] = await Promise.all([
+    base(),
+    base().eq('signature_status', 'pushed'),
+    base().eq('signature_status', 'pending'),
+    base().eq('signature_status', 'error'),
+  ]);
+
+  return {
+    total: total ?? 0,
+    pushed: pushed ?? 0,
+    pending: pending ?? 0,
+    errors: errors ?? 0,
+  };
 }
 
 export async function loadStaffRows(
   accountId: string,
-  filters?: {
-    branch?: string | null;
-    department?: string | null;
-    status?: string | null;
-  },
+  filters?: StaffListFilters,
 ) {
   let query = signaturesClient()
     .from('staff')
@@ -265,15 +405,7 @@ export async function loadStaffRows(
     .eq('account_id', accountId)
     .order('full_name', { ascending: true });
 
-  if (filters?.branch) {
-    query = query.eq('branch_id', filters.branch);
-  }
-  if (filters?.department) {
-    query = query.eq('department', filters.department);
-  }
-  if (filters?.status) {
-    query = query.eq('signature_status', filters.status);
-  }
+  query = applyStaffListFilters(query, filters);
 
   const { data, error } = await query;
 
@@ -349,20 +481,16 @@ async function decorateStaffWithTemplates(rows: SignatureStaff[]) {
   });
 }
 
-export async function loadSignaturesDashboard(accountId: string) {
-  const staff = await loadStaffRows(accountId);
-  const summary = staff.reduce(
-    (acc, row) => {
-      acc.total += 1;
-      if (row.signature_status === 'pushed') acc.pushed += 1;
-      if (row.signature_status === 'pending') acc.pending += 1;
-      if (row.signature_status === 'error') acc.errors += 1;
-      return acc;
-    },
-    { total: 0, pushed: 0, pending: 0, errors: 0 },
-  );
+export async function loadSignaturesDashboard(
+  accountId: string,
+  options: StaffListPageOptions = {},
+) {
+  const [{ rows, totalCount, page, pageSize }, summary] = await Promise.all([
+    loadStaffPage(accountId, options),
+    loadStaffSummaryCounts(accountId),
+  ]);
 
-  return { summary, staff };
+  return { summary, staff: rows, totalCount, page, pageSize };
 }
 
 export async function loadStaffDetail(accountId: string, staffId: string) {

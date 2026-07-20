@@ -33,7 +33,7 @@ export async function findStaffByEmail(
   const { data, error } = await db
     .from('staff')
     .select(
-      'id, email, source, branch_id, signature_email, signature_status, ms_user_id, google_user_id',
+      'id, email, source, branch_id, signature_email, signature_status, ms_user_id, google_user_id, photo_url, photo_overridden',
     )
     .eq('account_id', accountId)
     .ilike('email', normalized)

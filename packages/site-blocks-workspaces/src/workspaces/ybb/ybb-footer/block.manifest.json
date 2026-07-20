@@ -8,6 +8,37 @@
     { "key": "monogramUrl", "type": "image", "label": "Press monogram URL" },
     { "key": "textureUrl", "type": "image", "label": "Footer texture URL" },
     {
+      "key": "backgroundToken",
+      "type": "select",
+      "label": "Footer background",
+      "options": [
+        { "label": "Canvas (N0 / ivory)", "value": "canvas" },
+        { "label": "Atmosphere (N2 / pink)", "value": "atmosphere" },
+        { "label": "Surface (N1)", "value": "surface" },
+        { "label": "Custom colour", "value": "custom" }
+      ]
+    },
+    {
+      "key": "backgroundColor",
+      "type": "color",
+      "label": "Custom footer background"
+    },
+    {
+      "key": "cardBackgroundToken",
+      "type": "select",
+      "label": "Footer card background",
+      "options": [
+        { "label": "Secondary brand (mossy)", "value": "secondary" },
+        { "label": "Primary brand", "value": "primary" },
+        { "label": "Custom colour", "value": "custom" }
+      ]
+    },
+    {
+      "key": "cardBackgroundColor",
+      "type": "color",
+      "label": "Custom card background"
+    },
+    {
       "key": "cutoutImageUrl",
       "type": "image",
       "label": "Team cutout image URL"
@@ -33,6 +64,10 @@
     "logoWideUrl": "https://yourbridalbesties.co.uk/assets/images/branding/Artboard%2010%20copy.svg",
     "monogramUrl": "https://yourbridalbesties.co.uk/assets/images/branding/Artboard%209%20copy.svg",
     "textureUrl": "https://yourbridalbesties.co.uk/assets/images/branding/ybb_wallpaper-icons-pink-2.png",
+    "backgroundToken": "custom",
+    "backgroundColor": "#FFFFF3",
+    "cardBackgroundToken": "custom",
+    "cardBackgroundColor": "#550100",
     "cutoutImageUrl": "https://yourbridalbesties.co.uk/assets/images/photos/footer-cutout.png",
     "email": "BOOKINGS@YOURBRIDALBESTIES.CO.UK",
     "socialHandle": "@YOURBRIDALBESTIESUK",

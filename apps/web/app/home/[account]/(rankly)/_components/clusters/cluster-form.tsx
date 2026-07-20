@@ -79,7 +79,7 @@ export function ClusterForm(props: {
           value={seeds}
           onChange={(e) => setSeeds(e.target.value)}
           placeholder={
-            'web design kent\nwebsite designer tonbridge\nsmall business website'
+            'accountant near me\nsmall business accountant\nbookkeeping services'
           }
           className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[8rem] w-full rounded-md border px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         />
