@@ -720,7 +720,11 @@ export const disconnectStarlingAction = enhanceAction(
 );
 
 export const suggestCsvMappingAction = enhanceAction(
-  async (input) => suggestCsvColumnMapping(input),
+  async (input) =>
+    suggestCsvColumnMapping({
+      headers: input.headers,
+      sampleRows: input.sampleRows.slice(0, 5),
+    }),
   {
     schema: z.object({
       headers: z.array(z.string()).min(1).max(100),

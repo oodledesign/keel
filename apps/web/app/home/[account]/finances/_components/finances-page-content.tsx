@@ -1395,7 +1395,7 @@ function CsvImportSheet({
       }
       const suggestion = await suggestCsvMappingAction({
         headers,
-        sampleRows: rows,
+        sampleRows: rows.slice(0, 5),
       });
       setParsedCsv({ headers, rows });
       setCsvMapping({
