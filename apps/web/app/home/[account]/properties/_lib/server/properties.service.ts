@@ -24,6 +24,8 @@ export type Property = {
   isTenanted: boolean | null;
   buildingType: string | null;
   propertyStyle: string | null;
+  astStartDate: string | null;
+  astEndDate: string | null;
   mortgageLender: string | null;
   mortgageReference: string | null;
   mortgageBalance: number | null;
@@ -70,6 +72,8 @@ type PropertyRow = {
   is_tenanted?: boolean | null;
   building_type?: string | null;
   property_style?: string | null;
+  ast_start_date?: string | null;
+  ast_end_date?: string | null;
   mortgage_lender?: string | null;
   mortgage_reference?: string | null;
   mortgage_balance?: number | null;
@@ -115,6 +119,8 @@ export type PropertyPortfolioInput = {
   isTenanted?: boolean | null;
   buildingType?: string | null;
   propertyStyle?: string | null;
+  astStartDate?: string | null;
+  astEndDate?: string | null;
 };
 
 export type PropertyWriteInput = PropertyMortgageInput &
@@ -157,6 +163,8 @@ function mapProperty(row: PropertyRow): Property {
     isTenanted: row.is_tenanted ?? null,
     buildingType: row.building_type ?? null,
     propertyStyle: row.property_style ?? null,
+    astStartDate: row.ast_start_date ?? null,
+    astEndDate: row.ast_end_date ?? null,
     mortgageLender: row.mortgage_lender ?? null,
     mortgageReference: row.mortgage_reference ?? null,
     mortgageBalance: row.mortgage_balance ?? null,
@@ -230,6 +238,12 @@ function portfolioColumns(input: PropertyPortfolioInput) {
     }),
     ...(input.propertyStyle !== undefined && {
       property_style: input.propertyStyle,
+    }),
+    ...(input.astStartDate !== undefined && {
+      ast_start_date: input.astStartDate,
+    }),
+    ...(input.astEndDate !== undefined && {
+      ast_end_date: input.astEndDate,
     }),
   };
 }

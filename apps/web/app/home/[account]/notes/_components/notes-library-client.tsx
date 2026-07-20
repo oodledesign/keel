@@ -6,6 +6,10 @@ import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   Copy,
+  Download,
+  File,
+  FileImage,
+  FileText,
   Folder,
   FolderOpen,
   FolderPlus,
@@ -16,8 +20,10 @@ import {
   Plus,
   Search,
   Trash2,
+  Upload,
 } from 'lucide-react';
 
+import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import {
@@ -39,11 +45,19 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { WorkspaceFilePreview } from '~/home/[account]/_components/workspace-content/workspace-file-preview';
 import { previewContent } from '~/home/[account]/_lib/workspace-content/context-resolve';
+import {
+  deleteWorkspaceDocAction,
+  getWorkspaceDocDownloadUrlAction,
+  registerUploadedWorkspaceDocAction,
+} from '~/home/[account]/_lib/workspace-content/docs-actions';
+import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
 import {
   createNoteFolderAction,
   deleteNoteFolderAction,
@@ -56,12 +70,21 @@ import {
   deleteWorkspaceNoteAction,
   saveWorkspaceNoteAction,
 } from '~/home/[account]/_lib/workspace-content/notes-actions';
-import type { NoteListItem } from '~/home/[account]/_lib/workspace-content/types';
+import type {
+  DocListItem,
+  NoteListItem,
+} from '~/home/[account]/_lib/workspace-content/types';
+import {
+  getDocTypeLabel,
+  isPreviewableMimeType,
+} from '~/home/[account]/_lib/workspace-content/types';
 import { workspaceBtnPrimaryMd, workspaceTextMuted } from '~/lib/workspace-ui';
 
 type SidebarSelection = 'all' | 'pinned' | `folder:${string}`;
 
 type LayoutMode = 'list' | 'cards';
+
+type ContentMode = 'notes' | 'files';
 
 function formatDate(iso: string) {
   try {
@@ -88,12 +111,27 @@ function noteDetailHref(
     .replace('[noteId]', noteId);
 }
 
+function formatBytes(bytes: number | null) {
+  if (bytes == null) return '—';
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+function mimeIcon(mime: string | null) {
+  if (!mime) return File;
+  if (mime.startsWith('image/')) return FileImage;
+  return FileText;
+}
+
 export function NotesLibraryClient({
   accountId,
   accountSlug,
   notes: initialNotes,
+  docs: initialDocs = [],
   folders: initialFolders,
   tableAvailable,
+  docsTableAvailable = false,
   foldersAvailable,
   canEdit = true,
   personalScope = false,
@@ -101,22 +139,29 @@ export function NotesLibraryClient({
   accountId: string;
   accountSlug: string;
   notes: NoteListItem[];
+  docs?: DocListItem[];
   folders: NoteFolderListItem[];
   tableAvailable: boolean;
+  docsTableAvailable?: boolean;
   foldersAvailable: boolean;
   canEdit?: boolean;
   personalScope?: boolean;
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const supabase = useSupabase();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [notes, setNotes] = useState(initialNotes);
+  const [docs, setDocs] = useState(initialDocs);
   const [folders, setFolders] = useState(initialFolders);
+  const [contentMode, setContentMode] = useState<ContentMode>('notes');
   const [selection, setSelection] = useState<SidebarSelection>('all');
   const [layout, setLayout] = useState<LayoutMode>('list');
   const [query, setQuery] = useState('');
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<NoteListItem | null>(null);
+  const [activeFile, setActiveFile] = useState<DocListItem | null>(null);
   const [pending, startTransition] = useTransition();
   const handledNewQuery = useRef(false);
 
@@ -125,8 +170,18 @@ export function NotesLibraryClient({
   }, [initialNotes]);
 
   useEffect(() => {
+    setDocs(initialDocs);
+  }, [initialDocs]);
+
+  useEffect(() => {
     setFolders(initialFolders);
   }, [initialFolders]);
+
+  useEffect(() => {
+    if (contentMode === 'files' && selection.startsWith('folder:')) {
+      setSelection('all');
+    }
+  }, [contentMode, selection]);
 
   useEffect(() => {
     if (
@@ -173,6 +228,27 @@ export function NotesLibraryClient({
       });
   }, [notes, query, selection]);
 
+  const filteredDocs = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return docs
+      .filter((doc) => {
+        if (selection === 'pinned') return doc.isPinned;
+        return true;
+      })
+      .filter((doc) => {
+        if (!q) return true;
+        return (
+          doc.title.toLowerCase().includes(q) ||
+          (doc.mimeType?.toLowerCase().includes(q) ?? false) ||
+          (getDocTypeLabel(doc.docType)?.toLowerCase().includes(q) ?? false)
+        );
+      })
+      .sort((a, b) => {
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        return b.updatedAt.localeCompare(a.updatedAt);
+      });
+  }, [docs, query, selection]);
+
   function openNote(noteId: string) {
     router.push(noteDetailHref(accountSlug, noteId, personalScope));
   }
@@ -196,6 +272,105 @@ export function NotesLibraryClient({
         toast.error(
           error instanceof Error ? error.message : 'Could not create note',
         );
+      }
+    });
+  }
+
+  function uploadFile(fileList: FileList | null) {
+    const file = fileList?.[0];
+    if (!file || !canEdit || !docsTableAvailable) return;
+
+    startTransition(async () => {
+      try {
+        const safeName = file.name.replace(/[^a-zA-Z0-9._-]/g, '_');
+        const filePath = `${accountId}/${Date.now()}_${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from(ACCOUNT_DOCS_BUCKET)
+          .upload(filePath, file, { upsert: false });
+        if (uploadError) throw uploadError;
+
+        const result = await registerUploadedWorkspaceDocAction({
+          accountId,
+          accountSlug,
+          title: file.name,
+          docType: 'general',
+          tags: [],
+          link: null,
+          filePath,
+          mimeType: file.type || null,
+          fileSizeBytes: file.size,
+        });
+
+        const created: DocListItem = {
+          id: result.docId,
+          title: file.name,
+          content: null,
+          kind: 'uploaded',
+          docType: 'general',
+          category: 'idea',
+          isPinned: false,
+          tags: [],
+          projectId: null,
+          jobId: null,
+          clientOrgId: null,
+          clientId: null,
+          propertyId: null,
+          taskId: null,
+          context: null,
+          mimeType: file.type || null,
+          fileUrl: null,
+          filePath,
+          fileSizeBytes: file.size,
+          financialYear: null,
+          storageBucket: ACCOUNT_DOCS_BUCKET,
+          isPublic: false,
+          publicToken: null,
+          updatedAt: new Date().toISOString(),
+        };
+        setDocs((current) => [created, ...current]);
+        setActiveFile(created);
+        toast.success('File uploaded');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not upload file',
+        );
+      } finally {
+        if (fileInputRef.current) fileInputRef.current.value = '';
+      }
+    });
+  }
+
+  function downloadFile(doc: DocListItem) {
+    startTransition(async () => {
+      try {
+        const { url } = await getWorkspaceDocDownloadUrlAction({
+          accountId,
+          docId: doc.id,
+        });
+        if (url) window.open(url, '_blank', 'noopener,noreferrer');
+        else toast.error('Download unavailable');
+      } catch {
+        toast.error('Could not download file');
+      }
+    });
+  }
+
+  function deleteFile(doc: DocListItem) {
+    if (!window.confirm(`Delete “${doc.title}”? This cannot be undone.`)) {
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await deleteWorkspaceDocAction({
+          accountId,
+          accountSlug,
+          docId: doc.id,
+        });
+        setDocs((current) => current.filter((item) => item.id !== doc.id));
+        if (activeFile?.id === doc.id) setActiveFile(null);
+        toast.success('File deleted');
+      } catch {
+        toast.error('Could not delete file');
       }
     });
   }
@@ -369,9 +544,9 @@ export function NotesLibraryClient({
       <aside className="w-full shrink-0 border-[color:var(--workspace-shell-border)] lg:w-56 lg:border-r xl:w-64">
         <div className="flex items-center justify-between gap-2 px-3 py-3">
           <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-            Folders
+            {contentMode === 'files' ? 'Library' : 'Folders'}
           </p>
-          {canEdit && foldersAvailable ? (
+          {canEdit && foldersAvailable && contentMode === 'notes' ? (
             <Button
               type="button"
               variant="ghost"
@@ -389,19 +564,29 @@ export function NotesLibraryClient({
           <SidebarButton
             active={selection === 'all'}
             onClick={() => setSelection('all')}
-            icon={<FolderOpen className="h-4 w-4" />}
-            label="All Notes"
-            count={notes.length}
+            icon={
+              contentMode === 'files' ? (
+                <File className="h-4 w-4" />
+              ) : (
+                <FolderOpen className="h-4 w-4" />
+              )
+            }
+            label={contentMode === 'files' ? 'All Files' : 'All Notes'}
+            count={contentMode === 'files' ? docs.length : notes.length}
           />
           <SidebarButton
             active={selection === 'pinned'}
             onClick={() => setSelection('pinned')}
             icon={<Pin className="h-4 w-4" />}
             label="Pinned"
-            count={notes.filter((note) => note.isPinned).length}
+            count={
+              contentMode === 'files'
+                ? docs.filter((doc) => doc.isPinned).length
+                : notes.filter((note) => note.isPinned).length
+            }
           />
 
-          {folders.length > 0 ? (
+          {contentMode === 'notes' && folders.length > 0 ? (
             <div className="pt-3">
               <p className="px-2 pb-1 text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 Your folders
@@ -436,7 +621,7 @@ export function NotesLibraryClient({
             </div>
           ) : null}
 
-          {!foldersAvailable ? (
+          {contentMode === 'notes' && !foldersAvailable ? (
             <p className="px-3 pt-3 text-xs text-[var(--workspace-shell-text-muted)]">
               Folders need a database migration.
             </p>
@@ -446,15 +631,48 @@ export function NotesLibraryClient({
 
       <section className="flex min-w-0 flex-1 flex-col">
         <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-3 py-3 lg:px-4">
-          <div className="relative min-w-[12rem] flex-1">
+          <div className="relative min-w-[10rem] flex-1">
             <Search className="pointer-events-none absolute top-1/2 left-2.5 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
             <Input
               value={query}
               onChange={(event) => setQuery(event.target.value)}
-              placeholder="Search notes…"
+              placeholder={
+                contentMode === 'files' ? 'Search files…' : 'Search notes…'
+              }
               className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] pl-8"
             />
           </div>
+
+          {docsTableAvailable ? (
+            <div className="flex items-center rounded-full border border-[color:var(--workspace-shell-border)] p-0.5">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-8 rounded-full px-3 text-xs font-medium',
+                  contentMode === 'notes' &&
+                    'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
+                )}
+                onClick={() => setContentMode('notes')}
+              >
+                Notes
+              </Button>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className={cn(
+                  'h-8 rounded-full px-3 text-xs font-medium',
+                  contentMode === 'files' &&
+                    'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
+                )}
+                onClick={() => setContentMode('files')}
+              >
+                Files
+              </Button>
+            </div>
+          ) : null}
 
           <div className="flex items-center rounded-full border border-[color:var(--workspace-shell-border)] p-0.5">
             <Button
@@ -488,21 +706,92 @@ export function NotesLibraryClient({
           </div>
 
           {canEdit ? (
-            <Button
-              type="button"
-              size="sm"
-              className={`rounded-full ${workspaceBtnPrimaryMd}`}
-              disabled={pending}
-              onClick={createAndOpenNote}
-            >
-              <Plus className="mr-1.5 h-4 w-4" />
-              New note
-            </Button>
+            contentMode === 'files' ? (
+              <>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  className="hidden"
+                  onChange={(event) => uploadFile(event.target.files)}
+                />
+                <Button
+                  type="button"
+                  size="sm"
+                  className={`rounded-full ${workspaceBtnPrimaryMd}`}
+                  disabled={pending || !docsTableAvailable}
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  <Upload className="mr-1.5 h-4 w-4" />
+                  Upload
+                </Button>
+              </>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                className={`rounded-full ${workspaceBtnPrimaryMd}`}
+                disabled={pending}
+                onClick={createAndOpenNote}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                New note
+              </Button>
+            )
           ) : null}
         </div>
 
         <div className="flex-1 overflow-auto p-3 lg:p-4">
-          {filteredNotes.length === 0 ? (
+          {contentMode === 'files' ? (
+            !docsTableAvailable ? (
+              <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
+                <p className="font-medium text-[var(--workspace-shell-text)]">
+                  Files unavailable
+                </p>
+                <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+                  Apply the latest database migrations to enable files.
+                </p>
+              </div>
+            ) : filteredDocs.length === 0 ? (
+              <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
+                <p className="font-medium text-[var(--workspace-shell-text)]">
+                  {query ? 'No matching files' : 'No files here yet'}
+                </p>
+                <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+                  {query
+                    ? 'Try a different search.'
+                    : 'Upload a PDF, image, or document to keep it with this workspace.'}
+                </p>
+              </div>
+            ) : layout === 'cards' ? (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredDocs.map((doc) => (
+                  <FileCard
+                    key={doc.id}
+                    doc={doc}
+                    canEdit={canEdit}
+                    pending={pending}
+                    onOpen={() => setActiveFile(doc)}
+                    onDownload={() => downloadFile(doc)}
+                    onDelete={() => deleteFile(doc)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <ul className="divide-y divide-[color:var(--workspace-shell-border)] overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]">
+                {filteredDocs.map((doc) => (
+                  <FileRow
+                    key={doc.id}
+                    doc={doc}
+                    canEdit={canEdit}
+                    pending={pending}
+                    onOpen={() => setActiveFile(doc)}
+                    onDownload={() => downloadFile(doc)}
+                    onDelete={() => deleteFile(doc)}
+                  />
+                ))}
+              </ul>
+            )
+          ) : filteredNotes.length === 0 ? (
             <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
               <p className="font-medium text-[var(--workspace-shell-text)]">
                 {query ? 'No matching notes' : 'No notes here yet'}
@@ -626,6 +915,218 @@ export function NotesLibraryClient({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Sheet
+        open={Boolean(activeFile)}
+        onOpenChange={(open) => {
+          if (!open) setActiveFile(null);
+        }}
+      >
+        <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-xl">
+          <SheetHeader>
+            <SheetTitle className="text-[var(--workspace-shell-text)]">
+              {activeFile?.title ?? 'File'}
+            </SheetTitle>
+          </SheetHeader>
+          {activeFile ? (
+            <div className="mt-6 space-y-4">
+              {isPreviewableMimeType(activeFile.mimeType) ? (
+                <WorkspaceFilePreview
+                  accountId={accountId}
+                  docId={activeFile.id}
+                  mimeType={activeFile.mimeType}
+                  title={activeFile.title}
+                />
+              ) : null}
+              <div className="flex flex-wrap items-center gap-2">
+                {getDocTypeLabel(activeFile.docType) ? (
+                  <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]">
+                    {getDocTypeLabel(activeFile.docType)}
+                  </Badge>
+                ) : null}
+                <span className={`text-sm ${workspaceTextMuted}`}>
+                  {activeFile.mimeType ?? 'file'} ·{' '}
+                  {formatBytes(activeFile.fileSizeBytes)}
+                </span>
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {activeFile.kind === 'uploaded' ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-[color:var(--workspace-shell-border)]"
+                    disabled={pending}
+                    onClick={() => downloadFile(activeFile)}
+                  >
+                    <Download className="mr-2 h-4 w-4" />
+                    Download
+                  </Button>
+                ) : null}
+                {canEdit ? (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="border-red-500/30 text-red-300"
+                    disabled={pending}
+                    onClick={() => deleteFile(activeFile)}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    Delete
+                  </Button>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </SheetContent>
+      </Sheet>
+    </div>
+  );
+}
+
+function FileRow({
+  doc,
+  canEdit,
+  pending,
+  onOpen,
+  onDownload,
+  onDelete,
+}: {
+  doc: DocListItem;
+  canEdit: boolean;
+  pending: boolean;
+  onOpen: () => void;
+  onDownload: () => void;
+  onDelete: () => void;
+}) {
+  const Icon = mimeIcon(doc.mimeType);
+
+  return (
+    <li className="flex items-stretch gap-1 bg-[var(--workspace-shell-panel)] transition hover:bg-[var(--workspace-shell-sidebar-accent)]">
+      <button
+        type="button"
+        className="flex min-w-0 flex-1 items-start gap-3 px-3 py-3 text-left"
+        onClick={onOpen}
+      >
+        <Icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+        <div className="min-w-0 flex-1">
+          <div className="flex flex-wrap items-center gap-2">
+            {getDocTypeLabel(doc.docType) ? (
+              <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text)]">
+                {getDocTypeLabel(doc.docType)}
+              </Badge>
+            ) : null}
+            <span className="truncate font-medium text-[var(--workspace-shell-text)]">
+              {doc.title || 'Untitled file'}
+            </span>
+          </div>
+          <p className={`mt-0.5 truncate text-xs ${workspaceTextMuted}`}>
+            {doc.mimeType ?? 'file'} · {formatBytes(doc.fileSizeBytes)} ·{' '}
+            {formatDate(doc.updatedAt)}
+          </p>
+        </div>
+      </button>
+      <div className="flex items-center gap-1 pr-2">
+        {doc.kind === 'uploaded' ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8"
+            disabled={pending}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDownload();
+            }}
+            title="Download"
+          >
+            <Download className="h-4 w-4" />
+          </Button>
+        ) : null}
+        {canEdit ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
+            disabled={pending}
+            onClick={(event) => {
+              event.stopPropagation();
+              onDelete();
+            }}
+            title="Delete"
+          >
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : null}
+      </div>
+    </li>
+  );
+}
+
+function FileCard({
+  doc,
+  canEdit,
+  pending,
+  onOpen,
+  onDownload,
+  onDelete,
+}: {
+  doc: DocListItem;
+  canEdit: boolean;
+  pending: boolean;
+  onOpen: () => void;
+  onDownload: () => void;
+  onDelete: () => void;
+}) {
+  const Icon = mimeIcon(doc.mimeType);
+
+  return (
+    <div className="group relative rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 transition hover:border-[var(--ozer-accent)]/30">
+      <button type="button" className="w-full text-left" onClick={onOpen}>
+        <div className="mb-3 flex items-start justify-between gap-2">
+          <span className="flex h-9 w-9 items-center justify-center rounded-lg bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]">
+            <Icon className="h-4 w-4" />
+          </span>
+          {getDocTypeLabel(doc.docType) ? (
+            <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text)]">
+              {getDocTypeLabel(doc.docType)}
+            </Badge>
+          ) : null}
+        </div>
+        <p className="line-clamp-2 font-medium text-[var(--workspace-shell-text)]">
+          {doc.title || 'Untitled file'}
+        </p>
+        <p className={`mt-2 text-xs ${workspaceTextMuted}`}>
+          {formatBytes(doc.fileSizeBytes)} · {formatDate(doc.updatedAt)}
+        </p>
+      </button>
+      <div className="mt-3 flex gap-1">
+        {doc.kind === 'uploaded' ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="h-8 border-[color:var(--workspace-shell-border)]"
+            disabled={pending}
+            onClick={onDownload}
+          >
+            <Download className="mr-1 h-3.5 w-3.5" />
+            Download
+          </Button>
+        ) : null}
+        {canEdit ? (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
+            disabled={pending}
+            onClick={onDelete}
+          >
+            Delete
+          </Button>
+        ) : null}
+      </div>
     </div>
   );
 }

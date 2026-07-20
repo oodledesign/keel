@@ -114,6 +114,7 @@ export const DOC_TYPE_OPTIONS = [
   'general',
   'contract',
   'lease',
+  'ast',
   'insurance',
   'inspection',
   'title_deed',
@@ -131,6 +132,7 @@ export const DOC_TYPE_LABELS: Record<DocTypeOption, string> = {
   general: 'General',
   contract: 'Contract',
   lease: 'Lease',
+  ast: 'AST',
   insurance: 'Insurance',
   inspection: 'Inspection',
   title_deed: 'Title deed',
@@ -141,3 +143,20 @@ export const DOC_TYPE_LABELS: Record<DocTypeOption, string> = {
   photo: 'Photo',
   other: 'Other',
 };
+
+export function getDocTypeLabel(docType: string | null | undefined): string | null {
+  if (!docType) return null;
+  if (docType in DOC_TYPE_LABELS) {
+    return DOC_TYPE_LABELS[docType as DocTypeOption];
+  }
+  return docType.replace(/_/g, ' ');
+}
+
+export function isPreviewableMimeType(mimeType: string | null | undefined): boolean {
+  if (!mimeType) return false;
+  return (
+    mimeType.startsWith('image/') ||
+    mimeType === 'application/pdf' ||
+    mimeType === 'application/x-pdf'
+  );
+}

@@ -38,6 +38,7 @@ import {
 import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import {
   DOC_TYPE_OPTIONS,
+  getDocTypeLabel,
   type DocListItem,
   type DocTypeOption,
   type LinkOption,
@@ -75,8 +76,7 @@ function mimeIcon(mime: string | null) {
 }
 
 function docTypeLabel(t: string | null) {
-  if (!t) return null;
-  return t.replace(/_/g, ' ');
+  return getDocTypeLabel(t);
 }
 
 export function WorkspaceDocsPage({

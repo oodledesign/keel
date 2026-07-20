@@ -18,7 +18,9 @@ export function NotesPageContent({
   notes,
   folders = [],
   foldersAvailable = true,
+  docs = [],
   tableAvailable,
+  docsTableAvailable = false,
   canEdit = true,
 }: {
   accountSlug: string;
@@ -39,8 +41,10 @@ export function NotesPageContent({
       accountId={accountId}
       accountSlug={accountSlug}
       notes={notes}
+      docs={docs}
       folders={folders}
       tableAvailable={tableAvailable}
+      docsTableAvailable={docsTableAvailable}
       foldersAvailable={foldersAvailable}
       canEdit={canEdit}
       personalScope={false}

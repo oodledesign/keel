@@ -246,6 +246,20 @@ export function PropertyDetailContent({
                 value={formatCurrency(property.monthlyRent / 100)}
               />
             )}
+            {property.astStartDate && (
+              <StatPill
+                icon={Calendar}
+                label="AST start"
+                value={formatDate(property.astStartDate)}
+              />
+            )}
+            {property.astEndDate && (
+              <StatPill
+                icon={Calendar}
+                label="AST end"
+                value={formatDate(property.astEndDate)}
+              />
+            )}
             {yesNo(property.isTenanted) && (
               <StatPill
                 icon={KeyRound}

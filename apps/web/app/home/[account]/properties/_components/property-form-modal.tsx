@@ -53,6 +53,8 @@ const emptyForm = {
   isHmo: '',
   isFamilyLet: '',
   isLimitedCompany: '',
+  astStartDate: '',
+  astEndDate: '',
   mortgageLender: '',
   mortgageReference: '',
   mortgageBalance: '',
@@ -112,6 +114,8 @@ export function PropertyFormModal({
         isHmo: triStateFromBool(property.isHmo),
         isFamilyLet: triStateFromBool(property.isFamilyLet),
         isLimitedCompany: triStateFromBool(property.isLimitedCompany),
+        astStartDate: property.astStartDate ?? '',
+        astEndDate: property.astEndDate ?? '',
         mortgageLender: property.mortgageLender ?? '',
         mortgageReference: property.mortgageReference ?? '',
         mortgageBalance: poundsFromPence(property.mortgageBalance),
@@ -155,6 +159,8 @@ export function PropertyFormModal({
           isHmo: boolFromTriState(form.isHmo),
           isFamilyLet: boolFromTriState(form.isFamilyLet),
           isLimitedCompany: boolFromTriState(form.isLimitedCompany),
+          astStartDate: form.astStartDate || null,
+          astEndDate: form.astEndDate || null,
           remortgageDate: form.remortgageDate || null,
           bedrooms: form.bedrooms ? parseInt(form.bedrooms, 10) : null,
           bathrooms: form.bathrooms ? parseFloat(form.bathrooms) : null,
@@ -415,7 +421,7 @@ export function PropertyFormModal({
                 Letting
               </p>
               <p className="text-xs text-[var(--workspace-shell-text)]/45">
-                Rent and tenancy details for this property.
+                Rent, tenancy, and AST details for this property.
               </p>
             </div>
             <div className="grid gap-4 sm:grid-cols-2">
@@ -430,6 +436,28 @@ export function PropertyFormModal({
                   value={form.monthlyRent}
                   onChange={(e) => field('monthlyRent', e.target.value)}
                   placeholder="0.00"
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  AST start date
+                </Label>
+                <Input
+                  type="date"
+                  value={form.astStartDate}
+                  onChange={(e) => field('astStartDate', e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <Label className="text-[var(--workspace-shell-text)]/70">
+                  AST end date
+                </Label>
+                <Input
+                  type="date"
+                  value={form.astEndDate}
+                  onChange={(e) => field('astEndDate', e.target.value)}
                   className={inputClass}
                 />
               </div>

@@ -29,6 +29,8 @@ const PortfolioFieldsSchema = z.object({
   isTenanted: z.boolean().optional().nullable(),
   buildingType: z.string().optional().nullable(),
   propertyStyle: z.string().optional().nullable(),
+  astStartDate: z.string().optional().nullable(),
+  astEndDate: z.string().optional().nullable(),
 });
 
 const MortgageFieldsSchema = z.object({

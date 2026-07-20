@@ -79,11 +79,14 @@ import type {
 import {
   DOC_TYPE_LABELS,
   DOC_TYPE_OPTIONS,
+  getDocTypeLabel,
+  isPreviewableMimeType,
 } from '../../_lib/workspace-content/types';
 import { CategoryBadge, CategorySelect } from './category-select';
 import { LinkToSelect, type LinkValue } from './link-to-select';
 import { PublicSharingSection } from './public-sharing-section';
 import { TagsInput } from './tags-input';
+import { WorkspaceFilePreview } from './workspace-file-preview';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -661,6 +664,11 @@ function FileListRow({
             <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text-muted)]">
               File
             </Badge>
+            {getDocTypeLabel(doc.docType) ? (
+              <Badge className="bg-[var(--workspace-shell-sidebar-accent)] text-[10px] text-[var(--workspace-shell-text)]">
+                {getDocTypeLabel(doc.docType)}
+              </Badge>
+            ) : null}
             <CategoryBadge category={doc.category} />
             {doc.isPublic ? (
               <Globe
@@ -1226,13 +1234,21 @@ function FileDetailSheet({
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
+      <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-xl">
         <SheetHeader>
           <SheetTitle className="text-[var(--workspace-shell-text)]">
             Edit file
           </SheetTitle>
         </SheetHeader>
         <div className="mt-6 space-y-4">
+          {doc.kind === 'uploaded' && isPreviewableMimeType(doc.mimeType) ? (
+            <WorkspaceFilePreview
+              accountId={accountId}
+              docId={doc.id}
+              mimeType={doc.mimeType}
+              title={doc.title}
+            />
+          ) : null}
           <div className="space-y-2">
             <Label className="text-[var(--workspace-shell-text-muted)]">
               Title
