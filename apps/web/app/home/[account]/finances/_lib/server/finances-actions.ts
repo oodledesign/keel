@@ -723,12 +723,15 @@ export const suggestCsvMappingAction = enhanceAction(
   async (input) =>
     suggestCsvColumnMapping({
       headers: input.headers,
-      sampleRows: input.sampleRows.slice(0, 5),
+      sampleRows: input.sampleRows,
     }),
   {
     schema: z.object({
       headers: z.array(z.string()).min(1).max(100),
-      sampleRows: z.array(z.array(z.string())).max(20),
+      sampleRows: z.preprocess(
+        (value) => (Array.isArray(value) ? value.slice(0, 5) : value),
+        z.array(z.array(z.string())).max(20),
+      ),
     }),
   },
 );
