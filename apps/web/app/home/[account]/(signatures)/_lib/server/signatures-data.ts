@@ -115,6 +115,7 @@ export type SignatureStaff = {
   source: StaffSource;
   email: string;
   full_name: string | null;
+  credentials?: string | null;
   job_title: string | null;
   department: string | null;
   phone_direct: string | null;

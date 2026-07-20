@@ -12214,6 +12214,7 @@ export type Database = {
           department: string | null;
           email: string;
           full_name: string | null;
+          credentials: string | null;
           google_user_id: string | null;
           id: string;
           job_title: string | null;
@@ -12234,6 +12235,7 @@ export type Database = {
           department?: string | null;
           email: string;
           full_name?: string | null;
+          credentials?: string | null;
           google_user_id?: string | null;
           id?: string;
           job_title?: string | null;
@@ -12254,6 +12256,7 @@ export type Database = {
           department?: string | null;
           email?: string;
           full_name?: string | null;
+          credentials?: string | null;
           google_user_id?: string | null;
           id?: string;
           job_title?: string | null;

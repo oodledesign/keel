@@ -201,6 +201,7 @@ export const updateStaffActionSchema = z.object({
   accountId: z.string().uuid(),
   staffId: z.string().uuid(),
   full_name: emptyToNull,
+  credentials: emptyToNull,
   job_title: emptyToNull,
   department: emptyToNull,
   phone_direct: emptyToNull,
@@ -219,6 +220,7 @@ export const updateStaffActionSchema = z.object({
 const bulkStaffRowSchema = z.object({
   staffId: z.string().uuid(),
   full_name: emptyToNull,
+  credentials: emptyToNull,
   job_title: emptyToNull,
   department: emptyToNull,
   phone_direct: emptyToNull,
@@ -282,6 +284,7 @@ export const createManualStaffActionSchema = z.object({
   accountId: z.string().uuid(),
   email: z.string().trim().email('Enter a valid email address'),
   full_name: z.string().trim().min(1, 'Name is required').max(200),
+  credentials: emptyToNull,
   job_title: emptyToNull,
   department: emptyToNull,
   phone_direct: emptyToNull,

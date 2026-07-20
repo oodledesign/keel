@@ -137,7 +137,7 @@ export function SignatureTemplateEditor({
           previewBrand?.address?.trim() ||
           '';
       } else if (token === 'credentials') {
-        value = '';
+        value = staff?.credentials?.trim() ?? '';
       }
 
       output = output.replace(

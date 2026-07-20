@@ -15,6 +15,7 @@ export type SignaturesStaffRow = {
   email: string;
   signature_email?: string | null;
   full_name: string | null;
+  credentials?: string | null;
   job_title: string | null;
   department: string | null;
   phone_direct: string | null;
@@ -135,6 +136,8 @@ export function renderTemplate(
       replacement = options?.brand?.website_url?.trim() || '';
     } else if (key === 'address') {
       replacement = address;
+    } else if (key === 'credentials') {
+      replacement = staff.credentials?.trim() || '';
     }
     html = html.replace(re, replacement);
   }

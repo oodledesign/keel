@@ -241,6 +241,7 @@ export const updateSignatureStaff = enhanceAction(
     const update = manualEntry
       ? {
           full_name: input.full_name,
+          credentials: input.credentials,
           job_title: input.job_title,
           department: input.department,
           phone_direct: input.phone_direct,
@@ -254,6 +255,7 @@ export const updateSignatureStaff = enhanceAction(
           branch_id: input.branch_id ?? null,
           branch: branchName,
           signature_email: input.signature_email,
+          credentials: input.credentials,
           phone_direct: input.phone_direct,
           phone_mobile: input.phone_mobile,
           ...(input.clearPhotoOverride
@@ -375,6 +377,7 @@ export const bulkUpdateSignatureStaff = enhanceAction(
       const update = manualEntry
         ? {
             full_name: row.full_name,
+            credentials: row.credentials,
             job_title: row.job_title,
             department: row.department,
             phone_direct: row.phone_direct,
@@ -392,6 +395,7 @@ export const bulkUpdateSignatureStaff = enhanceAction(
               ? (branchCache.get(row.branch_id) ?? null)
               : null,
             signature_email: row.signature_email,
+            credentials: row.credentials,
             phone_direct: row.phone_direct,
             phone_mobile: row.phone_mobile,
             ...(photoUrl ? { photo_url: photoUrl, photo_overridden: true } : {}),
@@ -959,6 +963,7 @@ export const createManualSignatureStaff = enhanceAction(
         account_id: input.accountId,
         email,
         full_name: input.full_name,
+        credentials: input.credentials,
         job_title: input.job_title,
         department: input.department,
         phone_direct: input.phone_direct,

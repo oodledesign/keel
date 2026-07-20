@@ -178,6 +178,7 @@ export function SignatureStaffEditor({
     accountId,
     staffId: staff.id,
     full_name: String(formData.get('full_name') ?? ''),
+    credentials: String(formData.get('credentials') ?? ''),
     job_title: String(formData.get('job_title') ?? ''),
     department: String(formData.get('department') ?? ''),
     phone_direct: String(formData.get('phone_direct') ?? ''),
@@ -351,6 +352,13 @@ export function SignatureStaffEditor({
                 defaultValue={staff.full_name}
                 hasRequest={requestedFields.has('full_name')}
                 disabled={!manualEntry}
+              />
+              <Field
+                name="credentials"
+                label="Accreditations / post-nominals"
+                defaultValue={staff.credentials ?? null}
+                hint='Shown via {{credentials}} — e.g. "LLB, TEP". Editable for all staff.'
+                hasRequest={requestedFields.has('credentials')}
               />
               <Field
                 name="job_title"
