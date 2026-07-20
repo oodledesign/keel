@@ -556,16 +556,18 @@ export function SignatureStaffEditor({
               onThemeChange={setPreviewTheme}
               heightClassName="h-[420px]"
             >
-              <iframe
-                key={previewUrl}
-                src={previewUrl}
-                sandbox=""
-                className={cn(
-                  'h-full w-full rounded-lg border-0',
-                  previewTheme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
-                )}
-                title="Signature preview"
-              />
+              {({ viewport, theme }) => (
+                <iframe
+                  key={`${previewUrl}-${viewport}`}
+                  src={`${previewUrl}&viewport=${viewport}`}
+                  sandbox=""
+                  className={cn(
+                    'h-full w-full rounded-lg border-0',
+                    theme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
+                  )}
+                  title="Signature preview"
+                />
+              )}
             </SignaturePreviewFrame>
           ) : (
             <div className="text-muted-foreground flex h-[420px] items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] text-sm">

@@ -63,7 +63,7 @@ export function SignatureTemplatePreviewCard({
                 <iframe
                   key={`${previewSrc}-${theme}-${viewport}`}
                   title={`${template.name} preview`}
-                  src={`${previewSrc}${previewSrc.includes('?') ? '&' : '?'}theme=${theme}`}
+                  src={`${previewSrc}${previewSrc.includes('?') ? '&' : '?'}theme=${theme}&viewport=${viewport}`}
                   className={cn(
                     'h-36 w-full rounded-md border-0',
                     theme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',

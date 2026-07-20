@@ -35,6 +35,7 @@ import {
   SIGNATURE_DARK_MODE_CHECKLIST,
   lintSignatureTemplateHtml,
 } from '~/lib/signatures/template-dark-mode-lint';
+import { buildSignaturePreviewDocument } from '~/lib/signatures/signature-preview-document';
 
 import type {
   SignatureStaff,
@@ -104,7 +105,7 @@ export function SignatureTemplateEditor({
     return () => window.clearTimeout(timeout);
   }, [html]);
 
-  const renderedPreview = useMemo(() => {
+  const previewBodyHtml = useMemo(() => {
     const staff = previewStaff;
     let output = previewHtml;
 
@@ -136,8 +137,6 @@ export function SignatureTemplateEditor({
           previewBrand?.address?.trim() ||
           '';
       } else if (token === 'credentials') {
-        // Not yet a first-class staff column — leave blank rather than
-        // rendering the literal token name in the live preview.
         value = '';
       }
 
@@ -147,24 +146,8 @@ export function SignatureTemplateEditor({
       );
     }
 
-    // Match inbox chrome (browsers default iframe documents to white otherwise).
-    const chrome = previewTheme === 'dark' ? '#1c1c1e' : '#ffffff';
-
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="color-scheme" content="light dark" />
-<style>
-  html, body { margin: 0; padding: 0; background: ${chrome}; }
-  body { padding: 16px; }
-</style>
-</head>
-<body>
-<div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>
-</body>
-</html>`;
-  }, [previewHtml, previewStaff, previewTheme, previewAssetHtml, previewBrand]);
+    return `<div style="color:#333333;font-family:Arial,Calibri,Georgia,sans-serif;line-height:1.4;">${output}</div>`;
+  }, [previewHtml, previewStaff, previewAssetHtml, previewBrand]);
 
   const lintIssues = useMemo(() => lintSignatureTemplateHtml(html), [html]);
   const lintWarnings = lintIssues.filter((issue) => issue.severity === 'warn');
@@ -440,16 +423,23 @@ export function SignatureTemplateEditor({
               ) : null
             }
           >
-            <iframe
-              key={previewTheme}
-              title="Template preview"
-              srcDoc={renderedPreview}
-              sandbox=""
-              className={cn(
-                'h-full w-full rounded-lg border-0',
-                previewTheme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
-              )}
-            />
+            {({ viewport, layoutWidthPx, theme }) => (
+              <iframe
+                key={`${theme}-${viewport}`}
+                title="Template preview"
+                srcDoc={buildSignaturePreviewDocument({
+                  bodyHtml: previewBodyHtml,
+                  theme,
+                  layoutWidthPx,
+                  bodyPadding: '16px',
+                })}
+                sandbox=""
+                className={cn(
+                  'h-full w-full rounded-lg border-0',
+                  theme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
+                )}
+              />
+            )}
           </SignaturePreviewFrame>
         </CardContent>
       </Card>

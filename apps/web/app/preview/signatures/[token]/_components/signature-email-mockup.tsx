@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 import { ExternalLink } from 'lucide-react';
 
@@ -12,8 +12,10 @@ import {
   type SignaturePreviewTheme,
   type SignaturePreviewViewport,
   resolveSignaturePreviewViewport,
+  signaturePreviewLayoutWidthPx,
   signaturePreviewViewportStyle,
 } from '~/home/[account]/(signatures)/_components/signature-preview-frame';
+import { buildSignaturePreviewDocument } from '~/lib/signatures/signature-preview-document';
 
 import { SignatureInstallSteps } from './signature-install-steps';
 
@@ -42,37 +44,43 @@ export function SignatureEmailMockup({
     useState<SignaturePreviewViewport>('desktop');
   const isDark = theme === 'dark';
   const activeViewport = resolveSignaturePreviewViewport(viewport);
+  const layoutWidthPx = signaturePreviewLayoutWidthPx(viewport);
+
+  useEffect(() => {
+    if (window.matchMedia('(max-width: 480px)').matches) {
+      setViewport('mobile');
+    }
+  }, []);
 
   const iframeSrcDoc = useMemo(() => {
-    const text = isDark ? '#f5f5f7' : '#1d1d1f';
-    return `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="color-scheme" content="light dark" />
-<style>
-  html, body { margin: 0; padding: 0; background: transparent; color: ${text}; }
-  body {
-    font-family: Arial, Helvetica, sans-serif;
-    font-size: 15px;
-    line-height: 1.55;
-    padding: 20px;
-  }
-  p { margin: 0 0 1em; }
-</style>
-</head>
-<body>
-  <p>Hi team,</p>
+    const bodyHtml = `<p>Hi team,</p>
   <p>
     Thanks for taking a look at the latest proposal. I&rsquo;ve attached the
     revised timeline and a short note on next steps.
   </p>
   <p>Happy to jump on a call if anything needs clarifying.</p>
   <p>Best regards,<br />${escapeHtml(fromName)}</p>
-  <div style="margin-top:18px;">${signatureHtml}</div>
-</body>
-</html>`;
-  }, [fromName, isDark, signatureHtml]);
+  <div style="margin-top:18px;">${signatureHtml}</div>`;
+
+    return buildSignaturePreviewDocument({
+      bodyHtml,
+      theme: isDark ? 'dark' : 'light',
+      layoutWidthPx,
+      bodyPadding: '20px',
+      transparentBackground: true,
+    }).replace(
+      '</head>',
+      `<style>
+  body {
+    font-family: Arial, Helvetica, sans-serif;
+    font-size: 15px;
+    line-height: 1.55;
+  }
+  p { margin: 0 0 1em; }
+</style>
+</head>`,
+    );
+  }, [fromName, isDark, layoutWidthPx, signatureHtml]);
 
   const subtitle = showInstructions
     ? isPersonalShare
@@ -205,6 +213,7 @@ export function SignatureEmailMockup({
                     title="Email body with signature"
                     srcDoc={iframeSrcDoc}
                     sandbox=""
+                    key={`${theme}-${viewport}`}
                     className={cn(
                       'h-[560px] w-full min-w-0 border-0 sm:h-[620px]',
                       isDark ? 'bg-[#1c1c1e]' : 'bg-white',
@@ -215,9 +224,8 @@ export function SignatureEmailMockup({
             </div>
 
             <p className="text-xs text-[var(--ozer-plum-900)]/60">
-              {activeViewport.widthPx
-                ? `Previewing at ${activeViewport.widthPx}px (${activeViewport.label.toLowerCase()} reading width). Wide signatures may scroll horizontally on smaller screens.`
-                : 'Previewing at full desktop width.'}
+              Previewing at {layoutWidthPx}px ({activeViewport.label.toLowerCase()}{' '}
+              layout width). Responsive signatures switch layouts near 480px.
             </p>
           </div>
         </div>

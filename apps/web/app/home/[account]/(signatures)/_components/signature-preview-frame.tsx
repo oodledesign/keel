@@ -7,38 +7,43 @@ import { Monitor, Moon, Smartphone, Sun, Tablet } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
-export type SignaturePreviewTheme = 'light' | 'dark';
-export type SignaturePreviewViewport = 'mobile' | 'tablet' | 'desktop';
+import {
+  SIGNATURE_PREVIEW_DESKTOP_WIDTH_PX,
+  SIGNATURE_PREVIEW_VIEWPORTS,
+  type SignaturePreviewTheme,
+  type SignaturePreviewViewport,
+  resolveSignaturePreviewViewport,
+  signaturePreviewLayoutWidthPx,
+} from '~/lib/signatures/signature-preview-document';
 
-export const SIGNATURE_PREVIEW_VIEWPORTS: {
-  id: SignaturePreviewViewport;
-  label: string;
-  widthPx: number | null;
-  Icon: typeof Smartphone;
-}[] = [
-  { id: 'mobile', label: 'Mobile', widthPx: 375, Icon: Smartphone },
-  { id: 'tablet', label: 'Tablet', widthPx: 768, Icon: Tablet },
-  { id: 'desktop', label: 'Desktop', widthPx: null, Icon: Monitor },
-];
+export type { SignaturePreviewTheme, SignaturePreviewViewport };
+export {
+  SIGNATURE_PREVIEW_DESKTOP_WIDTH_PX,
+  SIGNATURE_PREVIEW_VIEWPORTS,
+  resolveSignaturePreviewViewport,
+  signaturePreviewLayoutWidthPx,
+};
 
-export function resolveSignaturePreviewViewport(
-  viewport: SignaturePreviewViewport,
-) {
-  return (
-    SIGNATURE_PREVIEW_VIEWPORTS.find((item) => item.id === viewport) ??
-    SIGNATURE_PREVIEW_VIEWPORTS[2]!
-  );
-}
+const VIEWPORT_ICONS = {
+  mobile: Smartphone,
+  tablet: Tablet,
+  desktop: Monitor,
+} as const;
 
 export function signaturePreviewViewportStyle(
   viewport: SignaturePreviewViewport,
 ): CSSProperties {
-  const active = resolveSignaturePreviewViewport(viewport);
   return {
-    maxWidth: active.widthPx ? `${active.widthPx}px` : '100%',
+    maxWidth: `${signaturePreviewLayoutWidthPx(viewport)}px`,
     width: '100%',
   };
 }
+
+export type SignaturePreviewFrameContext = {
+  viewport: SignaturePreviewViewport;
+  layoutWidthPx: number;
+  theme: SignaturePreviewTheme;
+};
 
 type ViewportControlsAppearance = 'workspace' | 'inbox';
 
@@ -72,30 +77,33 @@ export function SignaturePreviewViewportControls({
       role="group"
       aria-label="Preview viewport"
     >
-      {SIGNATURE_PREVIEW_VIEWPORTS.map(({ id, label, Icon }) => (
-        <Button
-          key={id}
-          type="button"
-          size="sm"
-          variant="ghost"
-          className={cn(
-            'h-8 gap-1.5 px-2.5',
-            appearance === 'workspace' &&
-              viewport === id &&
-              'bg-[var(--workspace-shell-sidebar-accent)]',
-            appearance === 'inbox' && inboxText,
-            appearance === 'inbox' && viewport === id && inboxActive,
-          )}
-          onClick={() => onViewportChange(id)}
-          title={`${label} width`}
-          aria-pressed={viewport === id}
-        >
-          <Icon className="h-3.5 w-3.5" />
-          {showLabels ? (
-            <span className="hidden sm:inline">{label}</span>
-          ) : null}
-        </Button>
-      ))}
+      {SIGNATURE_PREVIEW_VIEWPORTS.map(({ id, label }) => {
+        const Icon = VIEWPORT_ICONS[id];
+        return (
+          <Button
+            key={id}
+            type="button"
+            size="sm"
+            variant="ghost"
+            className={cn(
+              'h-8 gap-1.5 px-2.5',
+              appearance === 'workspace' &&
+                viewport === id &&
+                'bg-[var(--workspace-shell-sidebar-accent)]',
+              appearance === 'inbox' && inboxText,
+              appearance === 'inbox' && viewport === id && inboxActive,
+            )}
+            onClick={() => onViewportChange(id)}
+            title={`${label} width`}
+            aria-pressed={viewport === id}
+          >
+            <Icon className="h-3.5 w-3.5" />
+            {showLabels ? (
+              <span className="hidden sm:inline">{label}</span>
+            ) : null}
+          </Button>
+        );
+      })}
     </div>
   );
 }
@@ -186,13 +194,23 @@ export function SignaturePreviewFrame({
   /** Tailwind height class applied to the preview surface */
   heightClassName?: string;
   toolbarExtra?: ReactNode;
-  children: ReactNode;
+  children:
+    | ReactNode
+    | ((context: SignaturePreviewFrameContext) => ReactNode);
 }) {
   const [viewport, setViewport] =
     useState<SignaturePreviewViewport>(defaultViewport);
   const active = resolveSignaturePreviewViewport(viewport);
   const resolvedTheme = theme ?? 'light';
+  const layoutWidthPx = signaturePreviewLayoutWidthPx(viewport);
   const isDeviceViewport = active.id !== 'desktop';
+  const previewContext: SignaturePreviewFrameContext = {
+    viewport,
+    layoutWidthPx,
+    theme: resolvedTheme,
+  };
+  const previewContent =
+    typeof children === 'function' ? children(previewContext) : children;
 
   return (
     <div className="space-y-3">
@@ -224,8 +242,10 @@ export function SignaturePreviewFrame({
             'mx-auto min-w-0 transition-[max-width] duration-200 ease-out',
             isDeviceViewport &&
               'overflow-hidden shadow-[0_12px_40px_rgba(42,23,32,0.12)]',
-            active.id === 'mobile' && 'rounded-[1.75rem] border-[9px] border-[#1d1d1f]',
-            active.id === 'tablet' && 'rounded-2xl border-[6px] border-[#1d1d1f]/90',
+            active.id === 'mobile' &&
+              'rounded-[1.75rem] border-[9px] border-[#1d1d1f]',
+            active.id === 'tablet' &&
+              'rounded-2xl border-[6px] border-[#1d1d1f]/90',
           )}
           style={signaturePreviewViewportStyle(viewport)}
         >
@@ -237,15 +257,15 @@ export function SignaturePreviewFrame({
               resolvedTheme === 'light' ? 'bg-white' : 'bg-[#1c1c1e]',
             )}
           >
-            {children}
+            {previewContent}
           </div>
         </div>
       </div>
 
       <p className="text-muted-foreground text-xs">
-        {active.widthPx
-          ? `Previewing at ${active.widthPx}px (${active.label.toLowerCase()} reading width). Wide signatures may scroll horizontally.`
-          : 'Previewing at full desktop width.'}
+        Previewing at {layoutWidthPx}px ({active.label.toLowerCase()} layout
+        width). Responsive signatures switch layouts near 480px — use Mobile to
+        preview the stacked variant.
       </p>
     </div>
   );

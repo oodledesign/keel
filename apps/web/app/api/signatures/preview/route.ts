@@ -13,6 +13,11 @@ import {
 } from '~/lib/signatures/graph';
 import { loadSignatureRenderOptions } from '~/lib/signatures/render-context';
 import { denyUnlessSignaturesAddon } from '~/lib/signatures/require-signatures-api-access';
+import {
+  buildSignaturePreviewDocument,
+  parseSignaturePreviewViewportParam,
+  signaturePreviewLayoutWidthPx,
+} from '~/lib/signatures/signature-preview-document';
 
 export const dynamic = 'force-dynamic';
 
@@ -90,19 +95,15 @@ export async function GET(request: NextRequest) {
 
     const themeParam = request.nextUrl.searchParams.get('theme');
     const theme = themeParam === 'dark' ? 'dark' : 'light';
-    const chrome = theme === 'dark' ? '#1c1c1e' : '#ffffff';
-    const documentHtml = `<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="utf-8" />
-<meta name="color-scheme" content="light dark" />
-<style>
-  html, body { margin: 0; padding: 0; background: ${chrome}; }
-  body { padding: 12px; }
-</style>
-</head>
-<body>${html}</body>
-</html>`;
+    const viewport = parseSignaturePreviewViewportParam(
+      request.nextUrl.searchParams.get('viewport'),
+    );
+    const layoutWidthPx = signaturePreviewLayoutWidthPx(viewport);
+    const documentHtml = buildSignaturePreviewDocument({
+      bodyHtml: html,
+      theme,
+      layoutWidthPx,
+    });
 
     return new NextResponse(documentHtml, {
       status: 200,
