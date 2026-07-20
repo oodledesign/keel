@@ -1,7 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { heuristicClientMapping } from '~/lib/ai/client-csv-fields';
-import { heuristicTaskMapping } from '~/lib/ai/task-csv-fields';
+import {
+  buildClientImportTemplateCsv,
+  heuristicClientMapping,
+} from '~/lib/ai/client-csv-fields';
+import {
+  buildTaskImportTemplateCsv,
+  heuristicTaskMapping,
+} from '~/lib/ai/task-csv-fields';
 import {
   findClientDuplicate,
   inferClientType,
@@ -70,6 +76,26 @@ describe('heuristicTaskMapping', () => {
     expect(result.mapping['Task']).toBe('title');
     expect(result.mapping['Due Date']).toBe('due_date');
     expect(result.mapping['Client']).toBe('client_name');
+  });
+});
+
+describe('import templates', () => {
+  it('builds client template that parses and maps', () => {
+    const { headers, rows } = parseCsv(buildClientImportTemplateCsv());
+    expect(headers).toContain('Company name');
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    const mapped = heuristicClientMapping(headers);
+    expect(mapped.mapping['Company name']).toBe('company_name');
+    expect(mapped.mapping['Email']).toBe('email');
+  });
+
+  it('builds task template that parses and maps', () => {
+    const { headers, rows } = parseCsv(buildTaskImportTemplateCsv());
+    expect(headers).toContain('Title');
+    expect(rows.length).toBeGreaterThanOrEqual(1);
+    const mapped = heuristicTaskMapping(headers);
+    expect(mapped.mapping['Title']).toBe('title');
+    expect(mapped.mapping['Due date']).toBe('due_date');
   });
 });
 

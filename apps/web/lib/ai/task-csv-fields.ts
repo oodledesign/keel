@@ -1,3 +1,4 @@
+import { buildCsvDocument } from '~/lib/csv/build-csv';
 import {
   CSV_SKIP_FIELD,
   type CsvFieldMapping,
@@ -96,4 +97,41 @@ export function heuristicTaskMapping(
     confidence: 'medium',
     notes: 'Heuristic mapping (AI unavailable)',
   };
+}
+
+/** Friendly headers + example row for the tasks CSV import template. */
+export const TASK_CSV_TEMPLATE_HEADERS = [
+  'Title',
+  'Notes',
+  'Due date',
+  'Priority',
+  'Status',
+  'Client name',
+  'Project name',
+] as const;
+
+export function buildTaskImportTemplateCsv(): string {
+  return buildCsvDocument(
+    [...TASK_CSV_TEMPLATE_HEADERS],
+    [
+      [
+        'Follow up proposal',
+        'Send revised quote after call',
+        '2026-08-01',
+        'high',
+        'todo',
+        'Acme Ltd',
+        'Website Revamp',
+      ],
+      [
+        'Book kickoff meeting',
+        '',
+        '01/08/2026',
+        'medium',
+        'todo',
+        'Jordan Lee',
+        '',
+      ],
+    ],
+  );
 }

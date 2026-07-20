@@ -325,20 +325,23 @@ export function AddTaskDialog({
                     workspaceAccountSlug,
                   )}
                   className="font-medium text-[var(--ozer-accent)] hover:underline"
+                  onClick={() => setOpen(false)}
                 >
                   <Sparkles className="mr-1 inline h-3 w-3" />
                   Extract tasks from email or transcript (AI)
                 </Link>
               </p>
               <p>
+                Or{' '}
                 <Link
                   href={pathsConfig.app.accountTasksImport.replace(
                     '[account]',
                     workspaceAccountSlug,
                   )}
                   className="font-medium text-[var(--ozer-accent)] hover:underline"
+                  onClick={() => setOpen(false)}
                 >
-                  Import tasks from CSV
+                  upload via CSV
                 </Link>
               </p>
             </div>

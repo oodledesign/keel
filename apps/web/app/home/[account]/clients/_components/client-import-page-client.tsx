@@ -4,7 +4,10 @@ import { useCallback, useRef } from 'react';
 
 import { CsvImportWizard } from '~/components/bulk-import/csv-import-wizard';
 import pathsConfig from '~/config/paths.config';
-import { CLIENT_CSV_FIELD_OPTIONS } from '~/lib/ai/client-csv-fields';
+import {
+  CLIENT_CSV_FIELD_OPTIONS,
+  buildClientImportTemplateCsv,
+} from '~/lib/ai/client-csv-fields';
 import type { CsvFieldMapping } from '~/lib/csv/rows-to-records';
 
 import {
@@ -132,6 +135,10 @@ export function ClientImportPageClient({
       backHref={backHref}
       fieldOptions={CLIENT_CSV_FIELD_OPTIONS}
       enableDuplicateReview
+      template={{
+        filename: 'ozer-clients-template.csv',
+        csv: buildClientImportTemplateCsv(),
+      }}
       onSuggestMapping={onSuggestMapping}
       onPreview={onPreview}
       onCommit={onCommit}

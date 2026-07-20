@@ -1,3 +1,4 @@
+import { buildCsvDocument } from '~/lib/csv/build-csv';
 import {
   CSV_SKIP_FIELD,
   type CsvFieldMapping,
@@ -119,4 +120,68 @@ export function heuristicClientMapping(
     confidence: 'medium',
     notes: 'Heuristic mapping (AI unavailable)',
   };
+}
+
+/** Friendly headers + example rows for the clients CSV import template. */
+export const CLIENT_CSV_TEMPLATE_HEADERS = [
+  'Client type',
+  'Company name',
+  'First name',
+  'Last name',
+  'Email',
+  'Phone',
+  'Address line 1',
+  'Address line 2',
+  'City',
+  'Postcode',
+  'Country',
+  'Contact first name',
+  'Contact last name',
+  'Contact email',
+  'Contact phone',
+  'Contact role',
+] as const;
+
+export function buildClientImportTemplateCsv(): string {
+  return buildCsvDocument(
+    [...CLIENT_CSV_TEMPLATE_HEADERS],
+    [
+      [
+        'business',
+        'Acme Ltd',
+        '',
+        '',
+        'hello@acme.example',
+        '01234 567890',
+        '1 High Street',
+        '',
+        'London',
+        'SW1A 1AA',
+        'United Kingdom',
+        'Alex',
+        'Morgan',
+        'alex@acme.example',
+        '07123 456789',
+        'founder',
+      ],
+      [
+        'individual',
+        '',
+        'Jordan',
+        'Lee',
+        'jordan.lee@example.com',
+        '07911 123456',
+        '12 Queen Street',
+        'Flat 2',
+        'Manchester',
+        'M1 1AE',
+        'United Kingdom',
+        '',
+        '',
+        '',
+        '',
+        '',
+      ],
+    ],
+  );
 }

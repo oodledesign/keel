@@ -4,7 +4,7 @@ import { useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { ArrowLeft, Loader2, Sparkles, Upload } from 'lucide-react';
+import { ArrowLeft, Download, Loader2, Sparkles, Upload } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Label } from '@kit/ui/label';
@@ -36,6 +36,11 @@ type CsvImportWizardProps = {
   backHref: string;
   fieldOptions: CsvImportFieldOption[];
   enableDuplicateReview?: boolean;
+  /** Optional CSV template offered on the upload step. */
+  template?: {
+    filename: string;
+    csv: string;
+  };
   onSuggestMapping: (input: {
     headers: string[];
     sampleRows: string[][];
@@ -76,6 +81,16 @@ type CsvImportWizardProps = {
   }>;
 };
 
+function downloadCsvTemplate(filename: string, csv: string) {
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
@@ -85,6 +100,7 @@ export function CsvImportWizard({
   backHref,
   fieldOptions,
   enableDuplicateReview = false,
+  template,
   onSuggestMapping,
   onPreview,
   onCommit,
@@ -243,12 +259,27 @@ export function CsvImportWizard({
           <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             Export from Sheets or Excel as CSV. Excel files are not supported.
           </p>
-          <Label
-            htmlFor="csv-upload"
-            className="mt-4 inline-flex cursor-pointer items-center justify-center rounded-xl bg-[var(--ozer-accent)] px-4 py-2 text-sm font-medium text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-          >
-            Choose file
-          </Label>
+          <div className="mt-4 flex flex-wrap items-center justify-center gap-2">
+            {template ? (
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
+                onClick={() =>
+                  downloadCsvTemplate(template.filename, template.csv)
+                }
+              >
+                <Download className="mr-2 h-4 w-4" />
+                Download template
+              </Button>
+            ) : null}
+            <Label
+              htmlFor="csv-upload"
+              className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-[var(--ozer-accent)] px-4 py-2 text-sm font-medium text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+            >
+              Choose file
+            </Label>
+          </div>
           <input
             id="csv-upload"
             type="file"

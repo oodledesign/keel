@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
   Filter,
@@ -23,7 +23,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Sheet, SheetContent } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 import { Trans } from '@kit/ui/trans';
 import { cn } from '@kit/ui/utils';
@@ -38,7 +37,7 @@ import {
   ClientListTableColGroup,
   ClientListTableHeader,
 } from './client-card';
-import { ClientDetailDrawer } from './client-detail-drawer';
+import { ClientCreateDialog } from './client-create-dialog';
 import { ClientOverviewCard } from './client-overview-card';
 
 type ViewMode = 'cards' | 'list';
@@ -174,7 +173,7 @@ export function ClientsPageContent({
     accountSlug,
   );
 
-  const [createDrawerOpen, setCreateDrawerOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [createFormInitialValues, setCreateFormInitialValues] = useState<
     { first_name: string; company_name: string } | undefined
   >(undefined);
@@ -323,11 +322,11 @@ export function ClientsPageContent({
 
   const openCreate = () => {
     setCreateFormInitialValues(undefined);
-    setCreateDrawerOpen(true);
+    setCreateDialogOpen(true);
   };
 
   const closeCreate = () => {
-    setCreateDrawerOpen(false);
+    setCreateDialogOpen(false);
     setCreateFormInitialValues(undefined);
     void refreshClients();
   };
@@ -341,7 +340,7 @@ export function ClientsPageContent({
       first_name: searchParams.get('first_name') ?? '',
       company_name: searchParams.get('company_name') ?? '',
     });
-    setCreateDrawerOpen(true);
+    setCreateDialogOpen(true);
 
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
@@ -607,12 +606,12 @@ export function ClientsPageContent({
         )}
       </div>
 
-      <ClientDetailDrawer
-        open={createDrawerOpen}
+      <ClientCreateDialog
+        open={createDialogOpen}
         onOpenChange={(open) => !open && closeCreate()}
         accountId={accountId}
+        accountSlug={accountSlug}
         createInitialValues={createFormInitialValues}
-        canEditClients={canEditClients}
         onSaved={closeCreate}
       />
     </div>

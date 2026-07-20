@@ -4,7 +4,10 @@ import { useCallback, useRef } from 'react';
 
 import { CsvImportWizard } from '~/components/bulk-import/csv-import-wizard';
 import pathsConfig from '~/config/paths.config';
-import { TASK_CSV_FIELD_OPTIONS } from '~/lib/ai/task-csv-fields';
+import {
+  TASK_CSV_FIELD_OPTIONS,
+  buildTaskImportTemplateCsv,
+} from '~/lib/ai/task-csv-fields';
 import type { CsvFieldMapping } from '~/lib/csv/rows-to-records';
 
 import {
@@ -111,6 +114,10 @@ export function TaskImportPageClient({
       description="Upload a CSV, map columns, then create tasks. Client and project names are matched when possible."
       backHref={backHref}
       fieldOptions={TASK_CSV_FIELD_OPTIONS}
+      template={{
+        filename: 'ozer-tasks-template.csv',
+        csv: buildTaskImportTemplateCsv(),
+      }}
       onSuggestMapping={onSuggestMapping}
       onPreview={onPreview}
       onCommit={onCommit}
