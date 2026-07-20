@@ -65,6 +65,8 @@ import {
   importCsvTransactionsAction,
   loadFinancesDashboardAction,
   setFinanceTransactionLinksAction,
+  setFinanceTransactionNotesAction,
+  setFinanceTransactionPropertyAction,
   setFinanceTransferAction,
   suggestCsvMappingAction,
   suggestTransactionCategoriesAction,
@@ -352,6 +354,44 @@ export function FinancesPageContent({
         toast.error(
           err instanceof Error ? err.message : 'Could not update links',
         );
+      }
+    });
+  };
+
+  const onSetProperty = (
+    transactionId: string,
+    propertyId: string | null,
+  ) => {
+    startTransition(async () => {
+      try {
+        await setFinanceTransactionPropertyAction({
+          accountId,
+          accountSlug,
+          transactionId,
+          propertyId,
+        });
+        await refresh({ background: true });
+        toast.success('Property updated');
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Could not update property',
+        );
+      }
+    });
+  };
+
+  const onSetNotes = (transactionId: string, notes: string | null) => {
+    startTransition(async () => {
+      try {
+        await setFinanceTransactionNotesAction({
+          accountId,
+          accountSlug,
+          transactionId,
+          notes,
+        });
+        await refresh({ background: true });
+      } catch {
+        toast.error('Could not save note');
       }
     });
   };
@@ -692,6 +732,8 @@ export function FinancesPageContent({
             onCategorize={onCategorize}
             onSetTransfer={onSetTransfer}
             onSetLinks={onSetLinks}
+            onSetProperty={onSetProperty}
+            onSetNotes={onSetNotes}
             onSyncFreeAgent={() => onSyncFreeAgent()}
             onSyncFreeAgentHistory={() => onSyncFreeAgent({ history: true })}
           />
@@ -811,6 +853,8 @@ function TransactionsPanel({
   onCategorize,
   onSetTransfer,
   onSetLinks,
+  onSetProperty,
+  onSetNotes,
   onSyncFreeAgent,
   onSyncFreeAgentHistory,
 }: {
@@ -838,9 +882,12 @@ function TransactionsPanel({
     clientId: string | null,
     projectId: string | null,
   ) => void;
+  onSetProperty: (transactionId: string, propertyId: string | null) => void;
+  onSetNotes: (transactionId: string, notes: string | null) => void;
   onSyncFreeAgent: () => void;
   onSyncFreeAgentHistory: () => void;
 }) {
+  const isPropertyWorkspace = Boolean(data?.isPropertyWorkspace);
   const totalCount = data?.transactionTotalCount ?? 0;
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize));
   const rangeStart = totalCount === 0 ? 0 : (page - 1) * pageSize + 1;
@@ -922,7 +969,7 @@ function TransactionsPanel({
         <div className="relative max-w-sm min-w-[220px] flex-1">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
-            placeholder="Search description..."
+            placeholder="Search description or notes..."
             value={search}
             onChange={(e) => onSearchChange(e.target.value)}
             className="border-[color:var(--workspace-shell-border)] bg-transparent pl-9 text-[var(--workspace-shell-text)]"
@@ -957,8 +1004,15 @@ function TransactionsPanel({
                 <th className="px-4 py-2 font-medium">Amount</th>
                 <th className="px-4 py-2 font-medium">Type</th>
                 <th className="px-4 py-2 font-medium">Category</th>
-                <th className="px-4 py-2 font-medium">Client</th>
-                <th className="px-4 py-2 font-medium">Project</th>
+                {isPropertyWorkspace ? (
+                  <th className="px-4 py-2 font-medium">Property</th>
+                ) : (
+                  <>
+                    <th className="px-4 py-2 font-medium">Client</th>
+                    <th className="px-4 py-2 font-medium">Project</th>
+                  </>
+                )}
+                <th className="px-4 py-2 font-medium">Notes</th>
                 <th className="px-4 py-2 font-medium">Source</th>
               </tr>
             </thead>
@@ -975,6 +1029,12 @@ function TransactionsPanel({
                   : null;
                 const txClientId = (tx.client_id as string | null) ?? null;
                 const txProjectId = (tx.project_id as string | null) ?? null;
+                const txPropertyId = (tx.property_id as string | null) ?? null;
+                const txNotes = (tx.notes as string | null) ?? '';
+                const amountKind = pence >= 0 ? 'income' : 'expense';
+                const categoryOptions = (data.categories ?? []).filter(
+                  (category) => category.kind === amountKind,
+                );
                 const projectOptions = (data.projects ?? []).filter(
                   (project) =>
                     !txClientId ||
@@ -1018,6 +1078,22 @@ function TransactionsPanel({
                       {isTransfer ? ' transfer' : pence < 0 ? ' out' : ' in'}
                     </td>
                     <td className="px-4 py-2">
+                      {isTransfer ? (
+                        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                          Transfer
+                        </span>
+                      ) : (
+                        <span
+                          className={cn(
+                            'text-xs font-medium capitalize',
+                            amountKind === 'income'
+                              ? 'text-emerald-400'
+                              : 'text-red-300',
+                          )}
+                        >
+                          {amountKind}
+                        </span>
+                      )}
                       <Select
                         value={isTransfer ? 'transfer' : 'normal'}
                         onValueChange={(v) =>
@@ -1025,7 +1101,7 @@ function TransactionsPanel({
                         }
                         disabled={pending}
                       >
-                        <SelectTrigger className="h-8 w-32 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
+                        <SelectTrigger className="mt-1 h-8 w-32 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -1049,7 +1125,7 @@ function TransactionsPanel({
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="none">Uncategorised</SelectItem>
-                          {(data.categories ?? []).map((c) => (
+                          {categoryOptions.map((c) => (
                             <SelectItem
                               key={c.id as string}
                               value={c.id as string}
@@ -1063,76 +1139,121 @@ function TransactionsPanel({
                         <span className="sr-only">{String(cat.name)}</span>
                       ) : null}
                     </td>
-                    <td className="px-4 py-2">
-                      <Select
-                        value={txClientId ?? 'none'}
-                        onValueChange={(v) => {
-                          const nextClientId = v === 'none' ? null : v;
-                          const nextProjectId =
-                            txProjectId &&
-                            (data.projects ?? []).find(
-                              (p) => p.id === txProjectId,
-                            )?.client_id &&
-                            (data.projects ?? []).find(
-                              (p) => p.id === txProjectId,
-                            )?.client_id !== nextClientId
-                              ? null
-                              : txProjectId;
-                          onSetLinks(
-                            tx.id as string,
-                            nextClientId,
-                            nextProjectId,
-                          );
-                        }}
-                        disabled={pending}
-                      >
-                        <SelectTrigger className="h-8 w-36 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
-                          <SelectValue placeholder="Client" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No client</SelectItem>
-                          {(data.clients ?? []).map((clientRow) => (
-                            <SelectItem
-                              key={clientRow.id as string}
-                              value={clientRow.id as string}
-                            >
-                              {String(clientRow.display_name ?? clientRow.id)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </td>
-                    <td className="px-4 py-2">
-                      <Select
-                        value={txProjectId ?? 'none'}
-                        onValueChange={(v) => {
-                          if (v === 'none') {
-                            onSetLinks(tx.id as string, txClientId, null);
-                            return;
+                    {isPropertyWorkspace ? (
+                      <td className="px-4 py-2">
+                        <Select
+                          value={txPropertyId ?? 'none'}
+                          onValueChange={(v) =>
+                            onSetProperty(
+                              tx.id as string,
+                              v === 'none' ? null : v,
+                            )
                           }
-                          const project = (data.projects ?? []).find(
-                            (p) => p.id === v,
-                          );
-                          onSetLinks(
-                            tx.id as string,
-                            project?.client_id ?? txClientId,
-                            v,
-                          );
-                        }}
+                          disabled={pending}
+                        >
+                          <SelectTrigger className="h-8 w-40 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
+                            <SelectValue placeholder="Property" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="none">No property</SelectItem>
+                            {(data.properties ?? []).map((property) => (
+                              <SelectItem key={property.id} value={property.id}>
+                                {property.label}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </td>
+                    ) : (
+                      <>
+                        <td className="px-4 py-2">
+                          <Select
+                            value={txClientId ?? 'none'}
+                            onValueChange={(v) => {
+                              const nextClientId = v === 'none' ? null : v;
+                              const nextProjectId =
+                                txProjectId &&
+                                (data.projects ?? []).find(
+                                  (p) => p.id === txProjectId,
+                                )?.client_id &&
+                                (data.projects ?? []).find(
+                                  (p) => p.id === txProjectId,
+                                )?.client_id !== nextClientId
+                                  ? null
+                                  : txProjectId;
+                              onSetLinks(
+                                tx.id as string,
+                                nextClientId,
+                                nextProjectId,
+                              );
+                            }}
+                            disabled={pending}
+                          >
+                            <SelectTrigger className="h-8 w-36 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
+                              <SelectValue placeholder="Client" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No client</SelectItem>
+                              {(data.clients ?? []).map((clientRow) => (
+                                <SelectItem
+                                  key={clientRow.id as string}
+                                  value={clientRow.id as string}
+                                >
+                                  {String(
+                                    clientRow.display_name ?? clientRow.id,
+                                  )}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="px-4 py-2">
+                          <Select
+                            value={txProjectId ?? 'none'}
+                            onValueChange={(v) => {
+                              if (v === 'none') {
+                                onSetLinks(tx.id as string, txClientId, null);
+                                return;
+                              }
+                              const project = (data.projects ?? []).find(
+                                (p) => p.id === v,
+                              );
+                              onSetLinks(
+                                tx.id as string,
+                                project?.client_id ?? txClientId,
+                                v,
+                              );
+                            }}
+                            disabled={pending}
+                          >
+                            <SelectTrigger className="h-8 w-40 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
+                              <SelectValue placeholder="Project" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="none">No project</SelectItem>
+                              {projectOptions.map((project) => (
+                                <SelectItem key={project.id} value={project.id}>
+                                  {project.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </td>
+                      </>
+                    )}
+                    <td className="px-4 py-2">
+                      <Input
+                        key={`${tx.id as string}:${txNotes}`}
+                        defaultValue={txNotes}
+                        placeholder="Add a note…"
                         disabled={pending}
-                      >
-                        <SelectTrigger className="h-8 w-40 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
-                          <SelectValue placeholder="Project" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="none">No project</SelectItem>
-                          {projectOptions.map((project) => (
-                            <SelectItem key={project.id} value={project.id}>
-                              {project.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                        className="h-8 min-w-[160px] border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]"
+                        onBlur={(event) => {
+                          const next = event.target.value.trim();
+                          if (next === txNotes.trim()) return;
+                          onSetNotes(tx.id as string, next || null);
+                        }}
+                      />
                     </td>
                     <td className="px-4 py-2 text-xs text-[var(--workspace-shell-text-muted)] capitalize">
                       {String(tx.source)}
@@ -1249,10 +1370,20 @@ function CsvImportSheet({
   const [pending, startTransition] = useTransition();
   const [file, setFile] = useState<File | null>(null);
   const [mappingPreview, setMappingPreview] = useState<string>('');
+  const [parsedCsv, setParsedCsv] = useState<{
+    headers: string[];
+    rows: string[][];
+  } | null>(null);
+  const [csvMapping, setCsvMapping] = useState<{
+    mapping: Awaited<ReturnType<typeof suggestCsvMappingAction>>['mapping'];
+    dateFormat?: string;
+  } | null>(null);
 
   const handleFile = (f: File | null) => {
     setFile(f);
     setMappingPreview('');
+    setParsedCsv(null);
+    setCsvMapping(null);
     if (!f) return;
 
     startTransition(async () => {
@@ -1266,30 +1397,33 @@ function CsvImportSheet({
         headers,
         sampleRows: rows,
       });
+      setParsedCsv({ headers, rows });
+      setCsvMapping({
+        mapping: suggestion.mapping,
+        dateFormat: suggestion.dateFormat,
+      });
       setMappingPreview(JSON.stringify(suggestion.mapping, null, 2));
     });
   };
 
   const importFile = () => {
-    if (!file) return;
+    if (!file || !parsedCsv || !csvMapping) return;
     startTransition(async () => {
-      const text = await file.text();
-      const { headers, rows } = parseCsv(text);
-      const suggestion = await suggestCsvMappingAction({
-        headers,
-        sampleRows: rows,
-      });
       try {
         const result = await importCsvTransactionsAction({
           accountId,
           accountSlug,
           filename: file.name,
-          headers,
-          rows,
-          mapping: suggestion.mapping,
-          dateFormat: suggestion.dateFormat,
+          headers: parsedCsv.headers,
+          rows: parsedCsv.rows,
+          mapping: csvMapping.mapping,
+          dateFormat: csvMapping.dateFormat,
         });
-        toast.success(`Imported ${result.imported} transactions`);
+        toast.success(
+          result.skipped > 0
+            ? `Imported ${result.imported} transactions (${result.skipped} duplicates skipped)`
+            : `Imported ${result.imported} transactions`,
+        );
         onOpenChange(false);
         onImported();
       } catch (e) {
@@ -1323,7 +1457,7 @@ function CsvImportSheet({
           ) : null}
           <Button
             type="button"
-            disabled={!file || pending}
+            disabled={!file || !parsedCsv || !csvMapping || pending}
             className="bg-[var(--ozer-accent)] text-[var(--ozer-white)]"
             onClick={importFile}
           >

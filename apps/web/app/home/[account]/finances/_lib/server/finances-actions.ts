@@ -19,6 +19,12 @@ import {
   projectDisplayName,
   resolveFinanceTransactionLinks,
 } from '~/lib/finance/transaction-links';
+import { buildCsvTransactionExternalId } from '~/lib/finance/csv-transaction-id';
+import { matchPropertyFromReference } from '~/lib/finance/match-property-from-reference';
+import {
+  PROPERTY_FINANCE_DEFAULT_CATEGORIES,
+  suggestPropertyImportCategoryId,
+} from '~/lib/finance/property-finance-categories';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
 import {
@@ -48,11 +54,19 @@ function applyFinanceDateFilters<
 }
 
 function applyFinanceSearchFilter<
-  T extends { ilike: (col: string, pattern: string) => T },
+  T extends {
+    ilike: (col: string, pattern: string) => T;
+    or?: (filters: string) => T;
+  },
 >(query: T, search?: string) {
   const term = search?.trim();
   if (!term) return query;
   const escaped = term.replace(/[%_\\]/g, '\\$&');
+  if (typeof query.or === 'function') {
+    return query.or(
+      `description.ilike.%${escaped}%,notes.ilike.%${escaped}%`,
+    );
+  }
   return query.ilike('description', `%${escaped}%`);
 }
 
@@ -107,6 +121,32 @@ const DEFAULT_CATEGORIES = [
   { name: 'Uncategorised', kind: 'expense' as const },
 ];
 
+async function isPropertyFinanceAccount(
+  client: ReturnType<typeof getSupabaseServerClient>,
+  accountId: string,
+) {
+  const [{ data: account }, { data: business }] = await Promise.all([
+    client
+      .from('accounts')
+      .select('space_type')
+      .eq('id', accountId)
+      .maybeSingle(),
+    client
+      .from('businesses')
+      .select('type')
+      .eq('account_id', accountId)
+      .maybeSingle(),
+  ]);
+
+  const spaceType = String(
+    (account as { space_type?: string | null } | null)?.space_type ?? 'work',
+  ).toLowerCase();
+  const businessType = String(
+    (business as { type?: string | null } | null)?.type ?? '',
+  ).toLowerCase();
+  return spaceType === 'property' || businessType === 'property';
+}
+
 function revalidateFinances(accountSlug: string, projectId?: string | null) {
   revalidatePath(
     pathsConfig.app.accountFinances.replace('[account]', accountSlug),
@@ -150,8 +190,13 @@ export async function ensureDefaultFinanceCategories(accountId: string) {
 
   if ((count ?? 0) > 0) return;
 
+  const propertyWorkspace = await isPropertyFinanceAccount(client, accountId);
+  const seedCategories = propertyWorkspace
+    ? PROPERTY_FINANCE_DEFAULT_CATEGORIES
+    : DEFAULT_CATEGORIES;
+
   const { error: insertError } = await client.from('finance_categories').insert(
-    DEFAULT_CATEGORIES.map((c) => ({
+    seedCategories.map((c) => ({
       account_id: accountId,
       name: c.name,
       kind: c.kind,
@@ -166,10 +211,64 @@ export async function ensureDefaultFinanceCategories(accountId: string) {
   }
 }
 
+async function ensurePropertyFinanceCategories(accountId: string) {
+  const client = getSupabaseServerClient();
+
+  if (!(await isPropertyFinanceAccount(client, accountId))) {
+    return;
+  }
+
+  if (await hasFreeAgentFinanceConnection(client, accountId)) {
+    return;
+  }
+
+  const { data: existing, error } = await client
+    .from('finance_categories')
+    .select('name, kind')
+    .eq('account_id', accountId);
+
+  if (error) {
+    throw new Error(error.message || 'Could not load finance categories');
+  }
+
+  const existingKeys = new Set(
+    (existing ?? []).map(
+      (row) => `${String(row.kind)}:${String(row.name).toLowerCase()}`,
+    ),
+  );
+
+  const missing = PROPERTY_FINANCE_DEFAULT_CATEGORIES.filter(
+    (category) =>
+      !existingKeys.has(`${category.kind}:${category.name.toLowerCase()}`),
+  );
+
+  if (missing.length === 0) return;
+
+  const { error: insertError } = await client.from('finance_categories').insert(
+    missing.map((category) => ({
+      account_id: accountId,
+      name: category.name,
+      kind: category.kind,
+      is_system: true,
+    })),
+  );
+
+  if (insertError && !insertError.message.includes('duplicate')) {
+    throw new Error(
+      insertError.message || 'Could not create property finance categories',
+    );
+  }
+}
+
 export const loadFinancesDashboardAction = enhanceAction(
   async (input) => {
     await ensureDefaultFinanceCategories(input.accountId);
+    await ensurePropertyFinanceCategories(input.accountId);
     const client = getSupabaseServerClient();
+    const propertyWorkspace = await isPropertyFinanceAccount(
+      client,
+      input.accountId,
+    );
 
     const from = input.dateFrom;
     const to = input.dateTo;
@@ -181,10 +280,11 @@ export const loadFinancesDashboardAction = enhanceAction(
     let txQuery = client
       .from('finance_transactions')
       .select(
-        `id, transaction_date, description, amount_pence, category_id, is_transfer, source, sync_status, bank_account_id,
-        client_id, project_id,
+        `id, transaction_date, description, notes, amount_pence, category_id, is_transfer, source, sync_status, bank_account_id,
+        client_id, project_id, property_id,
         clients:client_id ( id, display_name ),
-        projects:project_id ( id, title, name )`,
+        projects:project_id ( id, title, name ),
+        properties:property_id ( id, name )`,
       )
       .eq('account_id', input.accountId)
       .order('transaction_date', { ascending: false })
@@ -219,6 +319,7 @@ export const loadFinancesDashboardAction = enhanceAction(
       { data: connections },
       { data: clients },
       { data: projects },
+      { data: properties },
     ] = await Promise.all([
       txQuery,
       countQuery,
@@ -250,6 +351,12 @@ export const loadFinancesDashboardAction = enhanceAction(
         .eq('account_id', input.accountId)
         .order('updated_at', { ascending: false })
         .limit(300),
+      client
+        .from('properties')
+        .select('id, name, address')
+        .eq('account_id', input.accountId)
+        .order('name')
+        .limit(500),
     ]);
 
     if (txError) throw txError;
@@ -289,6 +396,12 @@ export const loadFinancesDashboardAction = enhanceAction(
         ),
         client_id: (project.client_id as string | null) ?? null,
       })),
+      properties: (properties ?? []).map((property) => ({
+        id: property.id as string,
+        label: String(property.name ?? property.id),
+        address: (property.address as string | null) ?? null,
+      })),
+      isPropertyWorkspace: propertyWorkspace,
       summary: {
         incomePence: totals.incomePence,
         expensePence: totals.expensePence,
@@ -347,6 +460,72 @@ export const setFinanceTransactionLinksAction = enhanceAction(
       transactionId: z.string().uuid(),
       clientId: z.string().uuid().nullable(),
       projectId: z.string().uuid().nullable(),
+    }),
+  },
+);
+
+export const setFinanceTransactionPropertyAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+
+    if (input.propertyId) {
+      const { data: property, error: propertyError } = await client
+        .from('properties')
+        .select('id')
+        .eq('id', input.propertyId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (propertyError) {
+        throw new Error(propertyError.message || 'Could not load property');
+      }
+      if (!property) {
+        throw new Error('Property not found');
+      }
+    }
+
+    const { error } = await client
+      .from('finance_transactions')
+      .update({ property_id: input.propertyId })
+      .eq('id', input.transactionId)
+      .eq('account_id', input.accountId);
+
+    if (error) throw error;
+
+    revalidateFinances(input.accountSlug);
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      transactionId: z.string().uuid(),
+      propertyId: z.string().uuid().nullable(),
+    }),
+  },
+);
+
+export const setFinanceTransactionNotesAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+
+    const { error } = await client
+      .from('finance_transactions')
+      .update({ notes: input.notes?.trim() || null })
+      .eq('id', input.transactionId)
+      .eq('account_id', input.accountId);
+
+    if (error) throw error;
+
+    revalidateFinances(input.accountSlug);
+    return { ok: true };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      transactionId: z.string().uuid(),
+      notes: z.string().max(2000).nullable(),
     }),
   },
 );
@@ -553,6 +732,10 @@ export const suggestCsvMappingAction = enhanceAction(
 export const importCsvTransactionsAction = enhanceAction(
   async (input, user) => {
     const client = getSupabaseServerClient();
+    const propertyWorkspace = await isPropertyFinanceAccount(
+      client,
+      input.accountId,
+    );
 
     let bankAccountId = input.bankAccountId ?? null;
     if (!bankAccountId) {
@@ -585,7 +768,34 @@ export const importCsvTransactionsAction = enhanceAction(
     if (batchError) throw batchError;
 
     const mapping = input.mapping as CsvColumnMapping;
-    let imported = 0;
+
+    const [{ data: properties }, categories] = await Promise.all([
+      propertyWorkspace
+        ? client
+            .from('properties')
+            .select('id, name, address')
+            .eq('account_id', input.accountId)
+        : Promise.resolve({
+            data: [] as Array<{
+              id: string;
+              name: string;
+              address: string | null;
+            }>,
+          }),
+      loadFinanceCategoriesForAccount(client, input.accountId),
+    ]);
+
+    const parsedRows: Array<{
+      transactionDate: string;
+      description: string;
+      reference: string;
+      notes: string | null;
+      amountPence: number;
+      spendingCategory: string;
+      externalId: string;
+      propertyId: string | null;
+      categoryId: string | null;
+    }> = [];
 
     for (const row of input.rows) {
       const get = (col?: string) =>
@@ -603,42 +813,111 @@ export const importCsvTransactionsAction = enhanceAction(
         if (credit != null && credit !== 0) amountPence = credit;
         else if (debit != null && debit !== 0) amountPence = -Math.abs(debit);
       }
-      if (amountPence == null) continue;
+      if (amountPence == null || amountPence === 0) continue;
 
       const description = get(mapping.description) || 'Imported transaction';
-      const externalId = `csv:${input.filename}:${dateStr}:${description}:${amountPence}`;
+      const reference = get(mapping.reference);
+      const csvNotes = get(mapping.notes);
+      const spendingCategory = get(mapping.spendingCategory);
+      const noteParts = [reference, csvNotes].filter(Boolean);
+      const notes = noteParts.length > 0 ? noteParts.join(' · ') : null;
 
-      const { data: existing } = await client
+      const externalId = buildCsvTransactionExternalId({
+        accountId: input.accountId,
+        bankAccountId,
+        transactionDate: dateStr,
+        amountPence,
+        counterparty: description,
+        reference,
+      });
+
+      const propertyId =
+        propertyWorkspace && reference
+          ? matchPropertyFromReference(reference, properties ?? [])
+          : null;
+
+      const categoryId = propertyWorkspace
+        ? suggestPropertyImportCategoryId(categories, {
+            amountPence,
+            spendingCategory,
+            counterparty: description,
+          })
+        : null;
+
+      parsedRows.push({
+        transactionDate: dateStr,
+        description,
+        reference,
+        notes,
+        amountPence,
+        spendingCategory,
+        externalId,
+        propertyId,
+        categoryId,
+      });
+    }
+
+    const externalIds = parsedRows.map((row) => row.externalId);
+    const existingIds = new Set<string>();
+
+    for (let offset = 0; offset < externalIds.length; offset += 500) {
+      const chunk = externalIds.slice(offset, offset + 500);
+      if (chunk.length === 0) continue;
+
+      const { data: existingRows, error: existingError } = await client
         .from('finance_transactions')
-        .select('id')
+        .select('external_id')
         .eq('account_id', input.accountId)
-        .eq('external_id', externalId)
-        .maybeSingle();
+        .in('external_id', chunk);
 
-      if (existing?.id) continue;
+      if (existingError) throw existingError;
+      for (const row of existingRows ?? []) {
+        if (row.external_id) existingIds.add(row.external_id);
+      }
+    }
 
-      await client.from('finance_transactions').insert({
+    const batchId = batch?.id;
+    if (!batchId) {
+      throw new Error('Import batch was not created');
+    }
+
+    const inserts = parsedRows
+      .filter((row) => !existingIds.has(row.externalId))
+      .map((row) => ({
         account_id: input.accountId,
         bank_account_id: bankAccountId,
-        transaction_date: dateStr,
-        description,
-        amount_pence: amountPence,
-        source: 'csv',
-        external_id: externalId,
-        import_batch_id: batch?.id,
-        sync_status: 'local',
+        transaction_date: row.transactionDate,
+        description: row.description,
+        notes: row.notes,
+        amount_pence: row.amountPence,
+        property_id: row.propertyId,
+        category_id: row.categoryId,
+        source: 'csv' as const,
+        external_id: row.externalId,
+        import_batch_id: batchId,
+        sync_status: 'local' as const,
         created_by: user.id,
-      });
-      imported++;
+      }));
+
+    const skipped = parsedRows.length - inserts.length;
+    let imported = 0;
+
+    for (let offset = 0; offset < inserts.length; offset += 500) {
+      const chunk = inserts.slice(offset, offset + 500);
+      const { error: insertError } = await client
+        .from('finance_transactions')
+        .insert(chunk);
+      if (insertError) throw insertError;
+      imported += chunk.length;
     }
 
     await client
       .from('finance_import_batches')
       .update({ imported_count: imported, status: 'imported' })
-      .eq('id', batch!.id);
+      .eq('id', batchId);
 
     revalidateFinances(input.accountSlug);
-    return { imported, batchId: batch!.id };
+    return { imported, skipped, batchId };
   },
   {
     schema: z.object({
@@ -653,6 +932,9 @@ export const importCsvTransactionsAction = enhanceAction(
         amount: z.string().optional(),
         debit: z.string().optional(),
         credit: z.string().optional(),
+        reference: z.string().optional(),
+        notes: z.string().optional(),
+        spendingCategory: z.string().optional(),
       }),
       dateFormat: z.string().optional(),
       bankAccountId: z.string().uuid().nullable().optional(),

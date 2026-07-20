@@ -8,6 +8,9 @@ export type CsvColumnMapping = {
   amount?: string;
   debit?: string;
   credit?: string;
+  reference?: string;
+  notes?: string;
+  spendingCategory?: string;
 };
 
 export type FinanceCsvMapResult = {
@@ -26,7 +29,10 @@ Given CSV headers and 3 sample rows, return ONLY valid JSON (no markdown):
     "description": "<exact header for payee/description>",
     "amount": "<optional single signed amount column>",
     "debit": "<optional money-out column>",
-    "credit": "<optional money-in column>"
+    "credit": "<optional money-in column>",
+    "reference": "<optional payment reference, often property address>",
+    "notes": "<optional free-text notes column>",
+    "spendingCategory": "<optional bank spending category column>"
   },
   "dateFormat": "DD/MM/YYYY or YYYY-MM-DD or similar",
   "confidence": "high|medium|low",
@@ -37,6 +43,7 @@ Rules:
 - Use exact header strings from the input.
 - Prefer separate debit/credit columns when present (UK banks often use these).
 - If only one amount column, use mapping.amount (negative = expense).
+- For Starling exports: map "Counter Party" to description, "Reference" to reference, "Notes" to notes, "Spending Category" to spendingCategory.
 - British date formats are common.`;
 
 export async function suggestCsvColumnMapping(input: {
@@ -112,16 +119,43 @@ function heuristicMapping(headers: string[]): FinanceCsvMapResult {
       h.includes('credit') || h.includes('money in') || h.includes('paid in'),
   );
 
+  const referenceIdx = lower.findIndex(
+    (header) => header === 'reference' || header.includes('reference'),
+  );
+  const notesIdx = lower.findIndex(
+    (header) => header === 'notes' || header.includes('note'),
+  );
+  const spendingIdx = lower.findIndex(
+    (header) =>
+      header.includes('spending category') || header.includes('category'),
+  );
+  const counterPartyIdx = lower.findIndex(
+    (header) => header.includes('counter party') || header.includes('counterparty'),
+  );
+
   return {
     mapping: {
       date: pick('date', 'transaction date', 'posted'),
-      description: pick('description', 'memo', 'narrative', 'details', 'payee'),
+      description:
+        counterPartyIdx >= 0
+          ? headers[counterPartyIdx]!
+          : pick('description', 'memo', 'narrative', 'details', 'payee'),
+      ...(referenceIdx >= 0 ? { reference: headers[referenceIdx]! } : {}),
+      ...(notesIdx >= 0 ? { notes: headers[notesIdx]! } : {}),
+      ...(spendingIdx >= 0 ? { spendingCategory: headers[spendingIdx]! } : {}),
       ...(debitIdx >= 0 && creditIdx >= 0
         ? {
             debit: headers[debitIdx]!,
             credit: headers[creditIdx]!,
           }
-        : { amount: pick('amount', 'value', 'transaction amount') }),
+        : {
+            amount: pick(
+              'amount (gbp)',
+              'amount',
+              'value',
+              'transaction amount',
+            ),
+          }),
     },
     dateFormat: 'DD/MM/YYYY',
     confidence: 'medium',

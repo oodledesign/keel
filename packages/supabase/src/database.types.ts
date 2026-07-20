@@ -4961,8 +4961,12 @@ export type Database = {
           freeagent_explanation_url: string | null;
           freeagent_transaction_url: string | null;
           id: string;
+          client_id: string | null;
           import_batch_id: string | null;
           is_transfer: boolean;
+          notes: string | null;
+          project_id: string | null;
+          property_id: string | null;
           source: string;
           sync_error: string | null;
           sync_status: string;
@@ -4982,8 +4986,12 @@ export type Database = {
           freeagent_explanation_url?: string | null;
           freeagent_transaction_url?: string | null;
           id?: string;
+          client_id?: string | null;
           import_batch_id?: string | null;
           is_transfer?: boolean;
+          notes?: string | null;
+          project_id?: string | null;
+          property_id?: string | null;
           source?: string;
           sync_error?: string | null;
           sync_status?: string;
@@ -5003,8 +5011,12 @@ export type Database = {
           freeagent_explanation_url?: string | null;
           freeagent_transaction_url?: string | null;
           id?: string;
+          client_id?: string | null;
           import_batch_id?: string | null;
           is_transfer?: boolean;
+          notes?: string | null;
+          project_id?: string | null;
+          property_id?: string | null;
           source?: string;
           sync_error?: string | null;
           sync_status?: string;
