@@ -64,7 +64,7 @@ export default async function RanklyProjectBriefsPage({
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Saved briefs</h2>
         {briefs.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
+          <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
             No briefs yet. Generate one from a keyword or cluster spoke.
           </p>
         ) : (
@@ -76,7 +76,7 @@ export default async function RanklyProjectBriefsPage({
               >
                 <div>
                   <p className="font-medium">{brief.target_keyword}</p>
-                  <p className="text-muted-foreground text-xs capitalize">
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)] capitalize">
                     {brief.template_type?.replace(/-/g, ' ') ?? 'brief'} ·{' '}
                     {new Date(brief.created_at).toLocaleDateString()}
                   </p>

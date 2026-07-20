@@ -76,13 +76,15 @@ export function AuditJobPoller({
 
   if (!job) {
     return (
-      <p className="text-muted-foreground text-sm">Loading audit status…</p>
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+        Loading audit status…
+      </p>
     );
   }
 
   if (job.status === 'error') {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+      <div className="rounded-lg border border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_12%,transparent)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
         {job.error_msg ?? 'Audit failed'}
       </div>
     );
@@ -90,7 +92,9 @@ export function AuditJobPoller({
 
   if (job.status === 'done') {
     return (
-      <p className="text-sm text-emerald-400">Audit complete — redirecting…</p>
+      <p className="text-sm text-[var(--ozer-accent)]">
+        Audit complete — redirecting…
+      </p>
     );
   }
 

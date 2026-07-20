@@ -475,8 +475,7 @@ export function SignatureStaffEditor({
                             ? 'Using a custom photo in Ozer. Directory sync will not replace it.'
                             : 'Upload to override the directory photo for signatures.'}
                   </p>
-                  {!manualEntry &&
-                  (staff.photo_overridden || photoDataUrl) ? (
+                  {!manualEntry && (staff.photo_overridden || photoDataUrl) ? (
                     <Button
                       type="button"
                       variant="ghost"

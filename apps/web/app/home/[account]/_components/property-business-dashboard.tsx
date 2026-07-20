@@ -21,7 +21,16 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import { FinanceTrendBarChart } from '~/components/finance/finance-charts';
 import pathsConfig from '~/config/paths.config';
-import { workspaceIconChip, workspacePanelCard, workspaceLinkAccent, workspaceTabActive, workspaceTextMuted, workspaceTextSubtle } from '~/lib/workspace-ui';
+import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
+import { formatWorkspaceAmount } from '~/lib/currency/workspace-currency';
+import {
+  workspaceIconChip,
+  workspaceLinkAccent,
+  workspacePanelCard,
+  workspaceTabActive,
+  workspaceTextMuted,
+  workspaceTextSubtle,
+} from '~/lib/workspace-ui';
 
 import type {
   GroupMember,
@@ -116,7 +125,9 @@ export function PropertyBusinessDashboard({
               <p className="text-xl font-bold tracking-tight text-[var(--workspace-shell-text)]">
                 {c.value}
               </p>
-              <p className={`mt-0.5 text-[10px] font-medium tracking-wide uppercase ${workspaceTextMuted}`}>
+              <p
+                className={`mt-0.5 text-[10px] font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+              >
                 {c.label}
               </p>
             </CardContent>
@@ -204,6 +215,9 @@ function FinanceOverviewPanel({
   accountSlug: string;
   summary: FinanceDashboardSummary;
 }) {
+  const workspaceCurrency = useWorkspaceCurrency();
+  const formatMoney = (amount: number) =>
+    formatWorkspaceAmount(amount, workspaceCurrency);
   const financesPath = accountPath(
     accountSlug,
     pathsConfig.app.accountFinances,
@@ -233,17 +247,17 @@ function FinanceOverviewPanel({
         <div className="grid gap-3 sm:grid-cols-3">
           <FinanceStatCard
             label="Income"
-            value={formatCurrency(summary.financeIncomePence / 100)}
+            value={formatMoney(summary.financeIncomePence / 100)}
             icon={TrendingUp}
           />
           <FinanceStatCard
             label="Expenses"
-            value={formatCurrency(summary.financeExpensePence / 100)}
+            value={formatMoney(summary.financeExpensePence / 100)}
             icon={TrendingDown}
           />
           <FinanceStatCard
             label="Net"
-            value={formatCurrency(summary.financeNetPence / 100)}
+            value={formatMoney(summary.financeNetPence / 100)}
             icon={Wallet}
             muted={summary.financeNetPence < 0}
           />
@@ -256,6 +270,7 @@ function FinanceOverviewPanel({
                 variant="grouped"
                 surface="workspace"
                 compact
+                currency={workspaceCurrency}
               />
             </div>
           </div>
@@ -297,7 +312,9 @@ function FinanceStatCard({
         >
           <Icon className="h-3.5 w-3.5" />
         </span>
-        <p className={`text-[10px] font-medium tracking-wide uppercase ${workspaceTextMuted}`}>
+        <p
+          className={`text-[10px] font-medium tracking-wide uppercase ${workspaceTextMuted}`}
+        >
           {label}
         </p>
       </div>
@@ -312,14 +329,6 @@ function FinanceStatCard({
       </p>
     </div>
   );
-}
-
-function formatCurrency(amount: number) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(amount);
 }
 
 function ShortcutCard({
@@ -348,9 +357,7 @@ function ShortcutCard({
             <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
               {title}
             </p>
-            <p className={`text-xs ${workspaceTextMuted}`}>
-              {description}
-            </p>
+            <p className={`text-xs ${workspaceTextMuted}`}>{description}</p>
           </div>
         </CardContent>
       </Card>
@@ -368,7 +375,9 @@ function TasksPanel({
   if (tasks.length === 0) {
     return (
       <div className="py-8 text-center">
-        <CheckSquare className={`mx-auto mb-2 h-8 w-8 ${workspaceTextSubtle}`} />
+        <CheckSquare
+          className={`mx-auto mb-2 h-8 w-8 ${workspaceTextSubtle}`}
+        />
         <p className={`text-sm ${workspaceTextMuted}`}>No open tasks</p>
       </div>
     );
@@ -388,12 +397,16 @@ function TasksPanel({
               {task.title}
             </p>
             {task.projectName ? (
-              <p className={`text-xs ${workspaceTextMuted}`}>{task.projectName}</p>
+              <p className={`text-xs ${workspaceTextMuted}`}>
+                {task.projectName}
+              </p>
             ) : null}
           </div>
           <div className="ml-3 flex flex-shrink-0 items-center gap-2">
             {task.dueDate ? (
-              <span className={`text-xs ${workspaceTextMuted}`}>{task.dueDate}</span>
+              <span className={`text-xs ${workspaceTextMuted}`}>
+                {task.dueDate}
+              </span>
             ) : null}
             <Badge
               className={`text-[10px] ${priorityColour[task.priority] ?? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/50'}`}
@@ -440,10 +453,14 @@ function MembersPanel({ members }: { members: GroupMember[] }) {
               {m.displayName}
             </p>
             {m.email ? (
-              <p className={`truncate text-xs ${workspaceTextMuted}`}>{m.email}</p>
+              <p className={`truncate text-xs ${workspaceTextMuted}`}>
+                {m.email}
+              </p>
             ) : null}
           </div>
-          <span className={`ml-auto flex-shrink-0 text-xs capitalize ${workspaceTextMuted}`}>
+          <span
+            className={`ml-auto flex-shrink-0 text-xs capitalize ${workspaceTextMuted}`}
+          >
             {m.role}
           </span>
         </div>

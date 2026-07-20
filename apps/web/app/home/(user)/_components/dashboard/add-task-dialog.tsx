@@ -317,18 +317,31 @@ export function AddTaskDialog({
           {error && <p className="text-sm text-rose-400">{error}</p>}
 
           {isWorkspaceMode && workspaceAccountSlug ? (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              <Link
-                href={pathsConfig.app.accountTasksExtract.replace(
-                  '[account]',
-                  workspaceAccountSlug,
-                )}
-                className="font-medium text-[var(--ozer-accent)] hover:underline"
-              >
-                <Sparkles className="mr-1 inline h-3 w-3" />
-                Extract tasks from email or transcript (AI)
-              </Link>
-            </p>
+            <div className="space-y-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
+              <p>
+                <Link
+                  href={pathsConfig.app.accountTasksExtract.replace(
+                    '[account]',
+                    workspaceAccountSlug,
+                  )}
+                  className="font-medium text-[var(--ozer-accent)] hover:underline"
+                >
+                  <Sparkles className="mr-1 inline h-3 w-3" />
+                  Extract tasks from email or transcript (AI)
+                </Link>
+              </p>
+              <p>
+                <Link
+                  href={pathsConfig.app.accountTasksImport.replace(
+                    '[account]',
+                    workspaceAccountSlug,
+                  )}
+                  className="font-medium text-[var(--ozer-accent)] hover:underline"
+                >
+                  Import tasks from CSV
+                </Link>
+              </p>
+            </div>
           ) : null}
 
           <DialogFooter>

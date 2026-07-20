@@ -40,28 +40,30 @@ export function ClusterCard({
   country?: string;
 }) {
   return (
-    <article className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5 space-y-4">
+    <article className="space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5">
       <header className="flex flex-wrap items-start justify-between gap-3">
         <div>
-          <p className="text-xs uppercase tracking-wide text-muted-foreground">
+          <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Build order #{cluster.build_order ?? '—'} · {cluster.role}
           </p>
           <h3 className="mt-1 text-lg font-semibold">{cluster.name}</h3>
-          <p className="text-sm text-muted-foreground">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             Primary: {cluster.primary_keyword}
           </p>
         </div>
         <dl className="grid grid-cols-3 gap-3 text-right text-xs">
           <div>
-            <dt className="text-muted-foreground">Volume</dt>
+            <dt className="text-[var(--workspace-shell-text-muted)]">Volume</dt>
             <dd className="font-medium">{cluster.total_volume ?? '—'}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">KD</dt>
+            <dt className="text-[var(--workspace-shell-text-muted)]">KD</dt>
             <dd className="font-medium">{cluster.weighted_kd ?? '—'}</dd>
           </div>
           <div>
-            <dt className="text-muted-foreground">Priority</dt>
+            <dt className="text-[var(--workspace-shell-text-muted)]">
+              Priority
+            </dt>
             <dd className="font-medium">
               {cluster.priority_score != null
                 ? Number(cluster.priority_score).toFixed(2)
@@ -75,7 +77,7 @@ export function ClusterCard({
         <div className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
           <p className="font-medium">{cluster.pillar_h1}</p>
           {cluster.pillar_h2s?.length ? (
-            <ul className="mt-2 list-inside list-disc text-muted-foreground">
+            <ul className="mt-2 list-inside list-disc text-[var(--workspace-shell-text-muted)]">
               {cluster.pillar_h2s.map((h2) => (
                 <li key={h2}>{h2}</li>
               ))}
@@ -85,7 +87,7 @@ export function ClusterCard({
       ) : null}
 
       {cluster.secondary_keywords?.length ? (
-        <p className="text-xs text-muted-foreground">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           Secondary: {cluster.secondary_keywords.join(', ')}
         </p>
       ) : null}
@@ -102,7 +104,7 @@ export function ClusterCard({
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div>
                     <p className="font-medium">{spoke.title}</p>
-                    <p className="text-xs text-muted-foreground">
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                       {spoke.target_keyword}
                       {spoke.volume != null ? ` · vol ${spoke.volume}` : ''}
                     </p>
@@ -118,10 +120,12 @@ export function ClusterCard({
                   ) : null}
                 </div>
                 {spoke.h1 ? (
-                  <p className="mt-1 text-muted-foreground">H1: {spoke.h1}</p>
+                  <p className="mt-1 text-[var(--workspace-shell-text-muted)]">
+                    H1: {spoke.h1}
+                  </p>
                 ) : null}
                 {spoke.h2s?.length ? (
-                  <ul className="mt-1 list-inside list-disc text-xs text-muted-foreground">
+                  <ul className="mt-1 list-inside list-disc text-xs text-[var(--workspace-shell-text-muted)]">
                     {spoke.h2s.map((h2) => (
                       <li key={h2}>{h2}</li>
                     ))}

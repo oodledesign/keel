@@ -59,7 +59,7 @@ export function ClusterPlanView({
     <div className="space-y-8">
       <header className="space-y-2">
         <h2 className="text-xl font-semibold">Cluster plan</h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           {job.seeds.length} seeds · {job.country.toUpperCase()} ·{' '}
           {job.candidate_count ?? '—'} keywords · ~{job.credits_used ?? '—'}{' '}
           credits
@@ -95,7 +95,10 @@ export function ClusterPlanView({
           <h3 className="text-sm font-medium">Internal linking</h3>
           <ul className="divide-y divide-white/5 rounded-lg border border-[color:var(--workspace-shell-border)] text-sm">
             {links.map((link) => (
-              <li key={link.id} className="text-muted-foreground px-4 py-2">
+              <li
+                key={link.id}
+                className="px-4 py-2 text-[var(--workspace-shell-text-muted)]"
+              >
                 {link.from_cluster_id
                   ? (clusterNameById[link.from_cluster_id] ??
                     link.from_cluster_id)

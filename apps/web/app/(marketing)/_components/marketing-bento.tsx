@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 
 import Link from 'next/link';
+
 import { ArrowUpRight } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
@@ -77,7 +78,9 @@ export function MarketingBentoTile({
           {visual}
         </div>
       ) : null}
-      <div className={cn('mt-auto', visual && 'relative z-[1]')}>{children}</div>
+      <div className={cn('mt-auto', visual && 'relative z-[1]')}>
+        {children}
+      </div>
     </>
   );
 

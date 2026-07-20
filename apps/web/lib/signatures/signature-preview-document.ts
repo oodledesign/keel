@@ -11,7 +11,11 @@ export const SIGNATURE_PREVIEW_VIEWPORTS: {
 }[] = [
   { id: 'mobile', label: 'Mobile', widthPx: 375 },
   { id: 'tablet', label: 'Tablet', widthPx: 768 },
-  { id: 'desktop', label: 'Desktop', widthPx: SIGNATURE_PREVIEW_DESKTOP_WIDTH_PX },
+  {
+    id: 'desktop',
+    label: 'Desktop',
+    widthPx: SIGNATURE_PREVIEW_DESKTOP_WIDTH_PX,
+  },
 ];
 
 export function resolveSignaturePreviewViewport(
@@ -58,7 +62,11 @@ export function buildSignaturePreviewDocument({
       ? '#1c1c1e'
       : '#ffffff';
   const textColor =
-    theme === 'dark' ? '#f5f5f7' : transparentBackground ? '#1d1d1f' : undefined;
+    theme === 'dark'
+      ? '#f5f5f7'
+      : transparentBackground
+        ? '#1d1d1f'
+        : undefined;
 
   return `<!DOCTYPE html>
 <html lang="en">

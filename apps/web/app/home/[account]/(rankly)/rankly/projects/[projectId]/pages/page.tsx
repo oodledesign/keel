@@ -45,7 +45,7 @@ export default async function RanklyProjectPagesPage({
         title="Pages"
         description="Every URL with crawl or PageSpeed data — scored out of 100 with page-specific recommendations."
       />
-      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5">
         <RanklyPagesPanel
           account={account}
           projectId={projectId}

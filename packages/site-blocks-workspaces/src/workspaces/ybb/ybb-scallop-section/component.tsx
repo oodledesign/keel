@@ -84,7 +84,7 @@ export function YbbScallopSection(props: YbbScallopSectionProps) {
   return (
     <section
       id={sectionId || undefined}
-      className={`ybbScallopSection${overlapPrevious ? ' ybbScallopSectionOverlap' : ''}`}
+      className={`ybbScallopSection${overlapPrevious ? 'ybbScallopSectionOverlap' : ''}`}
       style={sectionStyle}
       aria-labelledby={`${sectionId}-heading`}
     >

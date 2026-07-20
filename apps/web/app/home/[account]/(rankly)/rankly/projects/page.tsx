@@ -68,13 +68,13 @@ export default async function RanklyProjectsPage({
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
             href={workAccountPath(workPaths.accountRanklyDashboard, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Dashboard
           </Link>
           <Link
             href={workAccountPath(workPaths.accountRanklyResearch, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Research cache
           </Link>

@@ -51,6 +51,9 @@ import {
 } from '~/components/date-range/analytics-date-range-picker';
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
+import { workspaceCurrencySymbol } from '~/lib/currency/workspace-currency';
+import { parseCsv } from '~/lib/csv/parse-csv';
 import { resolveAnalyticsDateRange } from '~/lib/date-range/analytics-date-range';
 import {
   buildFinanceChartSeries,
@@ -116,31 +119,6 @@ function initialDateRange() {
   return { from: resolved.fromIso, to: resolved.toIso };
 }
 
-function parseCsv(text: string): { headers: string[]; rows: string[][] } {
-  const lines = text.split(/\r?\n/).filter((l) => l.trim());
-  if (lines.length < 2) return { headers: [], rows: [] };
-
-  const headers = lines[0]!
-    .split(',')
-    .map((h) => h.trim().replace(/^"|"$/g, ''));
-  const rows = lines.slice(1).map((line) => {
-    const parts: string[] = [];
-    let cur = '';
-    let inQuotes = false;
-    for (let i = 0; i < line.length; i++) {
-      const ch = line[i]!;
-      if (ch === '"') inQuotes = !inQuotes;
-      else if (ch === ',' && !inQuotes) {
-        parts.push(cur.trim());
-        cur = '';
-      } else cur += ch;
-    }
-    parts.push(cur.trim());
-    return parts;
-  });
-  return { headers, rows };
-}
-
 export function FinancesPageContent({
   accountId,
   accountSlug,
@@ -150,6 +128,9 @@ export function FinancesPageContent({
 }) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const workspaceCurrency = useWorkspaceCurrency();
+  const currencyCode = workspaceCurrency.toUpperCase();
+  const formatMoney = (pence: number) => formatPence(pence, currencyCode);
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -358,10 +339,7 @@ export function FinancesPageContent({
     });
   };
 
-  const onSetProperty = (
-    transactionId: string,
-    propertyId: string | null,
-  ) => {
+  const onSetProperty = (transactionId: string, propertyId: string | null) => {
     startTransition(async () => {
       try {
         await setFinanceTransactionPropertyAction({
@@ -531,7 +509,7 @@ export function FinancesPageContent({
           dateFrom,
           dateTo,
         });
-        setAiSuggestions(result.suggestions ?? []);
+        setAiSuggestions([...(result.suggestions ?? [])]);
         if (!result.suggestions?.length) {
           toast.info('No uncategorised transactions to suggest for');
         } else {
@@ -638,27 +616,37 @@ export function FinancesPageContent({
           <div className="grid grid-cols-3 gap-2 sm:gap-4">
             <SummaryCard
               label="Income"
-              value={formatPence(data.summary.incomePence)}
+              value={formatMoney(data.summary.incomePence)}
               icon={ArrowDownLeft}
               tone="positive"
             />
             <SummaryCard
               label="Expenses"
-              value={formatPence(data.summary.expensePence)}
+              value={formatMoney(data.summary.expensePence)}
               icon={ArrowUpRight}
               tone="negative"
             />
             <SummaryCard
               label="Net"
-              value={formatPence(data.summary.netPence)}
+              value={formatMoney(data.summary.netPence)}
               icon={ArrowDownLeft}
               tone={data.summary.netPence >= 0 ? 'positive' : 'negative'}
             />
           </div>
 
+          {data.mixedCurrencies ? (
+            <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-200">
+              Totals shown in{' '}
+              {workspaceCurrencySymbol(
+                data.displayCurrency ?? workspaceCurrency,
+              )}
+              ; some transactions use other currencies.
+            </p>
+          ) : null}
+
           {data.summary.transferPence > 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              {formatPence(data.summary.transferPence)} in internal transfers
+              {formatMoney(data.summary.transferPence)} in internal transfers
               excluded from income and expenses.
             </p>
           ) : null}
@@ -679,6 +667,7 @@ export function FinancesPageContent({
                   data={chartData}
                   variant="grouped"
                   surface="workspace"
+                  currency={workspaceCurrency}
                 />
               </div>
               <div className={cn(panelClass, 'p-4')}>
@@ -691,6 +680,7 @@ export function FinancesPageContent({
                 <FinanceNetLineChart
                   key={`net-${dateFrom}-${dateTo}`}
                   data={chartData}
+                  currency={workspaceCurrency}
                 />
               </div>
             </div>
@@ -701,10 +691,10 @@ export function FinancesPageContent({
               <span className="font-medium text-[var(--workspace-shell-text)]">
                 Forecast (monthly average):
               </span>{' '}
-              ~{formatPence(forecast.avgIncomePence)} income, ~{' '}
-              {formatPence(forecast.avgExpensePence)} expenses → projected net{' '}
+              ~{formatMoney(forecast.avgIncomePence)} income, ~{' '}
+              {formatMoney(forecast.avgExpensePence)} expenses → projected net{' '}
               <span className="font-medium text-[var(--ozer-accent-muted)]">
-                {formatPence(forecast.projectedNetPence)}
+                {formatMoney(forecast.projectedNetPence)}
               </span>{' '}
               / month based on selected range
             </p>
@@ -714,6 +704,7 @@ export function FinancesPageContent({
             data={data}
             loading={false}
             pending={pending}
+            displayCurrency={currencyCode}
             freeAgentConnected={freeAgentConnected}
             uncategorizedCount={uncategorizedCount}
             aiSuggestions={aiSuggestions}
@@ -838,6 +829,7 @@ function TransactionsPanel({
   data,
   loading,
   pending,
+  displayCurrency,
   freeAgentConnected,
   uncategorizedCount,
   aiSuggestions,
@@ -861,6 +853,7 @@ function TransactionsPanel({
   data: DashboardData | null;
   loading: boolean;
   pending: boolean;
+  displayCurrency: string;
   freeAgentConnected: boolean;
   uncategorizedCount: number;
   aiSuggestions: CategorySuggestion[];
@@ -1074,7 +1067,7 @@ function TransactionsPanel({
                             : 'text-red-300',
                       )}
                     >
-                      {formatPence(Math.abs(pence))}
+                      {formatPence(Math.abs(pence), displayCurrency)}
                       {isTransfer ? ' transfer' : pence < 0 ? ' out' : ' in'}
                     </td>
                     <td className="px-4 py-2">

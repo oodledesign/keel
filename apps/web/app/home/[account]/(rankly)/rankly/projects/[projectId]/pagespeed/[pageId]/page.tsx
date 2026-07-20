@@ -50,7 +50,7 @@ export default async function RanklyProjectPagespeedPageDetail({
         title="PageSpeed detail"
         description="Score history and Lighthouse fix recommendations for a tracked page."
       />
-      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5">
         <PagespeedPageDetail
           snapshot={snapshot}
           history={history}

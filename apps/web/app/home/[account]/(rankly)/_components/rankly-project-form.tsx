@@ -97,7 +97,7 @@ export function RanklyProjectForm(props: {
   return (
     <form
       onSubmit={submit}
-      className="max-w-lg space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4"
+      className="max-w-lg space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
     >
       <div className="flex flex-wrap gap-2">
         <button
@@ -106,7 +106,7 @@ export function RanklyProjectForm(props: {
           className={`rounded-md px-3 py-1.5 text-xs font-medium ${
             mode === 'manual'
               ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground bg-black/30'
+              : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)]'
           }`}
         >
           Manual
@@ -117,7 +117,7 @@ export function RanklyProjectForm(props: {
           className={`rounded-md px-3 py-1.5 text-xs font-medium ${
             mode === 'import'
               ? 'bg-primary text-primary-foreground'
-              : 'text-muted-foreground bg-black/30'
+              : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)]'
           }`}
         >
           Import from client
@@ -144,7 +144,7 @@ export function RanklyProjectForm(props: {
                   </option>
                 ))}
               </select>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Pulls name and country from the client record. Domain comes from
                 a linked website when available.
               </p>
@@ -162,7 +162,7 @@ export function RanklyProjectForm(props: {
               ) : null}
             </>
           ) : (
-            <div className="text-muted-foreground rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-3 text-sm">
+            <div className="rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
               No clients found in this workspace.
               {props.clientsHref ? (
                 <>
@@ -182,7 +182,7 @@ export function RanklyProjectForm(props: {
           )}
         </div>
       ) : (
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           Create a project for your own business or any domain without linking a
           client.
         </p>

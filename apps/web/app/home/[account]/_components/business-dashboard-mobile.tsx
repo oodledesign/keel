@@ -10,6 +10,8 @@ import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-tas
 import { HapticLink } from '~/components/haptic-link';
 import { workspaceDashboardMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
+import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
+import { formatWorkspaceAmount } from '~/lib/currency/workspace-currency';
 
 import type {
   DashboardFinanceMonth,
@@ -64,17 +66,20 @@ export function BusinessDashboardMobile({
   recentNotes,
   shortcutsBar,
 }: BusinessDashboardMobileProps) {
+  const workspaceCurrency = useWorkspaceCurrency();
+  const formatMoney = (value: number) =>
+    formatWorkspaceAmount(value, workspaceCurrency);
   const revenueTrendData =
     financeTrend.length > 0
       ? financeTrend
       : buildRevenueTrendFallback(metrics.totalRevenuePence / 100);
 
   const totalRevenueLabel = metrics.hasFinanceData
-    ? formatCurrency(metrics.financeIncomePence / 100)
-    : formatCurrency(metrics.totalRevenuePence / 100);
+    ? formatMoney(metrics.financeIncomePence / 100)
+    : formatMoney(metrics.totalRevenuePence / 100);
 
   const netLabel = metrics.hasFinanceData
-    ? formatCurrency(metrics.financeNetPence / 100)
+    ? formatMoney(metrics.financeNetPence / 100)
     : null;
 
   const tasksHref = pathsConfig.app.accountTasks.replace(
@@ -127,6 +132,7 @@ export function BusinessDashboardMobile({
             variant="grouped"
             surface="workspace"
             compact
+            currency={workspaceCurrency}
           />
           <HapticLink
             href={financesHref}
@@ -244,14 +250,6 @@ export function BusinessDashboardMobile({
       </section>
     </div>
   );
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 function formatTaskDue(iso: string | null): string | null {

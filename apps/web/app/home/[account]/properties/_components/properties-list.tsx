@@ -28,6 +28,8 @@ import {
 } from '@kit/ui/dropdown-menu';
 
 import pathsConfig from '~/config/paths.config';
+import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
+import { formatWorkspaceAmount } from '~/lib/currency/workspace-currency';
 import {
   workspaceBtnPrimaryMd,
   workspaceIconChip,
@@ -90,6 +92,9 @@ export function PropertiesList({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const workspaceCurrency = useWorkspaceCurrency();
+  const formatMoney = (value: number) =>
+    formatWorkspaceAmount(value, workspaceCurrency);
   const [properties, setProperties] = useState<Property[]>(initialProperties);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Property | null>(null);
@@ -278,7 +283,7 @@ export function PropertiesList({
                   {/* Value */}
                   {property.currentValue != null && (
                     <p className="mt-3 text-sm font-semibold text-[var(--workspace-shell-text)]">
-                      {formatCurrency(property.currentValue / 100)}
+                      {formatMoney(property.currentValue / 100)}
                     </p>
                   )}
 
@@ -309,12 +314,4 @@ export function PropertiesList({
       />
     </div>
   );
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(value);
 }

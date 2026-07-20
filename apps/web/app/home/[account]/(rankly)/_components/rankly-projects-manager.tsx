@@ -65,7 +65,7 @@ export function RanklyProjectsManager(props: {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-muted-foreground max-w-xl text-sm">
+        <p className="max-w-xl text-sm text-[var(--workspace-shell-text-muted)]">
           Track domains and keyword sets. Link projects to clients or create one
           for your own business.
         </p>
@@ -89,7 +89,7 @@ export function RanklyProjectsManager(props: {
       ) : null}
 
       {props.projects.length === 0 && !open ? (
-        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
+        <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
           No projects yet. Use &quot;New project&quot; to add your first domain.
         </p>
       ) : null}
@@ -97,7 +97,7 @@ export function RanklyProjectsManager(props: {
       {props.projects.length > 0 ? (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[40rem] text-left text-sm">
-            <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
+            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               <tr>
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3">Domain</th>
@@ -120,10 +120,10 @@ export function RanklyProjectsManager(props: {
                       {project.name}
                     </Link>
                   </td>
-                  <td className="text-muted-foreground px-4 py-3">
+                  <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                     {project.domain}
                   </td>
-                  <td className="text-muted-foreground px-4 py-3">
+                  <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                     {project.client_id
                       ? (props.clientLabels[project.client_id] ?? '—')
                       : '—'}

@@ -19,10 +19,10 @@ const PagespeedHistoryChart = dynamic(
 );
 
 function scoreTone(score: number | null | undefined): string {
-  if (score == null) return 'text-muted-foreground';
+  if (score == null) return 'text-[var(--workspace-shell-text-muted)]';
   if (score >= 90) return 'text-[var(--ozer-accent)]';
   if (score >= 50) return 'text-amber-400';
-  return 'text-red-400';
+  return 'text-[var(--ozer-accent-pressed,#C2452A)]';
 }
 
 function formatScore(score: number | null | undefined): string {
@@ -50,10 +50,12 @@ function ScoreCard(props: {
   if (!props.metrics) {
     return (
       <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-        <p className="text-muted-foreground text-xs tracking-wide uppercase">
+        <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
           {props.label}
         </p>
-        <p className="text-muted-foreground mt-2 text-sm">Not checked yet</p>
+        <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+          Not checked yet
+        </p>
       </div>
     );
   }
@@ -61,22 +63,26 @@ function ScoreCard(props: {
   if (props.metrics.errorMsg) {
     return (
       <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-        <p className="text-muted-foreground text-xs tracking-wide uppercase">
+        <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
           {props.label}
         </p>
-        <p className="mt-2 text-sm text-red-400">{props.metrics.errorMsg}</p>
+        <p className="mt-2 text-sm text-[var(--ozer-accent-pressed,#C2452A)]">
+          {props.metrics.errorMsg}
+        </p>
       </div>
     );
   }
 
   return (
     <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-      <p className="text-muted-foreground text-xs tracking-wide uppercase">
+      <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
         {props.label}
       </p>
       <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase">Perf</p>
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
+            Perf
+          </p>
           <p
             className={`text-lg font-semibold tabular-nums ${scoreTone(props.metrics.performanceScore)}`}
           >
@@ -84,7 +90,9 @@ function ScoreCard(props: {
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase">A11y</p>
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
+            A11y
+          </p>
           <p
             className={`text-lg font-semibold tabular-nums ${scoreTone(props.metrics.accessibilityScore)}`}
           >
@@ -92,7 +100,9 @@ function ScoreCard(props: {
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase">Best</p>
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
+            Best
+          </p>
           <p
             className={`text-lg font-semibold tabular-nums ${scoreTone(props.metrics.bestPracticesScore)}`}
           >
@@ -100,7 +110,9 @@ function ScoreCard(props: {
           </p>
         </div>
         <div>
-          <p className="text-muted-foreground text-[10px] uppercase">SEO</p>
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
+            SEO
+          </p>
           <p
             className={`text-lg font-semibold tabular-nums ${scoreTone(props.metrics.seoScore)}`}
           >
@@ -108,7 +120,7 @@ function ScoreCard(props: {
           </p>
         </div>
       </div>
-      <p className="text-muted-foreground mt-3 text-xs">
+      <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
         LCP {formatMs(props.metrics.lcpMs)}
         {props.metrics.fetchedAt
           ? ` · Checked ${formatScanDate(props.metrics.fetchedAt)}`
@@ -132,7 +144,7 @@ export function PagespeedPageDetail(props: {
           <p className="font-medium">
             {title}
             {props.snapshot.isHomepage ? (
-              <span className="text-muted-foreground ml-2 text-xs uppercase">
+              <span className="ml-2 text-xs text-[var(--workspace-shell-text-muted)] uppercase">
                 Homepage
               </span>
             ) : null}
@@ -141,12 +153,12 @@ export function PagespeedPageDetail(props: {
             href={props.snapshot.url}
             target="_blank"
             rel="noreferrer"
-            className="text-muted-foreground hover:text-primary text-xs underline-offset-4 hover:underline"
+            className="hover:text-primary text-xs text-[var(--workspace-shell-text-muted)] underline-offset-4 hover:underline"
           >
             {props.snapshot.url.replace(/^https?:\/\//, '')}
           </a>
           {props.snapshot.lastScannedAt ? (
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               Last scanned{' '}
               <time dateTime={props.snapshot.lastScannedAt}>
                 {formatScanDate(props.snapshot.lastScannedAt)}
@@ -156,7 +168,7 @@ export function PagespeedPageDetail(props: {
         </div>
         <Link
           href={props.backHref}
-          className="text-muted-foreground text-sm hover:text-[var(--workspace-shell-text)]"
+          className="text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
         >
           ← Back to PageSpeed
         </Link>
@@ -167,11 +179,11 @@ export function PagespeedPageDetail(props: {
         <ScoreCard label="Desktop" metrics={props.snapshot.desktop} />
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10">
+      <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
         <PagespeedHistoryChart history={props.history} />
       </div>
 
-      <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10">
+      <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
         <PagespeedRecommendations
           mobile={props.snapshot.mobile}
           desktop={props.snapshot.desktop}

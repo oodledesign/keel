@@ -15,16 +15,18 @@ import {
   parseUkDate,
   suggestCsvColumnMapping,
 } from '~/lib/ai/finance-csv-map';
-import {
-  projectDisplayName,
-  resolveFinanceTransactionLinks,
-} from '~/lib/finance/transaction-links';
+import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import { normalizeWorkspaceCurrency } from '~/lib/currency/workspace-currency';
 import { buildCsvTransactionExternalId } from '~/lib/finance/csv-transaction-id';
 import { matchPropertyFromReference } from '~/lib/finance/match-property-from-reference';
 import {
   PROPERTY_FINANCE_DEFAULT_CATEGORIES,
   suggestPropertyImportCategoryId,
 } from '~/lib/finance/property-finance-categories';
+import {
+  projectDisplayName,
+  resolveFinanceTransactionLinks,
+} from '~/lib/finance/transaction-links';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import { isFreeAgentConfigured } from '~/lib/integrations/freeagent/env';
 import {
@@ -63,9 +65,7 @@ function applyFinanceSearchFilter<
   if (!term) return query;
   const escaped = term.replace(/[%_\\]/g, '\\$&');
   if (typeof query.or === 'function') {
-    return query.or(
-      `description.ilike.%${escaped}%,notes.ilike.%${escaped}%`,
-    );
+    return query.or(`description.ilike.%${escaped}%,notes.ilike.%${escaped}%`);
   }
   return query.ilike('description', `%${escaped}%`);
 }
@@ -83,12 +83,13 @@ async function loadFinanceSummaryRows(
     transaction_date: string;
     amount_pence: number;
     is_transfer: boolean | null;
+    currency: string | null;
   }> = [];
 
   for (let offset = 0; offset < hardCap; offset += pageSize) {
     let query = client
       .from('finance_transactions')
-      .select('transaction_date, amount_pence, is_transfer')
+      .select('transaction_date, amount_pence, is_transfer, currency')
       .eq('account_id', accountId)
       .order('transaction_date', { ascending: true })
       .order('id', { ascending: true })
@@ -103,6 +104,7 @@ async function loadFinanceSummaryRows(
       transaction_date: string;
       amount_pence: number;
       is_transfer: boolean | null;
+      currency: string | null;
     }>;
     rows.push(...batch);
 
@@ -363,8 +365,31 @@ export const loadFinancesDashboardAction = enhanceAction(
     if (countError) throw countError;
     if (uncategorizedError) throw uncategorizedError;
 
+    const displayCurrency = await getWorkspaceCurrencyWithClient(
+      client,
+      input.accountId,
+    );
+
+    const currenciesInRange = new Set(
+      summaryRows.map((row) =>
+        normalizeWorkspaceCurrency(
+          row.currency?.trim() ? row.currency.toLowerCase() : null,
+          displayCurrency,
+        ),
+      ),
+    );
+    const mixedCurrencies = currenciesInRange.size > 1;
+
+    const summaryRowsForTotals = summaryRows.filter(
+      (row) =>
+        normalizeWorkspaceCurrency(
+          row.currency?.trim() ? row.currency.toLowerCase() : null,
+          displayCurrency,
+        ) === displayCurrency,
+    );
+
     const totals = accumulateFinanceTotals(
-      summaryRows.map((tx) => ({
+      summaryRowsForTotals.map((tx) => ({
         amount_pence: tx.amount_pence,
         is_transfer: tx.is_transfer,
       })),
@@ -402,6 +427,8 @@ export const loadFinancesDashboardAction = enhanceAction(
         address: (property.address as string | null) ?? null,
       })),
       isPropertyWorkspace: propertyWorkspace,
+      displayCurrency,
+      mixedCurrencies,
       summary: {
         incomePence: totals.incomePence,
         expensePence: totals.expensePence,
@@ -888,6 +915,12 @@ export const importCsvTransactionsAction = enhanceAction(
       throw new Error('Import batch was not created');
     }
 
+    const workspaceCurrency = await getWorkspaceCurrencyWithClient(
+      client,
+      input.accountId,
+    );
+    const currencyCode = workspaceCurrency.toUpperCase();
+
     const inserts = parsedRows
       .filter((row) => !existingIds.has(row.externalId))
       .map((row) => ({
@@ -897,6 +930,7 @@ export const importCsvTransactionsAction = enhanceAction(
         description: row.description,
         notes: row.notes,
         amount_pence: row.amountPence,
+        currency: currencyCode,
         property_id: row.propertyId,
         category_id: row.categoryId,
         source: 'csv' as const,
@@ -962,6 +996,11 @@ export const createManualTransactionAction = enhanceAction(
       },
     );
 
+    const workspaceCurrency = await getWorkspaceCurrencyWithClient(
+      client,
+      input.accountId,
+    );
+
     const { error } = await client.from('finance_transactions').insert({
       account_id: input.accountId,
       bank_account_id: input.bankAccountId,
@@ -971,6 +1010,7 @@ export const createManualTransactionAction = enhanceAction(
       transaction_date: input.transactionDate,
       description: input.description,
       amount_pence: input.amountPence,
+      currency: workspaceCurrency.toUpperCase(),
       source: 'manual',
       sync_status: 'local',
       created_by: user.id,

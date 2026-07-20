@@ -31,10 +31,10 @@ type ApiResponse<T> =
   | { ok: false; error: { message: string } };
 
 function scoreTone(score: number | null | undefined): string {
-  if (score == null) return 'text-muted-foreground';
+  if (score == null) return 'text-[var(--workspace-shell-text-muted)]';
   if (score >= 90) return 'text-[var(--ozer-accent)]';
   if (score >= 50) return 'text-amber-400';
-  return 'text-red-400';
+  return 'text-[var(--ozer-accent-pressed,#C2452A)]';
 }
 
 function formatScore(score: number | null | undefined): string {
@@ -69,7 +69,10 @@ function MetricCell({
 }) {
   if (!metrics) {
     return (
-      <td colSpan={5} className="text-muted-foreground px-4 py-3">
+      <td
+        colSpan={5}
+        className="px-4 py-3 text-[var(--workspace-shell-text-muted)]"
+      >
         {label}: not checked yet
       </td>
     );
@@ -77,7 +80,10 @@ function MetricCell({
 
   if (metrics.errorMsg) {
     return (
-      <td colSpan={5} className="px-4 py-3 text-xs text-red-400">
+      <td
+        colSpan={5}
+        className="px-4 py-3 text-xs text-[var(--ozer-accent-pressed,#C2452A)]"
+      >
         {label}: {metrics.errorMsg}
       </td>
     );
@@ -105,7 +111,7 @@ function MetricCell({
       >
         {formatScore(metrics.seoScore)}
       </td>
-      <td className="text-muted-foreground px-4 py-3 text-right text-xs tabular-nums">
+      <td className="px-4 py-3 text-right text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
         LCP {formatMs(metrics.lcpMs)}
       </td>
     </>
@@ -239,7 +245,7 @@ export function PagespeedPanel(props: {
   return (
     <div className="space-y-6">
       {props.settings?.lastCheckAt ? (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Last scan{' '}
           <time
             dateTime={props.settings.lastCheckAt}
@@ -280,7 +286,7 @@ export function PagespeedPanel(props: {
               </option>
             ))}
           </select>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {props.settings?.lastCheckAt
               ? `Project last checked ${formatScanDate(props.settings.lastCheckAt)}`
               : 'Not checked yet'}
@@ -311,7 +317,7 @@ export function PagespeedPanel(props: {
         </div>
       </div>
 
-      <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
+      <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
         Homepage is tracked automatically for{' '}
         <strong className="text-[var(--workspace-shell-text)]">
           {props.domain}
@@ -358,7 +364,7 @@ export function PagespeedPanel(props: {
       </form>
 
       {props.snapshots.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
+        <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
           No pages yet. Run PageSpeed to fetch scores.
         </p>
       ) : (
@@ -381,7 +387,7 @@ export function PagespeedPanel(props: {
                     <p className="font-medium">
                       {page.label ?? page.url}
                       {page.isHomepage ? (
-                        <span className="text-muted-foreground ml-2 text-xs uppercase">
+                        <span className="ml-2 text-xs text-[var(--workspace-shell-text-muted)] uppercase">
                           Homepage
                         </span>
                       ) : null}
@@ -390,19 +396,19 @@ export function PagespeedPanel(props: {
                       href={page.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-muted-foreground hover:text-primary text-xs underline-offset-4 hover:underline"
+                      className="hover:text-primary text-xs text-[var(--workspace-shell-text-muted)] underline-offset-4 hover:underline"
                     >
                       {page.url.replace(/^https?:\/\//, '')}
                     </a>
                     {page.lastScannedAt ? (
-                      <p className="text-muted-foreground mt-1 text-xs">
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                         Last scanned{' '}
                         <time dateTime={page.lastScannedAt}>
                           {formatScanDate(page.lastScannedAt)}
                         </time>
                       </p>
                     ) : (
-                      <p className="text-muted-foreground mt-1 text-xs">
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                         Not scanned yet
                       </p>
                     )}
@@ -430,7 +436,7 @@ export function PagespeedPanel(props: {
                 </div>
 
                 <table className="w-full min-w-[40rem] text-left text-sm">
-                  <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide uppercase">
+                  <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                     <tr>
                       <th className="px-4 py-2">Device</th>
                       <th className="px-4 py-2 text-right">Perf</th>
@@ -442,13 +448,13 @@ export function PagespeedPanel(props: {
                   </thead>
                   <tbody>
                     <tr className="border-b border-[color:var(--workspace-shell-border)]">
-                      <td className="text-muted-foreground px-4 py-3">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                         Mobile
                       </td>
                       <MetricCell label="Mobile" metrics={page.mobile} />
                     </tr>
                     <tr>
-                      <td className="text-muted-foreground px-4 py-3">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                         Desktop
                       </td>
                       <MetricCell label="Desktop" metrics={page.desktop} />

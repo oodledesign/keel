@@ -24,6 +24,7 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import { workspaceBtnPrimary } from '~/lib/workspace-ui';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import { updateJob } from '../../_lib/server/server-actions';
@@ -171,7 +172,7 @@ export function JobsPmMainTable({
                     <td className="px-4 py-2 md:px-5">
                       <Link
                         href={jobDetailPath.replace('[id]', campaign.id)}
-                        className="font-medium text-[var(--workspace-shell-text)] hover:text-[#579bfc]"
+                        className="font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)]"
                       >
                         {campaign.name}
                       </Link>
@@ -271,7 +272,7 @@ export function JobsPmMainTable({
                           <td className="px-4 py-1.5 md:px-5">
                             <Link
                               href={jobDetailPath.replace('[id]', job.id)}
-                              className="flex items-center gap-2 font-medium text-[var(--workspace-shell-text)] hover:text-[#579bfc]"
+                              className="flex items-center gap-2 font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)]"
                             >
                               <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[10px] text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100">
                                 +
@@ -414,7 +415,7 @@ export function JobsPmMainTable({
                           <button
                             type="button"
                             onClick={onAddProject}
-                            className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[#579bfc]"
+                            className="inline-flex items-center gap-1.5 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--ozer-accent)]"
                           >
                             <Plus className="h-3.5 w-3.5" />
                             Add {projectLabel.toLowerCase()}
@@ -472,7 +473,7 @@ export function JobsPmMainTable({
             <button
               type="button"
               onClick={onAddProject}
-              className="inline-flex h-9 items-center gap-1.5 rounded-md bg-[#0073ea] px-4 text-sm font-semibold text-[var(--workspace-shell-text)] hover:bg-[#0060c2]"
+              className={`inline-flex h-9 items-center gap-1.5 rounded-md px-4 text-sm font-semibold ${workspaceBtnPrimary}`}
             >
               <Plus className="h-4 w-4" />
               {uiVariant === 'maintenance' ? 'New job' : 'New project'}

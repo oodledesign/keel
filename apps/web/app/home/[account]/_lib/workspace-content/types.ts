@@ -144,7 +144,9 @@ export const DOC_TYPE_LABELS: Record<DocTypeOption, string> = {
   other: 'Other',
 };
 
-export function getDocTypeLabel(docType: string | null | undefined): string | null {
+export function getDocTypeLabel(
+  docType: string | null | undefined,
+): string | null {
   if (!docType) return null;
   if (docType in DOC_TYPE_LABELS) {
     return DOC_TYPE_LABELS[docType as DocTypeOption];
@@ -152,7 +154,9 @@ export function getDocTypeLabel(docType: string | null | undefined): string | nu
   return docType.replace(/_/g, ' ');
 }
 
-export function isPreviewableMimeType(mimeType: string | null | undefined): boolean {
+export function isPreviewableMimeType(
+  mimeType: string | null | undefined,
+): boolean {
   if (!mimeType) return false;
   return (
     mimeType.startsWith('image/') ||

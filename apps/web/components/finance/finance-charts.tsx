@@ -14,6 +14,12 @@ import {
   YAxis,
 } from 'recharts';
 
+import {
+  formatWorkspaceAmount,
+  normalizeWorkspaceCurrency,
+  workspaceCurrencySymbol,
+} from '~/lib/currency/workspace-currency';
+
 export type MonthlyFinancePoint = {
   month: string;
   income: number;
@@ -22,12 +28,16 @@ export type MonthlyFinancePoint = {
   isCurrent?: boolean;
 };
 
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
+function formatChartCurrency(value: number, currency = 'gbp'): string {
+  return formatWorkspaceAmount(value, currency, {
     maximumFractionDigits: 0,
-  }).format(value);
+  });
+}
+
+function compactAxisLabel(value: number, currency = 'gbp'): string {
+  const symbol = workspaceCurrencySymbol(currency);
+  const major = Math.round(value / 1000);
+  return `${symbol}${major}k`;
 }
 
 const tooltipStyle = {
@@ -62,10 +72,12 @@ function FinanceGroupedTooltip({
   active,
   payload,
   label,
+  currency = 'gbp',
 }: {
   active?: boolean;
   payload?: Array<{ payload?: MonthlyFinancePoint }>;
   label?: string;
+  currency?: string;
 }) {
   if (!active || !payload?.length) {
     return null;
@@ -91,7 +103,7 @@ function FinanceGroupedTooltip({
             Income
           </span>
           <span className="font-medium text-[var(--workspace-shell-text)]">
-            {formatCurrency(point.income)}
+            {formatChartCurrency(point.income, currency)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-6">
@@ -103,7 +115,7 @@ function FinanceGroupedTooltip({
             Expenses
           </span>
           <span className="font-medium text-[var(--workspace-shell-text)]">
-            {formatCurrency(point.expenses)}
+            {formatChartCurrency(point.expenses, currency)}
           </span>
         </div>
         <div className="flex items-center justify-between gap-6 border-t border-[color:var(--workspace-shell-border)] pt-1.5">
@@ -115,7 +127,7 @@ function FinanceGroupedTooltip({
             Net
           </span>
           <span className="font-semibold text-[var(--workspace-shell-text)]">
-            {formatCurrency(point.net)}
+            {formatChartCurrency(point.net, currency)}
           </span>
         </div>
       </div>
@@ -127,10 +139,12 @@ function FinanceNetTooltip({
   active,
   payload,
   label,
+  currency = 'gbp',
 }: {
   active?: boolean;
   payload?: Array<{ value?: number }>;
   label?: string;
+  currency?: string;
 }) {
   if (!active || !payload?.length) {
     return null;
@@ -152,7 +166,7 @@ function FinanceNetTooltip({
           Net
         </span>
         <span className="font-semibold text-[var(--workspace-shell-text)]">
-          {formatCurrency(value)}
+          {formatChartCurrency(value, currency)}
         </span>
       </div>
     </div>
@@ -172,13 +186,16 @@ export function FinanceTrendBarChart({
   variant = 'stacked',
   surface = 'default',
   compact = false,
+  currency = 'gbp',
 }: {
   data: MonthlyFinancePoint[];
   variant?: 'stacked' | 'grouped';
   surface?: 'default' | 'workspace';
   /** Shorter dashboard embed — fills parent height instead of fixed 18rem. */
   compact?: boolean;
+  currency?: string;
 }) {
+  const resolvedCurrency = normalizeWorkspaceCurrency(currency);
   const isWorkspaceSurface = surface === 'workspace';
   const axisTickFill = isWorkspaceSurface ? WORKSPACE_CHART_TICK : '#8FA1BC';
   const gridStroke = isWorkspaceSurface
@@ -221,12 +238,12 @@ export function FinanceTrendBarChart({
               axisLine={false}
               domain={[0, 'auto']}
               tick={{ fill: axisTickFill, fontSize: compact ? 10 : 11 }}
-              tickFormatter={(v) => `£${Math.round(v / 1000)}k`}
+              tickFormatter={(v) => compactAxisLabel(v, resolvedCurrency)}
               width={compact ? 36 : 60}
             />
             <Tooltip
               cursor={{ fill: cursorFill }}
-              content={<FinanceGroupedTooltip />}
+              content={<FinanceGroupedTooltip currency={resolvedCurrency} />}
             />
             {!compact ? (
               <Legend wrapperStyle={{ fontSize: 12, color: legendColor }} />
@@ -264,7 +281,7 @@ export function FinanceTrendBarChart({
             cursor={{ fill: 'rgba(255,255,255,0.035)' }}
             contentStyle={tooltipStyle}
             formatter={(value: number, name: string) => [
-              formatCurrency(Number(value)),
+              formatChartCurrency(Number(value), resolvedCurrency),
               seriesLabel(name),
             ]}
           />
@@ -290,7 +307,15 @@ export function FinanceTrendBarChart({
   );
 }
 
-export function FinanceNetLineChart({ data }: { data: MonthlyFinancePoint[] }) {
+export function FinanceNetLineChart({
+  data,
+  currency = 'gbp',
+}: {
+  data: MonthlyFinancePoint[];
+  currency?: string;
+}) {
+  const resolvedCurrency = normalizeWorkspaceCurrency(currency);
+
   if (!data.length) {
     return (
       <p className="flex h-56 items-center justify-center text-sm text-[var(--workspace-shell-text-muted)]">
@@ -319,10 +344,10 @@ export function FinanceNetLineChart({ data }: { data: MonthlyFinancePoint[] }) {
             tickLine={false}
             axisLine={false}
             tick={{ fill: 'var(--workspace-shell-text-muted)', fontSize: 11 }}
-            tickFormatter={(v) => formatCurrency(v)}
+            tickFormatter={(v) => formatChartCurrency(v, resolvedCurrency)}
           />
           <Tooltip
-            content={<FinanceNetTooltip />}
+            content={<FinanceNetTooltip currency={resolvedCurrency} />}
             contentStyle={tooltipStyle}
             labelStyle={tooltipLabelStyle}
             itemStyle={tooltipItemStyle}
@@ -354,7 +379,14 @@ export function FinanceNetLineChart({ data }: { data: MonthlyFinancePoint[] }) {
   );
 }
 
-export function FinanceMonthRail({ data }: { data: MonthlyFinancePoint[] }) {
+export function FinanceMonthRail({
+  data,
+  currency = 'gbp',
+}: {
+  data: MonthlyFinancePoint[];
+  currency?: string;
+}) {
+  const resolvedCurrency = normalizeWorkspaceCurrency(currency);
   const recent = [...data].reverse().slice(0, 3);
 
   return (
@@ -373,21 +405,23 @@ export function FinanceMonthRail({ data }: { data: MonthlyFinancePoint[] }) {
               {month.month}
             </p>
             <span className="text-sm font-semibold text-violet-300">
-              {formatCurrency(month.net)}
+              {formatChartCurrency(month.net, resolvedCurrency)}
             </span>
           </div>
           <div className="mt-4 grid gap-2 text-xs text-violet-100/80">
             <div className="flex items-center justify-between">
               <span className="text-violet-200/70">Income</span>
-              <span>{formatCurrency(month.income)}</span>
+              <span>{formatChartCurrency(month.income, resolvedCurrency)}</span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-violet-200/70">Expenses</span>
-              <span>{formatCurrency(month.expenses)}</span>
+              <span>
+                {formatChartCurrency(month.expenses, resolvedCurrency)}
+              </span>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-violet-200/70">Net</span>
-              <span>{formatCurrency(month.net)}</span>
+              <span>{formatChartCurrency(month.net, resolvedCurrency)}</span>
             </div>
           </div>
         </div>
@@ -396,4 +430,6 @@ export function FinanceMonthRail({ data }: { data: MonthlyFinancePoint[] }) {
   );
 }
 
-export { formatCurrency as formatFinanceCurrency };
+export function formatFinanceCurrency(value: number, currency = 'gbp'): string {
+  return formatChartCurrency(value, currency);
+}

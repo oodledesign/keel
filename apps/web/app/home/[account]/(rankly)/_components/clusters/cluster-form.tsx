@@ -81,7 +81,7 @@ export function ClusterForm(props: {
           placeholder={
             'accountant near me\nsmall business accountant\nbookkeeping services'
           }
-          className="border-input bg-background ring-offset-background placeholder:text-muted-foreground focus-visible:ring-ring flex min-h-[8rem] w-full rounded-md border px-3 py-2 font-mono text-sm focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
+          className="border-input bg-background ring-offset-background focus-visible:ring-ring flex min-h-[8rem] w-full rounded-md border px-3 py-2 font-mono text-sm placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:outline-none"
         />
       </div>
 

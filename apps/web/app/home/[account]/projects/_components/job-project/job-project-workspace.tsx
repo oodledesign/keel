@@ -275,7 +275,7 @@ export function JobProjectWorkspace({
               onClick={() => setView(key)}
               className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
                 view === key
-                  ? 'bg-[#0073ea]/15 text-[#579bfc]'
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
                   : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]'
               }`}
             >

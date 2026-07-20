@@ -120,7 +120,9 @@ export function RankCheckJobPoller({
   if (!job) {
     return (
       <div className="max-w-xl space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-        <p className="text-muted-foreground text-sm">Starting rank check…</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Starting rank check…
+        </p>
         <Button
           type="button"
           variant="outline"
@@ -140,8 +142,8 @@ export function RankCheckJobPoller({
       <div
         className={`rounded-lg border px-4 py-3 text-sm ${
           cancelled
-            ? 'text-muted-foreground border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]'
-            : 'border-red-500/30 bg-red-500/10 text-red-200'
+            ? 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
+            : 'border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_12%,transparent)] text-[var(--workspace-shell-text)]'
         }`}
       >
         {job.error_msg ?? 'Rank check failed'}
@@ -165,10 +167,10 @@ export function RankCheckJobPoller({
   return (
     <div className="max-w-xl space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <span className="text-muted-foreground">
+        <span className="text-[var(--workspace-shell-text-muted)]">
           {job.status === 'pending' ? 'Queued…' : 'Checking SERP positions…'}
         </span>
-        <span className="text-muted-foreground tabular-nums">
+        <span className="text-[var(--workspace-shell-text-muted)] tabular-nums">
           {formatUsageLabel({
             tasksCompleted: job.tasks_completed,
             tasksTotal: job.tasks_total,
@@ -176,7 +178,7 @@ export function RankCheckJobPoller({
           })}
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-black/30">
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--workspace-control-surface)]">
         <div
           className="h-full rounded-full bg-[var(--ozer-accent)] transition-all duration-500"
           style={{ width: `${percent}%` }}

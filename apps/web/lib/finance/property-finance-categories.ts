@@ -23,8 +23,9 @@ export function suggestPropertyImportCategoryId(
 ): string | null {
   const kind = input.amountPence >= 0 ? 'income' : 'expense';
   const byName = (name: string) =>
-    categories.find((category) => category.name === name && category.kind === kind)
-      ?.id ?? null;
+    categories.find(
+      (category) => category.name === name && category.kind === kind,
+    )?.id ?? null;
 
   if (kind === 'income') {
     return byName('Rent');

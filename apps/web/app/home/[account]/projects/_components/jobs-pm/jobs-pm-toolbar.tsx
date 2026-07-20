@@ -18,6 +18,8 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 
+import { workspaceBtnPrimary } from '~/lib/workspace-ui';
+
 export function JobsPmToolbar({
   search,
   onSearchChange,
@@ -43,7 +45,7 @@ export function JobsPmToolbar({
       {canEditJobs && (
         <Button
           size="sm"
-          className="h-8 gap-1.5 rounded-md bg-[#0073ea] px-3 text-xs font-semibold text-[var(--workspace-shell-text)] hover:bg-[#0060c2]"
+          className={`h-8 gap-1.5 rounded-md px-3 text-xs font-semibold ${workspaceBtnPrimary}`}
           onClick={onNewProject}
           data-test="create-project-button"
         >

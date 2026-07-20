@@ -2,11 +2,11 @@ import Link from 'next/link';
 
 import { PageBody } from '@kit/ui/page';
 
-import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import {
   ModuleDataSection,
   ModuleEmptyState,
 } from '../../../_components/module-data-section';
+import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { loadRanklyAlertsForTeam } from '../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
@@ -41,7 +41,7 @@ export default async function RanklyAlertsPage({
           ) : (
             <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[32rem] text-left text-sm">
-                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   <tr>
                     <th className="px-4 py-3">Type</th>
                     <th className="px-4 py-3">Threshold</th>
@@ -57,7 +57,7 @@ export default async function RanklyAlertsPage({
                       className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                     >
                       <td className="px-4 py-3">{a.alert_type}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                         {a.threshold ?? '—'}
                       </td>
                       <td className="px-4 py-3">
@@ -66,7 +66,7 @@ export default async function RanklyAlertsPage({
                       <td className="px-4 py-3 font-mono text-xs">
                         {a.keyword_id}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                         {new Date(a.created_at).toLocaleString()}
                       </td>
                     </tr>
@@ -80,13 +80,13 @@ export default async function RanklyAlertsPage({
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
             href={workAccountPath(workPaths.accountRanklyProjects, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Projects
           </Link>
           <Link
             href={workAccountPath(workPaths.accountRanklyDashboard, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Dashboard
           </Link>

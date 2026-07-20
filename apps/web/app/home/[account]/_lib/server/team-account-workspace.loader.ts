@@ -10,6 +10,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import pathsConfig from '~/config/paths.config';
+import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
@@ -57,11 +58,17 @@ async function workspaceLoader(accountSlug: string) {
   }
 
   const accountId = (workspace.data.account as { id: string }).id;
-  const { data: moduleSettingsRows, error: moduleSettingsError } = await client
-    .from('account_module_settings')
-    .select('module_key, enabled')
-    .eq('account_id', accountId)
-    .eq('enabled', true);
+  const [moduleSettingsResult, defaultCurrency] = await Promise.all([
+    client
+      .from('account_module_settings')
+      .select('module_key, enabled')
+      .eq('account_id', accountId)
+      .eq('enabled', true),
+    getWorkspaceCurrencyWithClient(client, accountId),
+  ]);
+
+  const { data: moduleSettingsRows, error: moduleSettingsError } =
+    moduleSettingsResult;
 
   if (moduleSettingsError) {
     console.error(
@@ -107,6 +114,7 @@ async function workspaceLoader(accountSlug: string) {
     moduleSettings,
     workspaceProfile,
     businessType,
+    defaultCurrency,
     user,
   };
 }

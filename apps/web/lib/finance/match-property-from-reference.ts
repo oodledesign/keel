@@ -40,10 +40,7 @@ export function matchPropertyFromReference(
         return property.id;
       }
 
-      if (
-        refNorm.includes(candidateNorm) ||
-        candidateNorm.includes(refNorm)
-      ) {
+      if (refNorm.includes(candidateNorm) || candidateNorm.includes(refNorm)) {
         const score = Math.min(refNorm.length, candidateNorm.length);
         if (!best || score > best.score) {
           best = { id: property.id, score };

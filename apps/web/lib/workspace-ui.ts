@@ -69,3 +69,21 @@ export const workspaceSelectContentClass =
 
 export const workspaceSelectItemClass =
   'text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]';
+
+/** Inset panels/cards on workspace canvas (replaces ad-hoc bg-black/10). */
+export const workspaceInsetSurface =
+  'bg-[var(--workspace-shell-sidebar-accent)]';
+
+/** Progress tracks, tab lists, table headers (replaces bg-black/30). */
+export const workspaceMutedSurface = 'bg-[var(--workspace-control-surface)]';
+
+/** Info/link badges (replaces sky/blue Tailwind chips). */
+export const workspaceInfoBadge =
+  'border border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--workspace-shell-text)]';
+
+/** Success / accent state text (replaces emerald-400 on shell surfaces). */
+export const workspaceSuccessText = 'text-[var(--ozer-accent)]';
+
+/** Active underline tabs in PM views. */
+export const workspaceTabActiveUnderline =
+  'data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:text-[var(--workspace-shell-text)]';

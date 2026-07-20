@@ -16,14 +16,24 @@ export function RanklyJobProgress({
   return (
     <div className="max-w-xl space-y-3">
       {detail ? (
-        <p className="text-muted-foreground text-sm">{detail}</p>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          {detail}
+        </p>
       ) : null}
-      {meta ? <p className="text-muted-foreground text-sm">{meta}</p> : null}
+      {meta ? (
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          {meta}
+        </p>
+      ) : null}
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground">{percent}%</span>
+        <span className="text-[var(--workspace-shell-text-muted)]">
+          {label}
+        </span>
+        <span className="text-[var(--workspace-shell-text-muted)]">
+          {percent}%
+        </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-black/30">
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--workspace-control-surface)]">
         <div
           className="bg-primary h-full rounded-full transition-all duration-500"
           style={{ width: `${percent}%` }}

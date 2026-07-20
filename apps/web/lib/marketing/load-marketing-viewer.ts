@@ -6,10 +6,10 @@ import pathsConfig from '~/config/paths.config';
 import { getOptionalUserInServerComponent } from '~/lib/server/get-optional-user-in-server-component';
 
 import {
+  type MarketingViewerContext,
   formatMarketingDateLabel,
   getTimeOfDayGreeting,
   resolveMarketingViewerFirstName,
-  type MarketingViewerContext,
 } from './marketing-viewer';
 
 export const loadMarketingViewer = cache(

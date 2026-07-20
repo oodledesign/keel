@@ -3,9 +3,12 @@
 export const YBB_SITE_ORIGIN = 'https://yourbridalbesties.co.uk';
 
 /** Bundled in apps/web/public and apps/sites/public — same-origin on both apps. */
-export const YBB_FOUNDERS_STAR_OUTER = '/workspace-assets/ybb/founders/star-outer.svg';
-export const YBB_FOUNDERS_STAR_INNER = '/workspace-assets/ybb/founders/star-inner.svg';
-export const YBB_FOUNDERS_STAR_MASK = '/workspace-assets/ybb/founders/star-mask.svg';
+export const YBB_FOUNDERS_STAR_OUTER =
+  '/workspace-assets/ybb/founders/star-outer.svg';
+export const YBB_FOUNDERS_STAR_INNER =
+  '/workspace-assets/ybb/founders/star-inner.svg';
+export const YBB_FOUNDERS_STAR_MASK =
+  '/workspace-assets/ybb/founders/star-mask.svg';
 export const YBB_FOUNDERS_MASK_FILL = '#800000';
 
 /** Encode only characters that break static file serving (spaces, &). */

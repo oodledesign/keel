@@ -13,7 +13,11 @@ import type { BrandVisibilityRow } from '~/lib/site-overview/types';
 
 function SentimentIcon({ pct }: { pct: number | null }) {
   if (pct == null) {
-    return <span className="text-muted-foreground text-xs">—</span>;
+    return (
+      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+        —
+      </span>
+    );
   }
 
   const tone =
@@ -21,7 +25,7 @@ function SentimentIcon({ pct }: { pct: number | null }) {
       ? 'text-[var(--ozer-accent)]'
       : pct >= 60
         ? 'text-amber-400'
-        : 'text-red-400';
+        : 'text-[var(--ozer-accent-pressed,#C2452A)]';
 
   return (
     <span className={`text-sm font-medium tabular-nums ${tone}`}>{pct}%</span>
@@ -34,7 +38,7 @@ function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full min-w-[32rem] text-left text-sm">
-        <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide uppercase">
+        <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
           <tr>
             <th className="px-3 py-2">Platform</th>
             <th className="px-3 py-2">Sampled presence</th>
@@ -48,7 +52,7 @@ function BrandVisibilityTable({ rows }: { rows: BrandVisibilityRow[] }) {
               className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
             >
               <td className="px-3 py-3">{row.label}</td>
-              <td className="text-muted-foreground px-3 py-3">
+              <td className="px-3 py-3 text-[var(--workspace-shell-text-muted)]">
                 {row.presenceRatePct ?? row.visibilityPct}% ·{' '}
                 {row.promptsChecked ?? row.totalQueries} prompt
                 {(row.promptsChecked ?? row.totalQueries) === 1
@@ -75,7 +79,7 @@ function AuditCitationTable({
     <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
       <table className="w-full text-sm">
         <thead>
-          <tr className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] text-left text-xs uppercase">
+          <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-xs text-[var(--workspace-shell-text-muted)] uppercase">
             <th className="px-4 py-2 font-medium">Platform</th>
             <th className="px-4 py-2 font-medium">Presence</th>
             <th className="px-4 py-2 font-medium">Prompts</th>
@@ -90,14 +94,16 @@ function AuditCitationTable({
               <td className="px-4 py-2 font-medium">{platform.label}</td>
               <td className="px-4 py-2">
                 {platform.domainCitedInAny ? (
-                  <span className="text-emerald-400">
+                  <span className="text-[var(--ozer-accent)]">
                     {platform.averagePresenceRate ?? 0}% avg
                   </span>
                 ) : (
-                  <span className="text-muted-foreground">0% avg</span>
+                  <span className="text-[var(--workspace-shell-text-muted)]">
+                    0% avg
+                  </span>
                 )}
               </td>
-              <td className="text-muted-foreground px-4 py-2">
+              <td className="px-4 py-2 text-[var(--workspace-shell-text-muted)]">
                 <ul className="space-y-1">
                   {platform.citations.map((citation) => (
                     <li key={citation.query}>
@@ -159,7 +165,7 @@ export function BrandVisibilityLayerPanel(props: {
   if (props.rows.length === 0) {
     return (
       <div className="mt-4 space-y-2 text-sm">
-        <p className="text-muted-foreground">
+        <p className="text-[var(--workspace-shell-text-muted)]">
           Run an AI Search Audit to populate platform-level brand visibility.
         </p>
         {props.emptyHref ? (
@@ -178,13 +184,13 @@ export function BrandVisibilityLayerPanel(props: {
     <div className="mt-4 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <LayerTabs layer={layer} onLayerChange={setLayer} />
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           Sampled presence ({sampleRuns} runs per prompt) — not a fixed rank
         </p>
       </div>
 
       {activeRows.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No {PROMPT_LAYER_LABELS[layer].toLowerCase()} data yet. Re-run the AI
           Search Audit after filling in project brief settings.
         </p>
@@ -216,13 +222,13 @@ export function AuditCitationLayerPanel(props: {
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <LayerTabs layer={layer} onLayerChange={setLayer} />
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           Sampled presence ({CITATION_SAMPLE_RUNS} runs per prompt)
         </p>
       </div>
 
       {activePlatforms.length === 0 ? (
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No {PROMPT_LAYER_LABELS[layer].toLowerCase()} checks in this report.
         </p>
       ) : (

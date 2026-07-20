@@ -36,12 +36,12 @@ type ApiResponse<T> =
 function statusTone(code: number): string {
   if (code >= 200 && code < 300) return 'text-[var(--ozer-accent)]';
   if (code >= 300 && code < 400) return 'text-amber-400';
-  return 'text-red-400';
+  return 'text-[var(--ozer-accent-pressed,#C2452A)]';
 }
 
 function IssueBadge({ code }: { code: SiteCrawlIssueCode }) {
   return (
-    <span className="inline-flex rounded-full bg-red-500/15 px-2 py-0.5 text-xs text-red-200">
+    <span className="inline-flex rounded-full border border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_12%,transparent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
       {SITE_CRAWL_ISSUE_LABELS[code]}
     </span>
   );
@@ -49,7 +49,7 @@ function IssueBadge({ code }: { code: SiteCrawlIssueCode }) {
 
 function SchemaTypeBadge({ type }: { type: string }) {
   return (
-    <span className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-xs text-sky-200">
+    <span className="inline-flex rounded-full border border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]">
       {type}
     </span>
   );
@@ -82,9 +82,11 @@ function SchemaDetailDialog(props: {
         </DialogHeader>
 
         {schemaIssues.length > 0 ? (
-          <div className="space-y-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
-            <p className="text-sm font-medium text-amber-100">Schema issues</p>
-            <ul className="space-y-1 text-xs text-amber-100/90">
+          <div className="space-y-2 rounded-lg border border-[color-mix(in_srgb,#F0C14B_35%,transparent)] bg-[color-mix(in_srgb,#F0C14B_12%,transparent)] p-3">
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Schema issues
+            </p>
+            <ul className="space-y-1 text-xs text-[var(--workspace-shell-text)]/90">
               {schemaIssues.map((issue) => (
                 <li key={`${issue.code}-${issue.message}`}>
                   {SITE_CRAWL_ISSUE_LABELS[issue.code]}: {issue.message}
@@ -111,7 +113,7 @@ function SchemaDetailDialog(props: {
             {objects.map((object, index) => (
               <pre
                 key={`${props.page?.id}-schema-${index}`}
-                className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/30 p-3 text-xs leading-relaxed"
+                className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] p-3 text-xs leading-relaxed"
               >
                 {JSON.stringify(object, null, 2)}
               </pre>
@@ -480,7 +482,7 @@ export function SiteCrawlerPanel(props: {
           </p>
         </>
       ) : !activeJobId ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm">
+        <p className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
           Crawl {props.domain} to find broken links, missing titles, duplicate
           meta tags, and other on-page SEO issues — up to{' '}
           {urlLimit.toLocaleString()} internal URLs.

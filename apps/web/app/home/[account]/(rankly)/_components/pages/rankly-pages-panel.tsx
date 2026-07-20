@@ -24,7 +24,7 @@ function formatDate(iso: string | null | undefined): string | null {
 function ScoreMini(props: { label: string; score: number | null }) {
   return (
     <div className="text-center">
-      <p className="text-muted-foreground text-[10px] uppercase">
+      <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
         {props.label}
       </p>
       <p
@@ -42,7 +42,7 @@ function DataSourceBadge(props: { label: string; active: boolean }) {
       className={
         props.active
           ? 'inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] text-[var(--workspace-shell-text)]/90 uppercase'
-          : 'text-muted-foreground/60 inline-flex rounded-full border border-[color:var(--workspace-shell-border)] px-2 py-0.5 text-[10px] uppercase'
+          : 'inline-flex rounded-full border border-[color:var(--workspace-shell-border)] px-2 py-0.5 text-[10px] text-[var(--workspace-shell-text-subtle)] uppercase'
       }
     >
       {props.label}
@@ -68,12 +68,12 @@ function PageRow(props: {
           <p className="font-medium group-hover:text-[var(--ozer-accent)]">
             {props.page.label}
             {props.page.isHomepage ? (
-              <span className="text-muted-foreground ml-2 text-[10px] uppercase">
+              <span className="ml-2 text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
                 Homepage
               </span>
             ) : null}
           </p>
-          <p className="text-muted-foreground truncate text-xs">
+          <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
             {pageDisplayPath(props.page.url)}
           </p>
         </Link>
@@ -86,7 +86,10 @@ function PageRow(props: {
             {formatScore(props.page.scores.overall)}
           </span>
           {props.page.scores.overall != null ? (
-            <span className="text-muted-foreground text-xs"> /100</span>
+            <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {' '}
+              /100
+            </span>
           ) : null}
         </Link>
       </td>
@@ -104,7 +107,7 @@ function PageRow(props: {
             {props.page.recommendationCount}
           </span>
         ) : (
-          <span className="text-muted-foreground">0</span>
+          <span className="text-[var(--workspace-shell-text-muted)]">0</span>
         )}
       </td>
       <td className="hidden px-4 py-3 sm:table-cell">
@@ -113,7 +116,7 @@ function PageRow(props: {
           <DataSourceBadge label="PSI" active={props.page.hasPagespeedData} />
         </div>
       </td>
-      <td className="text-muted-foreground hidden px-4 py-3 text-xs xl:table-cell">
+      <td className="hidden px-4 py-3 text-xs text-[var(--workspace-shell-text-muted)] xl:table-cell">
         {formatDate(props.page.lastUpdatedAt) ?? '—'}
       </td>
     </tr>
@@ -146,7 +149,7 @@ export function RanklyPagesPanel(props: {
   if (props.pages.length === 0) {
     return (
       <div className="space-y-4">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No page data yet. Run a{' '}
           <Link
             href={props.siteCrawlerHref}
@@ -171,7 +174,7 @@ export function RanklyPagesPanel(props: {
     <div className="space-y-6">
       <div className="grid gap-3 sm:grid-cols-3">
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Pages with data
           </p>
           <p className="mt-1 text-2xl font-semibold tabular-nums">
@@ -179,7 +182,7 @@ export function RanklyPagesPanel(props: {
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Average score
           </p>
           <p
@@ -187,7 +190,7 @@ export function RanklyPagesPanel(props: {
           >
             {formatScore(avgScore)}
             {avgScore != null ? (
-              <span className="text-muted-foreground text-sm font-normal">
+              <span className="text-sm font-normal text-[var(--workspace-shell-text-muted)]">
                 {' '}
                 /100
               </span>
@@ -195,7 +198,7 @@ export function RanklyPagesPanel(props: {
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             Data sources
           </p>
           <div className="mt-2 flex flex-wrap gap-2">
@@ -211,7 +214,7 @@ export function RanklyPagesPanel(props: {
         </div>
       </div>
 
-      <p className="text-muted-foreground text-xs leading-relaxed">
+      <p className="text-xs leading-relaxed text-[var(--workspace-shell-text-muted)]">
         Scores combine on-page SEO (40%), performance (35%), technical health
         (15%), and structured data (10%) from your latest crawl and PageSpeed
         scans. Recommendations on each page are tailored to that URL&apos;s
@@ -220,7 +223,7 @@ export function RanklyPagesPanel(props: {
 
       <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
         <table className="w-full min-w-[720px] text-sm">
-          <thead className="text-muted-foreground bg-black/30 text-left text-xs tracking-wide uppercase">
+          <thead className="bg-[var(--workspace-control-surface)] text-left text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             <tr>
               <th className="px-4 py-3 font-medium">Page</th>
               <th className="px-4 py-3 text-center font-medium">Score</th>
@@ -249,7 +252,7 @@ export function RanklyPagesPanel(props: {
         </table>
       </div>
 
-      <div className="text-muted-foreground hidden text-[10px] uppercase lg:grid lg:grid-cols-4 lg:gap-2 lg:px-4">
+      <div className="hidden text-[10px] text-[var(--workspace-shell-text-muted)] uppercase lg:grid lg:grid-cols-4 lg:gap-2 lg:px-4">
         {Object.values(PAGE_SCORE_LABELS).map((label) => (
           <span key={label}>{label}</span>
         ))}

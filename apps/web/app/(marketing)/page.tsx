@@ -21,6 +21,7 @@ import {
   MARKETING_WORKSPACE_PLANS,
 } from '~/lib/billing/pricing-marketing';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { loadMarketingViewer } from '~/lib/marketing/load-marketing-viewer';
 import {
   marketingBtnGradient,
   marketingBtnOutline,
@@ -28,7 +29,6 @@ import {
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
 import { HOME_FAQS } from '~/lib/marketing/ozer-faqs';
-import { loadMarketingViewer } from '~/lib/marketing/load-marketing-viewer';
 import { JsonLd } from '~/lib/seo/json-ld';
 import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import {

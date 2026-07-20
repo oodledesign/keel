@@ -387,7 +387,9 @@ export const bulkUpdateSignatureStaff = enhanceAction(
               ? (branchCache.get(row.branch_id) ?? null)
               : null,
             signature_email: row.signature_email,
-            ...(photoUrl ? { photo_url: photoUrl, photo_overridden: false } : {}),
+            ...(photoUrl
+              ? { photo_url: photoUrl, photo_overridden: false }
+              : {}),
           }
         : {
             branch_id: row.branch_id,
@@ -398,7 +400,9 @@ export const bulkUpdateSignatureStaff = enhanceAction(
             credentials: row.credentials,
             phone_direct: row.phone_direct,
             phone_mobile: row.phone_mobile,
-            ...(photoUrl ? { photo_url: photoUrl, photo_overridden: true } : {}),
+            ...(photoUrl
+              ? { photo_url: photoUrl, photo_overridden: true }
+              : {}),
           };
 
       const { data: staff, error } = await db

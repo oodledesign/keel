@@ -7,10 +7,10 @@ import { ExternalLink } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import {
-  SignaturePreviewThemeControls,
-  SignaturePreviewViewportControls,
   type SignaturePreviewTheme,
+  SignaturePreviewThemeControls,
   type SignaturePreviewViewport,
+  SignaturePreviewViewportControls,
   resolveSignaturePreviewViewport,
   signaturePreviewLayoutWidthPx,
   signaturePreviewViewportStyle,
@@ -40,8 +40,7 @@ export function SignatureEmailMockup({
   showInstructions?: boolean;
 }) {
   const [theme, setTheme] = useState<SignaturePreviewTheme>('light');
-  const [viewport, setViewport] =
-    useState<SignaturePreviewViewport>('desktop');
+  const [viewport, setViewport] = useState<SignaturePreviewViewport>('desktop');
   const isDark = theme === 'dark';
   const activeViewport = resolveSignaturePreviewViewport(viewport);
   const layoutWidthPx = signaturePreviewLayoutWidthPx(viewport);
@@ -150,12 +149,7 @@ export function SignatureEmailMockup({
               />
             </div>
 
-            <div
-              className={cn(
-                'overflow-x-auto rounded-2xl p-2',
-                isDark ? 'bg-[#121214]' : 'bg-[#f5f5f7]',
-              )}
-            >
+            <div className="overflow-x-auto rounded-2xl">
               <section
                 className={cn(
                   'mx-auto min-w-0 transition-[max-width] duration-200 ease-out',
@@ -201,7 +195,10 @@ export function SignatureEmailMockup({
                       isDark ? 'border-[#2c2c2e]' : 'border-[#e5e5ea]',
                     )}
                   >
-                    <MetaRow label="From" value={`${fromName} <${fromEmail}>`} />
+                    <MetaRow
+                      label="From"
+                      value={`${fromName} <${fromEmail}>`}
+                    />
                     <MetaRow label="To" value="you@company.com" />
                     <MetaRow
                       label="Subject"
@@ -224,8 +221,9 @@ export function SignatureEmailMockup({
             </div>
 
             <p className="text-xs text-[var(--ozer-plum-900)]/60">
-              Previewing at {layoutWidthPx}px ({activeViewport.label.toLowerCase()}{' '}
-              layout width). Responsive signatures switch layouts near 480px.
+              Previewing at {layoutWidthPx}px (
+              {activeViewport.label.toLowerCase()} layout width). Responsive
+              signatures switch layouts near 480px.
             </p>
           </div>
         </div>

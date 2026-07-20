@@ -74,8 +74,8 @@ export const PRIORITY_CELL: Record<
   { label: string; bg: string; text: string }
 > = {
   low: { label: 'Low', bg: ozerStatusColors.pending, text: onDark },
-  medium: { label: 'Medium', bg: '#5559df', text: onDark },
-  high: { label: 'High', bg: '#a25ddc', text: onDark },
+  medium: { label: 'Medium', bg: ozerStatusColors.medium, text: onLight },
+  high: { label: 'High', bg: ozerStatusColors.high, text: onDark },
   urgent: { label: 'Urgent', bg: ozerStatusColors.urgent, text: onDark },
 };
 
@@ -83,7 +83,11 @@ export const PHASE_CELL: Record<
   ProjectGroupId,
   { label: string; bg: string; text: string }
 > = {
-  upcoming: { label: 'Upcoming', bg: '#ff5ac4', text: onDark },
+  upcoming: {
+    label: 'Upcoming',
+    bg: ozerStatusColors.pending,
+    text: onDark,
+  },
   ongoing: { label: 'Ongoing', bg: ozerStatusColors.onHold, text: onLight },
   completed: {
     label: 'Completed',

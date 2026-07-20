@@ -51,7 +51,13 @@ import {
   invoiceCurrencySymbol,
   normalizeInvoiceCurrency,
 } from '../_lib/invoice-currency';
-import { DEFAULT_INVOICE_FOOTER_MESSAGE } from '../_lib/invoice-smart-fields';
+import {
+  DEFAULT_INVOICE_EMAIL_BODY,
+  DEFAULT_INVOICE_EMAIL_SIGNATURE,
+  DEFAULT_INVOICE_EMAIL_SUBJECT,
+  DEFAULT_INVOICE_FOOTER_MESSAGE,
+  resolveInvoiceEmailField,
+} from '../_lib/invoice-smart-fields';
 import {
   type DepositType,
   type DiscountType,
@@ -305,10 +311,20 @@ export function InvoiceEditIndyContent({
   const [showLogoField, setShowLogoField] = useState(true);
   const [showPaymentLinkField, setShowPaymentLinkField] = useState(true);
 
-  const [emailSubject, setEmailSubject] = useState(invoice.email_subject ?? '');
-  const [emailBody, setEmailBody] = useState(invoice.email_body ?? '');
-  const [emailSignature, setEmailSignature] = useState(
-    invoice.email_signature ?? '',
+  const [emailSubject, setEmailSubject] = useState(() =>
+    resolveInvoiceEmailField(
+      invoice.email_subject,
+      DEFAULT_INVOICE_EMAIL_SUBJECT,
+    ),
+  );
+  const [emailBody, setEmailBody] = useState(() =>
+    resolveInvoiceEmailField(invoice.email_body, DEFAULT_INVOICE_EMAIL_BODY),
+  );
+  const [emailSignature, setEmailSignature] = useState(() =>
+    resolveInvoiceEmailField(
+      invoice.email_signature,
+      DEFAULT_INVOICE_EMAIL_SIGNATURE,
+    ),
   );
 
   const [items, setItems] = useState<InvoiceItem[]>(() =>
@@ -571,6 +587,15 @@ export function InvoiceEditIndyContent({
       return next.map((row, i) => ({ ...row, sort_order: i }));
     });
   }, []);
+
+  const handleEmailDraftChange = useCallback(
+    (email: { subject: string; body: string; signature: string }) => {
+      setEmailSubject(email.subject);
+      setEmailBody(email.body);
+      setEmailSignature(email.signature);
+    },
+    [],
+  );
 
   const handleSave = useCallback(async () => {
     if (!canModifyInvoice) return false;
@@ -952,6 +977,7 @@ export function InvoiceEditIndyContent({
             initialSubject={emailSubject}
             initialBody={emailBody}
             initialSignature={emailSignature}
+            onEmailChange={handleEmailDraftChange}
             pdfQuery={pdfQuery}
             isDraft={isDraft}
             onSent={() => {

@@ -121,6 +121,14 @@ Thanks for your business!`;
 export const DEFAULT_INVOICE_EMAIL_SIGNATURE = `Sincerely,
 {{your.firstName}} {{your.lastName}}`;
 
+export function resolveInvoiceEmailField(
+  value: string | null | undefined,
+  fallback: string,
+): string {
+  const trimmed = value?.trim();
+  return trimmed ? trimmed : fallback;
+}
+
 /** Shown on invoice PDF / portal when paying by card is available. */
 export const DEFAULT_INVOICE_FOOTER_MESSAGE =
   'Paying online by card (Stripe payment link) may incur a small processing fee.';

@@ -244,7 +244,7 @@ export function JobEventsTabContent({
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 font-medium ${
                             event.event_type === 'site_visit'
-                              ? 'bg-sky-500/20 text-sky-400'
+                              ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
                               : 'bg-violet-500/20 text-violet-400'
                           }`}
                         >
@@ -307,7 +307,7 @@ export function JobEventsTabContent({
                         <span
                           className={`inline-flex rounded-full px-2 py-0.5 font-medium ${
                             event.event_type === 'site_visit'
-                              ? 'bg-sky-500/20 text-sky-400'
+                              ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
                               : 'bg-violet-500/20 text-violet-400'
                           }`}
                         >

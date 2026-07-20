@@ -38,11 +38,11 @@ import {
 import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import {
   DOC_TYPE_OPTIONS,
-  getDocTypeLabel,
   type DocListItem,
   type DocTypeOption,
   type LinkOption,
   type WorkspaceDocsVariant,
+  getDocTypeLabel,
 } from '../../_lib/workspace-content/types';
 import { LinkToSelect, type LinkValue } from './link-to-select';
 import { TagsInput } from './tags-input';

@@ -1217,6 +1217,7 @@ export type Database = {
         Row: {
           created_at: string | null;
           created_by: string | null;
+          default_currency: string;
           email: string | null;
           id: string;
           is_personal_account: boolean;
@@ -1233,6 +1234,7 @@ export type Database = {
         Insert: {
           created_at?: string | null;
           created_by?: string | null;
+          default_currency?: string;
           email?: string | null;
           id?: string;
           is_personal_account?: boolean;
@@ -1249,6 +1251,7 @@ export type Database = {
         Update: {
           created_at?: string | null;
           created_by?: string | null;
+          default_currency?: string;
           email?: string | null;
           id?: string;
           is_personal_account?: boolean;
@@ -4883,6 +4886,7 @@ export type Database = {
           column_mapping: Json;
           created_at: string;
           created_by: string | null;
+          default_currency: string;
           error_message: string | null;
           filename: string;
           id: string;
@@ -4896,6 +4900,7 @@ export type Database = {
           column_mapping?: Json;
           created_at?: string;
           created_by?: string | null;
+          default_currency?: string;
           error_message?: string | null;
           filename: string;
           id?: string;
@@ -4909,6 +4914,7 @@ export type Database = {
           column_mapping?: Json;
           created_at?: string;
           created_by?: string | null;
+          default_currency?: string;
           error_message?: string | null;
           filename?: string;
           id?: string;
@@ -4955,6 +4961,7 @@ export type Database = {
           category_id: string | null;
           created_at: string;
           created_by: string | null;
+          default_currency: string;
           currency: string;
           description: string;
           external_id: string | null;
@@ -4980,6 +4987,7 @@ export type Database = {
           category_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          default_currency?: string;
           currency?: string;
           description?: string;
           external_id?: string | null;
@@ -5005,6 +5013,7 @@ export type Database = {
           category_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          default_currency?: string;
           currency?: string;
           description?: string;
           external_id?: string | null;
@@ -9501,6 +9510,7 @@ export type Database = {
             Returns: {
               created_at: string | null;
               created_by: string | null;
+              default_currency: string;
               email: string | null;
               id: string;
               is_personal_account: boolean;
@@ -9531,6 +9541,7 @@ export type Database = {
             Returns: {
               created_at: string | null;
               created_by: string | null;
+              default_currency: string;
               email: string | null;
               id: string;
               is_personal_account: boolean;
@@ -9562,6 +9573,7 @@ export type Database = {
             Returns: {
               created_at: string | null;
               created_by: string | null;
+              default_currency: string;
               email: string | null;
               id: string;
               is_personal_account: boolean;
@@ -9594,6 +9606,7 @@ export type Database = {
             Returns: {
               created_at: string | null;
               created_by: string | null;
+              default_currency: string;
               email: string | null;
               id: string;
               is_personal_account: boolean;

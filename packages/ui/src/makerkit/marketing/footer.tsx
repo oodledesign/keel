@@ -94,9 +94,7 @@ export const Footer: React.FC<FooterProps> = ({
             ))}
           </div>
 
-          {newsletter ? (
-            <div className="min-w-0">{newsletter}</div>
-          ) : null}
+          {newsletter ? <div className="min-w-0">{newsletter}</div> : null}
         </div>
 
         <div className="mt-12 flex flex-col gap-4 border-t border-[color:var(--workspace-shell-border)] pt-6 sm:flex-row sm:items-center sm:justify-between">
@@ -138,7 +136,7 @@ function FooterLink({
   children,
 }: React.PropsWithChildren<{ href: string }>) {
   return (
-    <li className="text-muted-foreground text-sm [&>a]:transition-colors hover:underline">
+    <li className="text-muted-foreground text-sm hover:underline [&>a]:transition-colors">
       <a href={href}>{children}</a>
     </li>
   );

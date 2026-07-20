@@ -350,12 +350,8 @@ function BentoVisual({
         aria-hidden
         className="relative flex h-28 w-full items-center justify-center"
       >
-        <span
-          className="absolute size-24 rounded-full border border-[var(--ozer-coral-alpha-15)]"
-        />
-        <span
-          className="absolute size-16 rounded-full border border-[var(--ozer-coral-alpha-45)]"
-        />
+        <span className="absolute size-24 rounded-full border border-[var(--ozer-coral-alpha-15)]" />
+        <span className="absolute size-16 rounded-full border border-[var(--ozer-coral-alpha-45)]" />
         <svg
           viewBox="0 0 48 48"
           className="relative size-14 text-[var(--ozer-coral-500)] drop-shadow-[0_0_18px_var(--ozer-coral-alpha-45)]"
@@ -372,11 +368,7 @@ function BentoVisual({
   if (kind === 'activity') {
     return (
       <div aria-hidden className="relative flex h-24 w-full items-center px-2">
-        <svg
-          viewBox="0 0 220 80"
-          className="h-full w-full"
-          fill="none"
-        >
+        <svg viewBox="0 0 220 80" className="h-full w-full" fill="none">
           <path
             d="M4 58 C 30 58, 36 22, 58 22 S 90 62, 112 48 S 150 12, 170 28 S 200 54, 216 40"
             stroke={bar}
@@ -403,7 +395,9 @@ function BentoVisual({
     <div
       aria-hidden
       className="flex h-24 w-full items-center justify-center px-2"
-    >      <div
+    >
+      {' '}
+      <div
         className={cn(
           'flex max-w-[16rem] items-center gap-3 rounded-full border px-3 py-2 shadow-[0_10px_30px_var(--ozer-plum-alpha-12)]',
           'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',

@@ -32,20 +32,22 @@ function StatCard(props: {
   return (
     <Link
       href={props.href}
-      className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-black/30"
+      className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-control-surface)]"
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="text-muted-foreground text-xs tracking-wide uppercase">
+        <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
           {props.label}
         </p>
         <Icon
-          className="text-muted-foreground h-4 w-4 shrink-0 opacity-80"
+          className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)] opacity-80"
           aria-hidden
         />
       </div>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{props.value}</p>
       {props.hint ? (
-        <p className="text-muted-foreground mt-1 text-xs">{props.hint}</p>
+        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+          {props.hint}
+        </p>
       ) : null}
     </Link>
   );
@@ -71,7 +73,7 @@ export function RanklyProjectDashboard(props: {
         <h1 className="text-xl font-semibold tracking-tight">
           Project overview
         </h1>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           {props.countryLabel} market · quick snapshot across Rankly tools
         </p>
       </header>
@@ -123,13 +125,13 @@ export function RanklyProjectDashboard(props: {
             <Link
               key={section.id}
               href={paths[section.pathKey]}
-              className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-5 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-5 transition-colors hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
             >
               <div className="flex items-start gap-3">
                 <SectionIcon icon={Icon} />
                 <div className="min-w-0">
                   <h2 className="font-semibold">{section.dashboardTitle}</h2>
-                  <p className="text-muted-foreground mt-1 text-sm">
+                  <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
                     {section.dashboardBody}
                   </p>
                 </div>

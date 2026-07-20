@@ -6,6 +6,8 @@ import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
+import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import { normalizeWorkspaceCurrency } from '~/lib/currency/workspace-currency';
 import { Database } from '~/lib/database.types';
 
 import {
@@ -244,6 +246,10 @@ class ContractsService {
       'invoices.edit',
     );
 
+    const currency = input.currency
+      ? normalizeWorkspaceCurrency(input.currency)
+      : await getWorkspaceCurrencyWithClient(this.db, input.accountId);
+
     const { data: contract, error } = await this.db
       .from('contracts')
       .insert({
@@ -255,7 +261,7 @@ class ContractsService {
         content_html: input.content_html ?? '',
         status: 'draft',
         total_pence: input.total_pence ?? 0,
-        currency: input.currency ?? 'gbp',
+        currency,
         payment_plan: input.payment_plan ?? [],
         auto_send_on_approval: input.auto_send_on_approval ?? false,
         recipient_email: input.recipient_email ?? null,

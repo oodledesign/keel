@@ -3,8 +3,16 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 
-import { Filter, LayoutGrid, List, PlusCircle, Search } from 'lucide-react';
+import {
+  Filter,
+  LayoutGrid,
+  List,
+  PlusCircle,
+  Search,
+  Upload,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -397,15 +405,34 @@ export function ClientsPageContent({
           {pageTitle}
         </h1>
         {canEditClients ? (
-          <Button
-            size="sm"
-            className="h-8 bg-[var(--ozer-accent)] text-xs hover:bg-[var(--ozer-accent-hover)]"
-            onClick={openCreate}
-            data-test="add-client-button"
-          >
-            <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
-            {addClientLabel}
-          </Button>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
+              asChild
+            >
+              <Link
+                href={pathsConfig.app.accountClientsImport.replace(
+                  '[account]',
+                  accountSlug,
+                )}
+                data-test="import-clients-csv-button"
+              >
+                <Upload className="mr-1.5 h-3.5 w-3.5" />
+                Import CSV
+              </Link>
+            </Button>
+            <Button
+              size="sm"
+              className="h-8 bg-[var(--ozer-accent)] text-xs hover:bg-[var(--ozer-accent-hover)]"
+              onClick={openCreate}
+              data-test="add-client-button"
+            >
+              <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+              {addClientLabel}
+            </Button>
+          </div>
         ) : null}
       </div>
 

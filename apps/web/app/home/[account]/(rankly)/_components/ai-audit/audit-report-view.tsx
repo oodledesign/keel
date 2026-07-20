@@ -23,17 +23,19 @@ import { BacklinkBar, BacklinkSourceNote } from '../shared/backlink-bar';
 import { OprBadge } from '../shared/opr-badge';
 
 function scoreColour(score: number | null): string {
-  if (score == null) return 'text-muted-foreground';
-  if (score >= 75) return 'text-emerald-400';
-  if (score >= 50) return 'text-amber-400';
-  return 'text-red-400';
+  if (score == null) return 'text-[var(--workspace-shell-text-muted)]';
+  if (score >= 75) return 'text-[var(--ozer-accent)]';
+  if (score >= 50) return 'text-[#F0C14B]';
+  return 'text-[var(--ozer-accent-pressed,#C2452A)]';
 }
 
 function scoreRing(score: number | null): string {
-  if (score == null) return 'ring-white/10';
-  if (score >= 75) return 'ring-emerald-500/30';
-  if (score >= 50) return 'ring-amber-500/30';
-  return 'ring-red-500/30';
+  if (score == null)
+    return 'ring-[color-mix(in_srgb,var(--workspace-shell-border)_80%,transparent)]';
+  if (score >= 75)
+    return 'ring-[color-mix(in_srgb,var(--ozer-accent)_30%,transparent)]';
+  if (score >= 50) return 'ring-[color-mix(in_srgb,#F0C14B_30%,transparent)]';
+  return 'ring-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_30%,transparent)]';
 }
 
 function DimensionScoreCard({
@@ -54,31 +56,36 @@ function DimensionScoreCard({
 
   return (
     <div
-      className={`rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/30 p-4 ring-1 ${scoreRing(score)}`}
+      className={`rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] p-4 ring-1 ${scoreRing(score)}`}
     >
-      <div className="text-muted-foreground mb-2 flex items-center gap-2 text-xs tracking-wide uppercase">
+      <div className="mb-2 flex items-center gap-2 text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
         <span>{icons[dimension]}</span>
         {label}
       </div>
       <div className={`text-3xl font-bold ${scoreColour(score)}`}>
         {score ?? '—'}
-        <span className="text-muted-foreground text-lg font-normal">/100</span>
+        <span className="text-lg font-normal text-[var(--workspace-shell-text-muted)]">
+          /100
+        </span>
       </div>
     </div>
   );
 }
 
 const CATEGORY_COLOURS: Record<AuditDimension, string> = {
-  entity: 'border-purple-500/40 bg-purple-500/10 text-purple-200',
-  content: 'border-orange-500/40 bg-orange-500/10 text-orange-200',
-  eeat: 'border-blue-500/40 bg-blue-500/10 text-blue-200',
-  tech: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200',
+  entity:
+    'border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--workspace-shell-text)]',
+  content:
+    'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]',
+  eeat: 'border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--workspace-shell-text)]',
+  tech: 'border-[color-mix(in_srgb,#059669_35%,transparent)] bg-[color-mix(in_srgb,#059669_12%,transparent)] text-[var(--workspace-shell-text)]',
 };
 
 const PRIORITY_COLOURS: Record<AuditPriority, string> = {
-  high: 'bg-red-500/20 text-red-200',
-  medium: 'bg-amber-500/20 text-amber-200',
-  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground',
+  high: 'bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_18%,transparent)] text-[var(--workspace-shell-text)]',
+  medium:
+    'bg-[color-mix(in_srgb,#F0C14B_18%,transparent)] text-[var(--workspace-shell-text)]',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
 };
 
 function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
@@ -129,14 +136,16 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
         >
           {rec.priority}
         </span>
-        <span className="text-muted-foreground text-sm">
+        <span className="text-sm text-[var(--workspace-shell-text-muted)]">
           {expanded ? '▲' : '▼'}
         </span>
       </button>
 
       {expanded ? (
         <div className="space-y-4 border-t border-[color:var(--workspace-shell-border)] px-4 pt-4 pb-4">
-          <p className="text-muted-foreground text-sm">{rec.description}</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            {rec.description}
+          </p>
 
           {!snippet ? (
             <Button
@@ -149,8 +158,8 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
               {loadingFix ? 'Generating fix…' : 'Help me fix this'}
             </Button>
           ) : (
-            <div className="rounded-md bg-black/40 p-3">
-              <pre className="overflow-x-auto text-xs whitespace-pre-wrap text-emerald-300">
+            <div className="rounded-md bg-[var(--workspace-control-surface)] p-3">
+              <pre className="overflow-x-auto text-xs whitespace-pre-wrap text-[var(--workspace-shell-text)]">
                 {snippet}
               </pre>
               <Button
@@ -168,24 +177,31 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
             </div>
           )}
 
-          <div className="space-y-1 rounded-md bg-black/30 p-3 text-sm">
-            <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <div className="space-y-1 rounded-md bg-[var(--workspace-control-surface)] p-3 text-sm">
+            <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               Projected impact
             </p>
             {rec.outcome ? (
               <p>
-                <span className="text-muted-foreground">Outcome:</span>{' '}
+                <span className="text-[var(--workspace-shell-text-muted)]">
+                  Outcome:
+                </span>{' '}
                 {rec.outcome}
               </p>
             ) : null}
             {rec.why ? (
               <p>
-                <span className="text-muted-foreground">Why:</span> {rec.why}
+                <span className="text-[var(--workspace-shell-text-muted)]">
+                  Why:
+                </span>{' '}
+                {rec.why}
               </p>
             ) : null}
             {rec.magnitude ? (
               <p>
-                <span className="text-muted-foreground">Magnitude:</span>{' '}
+                <span className="text-[var(--workspace-shell-text-muted)]">
+                  Magnitude:
+                </span>{' '}
                 {rec.magnitude}
               </p>
             ) : null}
@@ -193,7 +209,7 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
 
           {rec.example_urls?.length ? (
             <div>
-              <p className="text-muted-foreground mb-1 text-xs uppercase">
+              <p className="mb-1 text-xs text-[var(--workspace-shell-text-muted)] uppercase">
                 Example URLs
               </p>
               {rec.example_urls.map((url) => (
@@ -236,7 +252,9 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
       <div className="flex flex-wrap items-center gap-4 text-sm">
         {report.opr_score != null ? (
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-muted-foreground">Your domain OPR:</span>
+            <span className="text-[var(--workspace-shell-text-muted)]">
+              Your domain OPR:
+            </span>
             <OprBadge
               score={report.opr_score}
               decimal={
@@ -249,7 +267,9 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
         ) : null}
         {report.referring_domains != null ? (
           <div className="min-w-[200px] flex-1 space-y-1">
-            <p className="text-muted-foreground text-xs">Referring domains</p>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Referring domains
+            </p>
             <BacklinkBar
               domain={report.target_domain}
               referringDomains={report.referring_domains}
@@ -306,8 +326,8 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
         <div
           className={`rounded-lg border px-4 py-3 text-sm ${
             citedCount > 0
-              ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-100'
-              : 'border-amber-500/30 bg-amber-500/10 text-amber-100'
+              ? 'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-text)]'
+              : 'border-[color-mix(in_srgb,#F0C14B_35%,transparent)] bg-[color-mix(in_srgb,#F0C14B_12%,transparent)] text-[var(--workspace-shell-text)]'
           }`}
         >
           {citedCount > 0
@@ -320,7 +340,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
         {report.referring_domains != null && report.referring_domains > 0 ? (
           <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-4">
             <p className="text-sm font-medium">Top referring domains</p>
-            <ul className="text-muted-foreground space-y-1 text-sm">
+            <ul className="space-y-1 text-sm text-[var(--workspace-shell-text-muted)]">
               {(report.top_referring_domains ?? []).slice(0, 10).map((row) => (
                 <li
                   key={row.domain}
@@ -343,7 +363,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
     return (
       <div className="space-y-3">
         {domainMetrics}
-        <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+        <div className="rounded-lg border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
           Your domain is cited in AI search for:{' '}
           {(report.ai_cited_queries ?? []).join(', ') || 'at least one query'}
         </div>
@@ -354,7 +374,7 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
   return (
     <div className="space-y-3">
       {domainMetrics}
-      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-amber-100">
+      <div className="rounded-lg border border-[color-mix(in_srgb,#F0C14B_35%,transparent)] bg-[color-mix(in_srgb,#F0C14B_12%,transparent)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
         Not cited in AI search for tested queries.
       </div>
       {competingBrandsPanel}
@@ -392,7 +412,7 @@ export function AuditReportView({
     <div className="space-y-8">
       <header className="space-y-2">
         <h2 className="text-xl font-semibold">{report.target_domain}</h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Overall score:{' '}
           <span
             className={`font-semibold ${scoreColour(report.overall_score)}`}
@@ -401,11 +421,14 @@ export function AuditReportView({
           </span>{' '}
           · {new Date(report.created_at).toLocaleDateString()}
           {crawlAccess.severity === 'blocked' ? (
-            <span className="text-red-300"> · crawl blocked</span>
+            <span className="text-[var(--ozer-accent-pressed,#C2452A)]">
+              {' '}
+              · crawl blocked
+            </span>
           ) : null}
         </p>
         {report.executive_summary ? (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {report.executive_summary}
           </p>
         ) : null}
@@ -447,7 +470,7 @@ export function AuditReportView({
             className={`rounded px-3 py-1.5 text-xs font-medium uppercase ${
               priorityFilter === filter
                 ? 'bg-primary text-primary-foreground'
-                : 'text-muted-foreground bg-black/30'
+                : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)]'
             }`}
           >
             {filter}
@@ -464,7 +487,7 @@ export function AuditReportView({
               className={`rounded px-3 py-1.5 text-xs font-medium uppercase ${
                 categoryFilter === cat
                   ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground bg-black/30'
+                  : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)]'
               }`}
             >
               {cat}
@@ -515,7 +538,7 @@ export function AuditReportList({
           >
             <div>
               <p className="font-medium">{report.target_domain}</p>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {report.overall_score ?? '—'}/100 ·{' '}
                 {new Date(report.created_at).toLocaleDateString()}
               </p>

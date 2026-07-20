@@ -141,7 +141,11 @@ export function ClusterJobPoller({
   };
 
   if (!job) {
-    return <p className="text-muted-foreground text-sm">Loading job status…</p>;
+    return (
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+        Loading job status…
+      </p>
+    );
   }
 
   const percent = progressPercent(job.status);
@@ -149,7 +153,7 @@ export function ClusterJobPoller({
 
   if (job.status === 'error') {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+      <div className="rounded-lg border border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_12%,transparent)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
         {job.error_msg ?? 'Cluster job failed'}
       </div>
     );
@@ -160,14 +164,14 @@ export function ClusterJobPoller({
     const count = job.candidate_count ?? 0;
 
     return (
-      <div className="max-w-xl space-y-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-4">
-        <p className="text-sm text-amber-100">
+      <div className="max-w-xl space-y-4 rounded-lg border border-[color-mix(in_srgb,#F0C14B_35%,transparent)] bg-[color-mix(in_srgb,#F0C14B_12%,transparent)] px-4 py-4">
+        <p className="text-sm text-[var(--workspace-shell-text)]">
           Found <strong>{count}</strong> candidate keywords after filtering.
           Fetching SERPs will use approximately <strong>{credits}</strong>{' '}
           DataForSEO credits.
         </p>
         {credits > 500 ? (
-          <p className="text-xs text-amber-200/80">
+          <p className="text-xs text-[var(--workspace-shell-text)]/80">
             This is a large run. Consider raising minimum volume to reduce
             candidates.
           </p>
@@ -180,16 +184,22 @@ export function ClusterJobPoller({
   }
 
   if (job.status === 'done') {
-    return <p className="text-sm text-emerald-400">Cluster plan ready.</p>;
+    return (
+      <p className="text-sm text-[var(--ozer-accent)]">Cluster plan ready.</p>
+    );
   }
 
   return (
     <div className="max-w-xl space-y-2">
       <div className="flex items-center justify-between text-sm">
-        <span className="text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground">{percent}%</span>
+        <span className="text-[var(--workspace-shell-text-muted)]">
+          {label}
+        </span>
+        <span className="text-[var(--workspace-shell-text-muted)]">
+          {percent}%
+        </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-black/30">
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--workspace-control-surface)]">
         <div
           className="bg-primary h-full rounded-full transition-all duration-500"
           style={{ width: `${percent}%` }}

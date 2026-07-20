@@ -7,9 +7,9 @@ type QualityGate = {
 };
 
 const STATUS_COLOURS = {
-  pass: 'text-emerald-400',
-  warn: 'text-amber-400',
-  fail: 'text-red-400',
+  pass: 'text-[var(--ozer-accent)]',
+  warn: 'text-[#F0C14B]',
+  fail: 'text-[var(--ozer-accent-pressed,#C2452A)]',
 } as const;
 
 const STATUS_ICONS = {
@@ -29,7 +29,7 @@ export function QualityScorecard({ gates }: { gates: QualityGate[] }) {
 
   if (allPass) {
     return (
-      <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-200">
+      <div className="rounded-lg border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
         All quality gates passed — cannibalisation, orphan, coverage, anchor
         diversity
       </div>
@@ -39,7 +39,7 @@ export function QualityScorecard({ gates }: { gates: QualityGate[] }) {
   return (
     <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]">
       <table className="w-full text-left text-sm">
-        <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
+        <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
           <tr>
             <th className="px-4 py-3">Gate</th>
             <th className="px-4 py-3">Status</th>
@@ -58,7 +58,7 @@ export function QualityScorecard({ gates }: { gates: QualityGate[] }) {
               >
                 {STATUS_ICONS[gate.status]} {gate.status}
               </td>
-              <td className="text-muted-foreground px-4 py-3">
+              <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                 {gate.detail ?? '—'}
               </td>
             </tr>

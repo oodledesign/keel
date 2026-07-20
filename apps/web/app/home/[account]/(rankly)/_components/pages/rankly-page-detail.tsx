@@ -17,9 +17,10 @@ import { SITE_CRAWL_ISSUE_LABELS } from '~/lib/site-crawl/types';
 import { PageOptimizePanel } from './page-optimize-panel';
 
 const PRIORITY_COLOURS = {
-  high: 'bg-red-500/20 text-red-200',
-  medium: 'bg-amber-500/20 text-amber-200',
-  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground',
+  high: 'bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_18%,transparent)] text-[var(--workspace-shell-text)]',
+  medium:
+    'bg-[color-mix(in_srgb,#F0C14B_18%,transparent)] text-[var(--workspace-shell-text)]',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
 } as const;
 
 function formatScore(score: number | null | undefined): string {
@@ -43,7 +44,7 @@ function formatMs(ms: number | null | undefined): string {
 function ScoreBreakdownCard(props: { label: string; score: number | null }) {
   return (
     <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-      <p className="text-muted-foreground text-xs tracking-wide uppercase">
+      <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
         {props.label}
       </p>
       <p
@@ -70,7 +71,7 @@ function RecommendationRow(props: {
       >
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium">{rec.title}</span>
-          <span className="text-muted-foreground mt-0.5 block text-xs">
+          <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
             {PAGE_RECOMMENDATION_CATEGORY_LABELS[rec.category]}
             {' · '}
             {rec.source === 'site-crawl' ? 'Site crawl' : 'PageSpeed'}
@@ -81,14 +82,14 @@ function RecommendationRow(props: {
         >
           {PAGESPEED_PRIORITY_LABELS[rec.priority]}
         </span>
-        <span className="text-muted-foreground shrink-0 text-xs">
+        <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
           {expanded ? '▲' : '▼'}
         </span>
       </button>
 
       {expanded ? (
         <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] px-3 pt-2 pb-3">
-          <p className="text-muted-foreground text-sm leading-relaxed">
+          <p className="text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
             {rec.detail}
           </p>
           {rec.action ? (
@@ -108,7 +109,7 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
     return (
       <section className="space-y-2">
         <h2 className="text-sm font-medium">On-page data</h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No crawl data for this URL yet. Run a site crawl to populate title,
           meta, and technical checks.
         </p>
@@ -121,37 +122,41 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
       <h2 className="text-sm font-medium">On-page data</h2>
       <div className="grid gap-3 sm:grid-cols-2">
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-[10px] uppercase">Title</p>
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
+            Title
+          </p>
           <p className="mt-1 text-sm">{crawl.title || '—'}</p>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             {crawl.title.length} characters
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-[10px] uppercase">
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
             Meta description
           </p>
           <p className="mt-1 text-sm">{crawl.meta_description || '—'}</p>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             {crawl.meta_description.length} characters
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-[10px] uppercase">H1</p>
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
+            H1
+          </p>
           <p className="mt-1 text-sm">{crawl.h1 || '—'}</p>
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             {crawl.h1_count} H1 tag{crawl.h1_count === 1 ? '' : 's'}
           </p>
         </div>
         <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-          <p className="text-muted-foreground text-[10px] uppercase">
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)] uppercase">
             Technical
           </p>
           <p className="mt-1 text-sm">
             HTTP {crawl.status_code}
             {crawl.indexable ? ' · Indexable' : ' · Noindex'}
           </p>
-          <p className="text-muted-foreground mt-1 truncate text-xs">
+          <p className="mt-1 truncate text-xs text-[var(--workspace-shell-text-muted)]">
             Canonical: {crawl.canonical || '—'}
           </p>
         </div>
@@ -159,14 +164,14 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
 
       {(crawl.schema_types ?? []).length > 0 ? (
         <div>
-          <p className="text-muted-foreground mb-2 text-xs uppercase">
+          <p className="mb-2 text-xs text-[var(--workspace-shell-text-muted)] uppercase">
             Schema types
           </p>
           <div className="flex flex-wrap gap-1">
             {crawl.schema_types.map((type) => (
               <span
                 key={type}
-                className="inline-flex rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-xs text-sky-200"
+                className="inline-flex rounded-full border border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text)]"
               >
                 {type}
               </span>
@@ -177,19 +182,19 @@ function CrawlDataSection(props: { page: RanklyPageDetail }) {
 
       {crawl.issues.length > 0 ? (
         <div>
-          <p className="text-muted-foreground mb-2 text-xs uppercase">
+          <p className="mb-2 text-xs text-[var(--workspace-shell-text-muted)] uppercase">
             Crawl issues
           </p>
           <ul className="space-y-1 text-sm">
             {crawl.issues.map((issue) => (
               <li
                 key={`${issue.code}-${issue.message}`}
-                className="rounded-md border border-red-500/20 bg-red-500/5 px-3 py-2"
+                className="rounded-md border border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_25%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_6%,transparent)] px-3 py-2"
               >
-                <span className="font-medium text-red-200">
+                <span className="font-medium text-[var(--workspace-shell-text)]">
                   {SITE_CRAWL_ISSUE_LABELS[issue.code]}
                 </span>
-                <span className="text-muted-foreground">
+                <span className="text-[var(--workspace-shell-text-muted)]">
                   {' '}
                   — {issue.message}
                 </span>
@@ -211,7 +216,7 @@ function PagespeedSection(props: {
     return (
       <section className="space-y-2">
         <h2 className="text-sm font-medium">PageSpeed</h2>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No PageSpeed data for this URL yet.
         </p>
       </section>
@@ -244,17 +249,19 @@ function PagespeedSection(props: {
               key={label}
               className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
             >
-              <p className="text-muted-foreground text-xs uppercase">{label}</p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)] uppercase">
+                {label}
+              </p>
               <p
                 className={`mt-2 text-2xl font-semibold tabular-nums ${scoreTone(metrics.performanceScore)}`}
               >
                 {formatScore(metrics.performanceScore)}
-                <span className="text-muted-foreground text-sm font-normal">
+                <span className="text-sm font-normal text-[var(--workspace-shell-text-muted)]">
                   {' '}
                   performance
                 </span>
               </p>
-              <p className="text-muted-foreground mt-2 text-xs">
+              <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
                 LCP {formatMs(metrics.lcpMs)}
                 {metrics.fetchedAt
                   ? ` · ${formatDate(metrics.fetchedAt)}`
@@ -266,8 +273,10 @@ function PagespeedSection(props: {
               key={label}
               className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
             >
-              <p className="text-muted-foreground text-xs uppercase">{label}</p>
-              <p className="text-muted-foreground mt-2 text-sm">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)] uppercase">
+                {label}
+              </p>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 {metrics?.errorMsg ?? 'Not checked yet'}
               </p>
             </div>
@@ -295,7 +304,7 @@ export function RanklyPageDetailView(props: {
           <p className="text-lg font-medium">
             {page.label}
             {page.isHomepage ? (
-              <span className="text-muted-foreground ml-2 text-xs uppercase">
+              <span className="ml-2 text-xs text-[var(--workspace-shell-text-muted)] uppercase">
                 Homepage
               </span>
             ) : null}
@@ -304,19 +313,19 @@ export function RanklyPageDetailView(props: {
             href={page.url}
             target="_blank"
             rel="noreferrer"
-            className="text-muted-foreground hover:text-primary text-xs underline-offset-4 hover:underline"
+            className="hover:text-primary text-xs text-[var(--workspace-shell-text-muted)] underline-offset-4 hover:underline"
           >
             {pageDisplayPath(page.url)}
           </a>
           {page.lastUpdatedAt ? (
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               Last updated {formatDate(page.lastUpdatedAt)}
             </p>
           ) : null}
         </div>
 
         <div className="text-right">
-          <p className="text-muted-foreground text-xs uppercase">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)] uppercase">
             Overall score
           </p>
           <p
@@ -324,7 +333,7 @@ export function RanklyPageDetailView(props: {
           >
             {formatScore(page.scores.overall)}
             {page.scores.overall != null ? (
-              <span className="text-muted-foreground text-lg font-normal">
+              <span className="text-lg font-normal text-[var(--workspace-shell-text-muted)]">
                 {' '}
                 /100
               </span>
@@ -359,7 +368,7 @@ export function RanklyPageDetailView(props: {
         pagespeedDetailHref={props.pagespeedDetailHref}
       />
 
-      <section className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
+      <section className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
         <h2 className="text-sm font-medium">URL optimization</h2>
         <PageOptimizePanel
           accountId={props.accountId}
@@ -372,7 +381,7 @@ export function RanklyPageDetailView(props: {
       <section className="space-y-3">
         <div className="flex flex-wrap items-baseline justify-between gap-2">
           <h2 className="text-sm font-medium">Recommendations</h2>
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {page.recommendations.length} item
             {page.recommendations.length === 1 ? '' : 's'} — specific to this
             page
@@ -380,7 +389,7 @@ export function RanklyPageDetailView(props: {
         </div>
 
         {page.recommendations.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm">
+          <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm text-[var(--workspace-shell-text-muted)]">
             No issues found from the latest crawl and PageSpeed scans.
           </p>
         ) : (
@@ -394,7 +403,7 @@ export function RanklyPageDetailView(props: {
 
       <Link
         href={props.backHref}
-        className="text-muted-foreground inline-block text-sm underline-offset-4 hover:underline"
+        className="inline-block text-sm text-[var(--workspace-shell-text-muted)] underline-offset-4 hover:underline"
       >
         ← Back to all pages
       </Link>

@@ -2,11 +2,11 @@ import Link from 'next/link';
 
 import { PageBody } from '@kit/ui/page';
 
-import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import {
   ModuleDataSection,
   ModuleEmptyState,
 } from '../../../_components/module-data-section';
+import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { loadRanklyResearchCacheSample } from '../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
@@ -41,7 +41,7 @@ export default async function RanklyResearchPage({
           ) : (
             <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[36rem] text-left text-sm">
-                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   <tr>
                     <th className="px-4 py-3">Seed keyword</th>
                     <th className="px-4 py-3">Country</th>
@@ -59,10 +59,10 @@ export default async function RanklyResearchPage({
                       <td className="px-4 py-3">{r.seed_keyword}</td>
                       <td className="px-4 py-3">{r.country}</td>
                       <td className="px-4 py-3">{r.language}</td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                         {new Date(r.cached_at).toLocaleString()}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                         {new Date(r.expires_at).toLocaleString()}
                       </td>
                     </tr>
@@ -76,13 +76,13 @@ export default async function RanklyResearchPage({
         <div className="flex flex-wrap gap-3 text-sm">
           <Link
             href={workAccountPath(workPaths.accountRanklyProjects, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Projects
           </Link>
           <Link
             href={workAccountPath(workPaths.accountRanklyAlerts, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Alerts
           </Link>

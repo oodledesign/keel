@@ -52,9 +52,10 @@ function progressPercent(status: string): number {
 }
 
 const PRIORITY_COLOURS = {
-  high: 'bg-red-500/20 text-red-200',
-  medium: 'bg-amber-500/20 text-amber-200',
-  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground',
+  high: 'bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_18%,transparent)] text-[var(--workspace-shell-text)]',
+  medium:
+    'bg-[color-mix(in_srgb,#F0C14B_18%,transparent)] text-[var(--workspace-shell-text)]',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
 } as const;
 
 function OptimizeReportView({ report }: { report: OptimizeReport }) {
@@ -62,20 +63,20 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
     <div className="space-y-4 rounded-lg border border-[var(--ozer-accent)]/20 bg-[var(--ozer-accent)]/5 p-4">
       <div className="flex flex-wrap items-baseline justify-between gap-2">
         <div>
-          <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             SEO optimization score
           </p>
           <p className="text-3xl font-semibold tabular-nums">
             {report.score ?? '—'}
             {report.score != null ? (
-              <span className="text-muted-foreground text-lg font-normal">
+              <span className="text-lg font-normal text-[var(--workspace-shell-text-muted)]">
                 {' '}
                 /100
               </span>
             ) : null}
           </p>
         </div>
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Target keyword:{' '}
           <span className="text-foreground">{report.target_keyword}</span>
         </p>
@@ -87,7 +88,7 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
 
       {report.title_suggestions?.length ? (
         <div>
-          <p className="text-muted-foreground mb-2 text-xs font-medium uppercase">
+          <p className="mb-2 text-xs font-medium text-[var(--workspace-shell-text-muted)] uppercase">
             Title suggestions
           </p>
           <ul className="list-inside list-disc space-y-1 text-sm">
@@ -100,7 +101,7 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
 
       {report.meta_suggestion ? (
         <div>
-          <p className="text-muted-foreground mb-1 text-xs font-medium uppercase">
+          <p className="mb-1 text-xs font-medium text-[var(--workspace-shell-text-muted)] uppercase">
             Meta description
           </p>
           <p className="text-sm">{report.meta_suggestion}</p>
@@ -109,7 +110,7 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
 
       {report.recommendations.length > 0 ? (
         <div className="space-y-2">
-          <p className="text-muted-foreground text-xs font-medium uppercase">
+          <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)] uppercase">
             Recommendations
           </p>
           {report.recommendations.map((rec) => (
@@ -125,7 +126,9 @@ function OptimizeReportView({ report }: { report: OptimizeReport }) {
                   {rec.priority}
                 </span>
               </div>
-              <p className="text-muted-foreground mt-1">{rec.detail}</p>
+              <p className="mt-1 text-[var(--workspace-shell-text-muted)]">
+                {rec.detail}
+              </p>
               {rec.action ? (
                 <p className="mt-2 text-[var(--ozer-accent)]">{rec.action}</p>
               ) : null}
@@ -242,7 +245,7 @@ export function PageOptimizePanel(props: {
   if (job?.status === 'error') {
     return (
       <div className="space-y-3">
-        <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+        <div className="rounded-lg border border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_12%,transparent)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
           {job.error_msg ?? 'Page optimization failed'}
         </div>
         <Button
@@ -261,7 +264,7 @@ export function PageOptimizePanel(props: {
 
   return (
     <div className="space-y-3">
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
         Scrape this URL, compare it to the SERP, and get AI-powered title, meta,
         and content recommendations.
       </p>

@@ -1217,6 +1217,7 @@ export type Database = {
         Row: {
           created_at: string | null
           created_by: string | null
+          default_currency: string
           email: string | null
           id: string
           is_personal_account: boolean
@@ -1233,6 +1234,7 @@ export type Database = {
         Insert: {
           created_at?: string | null
           created_by?: string | null
+          default_currency?: string
           email?: string | null
           id?: string
           is_personal_account?: boolean
@@ -1249,6 +1251,7 @@ export type Database = {
         Update: {
           created_at?: string | null
           created_by?: string | null
+          default_currency?: string
           email?: string | null
           id?: string
           is_personal_account?: boolean

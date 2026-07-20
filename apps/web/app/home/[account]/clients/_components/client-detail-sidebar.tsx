@@ -41,6 +41,8 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { ClientSubscriptionStatusList } from '~/home/[account]/_components/client-subscription-status-list';
+import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
+import { formatWorkspaceMoney } from '~/lib/currency/workspace-currency';
 
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
@@ -185,13 +187,6 @@ function OverviewPreviewPanel({
   );
 }
 
-function formatPence(pence: number) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-  }).format(pence / 100);
-}
-
 function formatLastUpdated(updatedAt: string) {
   const date = new Date(updatedAt);
   const datePart = date.toLocaleDateString('en-GB', {
@@ -286,6 +281,9 @@ export function ClientDetailSidebar({
   initialClient?: Client | null;
   overviewSeed?: ClientDetailOverviewSeed;
 }) {
+  const workspaceCurrency = useWorkspaceCurrency();
+  const formatMoney = (pence: number) =>
+    formatWorkspaceMoney(pence, workspaceCurrency);
   const hasServerSeed = Boolean(initialClient);
   const [client, setClient] = useState<Client | null>(initialClient ?? null);
   const [jobs, setJobs] = useState<ClientJobSummary[]>(
@@ -475,7 +473,7 @@ export function ClientDetailSidebar({
         key === 'projects'
           ? String(jobsCount)
           : key === 'invoices'
-            ? formatPence(totalValuePence)
+            ? formatMoney(totalValuePence)
             : undefined,
     }));
   }, [client, isContractorView, jobsCount, totalValuePence]);
@@ -633,7 +631,7 @@ export function ClientDetailSidebar({
                   <OverviewMetric
                     icon={Building2}
                     label="Total project value"
-                    value={formatPence(totalValuePence)}
+                    value={formatMoney(totalValuePence)}
                   />
                 </div>
 
@@ -688,7 +686,7 @@ export function ClientDetailSidebar({
                   Projects
                 </h2>
                 <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  {jobsCount} total · {formatPence(totalValuePence)}
+                  {jobsCount} total · {formatMoney(totalValuePence)}
                 </span>
               </div>
 

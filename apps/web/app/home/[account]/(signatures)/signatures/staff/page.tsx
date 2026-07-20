@@ -2,23 +2,23 @@ import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { countOpenChangeRequestsByStaff } from '~/lib/signatures/change-requests';
 
 import { ModuleDataSection } from '../../../_components/module-data-section';
-import {
-  DEFAULT_SIGNATURES_STAFF_PAGE_SIZE,
-  parseStaffListPage,
-  parseStaffListPageSize,
-} from '../../_lib/signatures-staff-pagination';
 import { SignaturesStaffFilters } from '../../_components/signatures-staff-filters';
 import { SignaturesStaffToolbar } from '../../_components/signatures-staff-toolbar';
 import { SignaturesStaffViews } from '../../_components/signatures-staff-views';
 import {
+  type StaffListFilters,
   loadDepartments,
   loadSignaturesWorkspace,
   loadStaffImportRows,
   loadStaffPage,
   loadStaffRows,
   loadTemplates,
-  type StaffListFilters,
 } from '../../_lib/server/signatures-data';
+import {
+  DEFAULT_SIGNATURES_STAFF_PAGE_SIZE,
+  parseStaffListPage,
+  parseStaffListPageSize,
+} from '../../_lib/signatures-staff-pagination';
 
 type SignaturesStaffPageProps = {
   params: Promise<{ account: string }>;

@@ -41,7 +41,7 @@ function NavLink(props: {
           : 'gap-2.5 px-3',
         props.active
           ? 'ozer-gradient-active'
-          : 'text-muted-foreground hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+          : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
       )}
     >
       {props.icon}
@@ -120,7 +120,7 @@ export function RanklyProjectNav(props: {
               type="button"
               variant="ghost"
               size="icon"
-              className="text-muted-foreground h-8 w-8 hover:text-[var(--workspace-shell-text)]"
+              className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
               onClick={toggleCollapsed}
               aria-label={
                 collapsed

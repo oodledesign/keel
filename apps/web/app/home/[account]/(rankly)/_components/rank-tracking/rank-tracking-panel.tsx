@@ -90,22 +90,26 @@ const INTENT_LABELS: Record<KeywordIntent, string> = {
 };
 
 const INTENT_STYLES: Record<KeywordIntent, string> = {
-  informational: 'bg-blue-500/15 text-blue-200',
-  commercial: 'bg-amber-500/15 text-amber-200',
-  transactional: 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
-  navigational: 'bg-violet-500/15 text-violet-200',
+  informational:
+    'border border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--workspace-shell-text)]',
+  commercial:
+    'bg-[color-mix(in_srgb,#F0C14B_18%,transparent)] text-[var(--workspace-shell-text)]',
+  transactional:
+    'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]',
+  navigational:
+    'border border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--workspace-shell-text)]',
 };
 
 function IntentBadge({ intent }: { intent: string | null | undefined }) {
   if (!intent) {
-    return <span className="text-muted-foreground">—</span>;
+    return <span className="text-[var(--workspace-shell-text-muted)]">—</span>;
   }
 
   const key = intent as KeywordIntent;
   const label = INTENT_LABELS[key] ?? intent;
   const style =
     INTENT_STYLES[key] ??
-    'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground';
+    'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
 
   return (
     <span
@@ -575,7 +579,7 @@ export function RankTrackingPanel(props: {
                 </option>
               ))}
             </select>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               {props.settings?.lastRankCheckAt
                 ? `Last checked ${props.settings.lastRankCheckAt}`
                 : 'Not checked yet'}
@@ -616,7 +620,7 @@ export function RankTrackingPanel(props: {
                 {savingDevices ? 'Saving…' : 'Save devices'}
               </Button>
             </div>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
               Each enabled device doubles API cost and check time. Turn off
               mobile if you only need desktop rankings.
             </p>
@@ -628,7 +632,7 @@ export function RankTrackingPanel(props: {
             <DialogTrigger asChild>
               <Button type="button">Add keywords</Button>
             </DialogTrigger>
-            <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[#0F1923] text-[var(--workspace-shell-text)] sm:max-w-lg">
+            <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
               <DialogHeader>
                 <DialogTitle>Add keywords</DialogTitle>
                 <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
@@ -654,7 +658,7 @@ export function RankTrackingPanel(props: {
                     className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] font-mono text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                     autoComplete="off"
                   />
-                  <p className="text-muted-foreground text-xs">
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                     {parsedCount > 0
                       ? `${parsedCount} ready to add.`
                       : 'Paste or type keywords, one per line.'}
@@ -716,7 +720,7 @@ export function RankTrackingPanel(props: {
       </div>
 
       <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm">
-        <p className="text-muted-foreground">
+        <p className="text-[var(--workspace-shell-text-muted)]">
           Manual refresh est.{' '}
           <strong className="text-[var(--workspace-shell-text)]">
             {formatUsdCost(props.estimatedCostUsd)}
@@ -726,14 +730,14 @@ export function RankTrackingPanel(props: {
           {deviceCostLabel}.
         </p>
         {props.latestJob?.status === 'done' ? (
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             Last run: {formatUsdCost(Number(props.latestJob.api_cost_usd))} ·{' '}
             {props.latestJob.tasks_completed}/{props.latestJob.tasks_total}{' '}
             lookups
           </p>
         ) : null}
         {keywordsNeedingMetrics > 0 ? (
-          <p className="text-muted-foreground mt-1 text-xs">
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
             {keywordsNeedingMetrics} keyword
             {keywordsNeedingMetrics === 1 ? '' : 's'} missing volume & intent —
             click Load insights to fetch from DataForSEO.
@@ -749,14 +753,14 @@ export function RankTrackingPanel(props: {
       ) : null}
 
       {displayRows.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
+        <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
           No keywords yet. Click Add keywords, then refresh ranks to pull
           positions from Google.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[62rem] text-left text-sm">
-            <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
+            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               <tr>
                 <SortableHeader
                   label="Keyword"
@@ -834,10 +838,10 @@ export function RankTrackingPanel(props: {
                     className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                   >
                     <td className="px-4 py-3">{keyword.keyword}</td>
-                    <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
+                    <td className="px-4 py-3 text-right text-[var(--workspace-shell-text-muted)] tabular-nums">
                       {showRemove ? formatVolume(keyword.search_volume) : ''}
                     </td>
-                    <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
+                    <td className="px-4 py-3 text-right text-[var(--workspace-shell-text-muted)] tabular-nums">
                       {showRemove ? formatKd(keyword.keyword_difficulty) : ''}
                     </td>
                     <td className="px-4 py-3">
@@ -845,7 +849,7 @@ export function RankTrackingPanel(props: {
                         <IntentBadge intent={keyword.intent} />
                       ) : null}
                     </td>
-                    <td className="text-muted-foreground px-4 py-3 text-right tabular-nums">
+                    <td className="px-4 py-3 text-right text-[var(--workspace-shell-text-muted)] tabular-nums">
                       {showRemove ? formatCpc(keyword.cpc) : ''}
                     </td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">
@@ -856,22 +860,22 @@ export function RankTrackingPanel(props: {
                         change?.startsWith('▲')
                           ? 'px-4 py-3 text-right text-[var(--ozer-accent)] tabular-nums'
                           : change?.startsWith('▼')
-                            ? 'px-4 py-3 text-right text-red-400 tabular-nums'
-                            : 'text-muted-foreground px-4 py-3 text-right'
+                            ? 'px-4 py-3 text-right text-[var(--ozer-accent-pressed,#C2452A)] tabular-nums'
+                            : 'px-4 py-3 text-right text-[var(--workspace-shell-text-muted)]'
                       }
                     >
                       {change ?? '—'}
                     </td>
                     <td
-                      className="text-muted-foreground px-4 py-3 text-right tabular-nums"
+                      className="px-4 py-3 text-right text-[var(--workspace-shell-text-muted)] tabular-nums"
                       title={snapshot?.rankDate ?? undefined}
                     >
                       {formatRankDate(snapshot?.rankDate)}
                     </td>
-                    <td className="text-muted-foreground px-4 py-3">
+                    <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                       {device}
                     </td>
-                    <td className="text-muted-foreground max-w-[14rem] truncate px-4 py-3">
+                    <td className="max-w-[14rem] truncate px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                       {snapshot?.rankingUrl ? (
                         <a
                           href={snapshot.rankingUrl}

@@ -20,10 +20,10 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 export const MINIMAL_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures minimal template (dark-mode resilient) -->
 <table cellpadding="0" cellspacing="0" role="presentation" style="font-family:Arial,sans-serif;color:#333333;border-collapse:collapse;">
   <tr>
-    <td style="padding-right:16px;vertical-align:top;">
+    <td style="padding-right:8px;vertical-align:top;">
       <img src="{{photo_url}}" width="80" height="80" alt="{{full_name}}" style="display:block;width:80px;height:80px;border-radius:999px;object-fit:cover;" />
     </td>
-    <td style="vertical-align:top;color:#333333;">
+    <td style="vertical-align:top;color:#333333;padding-right:20px;">
       <div style="font-size:18px;font-weight:700;line-height:1.25;color:#333333;">{{full_name}}</div>
       <div style="font-size:14px;line-height:1.4;color:#555555;">{{job_title}}</div>
       <div style="font-size:13px;margin-top:8px;line-height:1.5;color:#333333;">
@@ -49,7 +49,7 @@ export const DEFAULT_SIGNATURE_TEMPLATE = `<!-- Ozer Signatures — executive ba
     <td style="width:160px;vertical-align:top;padding:0;line-height:0;font-size:0;">
       <img src="{{photo_url}}" alt="{{full_name}}" width="160" height="200" style="display:block;width:160px;height:200px;object-fit:cover;border:0;outline:none;text-decoration:none;-ms-interpolation-mode:bicubic;" />
     </td>
-    <td style="vertical-align:top;background-color:{{brand_primary_color}};color:#FFFFFF;padding:20px 22px 18px 24px;">
+    <td style="vertical-align:top;background-color:{{brand_primary_color}};color:#FFFFFF;padding:20px 28px 18px 12px;">
       <table role="presentation" cellpadding="0" cellspacing="0" border="0" width="100%" style="border-collapse:collapse;">
         <tr>
           <td style="vertical-align:top;padding:0 12px 0 0;">
@@ -246,11 +246,7 @@ export async function loadDepartments(accountId: string): Promise<string[]> {
     throw new Error(error.message);
   }
 
-  return [
-    ...new Set(
-      (data ?? []).map((row) => String(row.department).trim()),
-    ),
-  ]
+  return [...new Set((data ?? []).map((row) => String(row.department).trim()))]
     .filter(Boolean)
     .sort((a, b) => a.localeCompare(b));
 }

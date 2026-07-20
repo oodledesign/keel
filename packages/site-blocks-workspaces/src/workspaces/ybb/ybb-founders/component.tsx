@@ -2,13 +2,13 @@
 
 import type { CSSProperties } from 'react';
 
+import { YBB_DEFAULTS } from '../defaults';
 import {
   YBB_FOUNDERS_MASK_FILL,
   YBB_FOUNDERS_STAR_INNER,
   YBB_FOUNDERS_STAR_MASK,
   YBB_FOUNDERS_STAR_OUTER,
 } from '../ybb-assets';
-import { YBB_DEFAULTS } from '../defaults';
 import '../ybb-buttons.css';
 import { YbbImage } from '../ybb-image';
 import { resolveYbbColorVar, ybbCtaClassName } from '../ybb-styles';
@@ -41,8 +41,7 @@ export function YbbFounders(props: YbbFoundersProps) {
   const ctaLabel = props.ctaLabel ?? YBB_DEFAULTS.foundersCtaLabel;
   const ctaHref = props.ctaHref ?? YBB_DEFAULTS.foundersCtaHref;
   const ctaVariant = props.ctaVariant ?? 'primary';
-  const photoUrl =
-    props.photoUrl?.trim() || YBB_DEFAULTS.foundersPhotoUrl;
+  const photoUrl = props.photoUrl?.trim() || YBB_DEFAULTS.foundersPhotoUrl;
   const photoAlt =
     props.photoAlt ?? 'Zoe and Eloise — Your Bridal Besties founders';
 

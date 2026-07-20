@@ -3,6 +3,8 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+
 import { normalizeInvoiceCurrency } from '../invoice-currency';
 import {
   DEFAULT_INVOICE_EMAIL_BODY,
@@ -79,7 +81,7 @@ export async function getInvoiceSummary(
     from.setDate(from.getDate() - 90);
   }
 
-  const [{ data, error }, { data: paymentSettings }] = await Promise.all([
+  const [{ data, error }, displayCurrency] = await Promise.all([
     client
       .from('invoices')
       .select(
@@ -88,17 +90,11 @@ export async function getInvoiceSummary(
       .eq('account_id', accountId)
       .is('archived_at', null)
       .gte('issued_at', from.toISOString()),
-    client
-      .from('account_payment_settings')
-      .select('default_invoice_currency')
-      .eq('account_id', accountId)
-      .maybeSingle(),
+    getWorkspaceCurrencyWithClient(client, accountId),
   ]);
   if (error) throw new Error(error.message);
 
-  const displayCurrency = normalizeInvoiceCurrency(
-    paymentSettings?.default_invoice_currency,
-  );
+  const normalizedDisplayCurrency = normalizeInvoiceCurrency(displayCurrency);
 
   const currencies = new Set(
     (data ?? []).map((row: { currency?: string | null }) =>
@@ -117,7 +113,7 @@ export async function getInvoiceSummary(
     const rowCurrency = normalizeInvoiceCurrency(
       (row as { currency?: string | null }).currency,
     );
-    if (rowCurrency !== displayCurrency) continue;
+    if (rowCurrency !== normalizedDisplayCurrency) continue;
 
     const total = row.total_pence ?? 0;
     const amountPaid = row.amount_paid_pence ?? 0;
@@ -141,7 +137,7 @@ export async function getInvoiceSummary(
     paid_pence: paid,
     unpaid_pence: unpaid,
     overdue_pence: overdue,
-    currency: displayCurrency,
+    currency: normalizedDisplayCurrency,
     mixed_currencies: mixedCurrencies,
     chart: [...byDay.entries()]
       .sort(([a], [b]) => a.localeCompare(b))

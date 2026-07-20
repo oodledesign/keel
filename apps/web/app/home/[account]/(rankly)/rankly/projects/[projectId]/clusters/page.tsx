@@ -2,14 +2,14 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
-import { ClusterForm } from '../../../../_components/clusters/cluster-form';
-import { RanklyProjectSectionHeader } from '../../../../_components/rankly-project-section-header';
-import { loadClusterJobsForProject } from '../../../../../_lib/server/rankly-cluster-data';
 import { loadRanklyProjectForTeam } from '../../../../../_lib/server/rankly-account-data';
+import { loadClusterJobsForProject } from '../../../../../_lib/server/rankly-cluster-data';
 import { loadTeamWorkspace } from '../../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../../_lib/server/workspace-route-guard';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { ClusterForm } from '../../../../_components/clusters/cluster-form';
+import { RanklyProjectSectionHeader } from '../../../../_components/rankly-project-section-header';
 
 type RanklyProjectClustersPageProps = {
   params: Promise<{
@@ -78,14 +78,14 @@ export default async function RanklyProjectClustersPage({
       <section className="space-y-4">
         <h2 className="text-lg font-semibold">Previous plans</h2>
         {jobs.length === 0 ? (
-          <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
-            No cluster plans yet. Enter seed keywords above to generate a
-            pillar + spokes architecture.
+          <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
+            No cluster plans yet. Enter seed keywords above to generate a pillar
+            + spokes architecture.
           </p>
         ) : (
           <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
             <table className="w-full min-w-[36rem] text-left text-sm">
-              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+              <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 <tr>
                   <th className="px-4 py-3">Seeds</th>
                   <th className="px-4 py-3">Status</th>
@@ -103,13 +103,13 @@ export default async function RanklyProjectClustersPage({
                     <td className="max-w-xs truncate px-4 py-3">
                       {job.seeds.join(', ')}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                       {STATUS_LABELS[job.status] ?? job.status}
                     </td>
-                    <td className="px-4 py-3 uppercase text-muted-foreground">
+                    <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)] uppercase">
                       {job.country}
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">
+                    <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                       {new Date(job.created_at).toLocaleDateString()}
                     </td>
                     <td className="px-4 py-3 text-right">

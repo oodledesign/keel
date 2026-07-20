@@ -17,9 +17,10 @@ import type {
 import { PAGESPEED_RECOMMENDATION_CATEGORIES } from '~/lib/pagespeed/types';
 
 const PRIORITY_COLOURS: Record<PagespeedRecommendationPriority, string> = {
-  high: 'bg-red-500/20 text-red-200',
-  medium: 'bg-amber-500/20 text-amber-200',
-  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground',
+  high: 'bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_18%,transparent)] text-[var(--workspace-shell-text)]',
+  medium:
+    'bg-[color-mix(in_srgb,#F0C14B_18%,transparent)] text-[var(--workspace-shell-text)]',
+  low: 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
 };
 
 function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
@@ -35,7 +36,7 @@ function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
         <span className="min-w-0 flex-1">
           <span className="block text-sm font-medium">{rec.title}</span>
           {rec.displayValue ? (
-            <span className="text-muted-foreground mt-0.5 block text-xs">
+            <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
               {rec.displayValue}
             </span>
           ) : null}
@@ -50,14 +51,14 @@ function RecommendationRow({ rec }: { rec: PagespeedRecommendation }) {
         >
           {PAGESPEED_PRIORITY_LABELS[rec.priority]}
         </span>
-        <span className="text-muted-foreground shrink-0 text-xs">
+        <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
           {expanded ? '▲' : '▼'}
         </span>
       </button>
 
       {expanded && rec.description ? (
         <div className="border-t border-[color:var(--workspace-shell-border)] px-3 pt-2 pb-3">
-          <p className="text-muted-foreground text-sm leading-relaxed">
+          <p className="text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
             {rec.description}
           </p>
         </div>
@@ -95,7 +96,7 @@ function CategoryRecommendations(props: {
 
   if (props.recommendations.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
         No {PAGESPEED_CATEGORY_LABELS[props.category].toLowerCase()} issues —
         looking good.
       </p>
@@ -105,7 +106,7 @@ function CategoryRecommendations(props: {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           {props.recommendations.length} item
           {props.recommendations.length === 1 ? '' : 's'}
           {counts.high > 0 ? ` · ${counts.high} high urgency` : ''}
@@ -118,7 +119,7 @@ function CategoryRecommendations(props: {
               className={`rounded-md px-2 py-1 text-xs capitalize ${
                 priorityFilter === filter
                   ? 'ozer-gradient-active text-[var(--ozer-white)]'
-                  : 'text-muted-foreground bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]'
+                  : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
               }`}
               onClick={() => setPriorityFilter(filter)}
             >
@@ -133,7 +134,7 @@ function CategoryRecommendations(props: {
 
       <div className="space-y-2">
         {filtered.length === 0 ? (
-          <p className="text-muted-foreground text-sm">
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             No {priorityFilter} priority items.
           </p>
         ) : (
@@ -178,7 +179,7 @@ function StrategyCategoryTabs(props: {
 
   if (!props.metrics) {
     return (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
         {props.label} has not been checked yet.
       </p>
     );
@@ -186,7 +187,7 @@ function StrategyCategoryTabs(props: {
 
   if (props.metrics.errorMsg) {
     return (
-      <p className="text-sm text-red-400">
+      <p className="text-sm text-[var(--ozer-accent-pressed,#C2452A)]">
         {props.label}: {props.metrics.errorMsg}
       </p>
     );
@@ -194,7 +195,7 @@ function StrategyCategoryTabs(props: {
 
   if (recommendations.length === 0) {
     return (
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
         {props.label}: no failing audits — looking good.
       </p>
     );
@@ -202,7 +203,7 @@ function StrategyCategoryTabs(props: {
 
   return (
     <Tabs defaultValue={defaultCategory} className="space-y-3">
-      <TabsList className="flex h-auto flex-wrap gap-1 bg-black/30 p-1">
+      <TabsList className="flex h-auto flex-wrap gap-1 bg-[var(--workspace-control-surface)] p-1">
         {PAGESPEED_RECOMMENDATION_CATEGORIES.map((category) => {
           const count = byCategory.get(category)?.length ?? 0;
 
@@ -266,7 +267,7 @@ export function PagespeedRecommendations(props: {
           'border-t border-[color:var(--workspace-shell-border)] px-4 py-4'
         }
       >
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Re-run PageSpeed to import Lighthouse fix recommendations for this
           page.
         </p>
@@ -278,18 +279,18 @@ export function PagespeedRecommendations(props: {
     <div
       className={
         props.className ??
-        'border-t border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-4'
+        'border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-4'
       }
     >
       <div className="mb-3">
         <h4 className="text-sm font-medium">Lighthouse fixes</h4>
-        <p className="text-muted-foreground mt-0.5 text-xs">
+        <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
           From Google PageSpeed Insights — grouped by device and category
         </p>
       </div>
 
       <Tabs defaultValue={defaultStrategy}>
-        <TabsList className="mb-4 flex h-auto gap-1 bg-black/30 p-1">
+        <TabsList className="mb-4 flex h-auto gap-1 bg-[var(--workspace-control-surface)] p-1">
           <TabsTrigger
             value="mobile"
             className="data-[state=active]:ozer-gradient-active text-xs"

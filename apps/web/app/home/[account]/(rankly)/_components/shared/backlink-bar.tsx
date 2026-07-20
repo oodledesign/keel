@@ -9,7 +9,7 @@ type BacklinkBarProps = {
 export function BacklinkSourceNote() {
   return (
     <p
-      className="text-xs text-muted-foreground"
+      className="text-xs text-[var(--workspace-shell-text-muted)]"
       title="Backlink data sourced from Common Crawl (monthly snapshot). For real-time data, upgrade to our Pro plan."
     >
       Backlinks sourced from Common Crawl (monthly snapshot).
@@ -25,7 +25,7 @@ export function BacklinkBar({
   if (referringDomains === null) {
     return (
       <span
-        className="text-xs text-muted-foreground"
+        className="text-xs text-[var(--workspace-shell-text-muted)]"
         title={`${domain} — not found in Common Crawl index`}
       >
         Not in crawl
@@ -43,11 +43,11 @@ export function BacklinkBar({
     >
       <div className="h-1.5 flex-1 rounded-full bg-[var(--workspace-shell-sidebar-accent)]">
         <div
-          className="h-1.5 rounded-full bg-sky-500/80"
+          className="h-1.5 rounded-full bg-[var(--ozer-info)]"
           style={{ width: `${pct}%` }}
         />
       </div>
-      <span className="w-16 text-right text-xs tabular-nums text-muted-foreground">
+      <span className="w-16 text-right text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
         {referringDomains.toLocaleString()} RDs
       </span>
     </div>

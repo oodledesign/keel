@@ -60,24 +60,24 @@ export default async function RanklyDashboardPage({
       />
       <PageBody className="space-y-10 bg-[var(--workspace-shell-canvas)] px-0 py-8 text-[var(--workspace-shell-text)] lg:px-6">
         <div className="grid gap-4 px-4 sm:grid-cols-3 lg:px-0">
-          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
-            <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+            <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               Projects
             </p>
             <p className="mt-1 text-3xl font-semibold">{projects.length}</p>
           </div>
-          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
-            <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+            <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               Keywords
             </p>
             <p className="mt-1 text-3xl font-semibold">{keywordTotal}</p>
           </div>
-          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
-            <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+            <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               Active alerts
             </p>
             <p className="mt-1 text-3xl font-semibold">{activeAlerts}</p>
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               of {alerts.length} total
             </p>
           </div>
@@ -101,19 +101,19 @@ export default async function RanklyDashboardPage({
         <div className="flex flex-wrap gap-3 px-4 text-sm lg:px-0">
           <Link
             href={workAccountPath(workPaths.accountRanklyProjects, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             All projects
           </Link>
           <Link
             href={workAccountPath(workPaths.accountRanklyAlerts, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Alerts
           </Link>
           <Link
             href={workAccountPath(workPaths.accountRanklyResearch, account)}
-            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
+            className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-2 transition hover:border-[color:var(--workspace-shell-border)]"
           >
             Keyword research cache
           </Link>

@@ -10,8 +10,8 @@ import { SitePageHeader } from '~/(marketing)/_components/site-page-header';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { OZER_FAQS } from '~/lib/marketing/ozer-faqs';
-import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { JsonLd } from '~/lib/seo/json-ld';
+import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import { breadcrumbJsonLd, faqPageJsonLd, schemaGraph } from '~/lib/seo/schema';
 
 export const generateMetadata = async () => {

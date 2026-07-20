@@ -590,12 +590,17 @@ export function signatureBlocksToHtml(doc: SignatureBuilderDocument): string {
     ? `<table role="presentation" cellpadding="0" cellspacing="0" border="0" bgcolor="${shell.bgcolor}" style="${shell.style}">`
     : `<table role="presentation" cellpadding="0" cellspacing="0" border="0" style="${shell.style}">`;
 
+  /** Gap between photo column and details (photo cell right padding). */
+  const photoContentGap = '8px';
+  /** Breathing room on the far right of the details column. */
+  const detailsRightPad = '20px';
+
   const photoPad = shell.canvasPadding
-    ? `${shell.canvasPadding} 16px ${shell.canvasPadding} ${shell.canvasPadding}`
-    : '0 16px 0 0';
+    ? `${shell.canvasPadding} ${photoContentGap} ${shell.canvasPadding} ${shell.canvasPadding}`
+    : `0 ${photoContentGap} 0 0`;
   const contentPad = shell.canvasPadding
-    ? `${shell.canvasPadding} ${shell.canvasPadding} ${shell.canvasPadding} 0`
-    : '0';
+    ? `${shell.canvasPadding} ${detailsRightPad} ${shell.canvasPadding} 0`
+    : `0 ${detailsRightPad} 0 0`;
   const stackedPad = shell.canvasPadding ?? '0';
 
   let body: string;

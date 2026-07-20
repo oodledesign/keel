@@ -17,11 +17,6 @@ import { Textarea } from '@kit/ui/textarea';
 import pathsConfig from '~/config/paths.config';
 import { stripeConnectErrorMessage } from '~/lib/billing/stripe-connect-messages';
 
-import {
-  INVOICE_CURRENCY_OPTIONS,
-  type InvoiceCurrency,
-  normalizeInvoiceCurrency,
-} from '../../../invoices/_lib/invoice-currency';
 import type { AccountPaymentSettings } from '../../../invoices/_lib/server/invoice-payment-settings.service';
 import {
   disconnectStripeAction,
@@ -72,9 +67,6 @@ export function PaymentSettingsForm({
           bank_transfer_instructions: settings.bank_transfer_instructions,
           stripe_pay_now_enabled: settings.stripe_pay_now_enabled,
           invoice_starting_number: settings.invoice_starting_number,
-          default_invoice_currency: normalizeInvoiceCurrency(
-            settings.default_invoice_currency,
-          ),
         });
         setSettings(saved as AccountPaymentSettings);
         toast.success('Payment settings saved');
@@ -186,35 +178,19 @@ export function PaymentSettingsForm({
       <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
         <h2 className="text-base font-semibold">Invoice defaults</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          New invoices use these defaults. You can still change currency on each
-          draft invoice.
+          New invoices use these defaults. Currency is set in{' '}
+          <Link
+            href={pathsConfig.app.accountSettings.replace(
+              '[account]',
+              accountSlug,
+            )}
+            className="text-[var(--ozer-accent)] hover:underline"
+          >
+            general workspace settings
+          </Link>
+          . You can still change currency on each draft invoice.
         </p>
         <div className="mt-4 grid max-w-md gap-4">
-          <div>
-            <Label htmlFor="default_invoice_currency">
-              Default invoice currency
-            </Label>
-            <select
-              id="default_invoice_currency"
-              value={normalizeInvoiceCurrency(
-                settings.default_invoice_currency,
-              )}
-              disabled={!canEdit}
-              onChange={(e) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  default_invoice_currency: e.target.value as InvoiceCurrency,
-                }))
-              }
-              className="mt-1 flex h-10 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text)]"
-            >
-              {INVOICE_CURRENCY_OPTIONS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </div>
           <div>
             <Label htmlFor="invoice_starting_number">Next invoice number</Label>
             <div className="mt-1 flex items-center gap-2">

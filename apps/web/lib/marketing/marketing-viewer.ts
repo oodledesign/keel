@@ -23,14 +23,18 @@ export function formatMarketingDateLabel(now = new Date()): string {
   }).format(now);
 }
 
-export function toMarketingFirstName(raw: string | null | undefined): string | null {
+export function toMarketingFirstName(
+  raw: string | null | undefined,
+): string | null {
   if (!raw?.trim()) return null;
   const base = raw.trim().split(/\s+/)[0];
   if (!base) return null;
   return base.charAt(0).toUpperCase() + base.slice(1);
 }
 
-export function resolveMarketingViewerFirstName(user: JWTUserData): string | null {
+export function resolveMarketingViewerFirstName(
+  user: JWTUserData,
+): string | null {
   const meta = user.user_metadata as Record<string, unknown> | undefined;
   const displayNameRaw =
     (typeof meta?.display_name === 'string' && meta.display_name.trim()) ||

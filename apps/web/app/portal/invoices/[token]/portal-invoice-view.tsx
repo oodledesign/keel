@@ -4,7 +4,14 @@ import { useCallback, useState } from 'react';
 
 import Link from 'next/link';
 
-import { Building2, Check, Copy, CreditCard, Download, Loader2 } from 'lucide-react';
+import {
+  Building2,
+  Check,
+  Copy,
+  CreditCard,
+  Download,
+  Loader2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
@@ -216,7 +223,7 @@ export function PortalInvoiceView({
               />
             </div>
           ) : business?.name ? (
-            <p className="mb-4 font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
+            <p className="font-heading mb-4 text-lg font-semibold text-[var(--workspace-shell-text)]">
               {business.name}
             </p>
           ) : null}
@@ -435,7 +442,10 @@ export function PortalInvoiceView({
               <CopyableBankDetail
                 label="Account number"
                 value={paymentSettings.bank_account_number}
-                copyValue={paymentSettings.bank_account_number.replace(/\s+/g, '')}
+                copyValue={paymentSettings.bank_account_number.replace(
+                  /\s+/g,
+                  '',
+                )}
               />
             ) : null}
             {paymentSettings?.bank_iban ? (
@@ -452,10 +462,7 @@ export function PortalInvoiceView({
                 copyValue={paymentSettings.bank_bic.replace(/\s+/g, '')}
               />
             ) : null}
-            <CopyableBankDetail
-              label="Reference"
-              value={data.invoice_number}
-            />
+            <CopyableBankDetail label="Reference" value={data.invoice_number} />
             {paymentSettings?.bank_transfer_instructions ? (
               <p className="mt-2 px-2 text-[var(--workspace-shell-text-muted)]">
                 {paymentSettings.bank_transfer_instructions}

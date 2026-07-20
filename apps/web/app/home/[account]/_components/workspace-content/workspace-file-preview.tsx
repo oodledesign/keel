@@ -101,7 +101,9 @@ export function WorkspaceFilePreview({
         {loading ? (
           <Loader2 className="h-5 w-5 animate-spin text-[var(--workspace-shell-text-muted)]" />
         ) : error ? (
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">{error}</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            {error}
+          </p>
         ) : url && isImage ? (
           // eslint-disable-next-line @next/next/no-img-element -- signed storage URL
           <img

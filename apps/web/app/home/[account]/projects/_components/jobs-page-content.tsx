@@ -364,7 +364,7 @@ export function JobsPageContent({
               onClick={() => setView(key)}
               className={`inline-flex items-center gap-1.5 border-b-2 px-3 py-2.5 text-xs font-medium transition-colors ${
                 view === key
-                  ? 'border-[#0073ea] text-[var(--workspace-shell-text)]'
+                  ? 'border-[var(--ozer-accent)] text-[var(--workspace-shell-text)]'
                   : 'border-transparent text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
               }`}
             >

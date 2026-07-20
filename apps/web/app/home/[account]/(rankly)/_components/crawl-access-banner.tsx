@@ -9,8 +9,8 @@ export function CrawlAccessBanner(props: { summary: CrawlAccessSummary }) {
 
   const styles =
     props.summary.severity === 'blocked'
-      ? 'border-red-500/40 bg-red-500/10 text-red-100'
-      : 'border-amber-500/40 bg-amber-500/10 text-amber-100';
+      ? 'border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_12%,transparent)] text-[var(--workspace-shell-text)]'
+      : 'border-[color-mix(in_srgb,#F0C14B_35%,transparent)] bg-[color-mix(in_srgb,#F0C14B_12%,transparent)] text-[var(--workspace-shell-text)]';
 
   return (
     <div className={`rounded-lg border px-4 py-3 text-sm ${styles}`}>

@@ -108,8 +108,8 @@ describe('signatureBlocksToHtml / htmlToSignatureBlocks', () => {
     expect(html).toContain('color-scheme:light only');
     expect(html).toContain(`color:${palette.primary}`);
     // Padding on cells (not the table) — mail clients ignore table padding.
-    expect(html).toMatch(/padding:16px 16px 16px 16px/);
-    expect(html).toMatch(/padding:16px 16px 16px 0/);
+    expect(html).toMatch(/padding:16px 8px 16px 16px/);
+    expect(html).toMatch(/padding:16px 20px 16px 0/);
 
     const parsed = htmlToSignatureBlocks(html);
     expect(parsed?.background).toEqual({

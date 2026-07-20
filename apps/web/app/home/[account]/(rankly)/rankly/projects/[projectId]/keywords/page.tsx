@@ -52,7 +52,7 @@ export default async function RanklyProjectKeywordsPage({
         title="Keyword tracking"
         description="Track Google positions, schedule automatic refreshes, and see DataForSEO API usage per run."
       />
-      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5">
         <RankTrackingPanel
           accountId={accountId}
           projectId={projectId}

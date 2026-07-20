@@ -62,12 +62,12 @@ export function AuditLauncher(props: {
     <div className="space-y-4 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5">
       <div>
         <h3 className="text-lg font-semibold">AI Search Audit</h3>
-        <p className="text-muted-foreground mt-1 text-sm">
+        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
           Domain-level report across entity, content, E-E-A-T, and tech — checks
           citations on Google AI Overview, ChatGPT, Perplexity, and Claude via
           DataForSEO (~{AUDIT_CREDITS_ESTIMATE} credits) + Claude synthesis.
         </p>
-        <p className="text-muted-foreground mt-1 text-xs">
+        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
           Target: {props.targetDomain}
         </p>
       </div>
@@ -81,7 +81,13 @@ export function AuditLauncher(props: {
             </span>{' '}
             · {new Date(props.lastRun.created_at).toLocaleDateString()}
             {trend != null && trend !== 0 ? (
-              <span className={trend > 0 ? 'text-emerald-400' : 'text-red-400'}>
+              <span
+                className={
+                  trend > 0
+                    ? 'text-[var(--ozer-accent)]'
+                    : 'text-[var(--ozer-accent-pressed,#C2452A)]'
+                }
+              >
                 {' '}
                 ({trend > 0 ? '+' : ''}
                 {trend} since first run)

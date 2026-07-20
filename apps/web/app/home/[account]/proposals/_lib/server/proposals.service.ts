@@ -10,6 +10,8 @@ import {
   queueBrainIndexSource,
 } from '~/lib/brain/sync';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
+import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import { normalizeWorkspaceCurrency } from '~/lib/currency/workspace-currency';
 import { Database } from '~/lib/database.types';
 
 import {
@@ -227,6 +229,10 @@ class ProposalsService {
       throw new Error('Either client_id or deal_id is required');
     }
 
+    const currency = input.currency
+      ? normalizeWorkspaceCurrency(input.currency)
+      : await getWorkspaceCurrencyWithClient(this.db, input.accountId);
+
     const { data: proposal, error } = await this.db
       .from('proposals')
       .insert({
@@ -239,7 +245,7 @@ class ProposalsService {
         recipient_name: input.recipient_name ?? null,
         recipient_email: input.recipient_email ?? null,
         total_pence: input.total_pence ?? null,
-        currency: input.currency ?? 'gbp',
+        currency,
         expires_at: input.expires_at ?? null,
         private_note: input.private_note ?? null,
         context_refs: input.context_refs ?? [],

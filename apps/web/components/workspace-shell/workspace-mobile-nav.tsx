@@ -77,113 +77,116 @@ export function WorkspaceMobileMenu({
     <>
       {showMenu ? (
         <>
-      <div
-        className={cn(
-          'fixed inset-0 z-[100] bg-[#060a12]/92 backdrop-blur-md transition-opacity duration-200 lg:hidden',
-          open ? 'opacity-100' : 'pointer-events-none opacity-0',
-        )}
-        aria-hidden
-        onClick={close}
-      />
-
-      <div
-        className={cn(
-          'fixed inset-0 z-[101] flex flex-col bg-[var(--workspace-shell-canvas)] transition-transform duration-200 ease-out lg:hidden',
-          open ? 'translate-x-0' : '-translate-x-full',
-        )}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Navigation menu"
-        aria-hidden={!open}
-      >
-        <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <p className="text-base font-semibold text-[var(--workspace-shell-text)]">
-            Menu
-          </p>
-          <HapticButton
-            type="button"
-            aria-label="Close menu"
-            className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]"
+          <div
+            className={cn(
+              'fixed inset-0 z-[100] bg-[#060a12]/92 backdrop-blur-md transition-opacity duration-200 lg:hidden',
+              open ? 'opacity-100' : 'pointer-events-none opacity-0',
+            )}
+            aria-hidden
             onClick={close}
-          >
-            <X className="h-5 w-5" />
-          </HapticButton>
-        </div>
-
-        <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-          <WorkspaceAccountsSelector
-            selectedAccount={account}
-            userId={userId}
-            accounts={accounts}
-            className="w-full max-w-none justify-between px-0"
-            variant="inline"
-            onNavigate={close}
           />
-        </div>
 
-        <nav className="flex-1 overflow-y-auto px-3 py-4 pb-28">
-          <ul className="flex flex-col gap-1">
-            {navLinks.map((item, index) => {
-              const active =
-                pathname === item.path ||
-                (item.path !== '/' && pathname.startsWith(`${item.path}/`));
-
-              return (
-                <li
-                  key={item.path}
-                  className={cn(
-                    'transition-all duration-200',
-                    open
-                      ? 'translate-x-0 opacity-100'
-                      : '-translate-x-2 opacity-0',
-                  )}
-                  style={{ transitionDelay: open ? `${index * 25}ms` : '0ms' }}
-                >
-                  <HapticLink
-                    href={item.path}
-                    onClick={close}
-                    className={cn(
-                      'flex min-h-[3.25rem] items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium transition-colors',
-                      active
-                        ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                        : 'text-[var(--workspace-shell-text)] hover:bg-white/6',
-                    )}
-                  >
-                    <span className="flex h-6 w-6 shrink-0 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
-                      {item.Icon}
-                    </span>
-                    <Trans i18nKey={item.label} defaults={item.label} />
-                  </HapticLink>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-
-        <div className="border-t border-[color:var(--workspace-shell-border)] px-3 py-4">
-          <HapticButton
-            type="button"
-            className="flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-[var(--workspace-shell-text)] hover:bg-white/6"
-            onClick={() => {
-              close();
-              setSupportOpen(true);
-            }}
+          <div
+            className={cn(
+              'fixed inset-0 z-[101] flex flex-col bg-[var(--workspace-shell-canvas)] transition-transform duration-200 ease-out lg:hidden',
+              open ? 'translate-x-0' : '-translate-x-full',
+            )}
+            role="dialog"
+            aria-modal="true"
+            aria-label="Navigation menu"
+            aria-hidden={!open}
           >
-            <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[var(--ozer-accent)]">
-              <LifeBuoy className="h-5 w-5" />
-            </span>
+            <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+              <p className="text-base font-semibold text-[var(--workspace-shell-text)]">
+                Menu
+              </p>
+              <HapticButton
+                type="button"
+                aria-label="Close menu"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]"
+                onClick={close}
+              >
+                <X className="h-5 w-5" />
+              </HapticButton>
+            </div>
+
+            <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+              <WorkspaceAccountsSelector
+                selectedAccount={account}
+                userId={userId}
+                accounts={accounts}
+                className="w-full max-w-none justify-between px-0"
+                variant="inline"
+                onNavigate={close}
+              />
+            </div>
+
+            <nav className="flex-1 overflow-y-auto px-3 py-4 pb-28">
+              <ul className="flex flex-col gap-1">
+                {navLinks.map((item, index) => {
+                  const active =
+                    pathname === item.path ||
+                    (item.path !== '/' && pathname.startsWith(`${item.path}/`));
+
+                  return (
+                    <li
+                      key={item.path}
+                      className={cn(
+                        'transition-all duration-200',
+                        open
+                          ? 'translate-x-0 opacity-100'
+                          : '-translate-x-2 opacity-0',
+                      )}
+                      style={{
+                        transitionDelay: open ? `${index * 25}ms` : '0ms',
+                      }}
+                    >
+                      <HapticLink
+                        href={item.path}
+                        onClick={close}
+                        className={cn(
+                          'flex min-h-[3.25rem] items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium transition-colors',
+                          active
+                            ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                            : 'text-[var(--workspace-shell-text)] hover:bg-white/6',
+                        )}
+                      >
+                        <span className="flex h-6 w-6 shrink-0 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
+                          {item.Icon}
+                        </span>
+                        <Trans i18nKey={item.label} defaults={item.label} />
+                      </HapticLink>
+                    </li>
+                  );
+                })}
+              </ul>
+            </nav>
+
+            <div className="border-t border-[color:var(--workspace-shell-border)] px-3 py-4">
+              <HapticButton
+                type="button"
+                className="flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-[var(--workspace-shell-text)] hover:bg-white/6"
+                onClick={() => {
+                  close();
+                  setSupportOpen(true);
+                }}
+              >
+                <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[var(--ozer-accent)]">
+                  <LifeBuoy className="h-5 w-5" />
+                </span>
                 <Trans
                   i18nKey="common:helpAndSupport"
                   defaults="Help & support"
                 />
               </HapticButton>
-          {variant === 'personal' ? (
-            <p className="mt-2 px-4 text-xs text-[var(--workspace-shell-text-muted)]">
-              Personal settings are in the bottom bar while the menu is open.
-            </p>
-          ) : null}
-        </div>
-      </div>
+              {variant === 'personal' ? (
+                <p className="mt-2 px-4 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Personal settings are in the bottom bar while the menu is
+                  open.
+                </p>
+              ) : null}
+            </div>
+          </div>
         </>
       ) : null}
 

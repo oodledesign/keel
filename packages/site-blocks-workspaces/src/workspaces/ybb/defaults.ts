@@ -1,5 +1,4 @@
 /** Default content and asset URLs from the YBB Astro site (editable in Puck). */
-
 import {
   YBB_FOUNDERS_MASK_FILL,
   YBB_FOUNDERS_STAR_INNER,

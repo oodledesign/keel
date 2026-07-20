@@ -183,7 +183,7 @@ export function CampaignTableClient({
           <table className="min-w-full border-collapse text-sm">
             <thead>
               <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
-                <th className="sticky left-0 z-10 min-w-[180px] bg-[#0f1729] px-4 py-3 text-left text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                <th className="sticky left-0 z-10 min-w-[180px] bg-[var(--workspace-shell-panel)] px-4 py-3 text-left text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   Client
                 </th>
                 {project.fields.map((field) => (

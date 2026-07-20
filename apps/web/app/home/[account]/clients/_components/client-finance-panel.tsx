@@ -9,6 +9,7 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
 
 import { loadClientFinanceAction } from '../_lib/server/client-finance.actions';
 
@@ -17,9 +18,12 @@ type ClientFinanceData = Awaited<ReturnType<typeof loadClientFinanceAction>>;
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
-function formatValue(pence: number | null | undefined): string {
+function formatValue(
+  pence: number | null | undefined,
+  currencyCode: string,
+): string {
   if (pence == null) return '—';
-  return formatPence(pence);
+  return formatPence(pence, currencyCode);
 }
 
 export function ClientFinancePanel({
@@ -31,6 +35,8 @@ export function ClientFinancePanel({
   accountSlug: string;
   clientId: string;
 }) {
+  const workspaceCurrency = useWorkspaceCurrency();
+  const currencyCode = workspaceCurrency.toUpperCase();
   const [pending, startTransition] = useTransition();
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<ClientFinanceData | null>(null);
@@ -125,17 +131,17 @@ export function ClientFinancePanel({
       <div className="grid gap-3 sm:grid-cols-3">
         <MetricCard
           label="Income"
-          value={formatPence(summary.incomePence)}
+          value={formatPence(summary.incomePence, currencyCode)}
           tone="positive"
         />
         <MetricCard
           label="Expenses"
-          value={formatPence(summary.expensePence)}
+          value={formatPence(summary.expensePence, currencyCode)}
           tone="negative"
         />
         <MetricCard
           label="Real net"
-          value={formatPence(summary.netPence)}
+          value={formatPence(summary.netPence, currencyCode)}
           tone={summary.netPence >= 0 ? 'positive' : 'negative'}
         />
       </div>
@@ -152,7 +158,7 @@ export function ClientFinancePanel({
                 {summary.projectCount === 1 ? '' : 's'})
               </dt>
               <dd className="mt-0.5 text-[var(--workspace-shell-text)]">
-                {formatValue(summary.estimatedValuePence)}
+                {formatValue(summary.estimatedValuePence, currencyCode)}
               </dd>
             </div>
             <div>
@@ -160,7 +166,7 @@ export function ClientFinancePanel({
                 Total estimated cost
               </dt>
               <dd className="mt-0.5 text-[var(--workspace-shell-text)]">
-                {formatValue(summary.estimatedCostPence)}
+                {formatValue(summary.estimatedCostPence, currencyCode)}
               </dd>
             </div>
             <div>
@@ -169,7 +175,10 @@ export function ClientFinancePanel({
               </dt>
               <dd className="mt-0.5 text-[var(--workspace-shell-text)]">
                 {summary.estimatedValuePence > 0
-                  ? formatPence(summary.netPence - summary.estimatedValuePence)
+                  ? formatPence(
+                      summary.netPence - summary.estimatedValuePence,
+                      currencyCode,
+                    )
                   : '—'}
               </dd>
             </div>
@@ -179,7 +188,10 @@ export function ClientFinancePanel({
               </dt>
               <dd className="mt-0.5 text-[var(--workspace-shell-text)]">
                 {summary.estimatedCostPence > 0
-                  ? formatPence(summary.netPence - summary.estimatedCostPence)
+                  ? formatPence(
+                      summary.netPence - summary.estimatedCostPence,
+                      currencyCode,
+                    )
                   : '—'}
               </dd>
             </div>
@@ -189,8 +201,8 @@ export function ClientFinancePanel({
 
       {summary.transferPence > 0 ? (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          {formatPence(summary.transferPence)} in internal transfers excluded
-          from net.
+          {formatPence(summary.transferPence, currencyCode)} in internal
+          transfers excluded from net.
         </p>
       ) : null}
 
@@ -257,7 +269,7 @@ export function ClientFinancePanel({
                               : 'text-red-300',
                         )}
                       >
-                        {formatPence(Math.abs(pence))}
+                        {formatPence(Math.abs(pence), currencyCode)}
                         {!isTransfer ? (pence < 0 ? ' out' : ' in') : ''}
                       </td>
                     </tr>

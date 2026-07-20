@@ -194,9 +194,7 @@ export function SignaturePreviewFrame({
   /** Tailwind height class applied to the preview surface */
   heightClassName?: string;
   toolbarExtra?: ReactNode;
-  children:
-    | ReactNode
-    | ((context: SignaturePreviewFrameContext) => ReactNode);
+  children: ReactNode | ((context: SignaturePreviewFrameContext) => ReactNode);
 }) {
   const [viewport, setViewport] =
     useState<SignaturePreviewViewport>(defaultViewport);
@@ -231,12 +229,7 @@ export function SignaturePreviewFrame({
         </div>
       </div>
 
-      <div
-        className={cn(
-          'overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] p-3',
-          resolvedTheme === 'light' ? 'bg-[#f5f5f7]' : 'bg-[#121214]',
-        )}
-      >
+      <div className="overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)]">
         <div
           className={cn(
             'mx-auto min-w-0 transition-[max-width] duration-200 ease-out',

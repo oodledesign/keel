@@ -11,14 +11,14 @@ import { ModuleDataSection } from '../../_components/module-data-section';
 import { SignaturesStaffSearch } from '../_components/signatures-staff-search';
 import { SignaturesStaffTable } from '../_components/signatures-staff-table';
 import {
+  type StaffListFilters,
+  loadSignaturesDashboard,
+  loadSignaturesWorkspace,
+} from '../_lib/server/signatures-data';
+import {
   SIGNATURES_DASHBOARD_STAFF_PAGE_SIZE,
   parseStaffListPage,
 } from '../_lib/signatures-staff-pagination';
-import {
-  loadSignaturesDashboard,
-  loadSignaturesWorkspace,
-  type StaffListFilters,
-} from '../_lib/server/signatures-data';
 
 type SignaturesDashboardPageProps = {
   params: Promise<{ account: string }>;

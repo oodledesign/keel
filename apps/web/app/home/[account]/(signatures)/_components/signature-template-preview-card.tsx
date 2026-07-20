@@ -13,10 +13,10 @@ import { cn } from '@kit/ui/utils';
 
 import type { SignatureTemplate } from '../_lib/server/signatures-data';
 import {
-  SignaturePreviewThemeControls,
-  SignaturePreviewViewportControls,
   type SignaturePreviewTheme,
+  SignaturePreviewThemeControls,
   type SignaturePreviewViewport,
+  SignaturePreviewViewportControls,
   signaturePreviewViewportStyle,
 } from './signature-preview-frame';
 
@@ -31,8 +31,7 @@ export function SignatureTemplatePreviewCard({
   previewSrc: string | null;
 }) {
   const [theme, setTheme] = useState<SignaturePreviewTheme>('light');
-  const [viewport, setViewport] =
-    useState<SignaturePreviewViewport>('desktop');
+  const [viewport, setViewport] = useState<SignaturePreviewViewport>('desktop');
 
   return (
     <Card className="overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">

@@ -72,13 +72,15 @@ export function SiteCrawlJobPoller({
 
   if (!job) {
     return (
-      <p className="text-muted-foreground text-sm">Starting site crawl…</p>
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+        Starting site crawl…
+      </p>
     );
   }
 
   if (job.status === 'error') {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+      <div className="rounded-lg border border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_12%,transparent)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
         {job.error_msg ?? 'Site crawl failed'}
       </div>
     );
@@ -98,15 +100,15 @@ export function SiteCrawlJobPoller({
   return (
     <div className="max-w-xl space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
       <div className="flex flex-wrap items-center justify-between gap-2 text-sm">
-        <span className="text-muted-foreground">
+        <span className="text-[var(--workspace-shell-text-muted)]">
           {job.status === 'pending' ? 'Queued…' : 'Crawling internal links…'}
         </span>
-        <span className="text-muted-foreground tabular-nums">
+        <span className="text-[var(--workspace-shell-text-muted)] tabular-nums">
           {job.urls_crawled.toLocaleString()} / {job.url_limit.toLocaleString()}{' '}
           pages
         </span>
       </div>
-      <div className="h-2 overflow-hidden rounded-full bg-black/30">
+      <div className="h-2 overflow-hidden rounded-full bg-[var(--workspace-control-surface)]">
         <div
           className="h-full rounded-full bg-[var(--ozer-accent)] transition-all duration-500"
           style={{ width: `${percent}%` }}

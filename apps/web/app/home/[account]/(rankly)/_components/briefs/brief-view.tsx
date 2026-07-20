@@ -50,7 +50,9 @@ function CompetitorDomainsTable({
       </div>
       {targetReferringDomains !== null ? (
         <div className="space-y-1 border-b border-[color:var(--workspace-shell-border)] pb-3 text-xs">
-          <p className="text-muted-foreground">Your domain</p>
+          <p className="text-[var(--workspace-shell-text-muted)]">
+            Your domain
+          </p>
           <BacklinkBar
             domain="target"
             referringDomains={targetReferringDomains}
@@ -61,7 +63,7 @@ function CompetitorDomainsTable({
       {rows.length ? (
         <div className="overflow-x-auto text-xs">
           <table className="w-full text-left">
-            <thead className="text-muted-foreground">
+            <thead className="text-[var(--workspace-shell-text-muted)]">
               <tr>
                 <th className="pr-2 pb-2">Domain</th>
                 <th className="pr-2 pb-2">OPR</th>
@@ -111,7 +113,7 @@ function SerpBenchmarkTable({
       <h3 className="text-sm font-semibold">SERP benchmarks</h3>
       <div className="overflow-x-auto text-xs">
         <table className="w-full text-left">
-          <thead className="text-muted-foreground">
+          <thead className="text-[var(--workspace-shell-text-muted)]">
             <tr>
               <th className="pr-2 pb-2">Page</th>
               <th className="pr-2 pb-2">Words</th>
@@ -143,7 +145,7 @@ function SerpBenchmarkTable({
 function AISearchAngle({ brief }: { brief: ContentBriefRow }) {
   if (!brief.ai_cited_brands?.length) {
     return (
-      <div className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] p-4 text-sm">
+      <div className="rounded-lg border border-[color:var(--workspace-shell-border)] p-4 text-sm text-[var(--workspace-shell-text-muted)]">
         AI Overview not triggered for this query — monitor for future changes.
       </div>
     );
@@ -152,7 +154,7 @@ function AISearchAngle({ brief }: { brief: ContentBriefRow }) {
   return (
     <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] p-4">
       <h3 className="text-sm font-semibold">AI Search angle</h3>
-      <p className="text-muted-foreground text-sm">
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
         LLMs currently cite:{' '}
         <span className="text-foreground font-medium">
           {brief.ai_cited_brands.join(', ')}
@@ -179,7 +181,7 @@ function InternalLinksTable({ links }: { links: SuggestedLink[] | null }) {
       <h3 className="text-sm font-semibold">Internal links to include</h3>
       <div className="overflow-x-auto text-sm">
         <table className="w-full text-left">
-          <thead className="text-muted-foreground text-xs uppercase">
+          <thead className="text-xs text-[var(--workspace-shell-text-muted)] uppercase">
             <tr>
               <th className="pr-3 pb-2">Page</th>
               <th className="pr-3 pb-2">Anchor</th>
@@ -194,7 +196,7 @@ function InternalLinksTable({ links }: { links: SuggestedLink[] | null }) {
               >
                 <td className="py-2 pr-3">{link.from_url}</td>
                 <td className="py-2 pr-3">{link.anchor}</td>
-                <td className="text-muted-foreground py-2">
+                <td className="py-2 text-[var(--workspace-shell-text-muted)]">
                   {link.target_section}
                 </td>
               </tr>
@@ -212,11 +214,15 @@ function TrafficPotential({ brief }: { brief: ContentBriefRow }) {
       <h3 className="font-semibold">Traffic potential</h3>
       <dl className="space-y-1">
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Position 1–3</dt>
+          <dt className="text-[var(--workspace-shell-text-muted)]">
+            Position 1–3
+          </dt>
           <dd>~{brief.traffic_position_1_3 ?? '—'}/mo</dd>
         </div>
         <div className="flex justify-between">
-          <dt className="text-muted-foreground">Position 5</dt>
+          <dt className="text-[var(--workspace-shell-text-muted)]">
+            Position 5
+          </dt>
           <dd>~{brief.traffic_position_5 ?? '—'}/mo</dd>
         </div>
       </dl>
@@ -229,10 +235,10 @@ function WordCountPanel({ brief }: { brief: ContentBriefRow }) {
     <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-4 text-sm">
       <h3 className="font-semibold">Word count</h3>
       <p className="text-2xl font-semibold">{brief.word_count_target ?? '—'}</p>
-      <p className="text-muted-foreground">
+      <p className="text-[var(--workspace-shell-text-muted)]">
         Range {brief.word_count_min ?? '—'}–{brief.word_count_max ?? '—'}
       </p>
-      <p className="text-muted-foreground text-xs">
+      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
         Competitor avg: {brief.competitor_avg_wc ?? '—'}
       </p>
     </div>
@@ -358,10 +364,12 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
           <TemplateTypeBadge type={brief.template_type} />
         </div>
         {brief.angle ? (
-          <p className="text-muted-foreground text-sm">{brief.angle}</p>
+          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+            {brief.angle}
+          </p>
         ) : null}
         {brief.template_rationale ? (
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             {brief.template_rationale}
           </p>
         ) : null}
@@ -380,7 +388,7 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
                 ))}
               </ol>
               {brief.suggested_meta_desc ? (
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                   Meta: {brief.suggested_meta_desc}
                 </p>
               ) : null}
@@ -396,12 +404,14 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
               {outline.map((item, index) => (
                 <li
                   key={`${item.text}-${index}`}
-                  className={`rounded-md border border-[color:var(--workspace-shell-border)] bg-black/10 px-3 py-2 ${item.level === 'h3' ? 'ml-4' : ''}`}
+                  className={`rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2 ${item.level === 'h3' ? 'ml-4' : ''}`}
                 >
                   <p className="font-medium">
                     {item.level.toUpperCase()}: {item.text}
                   </p>
-                  <p className="text-muted-foreground">{item.notes}</p>
+                  <p className="text-[var(--workspace-shell-text-muted)]">
+                    {item.notes}
+                  </p>
                   {item.cite ? (
                     <p className="text-primary text-xs">Cite: {item.cite}</p>
                   ) : null}
@@ -413,7 +423,7 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
           {(brief.content_gaps?.length ?? 0) > 0 ? (
             <section className="space-y-2">
               <h3 className="text-sm font-semibold">Content gaps</h3>
-              <ul className="text-muted-foreground list-inside list-disc space-y-1 text-sm">
+              <ul className="list-inside list-disc space-y-1 text-sm text-[var(--workspace-shell-text-muted)]">
                 {brief.content_gaps!.map((gap) => (
                   <li key={gap}>{gap}</li>
                 ))}
@@ -424,12 +434,16 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
           <section className="space-y-2 text-sm">
             <h3 className="font-semibold">Keywords</h3>
             <p>
-              <span className="text-muted-foreground">Primary:</span>{' '}
+              <span className="text-[var(--workspace-shell-text-muted)]">
+                Primary:
+              </span>{' '}
               {brief.primary_keyword ?? brief.target_keyword}
             </p>
             {(brief.secondary_keywords?.length ?? 0) > 0 ? (
               <p>
-                <span className="text-muted-foreground">Secondary:</span>{' '}
+                <span className="text-[var(--workspace-shell-text-muted)]">
+                  Secondary:
+                </span>{' '}
                 {brief.secondary_keywords!.join(', ')}
               </p>
             ) : null}
@@ -439,19 +453,25 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
             <h3 className="font-semibold">Writer notes</h3>
             {brief.tone_notes ? (
               <p>
-                <span className="text-muted-foreground">Tone:</span>{' '}
+                <span className="text-[var(--workspace-shell-text-muted)]">
+                  Tone:
+                </span>{' '}
                 {brief.tone_notes}
               </p>
             ) : null}
             {brief.eeat_notes ? (
               <p>
-                <span className="text-muted-foreground">E-E-A-T:</span>{' '}
+                <span className="text-[var(--workspace-shell-text-muted)]">
+                  E-E-A-T:
+                </span>{' '}
                 {brief.eeat_notes}
               </p>
             ) : null}
             {brief.required_assets ? (
               <p>
-                <span className="text-muted-foreground">Assets:</span>{' '}
+                <span className="text-[var(--workspace-shell-text-muted)]">
+                  Assets:
+                </span>{' '}
                 {brief.required_assets}
               </p>
             ) : null}
@@ -472,7 +492,7 @@ export function BriefView({ brief }: { brief: ContentBriefRow }) {
           {serp.length > 0 ? (
             <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-4 text-xs">
               <h3 className="text-sm font-semibold">SERP top 10</h3>
-              <ol className="text-muted-foreground list-inside list-decimal space-y-1">
+              <ol className="list-inside list-decimal space-y-1 text-[var(--workspace-shell-text-muted)]">
                 {serp.map((result) => (
                   <li key={result.url} className="truncate">
                     {result.title}

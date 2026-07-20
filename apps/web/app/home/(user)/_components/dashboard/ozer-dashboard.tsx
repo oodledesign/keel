@@ -103,7 +103,9 @@ export function OzerDashboard({ data }: Props) {
 
           <DashboardSection title="People focus">
             {data.peopleUpcoming.length > 0 ? (
-              <div className={`${panelClass} divide-y divide-[color:var(--workspace-shell-border)]`}>
+              <div
+                className={`${panelClass} divide-y divide-[color:var(--workspace-shell-border)]`}
+              >
                 {data.peopleUpcoming.map((item) => (
                   <PeopleUpcomingRow key={item.id} item={item} />
                 ))}
@@ -125,7 +127,9 @@ export function OzerDashboard({ data }: Props) {
         <div className="min-w-0">
           <DashboardSection title="My Day">
             {data.myDayEvents.length > 0 ? (
-              <div className={`${panelClass} divide-y divide-[color:var(--workspace-shell-border)]`}>
+              <div
+                className={`${panelClass} divide-y divide-[color:var(--workspace-shell-border)]`}
+              >
                 {data.myDayEvents.map((event) => (
                   <CalendarEventRow key={event.id} event={event} />
                 ))}

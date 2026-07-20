@@ -21,10 +21,10 @@ import type {
 import { PAGESPEED_METRIC_LABELS } from '~/lib/pagespeed/types';
 
 function scoreTone(score: number | null | undefined): string {
-  if (score == null) return 'text-muted-foreground';
+  if (score == null) return 'text-[var(--workspace-shell-text-muted)]';
   if (score >= 90) return 'text-[var(--ozer-accent)]';
   if (score >= 50) return 'text-amber-400';
-  return 'text-red-400';
+  return 'text-[var(--ozer-accent-pressed,#C2452A)]';
 }
 
 function formatChartDate(iso: string) {
@@ -157,7 +157,7 @@ function HistoryTable(props: {
   return (
     <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
       <table className="w-full min-w-[24rem] text-left text-sm">
-        <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide uppercase">
+        <thead className="border-b border-[color:var(--workspace-shell-border)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
           <tr>
             <th className="px-3 py-2">Run</th>
             <th className="px-3 py-2 text-right">Mobile</th>
@@ -170,7 +170,7 @@ function HistoryTable(props: {
               key={row.fetchedAt}
               className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
             >
-              <td className="text-muted-foreground px-3 py-2">
+              <td className="px-3 py-2 text-[var(--workspace-shell-text-muted)]">
                 {formatRunDate(row.fetchedAt)}
               </td>
               <td
@@ -212,7 +212,7 @@ export function PagespeedHistoryChart(props: {
   if (runCount < 2) {
     return (
       <div className="border-t border-[color:var(--workspace-shell-border)] px-4 py-4">
-        <p className="text-muted-foreground text-sm">
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           Score history appears after at least two PageSpeed runs.
         </p>
       </div>
@@ -224,7 +224,7 @@ export function PagespeedHistoryChart(props: {
       <div className="mb-4 flex flex-wrap items-start justify-between gap-3">
         <div>
           <h4 className="text-sm font-medium">Score history</h4>
-          <p className="text-muted-foreground mt-0.5 text-xs">
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             Last {runCount} run{runCount === 1 ? '' : 's'} per device
             {mobileTrend ? ` · Mobile ${mobileTrend}` : ''}
             {desktopTrend && desktopTrend !== mobileTrend
@@ -243,7 +243,7 @@ export function PagespeedHistoryChart(props: {
                   className={`rounded-md px-2 py-1 text-xs transition ${
                     metric === key
                       ? 'ozer-gradient-active text-[var(--ozer-white)]'
-                      : 'text-muted-foreground hover:text-[var(--workspace-shell-text)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
                   }`}
                   onClick={() => setMetric(key)}
                 >
@@ -254,7 +254,7 @@ export function PagespeedHistoryChart(props: {
           </div>
           <button
             type="button"
-            className="text-muted-foreground text-xs hover:text-[var(--workspace-shell-text)]"
+            className="text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
             onClick={() => setShowTable((value) => !value)}
           >
             {showTable ? 'Hide runs' : 'View runs'}

@@ -46,14 +46,14 @@ export const ozerWorkspaceSpaceColors = {
 
 /** PM / kanban status palette (needs resolved hex for inline styles). */
 export const ozerStatusColors = {
-  pending: '#579bfc',
-  inProgress: '#00c875',
-  onHold: '#fdab3d',
-  completed: '#00c875',
-  cancelled: '#808080',
-  urgent: '#e2445c',
-  high: '#ff642e',
-  medium: '#fdab3d',
+  pending: ozerColors.info,
+  inProgress: ozerColors.accent,
+  onHold: ozerColors.gold,
+  completed: '#059669',
+  cancelled: ozerColors.muted,
+  urgent: ozerColors.accentPressed,
+  high: ozerColors.accent,
+  medium: ozerColors.gold,
   low: ozerColors.muted,
 } as const;
 

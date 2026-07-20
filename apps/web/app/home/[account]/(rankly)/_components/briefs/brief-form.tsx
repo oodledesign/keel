@@ -75,7 +75,7 @@ function BriefFormInner(props: {
   return (
     <form onSubmit={handleSubmit} className="max-w-lg space-y-4">
       {spokeId ? (
-        <div className="rounded-lg border border-blue-500/30 bg-blue-500/10 px-4 py-3 text-sm text-blue-100">
+        <div className="rounded-lg border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
           Generating brief from cluster spoke — quick mode pre-selected (~20
           credits)
         </div>
@@ -99,7 +99,7 @@ function BriefFormInner(props: {
           onChange={(e) => setKeyword(e.target.value)}
           placeholder="Leave empty to auto-discover best opportunity"
         />
-        <p className="text-muted-foreground text-xs">
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           Leave blank in full mode to let Rankly find the best gap vs your
           competitors
         </p>
@@ -153,7 +153,11 @@ export function BriefForm(props: {
 }) {
   return (
     <Suspense
-      fallback={<p className="text-muted-foreground text-sm">Loading…</p>}
+      fallback={
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          Loading…
+        </p>
+      }
     >
       <BriefFormInner {...props} />
     </Suspense>

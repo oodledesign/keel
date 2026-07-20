@@ -6,6 +6,7 @@ import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
+import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { Database } from '~/lib/database.types';
 
 import { normalizeInvoiceCurrency } from '../invoice-currency';
@@ -282,14 +283,7 @@ class InvoicesService {
 
     let currency = normalizeInvoiceCurrency(input.currency);
     if (!input.currency) {
-      const { data: paymentSettings } = await this.db
-        .from('account_payment_settings')
-        .select('default_invoice_currency')
-        .eq('account_id', input.accountId)
-        .maybeSingle();
-      currency = normalizeInvoiceCurrency(
-        paymentSettings?.default_invoice_currency,
-      );
+      currency = await getWorkspaceCurrencyWithClient(this.db, input.accountId);
     }
 
     const { data: invoice, error } = await this.db

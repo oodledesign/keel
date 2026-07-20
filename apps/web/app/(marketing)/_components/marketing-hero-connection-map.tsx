@@ -27,8 +27,8 @@ import { cn } from '@kit/ui/utils';
 
 import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
 import {
-  formatMarketingDashboardGreeting,
   type MarketingViewerContext,
+  formatMarketingDashboardGreeting,
 } from '~/lib/marketing/marketing-viewer';
 
 /* ──────────────────────────────────────────────────────────────

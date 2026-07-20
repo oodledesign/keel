@@ -112,7 +112,7 @@ export function RanklyProjectKeywordsManager(props: {
             className="font-mono text-sm"
             autoComplete="off"
           />
-          <p className="text-muted-foreground text-xs">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             One keyword per line. Paste from a spreadsheet or export — up to 500
             at a time.
             {parsedCount > 0 ? ` ${parsedCount} ready to add.` : null}
@@ -128,13 +128,13 @@ export function RanklyProjectKeywordsManager(props: {
       </form>
 
       {props.keywords.length === 0 ? (
-        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
+        <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
           No keywords yet. Add phrases to track in search results.
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full min-w-[28rem] text-left text-sm">
-            <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
+            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               <tr>
                 <th className="px-4 py-3">Keyword</th>
                 <th className="px-4 py-3">Engine</th>
@@ -149,10 +149,10 @@ export function RanklyProjectKeywordsManager(props: {
                   className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                 >
                   <td className="px-4 py-3">{k.keyword}</td>
-                  <td className="text-muted-foreground px-4 py-3">
+                  <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                     {k.search_engine}
                   </td>
-                  <td className="text-muted-foreground px-4 py-3">
+                  <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
                     {k.device}
                   </td>
                   <td className="px-4 py-3 text-right">

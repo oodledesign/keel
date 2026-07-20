@@ -81,12 +81,16 @@ export function BriefJobPoller({
   }, [briefsPath, job, router]);
 
   if (!job) {
-    return <p className="text-muted-foreground text-sm">Loading job status…</p>;
+    return (
+      <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+        Loading job status…
+      </p>
+    );
   }
 
   if (job.status === 'error') {
     return (
-      <div className="rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
+      <div className="rounded-lg border border-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent-pressed,#C2452A)_12%,transparent)] px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
         {job.error_msg ?? 'Brief generation failed'}
       </div>
     );
@@ -94,7 +98,9 @@ export function BriefJobPoller({
 
   if (job.status === 'done') {
     return (
-      <p className="text-sm text-emerald-400">Brief ready — redirecting…</p>
+      <p className="text-sm text-[var(--ozer-accent)]">
+        Brief ready — redirecting…
+      </p>
     );
   }
 

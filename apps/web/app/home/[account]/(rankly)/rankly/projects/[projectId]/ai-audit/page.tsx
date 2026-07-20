@@ -88,7 +88,7 @@ export default async function RanklyAiAuditPage({
               recommendations={latest.recommendations}
             />
           ) : (
-            <p className="text-muted-foreground text-sm">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
               No audit yet. Run your first AI Search Audit to score entity,
               content, E-E-A-T, and technical readiness for AI citations.
             </p>

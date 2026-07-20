@@ -272,7 +272,7 @@ export function JobScheduleTabContent({
                 <span
                   className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
                     selectedEvent.event_type === 'site_visit'
-                      ? 'bg-sky-500/20 text-sky-400'
+                      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
                       : 'bg-violet-500/20 text-violet-400'
                   }`}
                 >
@@ -316,7 +316,7 @@ export function JobScheduleTabContent({
                 Job:{' '}
                 <Link
                   href={jobPath ?? '#'}
-                  className="text-sky-400 hover:underline"
+                  className="text-[var(--ozer-accent)] hover:underline"
                 >
                   {selectedEvent.source_type === 'job_deadline'
                     ? (details.title as string)

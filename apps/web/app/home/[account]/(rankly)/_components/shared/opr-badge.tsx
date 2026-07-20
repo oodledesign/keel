@@ -9,10 +9,10 @@ type OprBadgeProps = {
 export function OprBadge({ score, decimal, showLabel = true }: OprBadgeProps) {
   const colour =
     score >= 7
-      ? 'border-emerald-500/40 bg-emerald-500/10 text-emerald-200'
+      ? 'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
       : score >= 4
-        ? 'border-amber-500/40 bg-amber-500/10 text-amber-200'
-        : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-muted-foreground';
+        ? 'border-[color-mix(in_srgb,#F0C14B_35%,transparent)] bg-[color-mix(in_srgb,#F0C14B_12%,transparent)] text-[var(--workspace-shell-text)]'
+        : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]';
 
   return (
     <span

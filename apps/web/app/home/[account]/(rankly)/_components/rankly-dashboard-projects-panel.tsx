@@ -40,7 +40,7 @@ export function RanklyDashboardProjectsPanel(props: {
   return (
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-muted-foreground max-w-xl text-sm">
+        <p className="max-w-xl text-sm text-[var(--workspace-shell-text-muted)]">
           Track SEO for client sites or your own business. Link a project to a
           client to jump back from their CRM record.
         </p>
@@ -64,7 +64,7 @@ export function RanklyDashboardProjectsPanel(props: {
       ) : null}
 
       {props.projects.length === 0 && !open ? (
-        <p className="text-muted-foreground rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 px-4 py-6 text-sm">
+        <p className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-sm text-[var(--workspace-shell-text-muted)]">
           No projects yet. Use &quot;New project&quot; to add a domain manually
           or import details from a client.
         </p>
@@ -84,17 +84,17 @@ export function RanklyDashboardProjectsPanel(props: {
                 >
                   {project.name}
                 </Link>
-                <p className="text-muted-foreground text-sm">
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                   {project.domain}
                 </p>
                 {project.client_id && props.clientLabels[project.client_id] ? (
-                  <p className="text-muted-foreground mt-0.5 text-xs">
+                  <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
                     Client: {props.clientLabels[project.client_id]}
                   </p>
                 ) : null}
               </div>
               <div className="text-right text-xs">
-                <p className="text-muted-foreground">
+                <p className="text-[var(--workspace-shell-text-muted)]">
                   {props.keywordCounts[project.id] ?? 0} keywords
                 </p>
                 <Link

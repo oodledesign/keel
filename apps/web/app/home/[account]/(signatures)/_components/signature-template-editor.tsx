@@ -31,11 +31,11 @@ import {
   htmlToSignatureBlocks,
   signatureBlocksToHtml,
 } from '~/lib/signatures/signature-blocks';
+import { buildSignaturePreviewDocument } from '~/lib/signatures/signature-preview-document';
 import {
   SIGNATURE_DARK_MODE_CHECKLIST,
   lintSignatureTemplateHtml,
 } from '~/lib/signatures/template-dark-mode-lint';
-import { buildSignaturePreviewDocument } from '~/lib/signatures/signature-preview-document';
 
 import type {
   SignatureStaff,

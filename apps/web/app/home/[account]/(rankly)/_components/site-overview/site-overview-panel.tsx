@@ -38,18 +38,20 @@ function MetricCard(props: {
 }) {
   return (
     <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-      <p className="text-muted-foreground text-xs tracking-wide uppercase">
+      <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
         {props.label}
       </p>
       <p className="mt-1 text-2xl font-semibold tabular-nums">{props.value}</p>
       {props.sub ? (
-        <p className="text-muted-foreground mt-1 text-xs">{props.sub}</p>
+        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+          {props.sub}
+        </p>
       ) : null}
       {props.delta ? (
         <p
           className={
             props.delta.startsWith('-')
-              ? 'mt-1 text-xs text-red-400'
+              ? 'mt-1 text-xs text-[var(--ozer-accent-pressed,#C2452A)]'
               : 'mt-1 text-xs text-[var(--ozer-accent)]'
           }
         >
@@ -109,20 +111,20 @@ export function SiteOverviewPanel(props: {
   const data = props.overview;
 
   return (
-    <section className="space-y-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-5">
+    <section className="space-y-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-5">
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Site Explorer</h2>
-          <p className="text-muted-foreground mt-1 text-sm">
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             {props.domain} · {props.countryLabel}
           </p>
           {data ? (
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               Updated {new Date(data.fetchedAt).toLocaleDateString()}
               {props.stale ? ' · refresh recommended' : ''}
             </p>
           ) : (
-            <p className="text-muted-foreground mt-1 text-xs">
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
               No overview yet — fetch domain metrics from DataForSEO.
             </p>
           )}
@@ -143,7 +145,7 @@ export function SiteOverviewPanel(props: {
       </div>
 
       {!data ? (
-        <p className="text-muted-foreground rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm">
+        <p className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-sm text-[var(--workspace-shell-text-muted)]">
           Pull authority, traffic, backlink, and AI visibility metrics for this
           domain.
         </p>
@@ -191,7 +193,7 @@ export function SiteOverviewPanel(props: {
 
           <div className="grid gap-4 lg:grid-cols-2">
             <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+              <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 Organic search
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -217,13 +219,13 @@ export function SiteOverviewPanel(props: {
                   }
                 />
               </div>
-              <p className="text-muted-foreground mt-2 text-xs">
+              <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
                 Top 3 rankings: {data.organicTop3.toLocaleString()}
               </p>
             </div>
 
             <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
-              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+              <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 Paid search
               </p>
               <div className="mt-3 grid gap-3 sm:grid-cols-3">
@@ -245,10 +247,10 @@ export function SiteOverviewPanel(props: {
 
           <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <p className="text-muted-foreground text-xs tracking-wide uppercase">
+              <p className="text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                 Brand visibility
               </p>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Rankly metrics — not Ahrefs DR / Moz DA / Majestic TF
               </p>
             </div>

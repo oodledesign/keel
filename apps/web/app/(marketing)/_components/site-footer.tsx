@@ -11,12 +11,7 @@ import { MarketingFooterNewsletter } from './marketing-footer-newsletter';
 
 function SocialIcon({ children }: { children: ReactNode }) {
   return (
-    <svg
-      viewBox="0 0 24 24"
-      className="size-4"
-      fill="currentColor"
-      aria-hidden
-    >
+    <svg viewBox="0 0 24 24" className="size-4" fill="currentColor" aria-hidden>
       {children}
     </svg>
   );

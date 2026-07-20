@@ -51,7 +51,11 @@ export default async function RanklyNewBriefPage({
         <BriefJobPoller jobId={jobId} briefsPath={base} />
       ) : (
         <Suspense
-          fallback={<p className="text-muted-foreground text-sm">Loading…</p>}
+          fallback={
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Loading…
+            </p>
+          }
         >
           <BriefForm
             accountId={accountId}

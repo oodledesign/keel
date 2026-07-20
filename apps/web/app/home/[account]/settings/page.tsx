@@ -15,12 +15,14 @@ import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
+import { createInvoicePaymentSettingsService } from '../../invoices/_lib/server/invoice-payment-settings.service';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../_lib/role-access';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { WorkspaceContactSettingsForm } from './_components/workspace-contact-settings-form';
+import { WorkspaceCurrencySettingsForm } from './_components/workspace-currency-settings-form';
 import { WorkspaceDashboardShortcutsSection } from './_components/workspace-dashboard-shortcuts-section';
 
 export const generateMetadata = async () => {
@@ -84,8 +86,30 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
     enableTeamDeletion: featuresFlagConfig.enableTeamDeletion,
   };
 
+  let stripeConnected = false;
+  try {
+    const paymentSettings = await createInvoicePaymentSettingsService(
+      client,
+    ).getSettings(account.id);
+    stripeConnected = Boolean(
+      paymentSettings.stripe_connect_enabled &&
+      paymentSettings.stripe_account_id,
+    );
+  } catch {
+    stripeConnected = false;
+  }
+
   return (
     <div className="flex flex-col gap-6">
+      {!isClient ? (
+        <WorkspaceCurrencySettingsForm
+          accountId={account.id}
+          accountSlug={account.slug}
+          initialCurrency={workspace.defaultCurrency}
+          canEdit={canEditContact}
+          stripeConnected={stripeConnected}
+        />
+      ) : null}
       {!isClient ? (
         <WorkspaceContactSettingsForm
           accountId={account.id}

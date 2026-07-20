@@ -46,6 +46,7 @@ import {
   DEFAULT_INVOICE_EMAIL_SUBJECT,
   INVOICE_SMART_FIELD_PILLS,
   renderSmartFields,
+  resolveInvoiceEmailField,
 } from '../_lib/invoice-smart-fields';
 import { formatPence } from '../_lib/invoice-totals';
 import {
@@ -166,6 +167,7 @@ export function InvoiceSendPanel({
   initialSignature,
   pdfQuery,
   isDraft = false,
+  onEmailChange,
   onSent,
   onMarkedSent,
   onClose,
@@ -190,6 +192,11 @@ export function InvoiceSendPanel({
   initialSignature?: string | null;
   pdfQuery?: string;
   isDraft?: boolean;
+  onEmailChange?: (email: {
+    subject: string;
+    body: string;
+    signature: string;
+  }) => void;
   onSent: () => void;
   onMarkedSent?: () => void;
   onClose: () => void;
@@ -206,12 +213,14 @@ export function InvoiceSendPanel({
       },
     ];
   });
-  const [subject, setSubject] = useState(
-    initialSubject ?? DEFAULT_INVOICE_EMAIL_SUBJECT,
+  const [subject, setSubjectState] = useState(() =>
+    resolveInvoiceEmailField(initialSubject, DEFAULT_INVOICE_EMAIL_SUBJECT),
   );
-  const [body, setBody] = useState(initialBody ?? DEFAULT_INVOICE_EMAIL_BODY);
-  const [signature, setSignature] = useState(
-    initialSignature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE,
+  const [body, setBodyState] = useState(() =>
+    resolveInvoiceEmailField(initialBody, DEFAULT_INVOICE_EMAIL_BODY),
+  );
+  const [signature, setSignatureState] = useState(() =>
+    resolveInvoiceEmailField(initialSignature, DEFAULT_INVOICE_EMAIL_SIGNATURE),
   );
   const [activeField, setActiveField] = useState<
     'subject' | 'body' | 'signature'
@@ -260,6 +269,30 @@ export function InvoiceSendPanel({
     if (!addOpen) return;
     void loadContacts();
   }, [addOpen, loadContacts]);
+
+  const setSubject = useCallback(
+    (value: string) => {
+      setSubjectState(value);
+      onEmailChange?.({ subject: value, body, signature });
+    },
+    [body, signature, onEmailChange],
+  );
+
+  const setBody = useCallback(
+    (value: string) => {
+      setBodyState(value);
+      onEmailChange?.({ subject, body: value, signature });
+    },
+    [subject, signature, onEmailChange],
+  );
+
+  const setSignature = useCallback(
+    (value: string) => {
+      setSignatureState(value);
+      onEmailChange?.({ subject, body, signature: value });
+    },
+    [subject, body, onEmailChange],
+  );
 
   const addRecipient = (next: Recipient) => {
     const email = next.email.trim().toLowerCase();

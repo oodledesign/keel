@@ -22,6 +22,8 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
+import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
+import { formatWorkspaceAmount } from '~/lib/currency/workspace-currency';
 import { workspaceIconChip, workspacePanelCard } from '~/lib/workspace-ui';
 
 import { ContextWorkspaceNotes } from '../../../_components/workspace-content/context-workspace-notes';
@@ -127,6 +129,9 @@ export function PropertyDetailContent({
 }: PropertyDetailContentProps) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
+  const workspaceCurrency = useWorkspaceCurrency();
+  const formatMoney = (value: number) =>
+    formatWorkspaceAmount(value, workspaceCurrency);
 
   const status = statusStyles[property.status];
 
@@ -215,7 +220,7 @@ export function PropertyDetailContent({
               <StatPill
                 icon={Building2}
                 label="Current value"
-                value={formatCurrency(property.currentValue / 100)}
+                value={formatMoney(property.currentValue / 100)}
               />
             )}
             {property.purchaseDate && (
@@ -229,7 +234,7 @@ export function PropertyDetailContent({
               <StatPill
                 icon={Building2}
                 label="Purchase Price"
-                value={formatCurrency(property.purchasePrice / 100)}
+                value={formatMoney(property.purchasePrice / 100)}
               />
             )}
             {property.registeredOwner && (
@@ -243,7 +248,7 @@ export function PropertyDetailContent({
               <StatPill
                 icon={KeyRound}
                 label="Monthly rent"
-                value={formatCurrency(property.monthlyRent / 100)}
+                value={formatMoney(property.monthlyRent / 100)}
               />
             )}
             {property.astStartDate && (
@@ -340,7 +345,7 @@ export function PropertyDetailContent({
                 <StatPill
                   icon={Building2}
                   label="Balance"
-                  value={formatCurrency(property.mortgageBalance / 100)}
+                  value={formatMoney(property.mortgageBalance / 100)}
                 />
               ) : null}
               {property.mortgageInterestRate != null ? (
@@ -354,7 +359,7 @@ export function PropertyDetailContent({
                 <StatPill
                   icon={Building2}
                   label="Monthly payment"
-                  value={formatCurrency(property.mortgageMonthlyPayment / 100)}
+                  value={formatMoney(property.mortgageMonthlyPayment / 100)}
                 />
               ) : null}
               {property.mortgageStartDate ? (
@@ -382,7 +387,7 @@ export function PropertyDetailContent({
                 <StatPill
                   icon={Building2}
                   label="Est. equity"
-                  value={formatCurrency(equity / 100)}
+                  value={formatMoney(equity / 100)}
                 />
               ) : null}
             </div>
@@ -529,14 +534,6 @@ function PropertyNotesTab({ property }: { property: Property }) {
       )}
     </div>
   );
-}
-
-function formatCurrency(value: number): string {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(value);
 }
 
 function formatDate(iso: string): string {

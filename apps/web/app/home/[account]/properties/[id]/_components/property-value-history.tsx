@@ -10,6 +10,11 @@ import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 
+import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
+import {
+  formatWorkspaceAmount,
+  workspaceCurrencySymbol,
+} from '~/lib/currency/workspace-currency';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { PropertyValuation } from '../../_lib/server/properties.service';
@@ -43,20 +48,15 @@ function formatMonth(iso: string) {
   }
 }
 
-function formatCurrency(value: number) {
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(value);
-}
-
 export function PropertyValueHistory({
   propertyId,
   accountId,
   valuations: initialValuations,
 }: PropertyValueHistoryProps) {
   const router = useRouter();
+  const workspaceCurrency = useWorkspaceCurrency();
+  const formatMoney = (value: number) =>
+    formatWorkspaceAmount(value, workspaceCurrency);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [month, setMonth] = useState(currentMonthInput);
@@ -127,7 +127,7 @@ export function PropertyValueHistory({
         {latest ? (
           <div className="text-right">
             <p className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-              {formatCurrency(latest.valueAmount / 100)}
+              {formatMoney(latest.valueAmount / 100)}
             </p>
             <p className="text-xs text-[var(--workspace-shell-text)]/45">
               as of {formatMonth(latest.valuedMonth)}
@@ -141,7 +141,7 @@ export function PropertyValueHistory({
                 >
                   {' '}
                   · {change >= 0 ? '+' : ''}
-                  {formatCurrency(change / 100)} vs prior
+                  {formatMoney(change / 100)} vs prior
                 </span>
               ) : null}
             </p>
@@ -165,7 +165,7 @@ export function PropertyValueHistory({
         </div>
         <div className="space-y-1.5">
           <Label className="text-[var(--workspace-shell-text)]/70">
-            Estimated value (£)
+            Estimated value ({workspaceCurrencySymbol(workspaceCurrency)})
           </Label>
           <Input
             type="number"
@@ -243,12 +243,12 @@ export function PropertyValueHistory({
                 <div className="flex items-center gap-3">
                   <div className="text-right">
                     <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                      {formatCurrency(valuation.valueAmount / 100)}
+                      {formatMoney(valuation.valueAmount / 100)}
                     </p>
                     {delta != null ? (
                       <p className="text-[11px] text-[var(--workspace-shell-text)]/45">
                         {delta >= 0 ? '+' : ''}
-                        {formatCurrency(delta / 100)}
+                        {formatMoney(delta / 100)}
                       </p>
                     ) : null}
                   </div>
