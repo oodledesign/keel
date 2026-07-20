@@ -27,10 +27,13 @@ import {
   marketingFeatureCard,
   marketingShellClass,
 } from '~/lib/marketing/marketing-ui';
+import { HOME_FAQS } from '~/lib/marketing/ozer-faqs';
+import { loadMarketingViewer } from '~/lib/marketing/load-marketing-viewer';
 import { JsonLd } from '~/lib/seo/json-ld';
 import { buildMarketingMetadata } from '~/lib/seo/marketing-metadata';
 import {
   absoluteUrl,
+  faqPageJsonLd,
   schemaGraph,
   softwareApplicationJsonLd,
 } from '~/lib/seo/schema';
@@ -41,6 +44,7 @@ import {
   MarketingBentoGrid,
   MarketingBentoTile,
 } from './_components/marketing-bento';
+import { MarketingFaqsSection } from './_components/marketing-faqs';
 import { MarketingFinalCta } from './_components/marketing-final-cta';
 import { MarketingHomeHero } from './_components/marketing-home-hero';
 
@@ -97,7 +101,9 @@ const lifeFeatures = [
   },
 ];
 
-function Home() {
+async function Home() {
+  const viewer = await loadMarketingViewer();
+
   const offers = [
     {
       name: MARKETING_FREE_TIER.name,
@@ -121,6 +127,7 @@ function Home() {
       url: absoluteUrl('/'),
       offers,
     }),
+    faqPageJsonLd(HOME_FAQS),
   ]);
 
   return (
@@ -129,7 +136,7 @@ function Home() {
 
       {/* Tighter top padding so the connection map peeks above the fold */}
       <section className="relative mx-auto flex w-full max-w-7xl flex-col px-6 pt-14 pb-14 md:pt-20 md:pb-20">
-        <MarketingHomeHero />
+        <MarketingHomeHero viewer={viewer} />
       </section>
 
       <InterconnectedWorkspacesSection tone="light" />
@@ -237,6 +244,20 @@ function Home() {
       </section>
 
       <ComingSoon />
+
+      <MarketingFaqsSection
+        faqs={HOME_FAQS}
+        tone="light"
+        title="Questions, answered"
+        headingId="home-faq-heading"
+        sectionClassName="border-t border-[color:var(--workspace-shell-border)]"
+      />
+
+      <div className="mx-auto -mt-6 mb-10 flex w-full max-w-3xl justify-center px-6 md:-mt-8 md:mb-12">
+        <Button asChild variant="outline" className={marketingBtnOutline}>
+          <Link href="/faq">View all FAQs</Link>
+        </Button>
+      </div>
 
       <MarketingFinalCta
         heading="Run the studio from one home"

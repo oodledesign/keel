@@ -1,15 +1,17 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
 
 import Link from 'next/link';
 
-import { Building2, CreditCard, Download, Loader2 } from 'lucide-react';
+import { Building2, Check, Copy, CreditCard, Download, Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
+import { cn } from '@kit/ui/utils';
 
 import { formatInvoiceMoney } from '~/home/[account]/invoices/_lib/invoice-currency';
+import { DEFAULT_INVOICE_FOOTER_MESSAGE } from '~/home/[account]/invoices/_lib/invoice-smart-fields';
 import type { AccountPaymentSettings } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 
 type InvoicePayload = {
@@ -64,14 +66,77 @@ function formatDate(iso: string | null): string {
   }
 }
 
+function CopyableBankDetail({
+  label,
+  value,
+  copyValue,
+}: {
+  label: string;
+  value: string;
+  copyValue?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = useCallback(async () => {
+    try {
+      await navigator.clipboard.writeText(copyValue ?? value);
+      setCopied(true);
+      window.setTimeout(() => setCopied(false), 1800);
+    } catch {
+      setCopied(false);
+    }
+  }, [copyValue, value]);
+
+  return (
+    <button
+      type="button"
+      onClick={() => void handleCopy()}
+      className={cn(
+        'group flex w-full items-start justify-between gap-3 rounded-md px-2 py-1.5 text-left transition-colors',
+        'hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none',
+      )}
+      aria-label={`Copy ${label}`}
+    >
+      <span className="min-w-0 flex-1">
+        <span className="text-[var(--workspace-shell-text-muted)]">
+          {label}:{' '}
+        </span>
+        <span className="font-medium text-[var(--workspace-shell-text)]">
+          {value}
+        </span>
+      </span>
+      <span className="mt-0.5 inline-flex shrink-0 items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] group-hover:text-[var(--ozer-accent)]">
+        {copied ? (
+          <>
+            <Check className="h-3.5 w-3.5" aria-hidden />
+            Copied
+          </>
+        ) : (
+          <>
+            <Copy className="h-3.5 w-3.5" aria-hidden />
+            Copy
+          </>
+        )}
+      </span>
+    </button>
+  );
+}
+
+type BusinessBranding = {
+  logoUrl: string | null;
+  name: string | null;
+};
+
 export function PortalInvoiceView({
   invoice,
   token,
   paymentSettings,
+  business,
 }: {
   invoice: Record<string, unknown>;
   token: string;
   paymentSettings?: AccountPaymentSettings | null;
+  business?: BusinessBranding | null;
 }) {
   const data = invoice as unknown as InvoicePayload;
   const [paying, setPaying] = useState<'full' | 'deposit' | null>(null);
@@ -106,6 +171,10 @@ export function PortalInvoiceView({
     paymentSettings?.bank_transfer_enabled &&
     (paymentSettings.bank_account_number || paymentSettings.bank_iban),
   );
+  const showCardFeeWarning = isPayable && cardEnabled;
+  const portalFooterMessage = data.footer_message?.trim() || null;
+  const isDefaultFeeFooter =
+    portalFooterMessage === DEFAULT_INVOICE_FOOTER_MESSAGE.trim();
 
   const authSearch = new URLSearchParams({ next: `/portal/invoices/${token}` });
   if (data.client?.email) authSearch.set('email', data.client.email);
@@ -137,6 +206,20 @@ export function PortalInvoiceView({
     <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-lg sm:p-8">
       <div className="flex flex-col gap-6 sm:flex-row sm:items-start sm:justify-between">
         <div>
+          {business?.logoUrl ? (
+            <div className="mb-4">
+              {/* eslint-disable-next-line @next/next/no-img-element -- remote brand asset from storage */}
+              <img
+                src={business.logoUrl}
+                alt={business.name ?? 'Business logo'}
+                className="h-10 w-auto max-w-[200px] object-contain object-left sm:h-11"
+              />
+            </div>
+          ) : business?.name ? (
+            <p className="mb-4 font-heading text-lg font-semibold text-[var(--workspace-shell-text)]">
+              {business.name}
+            </p>
+          ) : null}
           <div className="flex flex-wrap items-center gap-3">
             <h1 className="text-2xl font-bold text-[var(--workspace-shell-text)]">
               Invoice {data.invoice_number}
@@ -329,60 +412,52 @@ export function PortalInvoiceView({
       </div>
 
       {bankEnabled && isPayable ? (
-        <div className="mt-8 rounded-lg border border-[var(--ozer-accent)]/20 bg-[var(--ozer-accent)]/5 p-4">
-          <div className="flex items-center gap-2 text-[#97D9AA]">
+        <div className="mt-8 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 p-4">
+          <div className="flex items-center gap-2 text-[var(--workspace-shell-text)]">
             <Building2 className="h-4 w-4" />
             <h3 className="font-medium">Pay by bank transfer</h3>
           </div>
-          <div className="mt-3 space-y-1 text-sm text-[var(--workspace-shell-text-muted)]">
+          <div className="mt-3 space-y-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
             {paymentSettings?.bank_account_name ? (
-              <p>
-                <span className="text-[var(--workspace-shell-text-muted)]">
-                  Account name:
-                </span>{' '}
-                {paymentSettings.bank_account_name}
-              </p>
+              <CopyableBankDetail
+                label="Account name"
+                value={paymentSettings.bank_account_name}
+              />
             ) : null}
             {paymentSettings?.bank_sort_code ? (
-              <p>
-                <span className="text-[var(--workspace-shell-text-muted)]">
-                  Sort code:
-                </span>{' '}
-                {paymentSettings.bank_sort_code}
-              </p>
+              <CopyableBankDetail
+                label="Sort code"
+                value={paymentSettings.bank_sort_code}
+                copyValue={paymentSettings.bank_sort_code.replace(/\s+/g, '')}
+              />
             ) : null}
             {paymentSettings?.bank_account_number ? (
-              <p>
-                <span className="text-[var(--workspace-shell-text-muted)]">
-                  Account number:
-                </span>{' '}
-                {paymentSettings.bank_account_number}
-              </p>
+              <CopyableBankDetail
+                label="Account number"
+                value={paymentSettings.bank_account_number}
+                copyValue={paymentSettings.bank_account_number.replace(/\s+/g, '')}
+              />
             ) : null}
             {paymentSettings?.bank_iban ? (
-              <p>
-                <span className="text-[var(--workspace-shell-text-muted)]">
-                  IBAN:
-                </span>{' '}
-                {paymentSettings.bank_iban}
-              </p>
+              <CopyableBankDetail
+                label="IBAN"
+                value={paymentSettings.bank_iban}
+                copyValue={paymentSettings.bank_iban.replace(/\s+/g, '')}
+              />
             ) : null}
             {paymentSettings?.bank_bic ? (
-              <p>
-                <span className="text-[var(--workspace-shell-text-muted)]">
-                  BIC:
-                </span>{' '}
-                {paymentSettings.bank_bic}
-              </p>
+              <CopyableBankDetail
+                label="BIC"
+                value={paymentSettings.bank_bic}
+                copyValue={paymentSettings.bank_bic.replace(/\s+/g, '')}
+              />
             ) : null}
-            <p>
-              <span className="text-[var(--workspace-shell-text-muted)]">
-                Reference:
-              </span>{' '}
-              {data.invoice_number}
-            </p>
+            <CopyableBankDetail
+              label="Reference"
+              value={data.invoice_number}
+            />
             {paymentSettings?.bank_transfer_instructions ? (
-              <p className="mt-2 text-[var(--workspace-shell-text-muted)]">
+              <p className="mt-2 px-2 text-[var(--workspace-shell-text-muted)]">
                 {paymentSettings.bank_transfer_instructions}
               </p>
             ) : null}
@@ -390,20 +465,22 @@ export function PortalInvoiceView({
         </div>
       ) : null}
 
-      {(data.notes || data.footer_message) && (
+      {(data.notes || (portalFooterMessage && !isDefaultFeeFooter)) && (
         <div className="mt-6 space-y-2 rounded-md bg-[var(--workspace-control-surface)]/50 p-3 text-sm text-[var(--workspace-shell-text-muted)]">
           {data.notes ? <p>{data.notes}</p> : null}
-          {data.footer_message ? <p>{data.footer_message}</p> : null}
+          {portalFooterMessage && !isDefaultFeeFooter ? (
+            <p>{portalFooterMessage}</p>
+          ) : null}
         </div>
       )}
 
-      <div className="mt-8 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-4">
+      <div className="mt-8 rounded-xl border border-[color-mix(in_srgb,var(--ozer-plum-900)_10%,transparent)] bg-[var(--ozer-cream-100)] px-4 py-4">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <p className="text-sm font-medium text-[#F7F9FC]">
+            <p className="text-sm font-semibold text-[var(--ozer-plum-900)]">
               Want a client account for future invoices?
             </p>
-            <p className="mt-1 text-sm text-[#AAB4C8]">
+            <p className="mt-1 text-sm text-[var(--ozer-plum-600)]">
               Sign in to Ozer to see invoices, job details, and messages in one
               place.
             </p>
@@ -414,11 +491,7 @@ export function PortalInvoiceView({
                 Client login
               </Link>
             </Button>
-            <Button
-              asChild
-              size="sm"
-              className="bg-[var(--ozer-accent)] text-[#09111F]"
-            >
+            <Button asChild size="sm">
               <Link href={`/auth/sign-up?${authSearch.toString()}`}>
                 Client sign up
               </Link>

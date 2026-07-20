@@ -26,6 +26,10 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
+import {
+  formatMarketingDashboardGreeting,
+  type MarketingViewerContext,
+} from '~/lib/marketing/marketing-viewer';
 
 /* ──────────────────────────────────────────────────────────────
  * Map data — launch-scope capabilities feed the dashboard screen below
@@ -290,9 +294,11 @@ const WORKSPACE_CARDS = [
 function DashboardScreen({
   animate,
   live,
+  viewer,
 }: {
   animate: boolean;
   live: boolean;
+  viewer: MarketingViewerContext;
 }) {
   const reveal = (delay: number) => ({
     initial: { opacity: 0, y: 10 },
@@ -302,6 +308,11 @@ function DashboardScreen({
       ? { duration: 0.45, delay, ease: marketingHeroEase }
       : { duration: 0, delay: 0 },
   });
+
+  const greetingLine = formatMarketingDashboardGreeting(
+    viewer.greeting,
+    viewer.firstName,
+  );
 
   return (
     <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] shadow-[0_24px_80px_var(--ozer-plum-alpha-12)]">
@@ -363,10 +374,10 @@ function DashboardScreen({
           <div className="flex items-baseline justify-between gap-3">
             <div>
               <p className="font-heading text-sm font-bold text-[var(--workspace-shell-text)] lg:text-base">
-                Good morning, Alex
+                {greetingLine}
               </p>
               <p className="text-[10px] text-[var(--workspace-shell-text-muted)]">
-                Friday, 18 July
+                {viewer.dateLabel}
               </p>
             </div>
             <span
@@ -589,9 +600,11 @@ function DashboardScreen({
 function DesktopConnectionMap({
   animate,
   live,
+  viewer,
 }: {
   animate: boolean;
   live: boolean;
+  viewer: MarketingViewerContext;
 }) {
   const nodeReveal = (delay: number) => ({
     initial: { opacity: 0, y: -8 },
@@ -653,7 +666,7 @@ function DesktopConnectionMap({
         >
           <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--ozer-coral-400)_58%,transparent)_0%,color-mix(in_srgb,var(--ozer-coral-500)_32%,transparent)_38%,transparent_72%)] blur-3xl" />
         </div>
-        <DashboardScreen animate={animate} live={live} />
+        <DashboardScreen animate={animate} live={live} viewer={viewer} />
       </motion.div>
     </div>
   );
@@ -697,9 +710,11 @@ function MobileConnector({ live }: { live: boolean }) {
 function MobileConnectionMap({
   animate,
   live,
+  viewer,
 }: {
   animate: boolean;
   live: boolean;
+  viewer: MarketingViewerContext;
 }) {
   return (
     <div>
@@ -718,7 +733,7 @@ function MobileConnectionMap({
         >
           <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--ozer-coral-400)_55%,transparent)_0%,color-mix(in_srgb,var(--ozer-coral-500)_28%,transparent)_40%,transparent_72%)] blur-3xl" />
         </div>
-        <DashboardScreen animate={animate} live={live} />
+        <DashboardScreen animate={animate} live={live} viewer={viewer} />
       </div>
     </div>
   );
@@ -739,7 +754,11 @@ function useHydrated() {
   );
 }
 
-export function MarketingHeroConnectionMap() {
+export function MarketingHeroConnectionMap({
+  viewer,
+}: {
+  viewer: MarketingViewerContext;
+}) {
   const reducedMotion = useReducedMotion() ?? false;
   const animate = !reducedMotion;
 
@@ -754,10 +773,10 @@ export function MarketingHeroConnectionMap() {
       aria-label="Map of Ozer launch capabilities — clients, projects, invoicing, pipeline, email, planner, activity, notes, and second brain — all connected to one dashboard."
     >
       <div className="md:hidden">
-        <MobileConnectionMap animate={animate} live={live} />
+        <MobileConnectionMap animate={animate} live={live} viewer={viewer} />
       </div>
       <div className="hidden md:block">
-        <DesktopConnectionMap animate={animate} live={live} />
+        <DesktopConnectionMap animate={animate} live={live} viewer={viewer} />
       </div>
     </div>
   );

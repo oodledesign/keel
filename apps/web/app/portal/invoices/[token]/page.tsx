@@ -153,54 +153,40 @@ export default async function PortalInvoicePage({
   const isVoid = ['cancelled', 'void'].includes(invoiceStatus);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-[var(--ozer-coral-500)] to-[var(--ozer-coral-600)]">
+    <div className="min-h-screen bg-[color-mix(in_srgb,var(--ozer-plum-900)_4%,var(--ozer-cream-50))]">
       <div className="mx-auto max-w-3xl px-4 py-8 sm:px-6 lg:px-8">
         <div className="mb-6">
-          {business.logoUrl ? (
-            <div className="inline-flex rounded-lg bg-[var(--ozer-cream-50)]/95 px-3 py-2 shadow-sm">
-              {/* eslint-disable-next-line @next/next/no-img-element -- remote brand asset from storage */}
-              <img
-                src={business.logoUrl}
-                alt={business.name ?? 'Business logo'}
-                className="h-9 w-auto max-w-[180px] object-contain object-left sm:h-10"
-              />
-            </div>
-          ) : business.name ? (
-            <p className="font-heading text-xl font-bold text-[var(--ozer-cream-50)]">
-              {business.name}
-            </p>
-          ) : null}
           <Link
             href="/"
-            className="mt-3 inline-block text-sm text-[var(--ozer-cream-50)]/90 hover:text-[var(--ozer-cream-50)]"
+            className="inline-block text-sm text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
           >
             ← Back to home
           </Link>
         </div>
         {paid === '1' && isPaid ? (
-          <div className="mb-6 rounded-lg border border-[var(--ozer-cream-50)]/40 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-[var(--ozer-plum-900)]">
+          <div className="mb-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-[var(--workspace-shell-text)]">
             Payment successful. Thank you.
           </div>
         ) : null}
         {paid === '1' && !isPaid ? (
-          <div className="mb-6 rounded-lg border border-amber-700/30 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-amber-950">
+          <div className="mb-6 rounded-lg border border-amber-500/30 bg-[var(--workspace-shell-panel)] px-4 py-3 text-amber-950 dark:text-amber-100">
             {paymentReconciled
               ? 'Payment was received and is still syncing.'
               : 'Payment return detected, but the invoice has not been marked paid yet.'}
           </div>
         ) : null}
         {cancelled === '1' ? (
-          <div className="mb-6 rounded-lg border border-[var(--ozer-cream-50)]/40 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-[var(--ozer-plum-900)]">
+          <div className="mb-6 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 text-[var(--workspace-shell-text)]">
             Payment was cancelled.
           </div>
         ) : null}
         {checkout_error ? (
-          <div className="mb-6 rounded-lg border border-red-700/30 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-red-900">
+          <div className="mb-6 rounded-lg border border-red-500/30 bg-[var(--workspace-shell-panel)] px-4 py-3 text-red-900 dark:text-red-100">
             {checkout_error}
           </div>
         ) : null}
         {isVoid ? (
-          <div className="mb-6 rounded-lg border border-red-700/30 bg-[var(--ozer-cream-50)]/95 px-4 py-3 text-red-900">
+          <div className="mb-6 rounded-lg border border-red-500/30 bg-[var(--workspace-shell-panel)] px-4 py-3 text-red-900 dark:text-red-100">
             This invoice is no longer payable.
           </div>
         ) : null}
@@ -208,6 +194,7 @@ export default async function PortalInvoicePage({
           invoice={invoice}
           token={token}
           paymentSettings={paymentSettings}
+          business={business}
         />
       </div>
     </div>
