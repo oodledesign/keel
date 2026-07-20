@@ -5,11 +5,11 @@ import { displayInvoiceStatus, formatPence } from '../_lib/invoice-totals';
 const STATUS_STYLES: Record<string, string> = {
   draft:
     'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
-  sent: 'border-[#39AEB3]/30 bg-[#39AEB3]/12 text-[#B8D3D7]',
-  read: 'border-amber-500/30 bg-amber-500/10 text-amber-200',
-  overdue: 'border-[#E85D75]/30 bg-[#E85D75]/12 text-[#F6A7B5]',
-  paid: 'border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent)]/12 text-[#97D9AA]',
-  partial: 'border-violet-500/30 bg-violet-500/10 text-violet-200',
+  sent: 'border-[#2A8F94]/45 bg-[#39AEB3]/20 text-[#14575B]',
+  read: 'border-amber-700/40 bg-amber-500/20 text-amber-950',
+  overdue: 'border-[#C4455C]/40 bg-[#E85D75]/18 text-[#8F2F42]',
+  paid: 'border-emerald-700/40 bg-emerald-500/18 text-emerald-900',
+  partial: 'border-violet-700/40 bg-violet-500/18 text-violet-950',
   void: 'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',
   cancelled:
     'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',

@@ -27,12 +27,14 @@ function isTableMissingFromApi(
   } | null,
 ): boolean {
   if (!error) return false;
+  // PGRST200 = missing relationship (query bug) — do not treat as missing table.
+  if (error.code === 'PGRST200') return false;
   const m = (error.message ?? '').toLowerCase();
   return (
-    m.includes('schema cache') ||
-    m.includes('does not exist') ||
     error.code === 'PGRST205' ||
-    error.code === '42P01'
+    error.code === '42P01' ||
+    m.includes('could not find the table') ||
+    (m.includes('does not exist') && m.includes('relation'))
   );
 }
 
@@ -289,11 +291,11 @@ async function loadDashboardPageDataImpl(
   const upcomingTasksResult = await client
     .from('tasks')
     .select(
-      'id, title, status, due_date, project_id, client_id, projects(name, title), clients(display_name, first_name, last_name)',
+      'id, title, status, due_date, project_id, client_id, projects(name, title)',
     )
     .or(upcomingTaskFilters.join(','))
     .is('parent_task_id', null)
-    .not('status', 'in', '(done,cancelled)')
+    .not('status', 'in', '("done","cancelled")')
     .order('due_date', { ascending: true, nullsFirst: false })
     .limit(4);
 
@@ -474,12 +476,34 @@ async function loadDashboardPageDataImpl(
     throw tasksError;
   }
 
+  const taskClientIds = [
+    ...new Set(
+      (taskRows ?? [])
+        .map((t) => t.client_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const clientNameById = new Map<string, string>();
+  if (taskClientIds.length > 0) {
+    const { data: clientRows } = await client
+      .from('clients')
+      .select('id, display_name, first_name, last_name')
+      .in('id', taskClientIds);
+    for (const row of clientRows ?? []) {
+      const name =
+        (row.display_name as string | null)?.trim() ||
+        [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+        'Client';
+      clientNameById.set(row.id as string, name);
+    }
+  }
+
   const upcomingTasks: DashboardTaskSummary[] = (taskRows ?? []).map((t) => ({
     id: t.id as string,
     title: (t.title as string | null) ?? 'Untitled task',
     dueDate: toIsoDateString(t.due_date as string | null | undefined),
     status: (t.status as string | null) ?? 'todo',
-    projectName: resolveTaskContextName(t),
+    projectName: resolveTaskContextName(t, clientNameById),
   }));
 
   const accountName = account.name?.trim() || account.slug || accountSlug;
@@ -544,24 +568,16 @@ function summarizeProjectStatuses(
   };
 }
 
-function resolveTaskContextName(task: {
-  projects?:
-    | { name?: string | null; title?: string | null }
-    | Array<{ name?: string | null; title?: string | null }>
-    | null;
-  clients?:
-    | {
-        display_name?: string | null;
-        first_name?: string | null;
-        last_name?: string | null;
-      }
-    | Array<{
-        display_name?: string | null;
-        first_name?: string | null;
-        last_name?: string | null;
-      }>
-    | null;
-}): string | null {
+function resolveTaskContextName(
+  task: {
+    client_id?: string | null;
+    projects?:
+      | { name?: string | null; title?: string | null }
+      | Array<{ name?: string | null; title?: string | null }>
+      | null;
+  },
+  clientNameById: Map<string, string>,
+): string | null {
   const project = Array.isArray(task.projects)
     ? task.projects[0]
     : task.projects;
@@ -569,13 +585,8 @@ function resolveTaskContextName(task: {
     return project.title?.trim() || project.name?.trim() || 'Project';
   }
 
-  const client = Array.isArray(task.clients) ? task.clients[0] : task.clients;
-  if (client) {
-    return (
-      client.display_name?.trim() ||
-      [client.first_name, client.last_name].filter(Boolean).join(' ') ||
-      'Client'
-    );
+  if (task.client_id) {
+    return clientNameById.get(task.client_id) ?? 'Client';
   }
 
   return null;

@@ -353,7 +353,7 @@ export function InvoicesPageContent({
                 }}
                 className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
                   tab === item.key
-                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                    ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm ring-1 ring-[color:var(--workspace-shell-border)]'
                     : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
                 }`}
               >
