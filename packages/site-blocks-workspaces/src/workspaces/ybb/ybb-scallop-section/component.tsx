@@ -4,6 +4,7 @@ import type { CSSProperties } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
 import '../ybb-buttons.css';
+import { YbbImage } from '../ybb-image';
 import { resolveYbbColorVar, ybbCtaClassName } from '../ybb-styles';
 import './ybb-scallop-section.css';
 
@@ -42,10 +43,10 @@ export function YbbScallopSection(props: YbbScallopSectionProps) {
   const body = props.body ?? YBB_DEFAULTS.scallopBody;
   const bandBackgroundToken = props.bandBackgroundToken ?? 'custom';
   const bandBackgroundColor =
-    props.bandBackgroundColor ?? YBB_DEFAULTS.scallopBandColor;
+    props.bandBackgroundColor?.trim() || YBB_DEFAULTS.scallopBandColor;
   const scallopFillToken = props.scallopFillToken ?? 'custom';
   const scallopFillColor =
-    props.scallopFillColor ?? YBB_DEFAULTS.scallopBottomFillColor;
+    props.scallopFillColor?.trim() || YBB_DEFAULTS.scallopBottomFillColor;
   const showPrimaryCta = props.showPrimaryCta ?? true;
   const showSecondaryCta = props.showSecondaryCta ?? true;
   const primaryCtaLabel = props.primaryCtaLabel ?? YBB_DEFAULTS.primaryCtaLabel;
@@ -68,6 +69,13 @@ export function YbbScallopSection(props: YbbScallopSectionProps) {
     fallback: YBB_DEFAULTS.scallopBottomFillColor,
   });
 
+  const photoLeftUrl =
+    props.photoLeftUrl?.trim() || YBB_DEFAULTS.scallopPhotoLeftUrl;
+  const photoRightUrl =
+    props.photoRightUrl?.trim() || YBB_DEFAULTS.scallopPhotoRightUrl;
+  const photoAccentUrl =
+    props.photoAccentUrl?.trim() || YBB_DEFAULTS.scallopPhotoAccentUrl;
+
   const sectionStyle = {
     ['--ybb-scallop-band' as string]: bandColor,
     ['--ybb-scallop-fill' as string]: fillColor,
@@ -76,7 +84,7 @@ export function YbbScallopSection(props: YbbScallopSectionProps) {
   return (
     <section
       id={sectionId || undefined}
-      className={`ybbScallopSection${overlapPrevious ? 'ybbScallopSectionOverlap' : ''}`}
+      className={`ybbScallopSection${overlapPrevious ? ' ybbScallopSectionOverlap' : ''}`}
       style={sectionStyle}
       aria-labelledby={`${sectionId}-heading`}
     >
@@ -91,19 +99,19 @@ export function YbbScallopSection(props: YbbScallopSectionProps) {
         ) : null}
 
         <div className="ybbScallopInner">
-          {props.photoLeftUrl ? (
+          {photoLeftUrl ? (
             <figure className="ybbScallopPhoto ybbScallopPhotoLeft">
-              <img src={props.photoLeftUrl} alt="" loading="lazy" />
+              <YbbImage src={photoLeftUrl} alt="" loading="lazy" />
             </figure>
           ) : null}
-          {props.photoRightUrl ? (
+          {photoRightUrl ? (
             <figure className="ybbScallopPhoto ybbScallopPhotoRight">
-              <img src={props.photoRightUrl} alt="" loading="lazy" />
+              <YbbImage src={photoRightUrl} alt="" loading="lazy" />
             </figure>
           ) : null}
-          {props.photoAccentUrl ? (
+          {photoAccentUrl ? (
             <figure className="ybbScallopPhoto ybbScallopPhotoAccent">
-              <img src={props.photoAccentUrl} alt="" loading="lazy" />
+              <YbbImage src={photoAccentUrl} alt="" loading="lazy" />
             </figure>
           ) : null}
 

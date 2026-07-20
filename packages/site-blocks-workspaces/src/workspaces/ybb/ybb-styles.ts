@@ -40,13 +40,17 @@ const BACKGROUND_VAR: Record<Exclude<YbbBackgroundToken, 'custom'>, string> = {
 export function resolveYbbBackgroundStyle(input: {
   backgroundToken?: string;
   backgroundColor?: string;
+  fallbackColor?: string;
 }): CSSProperties {
   const token = (input.backgroundToken ?? 'atmosphere') as YbbBackgroundToken;
+  const fallback =
+    input.fallbackColor?.trim() || input.backgroundColor?.trim() || '#F9DADA';
+
   if (token === 'custom') {
-    return input.backgroundColor?.trim()
-      ? { background: input.backgroundColor.trim() }
-      : { background: BACKGROUND_VAR.atmosphere };
+    const color = input.backgroundColor?.trim();
+    return { background: color || fallback };
   }
+
   const resolved =
     BACKGROUND_VAR[token as Exclude<YbbBackgroundToken, 'custom'>] ??
     BACKGROUND_VAR.atmosphere;

@@ -22,9 +22,6 @@
     },
     { "key": "photoUrl", "type": "image", "label": "Founders photo" },
     { "key": "photoAlt", "type": "text", "label": "Photo alt text" },
-    { "key": "starOuterUrl", "type": "image", "label": "Outer star ring SVG" },
-    { "key": "starInnerUrl", "type": "image", "label": "Inner star ring SVG" },
-    { "key": "starMaskUrl", "type": "image", "label": "Star mask SVG" },
     {
       "key": "backgroundToken",
       "type": "select",
@@ -36,12 +33,7 @@
       ]
     },
     { "key": "backgroundColor", "type": "color", "label": "Custom background" },
-    { "key": "textColor", "type": "color", "label": "Text colour" },
-    {
-      "key": "maskFillColor",
-      "type": "color",
-      "label": "Star mask fill (behind photo)"
-    }
+    { "key": "textColor", "type": "color", "label": "Text colour" }
   ],
   "defaults": {
     "sectionId": "team",
@@ -51,14 +43,10 @@
     "ctaLabel": "Meet the Besties",
     "ctaHref": "#about",
     "ctaVariant": "primary",
-    "photoUrl": "",
+    "photoUrl": "https://yourbridalbesties.co.uk/assets/images/photos/MariaMarshallPhotography-250.jpg",
     "photoAlt": "Zoe and Eloise — Your Bridal Besties founders",
-    "starOuterUrl": "/workspace-assets/ybb/founders/star-outer.svg",
-    "starInnerUrl": "/workspace-assets/ybb/founders/star-inner.svg",
-    "starMaskUrl": "/workspace-assets/ybb/founders/star-mask.svg",
     "backgroundToken": "custom",
     "backgroundColor": "#B9A949",
-    "textColor": "#2C4F35",
-    "maskFillColor": "#800000"
+    "textColor": "#2C4F35"
   }
 }

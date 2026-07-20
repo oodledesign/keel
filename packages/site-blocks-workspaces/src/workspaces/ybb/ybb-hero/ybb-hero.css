@@ -3,20 +3,22 @@
 .ybbHeroPin {
   --ybb-scallop-r: 3.977em;
   --ybb-nav-height: 4.5em;
-  height: calc(100vh + var(--ybb-scallop-r) + 1.5em);
+  --ybb-hero-max-height: min(100vh, 54em);
+  height: calc(var(--ybb-hero-max-height) + var(--ybb-scallop-r) + 1.5em);
   position: relative;
   z-index: 1;
 }
 
 .ybbHero {
   z-index: 1;
-  height: 100vh;
-  max-height: 100vh;
   box-sizing: border-box;
   display: flex;
   align-items: center;
   /* background from inline style / design token — fallback only */
   background: var(--sb-atmosphere);
+  min-height: 0;
+  height: auto;
+  max-height: var(--ybb-hero-max-height);
   padding-top: calc(
     var(--ybb-banner-offset, 0px) + var(--ybb-nav-height) + var(--sb-space-8)
   );
@@ -55,7 +57,7 @@
 
 @media (min-width: 992px) {
   .ybbHeroPin {
-    height: calc(100vh + var(--ybb-scallop-r) + 1.5em);
+    height: calc(var(--ybb-hero-max-height) + var(--ybb-scallop-r) + 1.5em);
   }
 
   .ybbHero {
@@ -73,9 +75,7 @@
 
   .ybbHeroGrid {
     align-items: start;
-    min-height: calc(
-      100vh - var(--ybb-nav-height) - var(--ybb-scallop-r) - 2.25em
-    );
+    min-height: 0;
   }
 
   .ybbHeroContent {

@@ -2,8 +2,15 @@
 
 import type { CSSProperties } from 'react';
 
+import {
+  YBB_FOUNDERS_MASK_FILL,
+  YBB_FOUNDERS_STAR_INNER,
+  YBB_FOUNDERS_STAR_MASK,
+  YBB_FOUNDERS_STAR_OUTER,
+} from '../ybb-assets';
 import { YBB_DEFAULTS } from '../defaults';
 import '../ybb-buttons.css';
+import { YbbImage } from '../ybb-image';
 import { resolveYbbColorVar, ybbCtaClassName } from '../ybb-styles';
 import './ybb-founders.css';
 
@@ -21,13 +28,9 @@ export type YbbFoundersProps = {
   ctaVariant?: string;
   photoUrl?: string;
   photoAlt?: string;
-  starOuterUrl?: string;
-  starInnerUrl?: string;
-  starMaskUrl?: string;
   backgroundToken?: string;
   backgroundColor?: string;
   textColor?: string;
-  maskFillColor?: string;
 };
 
 export function YbbFounders(props: YbbFoundersProps) {
@@ -38,29 +41,24 @@ export function YbbFounders(props: YbbFoundersProps) {
   const ctaLabel = props.ctaLabel ?? YBB_DEFAULTS.foundersCtaLabel;
   const ctaHref = props.ctaHref ?? YBB_DEFAULTS.foundersCtaHref;
   const ctaVariant = props.ctaVariant ?? 'primary';
-  const photoUrl = props.photoUrl ?? YBB_DEFAULTS.foundersPhotoUrl;
+  const photoUrl =
+    props.photoUrl?.trim() || YBB_DEFAULTS.foundersPhotoUrl;
   const photoAlt =
     props.photoAlt ?? 'Zoe and Eloise — Your Bridal Besties founders';
-  const starOuterUrl = props.starOuterUrl ?? YBB_DEFAULTS.foundersStarOuterUrl;
-  const starInnerUrl = props.starInnerUrl ?? YBB_DEFAULTS.foundersStarInnerUrl;
-  const starMaskUrl = props.starMaskUrl ?? YBB_DEFAULTS.foundersStarMaskUrl;
 
   const background = resolveYbbColorVar({
     token: props.backgroundToken ?? 'custom',
-    customColor: props.backgroundColor ?? '#B9A949',
+    customColor: props.backgroundColor?.trim() || '#B9A949',
     fallback: '#B9A949',
   });
-  const textColor = props.textColor ?? '#2C4F35';
-  const maskFillColor = props.maskFillColor ?? '#800000';
+  const textColor = props.textColor?.trim() || '#2C4F35';
 
   const sectionStyle = {
     background,
     color: textColor,
     ['--ybb-founders-text' as string]: textColor,
-    ['--ybb-founders-mask-fill' as string]: maskFillColor,
-    ['--ybb-founders-star-mask' as string]: starMaskUrl
-      ? cssUrl(starMaskUrl)
-      : 'none',
+    ['--ybb-founders-mask-fill' as string]: YBB_FOUNDERS_MASK_FILL,
+    ['--ybb-founders-star-mask' as string]: cssUrl(YBB_FOUNDERS_STAR_MASK),
   } as CSSProperties;
 
   return (
@@ -88,27 +86,23 @@ export function YbbFounders(props: YbbFoundersProps) {
 
         <div className="ybbFoundersVisual">
           <div className="ybbFoundersStack">
-            {starOuterUrl ? (
-              <img
-                className="ybbFoundersRing ybbFoundersRingOuter"
-                src={starOuterUrl}
-                alt=""
-                aria-hidden
-              />
-            ) : null}
-            {starInnerUrl ? (
-              <img
-                className="ybbFoundersRing ybbFoundersRingInner"
-                src={starInnerUrl}
-                alt=""
-                aria-hidden
-              />
-            ) : null}
+            <YbbImage
+              className="ybbFoundersRing ybbFoundersRingOuter"
+              src={YBB_FOUNDERS_STAR_OUTER}
+              alt=""
+              aria-hidden
+            />
+            <YbbImage
+              className="ybbFoundersRing ybbFoundersRingInner"
+              src={YBB_FOUNDERS_STAR_INNER}
+              alt=""
+              aria-hidden
+            />
             <figure className="ybbFoundersPhoto">
               <div className="ybbFoundersPhotoMask">
                 <div className="ybbFoundersPhotoClip">
                   {photoUrl ? (
-                    <img src={photoUrl} alt={photoAlt} loading="lazy" />
+                    <YbbImage src={photoUrl} alt={photoAlt} loading="lazy" />
                   ) : (
                     <div className="ybbFoundersPhotoPlaceholder" aria-hidden />
                   )}

@@ -8,6 +8,7 @@ import {
   type YbbGlamCardSlot,
 } from '../defaults';
 import '../ybb-buttons.css';
+import { YbbImage } from '../ybb-image';
 import { resolveYbbBackgroundStyle, ybbPolaroidCtaClass } from '../ybb-styles';
 import './ybb-glam-girls.css';
 
@@ -43,6 +44,16 @@ function cardBySlot(
   slot: YbbGlamCardSlot,
 ): YbbGlamCard | undefined {
   return cards.find((card) => card.slot === slot);
+}
+
+function cardsWithDefaultImages(cards: YbbGlamCard[]): YbbGlamCard[] {
+  return cards.map((card) => {
+    const fallback = YBB_DEFAULT_GLAM_CARDS.find(
+      (defaultCard) => defaultCard.slot === card.slot,
+    );
+    const imageUrl = card.imageUrl?.trim() || fallback?.imageUrl || '';
+    return imageUrl === card.imageUrl ? card : { ...card, imageUrl };
+  });
 }
 
 function renderTitleLines(title: string) {
@@ -85,7 +96,7 @@ function Polaroid({
   return (
     <article className="ybbGlamCell ybbGlamCellPolaroid">
       <div
-        className={`ybbGlamPolaroid${card.featured ? 'ybbGlamPolaroidFeatured' : ''}`}
+        className={`ybbGlamPolaroid${card.featured ? ' ybbGlamPolaroidFeatured' : ''}`}
         style={
           {
             ['--ybb-glam-tilt' as string]: tilt,
@@ -96,9 +107,9 @@ function Polaroid({
         <div className="ybbGlamPolaroidMedia">
           {card.imageUrl ? (
             <figure
-              className={`ybbGlamPolaroidPhoto${card.squarePhoto ? 'ybbGlamPolaroidPhotoSquare' : ''}`}
+              className={`ybbGlamPolaroidPhoto${card.squarePhoto ? ' ybbGlamPolaroidPhotoSquare' : ''}`}
             >
-              <img
+              <YbbImage
                 src={card.imageUrl}
                 alt={imageAltText(card)}
                 loading="lazy"
@@ -106,7 +117,7 @@ function Polaroid({
             </figure>
           ) : (
             <figure
-              className={`ybbGlamPolaroidPhoto ybbGlamPolaroidPhotoEmpty${card.squarePhoto ? 'ybbGlamPolaroidPhotoSquare' : ''}`}
+              className={`ybbGlamPolaroidPhoto ybbGlamPolaroidPhotoEmpty${card.squarePhoto ? ' ybbGlamPolaroidPhotoSquare' : ''}`}
               aria-hidden
             />
           )}
@@ -138,7 +149,7 @@ function SpeechBubble({
   align: 'left' | 'right';
 }) {
   const avatar = card.imageUrl ? (
-    <img
+    <YbbImage
       className="ybbGlamAvatar"
       src={card.imageUrl}
       alt={imageAltText(card)}
@@ -173,15 +184,18 @@ export function YbbGlamGirls(props: YbbGlamGirlsProps) {
   const title = props.title ?? YBB_DEFAULTS.glamGirlsTitle;
   const kicker = props.kicker ?? YBB_DEFAULTS.glamGirlsKicker;
   const kickerColor = props.kickerColor ?? '#550100';
-  const cards =
+  const cards = cardsWithDefaultImages(
     props.cards && props.cards.length > 0
       ? props.cards
-      : YBB_DEFAULT_GLAM_CARDS;
+      : YBB_DEFAULT_GLAM_CARDS,
+  );
 
   const sectionStyle = {
     ...resolveYbbBackgroundStyle({
-      backgroundToken: props.backgroundToken ?? 'atmosphere',
-      backgroundColor: props.backgroundColor ?? '#F9DADA',
+      backgroundToken: props.backgroundToken ?? 'custom',
+      backgroundColor:
+        props.backgroundColor?.trim() || YBB_DEFAULTS.glamGirlsBackgroundColor,
+      fallbackColor: YBB_DEFAULTS.glamGirlsBackgroundColor,
     }),
     ['--ybb-glam-kicker' as string]: kickerColor,
     ['--ybb-glam-maroon' as string]: kickerColor,
@@ -196,7 +210,7 @@ export function YbbGlamGirls(props: YbbGlamGirlsProps) {
   return (
     <section
       id={sectionId || undefined}
-      className={`ybbGlamGirls${overlapScallop ? 'ybbGlamGirlsOverlap' : ''}`}
+      className={`ybbGlamGirls${overlapScallop ? ' ybbGlamGirlsOverlap' : ''}`}
       style={sectionStyle}
       aria-labelledby={`${sectionId}-heading`}
     >

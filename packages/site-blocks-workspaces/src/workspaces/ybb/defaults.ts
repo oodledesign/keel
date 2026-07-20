@@ -1,5 +1,14 @@
 /** Default content and asset URLs from the YBB Astro site (editable in Puck). */
 
+import {
+  YBB_FOUNDERS_MASK_FILL,
+  YBB_FOUNDERS_STAR_INNER,
+  YBB_FOUNDERS_STAR_MASK,
+  YBB_FOUNDERS_STAR_OUTER,
+  ybbPhoto,
+  ybbSiteAsset,
+} from './ybb-assets';
+
 /** YBB Design tab mapping: primary #CC848A, N2 (atmosphere) #F9DADA, buttons pill. */
 export const YBB_DEFAULTS = {
   heroVideoUrl:
@@ -10,12 +19,11 @@ export const YBB_DEFAULTS = {
   logoWideUrl: '/workspace-assets/ybb/logo-wide.svg',
   monogramUrl: '/workspace-assets/ybb/monogram.svg',
   logoNavUrl: '/workspace-assets/ybb/logo-nav.svg',
-  /** Upload a floral texture in Puck when ready — production YBB asset not bundled yet. */
-  heroTextureUrl: '',
-  footerTextureUrl:
-    'https://yourbridalbesties.co.uk/assets/images/branding/ybb_wallpaper-icons-pink-2.png',
-  footerCutoutUrl:
-    'https://yourbridalbesties.co.uk/assets/images/photos/footer-cutout.png',
+  heroTextureUrl: ybbSiteAsset('/assets/images/backgrounds/faq-texture.avif'),
+  footerTextureUrl: ybbSiteAsset(
+    '/assets/images/branding/ybb_wallpaper-icons-pink-2.png',
+  ),
+  footerCutoutUrl: ybbSiteAsset('/assets/images/photos/footer-cutout.png'),
   tagline: 'With a brush in one hand and a prosecco for you in the other!',
   primaryCtaLabel: 'Enquire now',
   primaryCtaHref: 'mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK',
@@ -42,17 +50,22 @@ export const YBB_DEFAULTS = {
     "The ones who'll calm your nerves, hype you up, and sneak you a sip of Prosecco before 10am. Luxe, soft glam that still feels like you, done by people who feel like friends.",
   scallopBandColor: '#800000',
   scallopBottomFillColor: '#F9DADA',
+  scallopPhotoLeftUrl: ybbPhoto('MariaMarshallPhotography-128.jpg'),
+  scallopPhotoRightUrl: ybbPhoto('MariaMarshallPhotography-198.jpg'),
+  scallopPhotoAccentUrl: ybbPhoto('IMG_8943.JPG'),
   glamGirlsTitle: "We're not just your glam squad.\nWe're your girls.",
   glamGirlsKicker: "Here's why brides choose us as their besties",
+  glamGirlsBackgroundColor: '#F9DADA',
   foundersTitle: 'Meet Zoe and Eloise',
   foundersBody:
     "Two best friends, one shared obsession with making brides feel incredible. We've been inseparable since the day we met — and your wedding morning is better for it.",
   foundersCtaLabel: 'Meet the Besties',
   foundersCtaHref: '#about',
-  foundersPhotoUrl: '',
-  foundersStarOuterUrl: '/workspace-assets/ybb/founders/star-outer.svg',
-  foundersStarInnerUrl: '/workspace-assets/ybb/founders/star-inner.svg',
-  foundersStarMaskUrl: '/workspace-assets/ybb/founders/star-mask.svg',
+  foundersPhotoUrl: ybbPhoto('MariaMarshallPhotography-250.jpg'),
+  foundersStarOuterUrl: YBB_FOUNDERS_STAR_OUTER,
+  foundersStarInnerUrl: YBB_FOUNDERS_STAR_INNER,
+  foundersStarMaskUrl: YBB_FOUNDERS_STAR_MASK,
+  foundersMaskFillColor: YBB_FOUNDERS_MASK_FILL,
   portfolioTitle: 'Some of our previous beautiful clients',
   portfolioCtaLabel: 'Enquire now',
   portfolioCtaHref: 'mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK',
@@ -85,7 +98,7 @@ export const YBB_DEFAULT_GLAM_CARDS = [
     slot: 'leftPolaroid' as const,
     title: 'A Room Full of Besties',
     body: "We're real-life besties whose effortless teamwork turns bridal prep into a relaxed, morning pre drink— no stress-o just prosecco!",
-    imageUrl: '',
+    imageUrl: ybbSiteAsset('/assets/images/photos/z-j-00058.jpg'),
     imageAlt: 'Bridal party getting ready together',
     ctaLabel: 'Meet the Besties',
     ctaHref: '#team',
@@ -98,7 +111,7 @@ export const YBB_DEFAULT_GLAM_CARDS = [
     slot: 'leftSpeech' as const,
     title: "We're your Wedding Day Sidekicks",
     body: "From helping you into your dress to calming your 'OMG is this really happening' nerves—we've got your back (and your veil).",
-    imageUrl: '',
+    imageUrl: ybbPhoto('MariaMarshallPhotography-147.jpg'),
     imageAlt: 'Zoe',
     linkLabel: 'Learn more →',
     linkHref: '#about',
@@ -107,7 +120,7 @@ export const YBB_DEFAULT_GLAM_CARDS = [
     slot: 'centerPolaroid' as const,
     title: 'Pampered Bride from prep to last dance',
     body: "A well-oiled schedule, touch-ups on tap, and social-media-ready moments—because 'Insta-Bride' status is non-negotiable",
-    imageUrl: '',
+    imageUrl: ybbPhoto('Photo 04-09-2025, 11 38 33.jpg'),
     imageAlt: 'Bride with soft glam makeup',
     ctaLabel: 'Learn more',
     ctaHref: '#about',
@@ -120,7 +133,7 @@ export const YBB_DEFAULT_GLAM_CARDS = [
     slot: 'rightSpeech' as const,
     title: 'Babes, We Know What You Need Before You Do',
     body: 'Music on, temperature just right, quiet when it counts—we read the room so you can breathe easy and glow effortlessly.',
-    imageUrl: '',
+    imageUrl: ybbPhoto('MariaMarshallPhotography-314.jpg'),
     imageAlt: 'Eloise',
     linkLabel: 'Learn more →',
     linkHref: '#about',
@@ -129,7 +142,7 @@ export const YBB_DEFAULT_GLAM_CARDS = [
     slot: 'rightPolaroid' as const,
     title: 'We love, love!',
     body: 'We bring your unique romance to life in every look, making sure your makeup and hair feel as personal as your vows.',
-    imageUrl: '',
+    imageUrl: ybbPhoto('Photo 04-09-2025, 15 55 20.jpg'),
     imageAlt: 'Bride on her wedding day',
     ctaLabel: 'Enquire now',
     ctaHref: 'mailto:BOOKINGS@YOURBRIDALBESTIES.CO.UK',

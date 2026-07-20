@@ -300,6 +300,10 @@ export function resolveTokens(
     '--sb-button-radius': buttonRadius(resolved.buttons.style, resolved.radius),
 
     ...spacingScale(resolved.spacingDensity),
+
+    '--sb-max': '72rem',
+    '--sb-container-max': '72rem',
+    '--sb-container-padding': '1.25rem',
   };
 }
 

@@ -4,6 +4,7 @@ import { type CSSProperties, useEffect, useRef } from 'react';
 
 import { YBB_DEFAULTS } from '../defaults';
 import '../ybb-buttons.css';
+import { YbbImage } from '../ybb-image';
 import { resolveYbbBackgroundStyle, ybbCtaClassName } from '../ybb-styles';
 import './ybb-hero.css';
 
@@ -141,7 +142,7 @@ export function YbbHero(props: YbbHeroProps) {
 
           <div className="ybbHeroContent">
             {logoUrl ? (
-              <img
+              <YbbImage
                 className="ybbHeroLogo"
                 src={logoUrl}
                 alt="Your Bridal Besties"

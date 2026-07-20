@@ -200,7 +200,7 @@
   flex-shrink: 0;
   margin: 0;
   overflow: hidden;
-  background: var(--sb-atmosphere, #f9dada);
+  background: var(--sb-canvas, #fffff3);
   border: none;
 }
 

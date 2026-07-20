@@ -133,6 +133,7 @@ function OzerSitePuckEditor({
   styleTokens,
   styleSystem,
   canEdit,
+  liveSiteUrl,
   onStyleTokensChange,
   onClose,
   onSaved,
@@ -148,6 +149,7 @@ function OzerSitePuckEditor({
   styleTokens: WebsiteStyleTokens;
   styleSystem?: WebsiteStyleSystem | null;
   canEdit: boolean;
+  liveSiteUrl: string;
   onStyleTokensChange?: (tokens: WebsiteStyleTokens) => void;
   onClose: () => void;
   onSaved: (page: OzerSitePageRecord) => void;
@@ -301,6 +303,12 @@ function OzerSitePuckEditor({
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button type="button" size="sm" variant="outline" asChild>
+            <a href={liveSiteUrl} target="_blank" rel="noopener noreferrer">
+              <ExternalLink className="mr-1 size-3.5" aria-hidden="true" />
+              View live site
+            </a>
+          </Button>
           <Button
             type="button"
             size="sm"
@@ -628,6 +636,7 @@ export function WebsiteOzerSitePanel({
           styleTokens={liveStyleTokens ?? emptyWebsiteStyleTokens()}
           styleSystem={styleSystem}
           canEdit={canEdit}
+          liveSiteUrl={ozerSitePreviewUrl(site.subdomain)}
           onStyleTokensChange={onLiveStyleTokensChange}
           onClose={() => setActivePageId(null)}
           onSaved={(saved) => {
