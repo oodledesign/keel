@@ -145,6 +145,36 @@ export async function upsertEmailThread(input: {
   lastMessageAt: string | null;
 }): Promise<string> {
   const now = new Date().toISOString();
+  const admin = getSupabaseServerAdminClient();
+
+  const { data: existing, error: existingError } = await admin
+    .from('email_threads')
+    .select('id, last_message_at')
+    .eq('user_id', input.userId)
+    .eq('gmail_thread_id', input.gmailThreadId)
+    .maybeSingle();
+
+  if (existingError) {
+    throw new Error(existingError.message);
+  }
+
+  const existingRow = existing as {
+    id?: string;
+    last_message_at?: string | null;
+  } | null;
+
+  let lastMessageAt = input.lastMessageAt;
+
+  if (existingRow?.last_message_at && input.lastMessageAt) {
+    lastMessageAt =
+      new Date(input.lastMessageAt).getTime() >=
+      new Date(existingRow.last_message_at).getTime()
+        ? input.lastMessageAt
+        : existingRow.last_message_at;
+  } else {
+    lastMessageAt = input.lastMessageAt ?? existingRow?.last_message_at ?? null;
+  }
+
   const { data, error } = await adminTable('email_threads')
     .upsert(
       {
@@ -155,7 +185,7 @@ export async function upsertEmailThread(input: {
         snippet: input.snippet,
         label_ids: input.labelIds,
         is_unread: input.isUnread,
-        last_message_at: input.lastMessageAt,
+        last_message_at: lastMessageAt,
         updated_at: now,
       },
       { onConflict: 'user_id,gmail_thread_id' },

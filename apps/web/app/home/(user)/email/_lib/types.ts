@@ -82,6 +82,7 @@ export type EmailPageInitialData = {
     autoSaveGmailDrafts: boolean;
   };
   threads: EmailThreadSummary[];
+  hasMoreThreads: boolean;
   workspaces: EmailWorkspaceOption[];
 };
 

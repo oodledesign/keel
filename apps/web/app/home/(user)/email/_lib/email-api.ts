@@ -25,7 +25,18 @@ export async function emailApiFetch<T>(
     },
   });
 
-  const payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
+  let payload: ApiSuccess<T> | ApiFailure;
+
+  try {
+    payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
+  } catch {
+    throw new EmailApiError(
+      'INVALID_RESPONSE',
+      response.ok
+        ? 'Unexpected response from email API'
+        : `Request failed (${response.status})`,
+    );
+  }
 
   if (!payload.ok) {
     throw new EmailApiError(payload.error.code, payload.error.message);

@@ -2,9 +2,14 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import { Link2, Loader2, X } from 'lucide-react';
+import { ChevronDown, Link2, Loader2, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from '@kit/ui/collapsible';
 import { Label } from '@kit/ui/label';
 import {
   Select,
@@ -60,8 +65,13 @@ export function EmailThreadLinkSection({
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [pending, startTransition] = useTransition();
+  const [open, setOpen] = useState(() => !link.linked);
 
   const currentLabel = useMemo(() => linkLabel(link), [link]);
+
+  useEffect(() => {
+    setOpen(!link.linked);
+  }, [link.linked, threadId]);
 
   useEffect(() => {
     setWorkspaceId(link.accountId ?? '');
@@ -130,105 +140,120 @@ export function EmailThreadLinkSection({
   }
 
   return (
-    <div className={cn(panelClass, 'p-3')}>
-      <div className="flex items-start justify-between gap-3">
-        <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <Link2 className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              Client / project
-            </p>
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <div className={cn(panelClass, 'overflow-hidden')}>
+        <div className="flex items-start gap-2">
+          <CollapsibleTrigger className="flex min-w-0 flex-1 items-start gap-2 px-3 py-3 text-left">
+            <Link2 className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-2">
+                <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Client / project
+                </span>
+                <ChevronDown
+                  className={cn(
+                    'h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)] transition-transform',
+                    open && 'rotate-180',
+                  )}
+                />
+              </span>
+              {link.linked && currentLabel ? (
+                <span className="mt-1 block truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                  {currentLabel}
+                  {link.accountName ? ` · ${link.accountName}` : ''}
+                  {link.linkSource === 'auto' ? ' · auto-linked' : ''}
+                </span>
+              ) : !open ? (
+                <span className="mt-1 block text-xs text-[var(--workspace-shell-text-muted)]">
+                  Link this thread to a workspace client or project.
+                </span>
+              ) : null}
+            </span>
+          </CollapsibleTrigger>
+
+          {link.linked ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="icon"
+              className="mt-2 mr-1 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+              disabled={pending}
+              onClick={(event) => {
+                event.stopPropagation();
+                saveLink(true);
+              }}
+              aria-label="Remove link"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          ) : null}
+        </div>
+
+        <CollapsibleContent className="border-t border-[color:var(--workspace-shell-border)] px-3 py-3">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Workspace
+              </Label>
+              <Select
+                value={workspaceId || 'none'}
+                onValueChange={(value) => {
+                  setWorkspaceId(value === 'none' ? '' : value);
+                  setAssignTo('none');
+                }}
+              >
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
+                  <SelectValue placeholder="Select workspace" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Select workspace</SelectItem>
+                  {workspaces.map((workspace) => (
+                    <SelectItem key={workspace.id} value={workspace.id}>
+                      {workspace.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-1.5">
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Client or project
+              </Label>
+              <TaskAssignmentCombobox
+                value={assignTo}
+                onValueChange={setAssignTo}
+                options={options}
+                isWorkspaceMode
+                placeholder={
+                  optionsLoading ? 'Loading…' : 'Select client or project'
+                }
+              />
+            </div>
           </div>
-          {link.linked && currentLabel ? (
-            <p className="mt-1 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-              {currentLabel}
-              {link.accountName ? ` · ${link.accountName}` : ''}
-              {link.linkSource === 'auto' ? ' · auto-linked' : ''}
-            </p>
-          ) : (
-            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              Link this thread to a workspace client or project.
-            </p>
-          )}
-        </div>
 
-        {link.linked ? (
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-            disabled={pending}
-            onClick={() => saveLink(true)}
-            aria-label="Remove link"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-        ) : null}
+          <div className="mt-3 flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+              disabled={
+                pending || !workspaceId || assignTo === 'none' || optionsLoading
+              }
+              onClick={() => saveLink(false)}
+            >
+              {pending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Saving…
+                </>
+              ) : (
+                'Save link'
+              )}
+            </Button>
+          </div>
+        </CollapsibleContent>
       </div>
-
-      <div className="mt-3 grid gap-3 sm:grid-cols-2">
-        <div className="space-y-1.5">
-          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Workspace
-          </Label>
-          <Select
-            value={workspaceId || 'none'}
-            onValueChange={(value) => {
-              setWorkspaceId(value === 'none' ? '' : value);
-              setAssignTo('none');
-            }}
-          >
-            <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)]">
-              <SelectValue placeholder="Select workspace" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">Select workspace</SelectItem>
-              {workspaces.map((workspace) => (
-                <SelectItem key={workspace.id} value={workspace.id}>
-                  {workspace.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="space-y-1.5">
-          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Client or project
-          </Label>
-          <TaskAssignmentCombobox
-            value={assignTo}
-            onValueChange={setAssignTo}
-            options={options}
-            isWorkspaceMode
-            placeholder={
-              optionsLoading ? 'Loading…' : 'Select client or project'
-            }
-          />
-        </div>
-      </div>
-
-      <div className="mt-3 flex justify-end">
-        <Button
-          type="button"
-          size="sm"
-          className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-          disabled={
-            pending || !workspaceId || assignTo === 'none' || optionsLoading
-          }
-          onClick={() => saveLink(false)}
-        >
-          {pending ? (
-            <>
-              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              Saving…
-            </>
-          ) : (
-            'Save link'
-          )}
-        </Button>
-      </div>
-    </div>
+    </Collapsible>
   );
 }

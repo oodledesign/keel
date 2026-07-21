@@ -22,6 +22,7 @@ import {
   previewEmailBody,
   splitEmailQuotedHistory,
 } from '~/lib/email-assistant/message-body-display';
+import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
 import { emailApiFetch } from '../_lib/email-api';
@@ -38,19 +39,6 @@ import { EmailThreadLinkSection } from './email-thread-link-section';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
-
-function formatMessageDate(value: string | null) {
-  if (!value) {
-    return '';
-  }
-
-  return new Date(value).toLocaleString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    hour: '2-digit',
-    minute: '2-digit',
-  });
-}
 
 function formatDueDate(value: string | null) {
   if (!value) {
@@ -81,6 +69,7 @@ export function EmailThreadPanel({
 }: Props) {
   const [detail, setDetail] = useState<EmailThreadDetail | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [draftBody, setDraftBody] = useState('');
   const [acceptItem, setAcceptItem] = useState<EmailActionItemRow | null>(null);
   const [acceptOpen, setAcceptOpen] = useState(false);
@@ -91,11 +80,13 @@ export function EmailThreadPanel({
     if (!threadId) {
       setDetail(null);
       setDraftBody('');
+      setLoadError(null);
       return;
     }
 
     let cancelled = false;
     setLoading(true);
+    setLoadError(null);
 
     void loadEmailThreadDetail(threadId).then((result) => {
       if (cancelled) {
@@ -106,12 +97,14 @@ export function EmailThreadPanel({
         toast.error(result.error);
         setDetail(null);
         setDraftBody('');
+        setLoadError(result.error);
         setLoading(false);
         return;
       }
 
       setDetail(result.data);
       setDraftBody(result.data.draft?.body_text ?? '');
+      setLoadError(null);
       setLoading(false);
     });
 
@@ -265,7 +258,7 @@ export function EmailThreadPanel({
     );
   }
 
-  if (loading || !detail) {
+  if (loading) {
     return (
       <section
         className={cn(
@@ -279,10 +272,33 @@ export function EmailThreadPanel({
     );
   }
 
+  if (!detail) {
+    return (
+      <section
+        className={cn(
+          panelClass,
+          'flex min-h-[320px] items-center justify-center px-6 py-12 text-center',
+        )}
+      >
+        <div>
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            {loadError ? 'Could not load thread' : 'Thread unavailable'}
+          </p>
+          <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+            {loadError ?? 'Choose another conversation from your inbox.'}
+          </p>
+        </div>
+      </section>
+    );
+  }
+
   return (
     <>
       <section
-        className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}
+        className={cn(
+          panelClass,
+          'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
+        )}
       >
         <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
           <div className="flex items-start gap-3">
@@ -318,7 +334,7 @@ export function EmailThreadPanel({
           />
         </div>
 
-        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto p-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto p-4">
           <ThreadMessages messages={detail.messages} />
 
           <div className="space-y-3">
@@ -372,8 +388,8 @@ export function EmailThreadPanel({
                     key={item.id}
                     className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/50 p-3"
                   >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="min-w-0 flex-1">
                         <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
                           {item.title}
                         </p>
@@ -403,7 +419,7 @@ export function EmailThreadPanel({
                           </p>
                         ) : null}
                       </div>
-                      <div className="flex shrink-0 gap-2">
+                      <div className="flex shrink-0 flex-wrap gap-2 sm:flex-nowrap">
                         <Button
                           type="button"
                           size="sm"
@@ -594,11 +610,11 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                   <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text-muted)]">
+                      <p className="min-w-0 truncate text-sm font-medium text-[var(--workspace-shell-text-muted)]">
                         {message.from_address ?? 'Unknown sender'}
                       </p>
-                      <p className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
-                        {formatMessageDate(message.internal_date)}
+                      <p className="shrink-0 text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+                        {formatEmailDateTime(message.internal_date)}
                       </p>
                     </div>
                     {preview ? (
@@ -630,14 +646,14 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                 ) : null}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                    <p className="min-w-0 break-words text-sm font-medium text-[var(--workspace-shell-text)]">
                       {message.from_address ?? 'Unknown sender'}
                     </p>
-                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                      {formatMessageDate(message.internal_date)}
+                    <p className="shrink-0 text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+                      {formatEmailDateTime(message.internal_date)}
                     </p>
                   </div>
-                  <p className="mt-3 text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
+                  <p className="mt-3 break-words text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
                     {body}
                   </p>
                   {quoted ? (

@@ -62,7 +62,7 @@ export function EmailPageClient({ initialData }: Props) {
   const [nextCursor, setNextCursor] = useState<string | null>(
     initialData.threads.at(-1)?.last_message_at ?? null,
   );
-  const [hasMore, setHasMore] = useState(initialData.threads.length >= 25);
+  const [hasMore, setHasMore] = useState(initialData.hasMoreThreads);
   const [loadingMore, setLoadingMore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [syncing, startSyncTransition] = useTransition();
@@ -72,6 +72,7 @@ export function EmailPageClient({ initialData }: Props) {
   const [searching, setSearching] = useState(false);
   const searchRequestId = useRef(0);
   const skipInitialSearchFetch = useRef(true);
+  const handledOAuthParams = useRef(false);
 
   const selectedThreadId = searchParams.get('thread');
 
@@ -88,21 +89,115 @@ export function EmailPageClient({ initialData }: Props) {
   useEffect(() => {
     setThreads(initialData.threads);
     setNextCursor(initialData.threads.at(-1)?.last_message_at ?? null);
-    setHasMore(initialData.threads.length >= 25);
+    setHasMore(initialData.hasMoreThreads);
   }, [initialData.threads]);
+
+  const reloadThreads = useCallback(async () => {
+    const data = await emailApiFetch<{
+      threads: EmailThreadSummary[];
+      nextCursor: string | null;
+    }>(threadsEndpoint());
+
+    setThreads(data.threads);
+    setNextCursor(data.nextCursor);
+    setHasMore(Boolean(data.nextCursor));
+  }, [threadsEndpoint]);
+
+  const runSync = useCallback(async () => {
+    let totalProcessed = 0;
+    let complete = true;
+    let guard = 0;
+    let draftsCreated = 0;
+    let classified = 0;
+    let linked = 0;
+    const maxBatches = 25;
+
+    do {
+      const result = await emailApiFetch<{
+        mode: string;
+        messagesProcessed: number;
+        backfillComplete?: boolean;
+        remainingEstimate?: number;
+        assistant?: {
+          classified: number;
+          linked?: number;
+          draftsCreated: number;
+          draftsSavedToGmail: number;
+          errors?: string[];
+        } | null;
+      }>('/api/gmail/sync', { method: 'POST' });
+
+      totalProcessed += result.messagesProcessed;
+      draftsCreated += result.assistant?.draftsCreated ?? 0;
+      classified += result.assistant?.classified ?? 0;
+      linked += result.assistant?.linked ?? 0;
+      complete = result.backfillComplete !== false;
+      guard += 1;
+    } while (!complete && guard < maxBatches);
+
+    await reloadThreads();
+    router.refresh();
+
+    if (draftsCreated > 0) {
+      toast.success(
+        `Drafted ${draftsCreated} repl${draftsCreated === 1 ? 'y' : 'ies'}`,
+      );
+    } else if (linked > 0) {
+      toast.success(
+        `Linked ${linked} thread${linked === 1 ? '' : 's'} to clients/projects`,
+      );
+    } else if (classified > 0) {
+      toast.success(
+        `Synced and sorted ${classified} thread${classified === 1 ? '' : 's'}`,
+      );
+    } else if (complete) {
+      toast.success(
+        totalProcessed > 0
+          ? `Synced ${totalProcessed} message${totalProcessed === 1 ? '' : 's'}`
+          : 'Mailbox is up to date',
+      );
+    } else {
+      toast.success(
+        `Synced ${totalProcessed} messages — still catching up, tap Sync again`,
+      );
+    }
+  }, [reloadThreads, router]);
 
   useEffect(() => {
     const connected = searchParams.get('email_connected');
     const error = searchParams.get('email_error');
 
+    if (!connected && !error) {
+      return;
+    }
+
+    if (handledOAuthParams.current) {
+      return;
+    }
+
+    handledOAuthParams.current = true;
+
     if (connected === '1') {
-      toast.success('Gmail connected');
+      toast.success('Gmail connected — syncing inbox…');
       router.replace(pathsConfig.app.personalEmailAssistant);
-    } else if (error) {
+
+      startSyncTransition(async () => {
+        try {
+          await runSync();
+        } catch (syncError) {
+          toast.error(
+            syncError instanceof Error ? syncError.message : 'Sync failed',
+          );
+        }
+      });
+      return;
+    }
+
+    if (error) {
       toast.error(decodeURIComponent(error));
       router.replace(pathsConfig.app.personalEmailAssistant);
     }
-  }, [router, searchParams]);
+  }, [router, searchParams, runSync]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {
@@ -163,17 +258,6 @@ export function EmailPageClient({ initialData }: Props) {
     router.push(pathsConfig.app.personalEmailAssistant);
   }, [router]);
 
-  const reloadThreads = useCallback(async () => {
-    const data = await emailApiFetch<{
-      threads: EmailThreadSummary[];
-      nextCursor: string | null;
-    }>(threadsEndpoint());
-
-    setThreads(data.threads);
-    setNextCursor(data.nextCursor);
-    setHasMore(Boolean(data.nextCursor));
-  }, [threadsEndpoint]);
-
   const changeInboxFilter = useCallback((filter: EmailInboxFilter) => {
     setInboxFilter(filter);
   }, []);
@@ -185,63 +269,7 @@ export function EmailPageClient({ initialData }: Props) {
   const syncNow = () => {
     startSyncTransition(async () => {
       try {
-        let totalProcessed = 0;
-        let complete = true;
-        let guard = 0;
-        let draftsCreated = 0;
-        let classified = 0;
-        let linked = 0;
-        const maxBatches = 25;
-
-        do {
-          const result = await emailApiFetch<{
-            mode: string;
-            messagesProcessed: number;
-            backfillComplete?: boolean;
-            remainingEstimate?: number;
-            assistant?: {
-              classified: number;
-              linked?: number;
-              draftsCreated: number;
-              draftsSavedToGmail: number;
-              errors?: string[];
-            } | null;
-          }>('/api/gmail/sync', { method: 'POST' });
-
-          totalProcessed += result.messagesProcessed;
-          draftsCreated += result.assistant?.draftsCreated ?? 0;
-          classified += result.assistant?.classified ?? 0;
-          linked += result.assistant?.linked ?? 0;
-          complete = result.backfillComplete !== false;
-          guard += 1;
-        } while (!complete && guard < maxBatches);
-
-        await reloadThreads();
-        router.refresh();
-
-        if (draftsCreated > 0) {
-          toast.success(
-            `Drafted ${draftsCreated} repl${draftsCreated === 1 ? 'y' : 'ies'}`,
-          );
-        } else if (linked > 0) {
-          toast.success(
-            `Linked ${linked} thread${linked === 1 ? '' : 's'} to clients/projects`,
-          );
-        } else if (classified > 0) {
-          toast.success(
-            `Synced and sorted ${classified} thread${classified === 1 ? '' : 's'}`,
-          );
-        } else if (complete) {
-          toast.success(
-            totalProcessed > 0
-              ? `Synced ${totalProcessed} message${totalProcessed === 1 ? '' : 's'}`
-              : 'Mailbox is up to date',
-          );
-        } else {
-          toast.success(
-            `Synced ${totalProcessed} messages — still catching up, tap Sync again`,
-          );
-        }
+        await runSync();
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Sync failed');
       }
@@ -281,8 +309,13 @@ export function EmailPageClient({ initialData }: Props) {
   const mobileShowThread = Boolean(selectedThreadId);
 
   return (
-    <div className={cn(workspacePageMainClassName, 'min-h-0')}>
-      <div className="flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
+    <div
+      className={cn(
+        workspacePageMainClassName,
+        'min-h-0 flex-1 overflow-hidden',
+      )}
+    >
+      <div className="flex shrink-0 flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-3xl">
             Email
@@ -325,7 +358,8 @@ export function EmailPageClient({ initialData }: Props) {
       </div>
 
       {showSettings ? (
-        <EmailSettingsCard
+        <div className="shrink-0">
+          <EmailSettingsCard
           connectedEmail={initialData.connection?.googleEmail ?? null}
           initialStyleNotes={initialData.settings.styleNotes}
           initialSignature={initialData.settings.signature}
@@ -334,11 +368,17 @@ export function EmailPageClient({ initialData }: Props) {
           initialAutoDraftEnabled={initialData.settings.autoDraftEnabled}
           initialAutoSaveGmailDrafts={initialData.settings.autoSaveGmailDrafts}
           lastSyncedAt={initialData.settings.lastSyncedAt}
-        />
+          />
+        </div>
       ) : null}
 
-      <div className="grid min-h-0 flex-1 gap-4 lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
-        <div className={cn(mobileShowThread && 'hidden lg:block')}>
+      <div className="grid min-h-0 min-w-0 flex-1 gap-4 overflow-hidden lg:grid-cols-[320px_minmax(0,1fr)] lg:gap-5">
+        <div
+          className={cn(
+            'flex min-h-0 min-w-0 flex-col',
+            mobileShowThread && 'hidden lg:flex',
+          )}
+        >
           <EmailInboxList
             threads={threads}
             selectedThreadId={selectedThreadId}
@@ -354,7 +394,12 @@ export function EmailPageClient({ initialData }: Props) {
           />
         </div>
 
-        <div className={cn(!mobileShowThread && 'hidden lg:block')}>
+        <div
+          className={cn(
+            'flex min-h-0 min-w-0 flex-col',
+            !mobileShowThread && 'hidden lg:flex',
+          )}
+        >
           <EmailThreadPanel
             threadId={selectedThreadId}
             connected={connected}

@@ -5,35 +5,12 @@ import { Loader2, Search, X } from 'lucide-react';
 import { Input } from '@kit/ui/input';
 import { cn } from '@kit/ui/utils';
 
+import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
+
 import type { EmailInboxFilter, EmailThreadSummary } from '../_lib/types';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
-
-function formatThreadDate(value: string | null) {
-  if (!value) {
-    return '';
-  }
-
-  const date = new Date(value);
-  const now = new Date();
-  const sameDay =
-    date.getFullYear() === now.getFullYear() &&
-    date.getMonth() === now.getMonth() &&
-    date.getDate() === now.getDate();
-
-  if (sameDay) {
-    return date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
-  }
-
-  return date.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-  });
-}
 
 function participantLabel(thread: EmailThreadSummary) {
   const first = thread.participants[0];
@@ -91,14 +68,17 @@ export function EmailInboxList({
 
   return (
     <section
-      className={cn(panelClass, 'flex min-h-0 flex-col overflow-hidden')}
+      className={cn(
+        panelClass,
+        'flex h-full min-h-0 min-w-0 flex-col overflow-hidden',
+      )}
     >
-      <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-        <div className="flex items-center justify-between gap-2">
+      <div className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
             Inbox
           </h2>
-          <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
+          <div className="flex max-w-full rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
             <button
               type="button"
               onClick={() => onFilterChange('all')}
@@ -196,7 +176,7 @@ export function EmailInboxList({
                     type="button"
                     onClick={() => onSelectThread(thread.id)}
                     className={cn(
-                      'flex w-full items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
+                      'flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
                       selected && 'bg-[var(--workspace-shell-sidebar-accent)]',
                     )}
                   >
@@ -221,8 +201,8 @@ export function EmailInboxList({
                         >
                           {participantLabel(thread)}
                         </span>
-                        <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
-                          {formatThreadDate(thread.last_message_at)}
+                        <span className="shrink-0 text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+                          {formatEmailDateTime(thread.last_message_at)}
                         </span>
                       </span>
                       <span

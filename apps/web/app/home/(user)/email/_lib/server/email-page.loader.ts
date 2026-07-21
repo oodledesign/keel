@@ -104,7 +104,7 @@ export const loadEmailPageData = cache(
           )
           .eq('user_id', user.id)
           .order('last_message_at', { ascending: false, nullsFirst: false })
-          .limit(25),
+          .limit(26),
         loadPersonalSidebarWorkspaces(),
       ]);
 
@@ -122,6 +122,10 @@ export const loadEmailPageData = cache(
       auto_draft_enabled?: boolean | null;
       auto_save_gmail_drafts?: boolean | null;
     } | null;
+
+    const threadRows = threadsResult.data ?? [];
+    const hasMoreInitial = threadRows.length > 25;
+    const pageRows = hasMoreInitial ? threadRows.slice(0, 25) : threadRows;
 
     return {
       connection: connectionRow?.google_email
@@ -144,10 +148,11 @@ export const loadEmailPageData = cache(
       },
       threads: await enrichEmailThreadLinks(
         client,
-        (threadsResult.data ?? []).map((row) =>
+        pageRows.map((row) =>
           mapThreadRow(row as Record<string, unknown>),
         ),
       ),
+      hasMoreThreads: hasMoreInitial,
       workspaces: workspaces.map((workspace) => ({
         id: workspace.id,
         slug: workspace.slug,

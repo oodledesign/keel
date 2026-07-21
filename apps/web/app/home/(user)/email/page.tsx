@@ -20,7 +20,7 @@ async function EmailPageContent() {
 
 function EmailPage() {
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)]">
+    <PageBody className="min-h-0 overflow-hidden bg-[var(--workspace-shell-canvas)]">
       <Suspense fallback={<EmailPageSkeleton />}>
         <EmailPageContent />
       </Suspense>

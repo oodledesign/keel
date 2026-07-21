@@ -22,13 +22,49 @@ type SyncResultRow = {
   ok: boolean;
   mode?: string;
   messagesProcessed?: number;
-  assistant?: Awaited<ReturnType<typeof runEmailAssistantPipeline>>;
+  assistant?: Awaited<ReturnType<typeof runEmailAssistantPipeline>> | null;
   error?: string;
 };
 
+async function assertGoogleConnection(userId: string) {
+  const admin = getSupabaseServerAdminClient();
+  const { data, error } = await admin
+    .from('google_connections')
+    .select('user_id')
+    .eq('user_id', userId)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  if (!data) {
+    throw new Error('Connect Gmail in Email settings before syncing');
+  }
+}
+
 async function syncUserMailbox(userId: string) {
   const syncResult = await syncMailbox(userId);
-  const assistant = await runEmailAssistantPipeline(userId);
+
+  let assistant: Awaited<ReturnType<typeof runEmailAssistantPipeline>> | null =
+    null;
+
+  try {
+    assistant = await runEmailAssistantPipeline(userId);
+  } catch (pipelineError) {
+    assistant = {
+      classified: 0,
+      linked: 0,
+      draftsCreated: 0,
+      draftsSavedToGmail: 0,
+      skipped: 0,
+      errors: [
+        pipelineError instanceof Error
+          ? pipelineError.message
+          : 'Assistant pipeline failed',
+      ],
+    };
+  }
 
   return { ...syncResult, assistant };
 }
@@ -111,6 +147,7 @@ export async function POST() {
   }
 
   try {
+    await assertGoogleConnection(auth.user.id);
     const result = await syncUserMailbox(auth.user.id);
     return jsonOk(result);
   } catch (error) {
