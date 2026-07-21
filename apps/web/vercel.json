@@ -64,7 +64,7 @@
     },
     {
       "path": "/api/gmail/sync",
-      "schedule": "0 */2 * * *"
+      "schedule": "*/15 * * * *"
     },
     {
       "path": "/api/ai/batch/submit",

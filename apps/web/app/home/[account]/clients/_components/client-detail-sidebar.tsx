@@ -26,6 +26,15 @@ import {
 } from 'lucide-react';
 
 import { createInvitationsAction } from '@kit/team-accounts/server-actions';
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import {
   DropdownMenu,
@@ -171,13 +180,13 @@ function OverviewPreviewPanel({
     <section className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
       <div className="mb-3 flex items-center justify-between gap-2">
         <h3 className="flex items-center gap-2 text-sm font-medium text-[var(--workspace-shell-text)]">
-          <Icon className="h-4 w-4 text-[var(--ozer-accent-muted)]" />
+          <Icon className="h-4 w-4 text-[var(--ozer-accent-pressed)]" />
           {title}
         </h3>
         <button
           type="button"
           onClick={onViewAll}
-          className="text-xs font-medium text-[var(--ozer-accent-muted)] hover:underline"
+          className="text-xs font-medium text-[var(--ozer-accent-pressed)] hover:underline"
         >
           {viewAllLabel}
         </button>
@@ -292,6 +301,8 @@ export function ClientDetailSidebar({
   const [activeTab, setActiveTab] = useState<DetailTab>('overview');
   const [loading, setLoading] = useState(!hasServerSeed);
   const [showEditForm, setShowEditForm] = useState(false);
+  const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
+  const [archiving, setArchiving] = useState(false);
   const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null);
   const [overviewClientNotes, setOverviewClientNotes] = useState<
     ClientNotePreview[]
@@ -479,20 +490,16 @@ export function ClientDetailSidebar({
   }, [client, isContractorView, jobsCount, totalValuePence]);
 
   const handleArchive = async () => {
-    if (
-      !confirm(
-        'Archive this client? They will be removed from your client list.',
-      )
-    ) {
-      return;
-    }
-
+    setArchiving(true);
     try {
       await deleteClient({ accountId, clientId });
       toast.success('Client archived');
+      setArchiveDialogOpen(false);
       onDeleted();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : 'Failed to archive client');
+    } finally {
+      setArchiving(false);
     }
   };
 
@@ -1082,7 +1089,7 @@ export function ClientDetailSidebar({
                     >
                       <DropdownMenuItem
                         className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                        onClick={handleArchive}
+                        onClick={() => setArchiveDialogOpen(true)}
                       >
                         <Archive className="mr-2 h-4 w-4" />
                         Archive
@@ -1108,6 +1115,37 @@ export function ClientDetailSidebar({
                       ) : null}
                     </DropdownMenuContent>
                   </DropdownMenu>
+
+                  <AlertDialog
+                    open={archiveDialogOpen}
+                    onOpenChange={setArchiveDialogOpen}
+                  >
+                    <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>
+                          Archive this client?
+                        </AlertDialogTitle>
+                        <AlertDialogDescription>
+                          They will be hidden from your client list, but all of
+                          their projects, invoices, notes and contacts are kept.
+                          You can restore them anytime from the Archived view on
+                          the Clients page.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter className="gap-2 sm:gap-0">
+                        <AlertDialogCancel className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
+                          Cancel
+                        </AlertDialogCancel>
+                        <Button
+                          variant="destructive"
+                          disabled={archiving}
+                          onClick={handleArchive}
+                        >
+                          {archiving ? 'Archiving...' : 'Archive client'}
+                        </Button>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
                 </div>
               ) : null}
             </div>

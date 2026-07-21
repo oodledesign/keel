@@ -163,9 +163,7 @@ export function mapNameToId(
 ): string | null {
   if (!name?.trim()) return null;
   const t = name.trim().toLowerCase();
-  const exactMatches = rows.filter(
-    (r) => r.name.trim().toLowerCase() === t,
-  );
+  const exactMatches = rows.filter((r) => r.name.trim().toLowerCase() === t);
   if (exactMatches.length === 1) return exactMatches[0]!.id;
   return null;
 }

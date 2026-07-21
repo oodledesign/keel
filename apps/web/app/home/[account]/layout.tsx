@@ -136,6 +136,7 @@ async function SidebarLayout({
         workspaceProfile={workspaceProfile}
         accountAccess={accountAccess}
         navCounts={adornments.navCounts}
+        emailAssistantAvailable={adornments.emailAssistantAvailable}
         mobileNavShortcuts={adornments.mobileNavShortcuts}
         focusSettingsByAccountId={adornments.focusSettingsByAccountId}
         layoutState={layoutState}
@@ -163,6 +164,7 @@ function TeamWorkspaceSidebarShell({
   workspaceProfile,
   accountAccess,
   navCounts,
+  emailAssistantAvailable,
   mobileNavShortcuts,
   focusSettingsByAccountId,
   layoutState,
@@ -184,6 +186,7 @@ function TeamWorkspaceSidebarShell({
     company_role?: string | null;
   };
   navCounts: WorkNavCounts;
+  emailAssistantAvailable: boolean;
   mobileNavShortcuts: Awaited<
     ReturnType<typeof loadTeamWorkspaceShellAdornments>
   >['mobileNavShortcuts'];
@@ -200,6 +203,7 @@ function TeamWorkspaceSidebarShell({
       moduleSettings,
       workspaceProfile,
       navCounts,
+      { emailAssistantAvailable },
     ),
   );
 
@@ -224,6 +228,7 @@ function TeamWorkspaceSidebarShell({
               moduleSettings={moduleSettings}
               workspaceProfile={workspaceProfile}
               navCounts={navCounts}
+              emailAssistantAvailable={emailAssistantAvailable}
               accountAccess={accountAccess}
             />
           </PageNavigation>
@@ -250,7 +255,7 @@ function TeamWorkspaceSidebarShell({
 
 async function HeaderLayout({
   account,
-  layoutState,
+  layoutState: _layoutState,
   children,
 }: React.PropsWithChildren<{
   account: string;
@@ -306,6 +311,7 @@ async function HeaderLayout({
       data.moduleSettings,
       workspaceProfile,
       adornments.navCounts,
+      { emailAssistantAvailable: adornments.emailAssistantAvailable },
     ),
   );
 
@@ -321,7 +327,10 @@ async function HeaderLayout({
       >
         <Page style={'header'}>
           <PageNavigation>
-            <TeamAccountNavigationMenu workspace={data} />
+            <TeamAccountNavigationMenu
+              workspace={data}
+              emailAssistantAvailable={adornments.emailAssistantAvailable}
+            />
           </PageNavigation>
 
           <PageMobileNavigation className="hidden lg:px-0" />

@@ -139,6 +139,7 @@ class JobsService {
       query,
       status,
       priority,
+      clientId,
     } = params;
     const from = (page - 1) * pageSize;
     const to = from + pageSize - 1;
@@ -166,6 +167,7 @@ class JobsService {
     }
     if (status) q = q.eq('status', status);
     if (priority) q = q.eq('priority', priority);
+    if (clientId) q = q.eq('client_id', clientId);
 
     let rows: unknown[] | null = null;
     let count: number | null = null;
@@ -198,6 +200,7 @@ class JobsService {
       }
       if (status) fallbackQ = fallbackQ.eq('status', status);
       if (priority) fallbackQ = fallbackQ.eq('priority', priority);
+      if (clientId) fallbackQ = fallbackQ.eq('client_id', clientId);
       const fallbackResult = await fallbackQ;
       if (fallbackResult.error)
         this.throwErr(fallbackResult.error, 'Failed to load jobs');

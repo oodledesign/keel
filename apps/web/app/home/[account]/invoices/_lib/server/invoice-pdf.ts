@@ -15,6 +15,7 @@ export type InvoiceForPdf = {
   issued_at?: string | null;
   title?: string | null;
   reference_number?: string | null;
+  project_name?: string | null;
   total_pence: number;
   subtotal_pence?: number;
   discount_pence?: number;
@@ -429,6 +430,19 @@ export async function buildInvoicePdf(
     COLORS.ink,
   );
   metaY -= 16;
+
+  if (invoice.project_name) {
+    drawRightText(
+      page,
+      `Project: ${invoice.project_name}`,
+      metaRight,
+      metaY,
+      10,
+      font,
+      COLORS.muted,
+    );
+    metaY -= 14;
+  }
 
   if (showIssuedDate) {
     drawRightText(

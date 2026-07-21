@@ -214,9 +214,7 @@ export const commitClientImportAction = enhanceAction(
       input.rows,
       input.mapping as CsvFieldMapping,
     );
-    const drafts = records.map((record, index) =>
-      recordToDraft(index, record),
-    );
+    const drafts = records.map((record, index) => recordToDraft(index, record));
 
     const { data: existingRows, error } = await client
       .from('clients')

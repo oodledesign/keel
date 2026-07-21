@@ -58,6 +58,10 @@ type InvoicePayload = {
     postcode?: string | null;
     country?: string | null;
   } | null;
+  project?: {
+    id: string;
+    title?: string | null;
+  } | null;
 };
 
 function formatDate(iso: string | null): string {
@@ -328,6 +332,16 @@ export function PortalInvoiceView({
       ) : null}
 
       <div className="mt-6 flex flex-wrap gap-6 text-sm">
+        {data.project?.title ? (
+          <div>
+            <span className="text-[var(--workspace-shell-text-muted)]">
+              Project
+            </span>
+            <p className="font-medium text-[var(--workspace-shell-text)]">
+              {data.project.title}
+            </p>
+          </div>
+        ) : null}
         <div>
           <span className="text-[var(--workspace-shell-text-muted)]">
             Due date

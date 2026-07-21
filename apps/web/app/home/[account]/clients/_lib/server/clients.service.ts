@@ -30,6 +30,7 @@ import type {
   DeleteClientInput,
   DeleteContactInput,
   DeleteNoteInput,
+  DestroyClientInput,
   GetClientInput,
   GetJobHistoryInput,
   LinkContactInput,
@@ -39,6 +40,7 @@ import type {
   ListContactsInput,
   ListNotesInput,
   ListWorkspaceContactsInput,
+  RestoreClientInput,
   SetPrimaryContactInput,
   UpdateClientInput,
   UpdateContactInput,
@@ -229,12 +231,18 @@ class ClientsService {
     let query = readDb
       .from('clients')
       .select(
-        'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type',
+        'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type, archived_at',
         { count: 'exact' },
       )
       .eq('account_id', params.accountId)
       .order('created_at', { ascending: false })
       .range(from, to);
+
+    if (params.archived) {
+      query = query.not('archived_at', 'is', null);
+    } else {
+      query = query.is('archived_at', null);
+    }
 
     if (search?.trim()) {
       const term = `%${search.trim()}%`;
@@ -245,7 +253,36 @@ class ClientsService {
 
     const { data, error, count } = await query;
 
-    if (error) throw error;
+    if (error) {
+      // archived_at may not exist until the soft-delete migration runs.
+      if (isMissingColumnError(error)) {
+        if (params.archived) return { data: [], total: 0 };
+
+        let legacyQuery = readDb
+          .from('clients')
+          .select(
+            'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type',
+            { count: 'exact' },
+          )
+          .eq('account_id', params.accountId)
+          .order('created_at', { ascending: false })
+          .range(from, to);
+
+        if (search?.trim()) {
+          const term = `%${search.trim()}%`;
+          legacyQuery = legacyQuery.or(
+            `display_name.ilike.${term},first_name.ilike.${term},last_name.ilike.${term},company_name.ilike.${term},email.ilike.${term}`,
+          );
+        }
+
+        const legacy = await legacyQuery;
+        if (legacy.error) throw legacy.error;
+        return { data: legacy.data ?? [], total: legacy.count ?? 0 };
+      }
+
+      throw error;
+    }
+
     return { data: data ?? [], total: count ?? 0 };
   }
 
@@ -490,16 +527,91 @@ class ClientsService {
     return data;
   }
 
+  /**
+   * Soft-deletes (archives) a client. All linked data is untouched and the
+   * client can be restored from the archive list.
+   */
   async deleteClient(params: DeleteClientInput) {
     await this.ensureUserAndPermission(params.accountId, 'clients.edit');
 
     const { error } = await this.adminDb
       .from('clients')
-      .delete()
+      .update({
+        archived_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
       .eq('id', params.clientId)
       .eq('account_id', params.accountId);
 
     if (error) throw mapClientWriteError(error);
+  }
+
+  async restoreClient(params: RestoreClientInput) {
+    await this.ensureUserAndPermission(params.accountId, 'clients.edit');
+
+    const { error } = await this.adminDb
+      .from('clients')
+      .update({
+        archived_at: null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', params.clientId)
+      .eq('account_id', params.accountId);
+
+    if (error) throw mapClientWriteError(error);
+  }
+
+  /**
+   * Permanently deletes an archived client. Invoices block deletion (they are
+   * financial records); notes, contacts and transcripts are removed with the
+   * client; projects, tasks, docs, proposals, emails etc. are kept but
+   * unlinked from the client.
+   */
+  async destroyClient(params: DestroyClientInput) {
+    await this.ensureUserAndPermission(params.accountId, 'clients.edit');
+
+    // Only allow permanent deletion of clients that were archived first.
+    const { data: existing, error: fetchError } = await this.adminDb
+      .from('clients')
+      .select('id, archived_at')
+      .eq('id', params.clientId)
+      .eq('account_id', params.accountId)
+      .maybeSingle();
+
+    if (fetchError) throw mapClientWriteError(fetchError);
+    if (!existing) return;
+    if (!(existing as { archived_at: string | null }).archived_at) {
+      throw new Error('Archive this client before deleting them permanently.');
+    }
+
+    const { count: invoiceCount } = await this.adminDb
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('client_id', params.clientId)
+      .eq('account_id', params.accountId);
+
+    if ((invoiceCount ?? 0) > 0) {
+      throw new Error(
+        `This client has ${invoiceCount} invoice${invoiceCount === 1 ? '' : 's'} and cannot be permanently deleted. Invoices are kept as financial records — leave the client archived instead.`,
+      );
+    }
+
+    const { error } = await this.adminDb
+      .from('clients')
+      .delete()
+      .eq('id', params.clientId)
+      .eq('account_id', params.accountId)
+      .not('archived_at', 'is', null);
+
+    if (error) {
+      const e = error as { code?: string };
+      if (e.code === '23503') {
+        throw new Error(
+          'This client still has linked records that must be kept (e.g. invoices or recurring billing). Leave them archived instead of deleting.',
+        );
+      }
+      throw mapClientWriteError(error);
+    }
   }
 
   async listNotes(params: ListNotesInput) {
@@ -625,6 +737,119 @@ class ClientsService {
     }
   }
 
+  private normalizeContactEmailAddresses(input: {
+    email?: string | null;
+    emails?: Array<{
+      email: string;
+      label: 'work' | 'personal' | 'billing' | 'other';
+      isPrimary: boolean;
+    }>;
+  }) {
+    const source =
+      input.emails ??
+      (input.email
+        ? [{ email: input.email, label: 'work' as const, isPrimary: true }]
+        : []);
+    const addresses = source
+      .map((address) => ({
+        email: address.email.trim().toLowerCase(),
+        label: address.label,
+        isPrimary: address.isPrimary,
+      }))
+      .filter((address) => address.email);
+
+    if (
+      addresses.length > 0 &&
+      !addresses.some((address) => address.isPrimary)
+    ) {
+      addresses[0] = { ...addresses[0]!, isPrimary: true };
+    }
+
+    return addresses;
+  }
+
+  private async replaceContactEmailAddresses(params: {
+    accountId: string;
+    contactId: string;
+    addresses: Array<{
+      email: string;
+      label: 'work' | 'personal' | 'billing' | 'other';
+      isPrimary: boolean;
+    }>;
+  }) {
+    const { error } = await this.adminDb.rpc(
+      'replace_contact_email_addresses',
+      {
+        p_account_id: params.accountId,
+        p_contact_id: params.contactId,
+        p_addresses: params.addresses,
+      },
+    );
+
+    if (error && !isMissingRelationError(error)) {
+      throw mapClientWriteError(error);
+    }
+  }
+
+  private async attachContactEmailAddresses<
+    T extends { id: string; email?: string | null },
+  >(accountId: string, contacts: T[]) {
+    if (contacts.length === 0) return contacts;
+
+    const { data, error } = await this.adminDb
+      .from('contact_email_addresses')
+      .select('id, contact_id, email, label, is_primary')
+      .eq('account_id', accountId)
+      .in(
+        'contact_id',
+        contacts.map((contact) => contact.id),
+      )
+      .order('is_primary', { ascending: false })
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      if (!isMissingRelationError(error)) throw error;
+      return contacts.map((contact) => ({
+        ...contact,
+        emails: contact.email
+          ? [
+              {
+                id: `legacy-${contact.id}`,
+                email: contact.email,
+                label: 'work',
+                is_primary: true,
+              },
+            ]
+          : [],
+      }));
+    }
+
+    const byContact = new Map<string, typeof data>();
+    for (const address of data ?? []) {
+      const contactId = (address as { contact_id: string }).contact_id;
+      const existing = byContact.get(contactId) ?? [];
+      existing.push(address);
+      byContact.set(contactId, existing);
+    }
+
+    return contacts.map((contact) => ({
+      ...contact,
+      emails:
+        byContact.get(contact.id) ??
+        (contact.email
+          ? [
+              {
+                id: `legacy-${contact.id}`,
+                contact_id: contact.id,
+                email: contact.email,
+                label: 'work',
+                is_primary: true,
+              },
+            ]
+          : []),
+    }));
+  }
+
   async listContacts(params: ListContactsInput) {
     await this.ensureUserAndPermission(params.accountId, 'clients.view');
     await this.ensureClientInAccount(params.clientId, params.accountId);
@@ -678,7 +903,15 @@ class ClientsService {
       .order('created_at', { ascending: true });
 
     if (!error) {
-      return { data: mapJunctionRows(data ?? []) };
+      const contacts = mapJunctionRows(data ?? []).filter(
+        (contact): contact is NonNullable<typeof contact> => Boolean(contact),
+      );
+      return {
+        data: await this.attachContactEmailAddresses(
+          params.accountId,
+          contacts,
+        ),
+      };
     }
 
     if (isMissingColumnError(error)) {
@@ -692,7 +925,15 @@ class ClientsService {
         .order('created_at', { ascending: true });
 
       if (!fallbackError) {
-        return { data: mapJunctionRows(fallbackData ?? []) };
+        const contacts = mapJunctionRows(fallbackData ?? []).filter(
+          (contact): contact is NonNullable<typeof contact> => Boolean(contact),
+        );
+        return {
+          data: await this.attachContactEmailAddresses(
+            params.accountId,
+            contacts,
+          ),
+        };
       }
     }
 
@@ -872,6 +1113,11 @@ class ClientsService {
       fullName: input.fullName,
     });
     const role = normalizeContactRole(input.role);
+    const emailAddresses = this.normalizeContactEmailAddresses(input);
+    const primaryEmail =
+      emailAddresses.find((address) => address.isPrimary)?.email ??
+      emailAddresses[0]?.email ??
+      null;
 
     const { data: contact, error } = await this.adminDb
       .from('contacts')
@@ -881,7 +1127,7 @@ class ClientsService {
         first_name: names.firstName,
         last_name: names.lastName,
         full_name: names.fullName,
-        email: input.email ?? null,
+        email: primaryEmail,
         phone: input.phone ?? null,
       })
       .select('id')
@@ -897,7 +1143,7 @@ class ClientsService {
           user_id: user.id,
           client_id: input.clientId,
           full_name: names.fullName,
-          email: input.email ?? null,
+          email: primaryEmail,
           phone: input.phone ?? null,
           role: role ?? null,
           is_primary: input.isPrimary ?? false,
@@ -910,6 +1156,19 @@ class ClientsService {
 
     if (contactError) throw contactError;
     if (!contactRow?.id) throw new Error('Failed to create contact');
+
+    if (input.emails !== undefined || input.email !== undefined) {
+      try {
+        await this.replaceContactEmailAddresses({
+          accountId: input.accountId,
+          contactId: contactRow.id,
+          addresses: emailAddresses,
+        });
+      } catch (emailError) {
+        await this.adminDb.from('contacts').delete().eq('id', contactRow.id);
+        throw emailError;
+      }
+    }
 
     const { error: linkError } = await this.adminDb
       .from('client_contacts')
@@ -1024,7 +1283,10 @@ class ClientsService {
       full_name: names.fullName,
       updated_at: new Date().toISOString(),
     };
-    if (input.email !== undefined) contactPayload.email = input.email;
+    const emailAddresses =
+      input.emails !== undefined || input.email !== undefined
+        ? this.normalizeContactEmailAddresses(input)
+        : undefined;
     if (input.phone !== undefined) contactPayload.phone = input.phone;
 
     const { error: contactError } = await this.adminDb
@@ -1046,6 +1308,14 @@ class ClientsService {
       if (legacyError) throw mapClientWriteError(legacyError);
     } else if (contactError) {
       throw mapClientWriteError(contactError);
+    }
+
+    if (emailAddresses !== undefined) {
+      await this.replaceContactEmailAddresses({
+        accountId: input.accountId,
+        contactId: input.contactId,
+        addresses: emailAddresses,
+      });
     }
 
     if (input.role !== undefined) {

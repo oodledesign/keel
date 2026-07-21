@@ -39,11 +39,16 @@ async function syncAllConnectedUsers() {
     1,
     Number(process.env.GMAIL_SYNC_BATCH_SIZE ?? DEFAULT_GMAIL_SYNC_BATCH_SIZE),
   );
-  const { data, error } = await admin
-    .from('google_connections')
-    .select('user_id')
-    .order('user_id', { ascending: true })
-    .limit(batchSize);
+  const claimBatch = admin.rpc as unknown as (
+    name: 'claim_gmail_sync_batch',
+    args: { p_batch_size: number },
+  ) => Promise<{
+    data: Array<{ user_id: string }> | null;
+    error: { message: string } | null;
+  }>;
+  const { data, error } = await claimBatch('claim_gmail_sync_batch', {
+    p_batch_size: batchSize,
+  });
 
   if (error) {
     throw new Error(error.message);
@@ -85,8 +90,16 @@ export async function GET(request: Request) {
     return cronSkippedResponse('gmail-sync disabled');
   }
 
-  const results = await syncAllConnectedUsers();
-  return jsonOk({ results });
+  try {
+    const results = await syncAllConnectedUsers();
+    return jsonOk({ results });
+  } catch (error) {
+    return jsonErr(
+      'SYNC_FAILED',
+      error instanceof Error ? error.message : 'Gmail sync failed',
+      500,
+    );
+  }
 }
 
 /** Authenticated user: sync their mailbox now. */

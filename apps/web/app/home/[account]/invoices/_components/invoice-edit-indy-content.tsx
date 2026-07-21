@@ -103,6 +103,7 @@ type InvoiceData = {
   id: string;
   account_id: string;
   client_id: string;
+  project_id: string | null;
   invoice_number: string;
   status: string;
   due_at: string | null;
@@ -128,6 +129,7 @@ type InvoiceData = {
   sent_to_email: string | null;
   items: InvoiceItem[];
   client: ClientInfo | null;
+  project?: { id: string; title: string | null } | null;
   preferred_send_email?: string | null;
   preferred_send_source?: string | null;
   preferred_send_name?: string | null;
@@ -389,6 +391,7 @@ export function InvoiceEditIndyContent({
     { id: string; title: string; client_id: string | null }[]
   >([]);
   const [jobsLoading, setJobsLoading] = useState(false);
+  const [projectId, setProjectId] = useState(invoice.project_id ?? '');
 
   const readOnly = previewMode || !canModifyInvoice;
 
@@ -488,13 +491,21 @@ export function InvoiceEditIndyContent({
   }, [accountId]);
 
   useEffect(() => {
-    if (!accountId) return;
+    if (!accountId || !clientId) {
+      setJobs([]);
+      setJobsLoading(false);
+      return;
+    }
     setJobsLoading(true);
     listJobs({
       accountId,
-      tab: 'active',
+      tab: 'all',
       page: 1,
-      pageSize: 100,
+      pageSize: 200,
+      query: undefined,
+      status: undefined,
+      priority: undefined,
+      clientId,
     })
       .then((r: unknown) => {
         const raw = r as { data?: unknown };
@@ -505,7 +516,7 @@ export function InvoiceEditIndyContent({
       })
       .catch(() => setJobs([]))
       .finally(() => setJobsLoading(false));
-  }, [accountId]);
+  }, [accountId, clientId]);
 
   useEffect(() => {
     const openStatuses = new Set(['draft', 'sent', 'read', 'overdue']);
@@ -610,6 +621,7 @@ export function InvoiceEditIndyContent({
         accountId,
         invoiceId: invoice.id,
         client_id: clientId.trim(),
+        project_id: projectId || null,
         due_at: dueAt ? new Date(dueAt).toISOString() : null,
         currency,
         notes: notes.trim() || null,
@@ -676,6 +688,7 @@ export function InvoiceEditIndyContent({
     parsedLateFeeValue,
     parsedTaxRateBp,
     privateNote,
+    projectId,
     referenceNumber,
     router,
     showDeposit,
@@ -729,6 +742,7 @@ export function InvoiceEditIndyContent({
         max_occurrences: null,
         auto_send: false,
         template: {
+          project_id: projectId || null,
           title: title.trim() || null,
           reference_number: referenceNumber.trim() || invoice.invoice_number,
           due_at: dueAt ? new Date(dueAt).toISOString() : null,
@@ -785,6 +799,7 @@ export function InvoiceEditIndyContent({
     parsedDiscountValue,
     parsedLateFeeValue,
     parsedTaxRateBp,
+    projectId,
     referenceNumber,
     showDeposit,
     showDiscount,
@@ -1155,7 +1170,18 @@ export function InvoiceEditIndyContent({
                     <ClientCombobox
                       clients={clients}
                       value={clientId}
-                      onValueChange={setClientId}
+                      onValueChange={(nextClientId) => {
+                        setClientId(nextClientId);
+                        const selectedProject = jobs.find(
+                          (job) => job.id === projectId,
+                        );
+                        if (
+                          selectedProject &&
+                          selectedProject.client_id !== nextClientId
+                        ) {
+                          setProjectId('');
+                        }
+                      }}
                       loading={clientsLoading}
                       disabled={readOnly}
                       placeholder="Select client"
@@ -1213,6 +1239,38 @@ export function InvoiceEditIndyContent({
                         </option>
                       ))}
                     </select>
+                  )}
+                </div>
+                <div className="sm:col-start-2">
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Project
+                  </Label>
+                  {previewMode || readOnly ? (
+                    <p className="mt-1 text-sm font-medium text-[var(--ozer-text-on-light)]">
+                      {jobs.find((job) => job.id === projectId)?.title ??
+                        invoice.project?.title ??
+                        '—'}
+                    </p>
+                  ) : (
+                    <>
+                      <select
+                        value={projectId}
+                        onChange={(event) => setProjectId(event.target.value)}
+                        disabled={readOnly || jobsLoading || !clientId}
+                        className={`mt-1 h-10 w-full rounded-md border px-3 text-sm ${inputClassName}`}
+                      >
+                        <option value="">No project</option>
+                        {jobsForClient.map((job) => (
+                          <option key={job.id} value={job.id}>
+                            {job.title}
+                          </option>
+                        ))}
+                      </select>
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                        Shown on the invoice. Line items can still use their own
+                        projects.
+                      </p>
+                    </>
                   )}
                 </div>
               </div>

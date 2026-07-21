@@ -9,11 +9,38 @@ const optionalEmail = z
   .optional()
   .transform((value) => (value ? value : undefined));
 
+const ContactEmailAddressSchema = z.object({
+  email: z.string().trim().email(),
+  label: z.enum(['work', 'personal', 'billing', 'other']).default('work'),
+  isPrimary: z.boolean().default(false),
+});
+
+const ContactEmailAddressesSchema = z
+  .array(ContactEmailAddressSchema)
+  .max(10, 'A contact can have at most 10 email addresses')
+  .superRefine((addresses, ctx) => {
+    const normalized = addresses.map((address) => address.email.toLowerCase());
+    if (new Set(normalized).size !== normalized.length) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Email addresses must be unique',
+      });
+    }
+
+    if (addresses.filter((address) => address.isPrimary).length > 1) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Only one email address can be primary',
+      });
+    }
+  });
+
 export const ListClientsSchema = z.object({
   accountId: z.string().uuid(),
   search: z.string().optional(),
   page: z.coerce.number().int().min(1).optional().default(1),
   pageSize: z.coerce.number().int().min(1).max(100).optional().default(20),
+  archived: z.coerce.boolean().optional(),
 });
 
 export const GetClientSchema = z.object({
@@ -88,6 +115,16 @@ export const DeleteClientSchema = z.object({
   clientId: z.string().uuid(),
 });
 
+export const RestoreClientSchema = z.object({
+  accountId: z.string().uuid(),
+  clientId: z.string().uuid(),
+});
+
+export const DestroyClientSchema = z.object({
+  accountId: z.string().uuid(),
+  clientId: z.string().uuid(),
+});
+
 export const ListNotesSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid(),
@@ -135,6 +172,7 @@ export const CreateContactSchema = z
     /** Legacy single-field name (meetings / older callers). */
     fullName: optionalString,
     email: optionalEmail,
+    emails: ContactEmailAddressesSchema.optional(),
     phone: optionalString,
     role: optionalString,
     isPrimary: z.boolean().optional().default(false),
@@ -189,6 +227,7 @@ export const UpdateContactSchema = z
       .transform((value) =>
         value === '' || value === undefined ? null : value,
       ),
+    emails: ContactEmailAddressesSchema.optional(),
     phone: optionalNullableString,
     role: optionalNullableString,
   })
@@ -247,6 +286,8 @@ export type GetClientInput = z.infer<typeof GetClientSchema>;
 export type CreateClientInput = z.infer<typeof CreateClientSchema>;
 export type UpdateClientInput = z.infer<typeof UpdateClientSchema>;
 export type DeleteClientInput = z.infer<typeof DeleteClientSchema>;
+export type RestoreClientInput = z.infer<typeof RestoreClientSchema>;
+export type DestroyClientInput = z.infer<typeof DestroyClientSchema>;
 export type ListNotesInput = z.infer<typeof ListNotesSchema>;
 export type CreateNoteInput = z.infer<typeof CreateNoteSchema>;
 export type DeleteNoteInput = z.infer<typeof DeleteNoteSchema>;

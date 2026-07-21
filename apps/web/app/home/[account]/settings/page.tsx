@@ -9,8 +9,8 @@ import {
 } from '@kit/team-accounts/components';
 
 import featuresFlagConfig from '~/config/feature-flags.config';
-import { createInvoicePaymentSettingsService } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 import pathsConfig from '~/config/paths.config';
+import { createInvoicePaymentSettingsService } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';

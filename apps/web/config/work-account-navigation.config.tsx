@@ -15,6 +15,7 @@ import {
   LayoutGrid,
   LifeBuoy,
   ListChecks,
+  Mail,
   MessageSquare,
   MessageSquareText,
   Mic,
@@ -145,6 +146,7 @@ export function buildWorkSpaceNavChildren(
   access: TeamAccountAccess,
   moduleSettings?: Record<string, boolean>,
   navCounts?: WorkNavCounts,
+  emailAssistantAvailable = false,
 ): Array<NavChild | NavCollapsible> {
   const ms = moduleSettings;
   const home = createPath(pathsConfig.app.accountHome, account);
@@ -360,6 +362,14 @@ export function buildWorkSpaceNavChildren(
     if (!factory) continue;
     const item = factory();
     if (item) items.push(item);
+    if (item && key === 'activity' && emailAssistantAvailable) {
+      items.push({
+        label: 'Emails',
+        path: pathsConfig.app.personalEmailAssistant,
+        Icon: <Mail className={iconClasses} />,
+        description: 'Gmail inbox, action items, and AI-assisted replies.',
+      });
+    }
     if (key === 'tasks') {
       const plannerFactory = registry.planner;
       if (plannerFactory) {

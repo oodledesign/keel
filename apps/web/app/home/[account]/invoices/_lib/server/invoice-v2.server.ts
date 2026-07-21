@@ -186,6 +186,7 @@ export async function duplicateInvoice(accountId: string, invoiceId: string) {
   const created = await service.createInvoice({
     accountId,
     client_id: source.client_id,
+    project_id: source.project_id,
     due_at: source.due_at,
     notes: source.notes,
     title: source.title,
@@ -448,9 +449,27 @@ export async function processDueRecurringSeries() {
 
   for (const series of seriesList ?? []) {
     const template = (series.template ?? {}) as Record<string, any>;
+    let invoiceProjectId =
+      typeof template.project_id === 'string' ? template.project_id : null;
+
+    if (invoiceProjectId) {
+      const { data: project } = await admin
+        .from('projects')
+        .select('id, client_id')
+        .eq('id', invoiceProjectId)
+        .eq('account_id', series.account_id)
+        .eq('project_type', 'delivery')
+        .maybeSingle();
+
+      if (!project || project.client_id !== series.client_id) {
+        invoiceProjectId = null;
+      }
+    }
+
     const invoice = await service.createInvoice({
       accountId: series.account_id,
       client_id: series.client_id,
+      project_id: invoiceProjectId,
       currency: normalizeInvoiceCurrency(series.currency),
       due_at: template.due_at ?? null,
       notes: template.notes ?? null,

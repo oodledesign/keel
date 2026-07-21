@@ -30,11 +30,13 @@ export function InvoicesIncomeSummary({
     () => Math.max(...(summary?.chart.map((d) => d.amount_pence) ?? [1]), 1),
     [summary?.chart],
   );
+  const hasChartData =
+    summary?.chart.some((point) => point.amount_pence > 0) ?? false;
 
   if (!summary) return null;
 
   return (
-    <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+    <div>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Income summary
@@ -64,28 +66,32 @@ export function InvoicesIncomeSummary({
         </p>
       ) : null}
 
-      <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
         {[
           {
             label: 'Issued',
             value: summary.issued_pence,
-            color: 'text-[#B8D3D7]',
+            color: 'text-[#1D767B]',
           },
-          { label: 'Paid', value: summary.paid_pence, color: 'text-[#97D9AA]' },
+          {
+            label: 'Paid',
+            value: summary.paid_pence,
+            color: 'text-emerald-600',
+          },
           {
             label: 'Unpaid',
             value: summary.unpaid_pence,
-            color: 'text-amber-200',
+            color: 'text-amber-600',
           },
           {
             label: 'Overdue',
             value: summary.overdue_pence,
-            color: 'text-[#F6A7B5]',
+            color: 'text-[#C4455C]',
           },
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 px-3 py-3"
+            className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 shadow-sm"
           >
             <p className="text-muted-foreground text-xs">{item.label}</p>
             <p className={`mt-1 text-lg font-semibold ${item.color}`}>
@@ -95,28 +101,26 @@ export function InvoicesIncomeSummary({
         ))}
       </div>
 
-      {summary.chart.length > 0 ? (
-        <div className="mt-5 flex h-24 items-end gap-1">
-          {summary.chart.map((point) => (
-            <div
-              key={point.date}
-              className="group relative flex-1"
-              title={`${point.date}: ${formatInvoiceMoney(point.amount_pence, currency)}`}
-            >
+      {hasChartData ? (
+        <div className="mt-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 shadow-sm">
+          <div className="flex h-20 items-end gap-1">
+            {summary.chart.map((point) => (
               <div
-                className="w-full rounded-t bg-[var(--ozer-accent)]/70 transition-all group-hover:bg-[var(--ozer-accent)]"
-                style={{
-                  height: `${Math.max(4, (point.amount_pence / maxBar) * 100)}%`,
-                }}
-              />
-            </div>
-          ))}
+                key={point.date}
+                className="group relative flex-1"
+                title={`${point.date}: ${formatInvoiceMoney(point.amount_pence, currency)}`}
+              >
+                <div
+                  className="w-full rounded-t bg-[var(--ozer-accent)]/70 transition-all group-hover:bg-[var(--ozer-accent)]"
+                  style={{
+                    height: `${Math.max(4, (point.amount_pence / maxBar) * 100)}%`,
+                  }}
+                />
+              </div>
+            ))}
+          </div>
         </div>
-      ) : (
-        <p className="text-muted-foreground mt-4 text-xs">
-          No issued invoices in this period.
-        </p>
-      )}
+      ) : null}
     </div>
   );
 }

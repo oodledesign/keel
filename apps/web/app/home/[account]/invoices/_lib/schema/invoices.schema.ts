@@ -4,6 +4,7 @@ import { InvoiceCurrencySchema } from '../invoice-currency';
 
 const optionalString = z.string().optional();
 const optionalNullableString = z.string().nullable().optional();
+const optionalNullableUuid = z.string().uuid().nullable().optional();
 
 const discountType = z.enum(['percent', 'fixed']).nullable().optional();
 const invoiceStatus = z.enum([
@@ -48,7 +49,7 @@ export const GetInvoiceSchema = z.object({
 export const CreateInvoiceSchema = z.object({
   accountId: z.string().uuid(),
   client_id: z.string().uuid(),
-  job_id: optionalNullableString,
+  project_id: optionalNullableUuid,
   due_at: optionalNullableString,
   notes: optionalNullableString,
   title: optionalNullableString,
@@ -60,6 +61,7 @@ export const UpdateInvoiceSchema = z.object({
   accountId: z.string().uuid(),
   invoiceId: z.string().uuid(),
   client_id: z.string().uuid().optional(),
+  project_id: optionalNullableUuid,
   due_at: optionalNullableString,
   notes: optionalNullableString,
   title: optionalNullableString,

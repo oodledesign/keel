@@ -51,9 +51,9 @@ import {
 } from '~/components/date-range/analytics-date-range-picker';
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import { parseCsv } from '~/lib/csv/parse-csv';
 import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
 import { workspaceCurrencySymbol } from '~/lib/currency/workspace-currency';
-import { parseCsv } from '~/lib/csv/parse-csv';
 import { resolveAnalyticsDateRange } from '~/lib/date-range/analytics-date-range';
 import {
   buildFinanceChartSeries,

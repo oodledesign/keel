@@ -6,6 +6,7 @@ import Link from 'next/link';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  Archive,
   Filter,
   LayoutGrid,
   List,
@@ -32,6 +33,7 @@ import pathsConfig from '~/config/paths.config';
 import { listAccountMembers } from '../../jobs/_lib/server/server-actions';
 import type { ClientOverviewItem } from '../_lib/clients-overview.types';
 import { listClientsOverview } from '../_lib/server/server-actions';
+import { ArchivedClientsList } from './archived-clients-list';
 import {
   ClientCard,
   ClientListTableColGroup,
@@ -162,6 +164,7 @@ export function ClientsPageContent({
   const [page, setPage] = useState(1);
   const [sort, setSort] = useState<SortKey>('name-asc');
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [showArchived, setShowArchived] = useState(false);
   const [favorites, setFavorites] = useState<Set<string>>(() => new Set());
   const [members, setMembers] = useState<
     Array<{ user_id: string; name: string | null; picture_url?: string | null }>
@@ -457,6 +460,22 @@ export function ClientsPageContent({
           Filter
         </Button>
 
+        <Button
+          variant="outline"
+          size="sm"
+          aria-pressed={showArchived}
+          onClick={() => setShowArchived((current) => !current)}
+          className={cn(
+            'border',
+            showArchived
+              ? 'border-transparent bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)] hover:bg-[var(--ozer-plum-900)] hover:text-[var(--ozer-text-on-dark)]'
+              : 'border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)]',
+          )}
+        >
+          <Archive className="mr-1 h-4 w-4" />
+          Archived
+        </Button>
+
         <Select
           value={sort}
           onValueChange={(value) => setSort(value as SortKey)}
@@ -484,7 +503,7 @@ export function ClientsPageContent({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
               viewMode === 'cards'
-                ? 'bg-[var(--ozer-info)] text-[var(--workspace-shell-text)]'
+                ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
                 : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
             aria-pressed={viewMode === 'cards'}
@@ -498,7 +517,7 @@ export function ClientsPageContent({
             className={cn(
               'inline-flex items-center gap-1.5 rounded-md px-3 py-2 text-sm font-medium transition',
               viewMode === 'list'
-                ? 'bg-[var(--ozer-info)] text-[var(--workspace-shell-text)]'
+                ? 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]'
                 : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
             )}
             aria-pressed={viewMode === 'list'}
@@ -510,7 +529,13 @@ export function ClientsPageContent({
       </div>
 
       <div className="flex-1 overflow-y-auto px-4 pb-4 md:px-5 md:pb-5">
-        {loadingPage && displayedClients.length === 0 ? (
+        {showArchived ? (
+          <ArchivedClientsList
+            accountId={accountId}
+            canEditClients={canEditClients}
+            onRestored={() => void refreshClients()}
+          />
+        ) : loadingPage && displayedClients.length === 0 ? (
           <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
             <Trans i18nKey="common:loading" />
           </div>
@@ -571,13 +596,13 @@ export function ClientsPageContent({
           </div>
         )}
 
-        {isSearching && enrichingSearch ? (
+        {!showArchived && isSearching && enrichingSearch ? (
           <p className="mt-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
             Finding more matches…
           </p>
         ) : null}
 
-        {!isSearching && totalPages > 1 && (
+        {!showArchived && !isSearching && totalPages > 1 && (
           <div className="mt-6 flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
             <span>
               Page {page} of {totalPages} ({total} clients)

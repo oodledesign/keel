@@ -74,29 +74,44 @@ export async function buildInvoicePdfPayload(
   } | null,
 ): Promise<InvoiceForPdf> {
   const client = getSupabaseServerAdminClient();
-  const [{ data: items }, { data: clientRow }, { data: account }, brand] =
-    await Promise.all([
-      client
-        .from('invoice_items')
-        .select('description, quantity, unit_price_pence, total_pence')
-        .eq('invoice_id', invoice.id)
-        .order('sort_order', { ascending: true }),
-      invoice.client_id
-        ? client
-            .from('clients')
-            .select(
-              'display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country',
-            )
-            .eq('id', invoice.client_id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      client
-        .from('accounts')
-        .select('name, email')
-        .eq('id', accountId)
-        .maybeSingle(),
-      loadAccountBrandResolved(accountId).catch(() => null),
-    ]);
+  const invoiceProjectId = (
+    invoice as InvoiceRow & { project_id?: string | null }
+  ).project_id;
+  const [
+    { data: items },
+    { data: clientRow },
+    { data: account },
+    { data: project },
+    brand,
+  ] = await Promise.all([
+    client
+      .from('invoice_items')
+      .select('description, quantity, unit_price_pence, total_pence')
+      .eq('invoice_id', invoice.id)
+      .order('sort_order', { ascending: true }),
+    invoice.client_id
+      ? client
+          .from('clients')
+          .select(
+            'display_name, first_name, last_name, company_name, email, address_line_1, address_line_2, city, postcode, country',
+          )
+          .eq('id', invoice.client_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    client
+      .from('accounts')
+      .select('name, email')
+      .eq('id', accountId)
+      .maybeSingle(),
+    invoiceProjectId
+      ? client
+          .from('projects')
+          .select('name')
+          .eq('id', invoiceProjectId)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    loadAccountBrandResolved(accountId).catch(() => null),
+  ]);
 
   const totals = computeInvoiceTotals({
     subtotal_pence: invoice.subtotal_pence ?? 0,
@@ -134,6 +149,7 @@ export async function buildInvoicePdfPayload(
     issued_at: invoice.issued_at ?? null,
     title: invoice.title ?? null,
     reference_number: invoice.reference_number ?? null,
+    project_name: project?.name?.trim() || null,
     total_pence: totals.total_pence,
     subtotal_pence: totals.subtotal_pence,
     discount_pence: totals.discount_pence,

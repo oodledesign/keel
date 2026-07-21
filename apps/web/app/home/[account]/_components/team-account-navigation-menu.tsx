@@ -16,6 +16,7 @@ import { TeamAccountWorkspace } from '../_lib/server/team-account-workspace.load
 
 export async function TeamAccountNavigationMenu(props: {
   workspace: TeamAccountWorkspace;
+  emailAssistantAvailable?: boolean;
 }) {
   const { account, user } = props.workspace;
   const client = (
@@ -32,6 +33,8 @@ export async function TeamAccountNavigationMenu(props: {
     },
     props.workspace.moduleSettings,
     props.workspace.workspaceProfile,
+    undefined,
+    { emailAssistantAvailable: props.emailAssistantAvailable },
   ).routes.reduce<
     Array<{
       path: string;

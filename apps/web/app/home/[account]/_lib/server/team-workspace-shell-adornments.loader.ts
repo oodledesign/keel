@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
+import { canUseEmailAssistant } from '~/lib/billing/entitlements';
 import { loadWorkspaceMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
 import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
@@ -15,6 +16,7 @@ export type TeamWorkspaceShellAdornments = {
     ReturnType<typeof loadWorkspaceMobileNavShortcuts>
   >;
   focusSettingsByAccountId: ReturnType<typeof serializeWorkspaceFocusMap>;
+  emailAssistantAvailable: boolean;
 };
 
 export async function loadTeamWorkspaceShellAdornments(params: {
@@ -25,7 +27,12 @@ export async function loadTeamWorkspaceShellAdornments(params: {
   moduleSettings: Record<string, boolean>;
   focusAccountIds: string[];
 }): Promise<TeamWorkspaceShellAdornments> {
-  const [navCounts, mobileNavShortcuts, focusSettings] = await Promise.all([
+  const [
+    navCounts,
+    mobileNavShortcuts,
+    focusSettings,
+    emailAssistantAvailable,
+  ] = await Promise.all([
     loadWorkNavCounts(
       params.client,
       params.accountId,
@@ -45,11 +52,16 @@ export async function loadTeamWorkspaceShellAdornments(params: {
       params.userId,
       params.focusAccountIds,
     ),
+    canUseEmailAssistant(params.client, params.userId).catch((error) => {
+      console.error('[team-workspace] canUseEmailAssistant:', error);
+      return false;
+    }),
   ]);
 
   return {
     navCounts,
     mobileNavShortcuts,
     focusSettingsByAccountId: serializeWorkspaceFocusMap(focusSettings),
+    emailAssistantAvailable,
   };
 }

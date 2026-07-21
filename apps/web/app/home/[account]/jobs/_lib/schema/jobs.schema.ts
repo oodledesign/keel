@@ -26,6 +26,7 @@ export const ListJobsSchema = z
     query: z.string().nullish().optional(),
     status: jobStatus.nullish().optional(),
     priority: jobPriority.nullish().optional(),
+    clientId: z.string().uuid().optional(),
   })
   .transform((input) => ({
     ...input,

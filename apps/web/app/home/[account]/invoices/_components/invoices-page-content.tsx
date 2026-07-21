@@ -340,7 +340,7 @@ export function InvoicesPageContent({
         onPeriodChange={setSummaryPeriod}
       />
 
-      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-sm">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] p-4">
           <div className="inline-flex flex-wrap gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
             {tabs.map((item) => (
@@ -353,7 +353,7 @@ export function InvoicesPageContent({
                 }}
                 className={`rounded-full px-3 py-1.5 font-medium transition-colors ${
                   tab === item.key
-                    ? 'bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-sm ring-1 ring-[color:var(--workspace-shell-border)]'
+                    ? 'bg-background text-[var(--workspace-shell-text)] shadow-sm ring-1 ring-[color:var(--workspace-shell-border)]'
                     : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
                 }`}
               >

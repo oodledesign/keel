@@ -244,7 +244,29 @@ export async function canUseEmailAssistant(
   client: SupabaseClient,
   userId: string,
 ): Promise<boolean> {
-  return canUseAddon(client, userId, userId, EMAIL_ASSISTANT_ENTITLEMENT);
+  if (process.env.DISABLE_EMAIL_ASSISTANT === 'true') {
+    return false;
+  }
+
+  const [entitled, connection] = await Promise.all([
+    canUseAddon(client, userId, userId, EMAIL_ASSISTANT_ENTITLEMENT),
+    client
+      .from('google_connections')
+      .select('user_id')
+      .eq('user_id', userId)
+      .maybeSingle(),
+  ]);
+
+  if (connection.error) {
+    console.error(
+      '[billing] canUseEmailAssistant connection check:',
+      connection.error.message,
+    );
+  }
+
+  // Existing connected users keep access even if the add-on entitlement was
+  // removed or drifted. New users still need the add-on before connecting.
+  return entitled || Boolean(connection.data);
 }
 
 export async function assertMemberInviteAllowed(

@@ -61,10 +61,25 @@ type Contact = {
   first_name?: string | null;
   last_name?: string | null;
   email: string | null;
+  emails?: ContactEmailAddress[];
   phone: string | null;
   role: string | null;
   is_primary: boolean;
   picture_url: string | null;
+};
+
+type ContactEmailAddress = {
+  id: string;
+  email: string;
+  label: 'work' | 'personal' | 'billing' | 'other';
+  is_primary: boolean;
+};
+
+type EmailAddressDraft = {
+  id: string;
+  email: string;
+  label: ContactEmailAddress['label'];
+  isPrimary: boolean;
 };
 
 type AccountContact = {
@@ -75,6 +90,154 @@ type AccountContact = {
 };
 
 type AddMode = 'new' | 'existing';
+
+function newEmailAddress(
+  isPrimary = false,
+  id = crypto.randomUUID(),
+): EmailAddressDraft {
+  return {
+    id,
+    email: '',
+    label: 'work',
+    isPrimary,
+  };
+}
+
+function contactEmailAddresses(contact: Contact): ContactEmailAddress[] {
+  if (contact.emails?.length) return contact.emails;
+  return contact.email
+    ? [
+        {
+          id: `legacy-${contact.id}`,
+          email: contact.email,
+          label: 'work',
+          is_primary: true,
+        },
+      ]
+    : [];
+}
+
+function EmailAddressFields({
+  idPrefix,
+  addresses,
+  onChange,
+}: {
+  idPrefix: string;
+  addresses: EmailAddressDraft[];
+  onChange: (addresses: EmailAddressDraft[]) => void;
+}) {
+  const updateAddress = (
+    id: string,
+    patch: Partial<Omit<EmailAddressDraft, 'id'>>,
+  ) => {
+    onChange(
+      addresses.map((address) =>
+        address.id === id ? { ...address, ...patch } : address,
+      ),
+    );
+  };
+
+  const makePrimary = (id: string) => {
+    onChange(
+      addresses.map((address) => ({
+        ...address,
+        isPrimary: address.id === id,
+      })),
+    );
+  };
+
+  const removeAddress = (id: string) => {
+    const removed = addresses.find((address) => address.id === id);
+    const next = addresses.filter((address) => address.id !== id);
+    if (removed?.isPrimary && next.length > 0) {
+      next[0] = { ...next[0]!, isPrimary: true };
+    }
+    onChange(next);
+  };
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <Label className="text-xs">Email addresses</Label>
+        <span className="text-[10px] text-[var(--workspace-shell-text-muted)]">
+          Choose one primary
+        </span>
+      </div>
+
+      {addresses.map((address, index) => (
+        <div
+          key={address.id}
+          className="grid grid-cols-1 items-center gap-2 sm:grid-cols-[minmax(0,1fr)_7rem_auto_auto]"
+        >
+          <Input
+            id={`${idPrefix}_email_${index}`}
+            type="email"
+            value={address.email}
+            onChange={(event) =>
+              updateAddress(address.id, { email: event.target.value })
+            }
+            placeholder="email@example.com"
+            className="h-8 text-sm"
+            aria-label={`Email address ${index + 1}`}
+          />
+          <select
+            value={address.label}
+            onChange={(event) =>
+              updateAddress(address.id, {
+                label: event.target.value as ContactEmailAddress['label'],
+              })
+            }
+            className="border-input bg-background h-8 rounded-md border px-2 text-xs"
+            aria-label={`Email address ${index + 1} label`}
+          >
+            <option value="work">Work</option>
+            <option value="personal">Personal</option>
+            <option value="billing">Billing</option>
+            <option value="other">Other</option>
+          </select>
+          <label
+            htmlFor={`${idPrefix}_primary_email_${index}`}
+            className="flex items-center gap-1 text-[10px] text-[var(--workspace-shell-text-muted)]"
+          >
+            <input
+              id={`${idPrefix}_primary_email_${index}`}
+              type="radio"
+              name={`${idPrefix}_primary_email`}
+              checked={address.isPrimary}
+              onChange={() => makePrimary(address.id)}
+            />
+            Primary
+          </label>
+          <Button
+            type="button"
+            size="icon"
+            variant="ghost"
+            className="h-8 w-8 text-[var(--workspace-shell-text-muted)]"
+            onClick={() => removeAddress(address.id)}
+            aria-label={`Remove email address ${index + 1}`}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      ))}
+
+      {addresses.length < 10 ? (
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          className="h-8 text-xs"
+          onClick={() =>
+            onChange([...addresses, newEmailAddress(addresses.length === 0)])
+          }
+        >
+          <PlusCircle className="mr-1.5 h-3.5 w-3.5" />
+          Add another email
+        </Button>
+      ) : null}
+    </div>
+  );
+}
 
 function RoleSelect({
   id,
@@ -134,7 +297,9 @@ function AddContactForm({
   const [saving, setSaving] = useState(false);
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
-  const [email, setEmail] = useState('');
+  const [emails, setEmails] = useState<EmailAddressDraft[]>([
+    newEmailAddress(true, 'new-contact-primary-email'),
+  ]);
   const [phone, setPhone] = useState('');
   const [role, setRole] = useState('');
   const [isPrimary, setIsPrimary] = useState(false);
@@ -189,7 +354,13 @@ function AddContactForm({
         clientId,
         firstName: firstName.trim(),
         lastName: lastName.trim() || undefined,
-        email: email.trim() || undefined,
+        emails: emails
+          .filter((address) => address.email.trim())
+          .map((address) => ({
+            email: address.email.trim(),
+            label: address.label,
+            isPrimary: address.isPrimary,
+          })),
         phone: phone.trim() || undefined,
         role: role.trim() || undefined,
         isPrimary,
@@ -291,32 +462,22 @@ function AddContactForm({
             </div>
           </div>
           <RoleSelect id="contact_role" value={role} onChange={setRole} />
-          <div className="grid grid-cols-2 gap-2">
-            <div className="space-y-2">
-              <Label htmlFor="contact_email" className="text-xs">
-                Email
-              </Label>
-              <Input
-                id="contact_email"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="email@example.com"
-                className="h-8 text-sm"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contact_phone" className="text-xs">
-                Phone
-              </Label>
-              <Input
-                id="contact_phone"
-                value={phone}
-                onChange={(e) => setPhone(e.target.value)}
-                placeholder="Phone number"
-                className="h-8 text-sm"
-              />
-            </div>
+          <EmailAddressFields
+            idPrefix="contact"
+            addresses={emails}
+            onChange={setEmails}
+          />
+          <div className="space-y-2">
+            <Label htmlFor="contact_phone" className="text-xs">
+              Phone
+            </Label>
+            <Input
+              id="contact_phone"
+              value={phone}
+              onChange={(e) => setPhone(e.target.value)}
+              placeholder="Phone number"
+              className="h-8 text-sm"
+            />
           </div>
           <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
             <input
@@ -472,7 +633,27 @@ function EditContactForm({
       contact.full_name.trim().split(/\s+/).slice(1).join(' ') ||
       '',
   );
-  const [email, setEmail] = useState(contact.email ?? '');
+  const [emails, setEmails] = useState<EmailAddressDraft[]>(() => {
+    if (contact.emails?.length) {
+      return contact.emails.map((address) => ({
+        id: address.id,
+        email: address.email,
+        label: address.label,
+        isPrimary: address.is_primary,
+      }));
+    }
+
+    return contact.email
+      ? [
+          {
+            id: `legacy-${contact.id}`,
+            email: contact.email,
+            label: 'work',
+            isPrimary: true,
+          },
+        ]
+      : [];
+  });
   const [phone, setPhone] = useState(contact.phone ?? '');
   const [role, setRole] = useState(contact.role ?? '');
 
@@ -490,7 +671,17 @@ function EditContactForm({
         contactId: contact.id,
         firstName: firstName.trim(),
         lastName: lastName.trim() || null,
-        email: email.trim() || null,
+        email:
+          emails.find((address) => address.isPrimary)?.email.trim() ||
+          emails[0]?.email.trim() ||
+          null,
+        emails: emails
+          .filter((address) => address.email.trim())
+          .map((address) => ({
+            email: address.email.trim(),
+            label: address.label,
+            isPrimary: address.isPrimary,
+          })),
         phone: phone.trim() || null,
         role: role.trim() || null,
       });
@@ -539,30 +730,21 @@ function EditContactForm({
         </div>
       </div>
       <RoleSelect id="edit_contact_role" value={role} onChange={setRole} />
-      <div className="grid grid-cols-2 gap-2">
-        <div className="space-y-2">
-          <Label htmlFor="edit_contact_email" className="text-xs">
-            Email
-          </Label>
-          <Input
-            id="edit_contact_email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            className="h-8 text-sm"
-          />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="edit_contact_phone" className="text-xs">
-            Phone
-          </Label>
-          <Input
-            id="edit_contact_phone"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="h-8 text-sm"
-          />
-        </div>
+      <EmailAddressFields
+        idPrefix={`edit_contact_${contact.id}`}
+        addresses={emails}
+        onChange={setEmails}
+      />
+      <div className="space-y-2">
+        <Label htmlFor="edit_contact_phone" className="text-xs">
+          Phone
+        </Label>
+        <Input
+          id="edit_contact_phone"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+          className="h-8 text-sm"
+        />
       </div>
       <div className="flex gap-2 pt-1">
         <Button type="submit" size="sm" disabled={saving}>
@@ -709,7 +891,7 @@ export function ClientContactsBlock({
                         {contact.full_name}
                       </p>
                       {contact.is_primary && (
-                        <span className="text-[10px] text-[var(--ozer-accent-muted)]">
+                        <span className="text-[10px] font-semibold tracking-wide text-[var(--ozer-accent-pressed)] uppercase">
                           Primary
                         </span>
                       )}
@@ -719,15 +901,16 @@ export function ClientContactsBlock({
                             {formatContactRoleLabel(contact.role)}
                           </span>
                         )}
-                        {contact.email && (
+                        {contactEmailAddresses(contact).map((address) => (
                           <a
-                            href={`mailto:${contact.email}`}
-                            className="flex items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]"
+                            key={address.id}
+                            href={`mailto:${address.email}`}
+                            className="flex items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-info)]"
                           >
                             <Mail className="h-3 w-3" />
-                            {contact.email}
+                            {address.email}
                           </a>
-                        )}
+                        ))}
                         {contact.phone && (
                           <a
                             href={`tel:${contact.phone}`}
@@ -825,14 +1008,23 @@ export function ClientContactsBlock({
                     )}
                   </td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
-                    {contact.email ? (
-                      <a
-                        href={`mailto:${contact.email}`}
-                        className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent-muted)]"
-                      >
-                        <Mail className="h-3 w-3" />
-                        {contact.email}
-                      </a>
+                    {contactEmailAddresses(contact).length > 0 ? (
+                      <div className="space-y-1">
+                        {contactEmailAddresses(contact).map((address) => (
+                          <a
+                            key={address.id}
+                            href={`mailto:${address.email}`}
+                            className="flex items-center gap-1 text-xs text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-info)]"
+                          >
+                            <Mail className="h-3 w-3 shrink-0" />
+                            <span className="truncate">{address.email}</span>
+                            <span className="text-[9px] tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                              {address.label}
+                              {address.is_primary ? ' · Primary' : ''}
+                            </span>
+                          </a>
+                        ))}
+                      </div>
                     ) : (
                       <span className="text-xs text-[var(--workspace-shell-text-muted)]">
                         —

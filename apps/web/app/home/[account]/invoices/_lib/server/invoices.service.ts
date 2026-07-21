@@ -94,6 +94,28 @@ class InvoicesService {
     }
   }
 
+  private async validateInvoiceProject(
+    accountId: string,
+    clientId: string,
+    projectId: string | null | undefined,
+  ) {
+    if (!projectId) return;
+
+    const { data: project, error } = await this.db
+      .from('projects')
+      .select('id, client_id')
+      .eq('id', projectId)
+      .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
+      .maybeSingle();
+
+    if (error) this.throwErr(error);
+    if (!project) throw new Error('Project not found in this workspace');
+    if (project.client_id !== clientId) {
+      throw new Error('Select a project belonging to the invoice client');
+    }
+  }
+
   /** Allocate next invoice number for account (transaction-safe RPC). */
   async allocateInvoiceNumber(accountId: string): Promise<string> {
     const { data, error } = await this.db.rpc('allocate_invoice_number', {
@@ -255,6 +277,17 @@ class InvoicesService {
       .eq('id', invoice.client_id)
       .single();
 
+    const { data: project } = invoice.project_id
+      ? await this.db
+          .from('projects')
+          .select('id, name')
+          .eq('id', invoice.project_id)
+          .eq('account_id', params.accountId)
+          .eq('client_id', invoice.client_id)
+          .eq('project_type', 'delivery')
+          .maybeSingle()
+      : { data: null };
+
     const recipient = await resolveClientRecipientEmail(
       this.db,
       invoice.client_id,
@@ -268,6 +301,7 @@ class InvoicesService {
       ...invoice,
       items: items ?? [],
       client,
+      project: project ? { id: project.id, title: project.name } : null,
       preferred_send_email: recipient.email,
       preferred_send_source: recipient.source,
       preferred_send_name: recipient.contactName,
@@ -286,11 +320,18 @@ class InvoicesService {
       currency = await getWorkspaceCurrencyWithClient(this.db, input.accountId);
     }
 
+    await this.validateInvoiceProject(
+      input.accountId,
+      input.client_id,
+      input.project_id,
+    );
+
     const { data: invoice, error } = await this.db
       .from('invoices')
       .insert({
         account_id: input.accountId,
         client_id: input.client_id,
+        project_id: input.project_id ?? null,
         invoice_number,
         status: 'draft',
         currency,
@@ -314,7 +355,10 @@ class InvoicesService {
       accountId: input.accountId,
       invoiceId: invoice.id,
       eventType: 'created',
-      payload: { client_id: input.client_id },
+      payload: {
+        client_id: input.client_id,
+        project_id: input.project_id ?? null,
+      },
       actorId: user.id,
     });
     return invoice;
@@ -328,7 +372,7 @@ class InvoicesService {
 
     const { data: existingInvoice, error: existingInvoiceError } = await this.db
       .from('invoices')
-      .select('status')
+      .select('status, client_id, project_id')
       .eq('id', input.invoiceId)
       .eq('account_id', input.accountId)
       .single();
@@ -337,8 +381,20 @@ class InvoicesService {
       throw new Error('Sent, paid, or void invoices can no longer be edited');
     }
 
+    const nextClientId = input.client_id ?? existingInvoice.client_id;
+    const nextProjectId =
+      input.project_id !== undefined
+        ? input.project_id
+        : existingInvoice.project_id;
+    await this.validateInvoiceProject(
+      input.accountId,
+      nextClientId,
+      nextProjectId,
+    );
+
     const payload: Record<string, unknown> = {};
     if (input.client_id !== undefined) payload.client_id = input.client_id;
+    if (input.project_id !== undefined) payload.project_id = input.project_id;
     if (input.due_at !== undefined) payload.due_at = input.due_at;
     if (input.notes !== undefined) payload.notes = input.notes;
     if (input.title !== undefined) payload.title = input.title;
@@ -384,7 +440,7 @@ class InvoicesService {
       accountId: input.accountId,
       invoiceId: input.invoiceId,
       eventType: 'updated',
-      payload: Object.keys(payload),
+      payload: { fields: Object.keys(payload) },
       actorId: user.id,
     });
 
@@ -818,7 +874,23 @@ class InvoicesService {
       .eq('id', invoice.client_id)
       .single();
 
-    return { ...invoice, items: items ?? [], client };
+    const { data: project } = invoice.project_id
+      ? await this.db
+          .from('projects')
+          .select('id, name')
+          .eq('id', invoice.project_id)
+          .eq('account_id', invoice.account_id)
+          .eq('client_id', invoice.client_id)
+          .eq('project_type', 'delivery')
+          .maybeSingle()
+      : { data: null };
+
+    return {
+      ...invoice,
+      items: items ?? [],
+      client,
+      project: project ? { id: project.id, title: project.name } : null,
+    };
   }
 
   /** Ensure invoice has a public_token and return it (used for internal payment links). */

@@ -1,19 +1,4 @@
-import {
-  Briefcase,
-  Building2,
-  Calendar,
-  CheckSquare,
-  ClipboardList,
-  CreditCard,
-  FileText,
-  Kanban,
-  LayoutDashboard,
-  Settings,
-  ShoppingCart,
-  StickyNote,
-  Users,
-  UtensilsCrossed,
-} from 'lucide-react';
+import { Settings } from 'lucide-react';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
 
@@ -25,7 +10,6 @@ import {
   buildFamilySettingsChildren,
   buildFamilySpaceNavChildren,
 } from '~/config/family-account-navigation.config';
-import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import {
   buildPropertySettingsChildren,
@@ -38,7 +22,6 @@ import {
 } from '~/config/work-account-navigation.config';
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
-import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
 
 const iconClasses = 'w-4';
 
@@ -53,10 +36,12 @@ const getRoutes = (
   },
   moduleSettings?: Record<string, boolean>,
   navCounts?: WorkNavCounts,
+  userFeatures?: {
+    emailAssistantAvailable?: boolean;
+  },
 ) => {
   const access = getTeamAccountAccess(accessInput);
   const ms = moduleSettings;
-  const spaceType = spaceTypeFromProfile(profile);
 
   let applicationChildren: Array<{
     label: string;
@@ -72,6 +57,7 @@ const getRoutes = (
       access,
       ms,
       navCounts,
+      userFeatures?.emailAssistantAvailable,
     ) as typeof applicationChildren;
   } else if (profile === 'work_property') {
     applicationChildren = buildPropertySpaceNavChildren(
@@ -145,9 +131,19 @@ export function getTeamAccountSidebarConfig(
   moduleSettings?: Record<string, boolean>,
   profile: WorkspaceProfile = 'work_design',
   navCounts?: WorkNavCounts,
+  userFeatures?: {
+    emailAssistantAvailable?: boolean;
+  },
 ) {
   return NavigationConfigSchema.parse({
-    routes: getRoutes(account, profile, accessInput, moduleSettings, navCounts),
+    routes: getRoutes(
+      account,
+      profile,
+      accessInput,
+      moduleSettings,
+      navCounts,
+      userFeatures,
+    ),
     style: process.env.NEXT_PUBLIC_TEAM_NAVIGATION_STYLE,
     sidebarCollapsed: process.env.NEXT_PUBLIC_TEAM_SIDEBAR_COLLAPSED,
     sidebarCollapsedStyle: process.env.NEXT_PUBLIC_SIDEBAR_COLLAPSIBLE_STYLE,

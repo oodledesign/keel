@@ -49,7 +49,11 @@ async function getInvoiceByToken(token: string) {
     return null;
   }
 
-  const [{ data: items }, clientResult] = await Promise.all([
+  const invoiceProjectId = (
+    invoice as typeof invoice & { project_id?: string | null }
+  ).project_id;
+
+  const [{ data: items }, clientResult, projectResult] = await Promise.all([
     client
       .from('invoice_items')
       .select(
@@ -64,6 +68,13 @@ async function getInvoiceByToken(token: string) {
             'display_name, first_name, last_name, company_name, email, picture_url, address_line_1, address_line_2, city, postcode, country',
           )
           .eq('id', invoice.client_id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    invoiceProjectId
+      ? client
+          .from('projects')
+          .select('id, name')
+          .eq('id', invoiceProjectId)
           .maybeSingle()
       : Promise.resolve({ data: null }),
   ]);
@@ -95,6 +106,12 @@ async function getInvoiceByToken(token: string) {
     ...totals,
     items: items ?? [],
     client: normalizedClient,
+    project: projectResult.data
+      ? {
+          id: projectResult.data.id,
+          title: projectResult.data.name,
+        }
+      : null,
   } as Record<string, unknown>;
 }
 

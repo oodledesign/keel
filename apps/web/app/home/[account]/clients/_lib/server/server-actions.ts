@@ -14,6 +14,7 @@ import {
   DeleteClientSchema,
   DeleteContactSchema,
   DeleteNoteSchema,
+  DestroyClientSchema,
   GetClientSchema,
   GetJobHistorySchema,
   LinkContactSchema,
@@ -23,6 +24,7 @@ import {
   ListContactsSchema,
   ListNotesSchema,
   ListWorkspaceContactsSchema,
+  RestoreClientSchema,
   SetPrimaryContactSchema,
   UpdateClientSchema,
   UpdateContactLinkSchema,
@@ -92,6 +94,22 @@ export const deleteClient = enhanceAction(
     return service.deleteClient(input);
   },
   { schema: DeleteClientSchema },
+);
+
+export const restoreClient = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.restoreClient(input);
+  },
+  { schema: RestoreClientSchema },
+);
+
+export const destroyClient = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.destroyClient(input);
+  },
+  { schema: DestroyClientSchema },
 );
 
 export const listNotes = enhanceAction(
