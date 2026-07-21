@@ -21,6 +21,7 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { copyTextToClipboard } from '~/lib/clipboard';
 import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
 import type {
   VideoFolderRow,
@@ -200,7 +201,7 @@ export function VideoLibraryClient(props: {
       if (!json.ok)
         throw new Error(json.error?.message ?? 'Failed to load config');
 
-      await navigator.clipboard.writeText(json.data.embedIframe);
+      await copyTextToClipboard(json.data.embedIframe);
       toast.success('Embed code copied');
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -220,7 +221,7 @@ export function VideoLibraryClient(props: {
     }
 
     try {
-      await navigator.clipboard.writeText(
+      await copyTextToClipboard(
         buildPublicVideoWatchUrl(video.public_share_token),
       );
       toast.success('Public link copied');

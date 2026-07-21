@@ -7,6 +7,7 @@ import { Check, Copy, ExternalLink } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
+import { copyTextToClipboard } from '~/lib/clipboard';
 import {
   buildEmbedUrl,
   buildHtml5VideoCode,
@@ -60,7 +61,7 @@ export function EmbedCode(props: {
 
   const copyCode = useCallback(async () => {
     try {
-      await navigator.clipboard.writeText(codes[tab]);
+      await copyTextToClipboard(codes[tab]);
       setCopied(true);
       window.setTimeout(() => setCopied(false), 2000);
     } catch {

@@ -11,6 +11,7 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
+import { copyTextToClipboard } from '~/lib/clipboard';
 import { buildWhatsAppShareUrl } from '~/lib/videos/public-share';
 
 type ApiResponse =
@@ -72,7 +73,7 @@ export function PublicSharePanel(props: {
     if (!publicUrl) return;
 
     try {
-      await navigator.clipboard.writeText(publicUrl);
+      await copyTextToClipboard(publicUrl);
       setCopied(true);
       toast.success('Link copied');
       window.setTimeout(() => setCopied(false), 2000);
