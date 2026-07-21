@@ -7,6 +7,10 @@ import { htmlToMarkdown } from '~/lib/markdown';
 import { brainChunksNeedRefresh } from './brain-index-refresh';
 import { splitIntoChunks } from './chunking';
 import {
+  loadEmailThreadIndexables,
+  mapEmailThreadToIndexable,
+} from './email-thread-index';
+import {
   type MeetingTranscriptEnrichment,
   buildMeetingTranscriptIndexText,
   loadMeetingTranscriptEnrichmentByIds,
@@ -352,6 +356,13 @@ export async function loadAccountIndexables(
     });
   }
 
+  const emailThreads = await loadEmailThreadIndexables(
+    admin,
+    accountId,
+    accountSlug,
+  );
+  records.push(...emailThreads);
+
   return dedupeIndexablesBySourceId(records);
 }
 
@@ -391,6 +402,15 @@ export async function loadIndexableSource(
 
   if (sourceType === 'transcript') {
     return loadTranscriptIndexable(admin, accountId, accountSlug, sourceId);
+  }
+
+  if (sourceType === 'email_thread') {
+    return mapEmailThreadToIndexable(
+      admin,
+      accountId,
+      accountSlug,
+      sourceId,
+    );
   }
 
   const records = await loadAccountIndexables(admin, accountId);
@@ -708,6 +728,16 @@ export async function listActiveAccountIds(admin: AdminClient) {
     .gte('created_at', since);
 
   for (const row of actionItemAccounts ?? []) {
+    ids.add(row.account_id as string);
+  }
+
+  const { data: emailThreadAccounts } = await admin
+    .from('email_threads')
+    .select('account_id')
+    .not('account_id', 'is', null)
+    .gte('updated_at', since);
+
+  for (const row of emailThreadAccounts ?? []) {
     ids.add(row.account_id as string);
   }
 

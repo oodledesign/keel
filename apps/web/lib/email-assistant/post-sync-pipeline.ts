@@ -3,6 +3,8 @@ import 'server-only';
 import { classify } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
+
 import { isFromOwner } from './address-utils';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
@@ -203,6 +205,8 @@ export async function runEmailAssistantPipeline(
         }
       }
 
+      queueEmailThreadBrainSync(thread.id);
+
       continue;
     }
 
@@ -281,6 +285,8 @@ export async function runEmailAssistantPipeline(
         );
       }
     }
+
+    queueEmailThreadBrainSync(thread.id);
 
     if (
       category === 'needs_reply' &&

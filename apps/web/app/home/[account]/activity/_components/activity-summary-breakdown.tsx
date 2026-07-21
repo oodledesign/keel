@@ -1,9 +1,10 @@
 'use client';
 
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { cn } from '@kit/ui/utils';
 
 import type { ActivityReportRow } from '~/lib/activity/activity-history';
-import { formatDuration } from '~/lib/activity/activity-history';
+import { ACTIVITY_REPORT_UNASSIGNED, formatDuration } from '~/lib/activity/activity-history';
 
 type ActivitySummaryBreakdownProps = {
   title: string;
@@ -12,6 +13,7 @@ type ActivitySummaryBreakdownProps = {
   maxRows?: number;
   accentClassName?: string;
   onRowClick?: (row: ActivityReportRow) => void;
+  showClientAvatars?: boolean;
 };
 
 export function ActivitySummaryBreakdown({
@@ -21,6 +23,7 @@ export function ActivitySummaryBreakdown({
   maxRows = 5,
   accentClassName = 'bg-[var(--ozer-accent)]',
   onRowClick,
+  showClientAvatars = false,
 }: ActivitySummaryBreakdownProps) {
   const visibleRows = rows.slice(0, maxRows);
   const maxDuration = visibleRows[0]?.durationSeconds ?? 0;
@@ -55,12 +58,22 @@ export function ActivitySummaryBreakdown({
                   disabled={!onRowClick}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <span
-                      className="truncate text-xs font-medium text-[var(--workspace-shell-text)]"
-                      title={row.label}
-                    >
-                      {row.label}
-                    </span>
+                    <div className="flex min-w-0 items-center gap-2">
+                      {showClientAvatars && row.id !== ACTIVITY_REPORT_UNASSIGNED ? (
+                        <ProfileAvatar
+                          displayName={row.label}
+                          pictureUrl={row.imageUrl}
+                          className="h-6 w-6"
+                          fallbackClassName="text-[10px]"
+                        />
+                      ) : null}
+                      <span
+                        className="truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+                        title={row.label}
+                      >
+                        {row.label}
+                      </span>
+                    </div>
                     <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)]">
                       {formatDuration(row.durationSeconds)}
                     </span>

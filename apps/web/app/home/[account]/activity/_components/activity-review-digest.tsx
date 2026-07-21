@@ -36,7 +36,7 @@ export function ActivityReviewDigest({
         )
       : 0;
 
-  if (unassignedPercent < 30 && assignment.needsReviewCount < 10) {
+  if (unassignedPercent < 30 && assignment.needsReviewSessionCount < 10) {
     return null;
   }
 
@@ -50,8 +50,8 @@ export function ActivityReviewDigest({
           </p>
           <p className="max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
             {formatDuration(assignment.unassignedSeconds)} ({unassignedPercent}
-            %) still unassigned across {assignment.needsReviewCount} sessions in
-            this range.
+            %) still unassigned across {assignment.needsReviewSessionCount}{' '}
+            sessions in this range.
             {topUnassignedApps.length > 0 ? (
               <>
                 {' '}

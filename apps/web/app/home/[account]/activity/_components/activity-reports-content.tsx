@@ -25,6 +25,7 @@ import {
 } from '@kit/ui/table';
 import { Tabs, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { cn } from '@kit/ui/utils';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 
 import { AnalyticsDateRangePicker } from '~/components/date-range/analytics-date-range-picker';
 import pathsConfig from '~/config/paths.config';
@@ -155,9 +156,19 @@ function ActivityReportTable({
                           : 'text-[var(--workspace-shell-text)]',
                       )}
                     >
-                      <span className="block truncate" title={row.label}>
-                        {row.label}
-                      </span>
+                      <div className="flex min-w-0 items-center gap-2">
+                        {dimension === 'client' && !isUnassigned ? (
+                          <ProfileAvatar
+                            displayName={row.label}
+                            pictureUrl={row.imageUrl}
+                            className="h-7 w-7"
+                            fallbackClassName="text-[10px]"
+                          />
+                        ) : null}
+                        <span className="block truncate" title={row.label}>
+                          {row.label}
+                        </span>
+                      </div>
                     </TableCell>
                     <TableCell className="px-3 py-2 text-sm whitespace-nowrap text-[var(--workspace-shell-text-muted)]">
                       {row.blockCount}

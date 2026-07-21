@@ -2,6 +2,8 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
+
 import { syncSuggestedActionItemsFromThreadLink } from './action-item-links';
 import { extractEmailAddress } from './address-utils';
 
@@ -268,6 +270,8 @@ export async function autoLinkEmailThread(
     clientId: client.id,
     projectId,
   });
+
+  queueEmailThreadBrainSync(threadId);
 
   return true;
 }

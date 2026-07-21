@@ -18,6 +18,8 @@ const ActivityBlockSchema = z.object({
   url: z.string().nullable().optional(),
   window_title: z.string(),
   repo_name: z.string().nullable().optional(),
+  email_from: z.string().nullable().optional(),
+  email_to: z.string().nullable().optional(),
   started_at: z.string().min(1),
   ended_at: z.string().min(1),
   duration_seconds: z.number().int().nonnegative(),

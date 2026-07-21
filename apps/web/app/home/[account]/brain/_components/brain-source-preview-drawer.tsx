@@ -103,7 +103,8 @@ export function BrainSourcePreviewDrawer({
         | 'phase'
         | 'transcript'
         | 'proposal'
-        | 'task',
+        | 'task'
+        | 'email_thread',
       sourceId: previewRef.source_id,
       highlightText: previewRef.chunkText,
     })

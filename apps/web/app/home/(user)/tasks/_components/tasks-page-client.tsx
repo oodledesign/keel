@@ -10,7 +10,6 @@ import {
 } from 'react';
 
 import dynamic from 'next/dynamic';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -1547,24 +1546,6 @@ export function TasksPageClient({
           <TasksViewMenu view={view} onViewChange={setView} />
 
           <div className="flex shrink-0 items-center gap-2">
-            {variant === 'workspace' && workspaceAccountSlug ? (
-              <Button
-                asChild
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-10 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-              >
-                <Link
-                  href={pathsConfig.app.accountTasksImport.replace(
-                    '[account]',
-                    workspaceAccountSlug,
-                  )}
-                >
-                  Import CSV
-                </Link>
-              </Button>
-            ) : null}
             {variant === 'personal' ? (
               <AddTaskDialog />
             ) : workspaceAccountId ? (

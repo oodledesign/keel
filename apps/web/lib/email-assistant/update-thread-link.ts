@@ -4,6 +4,9 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
 
+import { queueBrainDeleteSource } from '~/lib/brain/sync';
+import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
+
 import { syncSuggestedActionItemsFromThreadLink } from './action-item-links';
 
 type UpdateEmailThreadLinkInput = {
@@ -86,6 +89,8 @@ export async function updateEmailThreadLink(
       projectId: null,
     });
 
+    queueBrainDeleteSource(threadId);
+
     return;
   }
 
@@ -134,4 +139,6 @@ export async function updateEmailThreadLink(
     clientId: clientId ?? null,
     projectId: projectId ?? null,
   });
+
+  queueEmailThreadBrainSync(threadId);
 }

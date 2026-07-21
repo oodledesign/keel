@@ -241,6 +241,61 @@ describe('activity app context parsing', () => {
     });
   });
 
+  it('parses Claude Desktop chat and code sessions', () => {
+    expect(
+      parseActivityAppContext(
+        makeBlock({
+          id: 'claude-chat',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Claude',
+          bundleId: 'com.anthropic.claudefordesktop',
+          windowTitle: 'Invoice follow-up draft - Claude',
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'assistant',
+      item: 'Invoice follow-up draft',
+      detail: 'Chat',
+    });
+
+    expect(
+      parseActivityAppContext(
+        makeBlock({
+          id: 'claude-code',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Claude',
+          bundleId: 'com.anthropic.claudefordesktop',
+          windowTitle: 'keel - Claude Code',
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'assistant',
+      item: 'keel',
+      detail: 'Code',
+    });
+  });
+
+  it('uses Spark sender metadata when provided on the block', () => {
+    expect(
+      parseActivityAppContext(
+        makeBlock({
+          id: 'spark-rich',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          appName: 'Spark',
+          bundleId: 'com.readdle.SparkDesktop',
+          windowTitle: 'Re: Website launch plan - Spark',
+          emailFrom: 'alex@acme.test',
+          emailTo: 'dan@studio.test',
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'email',
+      item: 'Re: Website launch plan',
+      detail: 'alex@acme.test',
+      meta: 'To: dan@studio.test',
+    });
+  });
+
   it('labels IDE workspace-only sessions', () => {
     const block = makeBlock({
       id: 'workspace',
@@ -283,6 +338,62 @@ describe('activity app context parsing', () => {
         }),
       ),
     ).toBe('keel');
+
+    expect(
+      resolveIdeRepoName(
+        makeBlock({
+          id: 'agents-workspace',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          windowTitle: 'keel — Cursor Agents',
+        }),
+      ),
+    ).toBe('keel');
+  });
+
+  it('parses Cursor Agents workspace from titles', () => {
+    expect(
+      parseActivityAppContext(
+        makeBlock({
+          id: 'agents-workspace-title',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          windowTitle: 'keel — Cursor Agents',
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'ide',
+      item: 'keel',
+      detail: 'Agents',
+      repo: 'keel',
+      context: 'keel · Agents',
+    });
+
+    expect(
+      parseActivityAppContext(
+        makeBlock({
+          id: 'agents-file-repo',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          repoName: 'keel',
+          windowTitle: 'links.md — Cursor Agents',
+        }),
+      ),
+    ).toMatchObject({
+      kind: 'ide',
+      item: 'keel',
+      detail: 'Agents',
+      meta: 'links.md',
+      repo: 'keel',
+      context: 'keel · Agents',
+    });
+
+    expect(
+      blockContextLabel(
+        makeBlock({
+          id: 'agents-task-workspace',
+          startedAt: '2026-07-07T10:00:00.000Z',
+          windowTitle: 'Fix billing bug — keel — Cursor Agents',
+        }),
+      ),
+    ).toBe('keel · Agents');
   });
 
   it('infers granular remember rules from project and file titles', () => {

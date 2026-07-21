@@ -10,6 +10,8 @@ import {
 } from 'date-fns';
 
 import {
+  isClaudeDesktopApp,
+  isCursorAgentsBlock,
   isIdeApp,
   parseActivityAppContext,
   resolveIdeRepoName,
@@ -36,6 +38,7 @@ export type ActivityWeekDaySummary = {
   isToday: boolean;
   durationSeconds: number;
   blockCount: number;
+  sessionCount: number;
 };
 
 export type ActivityBlockStatus =
@@ -60,6 +63,9 @@ export type ActivityBlockListRow = {
   projectName: string | null;
   clientId: string | null;
   clientName: string | null;
+  clientPictureUrl?: string | null;
+  emailFrom?: string | null;
+  emailTo?: string | null;
   confidenceScore: number | null;
   isConfirmed: boolean;
   isExcluded: boolean;
@@ -311,7 +317,11 @@ export function summarizeActivityWeekDays(
   const weekStart = startOfWeek(anchor, { weekStartsOn: 1 });
   const totals = new Map<
     string,
-    { durationSeconds: number; blockCount: number }
+    {
+      durationSeconds: number;
+      blockCount: number;
+      blocks: ActivityBlockListRow[];
+    }
   >();
 
   for (const block of blocks) {
@@ -323,9 +333,11 @@ export function summarizeActivityWeekDays(
     const existing = totals.get(dayKey) ?? {
       durationSeconds: 0,
       blockCount: 0,
+      blocks: [] as ActivityBlockListRow[],
     };
     existing.durationSeconds += block.durationSeconds;
     existing.blockCount += 1;
+    existing.blocks.push(block);
     totals.set(dayKey, existing);
   }
 
@@ -335,6 +347,7 @@ export function summarizeActivityWeekDays(
     const dayTotals = totals.get(dayKey) ?? {
       durationSeconds: 0,
       blockCount: 0,
+      blocks: [] as ActivityBlockListRow[],
     };
 
     return {
@@ -344,6 +357,7 @@ export function summarizeActivityWeekDays(
       isToday: isToday(date),
       durationSeconds: dayTotals.durationSeconds,
       blockCount: dayTotals.blockCount,
+      sessionCount: countActivitySessionGroups(dayTotals.blocks),
     };
   });
 }
@@ -572,6 +586,21 @@ export function normalizeActivityUrl(url: string): string | null {
 
 export function activitySessionGroupKey(block: ActivityBlockListRow): string {
   if (isIdeApp(block)) {
+    if (isCursorAgentsBlock(block)) {
+      const repo = resolveIdeRepoName(block);
+      if (repo) {
+        return `agents:${repo.toLowerCase()}`;
+      }
+
+      const context = parseActivityAppContext(block);
+      const workspace = context?.item?.trim();
+      if (workspace && workspace.toLowerCase() !== 'agents') {
+        return `agents:${workspace.toLowerCase()}`;
+      }
+
+      return 'agents:unknown';
+    }
+
     const repo = resolveIdeRepoName(block);
     if (repo) {
       return `repo:${repo.toLowerCase()}`;
@@ -580,6 +609,40 @@ export function activitySessionGroupKey(block: ActivityBlockListRow): string {
     const context = parseActivityAppContext(block);
     if (context?.item?.trim()) {
       return `workspace:${context.item.trim().toLowerCase()}`;
+    }
+
+    const bundleId = block.bundleId.trim().toLowerCase();
+    if (bundleId) {
+      return `ide:${bundleId}`;
+    }
+  }
+
+  if (isClaudeDesktopApp(block)) {
+    const context = parseActivityAppContext(block);
+    const tab = context?.detail?.trim().toLowerCase() || 'chat';
+    const item = context?.item?.trim().toLowerCase();
+    if (item) {
+      return `claude:${tab}:${item}`;
+    }
+    return `claude:${tab}`;
+  }
+
+  if (isBrowserActivityBlock(block)) {
+    const domain = block.domain?.trim().toLowerCase();
+    if (domain) {
+      return `domain:${domain}`;
+    }
+
+    const url = block.url?.trim();
+    if (url) {
+      try {
+        const host = new URL(url).hostname.replace(/^www\./i, '').toLowerCase();
+        if (host) {
+          return `domain:${host}`;
+        }
+      } catch {
+        // fall through to generic url handling
+      }
     }
   }
 
@@ -609,6 +672,21 @@ export function activitySessionGroupKey(block: ActivityBlockListRow): string {
 
 export function activitySessionGroupLabel(block: ActivityBlockListRow): string {
   if (isIdeApp(block)) {
+    if (isCursorAgentsBlock(block)) {
+      const repo = resolveIdeRepoName(block);
+      if (repo) {
+        return `${repo} · Agents`;
+      }
+
+      const context = parseActivityAppContext(block);
+      const workspace = context?.item?.trim();
+      if (workspace && workspace.toLowerCase() !== 'agents') {
+        return `${workspace} · Agents`;
+      }
+
+      return 'Agents';
+    }
+
     const repo = resolveIdeRepoName(block);
     const context = parseActivityAppContext(block);
     const workspace = context?.item?.trim() ?? null;
@@ -736,11 +814,62 @@ export function groupBlocksByApp(
     );
 }
 
+function blockMatchesActivityStatus(
+  block: ActivityBlockListRow,
+  status: ActivityStatusFilter,
+): boolean {
+  if (block.isExcluded) {
+    return false;
+  }
+
+  if (status === 'confirmed') {
+    return block.isConfirmed;
+  }
+
+  if (status === 'unassigned') {
+    return !block.isConfirmed && !block.projectId && !block.clientId;
+  }
+
+  if (status === 'needs_review') {
+    return !block.isConfirmed;
+  }
+
+  return true;
+}
+
+export function countActivitySessionGroups(
+  blocks: ActivityBlockListRow[],
+  status: ActivityStatusFilter = 'all',
+): number {
+  const activeBlocks = blocks.filter((block) => !block.isExcluded);
+  let count = 0;
+
+  for (const appGroup of groupBlocksByApp(activeBlocks)) {
+    for (const sessionGroup of appGroup.sessionGroups) {
+      if (status === 'all') {
+        count += 1;
+        continue;
+      }
+
+      if (
+        sessionGroup.blocks.some((block) =>
+          blockMatchesActivityStatus(block, status),
+        )
+      ) {
+        count += 1;
+      }
+    }
+  }
+
+  return count;
+}
+
 export type ActivityReportRow = {
   id: string;
   label: string;
   durationSeconds: number;
   blockCount: number;
+  imageUrl?: string | null;
 };
 
 export const ACTIVITY_REPORT_UNASSIGNED = '__unassigned__';
@@ -794,17 +923,21 @@ function aggregateByKey(
   keyForBlock: (block: ActivityBlockListRow) => {
     id: string;
     label: string;
+    imageUrl?: string | null;
   },
 ): ActivityReportRow[] {
   const totals = new Map<string, ActivityReportRow>();
 
   for (const block of blocks) {
-    const { id, label } = keyForBlock(block);
+    const { id, label, imageUrl } = keyForBlock(block);
     const existing = totals.get(id);
 
     if (existing) {
       existing.durationSeconds += block.durationSeconds;
       existing.blockCount += 1;
+      if (!existing.imageUrl && imageUrl) {
+        existing.imageUrl = imageUrl;
+      }
       continue;
     }
 
@@ -813,6 +946,7 @@ function aggregateByKey(
       label,
       durationSeconds: block.durationSeconds,
       blockCount: 1,
+      imageUrl: imageUrl ?? null,
     });
   }
 
@@ -827,6 +961,7 @@ export function aggregateActivityByClient(
   return aggregateByKey(blocks, (block) => ({
     id: block.clientId ?? UNASSIGNED_REPORT_ID,
     label: block.clientName?.trim() || 'Unassigned',
+    imageUrl: block.clientPictureUrl ?? null,
   }));
 }
 
@@ -911,12 +1046,16 @@ export function filterBlocksByStatus(
 export type ActivityAssignmentSummary = {
   totalActiveSeconds: number;
   totalActiveCount: number;
+  totalSessionCount: number;
   unassignedSeconds: number;
   unassignedCount: number;
+  unassignedSessionCount: number;
   needsReviewSeconds: number;
   needsReviewCount: number;
+  needsReviewSessionCount: number;
   confirmedSeconds: number;
   confirmedCount: number;
+  confirmedSessionCount: number;
 };
 
 export function summarizeActivityAssignment(
@@ -957,12 +1096,16 @@ export function summarizeActivityAssignment(
   return {
     totalActiveSeconds,
     totalActiveCount,
+    totalSessionCount: countActivitySessionGroups(blocks),
     unassignedSeconds,
     unassignedCount,
+    unassignedSessionCount: countActivitySessionGroups(blocks, 'unassigned'),
     needsReviewSeconds,
     needsReviewCount,
+    needsReviewSessionCount: countActivitySessionGroups(blocks, 'needs_review'),
     confirmedSeconds,
     confirmedCount,
+    confirmedSessionCount: countActivitySessionGroups(blocks, 'confirmed'),
   };
 }
 

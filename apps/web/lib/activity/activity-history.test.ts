@@ -6,6 +6,7 @@ import {
   blockPageTitle,
   blockStatusLabel,
   blockUrlLabel,
+  countActivitySessionGroups,
   filterBlocksForDay,
   formatActivityFocusDateLabel,
   formatDuration,
@@ -136,7 +137,7 @@ describe('activity history helpers', () => {
     expect(groups[0]?.sessionGroups.length).toBeGreaterThan(0);
   });
 
-  it('groups blocks by url within an app', () => {
+  it('groups browser blocks by domain within an app', () => {
     const groups = groupBlocksByApp([
       makeBlock({
         id: 'a',
@@ -164,11 +165,37 @@ describe('activity history helpers', () => {
     const githubGroup = groups.find(
       (group) => group.domainLabel === 'github.com',
     );
-    expect(githubGroup?.sessionGroups).toHaveLength(2);
-    expect(
-      githubGroup?.sessionGroups.find((session) => session.blocks.length === 2)
-        ?.totalDurationSeconds,
-    ).toBe(300);
+    expect(githubGroup?.sessionGroups).toHaveLength(1);
+    expect(githubGroup?.sessionGroups[0]?.blocks).toHaveLength(3);
+    expect(githubGroup?.sessionGroups[0]?.totalDurationSeconds).toBe(360);
+  });
+
+  it('counts grouped sessions separately from raw focus blocks', () => {
+    const blocks = [
+      makeBlock({
+        id: 'a',
+        startedAt: '2026-07-07T10:00:00.000Z',
+        url: 'https://github.com/org/repo/pulls',
+        durationSeconds: 120,
+      }),
+      makeBlock({
+        id: 'b',
+        startedAt: '2026-07-07T10:05:00.000Z',
+        url: 'https://github.com/org/other',
+        durationSeconds: 180,
+      }),
+      makeBlock({
+        id: 'c',
+        startedAt: '2026-07-07T12:00:00.000Z',
+        appName: 'Cursor',
+        bundleId: 'com.todesktop.cursor',
+        domain: null,
+        durationSeconds: 600,
+      }),
+    ];
+
+    expect(blocks).toHaveLength(3);
+    expect(countActivitySessionGroups(blocks)).toBe(2);
   });
 
   it('groups blocks by day with Today label', () => {

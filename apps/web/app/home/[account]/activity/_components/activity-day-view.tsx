@@ -11,10 +11,12 @@ import { blockContextLabel } from '~/lib/activity/activity-app-context';
 import {
   type ActivityAppGroup,
   type ActivityBlockListRow,
+  type ActivitySessionGroup,
   aggregateActivityByApp,
   aggregateActivityByClient,
   aggregateActivityByProject,
   blockTimelinePosition,
+  countActivitySessionGroups,
   filterBlocksForDay,
   formatActivityFocusDateLabel,
   formatDuration,
@@ -163,6 +165,99 @@ function MemoryFeedItem({
   );
 }
 
+function MemorySessionGroup({
+  sessionGroup,
+  expanded,
+  onToggle,
+  showMember,
+  canEdit,
+  projects,
+  clients,
+  accountId,
+  accountSlug,
+  onUpdated,
+}: {
+  sessionGroup: ActivitySessionGroup;
+  expanded: boolean;
+  onToggle: () => void;
+  showMember: boolean;
+  canEdit: boolean;
+  projects: ActivityPageData['projects'];
+  clients: ActivityPageData['clients'];
+  accountId: string;
+  accountSlug: string;
+  onUpdated: (block: ActivityBlockListRow) => void;
+}) {
+  const representativeBlock = sessionGroup.blocks[0]!;
+  const blockLabel = `${sessionGroup.blocks.length} focus change${sessionGroup.blocks.length === 1 ? '' : 's'}`;
+
+  if (sessionGroup.blocks.length === 1) {
+    return (
+      <MemoryFeedItem
+        block={representativeBlock}
+        showMember={showMember}
+        canEdit={canEdit}
+        projects={projects}
+        clients={clients}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        onUpdated={onUpdated}
+        nested
+      />
+    );
+  }
+
+  return (
+    <section className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]/70 bg-[var(--workspace-control-surface)]/10">
+      <button
+        type="button"
+        className="flex w-full items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[var(--workspace-control-surface)]/30"
+        onClick={onToggle}
+      >
+        {expanded ? (
+          <ChevronDown className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+        ) : (
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+        )}
+        <div className="min-w-0 flex-1">
+          <p
+            className="truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+            title={sessionGroup.label}
+          >
+            {sessionGroup.label}
+          </p>
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)]">
+            {formatTimeRange(sessionGroup.startedAt, sessionGroup.endedAt)} ·{' '}
+            {blockLabel}
+          </p>
+        </div>
+        <span className="shrink-0 text-xs font-medium text-[var(--workspace-shell-text)]">
+          {formatDuration(sessionGroup.totalDurationSeconds)}
+        </span>
+      </button>
+
+      {expanded ? (
+        <div className="space-y-1 border-t border-[color:var(--workspace-shell-border)]/70 px-2 py-2">
+          {sessionGroup.blocks.map((block) => (
+            <MemoryFeedItem
+              key={block.id}
+              block={block}
+              showMember={showMember}
+              canEdit={canEdit}
+              projects={projects}
+              clients={clients}
+              accountId={accountId}
+              accountSlug={accountSlug}
+              onUpdated={onUpdated}
+              nested
+            />
+          ))}
+        </div>
+      ) : null}
+    </section>
+  );
+}
+
 function MemoryAppGroup({
   appGroup,
   expanded,
@@ -174,6 +269,8 @@ function MemoryAppGroup({
   accountId,
   accountSlug,
   onUpdated,
+  expandedSessions,
+  onToggleSession,
 }: {
   appGroup: ActivityAppGroup;
   expanded: boolean;
@@ -185,20 +282,18 @@ function MemoryAppGroup({
   accountId: string;
   accountSlug: string;
   onUpdated: (block: ActivityBlockListRow) => void;
+  expandedSessions: Set<string>;
+  onToggleSession: (sessionKey: string) => void;
 }) {
   const representativeBlock = appGroup.blocks[0]!;
   const primaryLabel = appGroup.domainLabel ?? appGroup.appName;
-  const sessionLabel = `${appGroup.blocks.length} session${appGroup.blocks.length === 1 ? '' : 's'}`;
-  const sortedBlocks = useMemo(
-    () =>
-      [...appGroup.blocks].sort((left, right) =>
-        right.startedAt.localeCompare(left.startedAt),
-      ),
-    [appGroup.blocks],
-  );
-  const isSingleBlock = appGroup.blocks.length === 1;
+  const sessionCount = appGroup.sessionGroups.length;
+  const sessionLabel = `${sessionCount} session${sessionCount === 1 ? '' : 's'}`;
+  const isSingleSession =
+    appGroup.sessionGroups.length === 1 &&
+    appGroup.sessionGroups[0]!.blocks.length === 1;
 
-  if (isSingleBlock) {
+  if (isSingleSession) {
     return (
       <MemoryFeedItem
         block={representativeBlock}
@@ -257,11 +352,17 @@ function MemoryAppGroup({
       </button>
 
       {expanded ? (
-        <div className="space-y-1 border-t border-[color:var(--workspace-shell-border)] px-2 py-2">
-          {sortedBlocks.map((block) => (
-            <MemoryFeedItem
-              key={block.id}
-              block={block}
+        <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] px-2 py-2">
+          {appGroup.sessionGroups.map((sessionGroup) => (
+            <MemorySessionGroup
+              key={`${appGroup.appKey}::${sessionGroup.sessionKey}`}
+              sessionGroup={sessionGroup}
+              expanded={expandedSessions.has(
+                `${appGroup.appKey}::${sessionGroup.sessionKey}`,
+              )}
+              onToggle={() =>
+                onToggleSession(`${appGroup.appKey}::${sessionGroup.sessionKey}`)
+              }
               showMember={showMember}
               canEdit={canEdit}
               projects={projects}
@@ -269,7 +370,6 @@ function MemoryAppGroup({
               accountId={accountId}
               accountSlug={accountSlug}
               onUpdated={onUpdated}
-              nested
             />
           ))}
         </div>
@@ -314,7 +414,14 @@ export function ActivityDayView({
     [dayBlocks],
   );
   const appGroups = useMemo(() => groupBlocksByApp(dayBlocks), [dayBlocks]);
+  const sessionCount = useMemo(
+    () => countActivitySessionGroups(dayBlocks),
+    [dayBlocks],
+  );
   const [collapsedApps, setCollapsedApps] = useState<Set<string>>(
+    () => new Set(),
+  );
+  const [expandedSessions, setExpandedSessions] = useState<Set<string>>(
     () => new Set(),
   );
 
@@ -326,6 +433,20 @@ export function ActivityDayView({
         next.delete(appKey);
       } else {
         next.add(appKey);
+      }
+
+      return next;
+    });
+  }
+
+  function toggleSessionGroup(sessionKey: string) {
+    setExpandedSessions((current) => {
+      const next = new Set(current);
+
+      if (next.has(sessionKey)) {
+        next.delete(sessionKey);
+      } else {
+        next.add(sessionKey);
       }
 
       return next;
@@ -375,6 +496,7 @@ export function ActivityDayView({
               rows={topClients}
               emptyLabel="No client time logged"
               accentClassName="bg-sky-500"
+              showClientAvatars
             />
             <ActivitySummaryBreakdown
               title="Top projects"
@@ -397,8 +519,11 @@ export function ActivityDayView({
               </p>
             </div>
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              {dayBlocks.length} session{dayBlocks.length === 1 ? '' : 's'} ·{' '}
+              {sessionCount} session{sessionCount === 1 ? '' : 's'} ·{' '}
               {appGroups.length} app{appGroups.length === 1 ? '' : 's'}
+              {dayBlocks.length !== sessionCount
+                ? ` · ${dayBlocks.length} focus changes`
+                : ''}
             </p>
           </header>
 
@@ -437,6 +562,8 @@ export function ActivityDayView({
                     accountId={accountId}
                     accountSlug={accountSlug}
                     onUpdated={onUpdated}
+                    expandedSessions={expandedSessions}
+                    onToggleSession={toggleSessionGroup}
                   />
                 ))}
               </div>

@@ -9,6 +9,10 @@ import {
   loadMeetingTranscriptEnrichmentByIds,
 } from './meeting-transcript-index';
 import {
+  buildEmailThreadIndexText,
+  shouldIndexEmailThreadForBrain,
+} from './email-thread-index';
+import {
   buildBrainSourceUrl,
   buildPhaseSourceUrl,
   type BrainSourceType,
@@ -223,6 +227,92 @@ export async function loadBrainSourcePreview(
         updatedAt: (data.updated_at as string | null) ?? null,
         content: htmlToMarkdown((data.content_html as string) ?? ''),
         sourceUrl: buildBrainSourceUrl(accountSlug, 'proposal', sourceId),
+      };
+    }
+    case 'email_thread': {
+      const { data: thread } = await client
+        .from('email_threads')
+        .select(
+          'id, account_id, subject, snippet, participants, assistant_category, assistant_category_reason, client_id, project_id, last_message_at, updated_at',
+        )
+        .eq('id', sourceId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (!thread || !shouldIndexEmailThreadForBrain(thread)) {
+        return null;
+      }
+
+      const [{ data: messages }, { data: actionItems }] = await Promise.all([
+        client
+          .from('email_messages')
+          .select(
+            'from_address, subject, body_text, snippet, internal_date, created_at',
+          )
+          .eq('thread_id', sourceId)
+          .order('internal_date', { ascending: false, nullsFirst: false })
+          .limit(20),
+        client
+          .from('email_action_items')
+          .select('title, detail, status')
+          .eq('thread_id', sourceId)
+          .in('status', ['suggested', 'accepted'])
+          .order('created_at', { ascending: true }),
+      ]);
+
+      let clientName: string | null = null;
+      let projectName: string | null = null;
+
+      if (thread.client_id) {
+        const { data: clientRow } = await client
+          .from('clients')
+          .select('display_name, company_name, first_name, last_name')
+          .eq('id', thread.client_id as string)
+          .maybeSingle();
+
+        if (clientRow) {
+          clientName =
+            (clientRow.display_name as string | null)?.trim() ||
+            (clientRow.company_name as string | null)?.trim() ||
+            [
+              clientRow.first_name as string | null,
+              clientRow.last_name as string | null,
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .trim() ||
+            null;
+        }
+      }
+
+      if (thread.project_id) {
+        const { data: projectRow } = await client
+          .from('projects')
+          .select('name')
+          .eq('id', thread.project_id as string)
+          .maybeSingle();
+
+        projectName = (projectRow?.name as string | null)?.trim() || null;
+      }
+
+      const title = ((thread.subject as string) || 'Email thread').trim();
+
+      return {
+        title,
+        sourceType,
+        updatedAt: (thread.updated_at as string | null) ?? null,
+        content: buildEmailThreadIndexText({
+          thread: thread as Parameters<typeof buildEmailThreadIndexText>[0]['thread'],
+          messages: ((messages ?? []) as Parameters<
+            typeof buildEmailThreadIndexText
+          >[0]['messages']).reverse(),
+          clientName,
+          projectName,
+          actionItems: (actionItems ?? []) as Parameters<
+            typeof buildEmailThreadIndexText
+          >[0]['actionItems'],
+        }),
+        sourceUrl: buildBrainSourceUrl(accountSlug, 'email_thread', sourceId),
       };
     }
     default:

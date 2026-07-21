@@ -5,6 +5,7 @@ export type ActivityAppContextKind =
   | 'design'
   | 'document'
   | 'email'
+  | 'assistant'
   | 'browser'
   | 'generic';
 
@@ -27,7 +28,13 @@ const GENERIC_IDE_WORKSPACES = new Set([
 
 const FILE_EXTENSION_PATTERN = /\.[a-z0-9][\w.-]*$/i;
 
-const IDE_SUFFIXES = new Set(['cursor', 'visual studio code', 'code']);
+const IDE_TITLE_SUFFIXES = [
+  'cursor agents',
+  'visual studio code',
+  'cursor',
+  'code',
+] as const;
+const CLAUDE_SUFFIXES = new Set(['claude', 'claude desktop', 'claude code']);
 const DESIGN_SUFFIXES = new Set(['figma', 'adobe illustrator', 'illustrator']);
 const DOCUMENT_SUFFIXES = new Set(['microsoft word', 'word']);
 const GOOGLE_WORKSPACE_SUFFIXES = new Set([
@@ -54,6 +61,7 @@ const GENERIC_APP_TITLES = new Set([
   'airmail',
   'figma',
   'cursor',
+  'claude',
   'word',
   'microsoft word',
 ]);
@@ -109,6 +117,24 @@ function stripSuffixParts(parts: string[], suffixes: Set<string>) {
   return parts;
 }
 
+function stripIdeSuffixParts(parts: string[]) {
+  let result = parts;
+
+  for (const suffix of IDE_TITLE_SUFFIXES) {
+    result = stripSuffixParts(result, new Set([suffix]));
+  }
+
+  return result;
+}
+
+export function isCursorAgentsTitle(title: string): boolean {
+  return title.trim().toLowerCase().includes('cursor agents');
+}
+
+export function isCursorAgentsBlock(block: ActivityBlockListRow): boolean {
+  return isIdeApp(block) && isCursorAgentsTitle(block.windowTitle);
+}
+
 function isGenericIdeWorkspace(value: string): boolean {
   const normalized = value.trim().toLowerCase();
   return GENERIC_IDE_WORKSPACES.has(normalized);
@@ -143,7 +169,19 @@ export function inferRepoFromWindowTitle(title: string): string | null {
     return fromPath;
   }
 
-  const parts = stripSuffixParts(splitTitleParts(trimmed), IDE_SUFFIXES);
+  const parts = stripIdeSuffixParts(splitTitleParts(trimmed));
+
+  if (isCursorAgentsTitle(trimmed)) {
+    const workspaceFromParts = [...parts].reverse().find((part) => {
+      const { label } = extractBranch(part);
+      return !looksLikeFile(label) && !isGenericIdeWorkspace(label);
+    });
+
+    if (workspaceFromParts) {
+      return extractBranch(workspaceFromParts).label;
+    }
+  }
+
   if (parts.length >= 2) {
     const candidate = extractBranch(parts[0]!).label;
     if (!looksLikeFile(candidate) && !isGenericIdeWorkspace(candidate)) {
@@ -184,6 +222,18 @@ function bundleIncludes(block: ActivityBlockListRow, value: string) {
 
 function appIncludes(block: ActivityBlockListRow, value: string) {
   return block.appName.trim().toLowerCase().includes(value);
+}
+
+export function isClaudeDesktopApp(block: ActivityBlockListRow): boolean {
+  const bundle = block.bundleId.trim().toLowerCase();
+  if (
+    bundle.includes('anthropic.claude') ||
+    bundle.includes('claudefordesktop')
+  ) {
+    return true;
+  }
+
+  return block.appName.trim().toLowerCase() === 'claude';
 }
 
 export function isIdeApp(block: ActivityBlockListRow): boolean {
@@ -253,8 +303,52 @@ function googleWorkspaceLabelFromDomain(domain: string | null): string | null {
   }
 }
 
+function parseCursorAgentsIdeContext(
+  block: ActivityBlockListRow,
+  title: string,
+): ActivityAppContext {
+  const parts = stripIdeSuffixParts(splitTitleParts(title));
+  const repo = resolveIdeRepoName(block);
+  const filePart = parts.find(looksLikeFile);
+  const fileName = filePart ? basename(filePart) : null;
+  const nonFileParts = parts
+    .filter((part) => !looksLikeFile(part))
+    .map((part) => extractBranch(part).label)
+    .filter(Boolean);
+  const workspaceCandidates = nonFileParts.filter(
+    (part) => !isGenericIdeWorkspace(part),
+  );
+  const workspace =
+    repo ??
+    workspaceCandidates.find(
+      (part) => part.trim().toLowerCase() !== 'cursor agents',
+    ) ??
+    null;
+  const taskParts = workspaceCandidates.filter((part) => part !== workspace);
+  const task = taskParts[0]?.trim() ?? null;
+  const item = workspace ?? task ?? 'Agents';
+  const context =
+    workspace != null
+      ? `${workspace} · Agents`
+      : task != null
+        ? `${task} · Agents`
+        : 'Agents';
+
+  return {
+    kind: 'ide',
+    item,
+    detail: 'Agents',
+    meta:
+      fileName ??
+      task ??
+      (taskParts.length > 1 ? taskParts.slice(1).join(' · ') : null),
+    context,
+    repo: workspace ?? repo,
+  };
+}
+
 function parseIdeContext(title: string): ActivityAppContext | null {
-  const parts = stripSuffixParts(splitTitleParts(title), IDE_SUFFIXES);
+  const parts = stripIdeSuffixParts(splitTitleParts(title));
   if (parts.length === 0) {
     return null;
   }
@@ -443,6 +537,77 @@ function parseEmailContext(title: string): ActivityAppContext | null {
   };
 }
 
+function parseEmailBlockContext(
+  block: ActivityBlockListRow,
+): ActivityAppContext | null {
+  const fromTitle = parseEmailContext(block.windowTitle);
+  const emailFrom = block.emailFrom?.trim() || null;
+  const emailTo = block.emailTo?.trim() || null;
+
+  if (!fromTitle && !emailFrom) {
+    return null;
+  }
+
+  const subject =
+    fromTitle?.item?.trim() ||
+    block.windowTitle.trim() ||
+    'Email';
+
+  const recipientMeta = emailTo ? `To: ${emailTo}` : fromTitle?.meta ?? null;
+
+  return {
+    kind: 'email',
+    item: subject,
+    detail: emailFrom ?? fromTitle?.detail ?? null,
+    meta: emailFrom ? recipientMeta : fromTitle?.meta ?? null,
+    context: emailFrom ? 'Sender' : fromTitle?.context ?? null,
+  };
+}
+
+function parseClaudeDesktopContext(title: string): ActivityAppContext | null {
+  const normalizedTitle = title.trim();
+  if (!normalizedTitle) {
+    return null;
+  }
+
+  const lowerTitle = normalizedTitle.toLowerCase();
+  if (lowerTitle === 'claude') {
+    return null;
+  }
+
+  const codeTab = lowerTitle.includes('claude code');
+
+  const parts = stripSuffixParts(
+    splitTitleParts(normalizedTitle),
+    CLAUDE_SUFFIXES,
+  ).filter((part) => {
+    const lower = part.trim().toLowerCase();
+    return lower !== 'code' && lower !== 'claude code';
+  });
+
+  if (parts.length === 0) {
+    return {
+      kind: 'assistant',
+      item: codeTab ? 'Claude Code' : 'Claude',
+      detail: codeTab ? 'Code' : 'Chat',
+      meta: null,
+      context: null,
+    };
+  }
+
+  const item = parts[0]!.trim();
+  const secondary =
+    parts.length > 1 ? parts.slice(1).join(' · ') : null;
+
+  return {
+    kind: 'assistant',
+    item,
+    detail: codeTab ? 'Code' : 'Chat',
+    meta: secondary,
+    context: null,
+  };
+}
+
 function parseBrowserContext(
   block: ActivityBlockListRow,
   title: string,
@@ -491,15 +656,23 @@ export function parseActivityAppContext(
   }
 
   if (isIdeApp(block)) {
+    if (isCursorAgentsTitle(title)) {
+      return withIdeRepo(block, parseCursorAgentsIdeContext(block, title));
+    }
+
     const context = parseIdeContext(title);
     return context ? withIdeRepo(block, context) : null;
+  }
+
+  if (isClaudeDesktopApp(block)) {
+    return parseClaudeDesktopContext(title);
   }
 
   if (
     isEmailApp(block) ||
     block.domain?.trim().toLowerCase() === 'mail.google.com'
   ) {
-    const emailContext = parseEmailContext(title);
+    const emailContext = parseEmailBlockContext(block);
     if (emailContext) {
       return emailContext;
     }
@@ -657,7 +830,7 @@ export function getActivityRuleMatchOptions(
 
     if (!preferDomain && !isGenericRememberLabel(item, block)) {
       const level: ActivityRuleMatchLevel =
-        context.kind === 'ide'
+        context.kind === 'ide' || context.kind === 'assistant'
           ? 'project'
           : context.kind === 'design'
             ? 'file'
@@ -774,6 +947,10 @@ export function blockContextLabel(block: ActivityBlockListRow): string {
     return context.context;
   }
 
+  if (context.kind === 'ide' && context.detail === 'Agents') {
+    return context.context ?? context.repo ?? context.item ?? 'Agents';
+  }
+
   if (context.kind === 'ide' && context.item && !context.detail) {
     if (context.repo) {
       return context.repo;
@@ -783,6 +960,10 @@ export function blockContextLabel(block: ActivityBlockListRow): string {
 
   if (context.kind === 'ide' && context.repo) {
     return context.repo;
+  }
+
+  if (context.kind === 'assistant' && context.detail) {
+    return context.detail;
   }
 
   if (context.kind === 'email' && context.meta) {

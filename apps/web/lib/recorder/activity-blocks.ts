@@ -13,6 +13,8 @@ export type ActivityBlockInput = {
   url?: string | null;
   window_title: string;
   repo_name?: string | null;
+  email_from?: string | null;
+  email_to?: string | null;
   started_at: string;
   ended_at: string;
   duration_seconds: number;
@@ -73,6 +75,8 @@ export function normalizeActivityBlockInput(
     url: privacy.capture_full_urls ? normalizeOptionalText(block.url) : null,
     window_title: block.window_title.trim(),
     repo_name: normalizeOptionalText(block.repo_name),
+    email_from: normalizeOptionalText(block.email_from),
+    email_to: normalizeOptionalText(block.email_to),
     started_at: startedAt,
     ended_at: endedAt,
     duration_seconds: block.duration_seconds,

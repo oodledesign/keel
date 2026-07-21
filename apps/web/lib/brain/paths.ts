@@ -10,7 +10,8 @@ export type BrainSourceType =
   | 'phase'
   | 'transcript'
   | 'proposal'
-  | 'task';
+  | 'task'
+  | 'email_thread';
 
 export type BrainChunkMetadata = {
   title: string;
@@ -61,6 +62,8 @@ export function buildBrainSourceUrl(
         .replace('[id]', sourceId);
     case 'task':
       return pathsConfig.app.accountTasks.replace('[account]', account);
+    case 'email_thread':
+      return `${pathsConfig.app.personalEmailAssistant}?thread=${sourceId}`;
     default:
       return pathsConfig.app.accountHome.replace('[account]', account);
   }

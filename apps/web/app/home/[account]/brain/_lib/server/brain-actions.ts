@@ -125,7 +125,10 @@ export const reindexBrainAccount = enhanceAction(
 
 export const getBrainSourcePreviewAction = enhanceAction(
   async (input) => {
-    const client = getSupabaseServerClient();
+    const client =
+      input.sourceType === 'email_thread'
+        ? getSupabaseServerAdminClient()
+        : getSupabaseServerClient();
     const preview = await loadBrainSourcePreview(client, {
       accountId: input.accountId,
       accountSlug: input.accountSlug,
@@ -149,6 +152,7 @@ export const getBrainSourcePreviewAction = enhanceAction(
         'transcript',
         'proposal',
         'task',
+        'email_thread',
       ]),
       sourceId: z.string().uuid(),
       highlightText: z.string().optional(),

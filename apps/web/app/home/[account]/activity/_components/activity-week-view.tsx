@@ -115,7 +115,7 @@ export function ActivityWeekView({
                   {formatDuration(day.durationSeconds)}
                 </span>
                 <span className="text-[10px] text-[var(--workspace-shell-text-muted)]">
-                  {day.blockCount} session{day.blockCount === 1 ? '' : 's'}
+                  {day.sessionCount} session{day.sessionCount === 1 ? '' : 's'}
                 </span>
               </button>
             );
@@ -139,6 +139,7 @@ export function ActivityWeekView({
             emptyLabel="No client time this week"
             maxRows={8}
             accentClassName="bg-sky-500"
+            showClientAvatars
           />
         </div>
         <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">

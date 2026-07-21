@@ -43,6 +43,8 @@ type ActivityBlockRow = {
   url: string | null;
   window_title: string;
   repo_name?: string | null;
+  email_from?: string | null;
+  email_to?: string | null;
   started_at: string;
   ended_at: string;
   duration_seconds: number;
@@ -53,7 +55,11 @@ type ActivityBlockRow = {
   is_excluded: boolean;
   work_classification?: string | null;
   projects?: { id: string; name: string | null; title: string | null } | null;
-  clients?: { id: string; display_name: string | null } | null;
+  clients?: {
+    id: string;
+    display_name: string | null;
+    picture_url?: string | null;
+  } | null;
 };
 
 type MemberRow = {
@@ -113,6 +119,9 @@ function mapBlockRow(
     projectName: projectLabel(row.projects),
     clientId: row.client_id,
     clientName: clientLabel(row.clients),
+    clientPictureUrl: (row.clients?.picture_url as string | null) ?? null,
+    emailFrom: (row.email_from as string | null) ?? null,
+    emailTo: (row.email_to as string | null) ?? null,
     confidenceScore:
       row.confidence_score == null ? null : Number(row.confidence_score),
     isConfirmed: row.is_confirmed,
@@ -223,6 +232,8 @@ async function loadActivityPageDataImpl(
         url,
         window_title,
         repo_name,
+        email_from,
+        email_to,
         started_at,
         ended_at,
         duration_seconds,
@@ -233,7 +244,7 @@ async function loadActivityPageDataImpl(
         is_excluded,
         work_classification,
         projects:project_id ( id, name, title ),
-        clients:client_id ( id, display_name )
+        clients:client_id ( id, display_name, picture_url )
       `;
 
   const fetchActivityBlocks = (

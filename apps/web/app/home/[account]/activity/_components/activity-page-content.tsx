@@ -299,6 +299,48 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
   const appContext = parseActivityAppContext(block);
 
   if (appContext?.kind === 'ide') {
+    if (appContext.detail === 'Agents') {
+      const repo = appContext.repo ?? resolveIdeRepoName(block);
+      const taskOrFile = appContext.meta?.trim() ?? null;
+      const workspace =
+        repo ??
+        (appContext.item?.trim() && appContext.item.trim().toLowerCase() !== 'agents'
+          ? appContext.item.trim()
+          : null);
+      const primary = workspace ?? taskOrFile ?? 'Agents';
+      const secondaryParts: string[] = [];
+
+      if (workspace && taskOrFile) {
+        secondaryParts.push(taskOrFile);
+      }
+
+      if (workspace || taskOrFile) {
+        secondaryParts.push('Agents');
+      }
+
+      const secondary =
+        secondaryParts.length > 0 ? secondaryParts.join(' · ') : null;
+
+      return (
+        <div className="min-w-0">
+          <span
+            className="block truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+            title={primary}
+          >
+            {primary}
+          </span>
+          {secondary ? (
+            <span
+              className="block truncate text-[10px] text-[var(--workspace-shell-text-muted)]"
+              title={secondary}
+            >
+              {secondary}
+            </span>
+          ) : null}
+        </div>
+      );
+    }
+
     const repo = appContext.repo ?? resolveIdeRepoName(block);
     const workspace = appContext.item?.trim() ?? null;
     const file = appContext.detail?.trim() ?? null;
@@ -317,6 +359,30 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
         </span>
       );
     }
+
+    return (
+      <div className="min-w-0">
+        <span
+          className="block truncate text-xs font-medium text-[var(--workspace-shell-text)]"
+          title={primary}
+        >
+          {primary}
+        </span>
+        {secondary ? (
+          <span
+            className="block truncate text-[10px] text-[var(--workspace-shell-text-muted)]"
+            title={secondary}
+          >
+            {secondary}
+          </span>
+        ) : null}
+      </div>
+    );
+  }
+
+  if (appContext?.kind === 'assistant') {
+    const primary = appContext.item?.trim() || 'Claude';
+    const secondary = [appContext.detail, appContext.meta].filter(Boolean).join(' · ');
 
     return (
       <div className="min-w-0">
@@ -698,8 +764,10 @@ function ActivityAppGroupRows({
   expandedSessions: Set<string>;
   onToggleSession: (sessionKey: string) => void;
 }) {
-  const sessionLabel = `${appGroup.blocks.length} session${appGroup.blocks.length === 1 ? '' : 's'}`;
-  const isSingleBlock = appGroup.blocks.length === 1;
+  const sessionLabel = `${appGroup.sessionGroups.length} session${appGroup.sessionGroups.length === 1 ? '' : 's'}`;
+  const isSingleBlock =
+    appGroup.sessionGroups.length === 1 &&
+    appGroup.sessionGroups[0]!.blocks.length === 1;
   const selectableBlocks = appGroup.blocks.filter((block) => !block.isExcluded);
   const selectedCount = selectableBlocks.filter((block) =>
     selectedBlockIds.has(block.id),
@@ -1579,19 +1647,19 @@ export function ActivityPageContent({ data }: Props) {
         >
           <TabsList className="bg-[var(--workspace-shell-panel)]">
             <TabsTrigger value="all">
-              All ({data.assignment.totalActiveCount}
+              All ({data.assignment.totalSessionCount}
               {countSuffix})
             </TabsTrigger>
             <TabsTrigger value="needs_review">
-              Needs review ({data.assignment.needsReviewCount}
+              Needs review ({data.assignment.needsReviewSessionCount}
               {countSuffix})
             </TabsTrigger>
             <TabsTrigger value="unassigned">
-              Unassigned ({data.assignment.unassignedCount}
+              Unassigned ({data.assignment.unassignedSessionCount}
               {countSuffix})
             </TabsTrigger>
             <TabsTrigger value="confirmed">
-              Confirmed ({data.assignment.confirmedCount}
+              Confirmed ({data.assignment.confirmedSessionCount}
               {countSuffix})
             </TabsTrigger>
           </TabsList>
@@ -1600,9 +1668,10 @@ export function ActivityPageContent({ data }: Props) {
 
       {data.blockLimitReached ? (
         <p className="rounded-xl border border-amber-500/25 bg-amber-500/8 px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
-          Showing the most recent {data.blocks.length.toLocaleString()} sessions
-          in this range. Narrow the date range or use a status filter to triage
-          faster.
+          Showing the most recent {data.blocks.length.toLocaleString()} focus
+          changes ({data.assignment.totalSessionCount.toLocaleString()} grouped
+          sessions) in this range. Narrow the date range or use a status filter
+          to triage faster.
         </p>
       ) : null}
 
