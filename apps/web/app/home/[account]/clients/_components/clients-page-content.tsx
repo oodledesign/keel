@@ -190,6 +190,20 @@ export function ClientsPageContent({
   }, [accountId]);
 
   useEffect(() => {
+    if (search.trim() || searchDebounced.trim()) {
+      return;
+    }
+
+    if (page !== 1) {
+      return;
+    }
+
+    setPageClients(initialOverview);
+    setCachedClients(initialOverview);
+    setTotal(Number(initialTotal) || 0);
+  }, [initialOverview, initialTotal, page, search, searchDebounced]);
+
+  useEffect(() => {
     listAccountMembers({ accountSlug })
       .then((data) => {
         setMembers(
@@ -569,6 +583,7 @@ export function ClientsPageContent({
                     id={client.id}
                     display_name={client.displayName}
                     company_name={client.companyName}
+                    tagline={client.tagline}
                     email={client.email}
                     city={client.city}
                     picture_url={client.pictureUrl}

@@ -1,6 +1,10 @@
 import 'server-only';
 
 import {
+  resolveClientListTagline,
+  resolveClientListTitle,
+} from '~/lib/clients/resolve-client-list-display';
+import {
   DELIVERY_PROJECT_FILTER,
   PROJECTS_TABLE,
   PROJECT_ASSIGNMENTS_TABLE,
@@ -106,23 +110,6 @@ function deriveProjectHealth(
   }
 
   return 'on_track';
-}
-
-function buildTagline(client: ClientRow): string {
-  if (client.company_name?.trim()) {
-    return client.company_name.trim();
-  }
-
-  const location = [client.city].filter(Boolean).join(', ');
-  if (location) {
-    return location;
-  }
-
-  if (client.email?.trim()) {
-    return client.email.trim();
-  }
-
-  return 'Client account';
 }
 
 function memberPreview(
@@ -464,13 +451,13 @@ export async function buildClientsOverview(params: {
 
     return {
       id: client.id,
-      displayName: client.display_name?.trim() || 'Unnamed client',
+      displayName: resolveClientListTitle(client),
       companyName: client.company_name,
       email: client.email,
       phone: client.phone,
       city: client.city,
       pictureUrl: client.picture_url ?? null,
-      tagline: buildTagline(client),
+      tagline: resolveClientListTagline(client),
       updatedAt: client.updated_at,
       projectCount,
       teamMemberCount,

@@ -12,6 +12,7 @@ type ClientCardProps = {
   id: string;
   display_name: string | null;
   company_name: string | null;
+  tagline?: string | null;
   email: string | null;
   city: string | null;
   picture_url?: string | null;
@@ -70,6 +71,7 @@ export function ClientListTableHeader() {
 export function ClientCard({
   display_name,
   company_name,
+  tagline,
   city,
   picture_url,
   updated_at,
@@ -82,7 +84,9 @@ export function ClientCard({
   onEmail,
   onCall,
 }: ClientCardProps) {
-  const subtitle = [company_name, city].filter(Boolean).join(' · ');
+  const subtitle =
+    tagline?.trim() ||
+    [company_name, city].filter(Boolean).join(' · ');
 
   const rowClassName = cn(
     'group border-b border-[color:var(--workspace-shell-border)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',

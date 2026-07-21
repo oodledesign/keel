@@ -1007,6 +1007,7 @@ export function ClientDetailSidebar({
         <div className="flex-1 overflow-y-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
           <ClientForm
             accountId={accountId}
+            accountSlug={accountSlug}
             mode="edit"
             client={client}
             canEdit={canEditClients}

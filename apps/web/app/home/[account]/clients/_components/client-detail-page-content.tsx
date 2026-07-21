@@ -83,7 +83,10 @@ export function ClientDetailPageContent({
 }: Props) {
   const router = useRouter();
 
-  const goToList = () => router.push(clientsListHref);
+  const goToList = () => {
+    router.refresh();
+    router.push(clientsListHref);
+  };
 
   return (
     <ClientDetailSidebar

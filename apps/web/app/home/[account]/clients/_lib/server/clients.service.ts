@@ -10,6 +10,7 @@ import {
   composeContactFullName,
   normalizeContactRole,
 } from '~/lib/clients/contact-roles';
+import { resolveStoredClientDisplayName } from '~/lib/clients/resolve-client-list-display';
 import { Database } from '~/lib/database.types';
 import {
   DELIVERY_PROJECT_FILTER,
@@ -350,6 +351,9 @@ class ClientsService {
         picture_url?: string | null;
         created_at: string;
         updated_at: string;
+        first_name?: string | null;
+        last_name?: string | null;
+        client_type?: string | null;
       }>,
       members,
     });
@@ -380,14 +384,12 @@ class ClientsService {
     const companyName = input.company_name?.trim() || null;
     const personFirst = input.first_name?.trim() || null;
     const personLast = input.last_name?.trim() || null;
-    const displayName =
-      clientType === 'individual'
-        ? [personFirst, personLast].filter(Boolean).join(' ').trim() ||
-          personFirst ||
-          'Unnamed'
-        : companyName ||
-          [personFirst, personLast].filter(Boolean).join(' ').trim() ||
-          'Unnamed company';
+    const displayName = resolveStoredClientDisplayName({
+      clientType,
+      companyName,
+      firstName: personFirst,
+      lastName: personLast,
+    });
 
     const primaryContactEmail =
       input.contact?.email?.trim() || input.email?.trim() || null;
@@ -491,20 +493,61 @@ class ClientsService {
     const payload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
-    if (input.first_name !== undefined) payload.first_name = input.first_name;
-    if (input.last_name !== undefined) payload.last_name = input.last_name;
-    if (input.first_name !== undefined || input.last_name !== undefined) {
-      const current = (await this.getClient({
+
+    const shouldRecalculateDisplayName =
+      input.first_name !== undefined ||
+      input.last_name !== undefined ||
+      input.company_name !== undefined;
+
+    let current:
+      | {
+          client_type?: string | null;
+          first_name?: string | null;
+          last_name?: string | null;
+          company_name?: string | null;
+        }
+      | null = null;
+
+    if (shouldRecalculateDisplayName) {
+      current = (await this.getClient({
         accountId: input.accountId,
         clientId: input.clientId,
-      })) as { first_name?: string | null; last_name?: string | null } | null;
-      const first = (input.first_name ?? current?.first_name ?? '').trim();
-      const last = (input.last_name ?? current?.last_name ?? '').trim();
-      payload.display_name =
-        [first, last].filter(Boolean).join(' ').trim() || first || 'Unnamed';
+      })) as {
+        client_type?: string | null;
+        first_name?: string | null;
+        last_name?: string | null;
+        company_name?: string | null;
+      } | null;
     }
-    if (input.company_name !== undefined)
+
+    if (input.first_name !== undefined) payload.first_name = input.first_name;
+    if (input.last_name !== undefined) payload.last_name = input.last_name;
+    if (input.company_name !== undefined) {
       payload.company_name = input.company_name;
+    }
+
+    if (shouldRecalculateDisplayName) {
+      const clientType =
+        current?.client_type === 'individual' ? 'individual' : 'business';
+      const firstName = (
+        input.first_name ??
+        current?.first_name ??
+        ''
+      ).trim();
+      const lastName = (input.last_name ?? current?.last_name ?? '').trim();
+      const companyName = (
+        input.company_name ??
+        current?.company_name ??
+        ''
+      ).trim();
+
+      payload.display_name = resolveStoredClientDisplayName({
+        clientType,
+        companyName: companyName || null,
+        firstName: firstName || null,
+        lastName: lastName || null,
+      });
+    }
     if (input.email !== undefined) payload.email = input.email;
     if (input.phone !== undefined) payload.phone = input.phone;
     if (input.address_line_1 !== undefined)

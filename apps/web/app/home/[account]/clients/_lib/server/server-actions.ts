@@ -1,10 +1,14 @@
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
+import pathsConfig from '~/config/paths.config';
 
 import {
   CreateClientSchema,
@@ -83,7 +87,19 @@ export const createClient = enhanceAction(
 export const updateClient = enhanceAction(
   async (input) => {
     const service = getService();
-    return service.updateClient(input);
+    const result = await service.updateClient(input);
+
+    if (input.accountSlug) {
+      const clientsPath = pathsConfig.app.accountClients.replace(
+        '[account]',
+        input.accountSlug,
+      );
+      revalidatePath(clientsPath, 'page');
+      revalidatePath(`/home/${input.accountSlug}/clients`, 'page');
+      revalidatePath(`${clientsPath}/${input.clientId}`, 'page');
+    }
+
+    return result;
   },
   { schema: UpdateClientSchema },
 );

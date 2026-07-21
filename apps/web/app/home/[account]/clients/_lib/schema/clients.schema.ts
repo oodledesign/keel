@@ -98,6 +98,7 @@ export const CreateClientSchema = z
 export const UpdateClientSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid(),
+  accountSlug: z.string().min(1).optional(),
   first_name: z.string().min(1).optional(),
   last_name: optionalNullableString,
   company_name: optionalNullableString,

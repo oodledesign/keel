@@ -34,6 +34,9 @@ export type ClientRow = {
   id: string;
   display_name: string | null;
   company_name: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  client_type?: string | null;
   email: string | null;
   phone: string | null;
   city: string | null;

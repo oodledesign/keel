@@ -48,6 +48,7 @@ type ClientType = 'individual' | 'business';
 
 export function ClientForm({
   accountId,
+  accountSlug,
   mode,
   client,
   initialValues,
@@ -57,6 +58,7 @@ export function ClientForm({
   onCancel,
 }: {
   accountId: string;
+  accountSlug?: string;
   mode: 'create' | 'edit';
   client?: Client | null;
   initialValues?: CreateInitialValues;
@@ -168,6 +170,7 @@ export function ClientForm({
         await updateClient({
           accountId,
           clientId: client.id,
+          accountSlug,
           first_name: first_name.trim() || undefined,
           last_name: last_name.trim() || null,
           company_name: company_name.trim() || null,
