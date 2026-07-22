@@ -8,6 +8,12 @@ import {
   rgb,
 } from 'pdf-lib';
 
+import {
+  formatInvoiceQuantity,
+  invoiceQuantityColumnHeaderPdf,
+  normalizeInvoiceQuantityLabel,
+} from '~/lib/invoices/invoice-quantity';
+
 export type InvoiceForPdf = {
   invoice_number: string;
   status: string;
@@ -40,6 +46,7 @@ export type InvoiceForPdf = {
   show_footer?: boolean;
   show_logo?: boolean;
   show_payment_link?: boolean;
+  quantity_column_label?: string;
   items: Array<{
     description: string;
     quantity: number;
@@ -574,13 +581,18 @@ export async function buildInvoicePdf(
     font: fontBold,
     color: COLORS.muted,
   });
-  page.drawText('QTY', {
-    x: colQty,
-    y: headerY,
-    size: 8,
-    font: fontBold,
-    color: COLORS.muted,
-  });
+  page.drawText(
+    invoiceQuantityColumnHeaderPdf(
+      normalizeInvoiceQuantityLabel(invoice.quantity_column_label),
+    ),
+    {
+      x: colQty,
+      y: headerY,
+      size: 8,
+      font: fontBold,
+      color: COLORS.muted,
+    },
+  );
   page.drawText('RATE', {
     x: colRate,
     y: headerY,
@@ -609,7 +621,7 @@ export async function buildInvoicePdf(
     }
 
     drawLines(page, descriptionLines, tableX + 10, y, 10, font, 13, COLORS.ink);
-    page.drawText(String(row.quantity), {
+    page.drawText(formatInvoiceQuantity(Number(row.quantity)), {
       x: colQty,
       y,
       size: 10,

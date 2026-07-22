@@ -92,7 +92,11 @@ export const InvoiceItemSchema = z.object({
   sort_order: z.number().int().min(0),
   description: z.string().min(1, 'Description is required'),
   description_detail: optionalNullableString,
-  quantity: z.number().int().min(0),
+  quantity: z
+    .number()
+    .min(0)
+    .transform((value) => Math.round(value * 100) / 100)
+    .refine((value) => Number.isFinite(value), 'Invalid quantity'),
   unit_price_pence: z.number().int().min(0),
   total_pence: z.number().int().min(0),
 });
@@ -219,6 +223,7 @@ export const SavePaymentSettingsSchema = z.object({
   stripe_pay_now_enabled: z.boolean().optional(),
   invoice_starting_number: z.number().int().min(1).max(999999).optional(),
   default_invoice_currency: InvoiceCurrencySchema.optional(),
+  invoice_quantity_label: z.enum(['quantity', 'hours']).optional(),
 });
 
 export type ListInvoicesInput = z.infer<typeof ListInvoicesSchema>;

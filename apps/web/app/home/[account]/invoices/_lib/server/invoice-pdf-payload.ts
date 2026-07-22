@@ -175,7 +175,11 @@ export async function buildInvoicePdfPayload(
     show_footer: options.show_footer ?? true,
     show_logo: options.show_logo ?? true,
     show_payment_link: options.show_payment_link ?? true,
-    items: items ?? [],
+    quantity_column_label: paymentSettings?.invoice_quantity_label ?? 'quantity',
+    items: (items ?? []).map((item) => ({
+      ...item,
+      quantity: Number(item.quantity),
+    })),
     client: clientRow ?? null,
     bank: paymentSettings?.bank_transfer_enabled
       ? {

@@ -42,6 +42,20 @@ import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
+import {
+  calculateInvoiceLineTotalPence,
+  invoiceQuantityColumnLabel,
+  normalizeInvoiceQuantity,
+  parseInvoiceQuantityInput,
+  type InvoiceQuantityLabel,
+} from '~/lib/invoices/invoice-quantity';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -66,6 +80,7 @@ import {
 } from '../_lib/invoice-totals';
 import {
   getInvoicePortalLink,
+  savePaymentSettingsAction,
   setInvoiceStatus,
   updateInvoice,
   upsertInvoiceItems,
@@ -201,6 +216,8 @@ export function InvoiceEditIndyContent({
   brandLogoUrl = null,
   brandName = null,
   sender = null,
+  invoiceQuantityLabel = 'quantity',
+  canManagePaymentSettings = false,
 }: {
   accountSlug: string;
   accountId: string;
@@ -214,6 +231,8 @@ export function InvoiceEditIndyContent({
     last_name?: string | null;
     email?: string | null;
   } | null;
+  invoiceQuantityLabel?: InvoiceQuantityLabel;
+  canManagePaymentSettings?: boolean;
 }) {
   const router = useRouter();
   const invoice = initialInvoice as unknown as InvoiceData;
@@ -312,6 +331,11 @@ export function InvoiceEditIndyContent({
   const [showFooterField, setShowFooterField] = useState(true);
   const [showLogoField, setShowLogoField] = useState(true);
   const [showPaymentLinkField, setShowPaymentLinkField] = useState(true);
+  const [quantityLabel, setQuantityLabel] =
+    useState<InvoiceQuantityLabel>(invoiceQuantityLabel);
+  const [savingQuantityLabel, setSavingQuantityLabel] = useState(false);
+
+  const quantityColumnLabel = invoiceQuantityColumnLabel(quantityLabel);
 
   const [emailSubject, setEmailSubject] = useState(() =>
     resolveInvoiceEmailField(
@@ -402,7 +426,12 @@ export function InvoiceEditIndyContent({
 
   const lineSubtotalPence = useMemo(
     () =>
-      items.reduce((sum, row) => sum + row.quantity * row.unit_price_pence, 0),
+      items.reduce(
+        (sum, row) =>
+          sum +
+          calculateInvoiceLineTotalPence(row.quantity, row.unit_price_pence),
+        0,
+      ),
     [items],
   );
 
@@ -570,7 +599,10 @@ export function InvoiceEditIndyContent({
       setItems((prev) => {
         const next = [...prev];
         const row = { ...next[index]!, ...updates };
-        row.total_pence = row.quantity * row.unit_price_pence;
+        row.total_pence = calculateInvoiceLineTotalPence(
+          row.quantity,
+          row.unit_price_pence,
+        );
         next[index] = row;
         return next;
       });
@@ -648,10 +680,12 @@ export function InvoiceEditIndyContent({
         sort_order: i,
         description: row.description.trim() || 'Item',
         description_detail: row.description_detail?.trim() || null,
-        quantity: Math.max(0, row.quantity),
+        quantity: normalizeInvoiceQuantity(row.quantity),
         unit_price_pence: Math.max(0, row.unit_price_pence),
-        total_pence:
-          Math.max(0, row.quantity) * Math.max(0, row.unit_price_pence),
+        total_pence: calculateInvoiceLineTotalPence(
+          row.quantity,
+          row.unit_price_pence,
+        ),
       }));
 
       await upsertInvoiceItems({
@@ -1282,7 +1316,7 @@ export function InvoiceEditIndyContent({
                       <tr className="border-b border-[color:var(--ozer-border-on-light)] text-[var(--workspace-shell-text-muted)]">
                         <th className="pr-2 pb-2 font-medium">Description</th>
                         <th className="w-20 pr-2 pb-2 text-right font-medium">
-                          Qty
+                          {quantityColumnLabel}
                         </th>
                         <th className="w-28 pr-2 pb-2 text-right font-medium">
                           Unit price
@@ -1358,10 +1392,14 @@ export function InvoiceEditIndyContent({
                               <Input
                                 type="number"
                                 min={0}
+                                step={0.01}
+                                inputMode="decimal"
                                 value={row.quantity}
                                 onChange={(e) =>
                                   updateItem(index, {
-                                    quantity: parseInt(e.target.value, 10) || 0,
+                                    quantity: parseInvoiceQuantityInput(
+                                      e.target.value,
+                                    ),
                                   })
                                 }
                                 disabled={readOnly}
@@ -1388,7 +1426,10 @@ export function InvoiceEditIndyContent({
                             </td>
                             <td className="py-3 pr-2 text-right font-medium text-[var(--ozer-text-on-light)]">
                               {formatInvoiceMoney(
-                                row.quantity * row.unit_price_pence,
+                                calculateInvoiceLineTotalPence(
+                                  row.quantity,
+                                  row.unit_price_pence,
+                                ),
                                 currency,
                               )}
                             </td>
@@ -1964,6 +2005,57 @@ export function InvoiceEditIndyContent({
                 />
               </div>
             ))}
+            <div className="rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-3">
+              <Label className="text-sm text-[var(--workspace-shell-text)]">
+                Line item quantity label
+              </Label>
+              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                Use Hours for time-based billing. Applies to this workspace&apos;s
+                invoices, PDFs, and portal.
+              </p>
+              <Select
+                value={quantityLabel}
+                disabled={!canManagePaymentSettings || savingQuantityLabel}
+                onValueChange={(value: InvoiceQuantityLabel) => {
+                  setQuantityLabel(value);
+                  if (!canManagePaymentSettings) return;
+                  setSavingQuantityLabel(true);
+                  void savePaymentSettingsAction({
+                    accountId,
+                    invoice_quantity_label: value,
+                  })
+                    .then(() => toast.success('Quantity label updated'))
+                    .catch((err) => {
+                      setQuantityLabel(invoiceQuantityLabel);
+                      toast.error(getErrorMessage(err));
+                    })
+                    .finally(() => setSavingQuantityLabel(false));
+                }}
+              >
+                <SelectTrigger className="mt-2 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="quantity">Quantity</SelectItem>
+                  <SelectItem value="hours">Hours</SelectItem>
+                </SelectContent>
+              </Select>
+              {!canManagePaymentSettings ? (
+                <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Only workspace owners and admins can change this. Update it in{' '}
+                  <Link
+                    href={pathsConfig.app.accountPaymentSettings.replace(
+                      '[account]',
+                      accountSlug,
+                    )}
+                    className="text-[var(--ozer-accent)] hover:underline"
+                  >
+                    payment settings
+                  </Link>
+                  .
+                </p>
+              ) : null}
+            </div>
           </div>
           <DialogFooter>
             <Button

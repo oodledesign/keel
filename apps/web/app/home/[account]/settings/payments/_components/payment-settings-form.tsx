@@ -13,9 +13,17 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 
 import pathsConfig from '~/config/paths.config';
 import { stripeConnectErrorMessage } from '~/lib/billing/stripe-connect-messages';
+import type { InvoiceQuantityLabel } from '~/lib/invoices/invoice-quantity';
 
 import type { AccountPaymentSettings } from '../../../invoices/_lib/server/invoice-payment-settings.service';
 import {
@@ -67,6 +75,7 @@ export function PaymentSettingsForm({
           bank_transfer_instructions: settings.bank_transfer_instructions,
           stripe_pay_now_enabled: settings.stripe_pay_now_enabled,
           invoice_starting_number: settings.invoice_starting_number,
+          invoice_quantity_label: settings.invoice_quantity_label,
         });
         setSettings(saved as AccountPaymentSettings);
         toast.success('Payment settings saved');
@@ -225,6 +234,34 @@ export function PaymentSettingsForm({
                 New invoices are numbered INV-0001, INV-0002, and so on.
               </p>
             )}
+          </div>
+          <div>
+            <Label htmlFor="invoice_quantity_label">Line item quantity label</Label>
+            <Select
+              value={settings.invoice_quantity_label ?? 'quantity'}
+              disabled={!canEdit}
+              onValueChange={(value: InvoiceQuantityLabel) =>
+                setSettings((prev) => ({
+                  ...prev,
+                  invoice_quantity_label: value,
+                }))
+              }
+            >
+              <SelectTrigger
+                id="invoice_quantity_label"
+                className="mt-1 max-w-xs border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
+              >
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="quantity">Quantity</SelectItem>
+                <SelectItem value="hours">Hours</SelectItem>
+              </SelectContent>
+            </Select>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Shown on invoice line items, PDFs, and the client portal. Quantities
+              support up to two decimal places (e.g. 2.5 hours).
+            </p>
           </div>
         </div>
       </div>

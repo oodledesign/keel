@@ -7,6 +7,7 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import { calculateInvoiceLineTotalPence } from '~/lib/invoices/invoice-quantity';
 import { Database } from '~/lib/database.types';
 
 import { normalizeInvoiceCurrency } from '../invoice-currency';
@@ -506,7 +507,10 @@ class InvoicesService {
       description_detail: item.description_detail ?? null,
       quantity: item.quantity,
       unit_price_pence: item.unit_price_pence,
-      total_pence: item.quantity * item.unit_price_pence,
+      total_pence: calculateInvoiceLineTotalPence(
+        item.quantity,
+        item.unit_price_pence,
+      ),
     }));
 
     const { data: inserted, error } = await this.db

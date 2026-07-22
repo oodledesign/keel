@@ -1,0 +1,48 @@
+export type InvoiceQuantityLabel = 'quantity' | 'hours';
+
+export function normalizeInvoiceQuantityLabel(
+  value: string | null | undefined,
+): InvoiceQuantityLabel {
+  return value === 'hours' ? 'hours' : 'quantity';
+}
+
+export function invoiceQuantityColumnLabel(
+  label: InvoiceQuantityLabel,
+): string {
+  return label === 'hours' ? 'Hours' : 'Quantity';
+}
+
+export function invoiceQuantityColumnHeaderPdf(
+  label: InvoiceQuantityLabel,
+): string {
+  return label === 'hours' ? 'HOURS' : 'QTY';
+}
+
+/** Clamp and round quantity to two decimal places. */
+export function normalizeInvoiceQuantity(value: number): number {
+  if (!Number.isFinite(value)) return 0;
+  return Math.round(Math.max(0, value) * 100) / 100;
+}
+
+export function parseInvoiceQuantityInput(value: string): number {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  const parsed = Number.parseFloat(trimmed);
+  return normalizeInvoiceQuantity(parsed);
+}
+
+/** Display quantity with up to two decimal places. */
+export function formatInvoiceQuantity(value: number): string {
+  const normalized = normalizeInvoiceQuantity(value);
+  if (Number.isInteger(normalized)) {
+    return String(normalized);
+  }
+  return normalized.toFixed(2).replace(/0$/, '').replace(/\.0$/, '');
+}
+
+export function calculateInvoiceLineTotalPence(
+  quantity: number,
+  unitPricePence: number,
+): number {
+  return Math.round(normalizeInvoiceQuantity(quantity) * unitPricePence);
+}

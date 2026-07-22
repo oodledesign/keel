@@ -20,6 +20,11 @@ import { cn } from '@kit/ui/utils';
 import { formatInvoiceMoney } from '~/home/[account]/invoices/_lib/invoice-currency';
 import { DEFAULT_INVOICE_FOOTER_MESSAGE } from '~/home/[account]/invoices/_lib/invoice-smart-fields';
 import type { AccountPaymentSettings } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
+import {
+  formatInvoiceQuantity,
+  invoiceQuantityColumnLabel,
+  normalizeInvoiceQuantityLabel,
+} from '~/lib/invoices/invoice-quantity';
 
 type InvoicePayload = {
   id: string;
@@ -164,6 +169,9 @@ export function PortalInvoiceView({
   const depositDue = data.deposit_due_pence ?? 0;
   const hasDeposit = depositDue > 0 && amountPaid < depositDue;
   const money = (pence: number) => formatInvoiceMoney(pence, data.currency);
+  const quantityColumnLabel = invoiceQuantityColumnLabel(
+    normalizeInvoiceQuantityLabel(paymentSettings?.invoice_quantity_label),
+  );
 
   const isPayable = ['sent', 'read'].includes(data.status) && remaining > 0;
   const isPaid = data.status === 'paid';
@@ -367,7 +375,9 @@ export function PortalInvoiceView({
           <thead>
             <tr className="border-b border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
               <th className="pr-4 pb-3 font-medium">Description</th>
-              <th className="w-24 pr-4 pb-3 text-right font-medium">Qty</th>
+              <th className="w-24 pr-4 pb-3 text-right font-medium">
+                {quantityColumnLabel}
+              </th>
               <th className="w-32 pr-4 pb-3 text-right font-medium">
                 Unit price
               </th>
@@ -388,7 +398,9 @@ export function PortalInvoiceView({
                     </div>
                   ) : null}
                 </td>
-                <td className="py-3 pr-4 text-right">{row.quantity}</td>
+                <td className="py-3 pr-4 text-right">
+                  {formatInvoiceQuantity(Number(row.quantity))}
+                </td>
                 <td className="py-3 pr-4 text-right">
                   {money(row.unit_price_pence)}
                 </td>

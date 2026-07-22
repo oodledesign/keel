@@ -4,8 +4,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { createInvoicePaymentSettingsService } from '../../_lib/server/invoice-payment-settings.service';
 
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
+import { getTeamAccountAccess } from '../../../_lib/role-access';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { InvoiceEditIndyContent } from '../../_components/invoice-edit-indy-content';
@@ -55,7 +57,8 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
   const authUser = await supabase.auth.getUser();
   const auth = authUser.data.user;
 
-  const [brand, accountResult, userSettings] = await Promise.all([
+  const [brand, accountResult, userSettings, paymentSettings] =
+    await Promise.all([
     loadAccountBrandResolved(accountId).catch(() => null),
     supabase.from('accounts').select('name').eq('id', accountId).maybeSingle(),
     auth?.id
@@ -65,6 +68,7 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
           .eq('user_id', auth.id)
           .maybeSingle()
       : Promise.resolve({ data: null }),
+    createInvoicePaymentSettingsService(supabase).getSettings(accountId),
   ]);
 
   const meta = (auth?.user_metadata ?? {}) as {
@@ -90,6 +94,15 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
     meta.name?.trim()?.split(/\s+/).slice(1).join(' ') ||
     null;
 
+  const access = getTeamAccountAccess(
+    workspace.account as {
+      permissions?: string[] | null;
+      role?: string | null;
+      company_role?: string | null;
+    },
+  );
+  const canManagePaymentSettings = access.isOwner || access.isAdmin;
+
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
       <InvoiceEditIndyContent
@@ -108,6 +121,8 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
           last_name: senderLast,
           email: auth?.email ?? null,
         }}
+        invoiceQuantityLabel={paymentSettings.invoice_quantity_label}
+        canManagePaymentSettings={canManagePaymentSettings}
       />
     </PageBody>
   );

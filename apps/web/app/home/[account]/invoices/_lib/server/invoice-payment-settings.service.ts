@@ -11,6 +11,10 @@ import {
   type InvoiceCurrency,
   normalizeInvoiceCurrency,
 } from '../invoice-currency';
+import {
+  type InvoiceQuantityLabel,
+  normalizeInvoiceQuantityLabel,
+} from '~/lib/invoices/invoice-quantity';
 
 export type AccountPaymentSettings = {
   account_id: string;
@@ -26,6 +30,7 @@ export type AccountPaymentSettings = {
   stripe_pay_now_enabled: boolean;
   invoice_starting_number: number;
   default_invoice_currency: InvoiceCurrency;
+  invoice_quantity_label: InvoiceQuantityLabel;
 };
 
 const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
@@ -41,6 +46,7 @@ const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
   stripe_pay_now_enabled: true,
   invoice_starting_number: 1,
   default_invoice_currency: 'gbp',
+  invoice_quantity_label: 'quantity',
 };
 
 export function createInvoicePaymentSettingsService(
@@ -96,6 +102,7 @@ class InvoicePaymentSettingsService {
     const row = data as {
       invoice_starting_number?: number;
       default_invoice_currency?: string | null;
+      invoice_quantity_label?: string | null;
     } | null;
 
     return {
@@ -109,6 +116,9 @@ class InvoicePaymentSettingsService {
         DEFAULT_SETTINGS.invoice_starting_number,
       default_invoice_currency: normalizeInvoiceCurrency(
         row?.default_invoice_currency,
+      ),
+      invoice_quantity_label: normalizeInvoiceQuantityLabel(
+        row?.invoice_quantity_label,
       ),
     };
   }
@@ -174,6 +184,13 @@ class InvoicePaymentSettingsService {
         ? {
             default_invoice_currency: normalizeInvoiceCurrency(
               input.default_invoice_currency,
+            ),
+          }
+        : {}),
+      ...(input.invoice_quantity_label !== undefined
+        ? {
+            invoice_quantity_label: normalizeInvoiceQuantityLabel(
+              input.invoice_quantity_label,
             ),
           }
         : {}),
@@ -300,6 +317,9 @@ export async function loadPaymentSettingsForPortal(
     ),
     invoice_starting_number:
       row.invoice_starting_number ?? DEFAULT_SETTINGS.invoice_starting_number,
+    invoice_quantity_label: normalizeInvoiceQuantityLabel(
+      row.invoice_quantity_label as string | null | undefined,
+    ),
   } as AccountPaymentSettings;
 }
 
