@@ -58,6 +58,7 @@ export function RanklyProjectDashboard(props: {
   account: string;
   accountId: string;
   projectId: string;
+  targetDomain: string;
   keywordCount: number;
   overview: SiteOverviewSnapshot | null;
   pagespeedMobileScore: number | null;
@@ -83,6 +84,7 @@ export function RanklyProjectDashboard(props: {
       <SeoReportSharePanel
         accountId={props.accountId}
         projectId={props.projectId}
+        targetDomain={props.targetDomain}
       />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">

@@ -2,7 +2,15 @@
 
 import { useCallback, useEffect, useState } from 'react';
 
-import { Check, Copy, ExternalLink, FileDown, RefreshCw } from 'lucide-react';
+import {
+  Check,
+  Copy,
+  ExternalLink,
+  FileDown,
+  Loader2,
+  RefreshCw,
+  Sparkles,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -23,19 +31,62 @@ type ReportSummary = {
   overallScore: number | null;
 };
 
-type ApiResponse =
-  | { ok: true; data: ReportSummary | { report: ReportSummary | null } }
-  | { ok: false; error: { message: string } };
+type ApiOk<T> = { ok: true; data: T };
+type ApiFail = { ok: false; error: { message: string } };
+type ApiResponse<T> = ApiOk<T> | ApiFail;
+
+type StepKey =
+  | 'siteExplorer'
+  | 'pagespeed'
+  | 'siteCrawl'
+  | 'aiAudit'
+  | 'report';
+
+type StepState = 'idle' | 'running' | 'done' | 'error';
+
+const STEP_LABELS: Record<StepKey, string> = {
+  siteExplorer: 'Site Explorer',
+  pagespeed: 'PageSpeed',
+  siteCrawl: 'Site Crawler',
+  aiAudit: 'AI Search Audit',
+  report: 'Client report',
+};
+
+const POLL_MS = 4000;
+const MAX_WAIT_MS = 12 * 60 * 1000;
+
+function sleep(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+async function readJson<T>(res: Response): Promise<T> {
+  const json = (await res.json()) as ApiResponse<T>;
+  if (!json.ok) throw new Error(json.error.message);
+  return json.data;
+}
 
 export function SeoReportSharePanel(props: {
   accountId: string;
   projectId: string;
+  targetDomain: string;
   compact?: boolean;
 }) {
   const [report, setReport] = useState<ReportSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [building, setBuilding] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [steps, setSteps] = useState<Record<StepKey, StepState>>({
+    siteExplorer: 'idle',
+    pagespeed: 'idle',
+    siteCrawl: 'idle',
+    aiAudit: 'idle',
+    report: 'idle',
+  });
+
+  const setStep = useCallback((key: StepKey, state: StepState) => {
+    setSteps((prev) => ({ ...prev, [key]: state }));
+  }, []);
 
   const loadLatest = useCallback(async () => {
     setLoading(true);
@@ -43,9 +94,7 @@ export function SeoReportSharePanel(props: {
       const res = await fetch(
         `/api/rankly/seo-report?projectId=${encodeURIComponent(props.projectId)}`,
       );
-      const json = (await res.json()) as ApiResponse;
-      if (!json.ok) throw new Error(json.error.message);
-      const data = json.data as { report: ReportSummary | null };
+      const data = await readJson<{ report: ReportSummary | null }>(res);
       setReport(data.report);
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -58,28 +107,199 @@ export function SeoReportSharePanel(props: {
     void loadLatest();
   }, [loadLatest]);
 
-  const generate = useCallback(async () => {
+  const generateReport = useCallback(async () => {
+    const res = await fetch('/api/rankly/seo-report', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        projectId: props.projectId,
+        accountId: props.accountId,
+        enableShare: true,
+      }),
+    });
+    return readJson<ReportSummary>(res);
+  }, [props.accountId, props.projectId]);
+
+  const generateOnly = useCallback(async () => {
     setGenerating(true);
+    setStep('report', 'running');
     try {
-      const res = await fetch('/api/rankly/seo-report', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          projectId: props.projectId,
-          accountId: props.accountId,
-          enableShare: true,
-        }),
-      });
-      const json = (await res.json()) as ApiResponse;
-      if (!json.ok) throw new Error(json.error.message);
-      setReport(json.data as ReportSummary);
+      const next = await generateReport();
+      setReport(next);
+      setStep('report', 'done');
       toast.success('Client SEO report ready');
     } catch (error) {
+      setStep('report', 'error');
       toast.error(getErrorMessage(error));
     } finally {
       setGenerating(false);
     }
-  }, [props.accountId, props.projectId]);
+  }, [generateReport, setStep]);
+
+  const pollJob = useCallback(
+    async (
+      url: string,
+      isDone: (data: unknown) => boolean,
+      isError: (data: unknown) => boolean,
+    ) => {
+      const started = Date.now();
+      while (Date.now() - started < MAX_WAIT_MS) {
+        await sleep(POLL_MS);
+        const res = await fetch(url);
+        const data = await readJson<unknown>(res);
+        if (isError(data)) {
+          throw new Error('Job failed');
+        }
+        if (isDone(data)) return data;
+      }
+      throw new Error('Timed out waiting for Rankly jobs to finish');
+    },
+    [],
+  );
+
+  const buildFullReport = useCallback(async () => {
+    setBuilding(true);
+    setSteps({
+      siteExplorer: 'running',
+      pagespeed: 'running',
+      siteCrawl: 'running',
+      aiAudit: 'running',
+      report: 'idle',
+    });
+
+    const body = {
+      projectId: props.projectId,
+      accountId: props.accountId,
+    };
+
+    try {
+      const results = await Promise.allSettled([
+        (async () => {
+          try {
+            const res = await fetch('/api/rankly/site-overview', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...body, force: true }),
+            });
+            await readJson(res);
+            setStep('siteExplorer', 'done');
+          } catch (error) {
+            setStep('siteExplorer', 'error');
+            throw error;
+          }
+        })(),
+        (async () => {
+          try {
+            const res = await fetch('/api/rankly/pagespeed', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            const started = await readJson<{ jobId: string }>(res);
+            await pollJob(
+              `/api/rankly/pagespeed/${started.jobId}`,
+              (data) => {
+                const status = (data as { job?: { status?: string } }).job
+                  ?.status;
+                return status === 'done';
+              },
+              (data) => {
+                const status = (data as { job?: { status?: string } }).job
+                  ?.status;
+                return status === 'error';
+              },
+            );
+            setStep('pagespeed', 'done');
+          } catch (error) {
+            setStep('pagespeed', 'error');
+            throw error;
+          }
+        })(),
+        (async () => {
+          try {
+            const res = await fetch('/api/rankly/site-crawl', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(body),
+            });
+            const started = await readJson<{ jobId: string }>(res);
+            await pollJob(
+              `/api/rankly/site-crawl/${started.jobId}`,
+              (data) => {
+                const status = (data as { job?: { status?: string } }).job
+                  ?.status;
+                return status === 'done';
+              },
+              (data) => {
+                const status = (data as { job?: { status?: string } }).job
+                  ?.status;
+                return status === 'error';
+              },
+            );
+            setStep('siteCrawl', 'done');
+          } catch (error) {
+            setStep('siteCrawl', 'error');
+            throw error;
+          }
+        })(),
+        (async () => {
+          try {
+            const res = await fetch('/api/rankly/ai-audit', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                ...body,
+                targetDomain: props.targetDomain,
+              }),
+            });
+            const started = await readJson<{ jobId: string }>(res);
+            await pollJob(
+              `/api/rankly/ai-audit/${started.jobId}`,
+              (data) => {
+                const status = (data as { job?: { status?: string } }).job
+                  ?.status;
+                return status === 'done';
+              },
+              (data) => {
+                const status = (data as { job?: { status?: string } }).job
+                  ?.status;
+                return status === 'error';
+              },
+            );
+            setStep('aiAudit', 'done');
+          } catch (error) {
+            setStep('aiAudit', 'error');
+            throw error;
+          }
+        })(),
+      ]);
+
+      const anyFailed = results.some((result) => result.status === 'rejected');
+      if (anyFailed) {
+        toast.message(
+          'Some Rankly checks failed — generating report from whatever completed',
+        );
+      }
+
+      setStep('report', 'running');
+      const next = await generateReport();
+      setReport(next);
+      setStep('report', 'done');
+      toast.success('Full client SEO report ready');
+    } catch (error) {
+      setStep('report', 'error');
+      toast.error(getErrorMessage(error));
+    } finally {
+      setBuilding(false);
+    }
+  }, [
+    generateReport,
+    pollJob,
+    props.accountId,
+    props.projectId,
+    props.targetDomain,
+    setStep,
+  ]);
 
   const copyLink = useCallback(async () => {
     if (!report?.publicUrl) return;
@@ -98,34 +318,80 @@ export function SeoReportSharePanel(props: {
       ? buildSeoReportPdfUrl(report.token)
       : null;
 
+  const busy = building || generating;
+  const showSteps = building || Object.values(steps).some((s) => s !== 'idle');
+
   return (
     <div
       className={
         props.compact
           ? 'rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4'
-          : 'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] p-5'
+          : 'rounded-xl border border-[color:var(--ozer-accent)]/35 bg-[var(--workspace-control-surface)] p-5 shadow-[0_0_0_1px_color-mix(in_srgb,var(--ozer-accent)_12%,transparent)]'
       }
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="font-semibold">Client SEO report</h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Public link + PDF with pillar scores from AI Audit, PageSpeed,
-            crawl, Site Explorer, and keywords.
+            One click runs Site Explorer, PageSpeed, Site Crawler, and AI Search
+            Audit, then builds a public link + PDF.
           </p>
         </div>
-        <Button
-          type="button"
-          size="sm"
-          onClick={() => void generate()}
-          disabled={generating}
-        >
-          <RefreshCw
-            className={`mr-2 h-3.5 w-3.5 ${generating ? 'animate-spin' : ''}`}
-          />
-          {report ? 'Regenerate' : 'Generate report'}
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          <Button
+            type="button"
+            size="sm"
+            onClick={() => void buildFullReport()}
+            disabled={busy || !props.targetDomain.trim()}
+          >
+            {building ? (
+              <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+            ) : (
+              <Sparkles className="mr-2 h-3.5 w-3.5" />
+            )}
+            Build full report
+          </Button>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={() => void generateOnly()}
+            disabled={busy}
+          >
+            <RefreshCw
+              className={`mr-2 h-3.5 w-3.5 ${generating ? 'animate-spin' : ''}`}
+            />
+            {report ? 'Snapshot now' : 'Generate from current data'}
+          </Button>
+        </div>
       </div>
+
+      {showSteps ? (
+        <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
+          {(Object.keys(STEP_LABELS) as StepKey[]).map((key) => {
+            const state = steps[key];
+            return (
+              <li
+                key={key}
+                className="rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2 text-xs"
+              >
+                <p className="text-[var(--workspace-shell-text-muted)]">
+                  {STEP_LABELS[key]}
+                </p>
+                <p className="mt-1 font-medium capitalize">
+                  {state === 'idle'
+                    ? 'Waiting'
+                    : state === 'running'
+                      ? 'Running…'
+                      : state === 'done'
+                        ? 'Done'
+                        : 'Failed'}
+                </p>
+              </li>
+            );
+          })}
+        </ul>
+      ) : null}
 
       {loading ? (
         <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -179,15 +445,12 @@ export function SeoReportSharePanel(props: {
                 ) : null}
               </div>
             </div>
-          ) : (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              Generate a report to create a public share link.
-            </p>
-          )}
+          ) : null}
         </div>
       ) : (
         <p className="mt-4 text-sm text-[var(--workspace-shell-text-muted)]">
-          No client report yet. Generate one to share a public link and PDF.
+          No client report yet. Use <strong>Build full report</strong> for the
+          complete flow, or snapshot whatever data you already have.
         </p>
       )}
     </div>

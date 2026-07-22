@@ -57,6 +57,7 @@ export default async function RanklyProjectDashboardPage({
       account={account}
       accountId={accountId}
       projectId={projectId}
+      targetDomain={project.domain}
       keywordCount={keywords.length}
       overview={overview}
       pagespeedMobileScore={homepage?.mobile?.performanceScore ?? null}

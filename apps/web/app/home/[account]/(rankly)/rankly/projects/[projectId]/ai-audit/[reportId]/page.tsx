@@ -47,6 +47,7 @@ export default async function RanklyAiAuditReportPage({
       <SeoReportSharePanel
         accountId={accountId}
         projectId={projectId}
+        targetDomain={bundle.report.target_domain}
         compact
       />
 
