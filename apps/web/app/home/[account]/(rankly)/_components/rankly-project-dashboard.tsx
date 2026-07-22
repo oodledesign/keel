@@ -9,6 +9,7 @@ import {
   RANKLY_DASHBOARD_TOOL_SECTIONS,
   getRanklySection,
 } from '../_lib/rankly-project-sections';
+import { SeoReportSharePanel } from './seo-report-share-panel';
 
 function SectionIcon(props: { icon: LucideIcon }) {
   const Icon = props.icon;
@@ -55,6 +56,7 @@ function StatCard(props: {
 
 export function RanklyProjectDashboard(props: {
   account: string;
+  accountId: string;
   projectId: string;
   keywordCount: number;
   overview: SiteOverviewSnapshot | null;
@@ -77,6 +79,11 @@ export function RanklyProjectDashboard(props: {
           {props.countryLabel} market · quick snapshot across Rankly tools
         </p>
       </header>
+
+      <SeoReportSharePanel
+        accountId={props.accountId}
+        projectId={props.projectId}
+      />
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard

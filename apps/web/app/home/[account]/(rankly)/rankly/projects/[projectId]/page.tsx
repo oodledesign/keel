@@ -55,6 +55,7 @@ export default async function RanklyProjectDashboardPage({
   return (
     <RanklyProjectDashboard
       account={account}
+      accountId={accountId}
       projectId={projectId}
       keywordCount={keywords.length}
       overview={overview}

@@ -221,6 +221,48 @@ export async function loadLatestAuditForProject(
   };
 }
 
+/** Latest completed audit for a project (any workspace member). */
+export async function loadLatestAuditForProjectAnyMember(
+  projectId: string,
+): Promise<{
+  report: AuditReportRow;
+  recommendations: AuditRecommendationRow[];
+  job: AuditJobRow;
+} | null> {
+  const db = ranklyAdmin();
+
+  const { data: job } = await db
+    .from('ai_audit_jobs')
+    .select('*')
+    .eq('project_id', projectId)
+    .eq('status', 'done')
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (!job) return null;
+
+  const { data: report } = await db
+    .from('ai_audit_reports')
+    .select('*')
+    .eq('job_id', job.id)
+    .maybeSingle();
+
+  if (!report) return null;
+
+  const { data: recommendations } = await db
+    .from('ai_audit_recommendations')
+    .select('*')
+    .eq('report_id', report.id)
+    .order('display_order', { ascending: true });
+
+  return {
+    job: job as AuditJobRow,
+    report: report as AuditReportRow,
+    recommendations: (recommendations ?? []) as AuditRecommendationRow[],
+  };
+}
+
 export async function loadAuditReportsForProject(
   projectId: string,
   userId: string,

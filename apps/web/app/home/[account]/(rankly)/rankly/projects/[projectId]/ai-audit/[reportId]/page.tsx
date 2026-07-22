@@ -2,14 +2,15 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
-
-import { AuditReportView } from '../../../../../_components/ai-audit/audit-report-view';
-import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 import { loadAuditReportBundle } from '~/lib/ai-audit/db';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+
 import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { AuditReportView } from '../../../../../_components/ai-audit/audit-report-view';
+import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
+import { SeoReportSharePanel } from '../../../../../_components/seo-report-share-panel';
 
 type RanklyAiAuditReportPageProps = {
   params: Promise<{ account: string; projectId: string; reportId: string }>;
@@ -43,6 +44,12 @@ export default async function RanklyAiAuditReportPage({
         description={bundle.report.target_domain}
       />
 
+      <SeoReportSharePanel
+        accountId={accountId}
+        projectId={projectId}
+        compact
+      />
+
       <AuditReportView
         report={bundle.report}
         recommendations={bundle.recommendations}
@@ -50,7 +57,7 @@ export default async function RanklyAiAuditReportPage({
 
       <Link
         href={auditPath(account, projectId)}
-        className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+        className="text-primary inline-block text-sm underline-offset-4 hover:underline"
       >
         ← Back to AI Search Audit
       </Link>
