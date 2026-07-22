@@ -59,7 +59,7 @@ async function resolveTaskAccountId(
 
   if (input.jobId) {
     const { data } = await client
-      .from('jobs')
+      .from('projects')
       .select('account_id')
       .eq('id', input.jobId)
       .maybeSingle();

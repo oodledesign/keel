@@ -357,6 +357,11 @@ export function EditTaskDialog({
         title: trimmed,
         priority: 'medium',
         parentTaskId: task.id,
+        parentTaskContext: {
+          projectId: task.projectId,
+          clientId: task.clientId,
+          areaId: task.areaId,
+        },
         projectId: task.projectId ?? undefined,
         clientId: task.clientId ?? undefined,
         areaId: task.areaId ?? undefined,

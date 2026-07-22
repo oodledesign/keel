@@ -116,9 +116,10 @@ async function resolveTaskAccountId(
     return (data as { account_id?: string | null } | null)?.account_id ?? null;
   }
 
+  // Legacy callers may still pass jobId; delivery jobs were merged into projects (same ids).
   if (input.jobId) {
     const { data } = await client
-      .from('jobs')
+      .from('projects')
       .select('account_id')
       .eq('id', input.jobId)
       .maybeSingle();
@@ -159,7 +160,7 @@ export async function createTaskForUser(
     } else {
       const { data: parent, error: parentError } = await client
         .from('tasks')
-        .select('user_id, project_id, client_id, area_id, account_id, job_id')
+        .select('user_id, project_id, client_id, area_id, account_id')
         .eq('id', input.parentTaskId)
         .maybeSingle();
 
@@ -172,16 +173,12 @@ export async function createTaskForUser(
         client_id: string | null;
         area_id: string | null;
         account_id: string | null;
-        job_id: string | null;
       };
 
       projectId = projectId ?? row.project_id;
       clientId = clientId ?? row.client_id;
       areaId = areaId ?? row.area_id;
       accountId = accountId ?? row.account_id;
-      if (!accountId && row.job_id) {
-        accountId = await resolveTaskAccountId(client, { jobId: row.job_id });
-      }
     }
   }
 
