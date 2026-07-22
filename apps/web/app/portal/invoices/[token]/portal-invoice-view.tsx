@@ -22,8 +22,11 @@ import { DEFAULT_INVOICE_FOOTER_MESSAGE } from '~/home/[account]/invoices/_lib/i
 import type { AccountPaymentSettings } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 import {
   formatInvoiceQuantity,
-  invoiceQuantityColumnLabel,
-  normalizeInvoiceQuantityLabel,
+  invoiceItemsQuantityHeader,
+  invoiceItemsShowUnitPriceColumn,
+  invoiceLineQuantityColumnLabel,
+  invoiceLineShowsUnitPrice,
+  normalizeInvoiceLineType,
 } from '~/lib/invoices/invoice-quantity';
 
 type InvoicePayload = {
@@ -46,6 +49,7 @@ type InvoicePayload = {
   items: Array<{
     description: string;
     description_detail?: string | null;
+    line_type?: string | null;
     quantity: number;
     unit_price_pence: number;
     total_pence: number;
@@ -169,9 +173,8 @@ export function PortalInvoiceView({
   const depositDue = data.deposit_due_pence ?? 0;
   const hasDeposit = depositDue > 0 && amountPaid < depositDue;
   const money = (pence: number) => formatInvoiceMoney(pence, data.currency);
-  const quantityColumnLabel = invoiceQuantityColumnLabel(
-    normalizeInvoiceQuantityLabel(paymentSettings?.invoice_quantity_label),
-  );
+  const quantityColumnLabel = invoiceItemsQuantityHeader(data.items ?? []);
+  const showUnitPriceColumn = invoiceItemsShowUnitPriceColumn(data.items ?? []);
 
   const isPayable = ['sent', 'read'].includes(data.status) && remaining > 0;
   const isPaid = data.status === 'paid';
@@ -378,14 +381,18 @@ export function PortalInvoiceView({
               <th className="w-24 pr-4 pb-3 text-right font-medium">
                 {quantityColumnLabel}
               </th>
-              <th className="w-32 pr-4 pb-3 text-right font-medium">
-                Unit price
-              </th>
+              {showUnitPriceColumn ? (
+                <th className="w-32 pr-4 pb-3 text-right font-medium">
+                  Unit price
+                </th>
+              ) : null}
               <th className="w-28 pr-4 pb-3 text-right font-medium">Total</th>
             </tr>
           </thead>
           <tbody>
-            {(data.items ?? []).map((row, index) => (
+            {(data.items ?? []).map((row, index) => {
+              const lineType = normalizeInvoiceLineType(row.line_type);
+              return (
               <tr
                 key={index}
                 className="border-b border-[color:var(--workspace-shell-border)]/70 text-[var(--workspace-shell-text-muted)]"
@@ -399,16 +406,24 @@ export function PortalInvoiceView({
                   ) : null}
                 </td>
                 <td className="py-3 pr-4 text-right">
+                  <span className="mr-2 text-[10px] uppercase tracking-wide text-[var(--workspace-shell-text-muted)] sm:hidden">
+                    {invoiceLineQuantityColumnLabel(lineType)}
+                  </span>
                   {formatInvoiceQuantity(Number(row.quantity))}
                 </td>
-                <td className="py-3 pr-4 text-right">
-                  {money(row.unit_price_pence)}
-                </td>
+                {showUnitPriceColumn ? (
+                  <td className="py-3 pr-4 text-right">
+                    {invoiceLineShowsUnitPrice(lineType)
+                      ? money(row.unit_price_pence)
+                      : '—'}
+                  </td>
+                ) : null}
                 <td className="py-3 pr-4 text-right">
                   {money(row.total_pence)}
                 </td>
               </tr>
-            ))}
+              );
+            })}
           </tbody>
         </table>
         <div className="mt-4 space-y-1 border-t border-[color:var(--workspace-shell-border)] pt-4 text-sm text-[var(--workspace-shell-text-muted)]">

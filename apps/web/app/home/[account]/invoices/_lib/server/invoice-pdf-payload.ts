@@ -86,7 +86,7 @@ export async function buildInvoicePdfPayload(
   ] = await Promise.all([
     client
       .from('invoice_items')
-      .select('description, quantity, unit_price_pence, total_pence')
+      .select('description, line_type, quantity, unit_price_pence, total_pence')
       .eq('invoice_id', invoice.id)
       .order('sort_order', { ascending: true }),
     invoice.client_id
@@ -175,9 +175,9 @@ export async function buildInvoicePdfPayload(
     show_footer: options.show_footer ?? true,
     show_logo: options.show_logo ?? true,
     show_payment_link: options.show_payment_link ?? true,
-    quantity_column_label: paymentSettings?.invoice_quantity_label ?? 'quantity',
     items: (items ?? []).map((item) => ({
       ...item,
+      line_type: (item as { line_type?: string | null }).line_type ?? 'quantity',
       quantity: Number(item.quantity),
     })),
     client: clientRow ?? null,

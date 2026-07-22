@@ -505,6 +505,7 @@ class InvoicesService {
       sort_order: item.sort_order ?? index,
       description: item.description,
       description_detail: item.description_detail ?? null,
+      line_type: item.line_type ?? 'quantity',
       quantity: item.quantity,
       unit_price_pence: item.unit_price_pence,
       total_pence: calculateInvoiceLineTotalPence(

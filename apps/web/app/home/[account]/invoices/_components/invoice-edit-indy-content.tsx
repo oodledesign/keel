@@ -43,18 +43,15 @@ import { listClients } from '~/home/[account]/clients/_lib/server/server-actions
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@kit/ui/select';
-import {
   calculateInvoiceLineTotalPence,
-  invoiceQuantityColumnLabel,
+  invoiceItemsQuantityHeader,
+  invoiceItemsShowUnitPriceColumn,
+  invoiceLineQuantityColumnLabel,
+  invoiceLineShowsUnitPrice,
+  normalizeInvoiceLineType,
   normalizeInvoiceQuantity,
   parseInvoiceQuantityInput,
-  type InvoiceQuantityLabel,
+  type InvoiceLineType,
 } from '~/lib/invoices/invoice-quantity';
 
 import { getErrorMessage } from '../_lib/error-message';
@@ -80,7 +77,6 @@ import {
 } from '../_lib/invoice-totals';
 import {
   getInvoicePortalLink,
-  savePaymentSettingsAction,
   setInvoiceStatus,
   updateInvoice,
   upsertInvoiceItems,
@@ -95,6 +91,7 @@ type InvoiceItem = {
   sort_order: number;
   description: string;
   description_detail?: string | null;
+  line_type: InvoiceLineType;
   quantity: number;
   unit_price_pence: number;
   total_pence: number;
@@ -216,8 +213,7 @@ export function InvoiceEditIndyContent({
   brandLogoUrl = null,
   brandName = null,
   sender = null,
-  invoiceQuantityLabel = 'quantity',
-  canManagePaymentSettings = false,
+  defaultHourlyRatePence = null,
 }: {
   accountSlug: string;
   accountId: string;
@@ -231,8 +227,7 @@ export function InvoiceEditIndyContent({
     last_name?: string | null;
     email?: string | null;
   } | null;
-  invoiceQuantityLabel?: InvoiceQuantityLabel;
-  canManagePaymentSettings?: boolean;
+  defaultHourlyRatePence?: number | null;
 }) {
   const router = useRouter();
   const invoice = initialInvoice as unknown as InvoiceData;
@@ -331,11 +326,6 @@ export function InvoiceEditIndyContent({
   const [showFooterField, setShowFooterField] = useState(true);
   const [showLogoField, setShowLogoField] = useState(true);
   const [showPaymentLinkField, setShowPaymentLinkField] = useState(true);
-  const [quantityLabel, setQuantityLabel] =
-    useState<InvoiceQuantityLabel>(invoiceQuantityLabel);
-  const [savingQuantityLabel, setSavingQuantityLabel] = useState(false);
-
-  const quantityColumnLabel = invoiceQuantityColumnLabel(quantityLabel);
 
   const [emailSubject, setEmailSubject] = useState(() =>
     resolveInvoiceEmailField(
@@ -360,11 +350,17 @@ export function InvoiceEditIndyContent({
       sort_order: it.sort_order,
       description: it.description,
       description_detail: it.description_detail ?? '',
+      line_type: normalizeInvoiceLineType(
+        (it as { line_type?: string | null }).line_type,
+      ),
       quantity: it.quantity,
       unit_price_pence: it.unit_price_pence,
       total_pence: it.total_pence,
     })),
   );
+
+  const quantityColumnLabel = invoiceItemsQuantityHeader(items);
+  const showUnitPriceColumn = invoiceItemsShowUnitPriceColumn(items);
 
   const [unitPriceDrafts, setUnitPriceDrafts] = useState<
     Record<string, string>
@@ -610,19 +606,25 @@ export function InvoiceEditIndyContent({
     [],
   );
 
-  const addRow = useCallback(() => {
-    setItems((prev) => [
-      ...prev,
-      {
-        sort_order: prev.length,
-        description: '',
-        description_detail: '',
-        quantity: 1,
-        unit_price_pence: 0,
-        total_pence: 0,
-      },
-    ]);
-  }, []);
+  const addRow = useCallback(
+    (lineType: InvoiceLineType = 'quantity') => {
+      setItems((prev) => [
+        ...prev,
+        {
+          sort_order: prev.length,
+          description: '',
+          description_detail: '',
+          line_type: lineType,
+          quantity: lineType === 'hours' ? 1 : 1,
+          unit_price_pence:
+            lineType === 'hours' ? (defaultHourlyRatePence ?? 0) : 0,
+          total_pence:
+            lineType === 'hours' ? (defaultHourlyRatePence ?? 0) : 0,
+        },
+      ]);
+    },
+    [defaultHourlyRatePence],
+  );
 
   const removeRow = useCallback((index: number) => {
     setItems((prev) => {
@@ -680,6 +682,7 @@ export function InvoiceEditIndyContent({
         sort_order: i,
         description: row.description.trim() || 'Item',
         description_detail: row.description_detail?.trim() || null,
+        line_type: row.line_type,
         quantity: normalizeInvoiceQuantity(row.quantity),
         unit_price_pence: Math.max(0, row.unit_price_pence),
         total_pence: calculateInvoiceLineTotalPence(
@@ -797,6 +800,7 @@ export function InvoiceEditIndyContent({
             sort_order: i,
             description: row.description,
             description_detail: row.description_detail,
+            line_type: row.line_type,
             quantity: row.quantity,
             unit_price_pence: row.unit_price_pence,
             total_pence: row.total_pence,
@@ -1318,9 +1322,11 @@ export function InvoiceEditIndyContent({
                         <th className="w-20 pr-2 pb-2 text-right font-medium">
                           {quantityColumnLabel}
                         </th>
-                        <th className="w-28 pr-2 pb-2 text-right font-medium">
-                          Unit price
-                        </th>
+                        {showUnitPriceColumn ? (
+                          <th className="w-28 pr-2 pb-2 text-right font-medium">
+                            Unit price
+                          </th>
+                        ) : null}
                         <th className="w-28 pr-2 pb-2 text-right font-medium">
                           Amount
                         </th>
@@ -1331,14 +1337,26 @@ export function InvoiceEditIndyContent({
                       {items.length === 0 ? (
                         <tr>
                           <td
-                            colSpan={readOnly ? 4 : 5}
+                            colSpan={
+                              readOnly
+                                ? showUnitPriceColumn
+                                  ? 4
+                                  : 3
+                                : showUnitPriceColumn
+                                  ? 5
+                                  : 4
+                            }
                             className="py-6 text-center text-[var(--workspace-shell-text-muted)]"
                           >
                             No line items yet.
                           </td>
                         </tr>
                       ) : (
-                        items.map((row, index) => (
+                        items.map((row, index) => {
+                          const isHoursLine = !invoiceLineShowsUnitPrice(
+                            row.line_type,
+                          );
+                          return (
                           <tr
                             key={row.id ?? index}
                             className="border-b border-zinc-100 align-top"
@@ -1366,7 +1384,29 @@ export function InvoiceEditIndyContent({
                                 placeholder="Additional details (optional)"
                                 className={`text-xs ${inputClassName}`}
                               />
-                              <div className="mt-2">
+                              <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                <select
+                                  value={row.line_type}
+                                  onChange={(e) => {
+                                    const lineType = normalizeInvoiceLineType(
+                                      e.target.value,
+                                    );
+                                    updateItem(index, {
+                                      line_type: lineType,
+                                      ...(lineType === 'hours'
+                                        ? {
+                                            unit_price_pence:
+                                              defaultHourlyRatePence ?? 0,
+                                          }
+                                        : {}),
+                                    });
+                                  }}
+                                  disabled={readOnly}
+                                  className="w-full rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-xs text-[var(--ozer-text-on-light)]"
+                                >
+                                  <option value="quantity">Quantity</option>
+                                  <option value="hours">Hours</option>
+                                </select>
                                 <select
                                   value={row.job_id ?? ''}
                                   onChange={(e) =>
@@ -1389,6 +1429,9 @@ export function InvoiceEditIndyContent({
                               </div>
                             </td>
                             <td className="py-3 pr-2 text-right">
+                              <span className="mb-1 block text-[10px] text-[var(--workspace-shell-text-muted)] sm:hidden">
+                                {invoiceLineQuantityColumnLabel(row.line_type)}
+                              </span>
                               <Input
                                 type="number"
                                 min={0}
@@ -1406,24 +1449,32 @@ export function InvoiceEditIndyContent({
                                 className={`text-right ${inputClassName}`}
                               />
                             </td>
-                            <td className="py-3 pr-2 text-right">
-                              <Input
-                                type="text"
-                                inputMode="decimal"
-                                value={unitPriceInputValue(row, index)}
-                                onChange={(e) => {
-                                  const key = unitPriceRowKey(row, index);
-                                  setUnitPriceDrafts((prev) => ({
-                                    ...prev,
-                                    [key]: e.target.value,
-                                  }));
-                                }}
-                                onBlur={() => commitUnitPriceDraft(index)}
-                                disabled={readOnly}
-                                placeholder="0.00"
-                                className={`text-right ${inputClassName}`}
-                              />
-                            </td>
+                            {showUnitPriceColumn ? (
+                              <td className="py-3 pr-2 text-right">
+                                {isHoursLine ? (
+                                  <span className="text-[var(--workspace-shell-text-muted)]">
+                                    —
+                                  </span>
+                                ) : (
+                                  <Input
+                                    type="text"
+                                    inputMode="decimal"
+                                    value={unitPriceInputValue(row, index)}
+                                    onChange={(e) => {
+                                      const key = unitPriceRowKey(row, index);
+                                      setUnitPriceDrafts((prev) => ({
+                                        ...prev,
+                                        [key]: e.target.value,
+                                      }));
+                                    }}
+                                    onBlur={() => commitUnitPriceDraft(index)}
+                                    disabled={readOnly}
+                                    placeholder="0.00"
+                                    className={`text-right ${inputClassName}`}
+                                  />
+                                )}
+                              </td>
+                            ) : null}
                             <td className="py-3 pr-2 text-right font-medium text-[var(--ozer-text-on-light)]">
                               {formatInvoiceMoney(
                                 calculateInvoiceLineTotalPence(
@@ -1447,7 +1498,8 @@ export function InvoiceEditIndyContent({
                               </td>
                             ) : null}
                           </tr>
-                        ))
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1459,12 +1511,37 @@ export function InvoiceEditIndyContent({
                       type="button"
                       variant="outline"
                       size="sm"
-                      onClick={addRow}
+                      onClick={() => addRow('quantity')}
                       className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
                     >
                       <PlusCircle className="mr-2 h-4 w-4" />
                       Add line
                     </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => addRow('hours')}
+                      className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
+                    >
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add hours
+                    </Button>
+                    {!defaultHourlyRatePence ? (
+                      <p className="w-full text-xs text-[var(--workspace-shell-text-muted)]">
+                        Set a default hourly rate in{' '}
+                        <Link
+                          href={pathsConfig.app.accountPaymentSettings.replace(
+                            '[account]',
+                            accountSlug,
+                          )}
+                          className="text-[var(--ozer-accent)] hover:underline"
+                        >
+                          payment settings
+                        </Link>{' '}
+                        to auto-fill hours lines.
+                      </p>
+                    ) : null}
                     <Button
                       type="button"
                       variant="outline"
@@ -2005,57 +2082,6 @@ export function InvoiceEditIndyContent({
                 />
               </div>
             ))}
-            <div className="rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-3">
-              <Label className="text-sm text-[var(--workspace-shell-text)]">
-                Line item quantity label
-              </Label>
-              <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                Use Hours for time-based billing. Applies to this workspace&apos;s
-                invoices, PDFs, and portal.
-              </p>
-              <Select
-                value={quantityLabel}
-                disabled={!canManagePaymentSettings || savingQuantityLabel}
-                onValueChange={(value: InvoiceQuantityLabel) => {
-                  setQuantityLabel(value);
-                  if (!canManagePaymentSettings) return;
-                  setSavingQuantityLabel(true);
-                  void savePaymentSettingsAction({
-                    accountId,
-                    invoice_quantity_label: value,
-                  })
-                    .then(() => toast.success('Quantity label updated'))
-                    .catch((err) => {
-                      setQuantityLabel(invoiceQuantityLabel);
-                      toast.error(getErrorMessage(err));
-                    })
-                    .finally(() => setSavingQuantityLabel(false));
-                }}
-              >
-                <SelectTrigger className="mt-2 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="quantity">Quantity</SelectItem>
-                  <SelectItem value="hours">Hours</SelectItem>
-                </SelectContent>
-              </Select>
-              {!canManagePaymentSettings ? (
-                <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
-                  Only workspace owners and admins can change this. Update it in{' '}
-                  <Link
-                    href={pathsConfig.app.accountPaymentSettings.replace(
-                      '[account]',
-                      accountSlug,
-                    )}
-                    className="text-[var(--ozer-accent)] hover:underline"
-                  >
-                    payment settings
-                  </Link>
-                  .
-                </p>
-              ) : null}
-            </div>
           </div>
           <DialogFooter>
             <Button

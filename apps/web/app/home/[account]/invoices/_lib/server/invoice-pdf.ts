@@ -10,8 +10,10 @@ import {
 
 import {
   formatInvoiceQuantity,
-  invoiceQuantityColumnHeaderPdf,
-  normalizeInvoiceQuantityLabel,
+  invoiceItemsQuantityHeader,
+  invoiceItemsShowUnitPriceColumn,
+  invoiceLineShowsUnitPrice,
+  normalizeInvoiceLineType,
 } from '~/lib/invoices/invoice-quantity';
 
 export type InvoiceForPdf = {
@@ -46,9 +48,9 @@ export type InvoiceForPdf = {
   show_footer?: boolean;
   show_logo?: boolean;
   show_payment_link?: boolean;
-  quantity_column_label?: string;
   items: Array<{
     description: string;
+    line_type?: string | null;
     quantity: number;
     unit_price_pence: number;
     total_pence: number;
@@ -574,6 +576,9 @@ export async function buildInvoicePdf(
   });
 
   const headerY = y - 4;
+  const quantityHeader = invoiceItemsQuantityHeader(invoice.items ?? []);
+  const showRateColumn = invoiceItemsShowUnitPriceColumn(invoice.items ?? []);
+
   page.drawText('ITEM', {
     x: tableX + 10,
     y: headerY,
@@ -582,9 +587,7 @@ export async function buildInvoicePdf(
     color: COLORS.muted,
   });
   page.drawText(
-    invoiceQuantityColumnHeaderPdf(
-      normalizeInvoiceQuantityLabel(invoice.quantity_column_label),
-    ),
+    quantityHeader === 'Quantity' ? 'QTY' : quantityHeader.toUpperCase(),
     {
       x: colQty,
       y: headerY,
@@ -593,13 +596,15 @@ export async function buildInvoicePdf(
       color: COLORS.muted,
     },
   );
-  page.drawText('RATE', {
-    x: colRate,
-    y: headerY,
-    size: 8,
-    font: fontBold,
-    color: COLORS.muted,
-  });
+  if (showRateColumn) {
+    page.drawText('RATE', {
+      x: colRate,
+      y: headerY,
+      size: 8,
+      font: fontBold,
+      color: COLORS.muted,
+    });
+  }
   drawRightText(
     page,
     'AMOUNT',
@@ -612,6 +617,7 @@ export async function buildInvoicePdf(
   y -= headerHeight + 6;
 
   for (const row of invoice.items ?? []) {
+    const lineType = normalizeInvoiceLineType(row.line_type);
     const descriptionLines = wrapText(row.description, font, 10, itemColWidth);
     const rowLineCount = Math.max(descriptionLines.length, 1);
     const rowHeight = rowLineCount * 13 + 10;
@@ -628,15 +634,17 @@ export async function buildInvoicePdf(
       font,
       color: COLORS.ink,
     });
-    drawRightText(
-      page,
-      formatCurrencyAmount(row.unit_price_pence, currency),
-      colRate + 52,
-      y,
-      10,
-      font,
-      COLORS.ink,
-    );
+    if (invoiceLineShowsUnitPrice(lineType)) {
+      drawRightText(
+        page,
+        formatCurrencyAmount(row.unit_price_pence, currency),
+        colRate + 52,
+        y,
+        10,
+        font,
+        COLORS.ink,
+      );
+    }
     drawRightText(
       page,
       formatCurrencyAmount(row.total_pence, currency),

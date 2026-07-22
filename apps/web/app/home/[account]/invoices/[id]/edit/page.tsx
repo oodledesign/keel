@@ -7,7 +7,6 @@ import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createInvoicePaymentSettingsService } from '../../_lib/server/invoice-payment-settings.service';
 
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
-import { getTeamAccountAccess } from '../../../_lib/role-access';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { InvoiceEditIndyContent } from '../../_components/invoice-edit-indy-content';
@@ -94,15 +93,6 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
     meta.name?.trim()?.split(/\s+/).slice(1).join(' ') ||
     null;
 
-  const access = getTeamAccountAccess(
-    workspace.account as {
-      permissions?: string[] | null;
-      role?: string | null;
-      company_role?: string | null;
-    },
-  );
-  const canManagePaymentSettings = access.isOwner || access.isAdmin;
-
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
       <InvoiceEditIndyContent
@@ -121,8 +111,7 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
           last_name: senderLast,
           email: auth?.email ?? null,
         }}
-        invoiceQuantityLabel={paymentSettings.invoice_quantity_label}
-        canManagePaymentSettings={canManagePaymentSettings}
+        defaultHourlyRatePence={paymentSettings.default_hourly_rate_pence}
       />
     </PageBody>
   );

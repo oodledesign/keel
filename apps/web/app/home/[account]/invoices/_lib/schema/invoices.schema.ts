@@ -92,6 +92,7 @@ export const InvoiceItemSchema = z.object({
   sort_order: z.number().int().min(0),
   description: z.string().min(1, 'Description is required'),
   description_detail: optionalNullableString,
+  line_type: z.enum(['quantity', 'hours']).optional().default('quantity'),
   quantity: z
     .number()
     .min(0)
@@ -224,6 +225,7 @@ export const SavePaymentSettingsSchema = z.object({
   invoice_starting_number: z.number().int().min(1).max(999999).optional(),
   default_invoice_currency: InvoiceCurrencySchema.optional(),
   invoice_quantity_label: z.enum(['quantity', 'hours']).optional(),
+  default_hourly_rate_pence: z.number().int().min(0).nullable().optional(),
 });
 
 export type ListInvoicesInput = z.infer<typeof ListInvoicesSchema>;

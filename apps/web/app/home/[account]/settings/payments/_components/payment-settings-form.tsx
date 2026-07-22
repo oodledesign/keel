@@ -21,9 +21,21 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 
+function penceToPoundsInput(pence: number | null | undefined): string {
+  if (pence == null || pence === 0) return '';
+  return (pence / 100).toFixed(2);
+}
+
+function poundsInputToPence(value: string): number | null {
+  const trimmed = value.trim();
+  if (!trimmed) return null;
+  const parsed = Number.parseFloat(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) return null;
+  return Math.round(parsed * 100);
+}
+
 import pathsConfig from '~/config/paths.config';
 import { stripeConnectErrorMessage } from '~/lib/billing/stripe-connect-messages';
-import type { InvoiceQuantityLabel } from '~/lib/invoices/invoice-quantity';
 
 import type { AccountPaymentSettings } from '../../../invoices/_lib/server/invoice-payment-settings.service';
 import {
@@ -48,6 +60,9 @@ export function PaymentSettingsForm({
   const searchParams = useSearchParams();
   const [pending, startTransition] = useTransition();
   const [settings, setSettings] = useState(initialSettings);
+  const [hourlyRateInput, setHourlyRateInput] = useState(() =>
+    penceToPoundsInput(initialSettings.default_hourly_rate_pence),
+  );
 
   const stripeConnected = Boolean(
     settings.stripe_connect_enabled && settings.stripe_account_id,
@@ -75,9 +90,14 @@ export function PaymentSettingsForm({
           bank_transfer_instructions: settings.bank_transfer_instructions,
           stripe_pay_now_enabled: settings.stripe_pay_now_enabled,
           invoice_starting_number: settings.invoice_starting_number,
-          invoice_quantity_label: settings.invoice_quantity_label,
+          default_hourly_rate_pence: poundsInputToPence(hourlyRateInput),
         });
         setSettings(saved as AccountPaymentSettings);
+        setHourlyRateInput(
+          penceToPoundsInput(
+            (saved as AccountPaymentSettings).default_hourly_rate_pence,
+          ),
+        );
         toast.success('Payment settings saved');
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Save failed');
@@ -236,31 +256,20 @@ export function PaymentSettingsForm({
             )}
           </div>
           <div>
-            <Label htmlFor="invoice_quantity_label">Line item quantity label</Label>
-            <Select
-              value={settings.invoice_quantity_label ?? 'quantity'}
+            <Label htmlFor="default_hourly_rate">Default hourly rate</Label>
+            <Input
+              id="default_hourly_rate"
+              type="text"
+              inputMode="decimal"
               disabled={!canEdit}
-              onValueChange={(value: InvoiceQuantityLabel) =>
-                setSettings((prev) => ({
-                  ...prev,
-                  invoice_quantity_label: value,
-                }))
-              }
-            >
-              <SelectTrigger
-                id="invoice_quantity_label"
-                className="mt-1 max-w-xs border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
-              >
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="quantity">Quantity</SelectItem>
-                <SelectItem value="hours">Hours</SelectItem>
-              </SelectContent>
-            </Select>
+              value={hourlyRateInput}
+              onChange={(e) => setHourlyRateInput(e.target.value)}
+              placeholder="0.00"
+              className="mt-1 max-w-xs font-mono"
+            />
             <p className="text-muted-foreground mt-2 text-xs">
-              Shown on invoice line items, PDFs, and the client portal. Quantities
-              support up to two decimal places (e.g. 2.5 hours).
+              Used when you add hours-based line items to an invoice. You can
+              still mix quantity and hours lines on the same invoice.
             </p>
           </div>
         </div>

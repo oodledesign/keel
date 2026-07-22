@@ -57,7 +57,7 @@ async function getInvoiceByToken(token: string) {
     client
       .from('invoice_items')
       .select(
-        'description, description_detail, quantity, unit_price_pence, total_pence',
+        'description, description_detail, line_type, quantity, unit_price_pence, total_pence',
       )
       .eq('invoice_id', invoice.id)
       .order('sort_order', { ascending: true }),

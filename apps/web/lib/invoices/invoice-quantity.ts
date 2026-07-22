@@ -1,9 +1,16 @@
 export type InvoiceQuantityLabel = 'quantity' | 'hours';
+export type InvoiceLineType = InvoiceQuantityLabel;
 
 export function normalizeInvoiceQuantityLabel(
   value: string | null | undefined,
 ): InvoiceQuantityLabel {
   return value === 'hours' ? 'hours' : 'quantity';
+}
+
+export function normalizeInvoiceLineType(
+  value: string | null | undefined,
+): InvoiceLineType {
+  return normalizeInvoiceQuantityLabel(value);
 }
 
 export function invoiceQuantityColumnLabel(
@@ -12,10 +19,41 @@ export function invoiceQuantityColumnLabel(
   return label === 'hours' ? 'Hours' : 'Quantity';
 }
 
+export function invoiceLineQuantityColumnLabel(
+  lineType: InvoiceLineType,
+): string {
+  return invoiceQuantityColumnLabel(lineType);
+}
+
 export function invoiceQuantityColumnHeaderPdf(
   label: InvoiceQuantityLabel,
 ): string {
   return label === 'hours' ? 'HOURS' : 'QTY';
+}
+
+export function invoiceLineShowsUnitPrice(lineType: InvoiceLineType): boolean {
+  return lineType !== 'hours';
+}
+
+export function invoiceItemsQuantityHeader(
+  items: Array<{ line_type?: string | null }>,
+): string {
+  const hasHours = items.some(
+    (item) => normalizeInvoiceLineType(item.line_type) === 'hours',
+  );
+  const hasQuantity = items.some(
+    (item) => normalizeInvoiceLineType(item.line_type) !== 'hours',
+  );
+
+  if (hasHours && hasQuantity) return 'Qty / Hours';
+  if (hasHours) return 'Hours';
+  return 'Quantity';
+}
+
+export function invoiceItemsShowUnitPriceColumn(
+  items: Array<{ line_type?: string | null }>,
+): boolean {
+  return items.some((item) => invoiceLineShowsUnitPrice(item.line_type));
 }
 
 /** Clamp and round quantity to two decimal places. */

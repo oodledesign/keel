@@ -31,6 +31,7 @@ export type AccountPaymentSettings = {
   invoice_starting_number: number;
   default_invoice_currency: InvoiceCurrency;
   invoice_quantity_label: InvoiceQuantityLabel;
+  default_hourly_rate_pence: number | null;
 };
 
 const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
@@ -47,6 +48,7 @@ const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
   invoice_starting_number: 1,
   default_invoice_currency: 'gbp',
   invoice_quantity_label: 'quantity',
+  default_hourly_rate_pence: null,
 };
 
 export function createInvoicePaymentSettingsService(
@@ -103,6 +105,7 @@ class InvoicePaymentSettingsService {
       invoice_starting_number?: number;
       default_invoice_currency?: string | null;
       invoice_quantity_label?: string | null;
+      default_hourly_rate_pence?: number | null;
     } | null;
 
     return {
@@ -120,6 +123,10 @@ class InvoicePaymentSettingsService {
       invoice_quantity_label: normalizeInvoiceQuantityLabel(
         row?.invoice_quantity_label,
       ),
+      default_hourly_rate_pence:
+        typeof row?.default_hourly_rate_pence === 'number'
+          ? Math.max(0, row.default_hourly_rate_pence)
+          : null,
     };
   }
 
@@ -152,6 +159,8 @@ class InvoicePaymentSettingsService {
     stripe_pay_now_enabled?: boolean;
     invoice_starting_number?: number;
     default_invoice_currency?: InvoiceCurrency;
+    invoice_quantity_label?: InvoiceQuantityLabel;
+    default_hourly_rate_pence?: number | null;
   }) {
     await this.ensureOwnerOrAdmin(input.accountId);
 
@@ -192,6 +201,14 @@ class InvoicePaymentSettingsService {
             invoice_quantity_label: normalizeInvoiceQuantityLabel(
               input.invoice_quantity_label,
             ),
+          }
+        : {}),
+      ...(input.default_hourly_rate_pence !== undefined
+        ? {
+            default_hourly_rate_pence:
+              input.default_hourly_rate_pence == null
+                ? null
+                : Math.max(0, input.default_hourly_rate_pence),
           }
         : {}),
     };
@@ -320,6 +337,10 @@ export async function loadPaymentSettingsForPortal(
     invoice_quantity_label: normalizeInvoiceQuantityLabel(
       row.invoice_quantity_label as string | null | undefined,
     ),
+    default_hourly_rate_pence:
+      typeof row.default_hourly_rate_pence === 'number'
+        ? Math.max(0, row.default_hourly_rate_pence)
+        : null,
   } as AccountPaymentSettings;
 }
 

@@ -3,6 +3,9 @@ import { describe, expect, it } from 'vitest';
 import {
   calculateInvoiceLineTotalPence,
   formatInvoiceQuantity,
+  invoiceItemsQuantityHeader,
+  invoiceItemsShowUnitPriceColumn,
+  invoiceLineShowsUnitPrice,
   normalizeInvoiceQuantity,
   parseInvoiceQuantityInput,
 } from './invoice-quantity';
@@ -26,5 +29,22 @@ describe('invoice quantity', () => {
 
   it('calculates line totals in pence', () => {
     expect(calculateInvoiceLineTotalPence(2.5, 10000)).toBe(25000);
+  });
+
+  it('detects hours-only line display', () => {
+    expect(invoiceLineShowsUnitPrice('quantity')).toBe(true);
+    expect(invoiceLineShowsUnitPrice('hours')).toBe(false);
+    expect(
+      invoiceItemsShowUnitPriceColumn([
+        { line_type: 'hours' },
+        { line_type: 'hours' },
+      ]),
+    ).toBe(false);
+    expect(
+      invoiceItemsQuantityHeader([
+        { line_type: 'hours' },
+        { line_type: 'quantity' },
+      ]),
+    ).toBe('Qty / Hours');
   });
 });
