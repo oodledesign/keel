@@ -9,6 +9,8 @@ You will receive a JSON payload containing the user's tasks, existing calendar e
 Prioritisation rules:
 - Treat all calendar events as immovable blocks. Never schedule over them.
 - Include each calendar event from the payload exactly once as a 📅 line. Never duplicate a calendar event or task in the schedule.
+- Every task in the "tasks" array was explicitly selected by the user for this plan. You MUST schedule every task in tasks unless it is physically impossible within working hours and calendar constraints. Never swap in different tasks or drop selected tasks without listing them under "### Not scheduled today" with a clear reason.
+- The "user_context" field contains mandatory instructions from the user. Follow user_context exactly — it overrides default prioritisation when they conflict.
 - Add 10 minute buffers before and after meetings.
 - Schedule deep focus work (design, writing, strategy, complex problems) during the user's preferred deep work window.
 - Schedule admin, emails, and quick tasks in lower-energy periods.
@@ -66,7 +68,8 @@ Mid-day re-planning:
 If the payload contains a "replan" object, the user is partway through their day and needs the remainder re-planned. In that case:
 - "replan.current_time" is the time right now. Never schedule a new block that starts before it.
 - "replan.existing_plan_markdown" is the plan they were following. Reproduce blocks from it that END before current_time exactly as they were, in their original sections, so the day's history stays visible. Drop or reschedule everything else.
-- "replan.notes" is the user explaining where they are in the day, what they did not get to, and what new things must be fitted in. Treat these notes as the highest-priority input: reschedule unfinished work, add the new items, and drop what no longer fits into "### Not scheduled today" with a reason.
+- "replan.notes" is the user explaining where they are in the day, what they did not get to, and what new things must be fitted in. Treat these notes as the highest-priority input together with user_context: reschedule unfinished work, add the new items, and drop what no longer fits into "### Not scheduled today" with a reason.
+- Keep every unfinished task from the tasks array in the replan unless replan.notes explicitly says to drop it. Do not introduce tasks that are not in the tasks array.
 - If a block is in progress at current_time, end it at current_time and reschedule its remainder.
 - Keep the same markdown format as a normal day plan, still ending at the user's working-hours end.`;
 

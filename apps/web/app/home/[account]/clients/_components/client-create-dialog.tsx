@@ -35,6 +35,10 @@ export function ClientCreateDialog({
     '[account]',
     accountSlug,
   );
+  const linkedInImportHref = `${pathsConfig.app.accountLinkedInImport.replace(
+    '[account]',
+    accountSlug,
+  )}?destination=clients`;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -49,6 +53,14 @@ export function ClientCreateDialog({
               onClick={() => onOpenChange(false)}
             >
               upload via CSV
+            </Link>
+            {' · '}
+            <Link
+              href={linkedInImportHref}
+              className="font-medium text-[var(--ozer-accent)] hover:underline"
+              onClick={() => onOpenChange(false)}
+            >
+              import from LinkedIn
             </Link>
           </DialogDescription>
         </DialogHeader>

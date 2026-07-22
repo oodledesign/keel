@@ -5,6 +5,10 @@ export type StoredPlan = {
   markdown: string;
   updatedAt: string;
   mode: 'day' | 'week';
+  /** Task IDs explicitly selected when the plan was generated. */
+  taskIds?: string[];
+  /** User context / notes from the planning session. */
+  userContext?: string;
 };
 
 export function plannerScopeKey(scope: PlannerScope): string {

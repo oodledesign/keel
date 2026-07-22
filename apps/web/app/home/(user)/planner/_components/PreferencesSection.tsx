@@ -105,7 +105,7 @@ export function PreferencesSection({
           </div>
 
           <div className="space-y-2">
-            <Label>Context</Label>
+            <Label>Planning notes</Label>
             <Textarea
               value={preferences.userContext}
               onChange={(e) =>
@@ -115,9 +115,13 @@ export function PreferencesSection({
                 })
               }
               rows={3}
-              placeholder="Anything Claude should know? e.g. low energy today, deadline pressure, school run at 3pm"
+              placeholder="Tell the planner what matters today — priorities, constraints, energy level, things to protect time for…"
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
             />
+            <p className="text-xs text-[var(--workspace-shell-text)]/45">
+              These notes are sent with every plan and re-plan. Regenerate uses
+              your current task selection and notes.
+            </p>
           </div>
         </CollapsibleContent>
       </div>

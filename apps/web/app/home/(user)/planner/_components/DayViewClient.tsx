@@ -31,6 +31,7 @@ import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { plannerTaskMetaWithoutClient } from '~/lib/planner/build-task-tree';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
+import { resolvePlannedTasks } from '~/lib/planner/planned-task-selection';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
   type PlanDocument,
@@ -162,10 +163,14 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       setPlanMarkdown(markdown);
       setPlanDocument(document);
 
+      const existing = loadStoredPlan(initialData.scope, dateYmd);
+
       saveStoredPlan(initialData.scope, dateYmd, {
         markdown,
         updatedAt: new Date().toISOString(),
         mode: 'day',
+        taskIds: existing?.taskIds,
+        userContext: existing?.userContext,
       });
 
       const result = await savePlannerPlanAction({
@@ -351,27 +356,34 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const doneTasks = tasks.filter((task) => task.status === 'completed');
 
   const replanOpenTasks = useMemo(() => {
-    const completedIds = new Set(
-      tasks
-        .filter((task) => task.status === 'completed')
-        .map((task) => task.id),
-    );
-    const byId = new Map<string, PlannerTask>();
+    const stored = loadStoredPlan(initialData.scope, dateYmd);
+    const pool = new Map<string, PlannerTask>();
 
     for (const task of initialData.openTasksForReplan) {
-      if (!completedIds.has(task.id)) {
-        byId.set(task.id, task);
-      }
+      pool.set(task.id, task);
     }
 
     for (const task of tasks) {
-      if (task.status !== 'completed') {
-        byId.set(task.id, task);
-      }
+      pool.set(task.id, task);
     }
 
-    return [...byId.values()];
-  }, [initialData.openTasksForReplan, tasks]);
+    return resolvePlannedTasks([...pool.values()], {
+      storedTaskIds: stored?.taskIds,
+      planMarkdown,
+      dateIso: `${dateYmd}T12:00:00`,
+    });
+  }, [
+    dateYmd,
+    initialData.openTasksForReplan,
+    initialData.scope,
+    planMarkdown,
+    tasks,
+  ]);
+
+  const replanUserContext = useMemo(() => {
+    const stored = loadStoredPlan(initialData.scope, dateYmd);
+    return stored?.userContext?.trim() ?? '';
+  }, [dateYmd, initialData.scope, planMarkdown]);
 
   async function toggleTask(task: PlannerTask) {
     const completing = task.status !== 'completed';
@@ -558,6 +570,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
                     planMarkdown={planMarkdown}
                     openTasks={replanOpenTasks}
                     calendarEvents={calendarEvents}
+                    sessionUserContext={replanUserContext}
                     onPlanUpdated={setPlanMarkdown}
                   />
                 </>

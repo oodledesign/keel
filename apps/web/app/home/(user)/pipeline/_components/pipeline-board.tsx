@@ -9,6 +9,8 @@ import {
   useTransition,
 } from 'react';
 
+import Link from 'next/link';
+
 import {
   DndContext,
   type DragEndEvent,
@@ -29,12 +31,16 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   ArrowRight,
   DollarSign,
+  Linkedin,
   MoreHorizontal,
   Phone,
   Send,
   Trophy,
   X,
 } from 'lucide-react';
+
+import pathsConfig from '~/config/paths.config';
+import { Button } from '@kit/ui/button';
 
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 
@@ -275,6 +281,24 @@ export function PipelineBoard({
               </button>
             ))}
           </div>
+          {workspaceAccountSlug ? (
+            <Button
+              asChild
+              variant="outline"
+              size="sm"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]/80 hover:bg-white/[0.08] hover:text-[var(--workspace-shell-text)]"
+            >
+              <Link
+                href={`${pathsConfig.app.accountLinkedInImport.replace(
+                  '[account]',
+                  workspaceAccountSlug,
+                )}?destination=pipeline`}
+              >
+                <Linkedin className="mr-1.5 h-3.5 w-3.5" />
+                LinkedIn
+              </Link>
+            </Button>
+          ) : null}
           <AddDealDialog
             businesses={initialData.businesses}
             onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}

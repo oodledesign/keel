@@ -21,6 +21,7 @@ import { Textarea } from '@kit/ui/textarea';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
+  loadStoredPlan,
   plannerScopeKey,
   saveStoredPlan,
   toLocalDateYmd,
@@ -82,6 +83,7 @@ type Props = {
   planMarkdown: string;
   openTasks: PlannerTask[];
   calendarEvents: PlannerCalendarEvent[];
+  sessionUserContext?: string;
   onPlanUpdated: (markdown: string) => void;
 };
 
@@ -90,6 +92,7 @@ export function ReplanDialog({
   planMarkdown,
   openTasks,
   calendarEvents,
+  sessionUserContext,
   onPlanUpdated,
 }: Props) {
   const [open, setOpen] = useState(false);
@@ -114,6 +117,11 @@ export function ReplanDialog({
     const preferences = loadPlannerPreferences();
     const now = new Date();
     const dateYmd = toLocalDateYmd(now);
+    const existing = loadStoredPlan(scope, dateYmd);
+    const userContext =
+      sessionUserContext?.trim() ||
+      existing?.userContext?.trim() ||
+      preferences.userContext;
 
     setIsReplanning(true);
 
@@ -127,7 +135,7 @@ export function ReplanDialog({
           working_hours: preferences.workingHours,
           deep_work_preference:
             preferences.deepWorkPreference as DeepWorkPreference,
-          user_context: preferences.userContext,
+          user_context: userContext,
           calendar_events: calendarEvents.map(({ id: _id, ...event }) => event),
           tasks: openTasks.map(plannerTaskToPayload),
           replan: {
@@ -163,6 +171,8 @@ export function ReplanDialog({
         markdown: accumulated,
         updatedAt: new Date().toISOString(),
         mode: 'day',
+        taskIds: existing?.taskIds ?? openTasks.map((task) => task.id),
+        userContext,
       });
 
       const saveResult = await savePlannerPlanAction({

@@ -9,6 +9,7 @@ import {
   Archive,
   Filter,
   LayoutGrid,
+  Linkedin,
   List,
   PlusCircle,
   Search,
@@ -437,6 +438,23 @@ export function ClientsPageContent({
               >
                 <Upload className="mr-1.5 h-3.5 w-3.5" />
                 Import CSV
+              </Link>
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
+              asChild
+            >
+              <Link
+                href={pathsConfig.app.accountLinkedInImport.replace(
+                  '[account]',
+                  accountSlug,
+                )}
+                data-test="import-clients-linkedin-button"
+              >
+                <Linkedin className="mr-1.5 h-3.5 w-3.5" />
+                LinkedIn
               </Link>
             </Button>
             <Button

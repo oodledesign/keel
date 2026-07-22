@@ -21,6 +21,7 @@ import {
   planGainedGoogleIds,
 } from '~/lib/planner/plan-calendar-sync';
 import {
+  loadStoredPlan,
   plannerScopeKey,
   saveStoredPlan,
   toLocalDateYmd,
@@ -85,9 +86,6 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
   );
   const [planDocument, setPlanDocument] = useState<PlanDocument | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [lastPayload, setLastPayload] = useState<PlannerGeneratePayload | null>(
-    null,
-  );
 
   useEffect(() => {
     const currentIds = allTaskIds;
@@ -153,11 +151,14 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
       setPlanDocument(document);
 
       const dateYmd = toLocalDateYmd(new Date(date));
+      const existing = loadStoredPlan(initialData.scope, dateYmd);
 
       saveStoredPlan(initialData.scope, dateYmd, {
         markdown,
         updatedAt: new Date().toISOString(),
         mode,
+        taskIds: existing?.taskIds,
+        userContext: existing?.userContext,
       });
 
       const result = await savePlannerPlanAction({
@@ -277,7 +278,6 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
       return;
     }
 
-    setLastPayload(payload);
     setPlanMarkdown('');
     setIsGenerating(true);
 
@@ -313,6 +313,8 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
           markdown: accumulated,
           updatedAt: new Date().toISOString(),
           mode,
+          taskIds: payload.tasks.map((task) => task.id),
+          userContext: payload.user_context,
         });
 
         const result = await savePlannerPlanAction({
@@ -390,8 +392,8 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
             date={date}
             markdown={planMarkdown}
             isGenerating={isGenerating}
-            onRegenerate={() => lastPayload && generatePlan(lastPayload)}
-            canRegenerate={Boolean(lastPayload)}
+            onRegenerate={() => generatePlan()}
+            canRegenerate={selectedTasks.length > 0 && !isGenerating}
             dayViewHref={initialData.dayViewHref}
             planDocument={planDocument}
             onPlanDocumentChange={setPlanDocument}
