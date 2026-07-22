@@ -7,6 +7,8 @@ import {
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import pathsConfig from '~/config/paths.config';
+import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
 
 import {
   DEFAULT_PROPOSAL_EMAIL_BODY,
@@ -233,6 +235,24 @@ export async function sendProposalApprovedOwnerNotification(params: {
       metadata: { proposal_id: params.proposalId, event: 'approved' },
     });
   }
+
+  const { data: account } = await admin
+    .from('accounts')
+    .select('slug')
+    .eq('id', params.accountId)
+    .maybeSingle();
+
+  if (account?.slug) {
+    const link = pathsConfig.app.accountProposalEdit
+      .replace('[account]', account.slug)
+      .replace('[id]', params.proposalId);
+
+    await createInAppNotification({
+      accountId: params.accountId,
+      body: `${recipient} approved proposal “${title}”`,
+      link,
+    });
+  }
 }
 
 export async function sendProposalCommentOwnerNotification(params: {
@@ -278,6 +298,25 @@ export async function sendProposalCommentOwnerNotification(params: {
         html: wrapEmailHtmlWithBrand({ brand, innerHtml }),
       },
       metadata: { proposal_id: params.proposalId, event: 'comment' },
+    });
+  }
+
+  const { data: account } = await admin
+    .from('accounts')
+    .select('slug')
+    .eq('id', params.accountId)
+    .maybeSingle();
+
+  if (account?.slug) {
+    const link = pathsConfig.app.accountProposalEdit
+      .replace('[account]', account.slug)
+      .replace('[id]', params.proposalId);
+    const preview = params.body.trim().replace(/\s+/g, ' ').slice(0, 80);
+
+    await createInAppNotification({
+      accountId: params.accountId,
+      body: `${params.authorName.trim()} commented on “${title}”: ${preview}${params.body.trim().length > 80 ? '…' : ''}`,
+      link,
     });
   }
 }

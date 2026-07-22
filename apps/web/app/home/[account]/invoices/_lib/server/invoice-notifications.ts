@@ -9,6 +9,7 @@ import {
 } from '~/lib/brand/account-brand';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
+import { notifyInvoicePaidInApp } from '~/lib/invoices/invoice-in-app-notifications';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import { formatInvoiceMoney } from '../invoice-currency';
@@ -214,6 +215,17 @@ export async function sendInvoicePaidNotifications(params: {
   if (emailJobs.length > 0) {
     await Promise.allSettled(emailJobs);
   }
+
+  await notifyInvoicePaidInApp({
+    accountId: params.accountId,
+    accountSlug: account.slug,
+    invoiceId: params.invoiceId,
+    invoiceNumber: invoice.invoice_number,
+    clientName,
+    totalPence: invoice.total_pence ?? 0,
+    currency: invoice.currency ?? 'gbp',
+    paymentMethod: params.paymentMethod,
+  });
 }
 
 export async function sendInvoiceIssuedEmail(params: {

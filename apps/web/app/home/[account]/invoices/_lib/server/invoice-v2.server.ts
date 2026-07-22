@@ -4,6 +4,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import { notifyInvoiceViewedInApp } from '~/lib/invoices/invoice-in-app-notifications';
 
 import { normalizeInvoiceCurrency } from '../invoice-currency';
 import {
@@ -285,7 +286,9 @@ export async function markInvoiceReadByToken(token: string) {
   const admin = adminDb();
   const { data: invoice } = await admin
     .from('invoices')
-    .select('id, status, read_at')
+    .select(
+      'id, account_id, invoice_number, status, read_at, client_id, clients(display_name, first_name, last_name)',
+    )
     .eq('public_token', token)
     .maybeSingle();
   if (!invoice || invoice.status !== 'sent' || invoice.read_at) return;
@@ -297,6 +300,30 @@ export async function markInvoiceReadByToken(token: string) {
       read_at: new Date().toISOString(),
     })
     .eq('id', invoice.id);
+
+  const { data: account } = await admin
+    .from('accounts')
+    .select('slug')
+    .eq('id', invoice.account_id)
+    .maybeSingle();
+
+  if (!account?.slug) return;
+
+  const client = Array.isArray(invoice.clients)
+    ? invoice.clients[0]
+    : invoice.clients;
+  const clientName =
+    client?.display_name?.trim() ||
+    [client?.first_name, client?.last_name].filter(Boolean).join(' ').trim() ||
+    'Client';
+
+  await notifyInvoiceViewedInApp({
+    accountId: invoice.account_id,
+    accountSlug: account.slug,
+    invoiceId: invoice.id,
+    invoiceNumber: invoice.invoice_number,
+    clientName,
+  });
 }
 
 export async function recordInvoicePayment(input: {

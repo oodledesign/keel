@@ -7,6 +7,8 @@ import {
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import pathsConfig from '~/config/paths.config';
+import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
 
 import {
   DEFAULT_CONTRACT_EMAIL_BODY,
@@ -272,4 +274,14 @@ export async function sendContractSignedNotifications(params: {
   if (emailJobs.length > 0) {
     await Promise.allSettled(emailJobs);
   }
+
+  const link = pathsConfig.app.accountContractEdit
+    .replace('[account]', account.slug)
+    .replace('[id]', params.contractId);
+
+  await createInAppNotification({
+    accountId: params.accountId,
+    body: `${clientName} signed contract “${contract.title ?? 'Agreement'}”`,
+    link,
+  });
 }

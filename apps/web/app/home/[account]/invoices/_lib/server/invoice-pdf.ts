@@ -621,21 +621,43 @@ export async function buildInvoicePdf(
   );
   y -= headerHeight + 6;
 
+  const itemFontSize = 10;
+  const itemLineHeight = 13;
+  const itemRowPadBottom = 6;
+  const itemRowGapAfterDivider = 8;
+
   for (const row of invoice.items ?? []) {
     const lineType = normalizeInvoiceLineType(row.line_type);
-    const descriptionLines = wrapText(row.description, font, 10, itemColWidth);
+    const rowTopY = y;
+    const descriptionLines = wrapText(
+      row.description,
+      font,
+      itemFontSize,
+      itemColWidth,
+    );
     const rowLineCount = Math.max(descriptionLines.length, 1);
-    const rowHeight = rowLineCount * 13 + 10;
+    const lastLineBaselineY = rowTopY - (rowLineCount - 1) * itemLineHeight;
+    const dividerY = lastLineBaselineY - itemRowPadBottom;
+    const nextRowY = dividerY - itemRowGapAfterDivider;
 
-    if (y - rowHeight < minContentY) {
+    if (nextRowY < minContentY) {
       break;
     }
 
-    drawLines(page, descriptionLines, tableX + 10, y, 10, font, 13, COLORS.ink);
+    drawLines(
+      page,
+      descriptionLines,
+      tableX + 10,
+      rowTopY,
+      itemFontSize,
+      font,
+      itemLineHeight,
+      COLORS.ink,
+    );
     page.drawText(formatInvoiceQuantity(Number(row.quantity)), {
       x: colQty,
-      y,
-      size: 10,
+      y: rowTopY,
+      size: itemFontSize,
       font,
       color: COLORS.ink,
     });
@@ -644,8 +666,8 @@ export async function buildInvoicePdf(
         page,
         formatCurrencyAmount(row.unit_price_pence, currency),
         colRate + 52,
-        y,
-        10,
+        rowTopY,
+        itemFontSize,
         font,
         COLORS.ink,
       );
@@ -654,19 +676,20 @@ export async function buildInvoicePdf(
       page,
       formatCurrencyAmount(row.total_pence, currency),
       colAmount - 10,
-      y,
-      10,
+      rowTopY,
+      itemFontSize,
       font,
       COLORS.ink,
     );
 
-    y -= rowHeight;
     page.drawLine({
-      start: { x: tableX, y: y + 4 },
-      end: { x: tableX + tableWidth, y: y + 4 },
+      start: { x: tableX, y: dividerY },
+      end: { x: tableX + tableWidth, y: dividerY },
       thickness: 0.5,
       color: COLORS.line,
     });
+
+    y = nextRowY;
   }
 
   y -= 18;
