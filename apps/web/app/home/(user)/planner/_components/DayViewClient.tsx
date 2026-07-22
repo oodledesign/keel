@@ -538,7 +538,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
+      <div className="grid min-w-0 gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
         <section className="space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">

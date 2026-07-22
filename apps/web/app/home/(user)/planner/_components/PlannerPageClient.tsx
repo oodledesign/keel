@@ -10,6 +10,7 @@ import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
   type PlanDocument,
   attachGoogleEventIdsToPlan,
+  dedupePlanDocument,
   flattenPlanBlocks,
   parsePlanDocument,
   serializePlanDocument,
@@ -189,15 +190,17 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
     let doc = parsePlanDocument(planMarkdown);
 
     if (mode === 'day' && calendarEvents.length > 0) {
-      const enriched = attachGoogleEventIdsToPlan(
-        doc,
-        calendarEvents.map((event) => ({
-          id: event.id,
-          title: event.title,
-          start: event.start,
-          calendarId: event.calendar_id,
-        })),
-        dateIso,
+      const enriched = dedupePlanDocument(
+        attachGoogleEventIdsToPlan(
+          doc,
+          calendarEvents.map((event) => ({
+            id: event.id,
+            title: event.title,
+            start: event.start,
+            calendarId: event.calendar_id,
+          })),
+          dateIso,
+        ),
       );
 
       if (planGainedGoogleIds(doc, enriched)) {
@@ -358,7 +361,7 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
         />
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(280px,1fr)]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
         <PlannerInputPanel
           mode={mode}
           onModeChange={setMode}

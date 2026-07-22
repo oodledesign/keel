@@ -42,7 +42,7 @@ type Props = {
 
 export function PlannerInputPanel(props: Props) {
   return (
-    <div className="space-y-6">
+    <div className="min-w-0 space-y-6">
       <PlanningModeToggle
         mode={props.mode}
         onModeChange={props.onModeChange}

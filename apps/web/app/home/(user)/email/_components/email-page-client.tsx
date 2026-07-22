@@ -23,6 +23,15 @@ import { EmailInboxList } from './email-inbox-list';
 import { EmailSettingsCard } from './email-settings-card';
 import { EmailThreadPanel } from './email-thread-panel';
 
+const AUTO_SYNC_STALE_MS = 15 * 60 * 1000;
+const MANUAL_SYNC_MAX_BATCHES = 8;
+
+type SyncOptions = {
+  mailOnly?: boolean;
+  maxBatches?: number;
+  quiet?: boolean;
+};
+
 type Props = {
   initialData: EmailPageInitialData;
 };
@@ -73,6 +82,7 @@ export function EmailPageClient({ initialData }: Props) {
   const searchRequestId = useRef(0);
   const skipInitialSearchFetch = useRef(true);
   const handledOAuthParams = useRef(false);
+  const autoSyncStarted = useRef(false);
 
   const selectedThreadId = searchParams.get('thread');
 
@@ -103,65 +113,78 @@ export function EmailPageClient({ initialData }: Props) {
     setHasMore(Boolean(data.nextCursor));
   }, [threadsEndpoint]);
 
-  const runSync = useCallback(async () => {
-    let totalProcessed = 0;
-    let complete = true;
-    let guard = 0;
-    let draftsCreated = 0;
-    let classified = 0;
-    let linked = 0;
-    const maxBatches = 25;
+  const runSync = useCallback(
+    async (options: SyncOptions = {}) => {
+      const mailOnly = options.mailOnly ?? false;
+      const maxBatches = options.maxBatches ?? MANUAL_SYNC_MAX_BATCHES;
+      const quiet = options.quiet ?? false;
+      const syncUrl = mailOnly
+        ? '/api/gmail/sync?mode=mail'
+        : '/api/gmail/sync';
 
-    do {
-      const result = await emailApiFetch<{
-        mode: string;
-        messagesProcessed: number;
-        backfillComplete?: boolean;
-        remainingEstimate?: number;
-        assistant?: {
-          classified: number;
-          linked?: number;
-          draftsCreated: number;
-          draftsSavedToGmail: number;
-          errors?: string[];
-        } | null;
-      }>('/api/gmail/sync', { method: 'POST' });
+      let totalProcessed = 0;
+      let complete = true;
+      let guard = 0;
+      let draftsCreated = 0;
+      let classified = 0;
+      let linked = 0;
 
-      totalProcessed += result.messagesProcessed;
-      draftsCreated += result.assistant?.draftsCreated ?? 0;
-      classified += result.assistant?.classified ?? 0;
-      linked += result.assistant?.linked ?? 0;
-      complete = result.backfillComplete !== false;
-      guard += 1;
-    } while (!complete && guard < maxBatches);
+      do {
+        const result = await emailApiFetch<{
+          mode: string;
+          messagesProcessed: number;
+          backfillComplete?: boolean;
+          remainingEstimate?: number;
+          assistant?: {
+            classified: number;
+            linked?: number;
+            draftsCreated: number;
+            draftsSavedToGmail: number;
+            errors?: string[];
+          } | null;
+        }>(syncUrl, { method: 'POST' });
 
-    await reloadThreads();
-    router.refresh();
+        totalProcessed += result.messagesProcessed;
+        draftsCreated += result.assistant?.draftsCreated ?? 0;
+        classified += result.assistant?.classified ?? 0;
+        linked += result.assistant?.linked ?? 0;
+        complete = mailOnly || result.backfillComplete !== false;
+        guard += 1;
+      } while (!complete && guard < maxBatches);
 
-    if (draftsCreated > 0) {
-      toast.success(
-        `Drafted ${draftsCreated} repl${draftsCreated === 1 ? 'y' : 'ies'}`,
-      );
-    } else if (linked > 0) {
-      toast.success(
-        `Linked ${linked} thread${linked === 1 ? '' : 's'} to clients/projects`,
-      );
-    } else if (classified > 0) {
-      toast.success(
-        `Synced and sorted ${classified} thread${classified === 1 ? '' : 's'}`,
-      );
-    } else if (complete) {
-      toast.success(
-        totalProcessed > 0
-          ? `Synced ${totalProcessed} message${totalProcessed === 1 ? '' : 's'}`
-          : 'Mailbox is up to date',
-      );
-    } else {
-      toast.success(
-        `Synced ${totalProcessed} messages — still catching up, tap Sync again`,
-      );
-    }
-  }, [reloadThreads, router]);
+      await reloadThreads();
+      router.refresh();
+
+      if (quiet) {
+        return;
+      }
+
+      if (draftsCreated > 0) {
+        toast.success(
+          `Drafted ${draftsCreated} repl${draftsCreated === 1 ? 'y' : 'ies'}`,
+        );
+      } else if (linked > 0) {
+        toast.success(
+          `Linked ${linked} thread${linked === 1 ? '' : 's'} to clients/projects`,
+        );
+      } else if (classified > 0) {
+        toast.success(
+          `Synced and sorted ${classified} thread${classified === 1 ? '' : 's'}`,
+        );
+      } else if (complete) {
+        toast.success(
+          totalProcessed > 0
+            ? `Synced ${totalProcessed} message${totalProcessed === 1 ? '' : 's'}`
+            : 'Mailbox is up to date',
+        );
+      } else {
+        toast.success(
+          `Synced ${totalProcessed} messages — still catching up, tap Sync again`,
+        );
+      }
+    },
+    [reloadThreads, router],
+  );
 
   useEffect(() => {
     const connected = searchParams.get('email_connected');
@@ -198,6 +221,44 @@ export function EmailPageClient({ initialData }: Props) {
       router.replace(pathsConfig.app.personalEmailAssistant);
     }
   }, [router, searchParams, runSync]);
+
+  useEffect(() => {
+    if (!initialData.connection || autoSyncStarted.current) {
+      return;
+    }
+
+    const lastSyncedAt = initialData.settings.lastSyncedAt;
+    if (lastSyncedAt) {
+      const ageMs = Date.now() - new Date(lastSyncedAt).getTime();
+      if (ageMs < AUTO_SYNC_STALE_MS) {
+        return;
+      }
+    }
+
+    autoSyncStarted.current = true;
+
+    startSyncTransition(async () => {
+      try {
+        const mailResult = await emailApiFetch<{
+          messagesProcessed: number;
+        }>('/api/gmail/sync?mode=mail', { method: 'POST' });
+
+        if (mailResult.messagesProcessed > 0) {
+          await emailApiFetch('/api/gmail/sync', { method: 'POST' });
+        }
+
+        await reloadThreads();
+        router.refresh();
+      } catch (syncError) {
+        console.error('Background email sync failed', syncError);
+      }
+    });
+  }, [
+    initialData.connection,
+    initialData.settings.lastSyncedAt,
+    reloadThreads,
+    router,
+  ]);
 
   useEffect(() => {
     const timeout = window.setTimeout(() => {

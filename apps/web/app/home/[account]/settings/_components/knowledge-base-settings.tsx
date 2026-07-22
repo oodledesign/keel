@@ -12,19 +12,16 @@ import { getBrainKnowledgeStats } from '../../brain/_lib/server/brain-actions';
 type KnowledgeStats = {
   totalChunks: number;
   byType: Record<string, { count: number; lastIndexedAt: string | null }>;
-  voyageConfigured: boolean;
 };
 
 export function KnowledgeBaseSettings({
   accountId,
   accountSlug,
   initialStats,
-  voyageConfigured,
 }: {
   accountId: string;
   accountSlug: string;
   initialStats: KnowledgeStats;
-  voyageConfigured: boolean;
 }) {
   const [stats, setStats] = useState<KnowledgeStats>(initialStats);
   const [isReindexing, setIsReindexing] = useState(false);
@@ -85,18 +82,14 @@ export function KnowledgeBaseSettings({
             Knowledge base
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Semantic index for Second brain chat. Requires{' '}
-            <code className="text-[var(--workspace-shell-text-muted)]">
-              VOYAGE_API_KEY
-            </code>
-            .
+            Semantic index for Second Brain chat and search.
           </p>
         </div>
         <Button
           type="button"
           variant="outline"
           className="border-[color:var(--workspace-shell-border)]"
-          disabled={isReindexing || !voyageConfigured}
+          disabled={isReindexing}
           onClick={() => void handleReindex()}
         >
           {isReindexing ? (
@@ -107,13 +100,6 @@ export function KnowledgeBaseSettings({
           Re-index all
         </Button>
       </div>
-
-      {!voyageConfigured && (
-        <p className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
-          Add VOYAGE_API_KEY to your environment to enable indexing and chat
-          search.
-        </p>
-      )}
 
       {lastErrors.length > 0 && (
         <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
@@ -169,8 +155,8 @@ export function KnowledgeBaseSettings({
                   colSpan={3}
                   className="py-4 text-[var(--workspace-shell-text-muted)]"
                 >
-                  No chunks indexed yet. Run a full re-index after adding
-                  VOYAGE_API_KEY.
+                  No chunks indexed yet. Run a full re-index to populate the
+                  knowledge base.
                 </td>
               </tr>
             )}

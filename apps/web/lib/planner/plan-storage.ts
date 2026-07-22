@@ -76,7 +76,7 @@ function scheduleBlockCount(markdown: string, dateIso: string): number {
   return parseDayScheduleFromMarkdown(markdown, dateIso).length;
 }
 
-/** Prefer the plan that parses to the most schedule blocks, then the newest copy. */
+/** Prefer the newest plan copy; tie-break on fewer schedule blocks to avoid duplicated AI output. */
 export function pickBestPlanMarkdown(
   serverMarkdown: string | null | undefined,
   serverUpdatedAt: string | null | undefined,
@@ -92,15 +92,20 @@ export function pickBestPlanMarkdown(
   const serverBlocks = scheduleBlockCount(serverMd, dateIso);
   const storedBlocks = scheduleBlockCount(storedMd, dateIso);
 
-  if (storedBlocks > serverBlocks) return storedMd;
-  if (serverBlocks > storedBlocks) return serverMd;
-
   const serverTime = serverUpdatedAt ? Date.parse(serverUpdatedAt) : 0;
   const storedTime =
     stored?.updatedAt && Number.isFinite(Date.parse(stored.updatedAt))
       ? Date.parse(stored.updatedAt)
       : 0;
-  if (Number.isFinite(storedTime) && storedTime > serverTime) return storedMd;
+
+  if (Number.isFinite(storedTime) && Number.isFinite(serverTime)) {
+    if (storedTime > serverTime) return storedMd;
+    if (serverTime > storedTime) return serverMd;
+  }
+
+  if (storedBlocks !== serverBlocks) {
+    return storedBlocks < serverBlocks ? storedMd : serverMd;
+  }
 
   return serverMd;
 }

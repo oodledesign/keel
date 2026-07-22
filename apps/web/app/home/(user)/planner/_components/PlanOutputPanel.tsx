@@ -64,7 +64,7 @@ export function PlanOutputPanel({
     editableBlockCount > 0;
 
   return (
-    <section className="sticky top-4 min-h-[min(80vh,720px)] rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.22)]">
+    <section className="min-w-0 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 shadow-[0_18px_50px_rgba(4,10,24,0.22)] md:sticky md:top-4 md:min-h-[min(80vh,720px)] md:p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">Generated plan</h2>
@@ -82,7 +82,7 @@ export function PlanOutputPanel({
         ) : null}
       </div>
 
-      <div className="min-h-[min(58vh,560px)] rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-4">
+      <div className="min-h-[min(42vh,420px)] rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/10 p-3 md:min-h-[min(58vh,560px)] md:p-4">
         {showDayScheduleEditor && planDocument ? (
           <DayScheduleEditor
             document={planDocument}

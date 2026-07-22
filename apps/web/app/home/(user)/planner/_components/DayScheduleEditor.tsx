@@ -103,6 +103,15 @@ export function DayScheduleEditor({
     endMinutes: number;
   } | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isMobileLayout, setIsMobileLayout] = useState(false);
+
+  useEffect(() => {
+    const media = window.matchMedia('(max-width: 767px)');
+    const update = () => setIsMobileLayout(media.matches);
+    update();
+    media.addEventListener('change', update);
+    return () => media.removeEventListener('change', update);
+  }, []);
 
   const blocks = useMemo(
     () =>
@@ -190,14 +199,19 @@ export function DayScheduleEditor({
             other.renderEndMinutes > block.renderStartMinutes;
           return overlaps ? count + 1 : count;
         }, 0);
-        existing.laneCount = Math.max(1, Math.min(laneCount, concurrentCount));
+        existing.laneCount = isMobileLayout
+          ? 1
+          : Math.max(1, Math.min(laneCount, concurrentCount));
+        if (isMobileLayout) {
+          existing.laneIndex = 0;
+        }
       }
     }
 
     return blocks
       .map((block) => positioned.get(block.id))
       .filter((block): block is PositionedBlock => Boolean(block));
-  }, [blocks, preview]);
+  }, [blocks, isMobileLayout, preview]);
 
   const nowLine = useMemo(() => {
     const viewingToday =
@@ -398,7 +412,7 @@ export function DayScheduleEditor({
         ) : null}
       </div>
 
-      <div className="relative overflow-x-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+      <div className="relative w-full min-w-0 overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         {nowLine ? (
           <div
             className="pointer-events-none absolute inset-x-0 z-30 flex items-center"
@@ -416,7 +430,7 @@ export function DayScheduleEditor({
           </div>
         ) : null}
 
-        <div className="flex min-w-[320px]">
+        <div className="flex w-full min-w-0">
           <div
             className="relative w-14 shrink-0 border-r border-[color:var(--workspace-shell-border)] bg-black/10"
             style={{ height: gridHeight }}

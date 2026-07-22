@@ -92,6 +92,45 @@ export function blockToScheduleLine(block: EditablePlanBlock): string {
   return `${start}–${end} · ${prefix}${block.title}${meta}`;
 }
 
+function normalizeTitle(value: string) {
+  return value.trim().toLowerCase().replace(/\s+/g, ' ');
+}
+
+function blockDedupeKey(block: EditablePlanBlock): string {
+  if (block.googleEventId) {
+    return `gcal:${block.googleEventId}`;
+  }
+
+  const title = normalizeTitle(block.title);
+  const kind = block.isCalendarEvent
+    ? 'cal'
+    : block.isBreak
+      ? 'break'
+      : 'task';
+
+  return `${kind}:${block.startMinutes}:${block.endMinutes}:${title}`;
+}
+
+/** Drop duplicate schedule blocks (common when AI repeats calendar events). */
+export function dedupePlanDocument(doc: PlanDocument): PlanDocument {
+  const seen = new Set<string>();
+
+  return {
+    ...doc,
+    sections: doc.sections.map((section) => ({
+      ...section,
+      blocks: section.blocks.filter((block) => {
+        const key = blockDedupeKey(block);
+        if (seen.has(key)) {
+          return false;
+        }
+        seen.add(key);
+        return true;
+      }),
+    })),
+  };
+}
+
 export function parsePlanDocument(markdown: string): PlanDocument {
   blockIdCounter = 0;
 
@@ -154,11 +193,11 @@ export function parsePlanDocument(markdown: string): PlanDocument {
     sections.push(currentSection);
   }
 
-  return {
+  return dedupePlanDocument({
     preamble: preambleLines.join('\n').trimEnd(),
     sections,
     footer,
-  };
+  });
 }
 
 export function serializePlanDocument(doc: PlanDocument): string {
@@ -317,10 +356,6 @@ function isoToMinutes(iso: string): number | null {
     return null;
   }
   return date.getHours() * 60 + date.getMinutes();
-}
-
-function normalizeTitle(value: string) {
-  return value.trim().toLowerCase().replace(/\s+/g, ' ');
 }
 
 function isoToMinutesOnDate(iso: string, dateIso: string): number | null {

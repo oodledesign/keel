@@ -43,8 +43,16 @@ async function assertGoogleConnection(userId: string) {
   }
 }
 
-async function syncUserMailbox(userId: string) {
+async function syncUserMailbox(
+  userId: string,
+  options?: { assistant?: boolean },
+) {
   const syncResult = await syncMailbox(userId);
+  const runAssistant = options?.assistant !== false;
+
+  if (!runAssistant) {
+    return { ...syncResult, assistant: null };
+  }
 
   let assistant: Awaited<ReturnType<typeof runEmailAssistantPipeline>> | null =
     null;
@@ -96,13 +104,36 @@ async function syncAllConnectedUsers() {
     const userId = (row as { user_id: string }).user_id;
 
     try {
-      const result = await syncUserMailbox(userId);
+      const syncResult = await syncMailbox(userId);
+      let assistant: Awaited<
+        ReturnType<typeof runEmailAssistantPipeline>
+      > | null = null;
+
+      if (syncResult.messagesProcessed > 0) {
+        try {
+          assistant = await runEmailAssistantPipeline(userId);
+        } catch (pipelineError) {
+          assistant = {
+            classified: 0,
+            linked: 0,
+            draftsCreated: 0,
+            draftsSavedToGmail: 0,
+            skipped: 0,
+            errors: [
+              pipelineError instanceof Error
+                ? pipelineError.message
+                : 'Assistant pipeline failed',
+            ],
+          };
+        }
+      }
+
       results.push({
         userId,
         ok: true,
-        mode: result.mode,
-        messagesProcessed: result.messagesProcessed,
-        assistant: result.assistant ?? undefined,
+        mode: syncResult.mode,
+        messagesProcessed: syncResult.messagesProcessed,
+        assistant: assistant ?? undefined,
       });
     } catch (syncError) {
       results.push({
@@ -139,16 +170,19 @@ export async function GET(request: Request) {
 }
 
 /** Authenticated user: sync their mailbox now. */
-export async function POST() {
+export async function POST(request: Request) {
   const auth = await requireEmailAssistantApiUser();
 
   if (!auth.ok) {
     return auth.response;
   }
 
+  const mode = new URL(request.url).searchParams.get('mode');
+  const assistant = mode !== 'mail';
+
   try {
     await assertGoogleConnection(auth.user.id);
-    const result = await syncUserMailbox(auth.user.id);
+    const result = await syncUserMailbox(auth.user.id, { assistant });
     return jsonOk(result);
   } catch (error) {
     return jsonErr(
