@@ -14,6 +14,7 @@ import {
 import {
   type InvoiceQuantityLabel,
   normalizeInvoiceQuantityLabel,
+  normalizePence,
 } from '~/lib/invoices/invoice-quantity';
 
 export type AccountPaymentSettings = {
@@ -123,10 +124,7 @@ class InvoicePaymentSettingsService {
       invoice_quantity_label: normalizeInvoiceQuantityLabel(
         row?.invoice_quantity_label,
       ),
-      default_hourly_rate_pence:
-        typeof row?.default_hourly_rate_pence === 'number'
-          ? Math.max(0, row.default_hourly_rate_pence)
-          : null,
+      default_hourly_rate_pence: normalizePence(row?.default_hourly_rate_pence),
     };
   }
 
@@ -337,10 +335,7 @@ export async function loadPaymentSettingsForPortal(
     invoice_quantity_label: normalizeInvoiceQuantityLabel(
       row.invoice_quantity_label as string | null | undefined,
     ),
-    default_hourly_rate_pence:
-      typeof row.default_hourly_rate_pence === 'number'
-        ? Math.max(0, row.default_hourly_rate_pence)
-        : null,
+    default_hourly_rate_pence: normalizePence(row.default_hourly_rate_pence),
   } as AccountPaymentSettings;
 }
 

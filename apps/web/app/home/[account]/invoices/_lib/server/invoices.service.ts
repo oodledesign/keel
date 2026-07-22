@@ -7,7 +7,12 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
-import { calculateInvoiceLineTotalPence } from '~/lib/invoices/invoice-quantity';
+import {
+  calculateInvoiceLineTotalPence,
+  normalizeInvoiceLineType,
+  normalizePence,
+  resolveInvoiceLineUnitPricePence,
+} from '~/lib/invoices/invoice-quantity';
 import { Database } from '~/lib/database.types';
 
 import { normalizeInvoiceCurrency } from '../invoice-currency';
@@ -498,21 +503,40 @@ class InvoicesService {
       return [];
     }
 
-    const rows = input.items.map((item, index) => ({
-      account_id: accountId,
-      invoice_id: invoiceId,
-      job_id: item.job_id ?? null,
-      sort_order: item.sort_order ?? index,
-      description: item.description,
-      description_detail: item.description_detail ?? null,
-      line_type: item.line_type ?? 'quantity',
-      quantity: item.quantity,
-      unit_price_pence: item.unit_price_pence,
-      total_pence: calculateInvoiceLineTotalPence(
-        item.quantity,
-        item.unit_price_pence,
-      ),
-    }));
+    const { data: paymentSettings } = await this.db
+      .from('account_payment_settings')
+      .select('default_hourly_rate_pence')
+      .eq('account_id', accountId)
+      .maybeSingle();
+    const defaultHourlyRatePence = normalizePence(
+      (paymentSettings as { default_hourly_rate_pence?: unknown } | null)
+        ?.default_hourly_rate_pence,
+    );
+
+    const rows = input.items.map((item, index) => {
+      const lineType = normalizeInvoiceLineType(item.line_type);
+      const unitPricePence = resolveInvoiceLineUnitPricePence({
+        lineType,
+        unitPricePence: item.unit_price_pence,
+        defaultHourlyRatePence,
+      });
+
+      return {
+        account_id: accountId,
+        invoice_id: invoiceId,
+        job_id: item.job_id ?? null,
+        sort_order: item.sort_order ?? index,
+        description: item.description,
+        description_detail: item.description_detail ?? null,
+        line_type: lineType,
+        quantity: item.quantity,
+        unit_price_pence: unitPricePence,
+        total_pence: calculateInvoiceLineTotalPence(
+          item.quantity,
+          unitPricePence,
+        ),
+      };
+    });
 
     const { data: inserted, error } = await this.db
       .from('invoice_items')

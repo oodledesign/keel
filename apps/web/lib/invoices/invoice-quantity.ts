@@ -56,6 +56,43 @@ export function invoiceItemsShowUnitPriceColumn(
   return items.some((item) => invoiceLineShowsUnitPrice(item.line_type));
 }
 
+/** Coerce Postgres / JSON numeric values to whole pence. */
+export function normalizePence(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const parsed =
+    typeof value === 'number'
+      ? value
+      : typeof value === 'string'
+        ? Number.parseFloat(value)
+        : Number.NaN;
+  if (!Number.isFinite(parsed)) return null;
+  return Math.max(0, Math.round(parsed));
+}
+
+/** Hours lines bill using the workspace hourly rate when no explicit rate is set. */
+export function resolveHoursLineUnitPricePence(
+  unitPricePence: number,
+  defaultHourlyRatePence: number | null | undefined,
+): number {
+  const explicit = normalizePence(unitPricePence) ?? 0;
+  if (explicit > 0) return explicit;
+  return normalizePence(defaultHourlyRatePence) ?? 0;
+}
+
+export function resolveInvoiceLineUnitPricePence(input: {
+  lineType: InvoiceLineType;
+  unitPricePence: number;
+  defaultHourlyRatePence?: number | null;
+}): number {
+  if (input.lineType === 'hours') {
+    return resolveHoursLineUnitPricePence(
+      input.unitPricePence,
+      input.defaultHourlyRatePence,
+    );
+  }
+  return normalizePence(input.unitPricePence) ?? 0;
+}
+
 /** Clamp and round quantity to two decimal places. */
 export function normalizeInvoiceQuantity(value: number): number {
   if (!Number.isFinite(value)) return 0;

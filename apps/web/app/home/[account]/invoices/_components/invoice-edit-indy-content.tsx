@@ -51,6 +51,7 @@ import {
   normalizeInvoiceLineType,
   normalizeInvoiceQuantity,
   parseInvoiceQuantityInput,
+  resolveInvoiceLineUnitPricePence,
   type InvoiceLineType,
 } from '~/lib/invoices/invoice-quantity';
 
@@ -204,6 +205,31 @@ function clientDisplayName(client: ClientInfo | null): string {
   );
 }
 
+function mapInvoiceItemFromServer(
+  it: InvoiceItem & { line_type?: string | null },
+  defaultHourlyRatePence: number | null | undefined,
+): InvoiceItem {
+  const line_type = normalizeInvoiceLineType(it.line_type);
+  const quantity = normalizeInvoiceQuantity(Number(it.quantity));
+  const unit_price_pence = resolveInvoiceLineUnitPricePence({
+    lineType: line_type,
+    unitPricePence: it.unit_price_pence,
+    defaultHourlyRatePence,
+  });
+
+  return {
+    id: it.id,
+    job_id: it.job_id ?? null,
+    sort_order: it.sort_order,
+    description: it.description,
+    description_detail: it.description_detail ?? '',
+    line_type,
+    quantity,
+    unit_price_pence,
+    total_pence: calculateInvoiceLineTotalPence(quantity, unit_price_pence),
+  };
+}
+
 export function InvoiceEditIndyContent({
   accountSlug,
   accountId,
@@ -344,19 +370,9 @@ export function InvoiceEditIndyContent({
   );
 
   const [items, setItems] = useState<InvoiceItem[]>(() =>
-    (invoice.items ?? []).map((it: InvoiceItem) => ({
-      id: it.id,
-      job_id: it.job_id ?? null,
-      sort_order: it.sort_order,
-      description: it.description,
-      description_detail: it.description_detail ?? '',
-      line_type: normalizeInvoiceLineType(
-        (it as { line_type?: string | null }).line_type,
-      ),
-      quantity: it.quantity,
-      unit_price_pence: it.unit_price_pence,
-      total_pence: it.total_pence,
-    })),
+    (invoice.items ?? []).map((it: InvoiceItem) =>
+      mapInvoiceItemFromServer(it, defaultHourlyRatePence),
+    ),
   );
 
   const quantityColumnLabel = invoiceItemsQuantityHeader(items);
@@ -608,6 +624,13 @@ export function InvoiceEditIndyContent({
 
   const addRow = useCallback(
     (lineType: InvoiceLineType = 'quantity') => {
+      const unit_price_pence = resolveInvoiceLineUnitPricePence({
+        lineType,
+        unitPricePence: 0,
+        defaultHourlyRatePence,
+      });
+      const quantity = 1;
+
       setItems((prev) => [
         ...prev,
         {
@@ -615,11 +638,12 @@ export function InvoiceEditIndyContent({
           description: '',
           description_detail: '',
           line_type: lineType,
-          quantity: lineType === 'hours' ? 1 : 1,
-          unit_price_pence:
-            lineType === 'hours' ? (defaultHourlyRatePence ?? 0) : 0,
-          total_pence:
-            lineType === 'hours' ? (defaultHourlyRatePence ?? 0) : 0,
+          quantity,
+          unit_price_pence,
+          total_pence: calculateInvoiceLineTotalPence(
+            quantity,
+            unit_price_pence,
+          ),
         },
       ]);
     },
@@ -676,20 +700,30 @@ export function InvoiceEditIndyContent({
         email_signature: emailSignature.trim() || null,
       });
 
-      const itemsPayload = items.map((row, i) => ({
-        id: row.id,
-        job_id: row.job_id ?? null,
-        sort_order: i,
-        description: row.description.trim() || 'Item',
-        description_detail: row.description_detail?.trim() || null,
-        line_type: row.line_type,
-        quantity: normalizeInvoiceQuantity(row.quantity),
-        unit_price_pence: Math.max(0, row.unit_price_pence),
-        total_pence: calculateInvoiceLineTotalPence(
-          row.quantity,
-          row.unit_price_pence,
-        ),
-      }));
+      const itemsPayload = items.map((row, i) => {
+        const lineType = normalizeInvoiceLineType(row.line_type);
+        const unitPricePence = resolveInvoiceLineUnitPricePence({
+          lineType,
+          unitPricePence: row.unit_price_pence,
+          defaultHourlyRatePence,
+        });
+        const quantity = normalizeInvoiceQuantity(row.quantity);
+
+        return {
+          id: row.id,
+          job_id: row.job_id ?? null,
+          sort_order: i,
+          description: row.description.trim() || 'Item',
+          description_detail: row.description_detail?.trim() || null,
+          line_type: lineType,
+          quantity,
+          unit_price_pence: Math.max(0, unitPricePence),
+          total_pence: calculateInvoiceLineTotalPence(
+            quantity,
+            unitPricePence,
+          ),
+        };
+      });
 
       await upsertInvoiceItems({
         accountId,
@@ -711,6 +745,7 @@ export function InvoiceEditIndyContent({
     canModifyInvoice,
     clientId,
     currency,
+    defaultHourlyRatePence,
     dueAt,
     emailBody,
     emailSignature,
@@ -1393,12 +1428,12 @@ export function InvoiceEditIndyContent({
                                     );
                                     updateItem(index, {
                                       line_type: lineType,
-                                      ...(lineType === 'hours'
-                                        ? {
-                                            unit_price_pence:
-                                              defaultHourlyRatePence ?? 0,
-                                          }
-                                        : {}),
+                                      unit_price_pence:
+                                        resolveInvoiceLineUnitPricePence({
+                                          lineType,
+                                          unitPricePence: row.unit_price_pence,
+                                          defaultHourlyRatePence,
+                                        }),
                                     });
                                   }}
                                   disabled={readOnly}

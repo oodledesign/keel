@@ -7,7 +7,9 @@ import {
   invoiceItemsShowUnitPriceColumn,
   invoiceLineShowsUnitPrice,
   normalizeInvoiceQuantity,
+  normalizePence,
   parseInvoiceQuantityInput,
+  resolveHoursLineUnitPricePence,
 } from './invoice-quantity';
 
 describe('invoice quantity', () => {
@@ -46,5 +48,11 @@ describe('invoice quantity', () => {
         { line_type: 'quantity' },
       ]),
     ).toBe('Qty / Hours');
+  });
+
+  it('applies default hourly rate to hours lines', () => {
+    expect(normalizePence('3500')).toBe(3500);
+    expect(resolveHoursLineUnitPricePence(0, 3500)).toBe(3500);
+    expect(resolveHoursLineUnitPricePence(4200, 3500)).toBe(4200);
   });
 });
