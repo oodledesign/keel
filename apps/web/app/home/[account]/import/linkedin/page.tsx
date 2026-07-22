@@ -57,7 +57,7 @@ async function LinkedInImportPage({ params }: PageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title="Import from LinkedIn"
-        description="Upload LinkedIn Connections.csv into clients or pipeline."
+        description="Export Connections.csv from LinkedIn, then import into clients or pipeline."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
         <LinkedInImportPageClient

@@ -35,6 +35,7 @@ import {
   commitLinkedInImportAction,
   previewLinkedInImportAction,
 } from '../_lib/server/linkedin-import-actions';
+import { LinkedInExportInstructions } from './linkedin-export-instructions';
 
 type Step = 'setup' | 'upload' | 'preview' | 'duplicates' | 'done';
 
@@ -222,8 +223,8 @@ export function LinkedInImportPageClient({
             {title}
           </h1>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Upload LinkedIn&apos;s Connections.csv and choose whether to create
-            CRM clients or pipeline leads.
+            Export your connections from LinkedIn, then upload Connections.csv
+            to create CRM clients or pipeline leads.
           </p>
         </div>
       </div>
@@ -307,27 +308,7 @@ export function LinkedInImportPageClient({
             </div>
           ) : null}
 
-          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 p-4 text-sm text-[var(--workspace-shell-text-muted)]">
-            <p className="font-medium text-[var(--workspace-shell-text)]">
-              Export from LinkedIn
-            </p>
-            <ol className="mt-2 list-decimal space-y-1 pl-5">
-              <li>
-                On desktop LinkedIn: Me → Settings &amp; Privacy → Data privacy
-              </li>
-              <li>Click Get a copy of your data</li>
-              <li>Select Connections and request the archive</li>
-              <li>
-                Download Connections.csv from the email LinkedIn sends (usually
-                within 10–20 minutes)
-              </li>
-            </ol>
-            <p className="mt-3 text-xs">
-              LinkedIn only includes email addresses when a connection has
-              chosen to share them. Company and job title are imported when
-              present.
-            </p>
-          </div>
+          <LinkedInExportInstructions />
 
           <div className="flex justify-end">
             <Button
@@ -342,7 +323,9 @@ export function LinkedInImportPageClient({
       ) : null}
 
       {step === 'upload' ? (
-        <div className={cn(panelClass, 'p-8 text-center')}>
+        <div className="space-y-4">
+          <LinkedInExportInstructions compact />
+          <div className={cn(panelClass, 'p-8 text-center')}>
           <Upload className="mx-auto mb-3 h-8 w-8 text-[var(--ozer-accent-muted)]" />
           <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
             Upload Connections.csv
@@ -375,6 +358,7 @@ export function LinkedInImportPageClient({
             >
               Back
             </Button>
+          </div>
           </div>
         </div>
       ) : null}
