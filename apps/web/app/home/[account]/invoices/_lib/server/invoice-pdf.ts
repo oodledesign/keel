@@ -15,6 +15,7 @@ import {
   invoiceLineShowsUnitPrice,
   normalizeInvoiceLineType,
 } from '~/lib/invoices/invoice-quantity';
+import { sanitizePdfText } from '~/lib/invoices/pdf-text';
 
 export type InvoiceForPdf = {
   invoice_number: string;
@@ -119,7 +120,7 @@ function formatMoneyLabel(pence: number, currency: string): string {
 }
 
 function formatDateShort(iso: string | null | undefined): string {
-  if (!iso) return '—';
+  if (!iso) return '-';
   try {
     return new Date(iso).toLocaleDateString('en-US', {
       month: 'short',
@@ -127,7 +128,7 @@ function formatDateShort(iso: string | null | undefined): string {
       year: 'numeric',
     });
   } catch {
-    return '—';
+    return '-';
   }
 }
 
@@ -137,7 +138,8 @@ function wrapText(
   size: number,
   maxWidth: number,
 ): string[] {
-  const words = text.replace(/\s+/g, ' ').trim().split(' ');
+  const safeText = sanitizePdfText(text);
+  const words = safeText.replace(/\s+/g, ' ').trim().split(' ');
   if (words.length === 0 || (words.length === 1 && words[0] === '')) {
     return [''];
   }
@@ -222,8 +224,9 @@ function drawRightText(
   font: PDFFont,
   color = COLORS.ink,
 ) {
-  const width = font.widthOfTextAtSize(text, size);
-  page.drawText(text, { x: xRight - width, y, size, font, color });
+  const safeText = sanitizePdfText(text);
+  const width = font.widthOfTextAtSize(safeText, size);
+  page.drawText(safeText, { x: xRight - width, y, size, font, color });
 }
 
 function drawLines(
@@ -238,7 +241,8 @@ function drawLines(
 ) {
   let y = startY;
   for (const line of lines) {
-    page.drawText(line, { x, y, size, font, color });
+    const safeLine = sanitizePdfText(line);
+    page.drawText(safeLine, { x, y, size, font, color });
     y -= lineHeight;
   }
   return y;
@@ -285,9 +289,10 @@ function drawPayButton(
     borderRadius: radius,
   } as Parameters<PDFPage['drawRectangle']>[0]);
 
-  const textWidth = fontBold.widthOfTextAtSize(label, fontSize);
+  const safeLabel = sanitizePdfText(label);
+  const textWidth = fontBold.widthOfTextAtSize(safeLabel, fontSize);
   const textY = rectBottomY + (height - fontSize) / 2 + 1;
-  page.drawText(label, {
+  page.drawText(safeLabel, {
     x: x + (width - textWidth) / 2,
     y: textY,
     size: fontSize,
@@ -771,8 +776,9 @@ export async function buildInvoicePdf(
   bottomY += 18;
 
   if (thankYouMessage) {
-    const thankYouWidth = font.widthOfTextAtSize(thankYouMessage, 10);
-    page.drawText(thankYouMessage, {
+    const safeThankYou = sanitizePdfText(thankYouMessage);
+    const thankYouWidth = font.widthOfTextAtSize(safeThankYou, 10);
+    page.drawText(safeThankYou, {
       x: (PAGE_WIDTH - thankYouWidth) / 2,
       y: bottomY,
       size: 10,
