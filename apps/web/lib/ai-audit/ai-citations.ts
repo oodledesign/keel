@@ -350,6 +350,13 @@ async function checkLlmPlatform(
   return summarisePlatform(config.platform, promptLayer, citations);
 }
 
+function platformKey(
+  platform: CitationPlatform,
+  promptLayer: PromptLayer,
+): string {
+  return `${platform}:${promptLayer}`;
+}
+
 async function runCitationLayer(
   host: string,
   genericQueries: string[],
@@ -358,16 +365,41 @@ async function runCitationLayer(
   locationCode: number,
   countryIso: string,
   competingBrands: Set<string>,
-  deadlineMs?: number,
-): Promise<PlatformCitationResult[]> {
-  const platforms: PlatformCitationResult[] = [];
-  const pastDeadline = () =>
-    deadlineMs != null && Date.now() >= deadlineMs;
+  options?: {
+    deadlineMs?: number;
+    existingPlatforms?: PlatformCitationResult[];
+  },
+): Promise<{ platforms: PlatformCitationResult[]; truncated: boolean }> {
+  const platforms: PlatformCitationResult[] = [
+    ...(options?.existingPlatforms ?? []),
+  ];
+  const done = new Set(
+    platforms.map((row) =>
+      platformKey(row.platform, row.promptLayer ?? 'generic'),
+    ),
+  );
+  let truncated = false;
+  const deadlineMs = options?.deadlineMs;
+  const pastDeadline = () => deadlineMs != null && Date.now() >= deadlineMs;
+
+  const pushIfNew = async (
+    key: string,
+    run: () => Promise<PlatformCitationResult>,
+  ) => {
+    if (done.has(key)) return;
+    if (pastDeadline()) {
+      truncated = true;
+      return;
+    }
+    const result = await run();
+    platforms.push(result);
+    done.add(key);
+  };
 
   const googleGeneric = genericQueries.slice(0, CITATION_QUERIES_GOOGLE);
-  if (googleGeneric.length && !pastDeadline()) {
-    platforms.push(
-      await checkGoogleAiOverview(
+  if (googleGeneric.length) {
+    await pushIfNew(platformKey('google_ai_overview', 'generic'), () =>
+      checkGoogleAiOverview(
         host,
         googleGeneric,
         locationCode,
@@ -377,9 +409,9 @@ async function runCitationLayer(
     );
   }
 
-  if (contextualGoogleQueries.length && !pastDeadline()) {
-    platforms.push(
-      await checkGoogleAiOverview(
+  if (contextualGoogleQueries.length) {
+    await pushIfNew(platformKey('google_ai_overview', 'contextual'), () =>
+      checkGoogleAiOverview(
         host,
         contextualGoogleQueries,
         locationCode,
@@ -391,11 +423,9 @@ async function runCitationLayer(
 
   const llmGeneric = genericQueries.slice(0, CITATION_QUERIES_LLM);
   for (const config of LLM_PLATFORMS) {
-    if (pastDeadline()) break;
-
     if (llmGeneric.length) {
-      platforms.push(
-        await checkLlmPlatform(
+      await pushIfNew(platformKey(config.platform, 'generic'), () =>
+        checkLlmPlatform(
           config,
           host,
           llmGeneric,
@@ -404,11 +434,12 @@ async function runCitationLayer(
           'generic',
         ),
       );
+      if (truncated) break;
     }
 
-    if (contextualLlmQueries.length && !pastDeadline()) {
-      platforms.push(
-        await checkLlmPlatform(
+    if (contextualLlmQueries.length) {
+      await pushIfNew(platformKey(config.platform, 'contextual'), () =>
+        checkLlmPlatform(
           config,
           host,
           contextualLlmQueries,
@@ -417,10 +448,11 @@ async function runCitationLayer(
           'contextual',
         ),
       );
+      if (truncated) break;
     }
   }
 
-  return platforms;
+  return { platforms, truncated };
 }
 
 export async function checkAiCitations(
@@ -432,13 +464,19 @@ export async function checkAiCitations(
     google: [],
     llm: [],
   },
-  options?: { deadlineMs?: number },
+  options?: {
+    deadlineMs?: number;
+    existingPlatforms?: PlatformCitationResult[];
+    existingCompetingBrands?: string[];
+  },
 ): Promise<AiCitationResult> {
   const host = normaliseDomain(domain);
   const countryIso = countryToIso(country);
-  const competingBrands = new Set<string>();
+  const competingBrands = new Set<string>(
+    options?.existingCompetingBrands ?? [],
+  );
 
-  const platforms = await runCitationLayer(
+  const { platforms, truncated } = await runCitationLayer(
     host,
     brandQueries,
     contextualQueries.google,
@@ -446,7 +484,10 @@ export async function checkAiCitations(
     locationCode,
     countryIso,
     competingBrands,
-    options?.deadlineMs,
+    {
+      deadlineMs: options?.deadlineMs,
+      existingPlatforms: options?.existingPlatforms,
+    },
   );
 
   const allCitations = platforms.flatMap((platform) => platform.citations);
@@ -472,6 +513,7 @@ export async function checkAiCitations(
         opr_decimal: opr?.page_rank_decimal ?? 0,
       };
     }),
+    truncated,
   };
 }
 

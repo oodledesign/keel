@@ -1,6 +1,20 @@
 import 'server-only';
 
+import { delay } from '~/lib/clusters/utils';
+
+import { getAuditJob, markAuditWorkerTriggered } from './db';
+
+/** Leave headroom under Vercel maxDuration=300s for response + cleanup. */
 const RUN_TIME_BUDGET_MS = 240_000;
+
+/** Minimum reserve so scoring gets a full invocation when citations finish late. */
+export const AUDIT_SCORING_RESERVE_MS = 90_000;
+
+/** Debounce concurrent poll-driven triggers for the same job. */
+export const AUDIT_WORKER_TRIGGER_DEBOUNCE_MS = 30_000;
+
+const RUN_TRIGGER_ATTEMPTS = 4;
+const RUN_TRIGGER_TIMEOUT_MS = 20_000;
 
 export function getAiAuditRunUrl(jobId: string): string {
   const base =
@@ -16,24 +30,101 @@ export function getAiAuditRunUrl(jobId: string): string {
   return `${base}/api/rankly/ai-audit/${jobId}/run`;
 }
 
+async function postAiAuditRunWithRetry(
+  jobId: string,
+  secret: string,
+): Promise<boolean> {
+  const url = getAiAuditRunUrl(jobId);
+
+  for (let attempt = 1; attempt <= RUN_TRIGGER_ATTEMPTS; attempt += 1) {
+    try {
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${secret}` },
+        signal: AbortSignal.timeout(RUN_TRIGGER_TIMEOUT_MS),
+      });
+
+      if (response.ok) {
+        return true;
+      }
+
+      console.error(
+        '[rankly] ai-audit run trigger bad status',
+        jobId,
+        response.status,
+        attempt,
+      );
+    } catch (error) {
+      console.error(
+        '[rankly] ai-audit run trigger attempt failed',
+        jobId,
+        attempt,
+        error,
+      );
+    }
+
+    if (attempt < RUN_TRIGGER_ATTEMPTS) {
+      await delay(1500 * attempt);
+    }
+  }
+
+  return false;
+}
+
 /**
- * Kick off AI audit on a dedicated worker invocation (same pattern as PageSpeed).
- * Avoids relying on Next.js `after()`, which often never runs under load.
+ * Kick off / continue AI audit on a dedicated worker invocation.
+ * Avoids relying on Next.js `after()`, which often never runs under load —
+ * though route handlers may still use `after()` as a best-effort chain.
  */
-export function triggerAiAuditRun(jobId: string): void {
+export async function scheduleAiAuditContinuation(
+  jobId: string,
+): Promise<boolean> {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) {
     console.error('[rankly] CRON_SECRET missing; cannot trigger AI audit run');
-    return;
+    return false;
   }
 
-  const url = getAiAuditRunUrl(jobId);
-  void fetch(url, {
-    method: 'POST',
-    headers: { Authorization: `Bearer ${secret}` },
-  }).catch((err) => {
-    console.error('[rankly] trigger AI audit run failed', jobId, err);
-  });
+  await markAuditWorkerTriggered(jobId);
+  return postAiAuditRunWithRetry(jobId, secret);
+}
+
+export async function triggerAiAuditRunDebounced(
+  jobId: string,
+  options?: { force?: boolean },
+): Promise<boolean> {
+  const secret = process.env.CRON_SECRET?.trim();
+  if (!secret) {
+    console.error('[rankly] CRON_SECRET missing; cannot trigger AI audit run');
+    return false;
+  }
+
+  if (!options?.force) {
+    try {
+      const job = await getAuditJob(jobId);
+      if (job.last_worker_trigger_at) {
+        const elapsedMs =
+          Date.now() - new Date(job.last_worker_trigger_at).getTime();
+        if (
+          !Number.isNaN(elapsedMs) &&
+          elapsedMs >= 0 &&
+          elapsedMs < AUDIT_WORKER_TRIGGER_DEBOUNCE_MS
+        ) {
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error('[rankly] ai-audit debounce check failed', jobId, error);
+      return false;
+    }
+  }
+
+  return scheduleAiAuditContinuation(jobId);
+}
+
+/** Fire-and-forget worker trigger (new jobs / stuck pending). */
+export function triggerAiAuditRun(jobId: string): void {
+  void triggerAiAuditRunDebounced(jobId, { force: true });
 }
 
 export { RUN_TIME_BUDGET_MS };

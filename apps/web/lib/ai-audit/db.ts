@@ -5,6 +5,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import type {
+  AuditJobProgress,
   AuditJobRow,
   AuditRecommendationRow,
   AuditReportRow,
@@ -15,6 +16,15 @@ import type {
   ScoreHistoryRow,
   ScorerOutput,
 } from './types';
+
+/** Heartbeat window — worker is considered alive while updated_at is fresher. */
+export const AUDIT_ACTIVE_LOCK_MS = 90_000;
+
+/** Mid-flight jobs with no heartbeat past this may be reclaimed. */
+export const AUDIT_STALE_RUNNING_MS = 4 * 60_000;
+
+/** Exclusive /run lease length; extended on heartbeat. */
+const AUDIT_CLAIM_MS = 5 * 60_000;
 
 function ranklyAdmin() {
   return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
@@ -47,6 +57,122 @@ export async function updateAuditJobStatus(
   if (error) {
     throw new Error(`Failed to update audit job: ${error.message}`);
   }
+}
+
+export function parseAuditJobProgress(raw: unknown): AuditJobProgress | null {
+  if (!raw || typeof raw !== 'object') return null;
+  const value = raw as AuditJobProgress;
+  if (value.version !== 1) return null;
+  return value;
+}
+
+export async function saveAuditJobProgress(
+  jobId: string,
+  progress: AuditJobProgress,
+  status?: string,
+): Promise<void> {
+  const payload: Record<string, unknown> = {
+    progress,
+    updated_at: new Date().toISOString(),
+  };
+  if (status) payload.status = status;
+
+  const { error } = await ranklyAdmin()
+    .from('ai_audit_jobs')
+    .update(payload)
+    .eq('id', jobId);
+
+  if (error) {
+    throw new Error(`Failed to save audit progress: ${error.message}`);
+  }
+}
+
+export async function heartbeatAuditJob(jobId: string): Promise<void> {
+  const now = Date.now();
+  const { error } = await ranklyAdmin()
+    .from('ai_audit_jobs')
+    .update({
+      updated_at: new Date(now).toISOString(),
+      claimed_until: new Date(now + AUDIT_CLAIM_MS).toISOString(),
+    })
+    .eq('id', jobId);
+
+  if (error) {
+    throw new Error(`Failed to heartbeat audit job: ${error.message}`);
+  }
+}
+
+export async function releaseAuditJobClaim(jobId: string): Promise<void> {
+  const { error } = await ranklyAdmin()
+    .from('ai_audit_jobs')
+    .update({
+      claimed_until: null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', jobId);
+
+  if (error) {
+    throw new Error(`Failed to release audit claim: ${error.message}`);
+  }
+}
+
+export async function markAuditWorkerTriggered(jobId: string): Promise<void> {
+  const now = new Date().toISOString();
+  const { error } = await ranklyAdmin()
+    .from('ai_audit_jobs')
+    .update({ last_worker_trigger_at: now })
+    .eq('id', jobId);
+
+  if (error) {
+    throw new Error(`Failed to mark audit worker trigger: ${error.message}`);
+  }
+}
+
+/**
+ * Claim a worker slot. Returns busy when another invocation holds an
+ * unexpired lease so we do not restart mid-flight work.
+ */
+export async function tryClaimAuditJobRun(
+  jobId: string,
+): Promise<'claimed' | 'busy' | 'done' | 'error'> {
+  const job = await getAuditJob(jobId);
+
+  if (job.status === 'done') return 'done';
+  if (job.status === 'error') return 'error';
+
+  if (job.claimed_until) {
+    const claimMs = new Date(job.claimed_until).getTime() - Date.now();
+    if (!Number.isNaN(claimMs) && claimMs > 0) {
+      return 'busy';
+    }
+  }
+
+  const now = Date.now();
+  const nowIso = new Date(now).toISOString();
+  const nextStatus = job.status === 'pending' ? 'crawling' : job.status;
+
+  const { data, error } = await ranklyAdmin()
+    .from('ai_audit_jobs')
+    .update({
+      status: nextStatus,
+      updated_at: nowIso,
+      last_worker_trigger_at: nowIso,
+      claimed_until: new Date(now + AUDIT_CLAIM_MS).toISOString(),
+    })
+    .eq('id', jobId)
+    .eq('updated_at', job.updated_at)
+    .select('id')
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(`Failed to claim audit job: ${error.message}`);
+  }
+
+  if (!data) {
+    return 'busy';
+  }
+
+  return 'claimed';
 }
 
 export async function saveAuditReport(

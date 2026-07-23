@@ -1,9 +1,10 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, after } from 'next/server';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { getAuditJob, updateAuditJobStatus } from '~/lib/ai-audit/db';
 import { runAuditJob } from '~/lib/ai-audit/runner';
+import { scheduleAiAuditContinuation } from '~/lib/ai-audit/trigger-run';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
@@ -18,6 +19,30 @@ function authorizeRun(request: NextRequest): boolean {
   const secret = process.env.CRON_SECRET?.trim();
   if (!secret) return false;
   return request.headers.get('authorization') === `Bearer ${secret}`;
+}
+
+async function continueAuditInBackground(jobId: string): Promise<void> {
+  try {
+    const admin = getSupabaseServerAdminClient();
+    const job = await getAuditJob(jobId);
+    if (job.status === 'done' || job.status === 'error') return;
+
+    const { data: project } = await supabaseCustomSchema(admin, 'rankly')
+      .from('projects')
+      .select('locale')
+      .eq('id', job.project_id)
+      .maybeSingle();
+
+    const second = await runAuditJob(
+      jobId,
+      (project?.locale as string | null) ?? null,
+    );
+    if (second.completed || second.alreadyRunning) return;
+  } catch (error) {
+    console.error('[rankly] ai-audit after batch failed', jobId, error);
+  }
+
+  await scheduleAiAuditContinuation(jobId);
 }
 
 export async function POST(request: NextRequest, context: RouteContext) {
@@ -44,10 +69,35 @@ export async function POST(request: NextRequest, context: RouteContext) {
       .eq('id', job.project_id)
       .maybeSingle();
 
-    await runAuditJob(jobId, (project?.locale as string | null) ?? null);
+    const result = await runAuditJob(
+      jobId,
+      (project?.locale as string | null) ?? null,
+    );
+
+    if (result.alreadyRunning) {
+      return jsonOk({
+        jobId,
+        status: job.status,
+        alreadyRunning: true,
+        completed: false,
+      });
+    }
+
+    if (!result.completed) {
+      // Prefer an immediate chained worker — `after()` is best-effort on Vercel.
+      void scheduleAiAuditContinuation(jobId);
+      after(() => {
+        void continueAuditInBackground(jobId);
+      });
+    }
 
     const refreshed = await getAuditJob(jobId);
-    return jsonOk({ jobId, status: refreshed.status });
+    return jsonOk({
+      jobId,
+      status: refreshed.status,
+      completed: result.completed,
+      alreadyRunning: false,
+    });
   } catch (error) {
     console.error('[rankly] ai-audit run POST', error);
     try {

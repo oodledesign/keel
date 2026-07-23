@@ -1,6 +1,26 @@
 export type AuditDimension = 'entity' | 'content' | 'eeat' | 'tech';
 export type AuditPriority = 'high' | 'medium' | 'low';
 
+/** Checkpoint so a job can resume across Vercel worker invocations. */
+export type AuditJobProgress = {
+  version: 1;
+  crawl?: CrawlResult;
+  /** In-progress citation platforms when a worker ran out of time. */
+  citationPartial?: {
+    platforms: PlatformCitationResult[];
+    competingBrandDomains: string[];
+  };
+  citationBundle?: {
+    aiCitations: AiCitationResult;
+    competingBrandsOpr: CompetingBrandOpr[];
+    oprScore: number;
+    oprDecimal: number;
+    referringDomains: number | null;
+    topReferringDomains: ReferringDomainRow[];
+    competitorBacklinks: Record<string, number>;
+  };
+};
+
 export type AuditJobRow = {
   id: string;
   project_id: string;
@@ -10,8 +30,17 @@ export type AuditJobRow = {
   error_msg: string | null;
   pages_crawled: number | null;
   credits_used: number | null;
+  progress: AuditJobProgress | null;
+  last_worker_trigger_at: string | null;
+  claimed_until: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type AuditRunResult = {
+  completed: boolean;
+  /** True when another worker holds the active lock. */
+  alreadyRunning?: boolean;
 };
 
 export type JsonLdBlock = {
@@ -138,6 +167,8 @@ export type AiCitationResult = {
   citedQueries: string[];
   competingBrands: string[];
   competingBrandsOpr: CompetingBrandOpr[];
+  /** True when the time budget cut the citation pass short. */
+  truncated?: boolean;
 };
 
 export type ScorerRecommendation = {

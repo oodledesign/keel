@@ -4,8 +4,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { loadReportByJobId } from '~/lib/ai-audit/db';
-import { triggerAiAuditRun } from '~/lib/ai-audit/trigger-run';
+import {
+  AUDIT_ACTIVE_LOCK_MS,
+  AUDIT_STALE_RUNNING_MS,
+  loadReportByJobId,
+} from '~/lib/ai-audit/db';
+import { triggerAiAuditRunDebounced } from '~/lib/ai-audit/trigger-run';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -17,7 +21,6 @@ type RouteContext = {
 };
 
 const STALE_PENDING_MS = 45_000;
-const STALE_RUNNING_MS = 6 * 60_000;
 
 function maybeRetriggerStuckAudit(job: {
   id: string;
@@ -33,14 +36,18 @@ function maybeRetriggerStuckAudit(job: {
   const ageMs = Date.now() - new Date(stamp).getTime();
   if (Number.isNaN(ageMs) || ageMs < 0) return;
 
+  // Never kick a worker that is still heartbeating.
+  if (ageMs < AUDIT_ACTIVE_LOCK_MS) return;
+
   if (job.status === 'pending' && ageMs >= STALE_PENDING_MS) {
-    triggerAiAuditRun(job.id);
+    void triggerAiAuditRunDebounced(job.id);
     return;
   }
 
-  // Worker may have been killed mid-flight without flipping status to error.
-  if (ageMs >= STALE_RUNNING_MS) {
-    triggerAiAuditRun(job.id);
+  // Worker may have been killed mid-flight. Only reclaim after a long stall;
+  // /run resumes from checkpoint instead of restarting from scratch.
+  if (ageMs >= AUDIT_STALE_RUNNING_MS) {
+    void triggerAiAuditRunDebounced(job.id);
   }
 }
 
