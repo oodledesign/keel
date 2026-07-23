@@ -1,9 +1,19 @@
 import 'server-only';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import { extractJsonObject } from '~/lib/ai/extract-json-object';
 
 import type { ScorerInput, ScorerOutput } from './types';
 import { CITATION_SAMPLE_RUNS } from './types';
+
+/** Comprehensive rec lists (18–28 items) routinely exceed 6k tokens. */
+const SCORER_MAX_TOKENS = 16_384;
+const SCORER_CONTINUE_ATTEMPTS = 3;
+
+type ClaudeCallResult = {
+  text: string;
+  stopReason: string | null;
+};
 
 function buildScorerPrompt(input: ScorerInput): string {
   const { domain, robotsResult, llmsTxt, sitemap, pages, aiCitations } = input;
@@ -131,6 +141,7 @@ Then produce a prioritised recommendation list. Rules:
 - HIGH = directly blocks or significantly impairs AI citation
 - MEDIUM = improves citation reliability and topical authority
 - LOW = incremental improvements, future-proofing
+- Keep string fields concise (1–2 sentences) so the full JSON fits
 
 Return this exact JSON shape:
 
@@ -158,7 +169,10 @@ Return this exact JSON shape:
 `;
 }
 
-async function callClaude(prompt: string, retry = false): Promise<string> {
+async function callClaudeMessages(
+  messages: Array<{ role: 'user' | 'assistant'; content: string }>,
+  system: string,
+): Promise<ClaudeCallResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) {
     throw new Error('ANTHROPIC_API_KEY is not configured');
@@ -176,13 +190,9 @@ async function callClaude(prompt: string, retry = false): Promise<string> {
     },
     body: JSON.stringify({
       model,
-      max_tokens: 6000,
-      system: retry
-        ? 'Output only valid JSON. No markdown. No preamble. Start with {'
-        : `You are an expert in AI search optimisation (AEO/GEO). You analyse website evidence and produce scored audit reports with specific, actionable recommendations.
-Every recommendation must reference actual evidence from the domain — specific pages, specific missing schema types, specific title tag content. Never give generic advice.
-Output only valid JSON. No markdown fences. No preamble. Start with {`,
-      messages: [{ role: 'user', content: prompt }],
+      max_tokens: SCORER_MAX_TOKENS,
+      system,
+      messages,
     }),
   });
 
@@ -193,18 +203,89 @@ Output only valid JSON. No markdown fences. No preamble. Start with {`,
   }
 
   const data = (await res.json()) as {
+    stop_reason?: string | null;
     content?: Array<{ type: string; text?: string }>;
   };
 
-  return data.content?.find((block) => block.type === 'text')?.text ?? '{}';
+  return {
+    text: data.content?.find((block) => block.type === 'text')?.text ?? '',
+    stopReason: data.stop_reason ?? null,
+  };
 }
 
 function parseScorerJson(text: string): ScorerOutput {
-  const cleaned = text
-    .trim()
-    .replace(/^```json\n?/i, '')
-    .replace(/\n?```$/i, '');
-  return JSON.parse(cleaned) as ScorerOutput;
+  const cleaned = extractJsonObject(text);
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(cleaned);
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : 'Invalid JSON from scorer';
+    throw new Error(`Audit recommendation JSON was incomplete (${message})`);
+  }
+
+  if (!parsed || typeof parsed !== 'object') {
+    throw new Error('Audit scorer returned an empty response');
+  }
+
+  const value = parsed as Partial<ScorerOutput>;
+  if (!Array.isArray(value.recommendations)) {
+    throw new Error('Audit scorer JSON missing recommendations');
+  }
+
+  return value as ScorerOutput;
+}
+
+function looksTruncated(text: string, stopReason: string | null): boolean {
+  if (stopReason === 'max_tokens') return true;
+  const trimmed = text.trim();
+  if (!trimmed.startsWith('{')) return false;
+  if (!trimmed.endsWith('}')) return true;
+  try {
+    JSON.parse(extractJsonObject(trimmed));
+    return false;
+  } catch {
+    return true;
+  }
+}
+
+async function generateScorerJson(prompt: string): Promise<ScorerOutput> {
+  const system = `You are an expert in AI search optimisation (AEO/GEO). You analyse website evidence and produce scored audit reports with specific, actionable recommendations.
+Every recommendation must reference actual evidence from the domain — specific pages, specific missing schema types, specific title tag content. Never give generic advice.
+Output only valid JSON. No markdown fences. No preamble. Start with {`;
+
+  let assembled = '';
+  const messages: Array<{ role: 'user' | 'assistant'; content: string }> = [
+    { role: 'user', content: prompt },
+  ];
+
+  for (let attempt = 0; attempt < SCORER_CONTINUE_ATTEMPTS; attempt += 1) {
+    const result = await callClaudeMessages(messages, system);
+    const chunk = result.text.trim();
+    if (!chunk) {
+      throw new Error('Audit scorer returned an empty response');
+    }
+
+    assembled = assembled ? `${assembled}${chunk}` : chunk;
+
+    try {
+      return parseScorerJson(assembled);
+    } catch (error) {
+      const truncated = looksTruncated(assembled, result.stopReason);
+      if (!truncated || attempt === SCORER_CONTINUE_ATTEMPTS - 1) {
+        throw error;
+      }
+
+      messages.push({ role: 'assistant', content: chunk });
+      messages.push({
+        role: 'user',
+        content:
+          'Continue the JSON exactly where you left off. Output only the missing continuation characters — no preamble, no restarting the object.',
+      });
+    }
+  }
+
+  throw new Error('Audit recommendation generation was cut off. Please retry.');
 }
 
 export async function scoreAndRecommend(
@@ -213,11 +294,25 @@ export async function scoreAndRecommend(
   const prompt = buildScorerPrompt(input);
 
   try {
-    const text = await callClaude(prompt);
-    return parseScorerJson(text);
-  } catch {
-    const retryText = await callClaude(prompt, true);
-    return parseScorerJson(retryText);
+    return await generateScorerJson(prompt);
+  } catch (firstError) {
+    console.warn(
+      '[rankly] ai-audit scorer first pass failed; retrying',
+      firstError instanceof Error ? firstError.message : firstError,
+    );
+    try {
+      return await generateScorerJson(
+        `${prompt}\n\nIMPORTANT: Output compact valid JSON only. Keep recommendation strings to one sentence each.`,
+      );
+    } catch (secondError) {
+      const detail =
+        secondError instanceof Error
+          ? secondError.message
+          : 'Recommendation generation failed';
+      throw new Error(
+        `Could not finish generating recommendations (${detail}). Crawl and citation data were saved — retry the audit to resume scoring.`,
+      );
+    }
   }
 }
 

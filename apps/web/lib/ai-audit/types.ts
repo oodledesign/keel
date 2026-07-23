@@ -19,6 +19,8 @@ export type AuditJobProgress = {
     topReferringDomains: ReferringDomainRow[];
     competitorBacklinks: Record<string, number>;
   };
+  /** How many times scoring has been attempted for this checkpoint. */
+  scoringAttempts?: number;
 };
 
 export type AuditJobRow = {

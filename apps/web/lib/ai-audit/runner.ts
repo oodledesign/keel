@@ -234,33 +234,53 @@ export async function runAuditJob(
     await updateAuditJobStatus(jobId, 'scoring');
     await heartbeatAuditJob(jobId);
 
-    const result = await scoreAndRecommend({
-      domain,
-      robotsResult: crawl.robotsTxt,
-      llmsTxt: crawl.llmsTxt,
-      sitemap: crawl.sitemap,
-      pages: crawl.pages,
-      aiCitations: citationBundle.aiCitations,
-    });
+    try {
+      const result = await scoreAndRecommend({
+        domain,
+        robotsResult: crawl.robotsTxt,
+        llmsTxt: crawl.llmsTxt,
+        sitemap: crawl.sitemap,
+        pages: crawl.pages,
+        aiCitations: citationBundle.aiCitations,
+      });
 
-    await saveAuditReport(jobId, job.project_id, domain, result, crawl, {
-      domainCitedInAny: citationBundle.aiCitations.domainCitedInAny,
-      citedQueries: citationBundle.aiCitations.citedQueries,
-      competingBrands: citationBundle.aiCitations.competingBrands,
-      competingBrandsOpr: citationBundle.competingBrandsOpr,
-      platforms: citationBundle.aiCitations.platforms,
-      oprScore: citationBundle.oprScore,
-      oprDecimal: citationBundle.oprDecimal,
-      referringDomains: citationBundle.referringDomains,
-      topReferringDomains: citationBundle.topReferringDomains,
-      competitorBacklinks: citationBundle.competitorBacklinks,
-    });
+      await saveAuditReport(jobId, job.project_id, domain, result, crawl, {
+        domainCitedInAny: citationBundle.aiCitations.domainCitedInAny,
+        citedQueries: citationBundle.aiCitations.citedQueries,
+        competingBrands: citationBundle.aiCitations.competingBrands,
+        competingBrandsOpr: citationBundle.competingBrandsOpr,
+        platforms: citationBundle.aiCitations.platforms,
+        oprScore: citationBundle.oprScore,
+        oprDecimal: citationBundle.oprDecimal,
+        referringDomains: citationBundle.referringDomains,
+        topReferringDomains: citationBundle.topReferringDomains,
+        competitorBacklinks: citationBundle.competitorBacklinks,
+      });
 
-    await updateAuditJobStatus(jobId, 'done', {
-      progress: null,
-      claimed_until: null,
-    });
-    return { completed: true };
+      await updateAuditJobStatus(jobId, 'done', {
+        progress: null,
+        claimed_until: null,
+        error_msg: null,
+      });
+      return { completed: true };
+    } catch (scoreError) {
+      const attempts = (progress.scoringAttempts ?? 0) + 1;
+      progress = { ...progress, scoringAttempts: attempts };
+      await saveAuditJobProgress(jobId, progress, 'scoring');
+
+      if (attempts < 3) {
+        console.warn(
+          '[rankly] ai-audit scoring failed; will retry',
+          jobId,
+          attempts,
+          scoreError instanceof Error ? scoreError.message : scoreError,
+        );
+        await releaseAuditJobClaim(jobId);
+        return { completed: false };
+      }
+
+      throw scoreError;
+    }
   } catch (error) {
     await updateAuditJobStatus(jobId, 'error', {
       error_msg: error instanceof Error ? error.message : 'Audit job failed',
