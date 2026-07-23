@@ -11,7 +11,7 @@ import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 90;
 
 type RouteContext = {
   params: Promise<{ jobId: string }>;
@@ -54,37 +54,41 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     );
     if (addonDenied) return addonDenied;
 
-    return createJobSseResponse(async () => {
-      const { data: job, error } = await supabaseCustomSchema(client, 'rankly')
-        .from('ai_audit_jobs')
-        .select('id, status, error_msg, pages_crawled, credits_used')
-        .eq('id', jobId)
-        .eq('user_id', user.id)
-        .maybeSingle();
+    return createJobSseResponse(
+      async () => {
+        const { data: job, error } = await supabaseCustomSchema(client, 'rankly')
+          .from('ai_audit_jobs')
+          .select('id, status, error_msg, pages_crawled, credits_used')
+          .eq('id', jobId)
+          .eq('user_id', user.id)
+          .maybeSingle();
 
-      if (error) {
-        throw new Error(error.message);
-      }
+        if (error) {
+          throw new Error(error.message);
+        }
 
-      if (!job) {
-        return null;
-      }
+        if (!job) {
+          return null;
+        }
 
-      let reportId: string | null = null;
-      if (job.status === 'done') {
-        const report = await loadReportByJobId(jobId);
-        reportId = report?.reportId ?? null;
-      }
+        let reportId: string | null = null;
+        if (job.status === 'done') {
+          const report = await loadReportByJobId(jobId);
+          reportId = report?.reportId ?? null;
+        }
 
-      return {
-        status: job.status as string,
-        error_msg: job.error_msg as string | null,
-        pages_crawled: job.pages_crawled as number | null,
-        credits_used: job.credits_used as number | null,
-        reportId,
-        done: job.status === 'done' || job.status === 'error',
-      };
-    });
+        return {
+          status: job.status as string,
+          error_msg: job.error_msg as string | null,
+          pages_crawled: job.pages_crawled as number | null,
+          credits_used: job.credits_used as number | null,
+          reportId,
+          done: job.status === 'done' || job.status === 'error',
+        };
+      },
+      // Keep SSE short so Vercel doesn't hard-timeout; client then polls lightly.
+      { intervalMs: 2000, maxTicks: 30 },
+    );
   } catch (error) {
     return jsonErr(
       'UNKNOWN',

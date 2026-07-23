@@ -4,6 +4,8 @@ export type JobProgressEvent = {
   status: string;
   error_msg?: string | null;
   done?: boolean;
+  /** Stream hit its poll budget; client should switch to lightweight polling. */
+  stream_end?: boolean;
   [key: string]: unknown;
 };
 
@@ -61,6 +63,27 @@ export function createJobSseResponse(
           }
 
           await new Promise((resolve) => setTimeout(resolve, intervalMs));
+        }
+
+        // Avoid leaving EventSource connected until the platform hard-timeout.
+        if (ticks >= maxTicks) {
+          try {
+            const latest = await loadProgress();
+            if (
+              latest &&
+              latest.status !== 'done' &&
+              latest.status !== 'error' &&
+              !latest.done
+            ) {
+              send({ ...latest, stream_end: true, done: false });
+            }
+          } catch {
+            send({
+              status: 'pending',
+              stream_end: true,
+              done: false,
+            });
+          }
         }
       } catch (error) {
         send({

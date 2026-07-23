@@ -23,6 +23,8 @@ export function useRanklyJobProgress<T extends { status: string }>({
   const [usingFallback, setUsingFallback] = useState(false);
   const fallbackFetchRef = useRef(fallbackFetch);
   fallbackFetchRef.current = fallbackFetch;
+  const isTerminalRef = useRef(isTerminal);
+  isTerminalRef.current = isTerminal;
 
   const runFallbackPoll = useCallback(async () => {
     setUsingFallback(true);
@@ -33,7 +35,7 @@ export function useRanklyJobProgress<T extends { status: string }>({
         const next = await fallbackFetchRef.current();
         if (!active) return;
         setData(next);
-        if (!isTerminal(next)) {
+        if (!isTerminalRef.current(next)) {
           setTimeout(poll, pollIntervalMs);
         }
       } catch (err) {
@@ -45,7 +47,7 @@ export function useRanklyJobProgress<T extends { status: string }>({
     return () => {
       active = false;
     };
-  }, [isTerminal, pollIntervalMs]);
+  }, [pollIntervalMs]);
 
   useEffect(() => {
     if (!streamUrl) {
@@ -55,8 +57,13 @@ export function useRanklyJobProgress<T extends { status: string }>({
     let active = true;
     let source: EventSource | null = null;
     let cleanupFallback: (() => void) | undefined;
+    let fallbackStarted = false;
 
     const startFallback = () => {
+      if (fallbackStarted || !active) return;
+      fallbackStarted = true;
+      source?.close();
+      source = null;
       void runFallbackPoll().then((cleanup) => {
         if (!active) cleanup?.();
         else cleanupFallback = cleanup;
@@ -69,8 +76,21 @@ export function useRanklyJobProgress<T extends { status: string }>({
       source.onmessage = (event) => {
         if (!active) return;
         try {
-          const payload = JSON.parse(event.data) as T;
+          const payload = JSON.parse(event.data) as T & {
+            stream_end?: boolean;
+            done?: boolean;
+          };
           setData(payload);
+
+          if (payload.stream_end && !isTerminalRef.current(payload)) {
+            startFallback();
+            return;
+          }
+
+          if (isTerminalRef.current(payload) || payload.done) {
+            source?.close();
+            source = null;
+          }
         } catch {
           // ignore malformed events
         }
@@ -78,8 +98,6 @@ export function useRanklyJobProgress<T extends { status: string }>({
 
       source.onerror = () => {
         if (!active) return;
-        source?.close();
-        source = null;
         startFallback();
       };
     } catch {

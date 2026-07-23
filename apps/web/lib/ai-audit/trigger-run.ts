@@ -1,5 +1,7 @@
 import 'server-only';
 
+const RUN_TIME_BUDGET_MS = 240_000;
+
 export function getAiAuditRunUrl(jobId: string): string {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ??
@@ -33,3 +35,5 @@ export function triggerAiAuditRun(jobId: string): void {
     console.error('[rankly] trigger AI audit run failed', jobId, err);
   });
 }
+
+export { RUN_TIME_BUDGET_MS };

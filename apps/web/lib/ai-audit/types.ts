@@ -237,16 +237,16 @@ export const CITATION_PLATFORM_LABELS: Record<CitationPlatform, string> = {
   claude: 'Claude',
 };
 
-/** Google AI Overview (5) + ChatGPT/Perplexity/Claude LLM Responses (3 each) */
-export const CITATION_QUERIES_GOOGLE = 5;
-export const CITATION_QUERIES_LLM = 3;
+/** Google AI Overview (4) + ChatGPT/Perplexity/Claude LLM Responses (2 each) */
+export const CITATION_QUERIES_GOOGLE = 4;
+export const CITATION_QUERIES_LLM = 2;
 
 /** Sample each prompt multiple times — LLM answers are probabilistic */
-export const CITATION_SAMPLE_RUNS = 3;
+export const CITATION_SAMPLE_RUNS = 2;
 
 /** Contextual (buyer-decision) prompts derived from brief + crawl */
-export const CITATION_CONTEXTUAL_PROMPTS_GOOGLE = 8;
-export const CITATION_CONTEXTUAL_PROMPTS_LLM = 5;
+export const CITATION_CONTEXTUAL_PROMPTS_GOOGLE = 4;
+export const CITATION_CONTEXTUAL_PROMPTS_LLM = 2;
 
 export const PROMPT_LAYER_LABELS: Record<PromptLayer, string> = {
   generic: 'Category benchmark',

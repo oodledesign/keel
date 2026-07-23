@@ -358,11 +358,14 @@ async function runCitationLayer(
   locationCode: number,
   countryIso: string,
   competingBrands: Set<string>,
+  deadlineMs?: number,
 ): Promise<PlatformCitationResult[]> {
   const platforms: PlatformCitationResult[] = [];
+  const pastDeadline = () =>
+    deadlineMs != null && Date.now() >= deadlineMs;
 
   const googleGeneric = genericQueries.slice(0, CITATION_QUERIES_GOOGLE);
-  if (googleGeneric.length) {
+  if (googleGeneric.length && !pastDeadline()) {
     platforms.push(
       await checkGoogleAiOverview(
         host,
@@ -374,7 +377,7 @@ async function runCitationLayer(
     );
   }
 
-  if (contextualGoogleQueries.length) {
+  if (contextualGoogleQueries.length && !pastDeadline()) {
     platforms.push(
       await checkGoogleAiOverview(
         host,
@@ -388,6 +391,8 @@ async function runCitationLayer(
 
   const llmGeneric = genericQueries.slice(0, CITATION_QUERIES_LLM);
   for (const config of LLM_PLATFORMS) {
+    if (pastDeadline()) break;
+
     if (llmGeneric.length) {
       platforms.push(
         await checkLlmPlatform(
@@ -401,7 +406,7 @@ async function runCitationLayer(
       );
     }
 
-    if (contextualLlmQueries.length) {
+    if (contextualLlmQueries.length && !pastDeadline()) {
       platforms.push(
         await checkLlmPlatform(
           config,
@@ -427,6 +432,7 @@ export async function checkAiCitations(
     google: [],
     llm: [],
   },
+  options?: { deadlineMs?: number },
 ): Promise<AiCitationResult> {
   const host = normaliseDomain(domain);
   const countryIso = countryToIso(country);
@@ -440,6 +446,7 @@ export async function checkAiCitations(
     locationCode,
     countryIso,
     competingBrands,
+    options?.deadlineMs,
   );
 
   const allCitations = platforms.flatMap((platform) => platform.citations);

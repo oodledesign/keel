@@ -16,6 +16,10 @@ type WorkspaceFilePreviewProps = {
   mimeType: string | null;
   title: string;
   className?: string;
+  /** Shorter preview so form fields stay visible in side sheets. */
+  compact?: boolean;
+  /** Fill a dialog side panel with a taller preview. */
+  panel?: boolean;
 };
 
 export function WorkspaceFilePreview({
@@ -24,6 +28,8 @@ export function WorkspaceFilePreview({
   mimeType,
   title,
   className,
+  compact = false,
+  panel = false,
 }: WorkspaceFilePreviewProps) {
   const [url, setUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -69,15 +75,31 @@ export function WorkspaceFilePreview({
   const isImage = Boolean(mimeType?.startsWith('image/'));
   const isPdf =
     mimeType === 'application/pdf' || mimeType === 'application/x-pdf';
+  const imageMaxClass = panel
+    ? 'max-h-[min(28rem,55dvh)]'
+    : compact
+      ? 'max-h-[12rem]'
+      : 'max-h-[28rem]';
+  const frameHeightClass = panel
+    ? 'h-[min(32rem,60dvh)]'
+    : compact
+      ? 'h-[14rem]'
+      : 'h-[28rem]';
+  const minHeightClass = panel
+    ? 'min-h-[16rem]'
+    : compact
+      ? 'min-h-[8rem]'
+      : 'min-h-[12rem]';
 
   return (
     <div
       className={cn(
         'overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
+        panel && 'flex h-full min-h-0 flex-col',
         className,
       )}
     >
-      <div className="flex items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
         <p className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
           Preview
         </p>
@@ -97,7 +119,13 @@ export function WorkspaceFilePreview({
         ) : null}
       </div>
 
-      <div className="relative flex min-h-[12rem] items-center justify-center p-3">
+      <div
+        className={cn(
+          'relative flex items-center justify-center p-3',
+          panel && 'min-h-0 flex-1',
+          minHeightClass,
+        )}
+      >
         {loading ? (
           <Loader2 className="h-5 w-5 animate-spin text-[var(--workspace-shell-text-muted)]" />
         ) : error ? (
@@ -109,13 +137,16 @@ export function WorkspaceFilePreview({
           <img
             src={url}
             alt={title}
-            className="max-h-[28rem] w-full rounded-lg object-contain"
+            className={cn('w-full rounded-lg object-contain', imageMaxClass)}
           />
         ) : url && isPdf ? (
           <iframe
             title={`${title} preview`}
             src={`${url}#view=FitH`}
-            className="h-[28rem] w-full rounded-lg bg-[var(--workspace-shell-panel)]"
+            className={cn(
+              'w-full rounded-lg bg-[var(--workspace-shell-panel)]',
+              frameHeightClass,
+            )}
           />
         ) : null}
       </div>

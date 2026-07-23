@@ -23,6 +23,7 @@ import {
 } from './crawl';
 import { getAuditJob, saveAuditReport, updateAuditJobStatus } from './db';
 import { AUDIT_CREDITS_ESTIMATE } from './types';
+import { RUN_TIME_BUDGET_MS } from './trigger-run';
 
 function localeToCountry(locale: string | null | undefined): string {
   if (!locale) return 'gb';
@@ -37,7 +38,12 @@ function localeToCountry(locale: string | null | undefined): string {
 export async function runAuditJob(
   jobId: string,
   projectLocale?: string | null,
+  options?: { timeBudgetMs?: number },
 ): Promise<void> {
+  const startedAt = Date.now();
+  const timeBudgetMs = options?.timeBudgetMs ?? RUN_TIME_BUDGET_MS;
+  const deadlineMs = startedAt + timeBudgetMs;
+
   try {
     const job = await getAuditJob(jobId);
     const domain = normaliseDomain(job.target_domain);
@@ -78,6 +84,7 @@ export async function runAuditJob(
       contextualPrompts.length
         ? { google: contextualPrompts, llm: contextualForLlm }
         : { google: [], llm: [] },
+      { deadlineMs },
     );
 
     const [targetOpr, targetBacklinks, competitorBacklinks] = await Promise.all(

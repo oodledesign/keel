@@ -30,6 +30,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -1009,124 +1016,173 @@ function UploadFileSheet({
     });
   };
 
-  return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-lg">
-        <SheetHeader>
-          <SheetTitle className="text-[var(--workspace-shell-text)]">
-            Upload file
-          </SheetTitle>
-        </SheetHeader>
-        <div className="mt-6 space-y-4">
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              File
-            </Label>
-            <input
-              ref={fileRef}
-              type="file"
-              className="hidden"
-              accept="image/*,.pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.ppt,.pptx"
-              onChange={(e) => {
-                const f = e.target.files?.[0];
-                setFile(f ?? null);
-                if (f && !title.trim()) {
-                  setTitle(f.name.replace(/\.[^.]+$/, ''));
-                }
-              }}
-            />
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-[color:var(--workspace-shell-border)]"
-              onClick={() => fileRef.current?.click()}
-            >
-              <Upload className="mr-2 h-4 w-4" />
-              {file ? file.name : 'Choose file (images, PDFs, documents)'}
-            </Button>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              Title
-            </Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              Document type
-            </Label>
-            <Select
-              value={docType}
-              onValueChange={(value) => setDocType(value as DocTypeOption)}
-            >
-              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                {DOC_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {DOC_TYPE_LABELS[option]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              Financial year
-            </Label>
-            <Select value={financialYear} onValueChange={setFinancialYear}>
-              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                <SelectItem value="__none__">None</SelectItem>
-                {financialYearOptions.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <CategorySelect
-            value={category}
-            onChange={setCategory}
-            disabled={pending}
+  const localPreviewUrl = useMemo(() => {
+    if (!file || !isPreviewableMimeType(file.type)) return null;
+    return URL.createObjectURL(file);
+  }, [file]);
+
+  useEffect(() => {
+    return () => {
+      if (localPreviewUrl) URL.revokeObjectURL(localPreviewUrl);
+    };
+  }, [localPreviewUrl]);
+
+  const fields = (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label className="text-[var(--workspace-shell-text-muted)]">File</Label>
+        <input
+          ref={fileRef}
+          type="file"
+          className="hidden"
+          accept="image/*,.pdf,.doc,.docx,.txt,.md,.xls,.xlsx,.ppt,.pptx"
+          onChange={(e) => {
+            const f = e.target.files?.[0];
+            setFile(f ?? null);
+            if (f && !title.trim()) {
+              setTitle(f.name.replace(/\.[^.]+$/, ''));
+            }
+          }}
+        />
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full border-[color:var(--workspace-shell-border)]"
+          onClick={() => fileRef.current?.click()}
+        >
+          <Upload className="mr-2 h-4 w-4" />
+          {file ? file.name : 'Choose file (images, PDFs, documents)'}
+        </Button>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
+        <Input
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder="Name shown in the documents list"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+        />
+      </div>
+      <div className="space-y-2">
+        <Label className="text-[var(--workspace-shell-text-muted)]">
+          Document type
+        </Label>
+        <Select
+          value={docType}
+          onValueChange={(value) => setDocType(value as DocTypeOption)}
+        >
+          <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+            {DOC_TYPE_OPTIONS.map((option) => (
+              <SelectItem key={option} value={option}>
+                {DOC_TYPE_LABELS[option]}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <div className="space-y-2">
+        <Label className="text-[var(--workspace-shell-text-muted)]">
+          Financial year
+        </Label>
+        <Select value={financialYear} onValueChange={setFinancialYear}>
+          <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+            <SelectValue placeholder="None" />
+          </SelectTrigger>
+          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+            <SelectItem value="__none__">None</SelectItem>
+            {financialYearOptions.map((year) => (
+              <SelectItem key={year} value={year}>
+                {year}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+      <CategorySelect
+        value={category}
+        onChange={setCategory}
+        disabled={pending}
+        accountId={accountId}
+        accountSlug={accountSlug}
+      />
+      {linkOptions.length > 0 ? (
+        <div className="space-y-2">
+          <Label className="text-[var(--workspace-shell-text-muted)]">
+            Link to
+          </Label>
+          <LinkToSelect options={linkOptions} value={link} onChange={setLink} />
+        </div>
+      ) : null}
+      <div className="space-y-2">
+        <Label className="text-[var(--workspace-shell-text-muted)]">Tags</Label>
+        <TagsInput tags={tags} onChange={setTags} disabled={pending} />
+      </div>
+    </div>
+  );
+
+  const preview = localPreviewUrl ? (
+    <div className="flex h-full min-h-[14rem] flex-col overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
+      <p className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-3 py-2 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+        Preview
+      </p>
+      <div className="flex min-h-0 flex-1 items-center justify-center p-3">
+        {file?.type.startsWith('image/') ? (
+          // eslint-disable-next-line @next/next/no-img-element -- local object URL
+          <img
+            src={localPreviewUrl}
+            alt={title || file.name}
+            className="max-h-[min(28rem,55dvh)] w-full rounded-lg object-contain"
           />
-          {linkOptions.length > 0 ? (
-            <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">
-                Link to
-              </Label>
-              <LinkToSelect
-                options={linkOptions}
-                value={link}
-                onChange={setLink}
-              />
-            </div>
-          ) : null}
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              Tags
-            </Label>
-            <TagsInput tags={tags} onChange={setTags} disabled={pending} />
+        ) : (
+          <iframe
+            title={`${title || file?.name || 'File'} preview`}
+            src={`${localPreviewUrl}#view=FitH`}
+            className="h-[min(32rem,60dvh)] w-full rounded-lg bg-[var(--workspace-shell-panel)]"
+          />
+        )}
+      </div>
+    </div>
+  ) : (
+    <div className="flex h-full min-h-[14rem] items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/50 px-6 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+      Choose an image or PDF to see a preview here
+    </div>
+  );
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          'flex max-h-[min(90dvh,calc(100dvh-2rem))] w-[calc(100%-2rem)] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-0 text-[var(--workspace-shell-text)] sm:w-full sm:max-w-5xl',
+        )}
+      >
+        <DialogHeader className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-6 py-4 pr-12 text-left">
+          <DialogTitle className="text-[var(--workspace-shell-text)]">
+            Upload file
+          </DialogTitle>
+        </DialogHeader>
+        <div className="grid min-h-0 flex-1 gap-4 overflow-y-auto overscroll-contain px-6 py-4 md:grid-cols-2 md:overflow-hidden">
+          <div className="min-h-0 space-y-4 md:overflow-y-auto md:overscroll-contain md:pr-1">
+            {fields}
           </div>
+          <div className="min-h-0 md:overflow-y-auto md:overscroll-contain">
+            {preview}
+          </div>
+        </div>
+        <DialogFooter className="shrink-0 border-t border-[color:var(--workspace-shell-border)] px-6 py-4 sm:justify-start">
           <Button
             type="button"
-            disabled={pending}
+            disabled={pending || !file}
             className={workspaceBtnPrimaryMd}
             onClick={submit}
           >
             Upload
           </Button>
-        </div>
-      </SheetContent>
-    </Sheet>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -1232,156 +1288,175 @@ function FileDetailSheet({
     });
   };
 
+  const showPreview =
+    doc.kind === 'uploaded' && isPreviewableMimeType(doc.mimeType);
+
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-full overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)] sm:max-w-xl">
-        <SheetHeader>
-          <SheetTitle className="text-[var(--workspace-shell-text)]">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent
+        className={cn(
+          'flex max-h-[min(90dvh,calc(100dvh-2rem))] w-[calc(100%-2rem)] max-w-[calc(100vw-2rem)] flex-col gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-0 text-[var(--workspace-shell-text)] sm:w-full sm:max-w-5xl',
+        )}
+      >
+        <DialogHeader className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-6 py-4 pr-12 text-left">
+          <DialogTitle className="text-[var(--workspace-shell-text)]">
             Edit file
-          </SheetTitle>
-        </SheetHeader>
-        <div className="mt-6 space-y-4">
-          {doc.kind === 'uploaded' && isPreviewableMimeType(doc.mimeType) ? (
-            <WorkspaceFilePreview
-              accountId={accountId}
-              docId={doc.id}
-              mimeType={doc.mimeType}
-              title={doc.title}
-            />
-          ) : null}
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              Title
-            </Label>
-            <Input
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              disabled={!canEdit || pending}
-              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              Document type
-            </Label>
-            <Select
-              value={docType}
-              onValueChange={(value) => setDocType(value as DocTypeOption)}
-              disabled={!canEdit || pending}
-            >
-              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                {DOC_TYPE_OPTIONS.map((option) => (
-                  <SelectItem key={option} value={option}>
-                    {DOC_TYPE_LABELS[option]}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              Financial year
-            </Label>
-            <Select
-              value={financialYear}
-              onValueChange={setFinancialYear}
-              disabled={!canEdit || pending}
-            >
-              <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                <SelectValue placeholder="None" />
-              </SelectTrigger>
-              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                <SelectItem value="__none__">None</SelectItem>
-                {financialYearOptions.map((year) => (
-                  <SelectItem key={year} value={year}>
-                    {year}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <CategorySelect
-            value={category}
-            onChange={setCategory}
-            disabled={!canEdit || pending}
-          />
-          {linkOptions.length > 0 ? (
+          </DialogTitle>
+        </DialogHeader>
+        <div
+          className={cn(
+            'grid min-h-0 flex-1 gap-4 overflow-y-auto overscroll-contain px-6 py-4 md:overflow-hidden',
+            showPreview ? 'md:grid-cols-2' : 'md:grid-cols-1',
+          )}
+        >
+          <div className="min-h-0 space-y-4 md:overflow-y-auto md:overscroll-contain md:pr-1">
             <div className="space-y-2">
               <Label className="text-[var(--workspace-shell-text-muted)]">
-                Link to
+                Title
               </Label>
-              <LinkToSelect
-                options={linkOptions}
-                value={link}
-                onChange={setLink}
+              <Input
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                disabled={!canEdit || pending}
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Document type
+              </Label>
+              <Select
+                value={docType}
+                onValueChange={(value) => setDocType(value as DocTypeOption)}
+                disabled={!canEdit || pending}
+              >
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                  {DOC_TYPE_OPTIONS.map((option) => (
+                    <SelectItem key={option} value={option}>
+                      {DOC_TYPE_LABELS[option]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Financial year
+              </Label>
+              <Select
+                value={financialYear}
+                onValueChange={setFinancialYear}
+                disabled={!canEdit || pending}
+              >
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                  <SelectValue placeholder="None" />
+                </SelectTrigger>
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                  <SelectItem value="__none__">None</SelectItem>
+                  {financialYearOptions.map((year) => (
+                    <SelectItem key={year} value={year}>
+                      {year}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <CategorySelect
+              value={category}
+              onChange={setCategory}
+              disabled={!canEdit || pending}
+              accountId={accountId}
+              accountSlug={accountSlug}
+            />
+            {linkOptions.length > 0 ? (
+              <div className="space-y-2">
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Link to
+                </Label>
+                <LinkToSelect
+                  options={linkOptions}
+                  value={link}
+                  onChange={setLink}
+                  disabled={!canEdit || pending}
+                />
+              </div>
+            ) : null}
+            <div className="space-y-2">
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Tags
+              </Label>
+              <TagsInput
+                tags={tags}
+                onChange={setTags}
                 disabled={!canEdit || pending}
               />
             </div>
-          ) : null}
-          <div className="space-y-2">
-            <Label className="text-[var(--workspace-shell-text-muted)]">
-              Tags
-            </Label>
-            <TagsInput
-              tags={tags}
-              onChange={setTags}
-              disabled={!canEdit || pending}
+            {doc.kind === 'uploaded' ? (
+              <>
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  {doc.mimeType ?? 'file'} · {formatBytes(doc.fileSizeBytes)}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="border-[color:var(--workspace-shell-border)]"
+                  disabled={pending}
+                  onClick={download}
+                >
+                  <Download className="mr-2 h-4 w-4" />
+                  Download
+                </Button>
+              </>
+            ) : (
+              <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
+                {doc.content || 'No content'}
+              </p>
+            )}
+            <PublicSharingSection
+              accountId={accountId}
+              accountSlug={accountSlug}
+              itemType="file"
+              itemId={doc.id}
+              isPublic={doc.isPublic}
             />
           </div>
-          {doc.kind === 'uploaded' ? (
-            <>
-              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                {doc.mimeType ?? 'file'} · {formatBytes(doc.fileSizeBytes)}
-              </p>
-              <Button
-                type="button"
-                variant="outline"
-                className="border-[color:var(--workspace-shell-border)]"
-                disabled={pending}
-                onClick={download}
-              >
-                <Download className="mr-2 h-4 w-4" />
-                Download
-              </Button>
-            </>
-          ) : (
-            <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
-              {doc.content || 'No content'}
-            </p>
-          )}
-          <PublicSharingSection
-            accountId={accountId}
-            accountSlug={accountSlug}
-            itemType="file"
-            itemId={doc.id}
-            isPublic={doc.isPublic}
-          />
-          {canEdit ? (
-            <div className="flex gap-2 pt-2">
-              <Button
-                type="button"
-                onClick={save}
-                disabled={pending}
-                className={workspaceBtnPrimaryMd}
-              >
-                Save
-              </Button>
-              <Button
-                type="button"
-                variant="outline"
-                onClick={remove}
-                disabled={pending}
-                className="border-red-500/30 text-red-300"
-              >
-                Delete
-              </Button>
+          {showPreview ? (
+            <div className="min-h-0 md:overflow-y-auto md:overscroll-contain">
+              <WorkspaceFilePreview
+                accountId={accountId}
+                docId={doc.id}
+                mimeType={doc.mimeType}
+                title={doc.title}
+                panel
+              />
             </div>
           ) : null}
         </div>
-      </SheetContent>
-    </Sheet>
+        {canEdit ? (
+          <DialogFooter className="shrink-0 gap-2 border-t border-[color:var(--workspace-shell-border)] px-6 py-4 sm:justify-start">
+            <Button
+              type="button"
+              onClick={save}
+              disabled={pending}
+              className={workspaceBtnPrimaryMd}
+            >
+              Save
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={remove}
+              disabled={pending}
+              className="border-red-500/30 text-red-300"
+            >
+              Delete
+            </Button>
+          </DialogFooter>
+        ) : null}
+      </DialogContent>
+    </Dialog>
   );
 }
