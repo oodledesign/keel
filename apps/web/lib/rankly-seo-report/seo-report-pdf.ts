@@ -4,6 +4,7 @@ import {
   PDFDocument,
   type PDFFont,
   type PDFPage,
+  type RGB,
   StandardFonts,
   rgb,
 } from 'pdf-lib';
@@ -18,18 +19,31 @@ import {
   scoreBand,
   scoreBandLabel,
 } from './client-copy';
+import {
+  buildOverallPotential,
+  buildPillarPotentials,
+  scoreTone,
+} from './report-visuals';
 import type { SeoReportSnapshot } from './types';
 
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
-const MARGIN = 48;
+const MARGIN = 44;
 
 const COLORS = {
-  ink: rgb(0.08, 0.1, 0.14),
-  muted: rgb(0.4, 0.43, 0.48),
-  line: rgb(0.88, 0.89, 0.91),
-  card: rgb(0.97, 0.97, 0.98),
-  accent: rgb(0.05, 0.45, 0.35),
+  ink: rgb(0.15, 0.09, 0.12),
+  muted: rgb(0.42, 0.36, 0.39),
+  line: rgb(0.88, 0.84, 0.8),
+  card: rgb(0.99, 0.97, 0.94),
+  cream: rgb(0.984, 0.965, 0.925),
+  plum: rgb(0.208, 0.118, 0.157),
+  plumSoft: rgb(0.3, 0.18, 0.22),
+  coral: rgb(1, 0.361, 0.204),
+  coralSoft: rgb(1, 0.92, 0.88),
+  white: rgb(1, 1, 1),
+  potential: rgb(0.12, 0.55, 0.48),
+  potentialSoft: rgb(0.88, 0.96, 0.94),
+  track: rgb(0.91, 0.88, 0.85),
 };
 
 function wrapText(
@@ -70,6 +84,71 @@ function drawText(
   page.drawText(sanitizePdfText(text), { x, y, size, font, color });
 }
 
+function pdfRgb(tone: { r: number; g: number; b: number }): RGB {
+  return rgb(tone.r, tone.g, tone.b);
+}
+
+function drawRoundedCard(
+  page: PDFPage,
+  x: number,
+  yBottom: number,
+  width: number,
+  height: number,
+  fill: RGB,
+  border?: RGB,
+) {
+  page.drawRectangle({
+    x,
+    y: yBottom,
+    width,
+    height,
+    color: fill,
+    borderColor: border,
+    borderWidth: border ? 0.8 : 0,
+  });
+}
+
+function drawBar(
+  page: PDFPage,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  fillRatio: number,
+  fill: RGB,
+  track = COLORS.track,
+) {
+  page.drawRectangle({
+    x,
+    y,
+    width,
+    height,
+    color: track,
+  });
+  const filled = Math.max(0, Math.min(1, fillRatio)) * width;
+  if (filled > 0) {
+    page.drawRectangle({
+      x,
+      y,
+      width: filled,
+      height,
+      color: fill,
+    });
+  }
+}
+
+function drawLegendDot(
+  page: PDFPage,
+  x: number,
+  y: number,
+  color: RGB,
+  label: string,
+  font: PDFFont,
+) {
+  page.drawCircle({ x: x + 4, y: y + 3, size: 4, color });
+  drawText(page, label, x + 12, y, 8, font, COLORS.muted);
+}
+
 export async function buildSeoReportPdf(params: {
   snapshot: SeoReportSnapshot;
   brandName?: string | null;
@@ -82,8 +161,16 @@ export async function buildSeoReportPdf(params: {
   const contentWidth = PAGE_WIDTH - MARGIN * 2;
 
   const ensureSpace = (needed: number) => {
-    if (y - needed < MARGIN) {
+    if (y - needed < MARGIN + 16) {
       page = doc.addPage([PAGE_WIDTH, PAGE_HEIGHT]);
+      // Soft cream page wash
+      page.drawRectangle({
+        x: 0,
+        y: 0,
+        width: PAGE_WIDTH,
+        height: PAGE_HEIGHT,
+        color: COLORS.cream,
+      });
       y = PAGE_HEIGHT - MARGIN;
     }
   };
@@ -94,15 +181,25 @@ export async function buildSeoReportPdf(params: {
     useFont: PDFFont,
     color = COLORS.ink,
     gapAfter = 8,
+    indent = 0,
   ) => {
-    const lines = wrapText(text, useFont, size, contentWidth);
+    const lines = wrapText(text, useFont, size, contentWidth - indent);
     for (const line of lines) {
       ensureSpace(size + 4);
-      drawText(page, line, MARGIN, y, size, useFont, color);
+      drawText(page, line, MARGIN + indent, y, size, useFont, color);
       y -= size + 4;
     }
     y -= gapAfter;
   };
+
+  // First page cream background
+  page.drawRectangle({
+    x: 0,
+    y: 0,
+    width: PAGE_WIDTH,
+    height: PAGE_HEIGHT,
+    color: COLORS.cream,
+  });
 
   const headline =
     params.snapshot.clientHeadline?.trim() ||
@@ -113,23 +210,47 @@ export async function buildSeoReportPdf(params: {
       ? storedSteps
       : buildClientNextSteps(params.snapshot);
   const pillars = params.snapshot.pillars.map(enrichPillarForClient);
+  const pillarPotentials = buildPillarPotentials(params.snapshot);
+  const overall = buildOverallPotential(params.snapshot, pillarPotentials);
+  const overallTone = scoreTone(overall.current);
 
-  const brand = sanitizePdfText(params.brandName?.trim() || 'SEO Report');
-  drawText(page, brand, MARGIN, y, 10, font, COLORS.muted);
-  y -= 28;
+  // ——— Hero band ———
+  const heroHeight = 118;
+  page.drawRectangle({
+    x: 0,
+    y: PAGE_HEIGHT - heroHeight,
+    width: PAGE_WIDTH,
+    height: heroHeight,
+    color: COLORS.plum,
+  });
+  page.drawRectangle({
+    x: 0,
+    y: PAGE_HEIGHT - heroHeight,
+    width: 6,
+    height: heroHeight,
+    color: COLORS.coral,
+  });
 
-  drawText(page, 'SEO Report', MARGIN, y, 26, fontBold, COLORS.ink);
-  y -= 22;
+  const brand = sanitizePdfText(params.brandName?.trim() || 'Rankly');
+  drawText(page, brand, MARGIN, PAGE_HEIGHT - 28, 10, fontBold, COLORS.coral);
+  drawText(
+    page,
+    'SEO Report',
+    MARGIN,
+    PAGE_HEIGHT - 52,
+    26,
+    fontBold,
+    COLORS.white,
+  );
   drawText(
     page,
     params.snapshot.targetDomain,
     MARGIN,
-    y,
-    12,
+    PAGE_HEIGHT - 72,
+    11,
     font,
-    COLORS.muted,
+    rgb(0.85, 0.78, 0.8),
   );
-  y -= 16;
   drawText(
     page,
     new Date(params.snapshot.generatedAt).toLocaleDateString('en-GB', {
@@ -138,161 +259,408 @@ export async function buildSeoReportPdf(params: {
       year: 'numeric',
     }),
     MARGIN,
-    y,
-    10,
+    PAGE_HEIGHT - 88,
+    9,
     font,
-    COLORS.muted,
+    rgb(0.72, 0.64, 0.67),
   );
-  y -= 28;
 
-  ensureSpace(50);
-  drawText(page, 'Overall score', MARGIN, y, 10, fontBold, COLORS.muted);
-  y -= 22;
+  // Score chip on hero
+  const scoreBoxX = PAGE_WIDTH - MARGIN - 110;
+  page.drawRectangle({
+    x: scoreBoxX,
+    y: PAGE_HEIGHT - 98,
+    width: 110,
+    height: 64,
+    color: COLORS.plumSoft,
+  });
   drawText(
     page,
-    `${params.snapshot.overallScore ?? '—'}/100`,
-    MARGIN,
-    y,
+    'TODAY',
+    scoreBoxX + 10,
+    PAGE_HEIGHT - 48,
+    8,
+    fontBold,
+    COLORS.coral,
+  );
+  drawText(
+    page,
+    `${overall.current ?? '—'}`,
+    scoreBoxX + 10,
+    PAGE_HEIGHT - 74,
     28,
+    fontBold,
+    COLORS.white,
+  );
+  drawText(
+    page,
+    '/100',
+    scoreBoxX +
+      10 +
+      fontBold.widthOfTextAtSize(`${overall.current ?? '—'}`, 28) +
+      4,
+    PAGE_HEIGHT - 68,
+    10,
+    font,
+    rgb(0.75, 0.68, 0.7),
+  );
+
+  y = PAGE_HEIGHT - heroHeight - 24;
+
+  // ——— Current vs potential card ———
+  const compareCardH = overall.uplift && overall.uplift > 0 ? 118 : 92;
+  ensureSpace(compareCardH + 10);
+  drawRoundedCard(
+    page,
+    MARGIN,
+    y - compareCardH,
+    contentWidth,
+    compareCardH,
+    COLORS.white,
+    COLORS.line,
+  );
+
+  drawText(
+    page,
+    'Where you are vs where you could be',
+    MARGIN + 14,
+    y - 18,
+    11,
     fontBold,
     COLORS.ink,
   );
-  y -= 18;
   drawText(
     page,
-    scoreBandLabel(scoreBand(params.snapshot.overallScore)),
-    MARGIN,
-    y,
-    10,
-    font,
-    COLORS.muted,
-  );
-  y -= 20;
-
-  writeParagraph(
-    'Scores are out of 100. Higher is better. Rough guide: 75+ is in good shape, 50-74 has room to improve, below 50 needs attention.',
+    scoreBandLabel(scoreBand(overall.current)),
+    MARGIN + 14,
+    y - 32,
     9,
     font,
     COLORS.muted,
-    10,
   );
 
-  writeParagraph(headline, 11, font, COLORS.ink, 10);
+  const barX = MARGIN + 14;
+  const barW = contentWidth - 140;
+  const barH = 10;
+
+  drawText(page, 'Today', barX, y - 50, 8, fontBold, COLORS.muted);
+  drawBar(
+    page,
+    barX + 48,
+    y - 52,
+    barW,
+    barH,
+    (overall.current ?? 0) / 100,
+    pdfRgb(overallTone.pdf),
+  );
+  drawText(
+    page,
+    `${overall.current ?? '—'}/100`,
+    barX + 48 + barW + 8,
+    y - 50,
+    9,
+    fontBold,
+    pdfRgb(overallTone.pdf),
+  );
+
+  if (overall.potential != null) {
+    drawText(page, 'With fixes', barX, y - 72, 8, fontBold, COLORS.muted);
+    drawBar(
+      page,
+      barX + 48,
+      y - 74,
+      barW,
+      barH,
+      overall.potential / 100,
+      COLORS.potential,
+      COLORS.potentialSoft,
+    );
+    drawText(
+      page,
+      `${overall.potential}/100`,
+      barX + 48 + barW + 8,
+      y - 72,
+      9,
+      fontBold,
+      COLORS.potential,
+    );
+  }
+
+  if (overall.uplift && overall.uplift > 0) {
+    page.drawRectangle({
+      x: MARGIN + 14,
+      y: y - compareCardH + 12,
+      width: 150,
+      height: 18,
+      color: COLORS.potentialSoft,
+    });
+    drawText(
+      page,
+      `+${overall.uplift} points possible`,
+      MARGIN + 20,
+      y - compareCardH + 17,
+      9,
+      fontBold,
+      COLORS.potential,
+    );
+    drawText(
+      page,
+      'Estimate if recommended actions are completed.',
+      MARGIN + 170,
+      y - compareCardH + 17,
+      8,
+      font,
+      COLORS.muted,
+    );
+  }
+
+  y -= compareCardH + 16;
+
+  writeParagraph(headline, 11, font, COLORS.ink, 8);
 
   if (
     params.snapshot.executiveSummary &&
     params.snapshot.executiveSummary.trim() !== headline.trim()
   ) {
-    writeParagraph(params.snapshot.executiveSummary, 10, font, COLORS.muted, 12);
+    writeParagraph(params.snapshot.executiveSummary, 9, font, COLORS.muted, 10);
   }
 
   if (nextSteps.length > 0) {
-    ensureSpace(30);
+    ensureSpace(36);
     drawText(page, 'What to do next', MARGIN, y, 12, fontBold, COLORS.ink);
-    y -= 16;
+    y -= 14;
     nextSteps.forEach((step, index) => {
-      writeParagraph(`${index + 1}. ${step}`, 10, font, COLORS.ink, 6);
+      ensureSpace(28);
+      page.drawCircle({
+        x: MARGIN + 7,
+        y: y + 2,
+        size: 7,
+        color: COLORS.coral,
+      });
+      drawText(
+        page,
+        `${index + 1}`,
+        MARGIN + 4.5,
+        y - 1,
+        8,
+        fontBold,
+        COLORS.white,
+      );
+      writeParagraph(step, 9, font, COLORS.ink, 6, 20);
     });
-    y -= 6;
+    y -= 4;
   }
 
-  ensureSpace(30);
+  // ——— Pillar score chart ———
+  ensureSpace(40);
   drawText(page, 'How your site scores', MARGIN, y, 12, fontBold, COLORS.ink);
-  y -= 14;
+  y -= 12;
   writeParagraph(
-    'Each score is one part of how customers find you in Google and AI answers.',
-    9,
+    "Each bar shows today's score and the estimated score after recommended fixes.",
+    8,
     font,
     COLORS.muted,
-    10,
+    6,
   );
 
+  drawLegendDot(page, MARGIN, y, pdfRgb(overallTone.pdf), 'Today', font);
+  drawLegendDot(page, MARGIN + 70, y, COLORS.potential, 'With fixes', font);
+  y -= 16;
+
   for (const pillar of pillars) {
-    const scoreLabel = pillar.available
-      ? `${pillar.score ?? '—'}/100 · ${pillar.bandLabel}`
-      : 'Not measured yet';
+    const pot = pillarPotentials.find((p) => p.id === pillar.id);
     const body = [
       pillar.whatItMeans,
       `Why it matters: ${pillar.whyItMatters}`,
-      pillar.scoreExplainer,
     ].join(' ');
-    const bodyLines = wrapText(body, font, 9, contentWidth);
-    ensureSpace(28 + bodyLines.length * 12);
+    const bodyLines = wrapText(body, font, 8, contentWidth - 20);
+    const blockH = 52 + bodyLines.length * 10;
+    ensureSpace(blockH + 8);
 
+    drawRoundedCard(
+      page,
+      MARGIN,
+      y - blockH,
+      contentWidth,
+      blockH,
+      COLORS.white,
+      COLORS.line,
+    );
+
+    const tone = scoreTone(pillar.available ? pillar.score : null);
     page.drawRectangle({
       x: MARGIN,
-      y: y - (18 + bodyLines.length * 12),
-      width: contentWidth,
-      height: 26 + bodyLines.length * 12,
-      color: COLORS.card,
-      borderColor: COLORS.line,
-      borderWidth: 0.5,
+      y: y - blockH,
+      width: 4,
+      height: blockH,
+      color: pdfRgb(tone.pdf),
     });
-    drawText(page, pillar.label, MARGIN + 10, y - 12, 9, fontBold, COLORS.ink);
+
+    drawText(page, pillar.label, MARGIN + 14, y - 14, 9, fontBold, COLORS.ink);
     drawText(
       page,
-      scoreLabel,
-      MARGIN + 10,
-      y - 24,
-      10,
-      fontBold,
-      COLORS.ink,
+      pillar.available ? pillar.bandLabel : 'Not measured yet',
+      MARGIN + 14 + fontBold.widthOfTextAtSize(pillar.label, 9) + 8,
+      y - 14,
+      8,
+      font,
+      COLORS.muted,
     );
-    y -= 34;
-    for (const line of bodyLines) {
-      drawText(page, line, MARGIN + 10, y, 9, font, COLORS.muted);
-      y -= 12;
+
+    const pBarX = MARGIN + 14;
+    const pBarW = contentWidth - 100;
+    if (pillar.available && pot?.current != null) {
+      drawBar(
+        page,
+        pBarX,
+        y - 28,
+        pBarW,
+        7,
+        pot.current / 100,
+        pdfRgb(tone.pdf),
+      );
+      drawText(
+        page,
+        `${pot.current}`,
+        pBarX + pBarW + 8,
+        y - 28,
+        9,
+        fontBold,
+        pdfRgb(tone.pdf),
+      );
+
+      if (pot.potential != null && pot.uplift && pot.uplift > 0) {
+        drawBar(
+          page,
+          pBarX,
+          y - 40,
+          pBarW,
+          7,
+          pot.potential / 100,
+          COLORS.potential,
+          COLORS.potentialSoft,
+        );
+        drawText(
+          page,
+          `${pot.potential} (+${pot.uplift})`,
+          pBarX + pBarW + 8,
+          y - 40,
+          8,
+          fontBold,
+          COLORS.potential,
+        );
+      }
+    } else {
+      drawText(page, '—', pBarX, y - 30, 10, font, COLORS.muted);
     }
-    y -= 14;
+
+    let ty = y - 54;
+    for (const line of bodyLines) {
+      drawText(page, line, MARGIN + 14, ty, 8, font, COLORS.muted);
+      ty -= 10;
+    }
+    y -= blockH + 8;
   }
 
   if (params.snapshot.recommendations.length > 0) {
     ensureSpace(30);
     drawText(page, 'Recommended actions', MARGIN, y, 12, fontBold, COLORS.ink);
-    y -= 14;
+    y -= 12;
     writeParagraph(
       'Practical fixes, ordered by impact. Start at the top.',
-      9,
+      8,
       font,
       COLORS.muted,
       8,
     );
 
     for (const rec of params.snapshot.recommendations) {
-      const titleLines = wrapText(
-        `${rec.priority.toUpperCase()} PRIORITY · ${rec.title}`,
-        fontBold,
-        10,
-        contentWidth,
-      );
-      const bodyLines = wrapText(rec.description, font, 9, contentWidth);
+      const titleLines = wrapText(rec.title, fontBold, 10, contentWidth - 24);
+      const bodyLines = wrapText(rec.description, font, 8, contentWidth - 24);
       const outcomeLines = rec.outcome
-        ? wrapText(`If you fix this: ${rec.outcome}`, font, 9, contentWidth)
+        ? wrapText(
+            `If you fix this: ${rec.outcome}`,
+            font,
+            8,
+            contentWidth - 24,
+          )
         : [];
-      ensureSpace(
-        titleLines.length * 13 + bodyLines.length * 12 + outcomeLines.length * 12 + 20,
+      const blockH =
+        28 +
+        titleLines.length * 12 +
+        bodyLines.length * 10 +
+        outcomeLines.length * 10 +
+        8;
+      ensureSpace(blockH + 6);
+
+      drawRoundedCard(
+        page,
+        MARGIN,
+        y - blockH,
+        contentWidth,
+        blockH,
+        COLORS.white,
+        COLORS.line,
       );
 
+      const priorityColor =
+        rec.priority === 'high'
+          ? rgb(0.85, 0.22, 0.28)
+          : rec.priority === 'medium'
+            ? rgb(0.85, 0.55, 0.08)
+            : rgb(0.45, 0.45, 0.48);
+      const priorityBg =
+        rec.priority === 'high'
+          ? rgb(1, 0.92, 0.92)
+          : rec.priority === 'medium'
+            ? rgb(1, 0.95, 0.88)
+            : rgb(0.94, 0.94, 0.95);
+
+      const badgeLabel = `${rec.priority.toUpperCase()} PRIORITY`;
+      const badgeW = fontBold.widthOfTextAtSize(badgeLabel, 7) + 12;
+      page.drawRectangle({
+        x: MARGIN + 12,
+        y: y - 22,
+        width: badgeW,
+        height: 14,
+        color: priorityBg,
+      });
+      drawText(
+        page,
+        badgeLabel,
+        MARGIN + 18,
+        y - 18,
+        7,
+        fontBold,
+        priorityColor,
+      );
+
+      if (rec.isQuickWin) {
+        const qwX = MARGIN + 18 + badgeW;
+        page.drawRectangle({
+          x: qwX,
+          y: y - 22,
+          width: 58,
+          height: 14,
+          color: COLORS.coralSoft,
+        });
+        drawText(page, 'QUICK WIN', qwX + 6, y - 18, 7, fontBold, COLORS.coral);
+      }
+
+      let ty = y - 36;
       for (const line of titleLines) {
-        drawText(page, line, MARGIN, y, 10, fontBold, COLORS.ink);
-        y -= 13;
+        drawText(page, line, MARGIN + 12, ty, 10, fontBold, COLORS.ink);
+        ty -= 12;
       }
       for (const line of bodyLines) {
-        drawText(page, line, MARGIN, y, 9, font, COLORS.muted);
-        y -= 12;
+        drawText(page, line, MARGIN + 12, ty, 8, font, COLORS.muted);
+        ty -= 10;
       }
       for (const line of outcomeLines) {
-        drawText(page, line, MARGIN, y, 9, font, COLORS.accent);
-        y -= 12;
+        drawText(page, line, MARGIN + 12, ty, 8, font, COLORS.potential);
+        ty -= 10;
       }
-      y -= 10;
-      page.drawLine({
-        start: { x: MARGIN, y },
-        end: { x: PAGE_WIDTH - MARGIN, y },
-        thickness: 0.5,
-        color: COLORS.line,
-      });
-      y -= 14;
+      y -= blockH + 8;
     }
   }
 
@@ -307,36 +675,63 @@ export async function buildSeoReportPdf(params: {
       fontBold,
       COLORS.ink,
     );
-    y -= 14;
+    y -= 12;
     writeParagraph(
       'How many pages have each problem — the main reasons Technical SEO may be low.',
-      9,
+      8,
       font,
       COLORS.muted,
       8,
     );
+
+    const maxCount = Math.max(
+      ...params.snapshot.appendix.crawlIssues.map((i) => i.count),
+      1,
+    );
+
     for (const issue of params.snapshot.appendix.crawlIssues) {
       const label =
         issue.label ||
         CRAWL_ISSUE_PLAIN[issue.code] ||
         issue.code.replace(/_/g, ' ');
-      writeParagraph(
-        `${label}: ${issue.count} page${issue.count === 1 ? '' : 's'}`,
-        10,
-        font,
-        COLORS.ink,
-        4,
+      const labelLines = wrapText(label, font, 8, contentWidth - 80);
+      ensureSpace(22 + labelLines.length * 10);
+
+      let ty = y;
+      for (const line of labelLines) {
+        drawText(page, line, MARGIN, ty, 8, font, COLORS.ink);
+        ty -= 10;
+      }
+      drawBar(
+        page,
+        MARGIN,
+        ty - 4,
+        contentWidth - 48,
+        6,
+        issue.count / maxCount,
+        COLORS.coral,
+        COLORS.coralSoft,
       );
+      drawText(
+        page,
+        `${issue.count}`,
+        MARGIN + contentWidth - 40,
+        ty - 4,
+        8,
+        fontBold,
+        COLORS.coral,
+      );
+      y = ty - 18;
     }
   }
 
-  ensureSpace(40);
+  ensureSpace(24);
   drawText(
     page,
-    'Generated with Rankly',
+    'Generated with Rankly  ·  Potential scores are estimates based on recommended actions',
     MARGIN,
-    MARGIN - 8,
-    8,
+    MARGIN - 4,
+    7,
     font,
     COLORS.muted,
   );
