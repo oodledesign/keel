@@ -800,23 +800,31 @@ export function SidebarNavigation({
             return props.children;
           };
 
+          const hideGroupLabel =
+            typeof item.label === 'string' && item.label.startsWith('ozer-nav');
+
           return (
             <Container key={`collapsible-${index}`}>
               <SidebarGroup key={item.label}>
-                <If
-                  condition={item.collapsible}
-                  fallback={
-                    <SidebarGroupLabel className={cn({ hidden: !open })}>
-                      <Trans i18nKey={item.label} defaults={item.label} />
+                <If condition={!hideGroupLabel}>
+                  <If
+                    condition={item.collapsible}
+                    fallback={
+                      <SidebarGroupLabel className={cn({ hidden: !open })}>
+                        <Trans i18nKey={item.label} defaults={item.label} />
+                      </SidebarGroupLabel>
+                    }
+                  >
+                    <SidebarGroupLabel
+                      className={cn({ hidden: !open })}
+                      asChild
+                    >
+                      <CollapsibleTrigger>
+                        <Trans i18nKey={item.label} defaults={item.label} />
+                        <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
+                      </CollapsibleTrigger>
                     </SidebarGroupLabel>
-                  }
-                >
-                  <SidebarGroupLabel className={cn({ hidden: !open })} asChild>
-                    <CollapsibleTrigger>
-                      <Trans i18nKey={item.label} defaults={item.label} />
-                      <ChevronDown className="ml-auto transition-transform group-data-[state=open]/collapsible:rotate-180" />
-                    </CollapsibleTrigger>
-                  </SidebarGroupLabel>
+                  </If>
                 </If>
 
                 <If condition={item.renderAction}>

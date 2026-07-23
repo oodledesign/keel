@@ -33,7 +33,10 @@ import { SidebarMenuBadge } from '@kit/ui/shadcn-sidebar';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
-import { WORK_BUSINESS_MODULE_ORDER } from '~/config/workspace-module-order';
+import {
+  WORK_BUSINESS_MODULE_ORDER,
+  WORK_BUSINESS_NAV_SECTIONS,
+} from '~/config/workspace-module-order';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
   isFeedflowModuleEnabled,
@@ -55,12 +58,18 @@ export type NavChild = {
   Icon: React.ReactNode;
   end?: boolean;
   description?: string;
+  renderAction?: React.ReactNode;
 };
 
 type NavCollapsible = NavChild & {
   collapsible: true;
   collapsed?: boolean;
   children: NavChild[];
+};
+
+export type WorkNavSection = {
+  label: string;
+  children: Array<NavChild | NavCollapsible>;
 };
 
 function createPath(path: string, account: string) {
@@ -137,11 +146,8 @@ export function buildWorkAppLinks(
   return buildWorkAppsGroup(account, moduleSettings)[0]?.children ?? [];
 }
 
-/**
- * Work workspace sidebar items in canonical module order (account_module_settings).
- * UI label "Projects" → jobs table / module_key `jobs`.
- */
-export function buildWorkSpaceNavChildren(
+function buildWorkNavItemsForKeys(
+  keys: readonly string[],
   account: string,
   access: TeamAccountAccess,
   moduleSettings?: Record<string, boolean>,
@@ -356,7 +362,7 @@ export function buildWorkSpaceNavChildren(
 
   const items: Array<NavChild | NavCollapsible> = [];
 
-  for (const key of WORK_BUSINESS_MODULE_ORDER) {
+  for (const key of keys) {
     if (key === 'settings') continue;
     const factory = registry[key];
     if (!factory) continue;
@@ -380,6 +386,49 @@ export function buildWorkSpaceNavChildren(
   }
 
   return items;
+}
+
+
+/**
+ * Work workspace sidebar items in canonical module order (account_module_settings).
+ * UI label "Projects" → jobs table / module_key `jobs`.
+ */
+export function buildWorkSpaceNavChildren(
+  account: string,
+  access: TeamAccountAccess,
+  moduleSettings?: Record<string, boolean>,
+  navCounts?: WorkNavCounts,
+  emailAssistantAvailable = false,
+): Array<NavChild | NavCollapsible> {
+  return buildWorkNavItemsForKeys(
+    WORK_BUSINESS_MODULE_ORDER,
+    account,
+    access,
+    moduleSettings,
+    navCounts,
+    emailAssistantAvailable,
+  );
+}
+
+/** Grouped sidebar sections for business workspaces. */
+export function buildWorkSpaceNavSections(
+  account: string,
+  access: TeamAccountAccess,
+  moduleSettings?: Record<string, boolean>,
+  navCounts?: WorkNavCounts,
+  emailAssistantAvailable = false,
+): WorkNavSection[] {
+  return WORK_BUSINESS_NAV_SECTIONS.map((section) => ({
+    label: section.label,
+    children: buildWorkNavItemsForKeys(
+      section.keys,
+      account,
+      access,
+      moduleSettings,
+      navCounts,
+      emailAssistantAvailable,
+    ),
+  })).filter((section) => section.children.length > 0);
 }
 
 export function buildWorkSettingsChildren(

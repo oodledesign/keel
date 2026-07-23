@@ -69,6 +69,36 @@ export const WORK_BUSINESS_MODULE_ORDER = [
 export type WorkBusinessModuleOrderKey =
   (typeof WORK_BUSINESS_MODULE_ORDER)[number];
 
+/**
+ * Sidebar section headers for business workspaces.
+ * Keys must exist in the work nav registry (planner/emails are injected beside related keys).
+ */
+export const WORK_BUSINESS_NAV_SECTIONS = [
+  {
+    label: 'Work',
+    keys: ['dashboard', 'projects', 'tasks', 'schedule', 'scheduling'],
+  },
+  {
+    label: 'Clients',
+    keys: [
+      'pipeline',
+      'clients',
+      'meetings',
+      'activity',
+      'websites',
+      'support_tickets',
+    ],
+  },
+  {
+    label: 'Commercial',
+    keys: ['invoices', 'proposals', 'contracts', 'finances'],
+  },
+  {
+    label: 'Team & tools',
+    keys: ['team', 'notes', 'brain', 'sops', 'messages', 'videos', 'apps'],
+  },
+] as const;
+
 /** work/property — property management workspace. */
 export const PROPERTY_WORKSPACE_MODULE_ORDER = [
   'dashboard',

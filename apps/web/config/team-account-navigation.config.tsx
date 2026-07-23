@@ -18,12 +18,26 @@ import {
 import {
   type WorkNavCounts,
   buildWorkSettingsChildren,
-  buildWorkSpaceNavChildren,
+  buildWorkSpaceNavSections,
 } from '~/config/work-account-navigation.config';
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 
 const iconClasses = 'w-4';
+
+type NavRouteChild = {
+  label: string;
+  path: string;
+  Icon: React.ReactNode;
+  end?: boolean;
+  renderAction?: React.ReactNode;
+};
+
+type NavRouteGroup = {
+  label: string;
+  children: NavRouteChild[];
+  collapsible?: boolean;
+};
 
 const getRoutes = (
   account: string,
@@ -43,40 +57,45 @@ const getRoutes = (
   const access = getTeamAccountAccess(accessInput);
   const ms = moduleSettings;
 
-  let applicationChildren: Array<{
-    label: string;
-    path: string;
-    Icon: React.ReactNode;
-    end?: boolean;
-    renderAction?: React.ReactNode;
-  }> = [];
+  const routes: NavRouteGroup[] = [];
 
   if (profile === 'work_design') {
-    applicationChildren = buildWorkSpaceNavChildren(
+    for (const section of buildWorkSpaceNavSections(
       account,
       access,
       ms,
       navCounts,
       userFeatures?.emailAssistantAvailable,
-    ) as typeof applicationChildren;
-  } else if (profile === 'work_property') {
-    applicationChildren = buildPropertySpaceNavChildren(
-      account,
-      access,
-      ms,
-    ) as typeof applicationChildren;
-  } else if (profile === 'family') {
-    applicationChildren = buildFamilySpaceNavChildren(
-      account,
-      access,
-      ms,
-    ) as typeof applicationChildren;
-  } else if (profile === 'community') {
-    applicationChildren = buildCommunitySpaceNavChildren(
-      account,
-      access,
-      ms,
-    ) as typeof applicationChildren;
+    )) {
+      routes.push({
+        label: section.label,
+        children: section.children as NavRouteChild[],
+      });
+    }
+  } else {
+    let applicationChildren: NavRouteChild[] = [];
+
+    if (profile === 'work_property') {
+      applicationChildren = buildPropertySpaceNavChildren(
+        account,
+        access,
+        ms,
+      ) as NavRouteChild[];
+    } else if (profile === 'family') {
+      applicationChildren = buildFamilySpaceNavChildren(
+        account,
+        access,
+        ms,
+      ) as NavRouteChild[];
+    } else if (profile === 'community') {
+      applicationChildren = buildCommunitySpaceNavChildren(
+        account,
+        access,
+        ms,
+      ) as NavRouteChild[];
+    }
+
+    routes.push({ label: 'ozer-nav', children: applicationChildren });
   }
 
   const settingsChildren =
@@ -103,17 +122,11 @@ const getRoutes = (
                   : []),
               ];
 
-  const routes: Array<{
-    label: string;
-    children: typeof applicationChildren;
-    collapsible?: boolean;
-  }> = [{ label: 'ozer-nav', children: applicationChildren }];
-
   if (settingsChildren.length > 0) {
     routes.push({
-      label: 'ozer-nav-settings',
+      label: profile === 'work_design' ? 'Settings' : 'ozer-nav-settings',
       collapsible: false,
-      children: settingsChildren,
+      children: settingsChildren as NavRouteChild[],
     });
   }
 
