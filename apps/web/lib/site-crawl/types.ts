@@ -95,6 +95,9 @@ export const SITE_CRAWL_URL_LIMIT_OPTIONS = [100, 500, 1000, 2000] as const;
 
 export const DEFAULT_SITE_CRAWL_URL_LIMIT = 1000;
 
+/** Cap used by “Build full report” — enough for technical scoring, much faster. */
+export const SEO_REPORT_SITE_CRAWL_URL_LIMIT = 500;
+
 export const SITE_CRAWL_ISSUE_LABELS: Record<SiteCrawlIssueCode, string> = {
   missing_title: 'Missing title',
   title_too_long: 'Title too long',

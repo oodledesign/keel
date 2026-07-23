@@ -24,8 +24,12 @@ import { fetchAndParsePage } from './fetch-page';
 import { applyDuplicateIssues, summariseIssues } from './issues';
 import { RUN_TIME_BUDGET_MS } from './trigger-run';
 
-const PAGES_PER_BATCH = 20;
-const CRAWL_DELAY_MS = 150;
+/** Max pages processed in one /run invocation (still gated by time budget). */
+const PAGES_PER_BATCH = 80;
+/** Parallel fetches per wave — keep modest to avoid hammering client sites. */
+const CRAWL_CONCURRENCY = 4;
+/** Pause between concurrent waves (politeness + rate-limit breathing room). */
+const WAVE_DELAY_MS = 40;
 
 function ranklyAdmin() {
   return supabaseCustomSchema(getSupabaseServerAdminClient(), 'rankly');
@@ -165,8 +169,19 @@ export async function runSiteCrawlJob(
     const domain = String(project.domain);
     const crawled = await loadCrawledUrlsForJob(jobId);
     const pending = [...job.pending_urls];
+    const pendingSet = new Set(pending);
     let urlsCrawled = job.urls_crawled;
     let processedThisRun = 0;
+
+    const enqueueLinks = (links: string[]) => {
+      if (urlsCrawled >= job.url_limit) return;
+      for (const link of links) {
+        if (crawled.has(link) || pendingSet.has(link)) continue;
+        if (crawled.size + pending.length >= job.url_limit) break;
+        pending.push(link);
+        pendingSet.add(link);
+      }
+    };
 
     while (
       pending.length > 0 &&
@@ -174,22 +189,34 @@ export async function runSiteCrawlJob(
       processedThisRun < PAGES_PER_BATCH &&
       Date.now() - startTime < timeBudgetMs
     ) {
-      const url = pending.shift();
-      if (!url || crawled.has(url)) continue;
+      const wave: string[] = [];
+      while (
+        wave.length < CRAWL_CONCURRENCY &&
+        pending.length > 0 &&
+        urlsCrawled + wave.length < job.url_limit &&
+        processedThisRun + wave.length < PAGES_PER_BATCH
+      ) {
+        const url = pending.shift();
+        if (!url) continue;
+        pendingSet.delete(url);
+        if (crawled.has(url)) continue;
+        wave.push(url);
+      }
 
-      const page = await fetchAndParsePage(url, domain);
-      await insertSiteCrawlPage(jobId, job.project_id, page);
+      if (wave.length === 0) break;
 
-      crawled.add(url);
-      urlsCrawled += 1;
-      processedThisRun += 1;
+      const pages = await Promise.all(
+        wave.map((url) => fetchAndParsePage(url, domain)),
+      );
 
-      if (urlsCrawled < job.url_limit) {
-        for (const link of page.internalLinks) {
-          if (crawled.has(link) || pending.includes(link)) continue;
-          if (crawled.size + pending.length >= job.url_limit) break;
-          pending.push(link);
-        }
+      for (let i = 0; i < pages.length; i += 1) {
+        const url = wave[i]!;
+        const page = pages[i]!;
+        await insertSiteCrawlPage(jobId, job.project_id, page);
+        crawled.add(url);
+        urlsCrawled += 1;
+        processedThisRun += 1;
+        enqueueLinks(page.internalLinks);
       }
 
       await updateSiteCrawlJob(jobId, {
@@ -198,7 +225,14 @@ export async function runSiteCrawlJob(
         pending_urls: pending,
       });
 
-      await delay(CRAWL_DELAY_MS);
+      if (
+        pending.length > 0 &&
+        urlsCrawled < job.url_limit &&
+        processedThisRun < PAGES_PER_BATCH &&
+        Date.now() - startTime < timeBudgetMs
+      ) {
+        await delay(WAVE_DELAY_MS);
+      }
     }
 
     const shouldContinue = pending.length > 0 && urlsCrawled < job.url_limit;

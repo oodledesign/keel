@@ -2,7 +2,7 @@
 export const SITE_CRAWL_POLL_INTERVAL_MS = 8_000;
 
 /** Minimum seconds between chained worker triggers for the same job. */
-export const SITE_CRAWL_WORKER_TRIGGER_DEBOUNCE_SEC = 30;
+export const SITE_CRAWL_WORKER_TRIGGER_DEBOUNCE_SEC = 15;
 
 /** Max site-crawl jobs the sweeper cron starts per tick. */
 export const SITE_CRAWL_MAX_ACTIVE_JOBS = 8;

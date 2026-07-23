@@ -27,6 +27,7 @@ import { cn } from '@kit/ui/utils';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import { copyTextToClipboard } from '~/lib/clipboard';
 import { buildSeoReportPdfUrl } from '~/lib/rankly-seo-report/public-url';
+import { SEO_REPORT_SITE_CRAWL_URL_LIMIT } from '~/lib/site-crawl/types';
 
 type ReportSummary = {
   id: string;
@@ -99,7 +100,8 @@ const INITIAL_STEPS: Record<StepKey, StepStatus> = {
 
 const POLL_MS = 5000;
 /** Site crawls and AI audits can take a long time on larger sites. */
-const MAX_WAIT_MS = 45 * 60 * 1000;
+const MAX_WAIT_MS = 90 * 60 * 1000;
+const MAX_WAIT_MINUTES = Math.round(MAX_WAIT_MS / 60_000);
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -324,7 +326,7 @@ export function SeoReportSharePanel(props: {
         if (isDone(data)) return data;
       }
       throw new Error(
-        `${label} is still running after 45 minutes — try Snapshot now once it finishes`,
+        `${label} is still running after ${MAX_WAIT_MINUTES} minutes — try Snapshot now once it finishes`,
       );
     },
     [],
@@ -400,49 +402,70 @@ export function SeoReportSharePanel(props: {
         (async () => {
           try {
             setStep('siteCrawl', 'running');
+            let lastCrawled = 0;
+            let lastLimit = SEO_REPORT_SITE_CRAWL_URL_LIMIT;
             const res = await fetch('/api/rankly/site-crawl', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify(body),
+              body: JSON.stringify({
+                ...body,
+                urlLimit: SEO_REPORT_SITE_CRAWL_URL_LIMIT,
+              }),
             });
             const started = await readJson<{ jobId: string }>(res);
-            await pollJob(
-              `/api/rankly/site-crawl/${started.jobId}`,
-              'Site Crawler',
-              (data) => {
-                const status = (data as { job?: { status?: string } }).job
-                  ?.status;
-                return status === 'done';
-              },
-              (data) => {
-                const status = (data as { job?: { status?: string } }).job
-                  ?.status;
-                return status === 'error';
-              },
-              jobErrorMessage,
-              (data) => {
-                const job = (
-                  data as {
-                    job?: {
-                      urls_crawled?: number;
-                      url_limit?: number;
-                      status?: string;
-                    };
-                  }
-                ).job;
-                if (!job) return;
-                const crawled = job.urls_crawled ?? 0;
-                const limit = job.url_limit ?? 0;
+            try {
+              await pollJob(
+                `/api/rankly/site-crawl/${started.jobId}`,
+                'Site Crawler',
+                (data) => {
+                  const status = (data as { job?: { status?: string } }).job
+                    ?.status;
+                  return status === 'done';
+                },
+                (data) => {
+                  const status = (data as { job?: { status?: string } }).job
+                    ?.status;
+                  return status === 'error';
+                },
+                jobErrorMessage,
+                (data) => {
+                  const job = (
+                    data as {
+                      job?: {
+                        urls_crawled?: number;
+                        url_limit?: number;
+                        status?: string;
+                      };
+                    }
+                  ).job;
+                  if (!job) return;
+                  lastCrawled = job.urls_crawled ?? 0;
+                  lastLimit = job.url_limit ?? lastLimit;
+                  setStep(
+                    'siteCrawl',
+                    'running',
+                    lastLimit > 0
+                      ? `${lastCrawled}/${lastLimit} pages`
+                      : `${lastCrawled} pages crawled`,
+                  );
+                },
+              );
+              setStep('siteCrawl', 'done');
+            } catch (error) {
+              // Partial crawl is still useful for the report; keep going.
+              if (lastCrawled > 0) {
                 setStep(
                   'siteCrawl',
-                  'running',
-                  limit > 0
-                    ? `${crawled}/${limit} pages`
-                    : `${crawled} pages crawled`,
+                  'done',
+                  `${lastCrawled}/${lastLimit} pages (partial)`,
                 );
-              },
-            );
-            setStep('siteCrawl', 'done');
+                toast.message(
+                  `Site crawl still running in the background (${lastCrawled} pages so far). Report will use what’s ready.`,
+                );
+                return;
+              }
+              throw error;
+            }
           } catch (error) {
             setStep('siteCrawl', 'error', getErrorMessage(error));
             throw error;
