@@ -331,12 +331,43 @@ export async function crawlPage(
   const html = await response.text();
   const $ = load(html);
 
+  // Extract structured data before stripping scripts for text analysis.
+  const jsonLd = extractAllJsonLd($);
+  const faqPatternPresent = detectFaqPattern($);
+  const title = $('title').text().trim();
+  const metaDesc = $('meta[name="description"]').attr('content') ?? '';
+  const canonical = $('link[rel="canonical"]').attr('href') ?? '';
+  const ogTitle = $('meta[property="og:title"]').attr('content') ?? '';
+  const ogDesc = $('meta[property="og:description"]').attr('content') ?? '';
+  const ogImage = $('meta[property="og:image"]').attr('content') ?? '';
+  const twitterCard = $('meta[name="twitter:card"]').attr('content') ?? '';
+  const h1s = $('h1')
+    .map((_, el) => $(el).text().trim())
+    .get()
+    .filter(Boolean);
+  const h2s = $('h2')
+    .map((_, el) => $(el).text().trim())
+    .get()
+    .filter(Boolean);
+  const h3s = $('h3')
+    .map((_, el) => $(el).text().trim())
+    .get()
+    .filter(Boolean)
+    .slice(0, 15);
+  const bylinePresent =
+    $(
+      '[rel="author"], [itemprop="author"], .author, .byline, [class*="author"]',
+    ).length > 0;
+  const tableCount = $('table').length;
+  const lastUpdatedVisible = detectLastUpdated($);
+  const contactInfoPresent = detectContactInfo($);
+
   $(
     'nav, footer, header, script, style, .cookie-banner, #cookie-consent',
   ).remove();
 
   const rawBodyText = $('body').text().trim();
-  const isJsRendered = rawBodyText.length < 200 && $('script').length > 3;
+  const isJsRendered = rawBodyText.length < 200 && html.includes('<script');
   const host = normaliseDomain(domain);
 
   const internalLinkCount = $(`a[href^="/"], a[href*="${host}"]`).length;
@@ -348,40 +379,27 @@ export async function crawlPage(
   return {
     url,
     statusCode: response.status,
-    title: $('title').text().trim(),
-    metaDesc: $('meta[name="description"]').attr('content') ?? '',
-    canonical: $('link[rel="canonical"]').attr('href') ?? '',
-    ogTitle: $('meta[property="og:title"]').attr('content') ?? '',
-    ogDesc: $('meta[property="og:description"]').attr('content') ?? '',
-    ogImage: $('meta[property="og:image"]').attr('content') ?? '',
-    twitterCard: $('meta[name="twitter:card"]').attr('content') ?? '',
-    h1s: $('h1')
-      .map((_, el) => $(el).text().trim())
-      .get()
-      .filter(Boolean),
-    h2s: $('h2')
-      .map((_, el) => $(el).text().trim())
-      .get()
-      .filter(Boolean),
-    h3s: $('h3')
-      .map((_, el) => $(el).text().trim())
-      .get()
-      .filter(Boolean)
-      .slice(0, 15),
-    jsonLd: extractAllJsonLd($),
-    bylinePresent:
-      $(
-        '[rel="author"], [itemprop="author"], .author, .byline, [class*="author"]',
-      ).length > 0,
-    tableCount: $('table').length,
-    faqPatternPresent: detectFaqPattern($),
+    title,
+    metaDesc,
+    canonical,
+    ogTitle,
+    ogDesc,
+    ogImage,
+    twitterCard,
+    h1s,
+    h2s,
+    h3s,
+    jsonLd,
+    bylinePresent,
+    tableCount,
+    faqPatternPresent,
     wordCount: rawBodyText.split(/\s+/).filter(Boolean).length,
     isJsRendered,
-    lastUpdatedVisible: detectLastUpdated($),
+    lastUpdatedVisible,
     hasTldr: /tl;dr|tldr|key takeaway|summary/i.test(
       rawBodyText.slice(0, 5000),
     ),
-    contactInfoPresent: detectContactInfo($),
+    contactInfoPresent,
     internalLinkCount,
     externalLinkCount,
     fetchProfile: profile,
