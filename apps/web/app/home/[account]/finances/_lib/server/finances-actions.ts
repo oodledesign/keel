@@ -630,8 +630,11 @@ export const categorizeFinanceTransactionAction = enhanceAction(
 export const syncFreeAgentAction = enhanceAction(
   async (input) => {
     const client = getSupabaseServerClient();
+    // Manual "Sync now" is a light incremental pull (recent window).
+    // Deep backfill is `syncFreeAgentHistoryChunkAction`.
     const result = await syncFreeAgentToOzer(client, input.accountId, {
-      mode: 'full',
+      mode: 'incremental',
+      syncCategories: true,
     });
     revalidateFinances(input.accountSlug);
     return result;

@@ -101,7 +101,12 @@ export function FinancesSettingsPanel({
         }
         toast.success(`Synced ${parts.join(', ')}`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Sync failed');
+        const message = e instanceof Error ? e.message : 'Sync failed';
+        toast.error(
+          /load failed|failed to fetch|networkerror/i.test(message)
+            ? 'Sync interrupted — check your connection and try again'
+            : message,
+        );
       }
     });
   };

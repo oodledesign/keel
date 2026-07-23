@@ -496,7 +496,13 @@ export function FinancesPageContent({
         await refresh({ background: true });
         toast.success(`FreeAgent sync complete — ${formatSyncResult(result)}`);
       } catch (e) {
-        toast.error(e instanceof Error ? e.message : 'Sync failed');
+        const message = e instanceof Error ? e.message : 'Sync failed';
+        // Safari/iOS reports aborted or unreachable fetches as "Load failed"
+        toast.error(
+          /load failed|failed to fetch|networkerror/i.test(message)
+            ? 'Sync interrupted — check your connection and try again. Use Sync all FreeAgent history for older transactions.'
+            : message,
+        );
       }
     });
   };

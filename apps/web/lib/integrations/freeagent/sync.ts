@@ -38,6 +38,8 @@ export type SyncFreeAgentOptions = {
   mode?: SyncFreeAgentMode;
   /** YYYY-MM-DD — incremental mode defaults from last_sync_at. */
   fromDate?: string;
+  /** Refresh FreeAgent categories even when mode is incremental (manual Sync now). */
+  syncCategories?: boolean;
 };
 
 export type SyncFreeAgentResult = {
@@ -644,7 +646,7 @@ export async function syncFreeAgentToOzer(
       : fullSyncFromDate();
 
   let categoriesSynced = 0;
-  if (!isIncremental) {
+  if (!isIncremental || options.syncCategories) {
     categoriesSynced = await syncFreeAgentCategories(db, accountId, client);
   }
   const categoryUrlToId = await buildCategoryUrlToIdMap(db, accountId);
