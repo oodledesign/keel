@@ -6,8 +6,7 @@ import { SITE_CRAWL_WORKER_TRIGGER_DEBOUNCE_SEC } from './config';
 import { getSiteCrawlJob, updateSiteCrawlJob } from './db';
 
 const RUN_TIME_BUDGET_MS = 270_000;
-const RUN_TRIGGER_ATTEMPTS = 4;
-const RUN_TRIGGER_TIMEOUT_MS = 20_000;
+const RUN_TRIGGER_ATTEMPTS = 3;
 
 export function getSiteCrawlRunUrl(jobId: string): string {
   const base =
@@ -23,7 +22,11 @@ export function getSiteCrawlRunUrl(jobId: string): string {
   return `${base}/api/rankly/site-crawl/${jobId}/run`;
 }
 
-async function postSiteCrawlRunWithRetry(
+/**
+ * Kick /run without waiting for it to finish — batches can take minutes.
+ * Waiting with a short AbortSignal timed out and retried stacked workers.
+ */
+async function kickSiteCrawlRun(
   jobId: string,
   secret: string,
 ): Promise<boolean> {
@@ -31,22 +34,17 @@ async function postSiteCrawlRunWithRetry(
 
   for (let attempt = 1; attempt <= RUN_TRIGGER_ATTEMPTS; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      void fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${secret}` },
-        signal: AbortSignal.timeout(RUN_TRIGGER_TIMEOUT_MS),
+      }).catch((error) => {
+        console.error(
+          '[rankly] site crawl run worker request failed',
+          jobId,
+          error,
+        );
       });
-
-      if (response.ok) {
-        return true;
-      }
-
-      console.error(
-        '[rankly] site crawl run trigger bad status',
-        jobId,
-        response.status,
-        attempt,
-      );
+      return true;
     } catch (error) {
       console.error(
         '[rankly] site crawl run trigger attempt failed',
@@ -54,10 +52,9 @@ async function postSiteCrawlRunWithRetry(
         attempt,
         error,
       );
-    }
-
-    if (attempt < RUN_TRIGGER_ATTEMPTS) {
-      await delay(1500 * attempt);
+      if (attempt < RUN_TRIGGER_ATTEMPTS) {
+        await delay(500 * attempt);
+      }
     }
   }
 
@@ -65,7 +62,7 @@ async function postSiteCrawlRunWithRetry(
 }
 
 /**
- * Kick off the next worker invocation with retries (used from after() and cron).
+ * Kick off the next worker invocation (used from after() and cron).
  */
 export async function scheduleSiteCrawlContinuation(
   jobId: string,
@@ -82,7 +79,7 @@ export async function scheduleSiteCrawlContinuation(
     last_worker_trigger_at: new Date().toISOString(),
   });
 
-  return postSiteCrawlRunWithRetry(jobId, secret);
+  return kickSiteCrawlRun(jobId, secret);
 }
 
 export async function triggerSiteCrawlRunDebounced(

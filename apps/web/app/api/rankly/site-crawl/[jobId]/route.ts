@@ -7,8 +7,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
+import { SITE_CRAWL_WORKER_STALL_MINUTES } from '~/lib/site-crawl/config';
 import { getSiteCrawlJob } from '~/lib/site-crawl/db';
 import { syncSiteCrawlJobProgress } from '~/lib/site-crawl/runner';
+import { triggerSiteCrawlRunDebounced } from '~/lib/site-crawl/trigger-run';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -16,6 +18,31 @@ export const runtime = 'nodejs';
 type RouteContext = {
   params: Promise<{ jobId: string }>;
 };
+
+function maybeRetriggerStalledCrawl(job: {
+  id: string;
+  status: string;
+  updated_at: string;
+  urls_crawled: number;
+  url_limit: number;
+  pending_urls: string[];
+}) {
+  if (job.status !== 'pending' && job.status !== 'running') return;
+
+  const hasWork =
+    job.pending_urls.length > 0 || job.urls_crawled < job.url_limit;
+  if (!hasWork) return;
+
+  const ageMs = Date.now() - new Date(job.updated_at).getTime();
+  if (Number.isNaN(ageMs) || ageMs < 0) return;
+
+  // Never started, or no progress for a few minutes — kick the worker again.
+  const stallMs = SITE_CRAWL_WORKER_STALL_MINUTES * 60 * 1000;
+  const neverStarted = job.status === 'pending' && job.urls_crawled === 0;
+  if (neverStarted || ageMs >= stallMs) {
+    void triggerSiteCrawlRunDebounced(job.id);
+  }
+}
 
 export async function GET(_request: NextRequest, context: RouteContext) {
   try {
@@ -60,6 +87,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
     await syncSiteCrawlJobProgress(jobId);
     const refreshedJob = await getSiteCrawlJob(jobId);
+    maybeRetriggerStalledCrawl(refreshedJob);
 
     return jsonOk({ job: refreshedJob });
   } catch (error) {

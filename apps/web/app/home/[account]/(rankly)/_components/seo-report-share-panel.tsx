@@ -4,17 +4,25 @@ import { useCallback, useEffect, useState } from 'react';
 
 import {
   Check,
+  CheckCircle2,
+  CircleDashed,
   Copy,
   ExternalLink,
   FileDown,
+  FileText,
+  Gauge,
+  Globe2,
   Loader2,
+  Radar,
   RefreshCw,
   Sparkles,
+  XCircle,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import { copyTextToClipboard } from '~/lib/clipboard';
@@ -49,6 +57,14 @@ type StepStatus = {
   detail?: string | null;
 };
 
+const STEP_ORDER: StepKey[] = [
+  'siteExplorer',
+  'pagespeed',
+  'siteCrawl',
+  'aiAudit',
+  'report',
+];
+
 const STEP_LABELS: Record<StepKey, string> = {
   siteExplorer: 'Site Explorer',
   pagespeed: 'PageSpeed',
@@ -56,6 +72,22 @@ const STEP_LABELS: Record<StepKey, string> = {
   aiAudit: 'AI Search Audit',
   report: 'Client report',
 };
+
+const STEP_HINTS: Record<StepKey, string> = {
+  siteExplorer: 'Overview & authority signals',
+  pagespeed: 'Core Web Vitals',
+  siteCrawl: 'On-page & technical crawl',
+  aiAudit: 'AI citation readiness',
+  report: 'Public link + PDF',
+};
+
+const STEP_ICONS = {
+  siteExplorer: Globe2,
+  pagespeed: Gauge,
+  siteCrawl: Radar,
+  aiAudit: Sparkles,
+  report: FileText,
+} as const;
 
 const INITIAL_STEPS: Record<StepKey, StepStatus> = {
   siteExplorer: { state: 'idle' },
@@ -79,6 +111,123 @@ async function readJson<T>(res: Response): Promise<T> {
   return json.data;
 }
 
+function stepStatusCopy(state: StepState): string {
+  switch (state) {
+    case 'idle':
+      return 'Waiting';
+    case 'running':
+      return 'Processing';
+    case 'done':
+      return 'Done';
+    case 'error':
+      return 'Failed';
+  }
+}
+
+function ReportStepCard(props: { stepKey: StepKey; status: StepStatus }) {
+  const Icon = STEP_ICONS[props.stepKey];
+  const { state, detail } = props.status;
+
+  return (
+    <li
+      className={cn(
+        'relative overflow-hidden rounded-lg border px-3 py-3 transition-[border-color,background-color,box-shadow,opacity] duration-300',
+        state === 'idle' &&
+          'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40 opacity-80',
+        state === 'running' &&
+          'border-[color-mix(in_srgb,var(--ozer-accent)_50%,transparent)] bg-[color-mix(in_srgb,var(--ozer-accent)_12%,transparent)] shadow-[0_0_0_1px_color-mix(in_srgb,var(--ozer-accent)_20%,transparent)]',
+        state === 'done' &&
+          'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]',
+        state === 'error' && 'border-destructive/40 bg-destructive/10',
+      )}
+    >
+      {state === 'running' ? (
+        <span
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 top-0 h-0.5 bg-[color-mix(in_srgb,var(--ozer-accent)_35%,transparent)]"
+        >
+          <span className="absolute inset-y-0 w-full animate-pulse bg-[var(--ozer-accent)]" />
+        </span>
+      ) : null}
+
+      <div className="flex items-start gap-2.5">
+        <span
+          className={cn(
+            'mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-md',
+            state === 'idle' &&
+              'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
+            state === 'running' &&
+              'bg-[color-mix(in_srgb,var(--ozer-accent)_18%,transparent)] text-[var(--ozer-accent)]',
+            state === 'done' &&
+              'bg-[color-mix(in_srgb,var(--ozer-accent)_14%,transparent)] text-[var(--ozer-accent)]',
+            state === 'error' && 'bg-destructive/15 text-destructive',
+          )}
+        >
+          <Icon className="h-4 w-4" aria-hidden />
+        </span>
+
+        <div className="min-w-0 flex-1">
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            {STEP_LABELS[props.stepKey]}
+          </p>
+          <p className="mt-0.5 text-[11px] leading-snug text-[var(--workspace-shell-text-muted)]">
+            {STEP_HINTS[props.stepKey]}
+          </p>
+
+          <div className="mt-2.5 flex items-center gap-1.5">
+            {state === 'idle' ? (
+              <CircleDashed
+                className="h-3.5 w-3.5 text-[var(--workspace-shell-text-muted)]"
+                aria-hidden
+              />
+            ) : null}
+            {state === 'running' ? (
+              <Loader2
+                className="h-3.5 w-3.5 animate-spin text-[var(--ozer-accent)]"
+                aria-hidden
+              />
+            ) : null}
+            {state === 'done' ? (
+              <CheckCircle2
+                className="h-3.5 w-3.5 text-[var(--ozer-accent)]"
+                aria-hidden
+              />
+            ) : null}
+            {state === 'error' ? (
+              <XCircle className="text-destructive h-3.5 w-3.5" aria-hidden />
+            ) : null}
+            <span
+              className={cn(
+                'text-xs font-medium',
+                state === 'idle' && 'text-[var(--workspace-shell-text-muted)]',
+                state === 'running' && 'text-[var(--ozer-accent)]',
+                state === 'done' && 'text-[var(--workspace-shell-text)]',
+                state === 'error' && 'text-destructive',
+              )}
+            >
+              {stepStatusCopy(state)}
+              {state === 'running' ? '…' : null}
+            </span>
+          </div>
+
+          {detail && (state === 'error' || state === 'running') ? (
+            <p
+              className={cn(
+                'mt-1.5 line-clamp-3 text-xs leading-snug',
+                state === 'error'
+                  ? 'text-destructive'
+                  : 'text-[var(--workspace-shell-text-muted)]',
+              )}
+            >
+              {detail}
+            </p>
+          ) : null}
+        </div>
+      </div>
+    </li>
+  );
+}
+
 export function SeoReportSharePanel(props: {
   accountId: string;
   projectId: string;
@@ -95,7 +244,10 @@ export function SeoReportSharePanel(props: {
 
   const setStep = useCallback(
     (key: StepKey, state: StepState, detail?: string | null) => {
-      setSteps((prev) => ({ ...prev, [key]: { state, detail: detail ?? null } }));
+      setSteps((prev) => ({
+        ...prev,
+        [key]: { state, detail: detail ?? null },
+      }));
     },
     [],
   );
@@ -134,14 +286,17 @@ export function SeoReportSharePanel(props: {
 
   const generateOnly = useCallback(async () => {
     setGenerating(true);
-    setStep('report', 'running');
+    setSteps({
+      ...INITIAL_STEPS,
+      report: { state: 'running' },
+    });
     try {
       const next = await generateReport();
       setReport(next);
       setStep('report', 'done');
       toast.success('Client SEO report ready');
     } catch (error) {
-      setStep('report', 'error');
+      setStep('report', 'error', getErrorMessage(error));
       toast.error(getErrorMessage(error));
     } finally {
       setGenerating(false);
@@ -155,16 +310,16 @@ export function SeoReportSharePanel(props: {
       isDone: (data: unknown) => boolean,
       isError: (data: unknown) => boolean,
       getErrorMessageFromData?: (data: unknown) => string | null,
+      onProgress?: (data: unknown) => void,
     ) => {
       const started = Date.now();
       while (Date.now() - started < MAX_WAIT_MS) {
         await sleep(POLL_MS);
         const res = await fetch(url);
         const data = await readJson<unknown>(res);
+        onProgress?.(data);
         if (isError(data)) {
-          throw new Error(
-            getErrorMessageFromData?.(data) || `${label} failed`,
-          );
+          throw new Error(getErrorMessageFromData?.(data) || `${label} failed`);
         }
         if (isDone(data)) return data;
       }
@@ -178,10 +333,10 @@ export function SeoReportSharePanel(props: {
   const buildFullReport = useCallback(async () => {
     setBuilding(true);
     setSteps({
-      siteExplorer: { state: 'running' },
-      pagespeed: { state: 'running' },
-      siteCrawl: { state: 'running' },
-      aiAudit: { state: 'running' },
+      siteExplorer: { state: 'idle' },
+      pagespeed: { state: 'idle' },
+      siteCrawl: { state: 'idle' },
+      aiAudit: { state: 'idle' },
       report: { state: 'idle' },
     });
 
@@ -199,6 +354,7 @@ export function SeoReportSharePanel(props: {
       const results = await Promise.allSettled([
         (async () => {
           try {
+            setStep('siteExplorer', 'running');
             const res = await fetch('/api/rankly/site-overview', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -213,6 +369,7 @@ export function SeoReportSharePanel(props: {
         })(),
         (async () => {
           try {
+            setStep('pagespeed', 'running');
             const res = await fetch('/api/rankly/pagespeed', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -242,6 +399,7 @@ export function SeoReportSharePanel(props: {
         })(),
         (async () => {
           try {
+            setStep('siteCrawl', 'running');
             const res = await fetch('/api/rankly/site-crawl', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -262,6 +420,27 @@ export function SeoReportSharePanel(props: {
                 return status === 'error';
               },
               jobErrorMessage,
+              (data) => {
+                const job = (
+                  data as {
+                    job?: {
+                      urls_crawled?: number;
+                      url_limit?: number;
+                      status?: string;
+                    };
+                  }
+                ).job;
+                if (!job) return;
+                const crawled = job.urls_crawled ?? 0;
+                const limit = job.url_limit ?? 0;
+                setStep(
+                  'siteCrawl',
+                  'running',
+                  limit > 0
+                    ? `${crawled}/${limit} pages`
+                    : `${crawled} pages crawled`,
+                );
+              },
             );
             setStep('siteCrawl', 'done');
           } catch (error) {
@@ -271,6 +450,7 @@ export function SeoReportSharePanel(props: {
         })(),
         (async () => {
           try {
+            setStep('aiAudit', 'running');
             const res = await fetch('/api/rankly/ai-audit', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -367,6 +547,16 @@ export function SeoReportSharePanel(props: {
   const showSteps =
     building || Object.values(steps).some((s) => s.state !== 'idle');
 
+  const doneCount = STEP_ORDER.filter(
+    (key) => steps[key].state === 'done',
+  ).length;
+  const runningCount = STEP_ORDER.filter(
+    (key) => steps[key].state === 'running',
+  ).length;
+  const failedCount = STEP_ORDER.filter(
+    (key) => steps[key].state === 'error',
+  ).length;
+
   return (
     <div
       className={
@@ -414,35 +604,23 @@ export function SeoReportSharePanel(props: {
       </div>
 
       {showSteps ? (
-        <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
-          {(Object.keys(STEP_LABELS) as StepKey[]).map((key) => {
-            const step = steps[key];
-            return (
-              <li
-                key={key}
-                className="rounded-md border border-[color:var(--workspace-shell-border)] px-3 py-2 text-xs"
-              >
-                <p className="text-[var(--workspace-shell-text-muted)]">
-                  {STEP_LABELS[key]}
-                </p>
-                <p className="mt-1 font-medium capitalize">
-                  {step.state === 'idle'
-                    ? 'Waiting'
-                    : step.state === 'running'
-                      ? 'Running…'
-                      : step.state === 'done'
-                        ? 'Done'
-                        : 'Failed'}
-                </p>
-                {step.detail && step.state === 'error' ? (
-                  <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-rose-600">
-                    {step.detail}
-                  </p>
-                ) : null}
-              </li>
-            );
-          })}
-        </ul>
+        <div className="mt-4 space-y-3" aria-live="polite" role="status">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+              Build progress
+            </p>
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {doneCount}/{STEP_ORDER.length} done
+              {runningCount > 0 ? ` · ${runningCount} running` : null}
+              {failedCount > 0 ? ` · ${failedCount} failed` : null}
+            </p>
+          </div>
+          <ul className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
+            {STEP_ORDER.map((key) => (
+              <ReportStepCard key={key} stepKey={key} status={steps[key]} />
+            ))}
+          </ul>
+        </div>
       ) : null}
 
       {loading ? (
