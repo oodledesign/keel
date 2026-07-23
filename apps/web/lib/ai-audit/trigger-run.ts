@@ -13,8 +13,8 @@ export const AUDIT_SCORING_RESERVE_MS = 90_000;
 /** Debounce concurrent poll-driven triggers for the same job. */
 export const AUDIT_WORKER_TRIGGER_DEBOUNCE_MS = 30_000;
 
-const RUN_TRIGGER_ATTEMPTS = 4;
-const RUN_TRIGGER_TIMEOUT_MS = 20_000;
+/** Only retry if the kickoff request itself fails to start (not while /run works). */
+const RUN_TRIGGER_ATTEMPTS = 3;
 
 export function getAiAuditRunUrl(jobId: string): string {
   const base =
@@ -30,7 +30,12 @@ export function getAiAuditRunUrl(jobId: string): string {
   return `${base}/api/rankly/ai-audit/${jobId}/run`;
 }
 
-async function postAiAuditRunWithRetry(
+/**
+ * Kick /run without waiting for it to finish — the worker can take minutes.
+ * Waiting with a short AbortSignal timed out in production and logged false
+ * errors on the status poll, then retried and stacked extra /run calls.
+ */
+async function kickAiAuditRun(
   jobId: string,
   secret: string,
 ): Promise<boolean> {
@@ -38,22 +43,17 @@ async function postAiAuditRunWithRetry(
 
   for (let attempt = 1; attempt <= RUN_TRIGGER_ATTEMPTS; attempt += 1) {
     try {
-      const response = await fetch(url, {
+      void fetch(url, {
         method: 'POST',
         headers: { Authorization: `Bearer ${secret}` },
-        signal: AbortSignal.timeout(RUN_TRIGGER_TIMEOUT_MS),
+      }).catch((error) => {
+        console.error(
+          '[rankly] ai-audit run worker request failed',
+          jobId,
+          error,
+        );
       });
-
-      if (response.ok) {
-        return true;
-      }
-
-      console.error(
-        '[rankly] ai-audit run trigger bad status',
-        jobId,
-        response.status,
-        attempt,
-      );
+      return true;
     } catch (error) {
       console.error(
         '[rankly] ai-audit run trigger attempt failed',
@@ -61,10 +61,9 @@ async function postAiAuditRunWithRetry(
         attempt,
         error,
       );
-    }
-
-    if (attempt < RUN_TRIGGER_ATTEMPTS) {
-      await delay(1500 * attempt);
+      if (attempt < RUN_TRIGGER_ATTEMPTS) {
+        await delay(500 * attempt);
+      }
     }
   }
 
@@ -86,7 +85,7 @@ export async function scheduleAiAuditContinuation(
   }
 
   await markAuditWorkerTriggered(jobId);
-  return postAiAuditRunWithRetry(jobId, secret);
+  return kickAiAuditRun(jobId, secret);
 }
 
 export async function triggerAiAuditRunDebounced(
