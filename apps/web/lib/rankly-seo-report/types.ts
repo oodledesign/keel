@@ -25,6 +25,8 @@ export type SeoReportKeywordRow = {
 
 export type SeoReportIssueRow = {
   code: string;
+  /** Plain-language label (optional for older snapshots) */
+  label?: string;
   count: number;
 };
 
@@ -34,7 +36,11 @@ export type SeoReportSnapshot = {
   targetDomain: string;
   title: string;
   overallScore: number | null;
+  /** Plain-language headline for non-technical clients */
+  clientHeadline?: string | null;
   executiveSummary: string | null;
+  /** Concrete next steps written for clients */
+  nextSteps?: string[];
   pillars: SeoReportScoreCard[];
   recommendations: SeoReportRecommendation[];
   appendix: {

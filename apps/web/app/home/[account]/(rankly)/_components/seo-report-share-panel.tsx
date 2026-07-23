@@ -44,6 +44,11 @@ type StepKey =
 
 type StepState = 'idle' | 'running' | 'done' | 'error';
 
+type StepStatus = {
+  state: StepState;
+  detail?: string | null;
+};
+
 const STEP_LABELS: Record<StepKey, string> = {
   siteExplorer: 'Site Explorer',
   pagespeed: 'PageSpeed',
@@ -52,8 +57,17 @@ const STEP_LABELS: Record<StepKey, string> = {
   report: 'Client report',
 };
 
-const POLL_MS = 4000;
-const MAX_WAIT_MS = 12 * 60 * 1000;
+const INITIAL_STEPS: Record<StepKey, StepStatus> = {
+  siteExplorer: { state: 'idle' },
+  pagespeed: { state: 'idle' },
+  siteCrawl: { state: 'idle' },
+  aiAudit: { state: 'idle' },
+  report: { state: 'idle' },
+};
+
+const POLL_MS = 5000;
+/** Site crawls and AI audits can take a long time on larger sites. */
+const MAX_WAIT_MS = 45 * 60 * 1000;
 
 function sleep(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
@@ -76,17 +90,15 @@ export function SeoReportSharePanel(props: {
   const [generating, setGenerating] = useState(false);
   const [building, setBuilding] = useState(false);
   const [copied, setCopied] = useState(false);
-  const [steps, setSteps] = useState<Record<StepKey, StepState>>({
-    siteExplorer: 'idle',
-    pagespeed: 'idle',
-    siteCrawl: 'idle',
-    aiAudit: 'idle',
-    report: 'idle',
-  });
+  const [steps, setSteps] =
+    useState<Record<StepKey, StepStatus>>(INITIAL_STEPS);
 
-  const setStep = useCallback((key: StepKey, state: StepState) => {
-    setSteps((prev) => ({ ...prev, [key]: state }));
-  }, []);
+  const setStep = useCallback(
+    (key: StepKey, state: StepState, detail?: string | null) => {
+      setSteps((prev) => ({ ...prev, [key]: { state, detail: detail ?? null } }));
+    },
+    [],
+  );
 
   const loadLatest = useCallback(async () => {
     setLoading(true);
@@ -139,8 +151,10 @@ export function SeoReportSharePanel(props: {
   const pollJob = useCallback(
     async (
       url: string,
+      label: string,
       isDone: (data: unknown) => boolean,
       isError: (data: unknown) => boolean,
+      getErrorMessageFromData?: (data: unknown) => string | null,
     ) => {
       const started = Date.now();
       while (Date.now() - started < MAX_WAIT_MS) {
@@ -148,11 +162,15 @@ export function SeoReportSharePanel(props: {
         const res = await fetch(url);
         const data = await readJson<unknown>(res);
         if (isError(data)) {
-          throw new Error('Job failed');
+          throw new Error(
+            getErrorMessageFromData?.(data) || `${label} failed`,
+          );
         }
         if (isDone(data)) return data;
       }
-      throw new Error('Timed out waiting for Rankly jobs to finish');
+      throw new Error(
+        `${label} is still running after 45 minutes — try Snapshot now once it finishes`,
+      );
     },
     [],
   );
@@ -160,16 +178,21 @@ export function SeoReportSharePanel(props: {
   const buildFullReport = useCallback(async () => {
     setBuilding(true);
     setSteps({
-      siteExplorer: 'running',
-      pagespeed: 'running',
-      siteCrawl: 'running',
-      aiAudit: 'running',
-      report: 'idle',
+      siteExplorer: { state: 'running' },
+      pagespeed: { state: 'running' },
+      siteCrawl: { state: 'running' },
+      aiAudit: { state: 'running' },
+      report: { state: 'idle' },
     });
 
     const body = {
       projectId: props.projectId,
       accountId: props.accountId,
+    };
+
+    const jobErrorMessage = (data: unknown) => {
+      const job = (data as { job?: { error?: string | null } }).job;
+      return job?.error?.trim() || null;
     };
 
     try {
@@ -184,7 +207,7 @@ export function SeoReportSharePanel(props: {
             await readJson(res);
             setStep('siteExplorer', 'done');
           } catch (error) {
-            setStep('siteExplorer', 'error');
+            setStep('siteExplorer', 'error', getErrorMessage(error));
             throw error;
           }
         })(),
@@ -198,6 +221,7 @@ export function SeoReportSharePanel(props: {
             const started = await readJson<{ jobId: string }>(res);
             await pollJob(
               `/api/rankly/pagespeed/${started.jobId}`,
+              'PageSpeed',
               (data) => {
                 const status = (data as { job?: { status?: string } }).job
                   ?.status;
@@ -208,10 +232,11 @@ export function SeoReportSharePanel(props: {
                   ?.status;
                 return status === 'error';
               },
+              jobErrorMessage,
             );
             setStep('pagespeed', 'done');
           } catch (error) {
-            setStep('pagespeed', 'error');
+            setStep('pagespeed', 'error', getErrorMessage(error));
             throw error;
           }
         })(),
@@ -225,6 +250,7 @@ export function SeoReportSharePanel(props: {
             const started = await readJson<{ jobId: string }>(res);
             await pollJob(
               `/api/rankly/site-crawl/${started.jobId}`,
+              'Site Crawler',
               (data) => {
                 const status = (data as { job?: { status?: string } }).job
                   ?.status;
@@ -235,10 +261,11 @@ export function SeoReportSharePanel(props: {
                   ?.status;
                 return status === 'error';
               },
+              jobErrorMessage,
             );
             setStep('siteCrawl', 'done');
           } catch (error) {
-            setStep('siteCrawl', 'error');
+            setStep('siteCrawl', 'error', getErrorMessage(error));
             throw error;
           }
         })(),
@@ -255,6 +282,7 @@ export function SeoReportSharePanel(props: {
             const started = await readJson<{ jobId: string }>(res);
             await pollJob(
               `/api/rankly/ai-audit/${started.jobId}`,
+              'AI Search Audit',
               (data) => {
                 const status = (data as { job?: { status?: string } }).job
                   ?.status;
@@ -265,19 +293,32 @@ export function SeoReportSharePanel(props: {
                   ?.status;
                 return status === 'error';
               },
+              jobErrorMessage,
             );
             setStep('aiAudit', 'done');
           } catch (error) {
-            setStep('aiAudit', 'error');
+            setStep('aiAudit', 'error', getErrorMessage(error));
             throw error;
           }
         })(),
       ]);
 
-      const anyFailed = results.some((result) => result.status === 'rejected');
-      if (anyFailed) {
+      const failed = results
+        .map((result, index) => {
+          if (result.status !== 'rejected') return null;
+          const keys: StepKey[] = [
+            'siteExplorer',
+            'pagespeed',
+            'siteCrawl',
+            'aiAudit',
+          ];
+          return STEP_LABELS[keys[index]!];
+        })
+        .filter((label): label is string => Boolean(label));
+
+      if (failed.length > 0) {
         toast.message(
-          'Some Rankly checks failed — generating report from whatever completed',
+          `Still building from available data. Incomplete: ${failed.join(', ')}`,
         );
       }
 
@@ -285,9 +326,13 @@ export function SeoReportSharePanel(props: {
       const next = await generateReport();
       setReport(next);
       setStep('report', 'done');
-      toast.success('Full client SEO report ready');
+      toast.success(
+        failed.length > 0
+          ? 'Client report ready — regenerate after failed scans finish'
+          : 'Full client SEO report ready',
+      );
     } catch (error) {
-      setStep('report', 'error');
+      setStep('report', 'error', getErrorMessage(error));
       toast.error(getErrorMessage(error));
     } finally {
       setBuilding(false);
@@ -319,7 +364,8 @@ export function SeoReportSharePanel(props: {
       : null;
 
   const busy = building || generating;
-  const showSteps = building || Object.values(steps).some((s) => s !== 'idle');
+  const showSteps =
+    building || Object.values(steps).some((s) => s.state !== 'idle');
 
   return (
     <div
@@ -334,7 +380,8 @@ export function SeoReportSharePanel(props: {
           <h2 className="font-semibold">Client SEO report</h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             One click runs Site Explorer, PageSpeed, Site Crawler, and AI Search
-            Audit, then builds a public link + PDF.
+            Audit, then builds a client-friendly public link + PDF. Larger sites
+            can take a while — leave this tab open until steps finish.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -369,7 +416,7 @@ export function SeoReportSharePanel(props: {
       {showSteps ? (
         <ul className="mt-4 grid gap-2 sm:grid-cols-2 lg:grid-cols-5">
           {(Object.keys(STEP_LABELS) as StepKey[]).map((key) => {
-            const state = steps[key];
+            const step = steps[key];
             return (
               <li
                 key={key}
@@ -379,14 +426,19 @@ export function SeoReportSharePanel(props: {
                   {STEP_LABELS[key]}
                 </p>
                 <p className="mt-1 font-medium capitalize">
-                  {state === 'idle'
+                  {step.state === 'idle'
                     ? 'Waiting'
-                    : state === 'running'
+                    : step.state === 'running'
                       ? 'Running…'
-                      : state === 'done'
+                      : step.state === 'done'
                         ? 'Done'
                         : 'Failed'}
                 </p>
+                {step.detail && step.state === 'error' ? (
+                  <p className="mt-1 line-clamp-3 text-[10px] leading-snug text-rose-600">
+                    {step.detail}
+                  </p>
+                ) : null}
               </li>
             );
           })}

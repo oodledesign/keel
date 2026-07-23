@@ -3,7 +3,6 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { loadLatestAuditForProjectAnyMember } from '~/lib/ai-audit/db';
-import { DIMENSION_LABELS } from '~/lib/ai-audit/types';
 import { loadPagespeedSnapshots } from '~/lib/pagespeed/db';
 import { loadKeywordRankSnapshots } from '~/lib/rank-tracking/db';
 import { loadRanklyPageInventory } from '~/lib/rankly-pages/db';
@@ -14,6 +13,14 @@ import {
 import { loadSiteOverviewForProject } from '~/lib/site-overview/db';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
+import {
+  CRAWL_ISSUE_PLAIN,
+  buildClientHeadline,
+  buildClientNextSteps,
+  explainScore,
+  scoreBand,
+  scoreBandLabel,
+} from './client-copy';
 import type {
   SeoReportIssueRow,
   SeoReportKeywordRow,
@@ -64,17 +71,15 @@ function visibilityScoreFromKeywords(input: {
   return clampScore(top10Share * 0.45 + positionScore * 0.35 + brand * 0.2);
 }
 
-function fallbackSummary(domain: string, overall: number | null): string {
-  if (overall == null) {
-    return `SEO snapshot for ${domain}. Run an AI Search Audit, Site Crawl, and PageSpeed check to unlock fuller pillar scores.`;
-  }
-  if (overall >= 75) {
-    return `${domain} is in strong shape overall (${overall}/100). Focus on the remaining recommendations to lock in gains.`;
-  }
-  if (overall >= 50) {
-    return `${domain} scores ${overall}/100 overall. Priority fixes below will move technical, content, and visibility scores fastest.`;
-  }
-  return `${domain} scores ${overall}/100 overall. Address high-priority recommendations first to improve crawl health, content readiness, and visibility.`;
+function pillarHint(
+  available: boolean,
+  score: number | null,
+  detail: string | null,
+): string {
+  if (!available) return detail ?? 'Not measured yet';
+  const band = scoreBand(score);
+  const bandBit = `${scoreBandLabel(band)} · ${explainScore(score)}`;
+  return detail ? `${bandBit} (${detail})` : bandBit;
 }
 
 export async function buildSeoReportSnapshot(params: {
@@ -152,7 +157,11 @@ export async function buildSeoReportSnapshot(params: {
     }
   }
   const crawlIssues: SeoReportIssueRow[] = [...issueCounts.entries()]
-    .map(([code, count]) => ({ code, count }))
+    .map(([code, count]) => ({
+      code,
+      label: CRAWL_ISSUE_PLAIN[code] ?? code.replace(/_/g, ' '),
+      count,
+    }))
     .sort((a, b) => b.count - a.count)
     .slice(0, 12);
 
@@ -187,70 +196,99 @@ export async function buildSeoReportSnapshot(params: {
   const pillars: SeoReportScoreCard[] = [
     {
       id: 'entity',
-      label: DIMENSION_LABELS.entity,
+      label: 'Brand clarity',
       score: audit?.report.score_entity ?? null,
       available: Boolean(audit),
-      hint: audit ? null : 'Run AI Search Audit',
+      hint: pillarHint(
+        Boolean(audit),
+        audit?.report.score_entity ?? null,
+        audit ? null : 'Needs an AI Search Audit',
+      ),
     },
     {
       id: 'content',
-      label: DIMENSION_LABELS.content,
+      label: 'Content quality',
       score: audit?.report.score_content ?? null,
       available: Boolean(audit),
-      hint: audit ? null : 'Run AI Search Audit',
+      hint: pillarHint(
+        Boolean(audit),
+        audit?.report.score_content ?? null,
+        audit ? null : 'Needs an AI Search Audit',
+      ),
     },
     {
       id: 'eeat',
-      label: DIMENSION_LABELS.eeat,
+      label: 'Trust & expertise',
       score: audit?.report.score_eeat ?? null,
       available: Boolean(audit),
-      hint: audit ? null : 'Run AI Search Audit',
+      hint: pillarHint(
+        Boolean(audit),
+        audit?.report.score_eeat ?? null,
+        audit ? null : 'Needs an AI Search Audit',
+      ),
     },
     {
       id: 'techFoundation',
-      label: DIMENSION_LABELS.tech,
+      label: 'Crawl foundations',
       score: audit?.report.score_tech ?? null,
       available: Boolean(audit),
-      hint: audit ? null : 'Run AI Search Audit',
+      hint: pillarHint(
+        Boolean(audit),
+        audit?.report.score_tech ?? null,
+        audit ? null : 'Needs an AI Search Audit',
+      ),
     },
     {
       id: 'performance',
-      label: 'Performance',
+      label: 'Page speed',
       score: performanceScore,
       available: performanceScores.length > 0,
-      hint:
+      hint: pillarHint(
+        performanceScores.length > 0,
+        performanceScore,
         performanceScores.length > 0
           ? `Mobile ${mobileScore ?? '—'} · Desktop ${desktopScore ?? '—'}`
-          : 'Run PageSpeed',
+          : 'Needs a PageSpeed check',
+      ),
     },
     {
       id: 'technicalSeo',
-      label: 'Technical SEO',
+      label: 'On-page technical health',
       score: technicalScore,
       available: crawlPages.length > 0,
-      hint:
+      hint: pillarHint(
+        crawlPages.length > 0,
+        technicalScore,
         crawlPages.length > 0
-          ? `${crawlPages.length - pagesWithIssues}/${crawlPages.length} clean pages`
-          : 'Run Site Crawler',
+          ? `${crawlPages.length - pagesWithIssues} of ${crawlPages.length} pages look clean`
+          : 'Needs a site crawl',
+      ),
     },
     {
       id: 'authority',
       label: 'Authority',
       score: overview?.domainPower ?? null,
       available: authorityAvailable,
-      hint: authorityAvailable
-        ? `${overview!.referringDomains} referring domains`
-        : 'Open Site Explorer',
+      hint: pillarHint(
+        authorityAvailable,
+        overview?.domainPower ?? null,
+        authorityAvailable
+          ? `${overview!.referringDomains} other sites link here`
+          : 'Needs Site Explorer',
+      ),
     },
     {
       id: 'visibility',
-      label: 'Visibility',
+      label: 'Search visibility',
       score: visibilityScore,
       available: keywordSnapshots.length > 0 || overview?.brandSignal != null,
-      hint:
+      hint: pillarHint(
+        keywordSnapshots.length > 0 || overview?.brandSignal != null,
+        visibilityScore,
         keywordSnapshots.length > 0
-          ? `${top10} of ${keywordSnapshots.length} in top 10`
-          : 'Track keywords',
+          ? `${top10} of ${keywordSnapshots.length} tracked keywords in the top 10`
+          : 'Add keyword tracking for a clearer picture',
+      ),
     },
   ];
 
@@ -298,15 +336,16 @@ export async function buildSeoReportSnapshot(params: {
       aiOverviewPresent: row.aiOverviewPresent,
     }));
 
-  const snapshot: SeoReportSnapshot = {
+  const snapshotDraft: SeoReportSnapshot = {
     version: 1,
     generatedAt: new Date().toISOString(),
     targetDomain,
     title: `SEO Report — ${projectName}`,
     overallScore,
+    clientHeadline: null,
     executiveSummary:
-      audit?.report.executive_summary?.trim() ||
-      fallbackSummary(targetDomain, overallScore),
+      audit?.report.executive_summary?.trim() || null,
+    nextSteps: [],
     pillars,
     recommendations,
     appendix: {
@@ -338,6 +377,35 @@ export async function buildSeoReportSnapshot(params: {
       pages: pagesAvailable,
       keywords: keywordSnapshots.length > 0,
     },
+  };
+
+  const clientHeadline = buildClientHeadline(snapshotDraft);
+  const nextSteps = buildClientNextSteps(snapshotDraft);
+  const missingSources = (
+    [
+      ['AI Search Audit', snapshotDraft.sources.aiAudit],
+      ['PageSpeed', snapshotDraft.sources.pagespeed],
+      ['Site Crawl', snapshotDraft.sources.siteCrawl],
+      ['Site Explorer', snapshotDraft.sources.siteExplorer],
+    ] as const
+  )
+    .filter(([, ok]) => !ok)
+    .map(([label]) => label);
+
+  const snapshot: SeoReportSnapshot = {
+    ...snapshotDraft,
+    clientHeadline,
+    executiveSummary:
+      snapshotDraft.executiveSummary ||
+      [
+        clientHeadline,
+        missingSources.length
+          ? `Note: ${missingSources.join(', ')} did not finish or was not available when this report was built, so those scores may be incomplete.`
+          : null,
+      ]
+        .filter(Boolean)
+        .join(' '),
+    nextSteps,
   };
 
   return {

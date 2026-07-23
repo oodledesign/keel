@@ -1,5 +1,4 @@
 import { type NextRequest } from 'next/server';
-import { after } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -8,7 +7,7 @@ import { z } from 'zod';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { normaliseDomain } from '~/lib/ai-audit/crawl';
-import { runAuditJob } from '~/lib/ai-audit/runner';
+import { triggerAiAuditRun } from '~/lib/ai-audit/trigger-run';
 import { AUDIT_CREDITS_ESTIMATE } from '~/lib/ai-audit/types';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
@@ -17,7 +16,7 @@ import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 60;
 
 const createAuditSchema = z.object({
   projectId: z.string().uuid(),
@@ -112,11 +111,7 @@ export async function POST(request: NextRequest) {
       return jsonErr('DB_ERROR', error?.message ?? 'Failed to create job', 500);
     }
 
-    const locale = (projectRow?.locale as string | null) ?? null;
-
-    after(() => {
-      void runAuditJob(job.id as string, locale).catch(console.error);
-    });
+    triggerAiAuditRun(job.id as string);
 
     return jsonOk({ jobId: job.id, job });
   } catch (error) {
