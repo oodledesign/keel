@@ -173,7 +173,7 @@ export function SeoReportView(props: {
               <img
                 src={props.logoUrl}
                 alt={props.brandName ?? 'Brand'}
-                className="mb-1 h-9 w-auto object-contain brightness-0 invert"
+                className="mb-1 h-10 w-auto max-w-[180px] object-contain"
               />
             ) : props.brandName ? (
               <p className="text-sm font-medium text-[var(--ozer-accent,#FF5C34)]">

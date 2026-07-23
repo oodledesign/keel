@@ -56,8 +56,16 @@ export default async function PortalSeoReportPage({
           pdfUrl={buildSeoReportPdfUrl(token)}
         />
         <p className="mt-12 text-center text-xs text-zinc-400">
-          Prepared with Rankly · Potential scores are estimates based on
-          recommended actions
+          Prepared with Rankly by{' '}
+          <a
+            href="https://ozer.so"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-medium text-zinc-500 underline-offset-2 hover:text-zinc-700 hover:underline"
+          >
+            Ozer
+          </a>
+          . Potential scores are estimates based on recommended actions.
         </p>
       </div>
     </div>

@@ -5,6 +5,7 @@ import {
   type PDFFont,
   type PDFPage,
   type RGB,
+  PDFString,
   StandardFonts,
   rgb,
 } from 'pdf-lib';
@@ -29,6 +30,10 @@ import type { SeoReportSnapshot } from './types';
 const PAGE_WIDTH = 595;
 const PAGE_HEIGHT = 842;
 const MARGIN = 44;
+/** Breathing room between major report sections */
+const SECTION_GAP = 22;
+/** Space between cards in a row / stack */
+const CARD_GAP = 10;
 
 const COLORS = {
   ink: rgb(0.15, 0.09, 0.12),
@@ -414,21 +419,22 @@ export async function buildSeoReportPdf(params: {
     );
   }
 
-  y -= compareCardH + 16;
+  y -= compareCardH + SECTION_GAP;
 
-  writeParagraph(headline, 11, font, COLORS.ink, 8);
+  writeParagraph(headline, 11, font, COLORS.ink, 6);
 
   if (
     params.snapshot.executiveSummary &&
     params.snapshot.executiveSummary.trim() !== headline.trim()
   ) {
-    writeParagraph(params.snapshot.executiveSummary, 9, font, COLORS.muted, 10);
+    writeParagraph(params.snapshot.executiveSummary, 9, font, COLORS.muted, 8);
   }
 
   if (nextSteps.length > 0) {
+    y -= 6;
     ensureSpace(36);
     drawText(page, 'What to do next', MARGIN, y, 12, fontBold, COLORS.ink);
-    y -= 14;
+    y -= 16;
     nextSteps.forEach((step, index) => {
       ensureSpace(28);
       page.drawCircle({
@@ -446,132 +452,170 @@ export async function buildSeoReportPdf(params: {
         fontBold,
         COLORS.white,
       );
-      writeParagraph(step, 9, font, COLORS.ink, 6, 20);
+      writeParagraph(step, 9, font, COLORS.ink, 8, 20);
     });
-    y -= 4;
+    y -= SECTION_GAP - 8;
+  } else {
+    y -= SECTION_GAP;
   }
 
-  // ——— Pillar score chart ———
+  // ——— Pillar score chart (2 columns) ———
   ensureSpace(40);
   drawText(page, 'How your site scores', MARGIN, y, 12, fontBold, COLORS.ink);
-  y -= 12;
+  y -= 14;
   writeParagraph(
     "Each bar shows today's score and the estimated score after recommended fixes.",
     8,
     font,
     COLORS.muted,
-    6,
+    4,
   );
 
   drawLegendDot(page, MARGIN, y, pdfRgb(overallTone.pdf), 'Today', font);
   drawLegendDot(page, MARGIN + 70, y, COLORS.potential, 'With fixes', font);
-  y -= 16;
+  y -= 18;
 
-  for (const pillar of pillars) {
+  const colGap = CARD_GAP;
+  const colWidth = (contentWidth - colGap) / 2;
+  const cardPad = 10;
+  const textWidth = colWidth - cardPad * 2 - 4;
+
+  type PillarCardLayout = {
+    pillar: (typeof pillars)[number];
+    pot: ReturnType<typeof buildPillarPotentials>[number] | undefined;
+    bodyLines: string[];
+    height: number;
+  };
+
+  const pillarLayouts: PillarCardLayout[] = pillars.map((pillar) => {
     const pot = pillarPotentials.find((p) => p.id === pillar.id);
-    const body = [
-      pillar.whatItMeans,
-      `Why it matters: ${pillar.whyItMatters}`,
-    ].join(' ');
-    const bodyLines = wrapText(body, font, 8, contentWidth - 20);
-    const blockH = 52 + bodyLines.length * 10;
-    ensureSpace(blockH + 8);
+    const body = `${pillar.whatItMeans} Why it matters: ${pillar.whyItMatters}`;
+    let bodyLines = wrapText(body, font, 7.5, textWidth);
+    const maxBodyLines = 5;
+    if (bodyLines.length > maxBodyLines) {
+      bodyLines = bodyLines.slice(0, maxBodyLines);
+      const last = bodyLines[maxBodyLines - 1]!;
+      bodyLines[maxBodyLines - 1] =
+        last.length > 3 ? `${last.slice(0, Math.max(0, last.length - 1))}…` : '…';
+    }
+    const hasUplift =
+      pillar.available &&
+      pot?.current != null &&
+      pot.potential != null &&
+      (pot.uplift ?? 0) > 0;
+    const barsH = pillar.available ? (hasUplift ? 28 : 16) : 14;
+    const height = 18 + barsH + 8 + bodyLines.length * 9.5 + 12;
+    return { pillar, pot, bodyLines, height };
+  });
 
-    drawRoundedCard(
-      page,
-      MARGIN,
-      y - blockH,
-      contentWidth,
-      blockH,
-      COLORS.white,
-      COLORS.line,
-    );
-
+  const drawPillarCard = (
+    layout: PillarCardLayout,
+    x: number,
+    topY: number,
+    height: number,
+  ) => {
+    const { pillar, pot, bodyLines } = layout;
     const tone = scoreTone(pillar.available ? pillar.score : null);
+    const bottom = topY - height;
+
+    drawRoundedCard(page, x, bottom, colWidth, height, COLORS.white, COLORS.line);
     page.drawRectangle({
-      x: MARGIN,
-      y: y - blockH,
-      width: 4,
-      height: blockH,
+      x,
+      y: bottom,
+      width: 3.5,
+      height,
       color: pdfRgb(tone.pdf),
     });
 
-    drawText(page, pillar.label, MARGIN + 14, y - 14, 9, fontBold, COLORS.ink);
-    drawText(
-      page,
-      pillar.available ? pillar.bandLabel : 'Not measured yet',
-      MARGIN + 14 + fontBold.widthOfTextAtSize(pillar.label, 9) + 8,
-      y - 14,
-      8,
-      font,
-      COLORS.muted,
-    );
+    const labelX = x + cardPad;
+    drawText(page, pillar.label, labelX, topY - 13, 8, fontBold, COLORS.ink);
+    const band = pillar.available ? pillar.bandLabel : 'Not measured';
+    drawText(page, band, labelX, topY - 24, 7, font, COLORS.muted);
 
-    const pBarX = MARGIN + 14;
-    const pBarW = contentWidth - 100;
+    const pBarX = labelX;
+    const pBarW = colWidth - cardPad * 2 - 28;
+    let barY = topY - 38;
+
     if (pillar.available && pot?.current != null) {
       drawBar(
         page,
         pBarX,
-        y - 28,
+        barY,
         pBarW,
-        7,
+        6,
         pot.current / 100,
         pdfRgb(tone.pdf),
       );
       drawText(
         page,
         `${pot.current}`,
-        pBarX + pBarW + 8,
-        y - 28,
-        9,
+        pBarX + pBarW + 4,
+        barY,
+        8,
         fontBold,
         pdfRgb(tone.pdf),
       );
+      barY -= 12;
 
       if (pot.potential != null && pot.uplift && pot.uplift > 0) {
         drawBar(
           page,
           pBarX,
-          y - 40,
+          barY,
           pBarW,
-          7,
+          6,
           pot.potential / 100,
           COLORS.potential,
           COLORS.potentialSoft,
         );
         drawText(
           page,
-          `${pot.potential} (+${pot.uplift})`,
-          pBarX + pBarW + 8,
-          y - 40,
-          8,
+          `+${pot.uplift}`,
+          pBarX + pBarW + 4,
+          barY,
+          7,
           fontBold,
           COLORS.potential,
         );
+        barY -= 10;
       }
     } else {
-      drawText(page, '—', pBarX, y - 30, 10, font, COLORS.muted);
+      drawText(page, '—', pBarX, barY, 9, font, COLORS.muted);
+      barY -= 12;
     }
 
-    let ty = y - 54;
+    let ty = barY - 4;
     for (const line of bodyLines) {
-      drawText(page, line, MARGIN + 14, ty, 8, font, COLORS.muted);
-      ty -= 10;
+      drawText(page, line, labelX, ty, 7.5, font, COLORS.muted);
+      ty -= 9.5;
     }
-    y -= blockH + 8;
+  };
+
+  for (let i = 0; i < pillarLayouts.length; i += 2) {
+    const left = pillarLayouts[i]!;
+    const right = pillarLayouts[i + 1];
+    const rowHeight = Math.max(left.height, right?.height ?? 0);
+
+    ensureSpace(rowHeight + CARD_GAP);
+    drawPillarCard(left, MARGIN, y, rowHeight);
+    if (right) {
+      drawPillarCard(right, MARGIN + colWidth + colGap, y, rowHeight);
+    }
+    y -= rowHeight + CARD_GAP;
   }
+
+  y -= SECTION_GAP - CARD_GAP;
 
   if (params.snapshot.recommendations.length > 0) {
     ensureSpace(30);
     drawText(page, 'Recommended actions', MARGIN, y, 12, fontBold, COLORS.ink);
-    y -= 12;
+    y -= 14;
     writeParagraph(
       'Practical fixes, ordered by impact. Start at the top.',
       8,
       font,
       COLORS.muted,
-      8,
+      10,
     );
 
     for (const rec of params.snapshot.recommendations) {
@@ -590,8 +634,8 @@ export async function buildSeoReportPdf(params: {
         titleLines.length * 12 +
         bodyLines.length * 10 +
         outcomeLines.length * 10 +
-        8;
-      ensureSpace(blockH + 6);
+        10;
+      ensureSpace(blockH + CARD_GAP);
 
       drawRoundedCard(
         page,
@@ -660,8 +704,9 @@ export async function buildSeoReportPdf(params: {
         drawText(page, line, MARGIN + 12, ty, 8, font, COLORS.potential);
         ty -= 10;
       }
-      y -= blockH + 8;
+      y -= blockH + CARD_GAP;
     }
+    y -= SECTION_GAP - CARD_GAP;
   }
 
   if (params.snapshot.appendix.crawlIssues.length > 0) {
@@ -675,13 +720,13 @@ export async function buildSeoReportPdf(params: {
       fontBold,
       COLORS.ink,
     );
-    y -= 12;
+    y -= 14;
     writeParagraph(
       'How many pages have each problem — the main reasons Technical SEO may be low.',
       8,
       font,
       COLORS.muted,
-      8,
+      10,
     );
 
     const maxCount = Math.max(
@@ -721,20 +766,47 @@ export async function buildSeoReportPdf(params: {
         fontBold,
         COLORS.coral,
       );
-      y = ty - 18;
+      y = ty - 20;
     }
   }
 
   ensureSpace(24);
+  const footerY = MARGIN - 4;
+  const prepared = 'Prepared with Rankly by Ozer';
+  const disclaimer =
+    '  ·  Potential scores are estimates based on recommended actions';
+  drawText(page, prepared, MARGIN, footerY, 7, font, COLORS.muted);
+  const preparedWidth = font.widthOfTextAtSize(prepared, 7);
   drawText(
     page,
-    'Generated with Rankly  ·  Potential scores are estimates based on recommended actions',
-    MARGIN,
-    MARGIN - 4,
+    disclaimer,
+    MARGIN + preparedWidth,
+    footerY,
     7,
     font,
     COLORS.muted,
   );
+
+  // Clickable “Ozer” → homepage
+  const ozerLabel = 'Ozer';
+  const ozerWidth = font.widthOfTextAtSize(ozerLabel, 7);
+  const ozerX =
+    MARGIN + font.widthOfTextAtSize('Prepared with Rankly by ', 7);
+  const link = doc.context.register(
+    doc.context.obj({
+      Type: 'Annot',
+      Subtype: 'Link',
+      Rect: [ozerX, footerY - 2, ozerX + ozerWidth, footerY + 9],
+      Border: [0, 0, 0],
+      C: [1, 0.36, 0.2],
+      A: {
+        Type: 'Action',
+        S: 'URI',
+        URI: PDFString.of('https://ozer.so'),
+      },
+    }),
+  );
+  page.node.addAnnot(link);
 
   return doc.save();
 }
