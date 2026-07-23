@@ -29,6 +29,7 @@ import type {
   RankTrackingSettings,
 } from '~/lib/rank-tracking/types';
 import { RANK_REFRESH_INTERVAL_LABELS } from '~/lib/rank-tracking/types';
+import type { GscKeywordSupplement } from '~/lib/rankly-gsc/types';
 
 import type { RanklyKeywordRow } from '../../../_lib/server/rankly-account-data';
 import { parseKeywordLines } from '../../_lib/parse-keyword-lines';
@@ -129,12 +130,20 @@ type SortColumn =
   | 'cpc'
   | 'position'
   | 'change'
+  | 'gscClicks'
+  | 'gscImpressions'
+  | 'gscPosition'
   | 'lastChecked';
 
 type SortDirection = 'asc' | 'desc';
 
 function defaultSortDirection(column: SortColumn): SortDirection {
-  if (column === 'keyword' || column === 'intent' || column === 'position') {
+  if (
+    column === 'keyword' ||
+    column === 'intent' ||
+    column === 'position' ||
+    column === 'gscPosition'
+  ) {
     return 'asc';
   }
   return 'desc';
@@ -212,6 +221,7 @@ export function RankTrackingPanel(props: {
   latestJob: RankCheckJobRow | null;
   keywordCount: number;
   estimatedCostUsd: number;
+  gscByKeyword?: Record<string, GscKeywordSupplement>;
 }) {
   const router = useRouter();
   const [keywordsText, setKeywordsText] = useState('');
@@ -315,6 +325,33 @@ export function RankTrackingPanel(props: {
           const bChange = primarySnapshot(b.id)?.positionChange;
           return compareNullableNumber(aChange, bChange, sort.direction);
         }
+        case 'gscClicks': {
+          const aGsc = props.gscByKeyword?.[a.keyword.trim().toLowerCase()];
+          const bGsc = props.gscByKeyword?.[b.keyword.trim().toLowerCase()];
+          return compareNullableNumber(
+            aGsc?.clicks ?? null,
+            bGsc?.clicks ?? null,
+            sort.direction,
+          );
+        }
+        case 'gscImpressions': {
+          const aGsc = props.gscByKeyword?.[a.keyword.trim().toLowerCase()];
+          const bGsc = props.gscByKeyword?.[b.keyword.trim().toLowerCase()];
+          return compareNullableNumber(
+            aGsc?.impressions ?? null,
+            bGsc?.impressions ?? null,
+            sort.direction,
+          );
+        }
+        case 'gscPosition': {
+          const aGsc = props.gscByKeyword?.[a.keyword.trim().toLowerCase()];
+          const bGsc = props.gscByKeyword?.[b.keyword.trim().toLowerCase()];
+          return compareNullableNumber(
+            aGsc?.position ?? null,
+            bGsc?.position ?? null,
+            sort.direction,
+          );
+        }
         case 'lastChecked': {
           const aDate = primarySnapshot(a.id)?.rankDate;
           const bDate = primarySnapshot(b.id)?.rankDate;
@@ -326,7 +363,7 @@ export function RankTrackingPanel(props: {
     });
 
     return rows;
-  }, [props.keywords, sort, snapshotByKeywordDevice]);
+  }, [props.keywords, props.gscByKeyword, sort, snapshotByKeywordDevice]);
 
   const displayRows = useMemo(
     () =>
@@ -759,7 +796,7 @@ export function RankTrackingPanel(props: {
         </p>
       ) : (
         <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
-          <table className="w-full min-w-[62rem] text-left text-sm">
+          <table className="w-full min-w-[76rem] text-left text-sm">
             <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               <tr>
                 <SortableHeader
@@ -817,6 +854,30 @@ export function RankTrackingPanel(props: {
                   align="right"
                 />
                 <SortableHeader
+                  label="GSC clicks"
+                  column="gscClicks"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
+                <SortableHeader
+                  label="GSC impr."
+                  column="gscImpressions"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
+                <SortableHeader
+                  label="GSC pos"
+                  column="gscPosition"
+                  activeColumn={sort.column}
+                  direction={sort.direction}
+                  onSort={toggleSort}
+                  align="right"
+                />
+                <SortableHeader
                   label="Last checked"
                   column="lastChecked"
                   activeColumn={sort.column}
@@ -832,6 +893,8 @@ export function RankTrackingPanel(props: {
             <tbody>
               {displayRows.map(({ keyword, device, snapshot, showRemove }) => {
                 const change = formatChange(snapshot?.positionChange ?? null);
+                const gsc =
+                  props.gscByKeyword?.[keyword.keyword.trim().toLowerCase()];
                 return (
                   <tr
                     key={`${keyword.id}-${device}`}
@@ -865,6 +928,27 @@ export function RankTrackingPanel(props: {
                       }
                     >
                       {change ?? '—'}
+                    </td>
+                    <td className="px-4 py-3 text-right text-[var(--workspace-shell-text-muted)] tabular-nums">
+                      {showRemove
+                        ? gsc
+                          ? gsc.clicks.toLocaleString()
+                          : '—'
+                        : ''}
+                    </td>
+                    <td className="px-4 py-3 text-right text-[var(--workspace-shell-text-muted)] tabular-nums">
+                      {showRemove
+                        ? gsc
+                          ? gsc.impressions.toLocaleString()
+                          : '—'
+                        : ''}
+                    </td>
+                    <td className="px-4 py-3 text-right text-[var(--workspace-shell-text-muted)] tabular-nums">
+                      {showRemove
+                        ? gsc?.position != null
+                          ? gsc.position.toFixed(1)
+                          : '—'
+                        : ''}
                     </td>
                     <td
                       className="px-4 py-3 text-right text-[var(--workspace-shell-text-muted)] tabular-nums"
