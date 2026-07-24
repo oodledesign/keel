@@ -45,7 +45,9 @@ export async function POST(request: Request, context: RouteContext) {
 
   const { data: thread, error: threadError } = await auth.client
     .from('email_threads')
-    .select('id, user_id, subject, account_id, client_id, project_id')
+    .select(
+      'id, user_id, subject, account_id, client_id, project_id, connection_id',
+    )
     .eq('id', threadId)
     .eq('user_id', auth.user.id)
     .maybeSingle();
@@ -58,7 +60,23 @@ export async function POST(request: Request, context: RouteContext) {
     return jsonErr('NOT_FOUND', 'Thread not found', 404);
   }
 
-  const owner = await resolveDraftOwnerContext(auth.user.id);
+  const connectionId = (thread as { connection_id?: string | null })
+    .connection_id;
+
+  let mailboxKind: 'business' | 'personal' = 'business';
+  if (connectionId) {
+    const { data: connection } = await auth.client
+      .from('google_connections')
+      .select('mailbox_kind')
+      .eq('id', connectionId)
+      .maybeSingle();
+    const kind = (connection as { mailbox_kind?: string } | null)?.mailbox_kind;
+    if (kind === 'personal' || kind === 'business') {
+      mailboxKind = kind;
+    }
+  }
+
+  const owner = await resolveDraftOwnerContext(auth.user.id, mailboxKind);
 
   if (!owner) {
     return jsonErr('OWNER_UNKNOWN', 'Could not resolve mailbox owner', 500);

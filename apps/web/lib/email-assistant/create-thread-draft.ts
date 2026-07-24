@@ -15,29 +15,56 @@ export async function createThreadDraft(input: {
 }): Promise<{ draftId: string; gmailDraftId?: string } | null> {
   const admin = getSupabaseServerAdminClient();
 
-  const owner = await resolveDraftOwnerContext(input.userId);
+  const { data: threadRow } = await admin
+    .from('email_threads')
+    .select('id, subject, connection_id')
+    .eq('id', input.threadId)
+    .eq('user_id', input.userId)
+    .maybeSingle();
+
+  if (!threadRow) {
+    return null;
+  }
+
+  const thread = threadRow as {
+    id: string;
+    subject: string | null;
+    connection_id: string | null;
+  };
+
+  let mailboxKind: 'business' | 'personal' = 'business';
+  if (thread.connection_id) {
+    const { data: connection } = await admin
+      .from('google_connections')
+      .select('mailbox_kind')
+      .eq('id', thread.connection_id)
+      .maybeSingle();
+    const kind = (connection as { mailbox_kind?: string } | null)?.mailbox_kind;
+    if (kind === 'personal' || kind === 'business') {
+      mailboxKind = kind;
+    }
+  }
+
+  const owner = await resolveDraftOwnerContext(input.userId, mailboxKind);
 
   if (!owner) {
     return null;
   }
 
-  const [{ data: thread }, { data: settings }] = await Promise.all([
-    admin
-      .from('email_threads')
-      .select('id, subject')
-      .eq('id', input.threadId)
-      .eq('user_id', input.userId)
-      .maybeSingle(),
-    admin
-      .from('email_assistant_settings')
-      .select('style_notes, signature, signature_is_html')
-      .eq('user_id', input.userId)
-      .maybeSingle(),
-  ]);
+  const connectionId = owner.connectionId ?? thread.connection_id;
 
-  if (!thread) {
-    return null;
-  }
+  const { data: settings } = connectionId
+    ? await admin
+        .from('email_assistant_settings')
+        .select('style_notes, signature, signature_is_html')
+        .eq('connection_id', connectionId)
+        .maybeSingle()
+    : await admin
+        .from('email_assistant_settings')
+        .select('style_notes, signature, signature_is_html')
+        .eq('user_id', input.userId)
+        .limit(1)
+        .maybeSingle();
 
   const { data: messages, error: messagesError } = await admin
     .from('email_messages')

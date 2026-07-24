@@ -150,7 +150,7 @@ export function EmailThreadPanel({
 
     startTransition(async () => {
       try {
-        await emailApiFetch<{ items: EmailActionItemRow[] }>(
+        const data = await emailApiFetch<{ items: EmailActionItemRow[] }>(
           `/api/gmail/threads/${threadId}/extract`,
           {
             method: 'POST',
@@ -159,7 +159,16 @@ export function EmailThreadPanel({
             }),
           },
         );
-        toast.success('Suggested to-dos updated');
+        const count = data.items?.length ?? 0;
+        if (count === 0) {
+          toast.message('No actionable to-dos found in this thread');
+        } else {
+          toast.success(
+            count === 1
+              ? '1 suggested to-do added'
+              : `${count} suggested to-dos added`,
+          );
+        }
         refreshDetail();
       } catch (error) {
         toast.error(
