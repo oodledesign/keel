@@ -8,7 +8,6 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
-import { refreshAndReconcileNeedsReplyThreads } from '~/lib/email-assistant/refresh-needs-reply-threads';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import { PROJECT_PRIMARY_CLIENT_EMBED } from '~/lib/projects/delivery-project-db';
 
@@ -188,16 +187,9 @@ async function loadDashboardPageDataImpl(
   const client = getSupabaseServerClient();
   const accountId = account.id;
 
-  try {
-    if (userId) {
-      await refreshAndReconcileNeedsReplyThreads({
-        userId,
-        mailboxKind: 'business',
-      });
-    }
-  } catch (error) {
-    console.error('[dashboard] needs-reply reconcile', error);
-  }
+  // Do not call Gmail from the dashboard — refreshing needs_reply threads via
+  // the Gmail API can take 10–20s+ and blocks first paint. Cron + email inbox
+  // keep categories fresh; dashboard only reads what is already synced.
 
   let businessConnectionId: string | null = null;
   if (userId) {

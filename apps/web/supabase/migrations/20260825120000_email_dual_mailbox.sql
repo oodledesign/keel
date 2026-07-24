@@ -150,6 +150,9 @@ alter table public.email_messages
 -- ---------------------------------------------------------------------------
 -- Cron claim: one row per connection (business + personal)
 -- ---------------------------------------------------------------------------
+-- Must drop first: return type changes from TABLE(user_id) → connection columns.
+drop function if exists public.claim_gmail_sync_batch(integer);
+
 create or replace function public.claim_gmail_sync_batch(
   p_batch_size integer default 8
 )
@@ -191,5 +194,8 @@ $$;
 
 comment on function public.claim_gmail_sync_batch(integer) is
   'Atomically claims least-recently-synced Gmail connections (business + personal).';
+
+revoke all on function public.claim_gmail_sync_batch(integer) from public;
+grant execute on function public.claim_gmail_sync_batch(integer) to service_role;
 
 notify pgrst, 'reload schema';

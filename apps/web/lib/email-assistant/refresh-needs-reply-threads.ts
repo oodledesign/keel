@@ -9,6 +9,9 @@ import { reconcileRepliedNeedsReplyThreads } from '~/lib/email-assistant/reconci
 /**
  * Pulls the latest Gmail state for `needs_reply` threads, then clears any that
  * were already answered outside Ozer (e.g. replied in Gmail).
+ *
+ * Prefer calling this from the email inbox / cron — not from the dashboard,
+ * where Gmail round-trips can block first paint for 10–20s+.
  */
 export async function refreshAndReconcileNeedsReplyThreads(params: {
   accountId?: string;
@@ -16,10 +19,32 @@ export async function refreshAndReconcileNeedsReplyThreads(params: {
   connectionId?: string;
   mailboxKind?: 'business' | 'personal';
   limit?: number;
+  /** Soft deadline; returns whatever finished (0,0 if nothing). Default: no cap. */
+  maxMs?: number;
 }): Promise<{ refreshed: number; cleared: number }> {
   if (!params.accountId && !params.userId && !params.connectionId) {
     return { refreshed: 0, cleared: 0 };
   }
+
+  if (params.maxMs != null && params.maxMs > 0) {
+    return Promise.race([
+      refreshAndReconcileNeedsReplyThreadsInner(params),
+      new Promise<{ refreshed: number; cleared: number }>((resolve) => {
+        setTimeout(() => resolve({ refreshed: 0, cleared: 0 }), params.maxMs);
+      }),
+    ]);
+  }
+
+  return refreshAndReconcileNeedsReplyThreadsInner(params);
+}
+
+async function refreshAndReconcileNeedsReplyThreadsInner(params: {
+  accountId?: string;
+  userId?: string;
+  connectionId?: string;
+  mailboxKind?: 'business' | 'personal';
+  limit?: number;
+}): Promise<{ refreshed: number; cleared: number }> {
 
   const admin = getSupabaseServerAdminClient();
   const limit = params.limit ?? 12;

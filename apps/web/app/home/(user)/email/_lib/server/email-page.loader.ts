@@ -96,6 +96,8 @@ export const loadEmailPageData = cache(
       await refreshAndReconcileNeedsReplyThreads({
         userId: user.id,
         mailboxKind,
+        maxMs: 4_000,
+        limit: 6,
       });
     } catch (error) {
       console.error('[email] needs-reply reconcile', error);
