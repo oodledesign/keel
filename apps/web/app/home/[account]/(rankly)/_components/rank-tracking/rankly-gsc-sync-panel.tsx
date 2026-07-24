@@ -244,7 +244,7 @@ export function RanklyGscSyncPanel(props: {
 
       {!status.configured ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, and
+          Set GOOGLE_GSC_CLIENT_ID, GOOGLE_GSC_CLIENT_SECRET, and
           GOOGLE_GSC_REDIRECT_URI (or NEXT_PUBLIC_SITE_URL) to enable Search
           Console OAuth.
         </p>
