@@ -11,6 +11,10 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import {
+  DisconnectIntegrationDialog,
+  GOOGLE_CALENDAR_DISCONNECT_CONSEQUENCES,
+} from '~/components/integrations/disconnect-integration-dialog';
+import {
   workspaceBtnPrimaryMd,
   workspacePanelBorder,
   workspaceTextMuted,
@@ -76,6 +80,10 @@ export function ConnectedAccountsPanel({
   conferencing,
 }: Props) {
   const [pending, startTransition] = useTransition();
+  const [disconnectTarget, setDisconnectTarget] = useState<{
+    connectionId?: string;
+    email?: string | null;
+  } | null>(null);
   const [selections, setSelections] = useState<
     Record<string, AccountSelection>
   >(() =>
@@ -196,6 +204,7 @@ export function ConnectedAccountsPanel({
           accountSlug,
           connectionId,
         });
+        setDisconnectTarget(null);
         toast.success(
           connectionId
             ? 'Google account disconnected'
@@ -442,7 +451,12 @@ export function ConnectedAccountsPanel({
                         size="sm"
                         className="rounded-full"
                         disabled={pending}
-                        onClick={() => disconnectGoogle(account.connectionId)}
+                        onClick={() =>
+                          setDisconnectTarget({
+                            connectionId: account.connectionId,
+                            email: account.email,
+                          })
+                        }
                       >
                         <Unplug className="mr-2 h-3.5 w-3.5" />
                         Disconnect
@@ -524,6 +538,20 @@ export function ConnectedAccountsPanel({
           </div>
         </section>
       ) : null}
+
+      <DisconnectIntegrationDialog
+        open={disconnectTarget !== null}
+        onOpenChange={(open) => !open && setDisconnectTarget(null)}
+        title="Disconnect Google Calendar?"
+        description={
+          disconnectTarget?.email
+            ? `This removes Ozer’s access to ${disconnectTarget.email}.`
+            : 'This removes Ozer’s access to this Google Calendar account.'
+        }
+        consequences={[...GOOGLE_CALENDAR_DISCONNECT_CONSEQUENCES]}
+        confirming={pending && disconnectTarget !== null}
+        onConfirm={() => disconnectGoogle(disconnectTarget?.connectionId)}
+      />
     </div>
   );
 }

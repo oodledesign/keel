@@ -10,6 +10,11 @@ import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
+import {
+  DisconnectIntegrationDialog,
+  GMAIL_DISCONNECT_CONSEQUENCES,
+  GOOGLE_CALENDAR_DISCONNECT_CONSEQUENCES,
+} from '~/components/integrations/disconnect-integration-dialog';
 import pathsConfig from '~/config/paths.config';
 
 import {
@@ -164,6 +169,9 @@ export function PersonalIntegrationsSection({ data }: Props) {
   const [disconnecting, setDisconnecting] = useState<
     'calendar' | 'gmail' | null
   >(null);
+  const [confirmTarget, setConfirmTarget] = useState<
+    'calendar' | 'gmail' | null
+  >(null);
 
   const settingsReturnPath = encodeURIComponent(
     pathsConfig.app.personalAccountIntegrationsSettings,
@@ -172,7 +180,8 @@ export function PersonalIntegrationsSection({ data }: Props) {
   const calendarConnectHref = `/api/integrations/google-calendar/start?returnPath=${settingsReturnPath}`;
   const gmailConnectHref = `/api/google/connect?returnPath=${settingsReturnPath}`;
 
-  function disconnectCalendar() {
+  function confirmDisconnectCalendar() {
+    setConfirmTarget(null);
     setDisconnecting('calendar');
     startTransition(async () => {
       try {
@@ -188,7 +197,8 @@ export function PersonalIntegrationsSection({ data }: Props) {
     });
   }
 
-  function disconnectGmail() {
+  function confirmDisconnectGmail() {
+    setConfirmTarget(null);
     setDisconnecting('gmail');
     startTransition(async () => {
       try {
@@ -254,7 +264,11 @@ export function PersonalIntegrationsSection({ data }: Props) {
         featureHref={pathsConfig.app.personalPlanner}
         featureLabel="Open Planner"
         connectHref={calendarConnectHref}
-        onDisconnect={data.calendar.connected ? disconnectCalendar : undefined}
+        onDisconnect={
+          data.calendar.connected
+            ? () => setConfirmTarget('calendar')
+            : undefined
+        }
         disconnecting={disconnecting === 'calendar' || pending}
       />
 
@@ -281,7 +295,9 @@ export function PersonalIntegrationsSection({ data }: Props) {
         featureHref={pathsConfig.app.personalEmailAssistant}
         featureLabel="Open Email"
         connectHref={gmailConnectHref}
-        onDisconnect={data.gmail.connected ? disconnectGmail : undefined}
+        onDisconnect={
+          data.gmail.connected ? () => setConfirmTarget('gmail') : undefined
+        }
         disconnecting={disconnecting === 'gmail' || pending}
         connectDisabled={gmailConnectDisabled}
         connectDisabledReason={
@@ -302,6 +318,26 @@ export function PersonalIntegrationsSection({ data }: Props) {
           </Link>
         </p>
       ) : null}
+
+      <DisconnectIntegrationDialog
+        open={confirmTarget === 'calendar'}
+        onOpenChange={(open) => !open && setConfirmTarget(null)}
+        title="Disconnect Google Calendar?"
+        description="This removes Ozer’s access to your Google Calendar account(s)."
+        consequences={[...GOOGLE_CALENDAR_DISCONNECT_CONSEQUENCES]}
+        confirming={disconnecting === 'calendar'}
+        onConfirm={confirmDisconnectCalendar}
+      />
+
+      <DisconnectIntegrationDialog
+        open={confirmTarget === 'gmail'}
+        onOpenChange={(open) => !open && setConfirmTarget(null)}
+        title="Disconnect Gmail?"
+        description="This removes Ozer’s access to this Gmail mailbox and deletes synced email data stored in Ozer."
+        consequences={[...GMAIL_DISCONNECT_CONSEQUENCES]}
+        confirming={disconnecting === 'gmail'}
+        onConfirm={confirmDisconnectGmail}
+      />
     </div>
   );
 }

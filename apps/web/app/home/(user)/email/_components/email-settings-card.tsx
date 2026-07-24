@@ -10,6 +10,10 @@ import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
+import {
+  DisconnectIntegrationDialog,
+  GMAIL_DISCONNECT_CONSEQUENCES,
+} from '~/components/integrations/disconnect-integration-dialog';
 import pathsConfig from '~/config/paths.config';
 
 import {
@@ -116,6 +120,7 @@ export function EmailSettingsCard({
   );
   const [pending, startTransition] = useTransition();
   const [disconnecting, setDisconnecting] = useState(false);
+  const [confirmDisconnectOpen, setConfirmDisconnectOpen] = useState(false);
 
   useEffect(() => {
     setStyleNotes(initialStyleNotes);
@@ -157,6 +162,7 @@ export function EmailSettingsCard({
   }
 
   function disconnect() {
+    setConfirmDisconnectOpen(false);
     setDisconnecting(true);
     startTransition(async () => {
       try {
@@ -210,7 +216,7 @@ export function EmailSettingsCard({
               type="button"
               variant="outline"
               className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              onClick={disconnect}
+              onClick={() => setConfirmDisconnectOpen(true)}
               disabled={disconnecting || pending}
             >
               {disconnecting ? (
@@ -318,6 +324,20 @@ export function EmailSettingsCard({
           )}
         </Button>
       </div>
+
+      <DisconnectIntegrationDialog
+        open={confirmDisconnectOpen}
+        onOpenChange={setConfirmDisconnectOpen}
+        title="Disconnect Gmail?"
+        description={
+          connectedEmail
+            ? `This removes Ozer’s access to ${connectedEmail} and deletes synced email data stored in Ozer.`
+            : 'This removes Ozer’s access to this Gmail mailbox and deletes synced email data stored in Ozer.'
+        }
+        consequences={[...GMAIL_DISCONNECT_CONSEQUENCES]}
+        confirming={disconnecting}
+        onConfirm={disconnect}
+      />
     </section>
   );
 }

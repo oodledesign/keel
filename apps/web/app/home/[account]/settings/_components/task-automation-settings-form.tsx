@@ -14,6 +14,10 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 
+import {
+  DisconnectIntegrationDialog,
+  GOOGLE_CALENDAR_DISCONNECT_CONSEQUENCES,
+} from '~/components/integrations/disconnect-integration-dialog';
 import pathsConfig from '~/config/paths.config';
 import { workAccountPath } from '~/home/[account]/_lib/work-account-path';
 import type { AccountTaskAutomationSettings } from '~/lib/recorder/task-automation-settings';
@@ -59,6 +63,10 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
     ),
   );
   const [pending, startTransition] = useTransition();
+  const [disconnectTarget, setDisconnectTarget] = useState<{
+    connectionId?: string;
+    email?: string | null;
+  } | null>(null);
 
   const reviewPath = workAccountPath(
     pathsConfig.app.accountTasksReview,
@@ -172,6 +180,7 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
           accountSlug: data.accountSlug,
           connectionId,
         });
+        setDisconnectTarget(null);
         toast.success(
           connectionId
             ? 'Google account disconnected'
@@ -435,7 +444,12 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
                         size="sm"
                         className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel)]"
                         disabled={pending}
-                        onClick={() => disconnectCalendar(account.connectionId)}
+                        onClick={() =>
+                          setDisconnectTarget({
+                            connectionId: account.connectionId,
+                            email: account.email,
+                          })
+                        }
                       >
                         {pending ? (
                           <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -533,6 +547,20 @@ export function TaskAutomationSettingsForm({ data, canEdit }: Props) {
           </Button>
         </div>
       ) : null}
+
+      <DisconnectIntegrationDialog
+        open={disconnectTarget !== null}
+        onOpenChange={(open) => !open && setDisconnectTarget(null)}
+        title="Disconnect Google Calendar?"
+        description={
+          disconnectTarget?.email
+            ? `This removes Ozer’s access to ${disconnectTarget.email}.`
+            : 'This removes Ozer’s access to this Google Calendar account.'
+        }
+        consequences={[...GOOGLE_CALENDAR_DISCONNECT_CONSEQUENCES]}
+        confirming={pending && disconnectTarget !== null}
+        onConfirm={() => disconnectCalendar(disconnectTarget?.connectionId)}
+      />
     </div>
   );
 }
