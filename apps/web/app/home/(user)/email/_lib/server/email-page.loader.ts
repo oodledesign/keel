@@ -6,7 +6,6 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadPersonalSidebarWorkspaces } from '~/home/(user)/_lib/server/personal-sidebar-workspaces.loader';
 import type { MailboxKind } from '~/lib/email-assistant/mailbox-kind';
-import { refreshAndReconcileNeedsReplyThreads } from '~/lib/email-assistant/refresh-needs-reply-threads';
 import {
   EMAIL_THREAD_LINK_SELECT,
   enrichEmailThreadLinks,
@@ -92,25 +91,20 @@ export const loadEmailPageData = cache(
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
-    try {
-      await refreshAndReconcileNeedsReplyThreads({
-        userId: user.id,
-        mailboxKind,
-        maxMs: 4_000,
-        limit: 6,
-      });
-    } catch (error) {
-      console.error('[email] needs-reply reconcile', error);
-    }
+    // Inbox first paint must stay DB-only. Gmail refresh for needs_reply runs via
+    // cron (+ optional manual sync); blocking here made the page feel multi-second.
 
-    const { data: connectionRow } = await client
-      .from('google_connections')
-      .select('id, google_email, connected_at')
-      .eq('user_id', user.id)
-      .eq('mailbox_kind', mailboxKind)
-      .maybeSingle();
+    const [connectionResult, workspaces] = await Promise.all([
+      client
+        .from('google_connections')
+        .select('id, google_email, connected_at')
+        .eq('user_id', user.id)
+        .eq('mailbox_kind', mailboxKind)
+        .maybeSingle(),
+      loadPersonalSidebarWorkspaces(),
+    ]);
 
-    const connection = connectionRow as {
+    const connection = connectionResult.data as {
       id?: string;
       google_email?: string;
       connected_at?: string;
@@ -118,7 +112,7 @@ export const loadEmailPageData = cache(
 
     const connectionId = connection?.id ?? null;
 
-    const [settingsResult, threadsResult, workspaces] = await Promise.all([
+    const [settingsResult, threadsResult] = await Promise.all([
       connectionId
         ? client
             .from('email_assistant_settings')
@@ -139,7 +133,6 @@ export const loadEmailPageData = cache(
             .order('last_message_at', { ascending: false, nullsFirst: false })
             .limit(26)
         : Promise.resolve({ data: [] }),
-      loadPersonalSidebarWorkspaces(),
     ]);
 
     const settingsRow = settingsResult.data as {

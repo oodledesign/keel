@@ -24,9 +24,10 @@ async function BusinessEmailPageContent({
 }: {
   accountSlug: string;
 }) {
-  await redirectIfEmailAssistantNotAllowed();
-
-  const workspace = await loadTeamWorkspace(accountSlug);
+  const [, workspace] = await Promise.all([
+    redirectIfEmailAssistantNotAllowed(),
+    loadTeamWorkspace(accountSlug),
+  ]);
 
   if (!workspace?.account) {
     notFound();

@@ -36,39 +36,41 @@ export async function loadEmailThreadDetail(
 ): Promise<
   { ok: true; data: EmailThreadDetail } | { ok: false; error: string }
 > {
+  // Page routes already gate email-assistant access; avoid a billing + entitlement
+  // round-trip on every thread click.
   const client = getSupabaseServerClient();
-  const user = await requireEmailAssistantAccess();
+  const user = await requireUserInServerComponent();
 
-  const thread = await loadEmailThreadDetailFromDb(threadId);
+  const [thread, messagesResult, actionItemsResult, draftResult] =
+    await Promise.all([
+      loadEmailThreadDetailFromDb(threadId),
+      client
+        .from('email_messages')
+        .select('id, from_address, subject, body_text, snippet, internal_date')
+        .eq('thread_id', threadId)
+        .eq('user_id', user.id)
+        .order('internal_date', { ascending: true, nullsFirst: false }),
+      client
+        .from('email_action_items')
+        .select(
+          'id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, account_id, client_id, project_id, status, task_id, created_at',
+        )
+        .eq('thread_id', threadId)
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false }),
+      client
+        .from('email_drafts')
+        .select('id, body_text, gmail_draft_id, status, updated_at')
+        .eq('thread_id', threadId)
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+    ]);
 
   if (!thread) {
     return { ok: false, error: 'Thread not found' };
   }
-
-  const [messagesResult, actionItemsResult, draftResult] = await Promise.all([
-    client
-      .from('email_messages')
-      .select('id, from_address, subject, body_text, snippet, internal_date')
-      .eq('thread_id', threadId)
-      .eq('user_id', user.id)
-      .order('internal_date', { ascending: true, nullsFirst: false }),
-    client
-      .from('email_action_items')
-      .select(
-        'id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, account_id, client_id, project_id, status, task_id, created_at',
-      )
-      .eq('thread_id', threadId)
-      .eq('user_id', user.id)
-      .order('created_at', { ascending: false }),
-    client
-      .from('email_drafts')
-      .select('id, body_text, gmail_draft_id, status, updated_at')
-      .eq('thread_id', threadId)
-      .eq('user_id', user.id)
-      .order('updated_at', { ascending: false })
-      .limit(1)
-      .maybeSingle(),
-  ]);
 
   if (messagesResult.error) {
     return { ok: false, error: messagesResult.error.message };
@@ -78,8 +80,13 @@ export async function loadEmailThreadDetail(
     return { ok: false, error: actionItemsResult.error.message };
   }
 
+  if (draftResult.error) {
+    return { ok: false, error: draftResult.error.message };
+  }
+
   let actionItems = (actionItemsResult.data ?? []) as EmailActionItemRow[];
 
+  // Best-effort link backfill — paint with in-memory ids first; persist async.
   if (thread.link.linked && (thread.link.clientId || thread.link.projectId)) {
     const needsSync = actionItems.some(
       (item) =>
@@ -87,38 +94,22 @@ export async function loadEmailThreadDetail(
     );
 
     if (needsSync) {
-      try {
-        await syncSuggestedActionItemsFromThreadLink(
-          client,
-          user.id,
-          threadId,
-          {
-            accountId: thread.link.accountId,
-            clientId: thread.link.clientId,
-            projectId: thread.link.projectId,
-          },
-        );
-
-        const { data: syncedItems, error: syncLoadError } = await client
-          .from('email_action_items')
-          .select(
-            'id, title, detail, suggested_due_date, source_excerpt, assignee_confidence, suggested_assignee_id, account_id, client_id, project_id, status, task_id, created_at',
-          )
-          .eq('thread_id', threadId)
-          .eq('user_id', user.id)
-          .order('created_at', { ascending: false });
-
-        if (!syncLoadError && syncedItems) {
-          actionItems = syncedItems as EmailActionItemRow[];
-        }
-      } catch {
-        // Keep showing items even if backfill fails.
+      for (const item of actionItems) {
+        if (item.status !== 'suggested') continue;
+        if (item.client_id || item.project_id) continue;
+        item.account_id = thread.link.accountId;
+        item.client_id = thread.link.clientId;
+        item.project_id = thread.link.projectId;
       }
-    }
-  }
 
-  if (draftResult.error) {
-    return { ok: false, error: draftResult.error.message };
+      void syncSuggestedActionItemsFromThreadLink(client, user.id, threadId, {
+        accountId: thread.link.accountId,
+        clientId: thread.link.clientId,
+        projectId: thread.link.projectId,
+      }).catch(() => {
+        // Keep showing items even if backfill fails.
+      });
+    }
   }
 
   return {
