@@ -14,6 +14,7 @@ import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-
 import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import {
   type MobileNavLink,
+  type MobileNavSection,
   WorkspaceMobileBottomNav,
   WorkspaceMobileHeaderBar,
   WorkspaceMobileHeaderSelector,
@@ -35,7 +36,8 @@ type TeamWorkspaceMobileChromeProps = {
   accountId: string;
   user: JWTUserData;
   accounts: WorkspaceSwitcherAccount[];
-  navLinks: MobileNavLink[];
+  navLinks?: MobileNavLink[];
+  navSections?: MobileNavSection[];
   bottomNavTabs: MobileBottomNavTab[];
   spaceType: WorkspaceSpaceType;
   showNewMenu?: boolean;
@@ -48,6 +50,7 @@ export function TeamWorkspaceMobileChrome({
   user,
   accounts: rawAccounts,
   navLinks,
+  navSections,
   bottomNavTabs,
   spaceType,
   showNewMenu = true,
@@ -113,6 +116,7 @@ export function TeamWorkspaceMobileChrome({
         userId={user.id}
         accounts={accounts}
         navLinks={navLinks}
+        navSections={navSections}
         open={menuOpen}
         onOpenChange={setMenuOpen}
         variant="team"

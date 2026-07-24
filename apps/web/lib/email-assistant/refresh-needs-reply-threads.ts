@@ -13,14 +13,29 @@ import { reconcileRepliedNeedsReplyThreads } from '~/lib/email-assistant/reconci
 export async function refreshAndReconcileNeedsReplyThreads(params: {
   accountId?: string;
   userId?: string;
+  connectionId?: string;
+  mailboxKind?: 'business' | 'personal';
   limit?: number;
 }): Promise<{ refreshed: number; cleared: number }> {
-  if (!params.accountId && !params.userId) {
+  if (!params.accountId && !params.userId && !params.connectionId) {
     return { refreshed: 0, cleared: 0 };
   }
 
   const admin = getSupabaseServerAdminClient();
   const limit = params.limit ?? 12;
+  const mailboxKind = params.mailboxKind ?? 'business';
+
+  let connectionId = params.connectionId ?? null;
+
+  if (!connectionId && params.userId) {
+    const { data: connection } = await admin
+      .from('google_connections')
+      .select('id')
+      .eq('user_id', params.userId)
+      .eq('mailbox_kind', mailboxKind)
+      .maybeSingle();
+    connectionId = (connection as { id?: string } | null)?.id ?? null;
+  }
 
   let query = admin
     .from('email_threads')
@@ -29,7 +44,9 @@ export async function refreshAndReconcileNeedsReplyThreads(params: {
     .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(limit);
 
-  if (params.accountId) {
+  if (connectionId) {
+    query = query.eq('connection_id', connectionId);
+  } else if (params.accountId) {
     query = query.eq('account_id', params.accountId);
   } else if (params.userId) {
     query = query.eq('user_id', params.userId);
@@ -58,6 +75,7 @@ export async function refreshAndReconcileNeedsReplyThreads(params: {
       try {
         const result = await syncGmailThread(mailboxUserId, gmailThreadId, {
           format: 'metadata',
+          mailboxKind,
         });
         refreshed += 1;
 
@@ -100,6 +118,7 @@ export async function refreshAndReconcileNeedsReplyThreads(params: {
   const { cleared } = await reconcileRepliedNeedsReplyThreads({
     accountId: params.accountId,
     userId: params.userId,
+    connectionId: connectionId ?? undefined,
     threadIds,
   });
 

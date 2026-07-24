@@ -41,9 +41,9 @@ export const loadPersonalIntegrationsData = cache(
           .limit(5),
         client
           .from('google_connections')
-          .select('google_email, connected_at')
+          .select('google_email, connected_at, mailbox_kind')
           .eq('user_id', user.id)
-          .maybeSingle(),
+          .order('mailbox_kind', { ascending: true }),
         canUseEmailAssistant(client, user.id),
       ]);
 
@@ -52,10 +52,13 @@ export const loadPersonalIntegrationsData = cache(
       google_account_email?: string | null;
     }>;
 
-    const gmailRow = gmailConnection.data as {
+    const gmailRows = (gmailConnection.data ?? []) as Array<{
       google_email?: string | null;
       connected_at?: string | null;
-    } | null;
+      mailbox_kind?: string | null;
+    }>;
+    const primaryGmail =
+      gmailRows.find((row) => row.mailbox_kind === 'business') ?? gmailRows[0];
 
     return {
       calendar: {
@@ -69,9 +72,9 @@ export const loadPersonalIntegrationsData = cache(
       },
       gmail: {
         configured: Boolean(getOptionalGoogleAuthEnv()),
-        connected: Boolean(gmailRow?.google_email),
-        googleEmail: gmailRow?.google_email?.trim() || null,
-        connectedAt: gmailRow?.connected_at ?? null,
+        connected: Boolean(primaryGmail?.google_email),
+        googleEmail: primaryGmail?.google_email?.trim() || null,
+        connectedAt: primaryGmail?.connected_at ?? null,
         emailAssistantAllowed,
       },
     };

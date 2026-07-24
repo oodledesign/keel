@@ -4,6 +4,7 @@ export type GoogleOAuthStatePayload = {
   userId: string;
   returnPath: string;
   exp: number;
+  mailboxKind?: 'business' | 'personal';
 };
 
 function stateSecret() {

@@ -254,6 +254,7 @@ export async function canUseEmailAssistant(
       .from('google_connections')
       .select('user_id')
       .eq('user_id', userId)
+      .limit(1)
       .maybeSingle(),
   ]);
 

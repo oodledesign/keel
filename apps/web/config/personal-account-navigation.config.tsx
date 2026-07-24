@@ -58,7 +58,7 @@ export function buildPersonalHomeNavRoutes() {
           Icon: <CalendarDays className={iconClasses} />,
         },
         {
-          label: 'Email',
+          label: 'Personal email',
           path: pathsConfig.app.personalEmailAssistant,
           Icon: <Mail className={iconClasses} />,
         },
@@ -154,7 +154,7 @@ export function buildPersonalShortcutRoutes(): PersonalShortcutRoute[] {
       keywords: ['pipeline', 'leads'],
     },
     {
-      label: 'Email',
+      label: 'Personal email',
       path: pathsConfig.app.personalEmailAssistant,
       description: 'Gmail inbox, suggested to-dos, and AI draft replies',
       keywords: ['email', 'gmail', 'inbox', 'assistant'],
@@ -218,7 +218,7 @@ export function buildPersonalMobileNavIconLinks(): Array<{
     },
     {
       path: pathsConfig.app.personalEmailAssistant,
-      label: 'Email',
+      label: 'Personal email',
       Icon: icon(Mail),
     },
   ];

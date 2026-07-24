@@ -13,6 +13,7 @@ import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
 export async function reconcileRepliedNeedsReplyThreads(params: {
   userId?: string;
   accountId?: string;
+  connectionId?: string;
   threadIds?: string[];
 }): Promise<{ cleared: number }> {
   const admin = getSupabaseServerAdminClient();
@@ -24,6 +25,8 @@ export async function reconcileRepliedNeedsReplyThreads(params: {
 
   if (params.threadIds && params.threadIds.length > 0) {
     query = query.in('id', params.threadIds);
+  } else if (params.connectionId) {
+    query = query.eq('connection_id', params.connectionId);
   } else if (params.accountId) {
     query = query.eq('account_id', params.accountId);
   } else if (params.userId) {

@@ -40,8 +40,10 @@ function buildThreadsUrl(input: {
   filter: EmailInboxFilter;
   searchQuery?: string;
   cursor?: string | null;
+  mailboxKind?: 'business' | 'personal';
 }) {
   const params = new URLSearchParams({ limit: '25' });
+  params.set('mailbox', input.mailboxKind ?? 'personal');
 
   if (input.filter === 'needs_reply') {
     params.set('filter', 'needs_reply');
@@ -67,6 +69,7 @@ function buildThreadsUrl(input: {
 export function EmailPageClient({ initialData }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
+  const mailboxKind = initialData.mailboxKind;
   const [threads, setThreads] = useState(initialData.threads);
   const [nextCursor, setNextCursor] = useState<string | null>(
     initialData.threads.at(-1)?.last_message_at ?? null,
@@ -95,8 +98,9 @@ export function EmailPageClient({ initialData }: Props) {
         filter: inboxFilter,
         searchQuery: debouncedSearch,
         cursor,
+        mailboxKind,
       }),
-    [inboxFilter, debouncedSearch],
+    [inboxFilter, debouncedSearch, mailboxKind],
   );
 
   useEffect(() => {
@@ -121,9 +125,14 @@ export function EmailPageClient({ initialData }: Props) {
       const mailOnly = options.mailOnly ?? false;
       const maxBatches = options.maxBatches ?? MANUAL_SYNC_MAX_BATCHES;
       const quiet = options.quiet ?? false;
-      const syncUrl = mailOnly
-        ? '/api/gmail/sync?mode=mail'
-        : '/api/gmail/sync';
+      const syncParams = new URLSearchParams({ mailbox: mailboxKind });
+      if (mailOnly) {
+        syncParams.set('mode', 'mail');
+      }
+      if (initialData.preferredAccountId) {
+        syncParams.set('preferredAccountId', initialData.preferredAccountId);
+      }
+      const syncUrl = `/api/gmail/sync?${syncParams.toString()}`;
 
       let totalProcessed = 0;
       let complete = true;
@@ -186,8 +195,16 @@ export function EmailPageClient({ initialData }: Props) {
         );
       }
     },
-    [reloadThreads, router],
+    [reloadThreads, router, mailboxKind, initialData.preferredAccountId],
   );
+
+  const emailHomePath =
+    mailboxKind === 'business' && initialData.accountSlug
+      ? pathsConfig.app.accountEmailAssistant.replace(
+          '[account]',
+          initialData.accountSlug,
+        )
+      : pathsConfig.app.personalEmailAssistant;
 
   useEffect(() => {
     const connected = searchParams.get('email_connected');
@@ -205,7 +222,7 @@ export function EmailPageClient({ initialData }: Props) {
 
     if (connected === '1') {
       toast.success('Gmail connected — syncing inbox…');
-      router.replace(pathsConfig.app.personalEmailAssistant);
+      router.replace(emailHomePath);
 
       startSyncTransition(async () => {
         try {
@@ -221,9 +238,9 @@ export function EmailPageClient({ initialData }: Props) {
 
     if (error) {
       toast.error(decodeURIComponent(error));
-      router.replace(pathsConfig.app.personalEmailAssistant);
+      router.replace(emailHomePath);
     }
-  }, [router, searchParams, runSync]);
+  }, [router, searchParams, runSync, emailHomePath]);
 
   useEffect(() => {
     if (!initialData.connection || autoSyncStarted.current) {
@@ -244,10 +261,14 @@ export function EmailPageClient({ initialData }: Props) {
       try {
         const mailResult = await emailApiFetch<{
           messagesProcessed: number;
-        }>('/api/gmail/sync?mode=mail', { method: 'POST' });
+        }>(`/api/gmail/sync?mode=mail&mailbox=${mailboxKind}`, {
+          method: 'POST',
+        });
 
         if (mailResult.messagesProcessed > 0) {
-          await emailApiFetch('/api/gmail/sync', { method: 'POST' });
+          await emailApiFetch(`/api/gmail/sync?mailbox=${mailboxKind}`, {
+            method: 'POST',
+          });
         }
 
         await reloadThreads();
@@ -283,7 +304,13 @@ export function EmailPageClient({ initialData }: Props) {
     void emailApiFetch<{
       threads: EmailThreadSummary[];
       nextCursor: string | null;
-    }>(buildThreadsUrl({ filter: inboxFilter, searchQuery: debouncedSearch }))
+    }>(
+      buildThreadsUrl({
+        filter: inboxFilter,
+        searchQuery: debouncedSearch,
+        mailboxKind,
+      }),
+    )
       .then((data) => {
         if (requestId !== searchRequestId.current) {
           return;
@@ -382,11 +409,12 @@ export function EmailPageClient({ initialData }: Props) {
       <div className="flex shrink-0 flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-5 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)] md:text-3xl">
-            Email
+            {mailboxKind === 'business' ? 'Emails' : 'Personal email'}
           </h1>
           <p className="mt-1 max-w-2xl text-sm text-[var(--workspace-shell-text-muted)]">
-            Sync Gmail threads, auto-draft replies that need a response, and
-            save them back to Gmail.
+            {mailboxKind === 'business'
+              ? 'Sync your business Gmail, auto-draft replies, and link threads to clients and projects.'
+              : 'Connect a personal Gmail account for private mail — separate from your business inbox.'}
           </p>
         </div>
 
@@ -425,6 +453,8 @@ export function EmailPageClient({ initialData }: Props) {
         <div className="shrink-0">
           <EmailSettingsCard
             connectedEmail={initialData.connection?.googleEmail ?? null}
+            mailboxKind={mailboxKind}
+            returnPath={emailHomePath}
             initialStyleNotes={initialData.settings.styleNotes}
             initialSignature={initialData.settings.signature}
             initialSignatureIsHtml={initialData.settings.signatureIsHtml}

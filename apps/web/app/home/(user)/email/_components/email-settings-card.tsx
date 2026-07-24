@@ -26,6 +26,8 @@ const panelClass =
 
 type Props = {
   connectedEmail: string | null;
+  mailboxKind?: 'business' | 'personal';
+  returnPath?: string;
   initialStyleNotes: string;
   initialSignature: string;
   initialSignatureIsHtml: boolean;
@@ -88,6 +90,8 @@ function SettingToggle({
 
 export function EmailSettingsCard({
   connectedEmail,
+  mailboxKind = 'personal',
+  returnPath = pathsConfig.app.personalEmailAssistant,
   initialStyleNotes,
   initialSignature,
   initialSignatureIsHtml,
@@ -129,7 +133,7 @@ export function EmailSettingsCard({
     initialAutoSaveGmailDrafts,
   ]);
 
-  const connectHref = `/api/google/connect?returnPath=${encodeURIComponent(pathsConfig.app.personalEmailAssistant)}`;
+  const connectHref = `/api/google/connect?mailbox=${mailboxKind}&returnPath=${encodeURIComponent(returnPath)}`;
 
   function saveSettings() {
     startTransition(async () => {
@@ -140,6 +144,7 @@ export function EmailSettingsCard({
         autoTriageEnabled,
         autoDraftEnabled,
         autoSaveGmailDrafts,
+        mailboxKind,
       });
 
       if (!result.success) {
@@ -155,7 +160,7 @@ export function EmailSettingsCard({
     setDisconnecting(true);
     startTransition(async () => {
       try {
-        const result = await disconnectGmailConnection();
+        const result = await disconnectGmailConnection({ mailboxKind });
 
         if (!result.success) {
           toast.error(result.error ?? 'Could not disconnect Gmail');

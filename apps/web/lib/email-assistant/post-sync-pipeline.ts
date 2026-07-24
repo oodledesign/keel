@@ -9,6 +9,7 @@ import { isFromOwner } from './address-utils';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
+import type { MailboxKind } from './mailbox-kind';
 import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
 import { buildThreadText } from './thread-text';
 
@@ -50,7 +51,15 @@ type AssistantSettings = {
 
 export async function runEmailAssistantPipeline(
   userId: string,
+  options?: {
+    mailboxKind?: MailboxKind;
+    preferredAccountId?: string | null;
+  },
 ): Promise<EmailAssistantPipelineResult> {
+  const mailboxKind = options?.mailboxKind ?? 'business';
+  const preferredAccountId = options?.preferredAccountId ?? null;
+  const skipAutoLink = mailboxKind === 'personal';
+
   const result: EmailAssistantPipelineResult = {
     classified: 0,
     linked: 0,
@@ -61,11 +70,17 @@ export async function runEmailAssistantPipeline(
   };
 
   const admin = getSupabaseServerAdminClient();
+  const owner = await resolveDraftOwnerContext(userId, mailboxKind);
+
+  if (!owner?.connectionId) {
+    result.errors.push('Could not resolve mailbox owner');
+    return result;
+  }
 
   const { data: settingsRow, error: settingsError } = await admin
     .from('email_assistant_settings')
     .select('auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts')
-    .eq('user_id', userId)
+    .eq('connection_id', owner.connectionId)
     .maybeSingle();
 
   if (settingsError) {
@@ -83,15 +98,11 @@ export async function runEmailAssistantPipeline(
     return result;
   }
 
-  const owner = await resolveDraftOwnerContext(userId);
-
-  if (!owner) {
-    result.errors.push('Could not resolve mailbox owner');
-    return result;
-  }
-
   try {
-    await reconcileRepliedNeedsReplyThreads({ userId });
+    await reconcileRepliedNeedsReplyThreads({
+      userId,
+      connectionId: owner.connectionId,
+    });
   } catch (error) {
     result.errors.push(
       error instanceof Error
@@ -106,6 +117,7 @@ export async function runEmailAssistantPipeline(
       'id, subject, assistant_category, assistant_processed_message_id, link_source',
     )
     .eq('user_id', userId)
+    .eq('connection_id', owner.connectionId)
     .order('assistant_category', { ascending: true, nullsFirst: true })
     .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(30);
@@ -197,13 +209,17 @@ export async function runEmailAssistantPipeline(
         result.skipped += 1;
       }
 
-      if (!thread.link_source || thread.link_source === 'auto') {
+      if (
+        !skipAutoLink &&
+        (!thread.link_source || thread.link_source === 'auto')
+      ) {
         try {
           const linked = await autoLinkEmailThread(
             admin,
             userId,
             thread.id,
             owner.email,
+            { preferredAccountId },
           );
 
           if (linked) {
@@ -278,13 +294,17 @@ export async function runEmailAssistantPipeline(
 
     result.classified += 1;
 
-    if (!thread.link_source || thread.link_source === 'auto') {
+    if (
+      !skipAutoLink &&
+      (!thread.link_source || thread.link_source === 'auto')
+    ) {
       try {
         const linked = await autoLinkEmailThread(
           admin,
           userId,
           thread.id,
           owner.email,
+          { preferredAccountId },
         );
 
         if (linked) {

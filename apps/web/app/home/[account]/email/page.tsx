@@ -1,28 +1,53 @@
 import { Suspense } from 'react';
 
+import { notFound } from 'next/navigation';
+
 import { PageBody } from '@kit/ui/page';
-
-import { withI18n } from '~/lib/i18n/with-i18n';
-import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { cn } from '@kit/ui/utils';
+
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import { EmailPageClient } from '~/home/(user)/email/_components/email-page-client';
+import { loadEmailPageData } from '~/home/(user)/email/_lib/server/email-page.loader';
 import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-assistant-access';
+import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { EmailPageClient } from './_components/email-page-client';
-import { loadEmailPageData } from './_lib/server/email-page.loader';
+import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 
-export const metadata = { title: 'Personal email' };
+export const metadata = { title: 'Emails' };
 
-async function EmailPageContent() {
+type PageProps = {
+  params: Promise<{ account: string }>;
+};
+
+async function BusinessEmailPageContent({
+  accountSlug,
+}: {
+  accountSlug: string;
+}) {
   await redirectIfEmailAssistantNotAllowed();
-  const initialData = await loadEmailPageData({ mailboxKind: 'personal' });
+
+  const workspace = await loadTeamWorkspace(accountSlug);
+
+  if (!workspace?.account) {
+    notFound();
+  }
+
+  const initialData = await loadEmailPageData({
+    mailboxKind: 'business',
+    preferredAccountId: workspace.account.id,
+    accountSlug,
+  });
+
   return <EmailPageClient initialData={initialData} />;
 }
 
-function EmailPage() {
+async function BusinessEmailPage({ params }: PageProps) {
+  const { account } = await params;
+
   return (
     <PageBody className="min-h-0 overflow-hidden bg-[var(--workspace-shell-canvas)]">
       <Suspense fallback={<EmailPageSkeleton />}>
-        <EmailPageContent />
+        <BusinessEmailPageContent accountSlug={account} />
       </Suspense>
     </PageBody>
   );
@@ -43,4 +68,4 @@ function EmailPageSkeleton() {
   );
 }
 
-export default withI18n(EmailPage);
+export default withI18n(BusinessEmailPage);

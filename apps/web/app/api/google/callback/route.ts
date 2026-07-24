@@ -118,6 +118,7 @@ export async function GET(request: NextRequest) {
         expiresAt: expiresAtFromToken(tokens.expires_in),
       },
       scopes,
+      payload.mailboxKind === 'personal' ? 'personal' : 'business',
     );
   } catch (error) {
     const message =

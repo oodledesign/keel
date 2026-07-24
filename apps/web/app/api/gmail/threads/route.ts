@@ -1,4 +1,5 @@
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { parseMailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { searchEmailThreadIds } from '~/lib/email-assistant/search-threads';
 import {
@@ -72,6 +73,23 @@ export async function GET(request: Request) {
   const cursor = url.searchParams.get('cursor');
   const filter = url.searchParams.get('filter');
   const searchQuery = url.searchParams.get('q')?.trim() ?? '';
+  const mailboxKind = parseMailboxKind(url.searchParams.get('mailbox'));
+
+  const { data: connection } = await auth.client
+    .from('google_connections')
+    .select('id')
+    .eq('user_id', auth.user.id)
+    .eq('mailbox_kind', mailboxKind)
+    .maybeSingle();
+
+  const connectionId = (connection as { id?: string } | null)?.id;
+
+  if (!connectionId) {
+    return jsonOk({
+      threads: [],
+      nextCursor: null,
+    });
+  }
 
   let matchingThreadIds: string[] | null = null;
 
@@ -104,6 +122,7 @@ export async function GET(request: Request) {
       `id, gmail_thread_id, subject, snippet, participants, label_ids, is_unread, last_message_at, updated_at, assistant_category, ${EMAIL_THREAD_LINK_SELECT}`,
     )
     .eq('user_id', auth.user.id)
+    .eq('connection_id', connectionId)
     .order('last_message_at', { ascending: false, nullsFirst: false })
     .limit(limit + 1);
 

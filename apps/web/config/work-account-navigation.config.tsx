@@ -371,7 +371,10 @@ function buildWorkNavItemsForKeys(
     if (item && key === 'activity' && emailAssistantAvailable) {
       items.push({
         label: 'Emails',
-        path: pathsConfig.app.personalEmailAssistant,
+        path: pathsConfig.app.accountEmailAssistant.replace(
+          '[account]',
+          account,
+        ),
         Icon: <Mail className={iconClasses} />,
         description: 'Gmail inbox, action items, and AI-assisted replies.',
       });

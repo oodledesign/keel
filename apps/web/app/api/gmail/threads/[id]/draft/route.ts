@@ -24,24 +24,12 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const [
     { data: thread, error: threadError },
-    { data: settings },
-    { data: connection },
     { data: account },
   ] = await Promise.all([
     auth.client
       .from('email_threads')
-      .select('id, user_id, subject')
+      .select('id, user_id, subject, connection_id')
       .eq('id', threadId)
-      .eq('user_id', auth.user.id)
-      .maybeSingle(),
-    auth.client
-      .from('email_assistant_settings')
-      .select('style_notes, signature, signature_is_html')
-      .eq('user_id', auth.user.id)
-      .maybeSingle(),
-    auth.client
-      .from('google_connections')
-      .select('google_email')
       .eq('user_id', auth.user.id)
       .maybeSingle(),
     auth.client
@@ -58,6 +46,36 @@ export async function POST(_request: Request, context: RouteContext) {
   if (!thread) {
     return jsonErr('NOT_FOUND', 'Thread not found', 404);
   }
+
+  const connectionId = (thread as { connection_id?: string | null })
+    .connection_id;
+
+  const [{ data: connection }, { data: settings }] = await Promise.all([
+    connectionId
+      ? auth.client
+          .from('google_connections')
+          .select('google_email')
+          .eq('id', connectionId)
+          .maybeSingle()
+      : auth.client
+          .from('google_connections')
+          .select('google_email')
+          .eq('user_id', auth.user.id)
+          .eq('mailbox_kind', 'business')
+          .maybeSingle(),
+    connectionId
+      ? auth.client
+          .from('email_assistant_settings')
+          .select('style_notes, signature, signature_is_html')
+          .eq('connection_id', connectionId)
+          .maybeSingle()
+      : auth.client
+          .from('email_assistant_settings')
+          .select('style_notes, signature, signature_is_html')
+          .eq('user_id', auth.user.id)
+          .limit(1)
+          .maybeSingle(),
+  ]);
 
   const ownerEmail =
     (

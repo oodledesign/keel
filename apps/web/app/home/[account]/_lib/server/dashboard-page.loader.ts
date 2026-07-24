@@ -157,9 +157,12 @@ async function loadDashboardPageDataImpl(
   };
 
   const user = workspace.user as {
+    id?: string;
     email?: string | null;
     user_metadata?: Record<string, unknown> | null;
   };
+
+  const userId = user.id;
 
   const toFirstName = (raw: string | null | undefined): string | null => {
     if (!raw) return null;
@@ -186,9 +189,26 @@ async function loadDashboardPageDataImpl(
   const accountId = account.id;
 
   try {
-    await refreshAndReconcileNeedsReplyThreads({ accountId });
+    if (userId) {
+      await refreshAndReconcileNeedsReplyThreads({
+        userId,
+        mailboxKind: 'business',
+      });
+    }
   } catch (error) {
     console.error('[dashboard] needs-reply reconcile', error);
+  }
+
+  let businessConnectionId: string | null = null;
+  if (userId) {
+    const { data: businessConnection } = await client
+      .from('google_connections')
+      .select('id')
+      .eq('user_id', userId)
+      .eq('mailbox_kind', 'business')
+      .maybeSingle();
+    businessConnectionId =
+      (businessConnection as { id?: string } | null)?.id ?? null;
   }
 
   const todayIso = new Date().toISOString().slice(0, 10);
@@ -295,18 +315,21 @@ async function loadDashboardPageDataImpl(
     // Task scope — many tasks are linked via client/project without account_id
     client.from('clients').select('id').eq('account_id', accountId),
     client.from('projects').select('id').eq('account_id', accountId),
-    client
-      .from('email_threads')
-      .select(
-        'id, subject, snippet, participants, last_message_at, client_id',
-        {
-          count: 'exact',
-        },
-      )
-      .eq('account_id', accountId)
-      .eq('assistant_category', 'needs_reply')
-      .order('last_message_at', { ascending: false, nullsFirst: false })
-      .limit(8),
+    businessConnectionId
+      ? client
+          .from('email_threads')
+          .select(
+            'id, subject, snippet, participants, last_message_at, client_id',
+            {
+              count: 'exact',
+            },
+          )
+          .eq('user_id', userId ?? '')
+          .eq('connection_id', businessConnectionId)
+          .eq('assistant_category', 'needs_reply')
+          .order('last_message_at', { ascending: false, nullsFirst: false })
+          .limit(8)
+      : Promise.resolve({ data: [], count: 0, error: null }),
   ]);
 
   const projectIdsForTasks = (projectIdsForTasksResult.data ?? []).map(

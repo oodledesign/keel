@@ -1,5 +1,6 @@
 import 'server-only';
 
+import type { MailboxKind } from '@kit/google-auth';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 type DynamicQuery = PromiseLike<{
@@ -8,6 +9,7 @@ type DynamicQuery = PromiseLike<{
 }> & {
   select: (columns: string) => DynamicQuery;
   eq: (column: string, value: string) => DynamicQuery;
+  in: (column: string, values: string[]) => DynamicQuery;
   maybeSingle: () => Promise<{
     data: unknown;
     error: { message: string } | null;
@@ -37,10 +39,36 @@ function adminTable(name: string) {
   ).from(name);
 }
 
-export async function loadAssistantSettings(userId: string) {
-  const { data, error } = await adminTable('email_assistant_settings')
-    .select('user_id, last_history_id, last_synced_at')
+export async function resolveConnectionId(
+  userId: string,
+  mailboxKind: MailboxKind = 'business',
+): Promise<string | null> {
+  const { data, error } = await adminTable('google_connections')
+    .select('id')
     .eq('user_id', userId)
+    .eq('mailbox_kind', mailboxKind)
+    .maybeSingle();
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return (data as { id?: string } | null)?.id ?? null;
+}
+
+export async function loadAssistantSettings(
+  userId: string,
+  mailboxKind: MailboxKind = 'business',
+) {
+  const connectionId = await resolveConnectionId(userId, mailboxKind);
+
+  if (!connectionId) {
+    return null;
+  }
+
+  const { data, error } = await adminTable('email_assistant_settings')
+    .select('user_id, connection_id, last_history_id, last_synced_at')
+    .eq('connection_id', connectionId)
     .maybeSingle();
 
   if (error) {
@@ -49,6 +77,7 @@ export async function loadAssistantSettings(userId: string) {
 
   return data as {
     user_id: string;
+    connection_id: string;
     last_history_id: string | null;
     last_synced_at: string | null;
   } | null;
@@ -57,19 +86,27 @@ export async function loadAssistantSettings(userId: string) {
 export async function saveAssistantCursor(
   userId: string,
   historyId: string | null,
+  mailboxKind: MailboxKind = 'business',
 ) {
+  const connectionId = await resolveConnectionId(userId, mailboxKind);
+
+  if (!connectionId) {
+    throw new Error('Google account is not connected');
+  }
+
   const now = new Date().toISOString();
   const { error } = await adminTable('email_assistant_settings')
     .upsert(
       {
         user_id: userId,
+        connection_id: connectionId,
         last_history_id: historyId,
         last_synced_at: now,
         updated_at: now,
       },
-      { onConflict: 'user_id' },
+      { onConflict: 'connection_id' },
     )
-    .select('user_id')
+    .select('connection_id')
     .maybeSingle();
 
   if (error) {
@@ -77,20 +114,31 @@ export async function saveAssistantCursor(
   }
 }
 
-export async function touchAssistantSyncTime(userId: string) {
-  const settings = await loadAssistantSettings(userId);
+export async function touchAssistantSyncTime(
+  userId: string,
+  mailboxKind: MailboxKind = 'business',
+) {
+  const settings = await loadAssistantSettings(userId, mailboxKind);
+  const connectionId =
+    settings?.connection_id ?? (await resolveConnectionId(userId, mailboxKind));
+
+  if (!connectionId) {
+    throw new Error('Google account is not connected');
+  }
+
   const now = new Date().toISOString();
   const { error } = await adminTable('email_assistant_settings')
     .upsert(
       {
         user_id: userId,
+        connection_id: connectionId,
         last_history_id: settings?.last_history_id ?? null,
         last_synced_at: now,
         updated_at: now,
       },
-      { onConflict: 'user_id' },
+      { onConflict: 'connection_id' },
     )
-    .select('user_id')
+    .select('connection_id')
     .maybeSingle();
 
   if (error) {
@@ -101,6 +149,7 @@ export async function touchAssistantSyncTime(userId: string) {
 export async function listSyncedGmailMessageIds(
   userId: string,
   gmailMessageIds: string[],
+  connectionId?: string | null,
 ): Promise<Set<string>> {
   const synced = new Set<string>();
 
@@ -108,23 +157,29 @@ export async function listSyncedGmailMessageIds(
     return synced;
   }
 
-  const admin = getSupabaseServerAdminClient();
   const chunkSize = 200;
 
   for (let offset = 0; offset < gmailMessageIds.length; offset += chunkSize) {
     const chunk = gmailMessageIds.slice(offset, offset + chunkSize);
-    const { data, error } = await admin
-      .from('email_messages')
+    let query = adminTable('email_messages')
       .select('gmail_message_id')
       .eq('user_id', userId)
       .in('gmail_message_id', chunk);
+
+    if (connectionId) {
+      query = query.eq('connection_id', connectionId);
+    }
+
+    const { data, error } = await query;
 
     if (error) {
       throw new Error(error.message);
     }
 
-    for (const row of data ?? []) {
-      const id = (row as { gmail_message_id?: string | null }).gmail_message_id;
+    for (const row of (data as Array<{
+      gmail_message_id?: string | null;
+    }> | null) ?? []) {
+      const id = row.gmail_message_id;
       if (id) {
         synced.add(id);
       }
@@ -136,6 +191,7 @@ export async function listSyncedGmailMessageIds(
 
 export async function upsertEmailThread(input: {
   userId: string;
+  connectionId: string;
   gmailThreadId: string;
   subject: string | null;
   participants: Array<{ name: string | null; email: string }>;
@@ -145,12 +201,12 @@ export async function upsertEmailThread(input: {
   lastMessageAt: string | null;
 }): Promise<string> {
   const now = new Date().toISOString();
-  const admin = getSupabaseServerAdminClient();
 
-  const { data: existing, error: existingError } = await admin
-    .from('email_threads')
+  const { data: existing, error: existingError } = await adminTable(
+    'email_threads',
+  )
     .select('id, last_message_at')
-    .eq('user_id', input.userId)
+    .eq('connection_id', input.connectionId)
     .eq('gmail_thread_id', input.gmailThreadId)
     .maybeSingle();
 
@@ -179,6 +235,7 @@ export async function upsertEmailThread(input: {
     .upsert(
       {
         user_id: input.userId,
+        connection_id: input.connectionId,
         gmail_thread_id: input.gmailThreadId,
         subject: input.subject,
         participants: input.participants,
@@ -188,7 +245,7 @@ export async function upsertEmailThread(input: {
         last_message_at: lastMessageAt,
         updated_at: now,
       },
-      { onConflict: 'user_id,gmail_thread_id' },
+      { onConflict: 'connection_id,gmail_thread_id' },
     )
     .select('id')
     .single();
@@ -202,6 +259,7 @@ export async function upsertEmailThread(input: {
 
 export async function upsertEmailMessage(input: {
   userId: string;
+  connectionId: string;
   threadId: string;
   gmailMessageId: string;
   fromAddress: string | null;
@@ -217,6 +275,7 @@ export async function upsertEmailMessage(input: {
     .upsert(
       {
         user_id: input.userId,
+        connection_id: input.connectionId,
         thread_id: input.threadId,
         gmail_message_id: input.gmailMessageId,
         from_address: input.fromAddress,
@@ -228,7 +287,7 @@ export async function upsertEmailMessage(input: {
         body_html: input.bodyHtml,
         internal_date: input.internalDate,
       },
-      { onConflict: 'user_id,gmail_message_id' },
+      { onConflict: 'connection_id,gmail_message_id' },
     )
     .select('id')
     .maybeSingle();
@@ -241,15 +300,20 @@ export async function upsertEmailMessage(input: {
 export async function deleteEmailMessage(
   userId: string,
   gmailMessageId: string,
+  connectionId?: string | null,
 ) {
-  const query = adminTable('email_messages')
+  let query = adminTable('email_messages')
     .delete()
     .eq('user_id', userId)
-    .eq('gmail_message_id', gmailMessageId) as unknown as Promise<{
-    error: { message: string } | null;
-  }>;
+    .eq('gmail_message_id', gmailMessageId);
 
-  const { error } = await query;
+  if (connectionId) {
+    query = query.eq('connection_id', connectionId);
+  }
+
+  const { error } = await (query as unknown as Promise<{
+    error: { message: string } | null;
+  }>);
 
   if (error) {
     throw new Error(error.message);

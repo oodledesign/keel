@@ -139,13 +139,36 @@ export async function saveEmailAssistantSettings(input: {
   autoTriageEnabled: boolean;
   autoDraftEnabled: boolean;
   autoSaveGmailDrafts: boolean;
+  mailboxKind?: 'business' | 'personal';
 }) {
   const client = getSupabaseServerClient();
   const user = await requireEmailAssistantAccess();
+  const mailboxKind = input.mailboxKind ?? 'personal';
+
+  const { data: connection, error: connectionError } = await client
+    .from('google_connections')
+    .select('id')
+    .eq('user_id', user.id)
+    .eq('mailbox_kind', mailboxKind)
+    .maybeSingle();
+
+  if (connectionError) {
+    return { success: false as const, error: connectionError.message };
+  }
+
+  const connectionId = (connection as { id?: string } | null)?.id;
+
+  if (!connectionId) {
+    return {
+      success: false as const,
+      error: 'Connect Gmail before saving settings',
+    };
+  }
 
   const { error } = await client.from('email_assistant_settings').upsert(
     {
       user_id: user.id,
+      connection_id: connectionId,
       style_notes: input.styleNotes.trim() || null,
       signature: input.signature.trim() || null,
       signature_is_html: input.signatureIsHtml,
@@ -154,7 +177,7 @@ export async function saveEmailAssistantSettings(input: {
       auto_save_gmail_drafts: input.autoSaveGmailDrafts,
       updated_at: new Date().toISOString(),
     },
-    { onConflict: 'user_id' },
+    { onConflict: 'connection_id' },
   );
 
   if (error) {
@@ -165,14 +188,18 @@ export async function saveEmailAssistantSettings(input: {
   return { success: true as const, error: null };
 }
 
-export async function disconnectGmailConnection() {
+export async function disconnectGmailConnection(input?: {
+  mailboxKind?: 'business' | 'personal';
+}) {
   const client = getSupabaseServerClient();
   const user = await requireEmailAssistantAccess();
+  const mailboxKind = input?.mailboxKind ?? 'personal';
 
   const { error } = await client
     .from('google_connections')
     .delete()
-    .eq('user_id', user.id);
+    .eq('user_id', user.id)
+    .eq('mailbox_kind', mailboxKind);
 
   if (error) {
     return { success: false as const, error: error.message };

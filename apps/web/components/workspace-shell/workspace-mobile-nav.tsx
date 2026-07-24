@@ -28,11 +28,17 @@ export type MobileNavLink = {
   Icon: React.ReactNode;
 };
 
+export type MobileNavSection = {
+  sectionLabel: string | null;
+  links: MobileNavLink[];
+};
+
 type WorkspaceMobileMenuProps = {
   account: string;
   userId: string;
   accounts: WorkspaceSwitcherAccount[];
-  navLinks: MobileNavLink[];
+  navLinks?: MobileNavLink[];
+  navSections?: MobileNavSection[];
   open: boolean;
   onOpenChange: (open: boolean) => void;
   variant?: 'personal' | 'team';
@@ -44,6 +50,7 @@ export function WorkspaceMobileMenu({
   userId,
   accounts,
   navLinks,
+  navSections,
   open,
   onOpenChange,
   variant = 'team',
@@ -54,6 +61,10 @@ export function WorkspaceMobileMenu({
   const [supportOpen, setSupportOpen] = useState(false);
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
+
+  const sections: MobileNavSection[] =
+    navSections ??
+    (navLinks?.length ? [{ sectionLabel: null, links: navLinks }] : []);
 
   useEffect(() => {
     if (open) {
@@ -72,6 +83,7 @@ export function WorkspaceMobileMenu({
   if (!visible && !open && !supportOpen) return null;
 
   const showMenu = visible || open;
+  let linkIndex = 0;
 
   return (
     <>
@@ -122,44 +134,63 @@ export function WorkspaceMobileMenu({
             </div>
 
             <nav className="flex-1 overflow-y-auto px-3 py-4 pb-28">
-              <ul className="flex flex-col gap-1">
-                {navLinks.map((item, index) => {
-                  const active =
-                    pathname === item.path ||
-                    (item.path !== '/' && pathname.startsWith(`${item.path}/`));
+              <div className="flex flex-col gap-4">
+                {sections.map((section, sectionIndex) => (
+                  <div key={`${section.sectionLabel ?? 'nav'}-${sectionIndex}`}>
+                    {section.sectionLabel ? (
+                      <p className="px-4 pt-1 pb-1 text-[11px] font-semibold tracking-wider text-[var(--workspace-shell-nav-text)] uppercase opacity-55 first:pt-0">
+                        <Trans
+                          i18nKey={section.sectionLabel}
+                          defaults={section.sectionLabel}
+                        />
+                      </p>
+                    ) : null}
+                    <ul className="flex flex-col gap-1">
+                      {section.links.map((item) => {
+                        const index = linkIndex++;
+                        const active =
+                          pathname === item.path ||
+                          (item.path !== '/' &&
+                            pathname.startsWith(`${item.path}/`));
 
-                  return (
-                    <li
-                      key={item.path}
-                      className={cn(
-                        'transition-all duration-200',
-                        open
-                          ? 'translate-x-0 opacity-100'
-                          : '-translate-x-2 opacity-0',
-                      )}
-                      style={{
-                        transitionDelay: open ? `${index * 25}ms` : '0ms',
-                      }}
-                    >
-                      <HapticLink
-                        href={item.path}
-                        onClick={close}
-                        className={cn(
-                          'flex min-h-[3.25rem] items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium transition-colors',
-                          active
-                            ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                            : 'text-[var(--workspace-shell-text)] hover:bg-white/6',
-                        )}
-                      >
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
-                          {item.Icon}
-                        </span>
-                        <Trans i18nKey={item.label} defaults={item.label} />
-                      </HapticLink>
-                    </li>
-                  );
-                })}
-              </ul>
+                        return (
+                          <li
+                            key={item.path}
+                            className={cn(
+                              'transition-all duration-200',
+                              open
+                                ? 'translate-x-0 opacity-100'
+                                : '-translate-x-2 opacity-0',
+                            )}
+                            style={{
+                              transitionDelay: open ? `${index * 25}ms` : '0ms',
+                            }}
+                          >
+                            <HapticLink
+                              href={item.path}
+                              onClick={close}
+                              className={cn(
+                                'flex min-h-[3.25rem] items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium transition-colors',
+                                active
+                                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                                  : 'text-[var(--workspace-shell-text)] hover:bg-white/6',
+                              )}
+                            >
+                              <span className="flex h-6 w-6 shrink-0 items-center justify-center [&>svg]:h-5 [&>svg]:w-5">
+                                {item.Icon}
+                              </span>
+                              <Trans
+                                i18nKey={item.label}
+                                defaults={item.label}
+                              />
+                            </HapticLink>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </div>
+                ))}
+              </div>
             </nav>
 
             <div className="border-t border-[color:var(--workspace-shell-border)] px-3 py-4">

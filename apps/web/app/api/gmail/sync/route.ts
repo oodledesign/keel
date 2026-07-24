@@ -7,6 +7,10 @@ import {
   isCronDisabled,
 } from '~/lib/cron/cron-guards';
 import { authorizeCron } from '~/lib/email-assistant/cron-auth';
+import {
+  type MailboxKind,
+  parseMailboxKind,
+} from '~/lib/email-assistant/mailbox-kind';
 import { runEmailAssistantPipeline } from '~/lib/email-assistant/post-sync-pipeline';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
@@ -19,6 +23,8 @@ const DEFAULT_GMAIL_SYNC_BATCH_SIZE = 8;
 
 type SyncResultRow = {
   userId: string;
+  connectionId?: string;
+  mailboxKind?: MailboxKind;
   ok: boolean;
   mode?: string;
   messagesProcessed?: number;
@@ -26,12 +32,16 @@ type SyncResultRow = {
   error?: string;
 };
 
-async function assertGoogleConnection(userId: string) {
+async function assertGoogleConnection(
+  userId: string,
+  mailboxKind: MailboxKind,
+) {
   const admin = getSupabaseServerAdminClient();
   const { data, error } = await admin
     .from('google_connections')
-    .select('user_id')
+    .select('id')
     .eq('user_id', userId)
+    .eq('mailbox_kind', mailboxKind)
     .maybeSingle();
 
   if (error) {
@@ -45,9 +55,10 @@ async function assertGoogleConnection(userId: string) {
 
 async function syncUserMailbox(
   userId: string,
-  options?: { assistant?: boolean },
+  mailboxKind: MailboxKind,
+  options?: { assistant?: boolean; preferredAccountId?: string | null },
 ) {
-  const syncResult = await syncMailbox(userId);
+  const syncResult = await syncMailbox(userId, mailboxKind);
   const runAssistant = options?.assistant !== false;
 
   if (!runAssistant) {
@@ -58,7 +69,10 @@ async function syncUserMailbox(
     null;
 
   try {
-    assistant = await runEmailAssistantPipeline(userId);
+    assistant = await runEmailAssistantPipeline(userId, {
+      mailboxKind,
+      preferredAccountId: options?.preferredAccountId,
+    });
   } catch (pipelineError) {
     assistant = {
       classified: 0,
@@ -87,7 +101,11 @@ async function syncAllConnectedUsers() {
     name: 'claim_gmail_sync_batch',
     args: { p_batch_size: number },
   ) => Promise<{
-    data: Array<{ user_id: string }> | null;
+    data: Array<{
+      connection_id: string;
+      user_id: string;
+      mailbox_kind: string;
+    }> | null;
     error: { message: string } | null;
   }>;
   const { data, error } = await claimBatch('claim_gmail_sync_batch', {
@@ -101,17 +119,19 @@ async function syncAllConnectedUsers() {
   const results: SyncResultRow[] = [];
 
   for (const row of data ?? []) {
-    const userId = (row as { user_id: string }).user_id;
+    const userId = row.user_id;
+    const connectionId = row.connection_id;
+    const mailboxKind = parseMailboxKind(row.mailbox_kind);
 
     try {
-      const syncResult = await syncMailbox(userId);
+      const syncResult = await syncMailbox(userId, mailboxKind);
       let assistant: Awaited<
         ReturnType<typeof runEmailAssistantPipeline>
       > | null = null;
 
       if (syncResult.messagesProcessed > 0) {
         try {
-          assistant = await runEmailAssistantPipeline(userId);
+          assistant = await runEmailAssistantPipeline(userId, { mailboxKind });
         } catch (pipelineError) {
           assistant = {
             classified: 0,
@@ -130,6 +150,8 @@ async function syncAllConnectedUsers() {
 
       results.push({
         userId,
+        connectionId,
+        mailboxKind,
         ok: true,
         mode: syncResult.mode,
         messagesProcessed: syncResult.messagesProcessed,
@@ -138,6 +160,8 @@ async function syncAllConnectedUsers() {
     } catch (syncError) {
       results.push({
         userId,
+        connectionId,
+        mailboxKind,
         ok: false,
         error: syncError instanceof Error ? syncError.message : 'Sync failed',
       });
@@ -177,12 +201,18 @@ export async function POST(request: Request) {
     return auth.response;
   }
 
-  const mode = new URL(request.url).searchParams.get('mode');
+  const url = new URL(request.url);
+  const mode = url.searchParams.get('mode');
   const assistant = mode !== 'mail';
+  const mailboxKind = parseMailboxKind(url.searchParams.get('mailbox'));
+  const preferredAccountId = url.searchParams.get('preferredAccountId');
 
   try {
-    await assertGoogleConnection(auth.user.id);
-    const result = await syncUserMailbox(auth.user.id, { assistant });
+    await assertGoogleConnection(auth.user.id, mailboxKind);
+    const result = await syncUserMailbox(auth.user.id, mailboxKind, {
+      assistant,
+      preferredAccountId,
+    });
     return jsonOk(result);
   } catch (error) {
     return jsonErr(

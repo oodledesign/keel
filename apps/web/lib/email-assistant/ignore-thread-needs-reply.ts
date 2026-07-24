@@ -4,15 +4,19 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
+/**
+ * Marks a needs_reply thread as no_reply. Ownership is required; workspace
+ * membership is validated by the caller when accountId is supplied.
+ */
 export async function ignoreEmailThreadNeedsReply(
   client: SupabaseClient,
   userId: string,
   threadId: string,
-  accountId: string,
+  _accountId?: string,
 ) {
   const { data: existing, error: loadError } = await client
     .from('email_threads')
-    .select('id, account_id, assistant_category')
+    .select('id, assistant_category')
     .eq('id', threadId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -23,10 +27,6 @@ export async function ignoreEmailThreadNeedsReply(
 
   if (!existing) {
     throw new Error('Thread not found');
-  }
-
-  if (existing.account_id !== accountId) {
-    throw new Error('Thread is not linked to this workspace');
   }
 
   if (existing.assistant_category !== 'needs_reply') {
@@ -41,8 +41,7 @@ export async function ignoreEmailThreadNeedsReply(
       updated_at: new Date().toISOString(),
     })
     .eq('id', threadId)
-    .eq('user_id', userId)
-    .eq('account_id', accountId);
+    .eq('user_id', userId);
 
   if (error) {
     throw new Error(error.message);

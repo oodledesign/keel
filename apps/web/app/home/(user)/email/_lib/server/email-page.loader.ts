@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadPersonalSidebarWorkspaces } from '~/home/(user)/_lib/server/personal-sidebar-workspaces.loader';
+import type { MailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import { refreshAndReconcileNeedsReplyThreads } from '~/lib/email-assistant/refresh-needs-reply-threads';
 import {
   EMAIL_THREAD_LINK_SELECT,
@@ -79,46 +80,65 @@ function mapThreadRow(row: Record<string, unknown>): EmailThreadSummary {
   };
 }
 
+export type LoadEmailPageOptions = {
+  mailboxKind?: MailboxKind;
+  preferredAccountId?: string | null;
+  accountSlug?: string | null;
+};
+
 export const loadEmailPageData = cache(
-  async (): Promise<EmailPageInitialData> => {
+  async (options?: LoadEmailPageOptions): Promise<EmailPageInitialData> => {
+    const mailboxKind = options?.mailboxKind ?? 'personal';
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
     try {
-      await refreshAndReconcileNeedsReplyThreads({ userId: user.id });
+      await refreshAndReconcileNeedsReplyThreads({
+        userId: user.id,
+        mailboxKind,
+      });
     } catch (error) {
       console.error('[email] needs-reply reconcile', error);
     }
 
-    const [connectionResult, settingsResult, threadsResult, workspaces] =
-      await Promise.all([
-        client
-          .from('google_connections')
-          .select('google_email, connected_at')
-          .eq('user_id', user.id)
-          .maybeSingle(),
-        client
-          .from('email_assistant_settings')
-          .select(
-            'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts',
-          )
-          .eq('user_id', user.id)
-          .maybeSingle(),
-        client
-          .from('email_threads')
-          .select(
-            `id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category, ${EMAIL_THREAD_LINK_SELECT}`,
-          )
-          .eq('user_id', user.id)
-          .order('last_message_at', { ascending: false, nullsFirst: false })
-          .limit(26),
-        loadPersonalSidebarWorkspaces(),
-      ]);
+    const { data: connectionRow } = await client
+      .from('google_connections')
+      .select('id, google_email, connected_at')
+      .eq('user_id', user.id)
+      .eq('mailbox_kind', mailboxKind)
+      .maybeSingle();
 
-    const connectionRow = connectionResult.data as {
+    const connection = connectionRow as {
+      id?: string;
       google_email?: string;
       connected_at?: string;
     } | null;
+
+    const connectionId = connection?.id ?? null;
+
+    const [settingsResult, threadsResult, workspaces] = await Promise.all([
+      connectionId
+        ? client
+            .from('email_assistant_settings')
+            .select(
+              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts',
+            )
+            .eq('connection_id', connectionId)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      connectionId
+        ? client
+            .from('email_threads')
+            .select(
+              `id, gmail_thread_id, subject, snippet, participants, is_unread, last_message_at, assistant_category, ${EMAIL_THREAD_LINK_SELECT}`,
+            )
+            .eq('user_id', user.id)
+            .eq('connection_id', connectionId)
+            .order('last_message_at', { ascending: false, nullsFirst: false })
+            .limit(26)
+        : Promise.resolve({ data: [] }),
+      loadPersonalSidebarWorkspaces(),
+    ]);
 
     const settingsRow = settingsResult.data as {
       style_notes?: string | null;
@@ -135,10 +155,13 @@ export const loadEmailPageData = cache(
     const pageRows = hasMoreInitial ? threadRows.slice(0, 25) : threadRows;
 
     return {
-      connection: connectionRow?.google_email
+      mailboxKind,
+      preferredAccountId: options?.preferredAccountId ?? null,
+      accountSlug: options?.accountSlug ?? null,
+      connection: connection?.google_email
         ? {
-            googleEmail: connectionRow.google_email,
-            connectedAt: connectionRow.connected_at ?? new Date().toISOString(),
+            googleEmail: connection.google_email,
+            connectedAt: connection.connected_at ?? new Date().toISOString(),
           }
         : null,
       settings: {

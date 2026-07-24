@@ -1,10 +1,13 @@
 import 'server-only';
 
+import type { MailboxKind } from '@kit/google-auth';
+
 import { GmailApiError, gmailFetch, gmailFetchPaginated } from './client';
 import {
   deleteEmailMessage,
   listSyncedGmailMessageIds,
   loadAssistantSettings,
+  resolveConnectionId,
   saveAssistantCursor,
   touchAssistantSyncTime,
   upsertEmailMessage,
@@ -20,28 +23,50 @@ const BACKFILL_MAX_MESSAGES_PER_RUN = 40;
 type GmailListMessage = { id?: string | null; threadId?: string | null };
 type GmailProfile = { historyId?: string | null; emailAddress?: string | null };
 
+type SyncContext = {
+  userId: string;
+  connectionId: string;
+  mailboxKind: MailboxKind;
+};
+
 function isUnread(labelIds: string[] | null | undefined) {
   return (labelIds ?? []).includes('UNREAD');
 }
 
-async function fetchMessage(
+async function requireSyncContext(
   userId: string,
+  mailboxKind: MailboxKind,
+): Promise<SyncContext> {
+  const connectionId = await resolveConnectionId(userId, mailboxKind);
+
+  if (!connectionId) {
+    throw new Error('Google account is not connected');
+  }
+
+  return { userId, connectionId, mailboxKind };
+}
+
+async function fetchMessage(
+  ctx: SyncContext,
   messageId: string,
 ): Promise<GmailMessage> {
   return gmailFetch<GmailMessage>(
-    userId,
+    ctx.userId,
     `/messages/${encodeURIComponent(messageId)}?format=full`,
+    undefined,
+    ctx.mailboxKind,
   );
 }
 
-async function persistMessage(userId: string, message: GmailMessage) {
+async function persistMessage(ctx: SyncContext, message: GmailMessage) {
   if (!message.id || !message.threadId) {
     return;
   }
 
   const parsed = parseMessage(message);
   const threadId = await upsertEmailThread({
-    userId,
+    userId: ctx.userId,
+    connectionId: ctx.connectionId,
     gmailThreadId: message.threadId,
     subject: parsed.subject,
     participants: participantsFromMessage(message),
@@ -52,7 +77,8 @@ async function persistMessage(userId: string, message: GmailMessage) {
   });
 
   await upsertEmailMessage({
-    userId,
+    userId: ctx.userId,
+    connectionId: ctx.connectionId,
     threadId,
     gmailMessageId: message.id,
     fromAddress: parsed.from,
@@ -66,13 +92,14 @@ async function persistMessage(userId: string, message: GmailMessage) {
   });
 }
 
-async function listBackfillMessageIds(userId: string): Promise<string[]> {
+async function listBackfillMessageIds(ctx: SyncContext): Promise<string[]> {
   const listed = await gmailFetchPaginated<GmailListMessage>(
-    userId,
+    ctx.userId,
     '/messages',
     { q: BACKFILL_QUERY, maxResults: '100' },
     (page) => (page.messages as GmailListMessage[] | undefined) ?? [],
     (page) => page.nextPageToken as string | undefined,
+    ctx.mailboxKind,
   );
 
   return listed
@@ -80,21 +107,34 @@ async function listBackfillMessageIds(userId: string): Promise<string[]> {
     .filter((id): id is string => Boolean(id));
 }
 
-async function fetchProfileHistoryId(userId: string): Promise<string | null> {
-  const profile = await gmailFetch<GmailProfile>(userId, '/profile');
+async function fetchProfileHistoryId(ctx: SyncContext): Promise<string | null> {
+  const profile = await gmailFetch<GmailProfile>(
+    ctx.userId,
+    '/profile',
+    undefined,
+    ctx.mailboxKind,
+  );
   return profile.historyId ?? null;
 }
 
-export async function backfill(userId: string): Promise<GmailSyncResult> {
-  const messageIds = await listBackfillMessageIds(userId);
-  const syncedIds = await listSyncedGmailMessageIds(userId, messageIds);
+export async function backfill(
+  userId: string,
+  mailboxKind: MailboxKind = 'business',
+): Promise<GmailSyncResult> {
+  const ctx = await requireSyncContext(userId, mailboxKind);
+  const messageIds = await listBackfillMessageIds(ctx);
+  const syncedIds = await listSyncedGmailMessageIds(
+    userId,
+    messageIds,
+    ctx.connectionId,
+  );
   const pending = messageIds.filter((id) => !syncedIds.has(id));
   const batch = pending.slice(0, BACKFILL_MAX_MESSAGES_PER_RUN);
   let processed = 0;
 
   for (const messageId of batch) {
-    const message = await fetchMessage(userId, messageId);
-    await persistMessage(userId, message);
+    const message = await fetchMessage(ctx, messageId);
+    await persistMessage(ctx, message);
     processed += 1;
   }
 
@@ -102,8 +142,8 @@ export async function backfill(userId: string): Promise<GmailSyncResult> {
   const backfillComplete = remainingEstimate === 0;
 
   if (backfillComplete) {
-    const historyId = await fetchProfileHistoryId(userId);
-    await saveAssistantCursor(userId, historyId);
+    const historyId = await fetchProfileHistoryId(ctx);
+    await saveAssistantCursor(userId, historyId, mailboxKind);
 
     return {
       mode: 'backfill',
@@ -114,7 +154,7 @@ export async function backfill(userId: string): Promise<GmailSyncResult> {
     };
   }
 
-  await touchAssistantSyncTime(userId);
+  await touchAssistantSyncTime(userId, mailboxKind);
 
   return {
     mode: 'backfill',
@@ -165,12 +205,15 @@ function collectHistoryMessageIds(
 
 export async function incrementalSync(
   userId: string,
+  mailboxKind: MailboxKind = 'business',
 ): Promise<GmailSyncResult> {
-  const settings = await loadAssistantSettings(userId);
+  const settings = await loadAssistantSettings(userId, mailboxKind);
 
   if (!settings?.last_history_id) {
-    return backfill(userId);
+    return backfill(userId, mailboxKind);
   }
+
+  const ctx = await requireSyncContext(userId, mailboxKind);
 
   try {
     let processed = 0;
@@ -190,19 +233,23 @@ export async function incrementalSync(
         history?: Array<Record<string, unknown>>;
         historyId?: string | null;
         nextPageToken?: string | null;
-      }>(userId, `/history?${search.toString()}`);
+      }>(ctx.userId, `/history?${search.toString()}`, undefined, mailboxKind);
 
       const messageIds = collectHistoryMessageIds(page.history);
 
       for (const token of messageIds) {
         if (token.startsWith('__delete__:')) {
-          await deleteEmailMessage(userId, token.replace('__delete__:', ''));
+          await deleteEmailMessage(
+            userId,
+            token.replace('__delete__:', ''),
+            ctx.connectionId,
+          );
           processed += 1;
           continue;
         }
 
-        const message = await fetchMessage(userId, token);
-        await persistMessage(userId, message);
+        const message = await fetchMessage(ctx, token);
+        await persistMessage(ctx, message);
         processed += 1;
       }
 
@@ -213,7 +260,7 @@ export async function incrementalSync(
       pageToken = page.nextPageToken ?? undefined;
     } while (pageToken);
 
-    await saveAssistantCursor(userId, latestHistoryId);
+    await saveAssistantCursor(userId, latestHistoryId, mailboxKind);
 
     return {
       mode: 'incremental',
@@ -222,21 +269,24 @@ export async function incrementalSync(
     };
   } catch (error) {
     if (error instanceof GmailApiError && error.status === 404) {
-      return backfill(userId);
+      return backfill(userId, mailboxKind);
     }
 
     throw error;
   }
 }
 
-export async function syncMailbox(userId: string): Promise<GmailSyncResult> {
-  const settings = await loadAssistantSettings(userId);
+export async function syncMailbox(
+  userId: string,
+  mailboxKind: MailboxKind = 'business',
+): Promise<GmailSyncResult> {
+  const settings = await loadAssistantSettings(userId, mailboxKind);
 
   if (!settings?.last_history_id) {
-    return backfill(userId);
+    return backfill(userId, mailboxKind);
   }
 
-  return incrementalSync(userId);
+  return incrementalSync(userId, mailboxKind);
 }
 
 type GmailThreadResponse = {
@@ -253,8 +303,13 @@ type GmailThreadResponse = {
 export async function syncGmailThread(
   userId: string,
   gmailThreadId: string,
-  options?: { format?: 'full' | 'metadata' },
+  options?: {
+    format?: 'full' | 'metadata';
+    mailboxKind?: MailboxKind;
+  },
 ): Promise<{ messagesProcessed: number; latestIsSent: boolean }> {
+  const mailboxKind = options?.mailboxKind ?? 'business';
+  const ctx = await requireSyncContext(userId, mailboxKind);
   const format = options?.format ?? 'full';
   const search = new URLSearchParams({ format });
 
@@ -265,8 +320,10 @@ export async function syncGmailThread(
   }
 
   const thread = await gmailFetch<GmailThreadResponse>(
-    userId,
+    ctx.userId,
     `/threads/${encodeURIComponent(gmailThreadId)}?${search.toString()}`,
+    undefined,
+    mailboxKind,
   );
 
   const messages = [...(thread.messages ?? [])].sort((a, b) => {
@@ -277,7 +334,7 @@ export async function syncGmailThread(
 
   let processed = 0;
   for (const message of messages) {
-    await persistMessage(userId, message);
+    await persistMessage(ctx, message);
     processed += 1;
   }
 

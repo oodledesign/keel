@@ -9,6 +9,7 @@ import {
   EMAIL_ASSISTANT_DEFAULT_RETURN_PATH,
   GMAIL_OAUTH_SCOPES,
 } from '~/lib/email-assistant/constants';
+import { parseMailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import { signGoogleOAuthState } from '~/lib/email-assistant/oauth-state';
 
 export const dynamic = 'force-dynamic';
@@ -40,11 +41,15 @@ export async function GET(request: NextRequest) {
   const returnPath =
     request.nextUrl.searchParams.get('returnPath') ??
     EMAIL_ASSISTANT_DEFAULT_RETURN_PATH;
+  const mailboxKind = parseMailboxKind(
+    request.nextUrl.searchParams.get('mailbox'),
+  );
 
   try {
     const state = signGoogleOAuthState({
       userId: user.id,
       returnPath,
+      mailboxKind,
       exp: Date.now() + 10 * 60_000,
     });
 

@@ -44,7 +44,7 @@ export function DashboardNeedsReplyCard({
     setItems(threads);
   }, [threads]);
 
-  const emailHref = `${pathsConfig.app.personalEmailAssistant}?filter=needs_reply`;
+  const emailHref = `${pathsConfig.app.accountEmailAssistant.replace('[account]', accountSlug)}?filter=needs_reply`;
   const displayCount = Math.max(
     0,
     totalCount - Math.max(0, threads.length - items.length),
@@ -104,12 +104,12 @@ export function DashboardNeedsReplyCard({
       {items.length === 0 ? (
         <div className="flex items-center gap-3 px-4 py-5 text-sm text-[var(--workspace-shell-text-muted)]">
           <Mail className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
-          No linked emails need a reply right now.
+          No emails need a reply right now.
         </div>
       ) : (
         <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
           {items.map((thread) => {
-            const href = `${pathsConfig.app.personalEmailAssistant}?thread=${thread.id}`;
+            const href = `${pathsConfig.app.accountEmailAssistant.replace('[account]', accountSlug)}?thread=${thread.id}`;
             const ignoring = isPending && pendingIds.has(thread.id);
 
             return (

@@ -71,6 +71,9 @@ export type EmailWorkspaceOption = {
 };
 
 export type EmailPageInitialData = {
+  mailboxKind: 'business' | 'personal';
+  preferredAccountId: string | null;
+  accountSlug: string | null;
   connection: { googleEmail: string; connectedAt: string } | null;
   settings: {
     styleNotes: string;

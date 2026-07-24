@@ -6,6 +6,13 @@ import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
 import { syncSuggestedActionItemsFromThreadLink } from './action-item-links';
 import { extractEmailAddress } from './address-utils';
+import {
+  domainsFromEmails,
+  extractEmailDomain,
+  isPublicEmailDomain,
+  normalizeWebsiteDomain,
+  pickUniqueClientMatch,
+} from './domain-utils';
 
 type Participant = {
   name?: string | null;
@@ -71,7 +78,7 @@ async function loadAccountIds(
   return [...new Set((data ?? []).map((row) => String(row.account_id)))];
 }
 
-async function findClientMatches(
+async function findExactEmailMatches(
   admin: SupabaseClient,
   accountIds: string[],
   emails: string[],
@@ -154,6 +161,139 @@ async function findClientMatches(
   return [...matches.values()];
 }
 
+async function findDomainMatches(
+  admin: SupabaseClient,
+  accountIds: string[],
+  participantDomains: string[],
+): Promise<ClientMatch[]> {
+  if (accountIds.length === 0 || participantDomains.length === 0) {
+    return [];
+  }
+
+  const domainSet = new Set(participantDomains);
+  const { data: clients, error: clientsError } = await admin
+    .from('clients')
+    .select('id, account_id, email, client_org_id')
+    .in('account_id', accountIds);
+
+  if (clientsError) {
+    throw new Error(clientsError.message);
+  }
+
+  const clientRows = clients ?? [];
+  const matches = new Map<string, ClientMatch>();
+
+  for (const row of clientRows) {
+    const domain = extractEmailDomain(row.email as string | null);
+
+    if (!domain || isPublicEmailDomain(domain) || !domainSet.has(domain)) {
+      continue;
+    }
+
+    matches.set(row.id as string, {
+      id: row.id as string,
+      account_id: row.account_id as string,
+    });
+  }
+
+  const clientIds = clientRows.map((row) => row.id as string);
+
+  if (clientIds.length > 0) {
+    const { data: contactLinks, error: contactLinksError } = await admin
+      .from('client_contacts')
+      .select('client_id, contacts ( email )')
+      .in('client_id', clientIds);
+
+    if (contactLinksError) {
+      if (
+        !contactLinksError.message.includes('client_contacts') &&
+        !contactLinksError.message.includes('contacts')
+      ) {
+        throw new Error(contactLinksError.message);
+      }
+    } else {
+      const clientAccountById = new Map(
+        clientRows.map((row) => [row.id as string, row.account_id as string]),
+      );
+
+      for (const row of contactLinks ?? []) {
+        const contact = row.contacts as { email?: string | null } | null;
+        const domain = extractEmailDomain(contact?.email ?? null);
+        const clientId = row.client_id as string | null;
+
+        if (
+          !domain ||
+          isPublicEmailDomain(domain) ||
+          !domainSet.has(domain) ||
+          !clientId
+        ) {
+          continue;
+        }
+
+        const accountId = clientAccountById.get(clientId);
+
+        if (!accountId) {
+          continue;
+        }
+
+        matches.set(clientId, {
+          id: clientId,
+          account_id: accountId,
+        });
+      }
+    }
+  }
+
+  const orgIds = [
+    ...new Set(
+      clientRows
+        .map((row) => row.client_org_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  if (orgIds.length > 0) {
+    const { data: websites, error: websitesError } = await admin
+      .from('websites')
+      .select('domain, client_org_id, business_id')
+      .in('client_org_id', orgIds);
+
+    if (!websitesError) {
+      const clientsByOrg = new Map<string, typeof clientRows>();
+
+      for (const row of clientRows) {
+        const orgId = row.client_org_id as string | null;
+        if (!orgId) continue;
+        const list = clientsByOrg.get(orgId) ?? [];
+        list.push(row);
+        clientsByOrg.set(orgId, list);
+      }
+
+      for (const site of websites ?? []) {
+        const domain = normalizeWebsiteDomain(site.domain as string | null);
+
+        if (!domain || !domainSet.has(domain)) {
+          continue;
+        }
+
+        const orgId = site.client_org_id as string | null;
+        if (!orgId) continue;
+
+        const orgClients = clientsByOrg.get(orgId) ?? [];
+
+        for (const client of orgClients) {
+          matches.set(client.id as string, {
+            id: client.id as string,
+            account_id: client.account_id as string,
+          });
+        }
+      }
+    }
+  }
+
+  return [...matches.values()];
+}
+
 async function inferProjectId(
   admin: SupabaseClient,
   accountId: string,
@@ -206,7 +346,12 @@ export async function autoLinkEmailThread(
   userId: string,
   threadId: string,
   ownerEmail: string,
+  options?: { preferredAccountId?: string | null; skip?: boolean },
 ): Promise<boolean> {
+  if (options?.skip) {
+    return false;
+  }
+
   const { data: thread, error: threadError } = await admin
     .from('email_threads')
     .select('id, subject, participants, client_id, project_id, link_source')
@@ -235,13 +380,21 @@ export async function autoLinkEmailThread(
   }
 
   const accountIds = await loadAccountIds(admin, userId);
-  const clientMatches = await findClientMatches(admin, accountIds, emails);
+  const preferredAccountId = options?.preferredAccountId ?? null;
 
-  if (clientMatches.length !== 1) {
+  const exactMatches = await findExactEmailMatches(admin, accountIds, emails);
+  let client = pickUniqueClientMatch(exactMatches, preferredAccountId);
+
+  if (!client) {
+    const domains = domainsFromEmails(emails);
+    const domainMatches = await findDomainMatches(admin, accountIds, domains);
+    client = pickUniqueClientMatch(domainMatches, preferredAccountId);
+  }
+
+  if (!client) {
     return false;
   }
 
-  const client = clientMatches[0]!;
   const projectId = await inferProjectId(
     admin,
     client.account_id,

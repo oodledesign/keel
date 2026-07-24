@@ -29,7 +29,7 @@ import { BillingAccessBannerHost } from './_components/billing-access-banner-hos
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
 import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
-import { flattenTeamNavLinks } from './_lib/flatten-team-nav-links';
+import { flattenTeamNavSections } from './_lib/flatten-team-nav-links';
 import { getTeamAccountAccess } from './_lib/role-access';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 import { loadTeamWorkspaceShellAdornments } from './_lib/server/team-workspace-shell-adornments.loader';
@@ -196,7 +196,7 @@ function TeamWorkspaceSidebarShell({
   homePath: string;
   children: React.ReactNode;
 }) {
-  const mobileNavLinks = flattenTeamNavLinks(
+  const mobileNavSections = flattenTeamNavSections(
     getTeamAccountSidebarConfig(
       account,
       accountAccess,
@@ -240,7 +240,7 @@ function TeamWorkspaceSidebarShell({
             accountId={accountId}
             user={user}
             accounts={accounts}
-            navLinks={mobileNavLinks}
+            navSections={mobileNavSections}
             bottomNavTabs={bottomNavTabs}
             spaceType={spaceTypeFromProfile(workspaceProfile)}
             showNewMenu={showNewMenu}
@@ -304,7 +304,7 @@ async function HeaderLayout({
     focusAccountIds,
   });
 
-  const mobileNavLinks = flattenTeamNavLinks(
+  const mobileNavSections = flattenTeamNavSections(
     getTeamAccountSidebarConfig(
       account,
       accountAccess,
@@ -340,7 +340,7 @@ async function HeaderLayout({
             accountId={accountId}
             user={data.user}
             accounts={accounts}
-            navLinks={mobileNavLinks}
+            navSections={mobileNavSections}
             bottomNavTabs={bottomNavTabs}
             spaceType={spaceTypeFromProfile(workspaceProfile)}
             showNewMenu={access.canUseQuickCreate}

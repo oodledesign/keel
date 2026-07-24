@@ -29,6 +29,8 @@ export const ignoreEmailNeedsReplyAction = enhanceAction(
     if (data.accountSlug) {
       revalidatePath(`/home/${data.accountSlug}`);
       revalidatePath(`/app/${data.accountSlug}`);
+      revalidatePath(`/home/${data.accountSlug}/email`);
+      revalidatePath(`/app/${data.accountSlug}/email`);
     }
 
     return { ok: true as const };

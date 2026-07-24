@@ -62,6 +62,7 @@ export async function loadGoogleConnectionMeta(
   const { data, error } = await googleConnectionsTable()
     .select('scopes')
     .eq('user_id', userId)
+    .eq('mailbox_kind', 'business')
     .maybeSingle();
 
   if (error) {
@@ -95,7 +96,7 @@ export async function getValidAccessToken(userId: string): Promise<string> {
     throw error;
   }
 
-  return refreshGoogleAccessToken(userId);
+  return refreshGoogleAccessToken(userId, 'business');
 }
 
 function isScopeMissingError(error: unknown): boolean {
