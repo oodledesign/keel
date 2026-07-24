@@ -101,6 +101,20 @@ export type DashboardTaskSummary = {
   projectName: string | null;
 };
 
+export type DashboardNeedsReplyThread = {
+  id: string;
+  subject: string;
+  snippet: string | null;
+  fromLabel: string;
+  lastMessageAt: string | null;
+  clientName: string | null;
+};
+
+export type DashboardNeedsReplySummary = {
+  threads: DashboardNeedsReplyThread[];
+  totalCount: number;
+};
+
 export type DashboardPageData = {
   accountId: string;
   accountSlug: string;
@@ -111,6 +125,7 @@ export type DashboardPageData = {
   statusSummary: DashboardStatusSummary;
   activeJobsList: DashboardJobSummary[];
   upcomingTasks: DashboardTaskSummary[];
+  needsReply: DashboardNeedsReplySummary;
   recentNotes: DashboardNoteSummary[];
   recentInvoices: DashboardInvoiceSummary[];
   teamMembers: Array<{
@@ -202,6 +217,7 @@ async function loadDashboardPageDataImpl(
     notesResult,
     clientIdsForTasksResult,
     projectIdsForTasksResult,
+    needsReplyResult,
   ] = await Promise.all([
     client
       .from('projects')
@@ -272,6 +288,15 @@ async function loadDashboardPageDataImpl(
     // Task scope — many tasks are linked via client/project without account_id
     client.from('clients').select('id').eq('account_id', accountId),
     client.from('projects').select('id').eq('account_id', accountId),
+    client
+      .from('email_threads')
+      .select('id, subject, snippet, participants, last_message_at, client_id', {
+        count: 'exact',
+      })
+      .eq('account_id', accountId)
+      .eq('assistant_category', 'needs_reply')
+      .order('last_message_at', { ascending: false, nullsFirst: false })
+      .limit(8),
   ]);
 
   const projectIdsForTasks = (projectIdsForTasksResult.data ?? []).map(
@@ -506,6 +531,74 @@ async function loadDashboardPageDataImpl(
     projectName: resolveTaskContextName(t, clientNameById),
   }));
 
+  const needsReplyUnavailable = isTableMissingFromApi(needsReplyResult.error);
+  if (!needsReplyUnavailable && needsReplyResult.error) {
+    // Soft-fail so the dashboard still loads if email assistant isn't available.
+    console.error('[dashboard] needs-reply threads', needsReplyResult.error);
+  }
+
+  const needsReplyRows = needsReplyUnavailable
+    ? []
+    : needsReplyResult.error
+      ? []
+      : (needsReplyResult.data ?? []);
+
+  const needsReplyClientIds = [
+    ...new Set(
+      needsReplyRows
+        .map((row) => row.client_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const needsReplyClientNameById = new Map<string, string>();
+  if (needsReplyClientIds.length > 0) {
+    const { data: needsReplyClients } = await client
+      .from('clients')
+      .select('id, display_name, first_name, last_name')
+      .in('id', needsReplyClientIds);
+    for (const row of needsReplyClients ?? []) {
+      const name =
+        (row.display_name as string | null)?.trim() ||
+        [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+        'Client';
+      needsReplyClientNameById.set(row.id as string, name);
+    }
+  }
+
+  const needsReplyThreads: DashboardNeedsReplyThread[] = needsReplyRows.map(
+    (row) => {
+      const participants = Array.isArray(row.participants)
+        ? row.participants
+        : [];
+      const first = participants.find(
+        (entry): entry is { name?: string | null; email?: string | null } =>
+          Boolean(entry) && typeof entry === 'object',
+      );
+      const fromLabel =
+        first?.name?.trim() || first?.email?.trim() || 'Unknown sender';
+      const clientId = row.client_id as string | null;
+
+      return {
+        id: row.id as string,
+        subject: ((row.subject as string | null)?.trim() ||
+          '(no subject)') as string,
+        snippet: (row.snippet as string | null)?.trim() || null,
+        fromLabel,
+        lastMessageAt: (row.last_message_at as string | null) ?? null,
+        clientName: clientId
+          ? (needsReplyClientNameById.get(clientId) ?? null)
+          : null,
+      };
+    },
+  );
+
+  const needsReply: DashboardNeedsReplySummary = {
+    threads: needsReplyThreads,
+    totalCount: needsReplyUnavailable
+      ? 0
+      : (needsReplyResult.count ?? needsReplyThreads.length),
+  };
+
   const accountName = account.name?.trim() || account.slug || accountSlug;
 
   return {
@@ -518,6 +611,7 @@ async function loadDashboardPageDataImpl(
     statusSummary,
     activeJobsList,
     upcomingTasks,
+    needsReply,
     recentNotes,
     recentInvoices,
     teamMembers: teamMembers.map((m) => ({

@@ -3,6 +3,7 @@
 import type {
   DashboardFinanceMonth,
   DashboardMetrics,
+  DashboardNeedsReplySummary,
   DashboardNoteSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
@@ -14,6 +15,7 @@ type DashboardPageContentProps = {
   metrics: DashboardMetrics;
   financeTrend: DashboardFinanceMonth[];
   upcomingTasks: DashboardTaskSummary[];
+  needsReply: DashboardNeedsReplySummary;
   recentNotes: DashboardNoteSummary[];
   shortcutsBar?: React.ReactNode;
 };
@@ -24,6 +26,7 @@ export function DashboardPageContent({
   metrics,
   financeTrend,
   upcomingTasks,
+  needsReply,
   recentNotes,
   shortcutsBar,
 }: DashboardPageContentProps) {
@@ -34,6 +37,7 @@ export function DashboardPageContent({
       metrics={metrics}
       financeTrend={financeTrend}
       upcomingTasks={upcomingTasks}
+      needsReply={needsReply}
       recentNotes={recentNotes}
       shortcutsBar={shortcutsBar}
     />

@@ -75,7 +75,10 @@ export function EmailPageClient({ initialData }: Props) {
   const [loadingMore, setLoadingMore] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
   const [syncing, startSyncTransition] = useTransition();
-  const [inboxFilter, setInboxFilter] = useState<EmailInboxFilter>('all');
+  const [inboxFilter, setInboxFilter] = useState<EmailInboxFilter>(() => {
+    const filter = searchParams.get('filter');
+    return filter === 'needs_reply' || filter === 'linked' ? filter : 'all';
+  });
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [searching, setSearching] = useState(false);

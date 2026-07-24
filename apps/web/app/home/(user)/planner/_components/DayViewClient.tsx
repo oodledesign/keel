@@ -476,9 +476,12 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
 
   return (
     <div
-      className={cn(workspacePageMainClassName, 'gap-4 pt-1 md:gap-5 md:pt-3')}
+      className={cn(
+        workspacePageMainClassName,
+        'gap-4 px-2.5 pt-1 pb-6 md:gap-5 md:px-6 md:pt-3 md:pb-12 lg:px-6',
+      )}
     >
-      <header className="flex items-center gap-2">
+      <header className="flex min-w-0 items-center gap-2">
         <Button
           type="button"
           variant="ghost"
@@ -489,12 +492,12 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
         >
           <ArrowLeft className="h-4 w-4" />
         </Button>
-        <div className="min-w-0 flex-1">
-          <h1 className="text-xl font-bold tracking-tight md:text-2xl">
+        <div className="min-w-0 flex-1 overflow-hidden">
+          <h1 className="truncate text-xl font-bold tracking-tight md:text-2xl">
             {isViewingToday ? 'Today' : dateLabel}
           </h1>
           <p
-            className="text-xs text-[var(--workspace-shell-text)]/55 md:text-sm"
+            className="truncate text-xs text-[var(--workspace-shell-text)]/55 md:text-sm"
             suppressHydrationWarning
           >
             {initialData.scope.kind === 'workspace'
@@ -551,7 +554,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       </div>
 
       <div className="grid min-w-0 gap-6 lg:grid-cols-[1.15fr_0.85fr] lg:items-start">
-        <section className="space-y-3">
+        <section className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
               Schedule
@@ -603,7 +606,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               onSyncBlock={syncBlockToGoogle}
             />
           ) : (
-            <div className="space-y-2">
+            <div className="min-w-0 space-y-2">
               {displayBlocks.map((block) => (
                 <ScheduleRow
                   key={block.key}
@@ -620,7 +623,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           ) : null}
         </section>
 
-        <section className="space-y-3">
+        <section className="min-w-0 space-y-3">
           <div className="flex items-center justify-between gap-3">
             <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
               {isViewingToday ? 'Due today' : 'Due this day'}
@@ -658,7 +661,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               {isViewingToday ? 'Nothing due today.' : 'Nothing due this day.'}
             </p>
           ) : (
-            <ul className="space-y-2">
+            <ul className="min-w-0 space-y-2">
               {[...openTasks, ...doneTasks].map((task) => (
                 <TaskRow
                   key={task.id}
@@ -786,7 +789,7 @@ function ScheduleRow({
   return (
     <div
       className={cn(
-        'flex items-start gap-3 rounded-xl border px-4 py-3 transition-colors',
+        'flex min-w-0 items-start gap-2.5 rounded-xl border px-3 py-3 transition-colors sm:gap-3 sm:px-4',
         block.isCalendarEvent
           ? 'border-sky-400/15 bg-sky-400/10'
           : block.isBreak
@@ -807,13 +810,13 @@ function ScheduleRow({
               : 'text-[var(--ozer-accent-muted)]',
         )}
       />
-      <div className="min-w-0 flex-1">
+      <div className="min-w-0 flex-1 overflow-hidden">
         <p className="font-mono text-xs text-[var(--workspace-shell-text)]/45">
           {formatTime(block.start)} – {formatTime(block.end)}
         </p>
         <p
           className={cn(
-            'mt-0.5 text-sm font-medium',
+            'mt-0.5 text-sm font-medium break-words',
             block.isBreak
               ? 'text-[var(--workspace-shell-text)]/45 italic'
               : 'text-[var(--workspace-shell-text)]',
@@ -852,7 +855,7 @@ function TaskRow({
     <>
       <li
         className={cn(
-          'flex items-start gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3',
+          'flex min-w-0 items-start gap-2.5 overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-3 sm:gap-3 sm:px-4',
           done && 'opacity-55',
         )}
       >
@@ -871,18 +874,18 @@ function TaskRow({
         <button
           type="button"
           onClick={() => setEditOpen(true)}
-          className="min-w-0 flex-1 rounded-lg text-left transition-colors hover:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40 focus-visible:outline-none"
+          className="min-w-0 flex-1 overflow-hidden rounded-lg text-left transition-colors hover:bg-white/[0.03] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40 focus-visible:outline-none"
         >
           <p
             className={cn(
-              'text-sm font-medium text-[var(--workspace-shell-text)]',
+              'text-sm font-medium break-words text-[var(--workspace-shell-text)]',
               done && 'line-through decoration-white/40',
             )}
           >
             {task.title}
           </p>
           {clientName || metaLabel ? (
-            <div className="mt-1 flex flex-wrap items-center gap-1.5">
+            <div className="mt-1 flex min-w-0 flex-wrap items-center gap-1.5">
               {clientName ? (
                 <PlannerClientPill
                   name={clientName}
@@ -891,14 +894,14 @@ function TaskRow({
                 />
               ) : null}
               {metaLabel ? (
-                <span className="text-xs text-[var(--workspace-shell-text)]/45">
+                <span className="min-w-0 text-xs break-words text-[var(--workspace-shell-text)]/45">
                   {metaLabel}
                 </span>
               ) : null}
             </div>
           ) : null}
           {task.notes?.trim() ? (
-            <p className="mt-1 line-clamp-2 text-xs text-[var(--workspace-shell-text)]/35">
+            <p className="mt-1 line-clamp-2 text-xs break-words text-[var(--workspace-shell-text)]/35">
               {task.notes.trim()}
             </p>
           ) : null}
@@ -927,13 +930,13 @@ const STAGE_DOT_COLORS: Record<string, string> = {
 
 function PipelineOverview({ pipeline }: { pipeline: DayViewPipeline }) {
   return (
-    <section className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-5 py-4">
+    <section className="min-w-0 space-y-3 overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-4 sm:px-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
+        <div className="min-w-0">
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
             Pipeline
           </h2>
-          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text)]/45">
+          <p className="mt-0.5 text-xs break-words text-[var(--workspace-shell-text)]/45">
             {pipeline.openCount} open deal{pipeline.openCount === 1 ? '' : 's'}{' '}
             · {gbp.format(pipeline.openValue)}
           </p>

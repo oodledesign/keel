@@ -191,6 +191,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           metrics={data.metrics}
           financeTrend={data.financeTrend}
           upcomingTasks={data.upcomingTasks}
+          needsReply={data.needsReply}
           recentNotes={data.recentNotes}
         />
       </PageBody>

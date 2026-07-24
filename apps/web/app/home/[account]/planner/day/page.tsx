@@ -38,7 +38,7 @@ async function WorkspacePlannerDayPage({
   );
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-3 text-[var(--workspace-shell-text)] lg:px-6 lg:py-4">
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-3 text-[var(--workspace-shell-text)] lg:px-0 lg:py-4">
       <DayViewClient initialData={data} dayViewHref={dayViewHref} />
     </PageBody>
   );

@@ -16,9 +16,11 @@ import { formatWorkspaceAmount } from '~/lib/currency/workspace-currency';
 import type {
   DashboardFinanceMonth,
   DashboardMetrics,
+  DashboardNeedsReplySummary,
   DashboardNoteSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
+import { DashboardNeedsReplyCard } from './dashboard-needs-reply-card';
 import { NoteAssignmentLabels } from './note-assignment-labels';
 
 const FinanceTrendBarChart = dynamic(
@@ -53,6 +55,7 @@ type BusinessDashboardMobileProps = {
   metrics: DashboardMetrics;
   financeTrend: DashboardFinanceMonth[];
   upcomingTasks: DashboardTaskSummary[];
+  needsReply: DashboardNeedsReplySummary;
   recentNotes: DashboardNoteSummary[];
   shortcutsBar: React.ReactNode;
 };
@@ -63,6 +66,7 @@ export function BusinessDashboardMobile({
   metrics,
   financeTrend,
   upcomingTasks,
+  needsReply,
   recentNotes,
   shortcutsBar,
 }: BusinessDashboardMobileProps) {
@@ -147,6 +151,13 @@ export function BusinessDashboardMobile({
       {shortcutsBar ? (
         <section className="xl:col-span-2">{shortcutsBar}</section>
       ) : null}
+
+      <DashboardNeedsReplyCard
+        accountSlug={accountSlug}
+        accountId={accountId}
+        threads={needsReply.threads}
+        totalCount={needsReply.totalCount}
+      />
 
       <section className={panelClass}>
         <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
