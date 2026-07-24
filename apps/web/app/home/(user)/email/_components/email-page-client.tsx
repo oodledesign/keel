@@ -332,22 +332,20 @@ export function EmailPageClient({ initialData }: Props) {
           setSearching(false);
         }
       });
-  }, [debouncedSearch, inboxFilter]);
+  }, [debouncedSearch, inboxFilter, mailboxKind]);
 
   const selectThread = useCallback(
     (threadId: string) => {
       const params = new URLSearchParams(searchParams.toString());
       params.set('thread', threadId);
-      router.push(
-        `${pathsConfig.app.personalEmailAssistant}?${params.toString()}`,
-      );
+      router.push(`${emailHomePath}?${params.toString()}`);
     },
-    [router, searchParams],
+    [emailHomePath, router, searchParams],
   );
 
   const clearThread = useCallback(() => {
-    router.push(pathsConfig.app.personalEmailAssistant);
-  }, [router]);
+    router.push(emailHomePath);
+  }, [emailHomePath, router]);
 
   const changeInboxFilter = useCallback((filter: EmailInboxFilter) => {
     setInboxFilter(filter);
