@@ -304,7 +304,8 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
       const taskOrFile = appContext.meta?.trim() ?? null;
       const workspace =
         repo ??
-        (appContext.item?.trim() && appContext.item.trim().toLowerCase() !== 'agents'
+        (appContext.item?.trim() &&
+        appContext.item.trim().toLowerCase() !== 'agents'
           ? appContext.item.trim()
           : null);
       const primary = workspace ?? taskOrFile ?? 'Agents';
@@ -382,7 +383,9 @@ function AppItemCell({ block }: { block: ActivityBlockListRow }) {
 
   if (appContext?.kind === 'assistant') {
     const primary = appContext.item?.trim() || 'Claude';
-    const secondary = [appContext.detail, appContext.meta].filter(Boolean).join(' · ');
+    const secondary = [appContext.detail, appContext.meta]
+      .filter(Boolean)
+      .join(' · ');
 
     return (
       <div className="min-w-0">

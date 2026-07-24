@@ -5,17 +5,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { htmlToMarkdown } from '~/lib/markdown';
 
 import {
-  buildMeetingTranscriptIndexText,
-  loadMeetingTranscriptEnrichmentByIds,
-} from './meeting-transcript-index';
-import {
   buildEmailThreadIndexText,
   shouldIndexEmailThreadForBrain,
 } from './email-thread-index';
 import {
+  buildMeetingTranscriptIndexText,
+  loadMeetingTranscriptEnrichmentByIds,
+} from './meeting-transcript-index';
+import {
+  type BrainSourceType,
   buildBrainSourceUrl,
   buildPhaseSourceUrl,
-  type BrainSourceType,
 } from './paths';
 
 export type BrainSourcePreview = {
@@ -302,10 +302,14 @@ export async function loadBrainSourcePreview(
         sourceType,
         updatedAt: (thread.updated_at as string | null) ?? null,
         content: buildEmailThreadIndexText({
-          thread: thread as Parameters<typeof buildEmailThreadIndexText>[0]['thread'],
-          messages: ((messages ?? []) as Parameters<
+          thread: thread as Parameters<
             typeof buildEmailThreadIndexText
-          >[0]['messages']).reverse(),
+          >[0]['thread'],
+          messages: (
+            (messages ?? []) as Parameters<
+              typeof buildEmailThreadIndexText
+            >[0]['messages']
+          ).reverse(),
           clientName,
           projectName,
           actionItems: (actionItems ?? []) as Parameters<

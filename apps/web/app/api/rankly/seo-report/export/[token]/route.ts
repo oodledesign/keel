@@ -38,7 +38,7 @@ export async function GET(_request: NextRequest, context: RouteContext) {
     });
 
     const safeDomain = report.target_domain.replace(/[^\w.-]+/g, '-');
-    const filename = `SEO-Report-${safeDomain}-${report.created_at.slice(0, 10)}.pdf`;
+    const filename = `SEO-AI-Search-Report-${safeDomain}-${report.created_at.slice(0, 10)}.pdf`;
 
     return new Response(Buffer.from(pdfBytes), {
       headers: {

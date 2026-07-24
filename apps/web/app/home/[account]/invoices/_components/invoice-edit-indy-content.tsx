@@ -43,6 +43,7 @@ import { listClients } from '~/home/[account]/clients/_lib/server/server-actions
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 import {
+  type InvoiceLineType,
   calculateInvoiceLineTotalPence,
   invoiceItemsQuantityHeader,
   invoiceItemsShowUnitPriceColumn,
@@ -52,7 +53,6 @@ import {
   normalizeInvoiceQuantity,
   parseInvoiceQuantityInput,
   resolveInvoiceLineUnitPricePence,
-  type InvoiceLineType,
 } from '~/lib/invoices/invoice-quantity';
 
 import { getErrorMessage } from '../_lib/error-message';
@@ -718,10 +718,7 @@ export function InvoiceEditIndyContent({
           line_type: lineType,
           quantity,
           unit_price_pence: Math.max(0, unitPricePence),
-          total_pence: calculateInvoiceLineTotalPence(
-            quantity,
-            unitPricePence,
-          ),
+          total_pence: calculateInvoiceLineTotalPence(quantity, unitPricePence),
         };
       });
 
@@ -1392,147 +1389,150 @@ export function InvoiceEditIndyContent({
                             row.line_type,
                           );
                           return (
-                          <tr
-                            key={row.id ?? index}
-                            className="border-b border-zinc-100 align-top"
-                          >
-                            <td className="py-3 pr-2">
-                              <Input
-                                value={row.description}
-                                onChange={(e) =>
-                                  updateItem(index, {
-                                    description: e.target.value,
-                                  })
-                                }
-                                disabled={readOnly}
-                                placeholder="Description"
-                                className={`mb-2 ${inputClassName}`}
-                              />
-                              <Input
-                                value={row.description_detail ?? ''}
-                                onChange={(e) =>
-                                  updateItem(index, {
-                                    description_detail: e.target.value,
-                                  })
-                                }
-                                disabled={readOnly}
-                                placeholder="Additional details (optional)"
-                                className={`text-xs ${inputClassName}`}
-                              />
-                              <div className="mt-2 grid gap-2 sm:grid-cols-2">
-                                <select
-                                  value={row.line_type}
-                                  onChange={(e) => {
-                                    const lineType = normalizeInvoiceLineType(
-                                      e.target.value,
-                                    );
-                                    updateItem(index, {
-                                      line_type: lineType,
-                                      unit_price_pence:
-                                        resolveInvoiceLineUnitPricePence({
-                                          lineType,
-                                          unitPricePence: row.unit_price_pence,
-                                          defaultHourlyRatePence,
-                                        }),
-                                    });
-                                  }}
-                                  disabled={readOnly}
-                                  className="w-full rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-xs text-[var(--ozer-text-on-light)]"
-                                >
-                                  <option value="quantity">Quantity</option>
-                                  <option value="hours">Hours</option>
-                                </select>
-                                <select
-                                  value={row.job_id ?? ''}
+                            <tr
+                              key={row.id ?? index}
+                              className="border-b border-zinc-100 align-top"
+                            >
+                              <td className="py-3 pr-2">
+                                <Input
+                                  value={row.description}
                                   onChange={(e) =>
                                     updateItem(index, {
-                                      job_id: e.target.value || null,
+                                      description: e.target.value,
                                     })
                                   }
-                                  disabled={readOnly || jobsLoading}
-                                  className="w-full rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-xs text-[var(--ozer-text-on-light)]"
-                                >
-                                  <option value="">
-                                    Link to job (optional)
-                                  </option>
-                                  {jobsForClient.map((j) => (
-                                    <option key={j.id} value={j.id}>
-                                      {j.title}
-                                    </option>
-                                  ))}
-                                </select>
-                              </div>
-                            </td>
-                            <td className="py-3 pr-2 text-right">
-                              <span className="mb-1 block text-[10px] text-[var(--workspace-shell-text-muted)] sm:hidden">
-                                {invoiceLineQuantityColumnLabel(row.line_type)}
-                              </span>
-                              <Input
-                                type="number"
-                                min={0}
-                                step={0.01}
-                                inputMode="decimal"
-                                value={row.quantity}
-                                onChange={(e) =>
-                                  updateItem(index, {
-                                    quantity: parseInvoiceQuantityInput(
-                                      e.target.value,
-                                    ),
-                                  })
-                                }
-                                disabled={readOnly}
-                                className={`text-right ${inputClassName}`}
-                              />
-                            </td>
-                            {showUnitPriceColumn ? (
-                              <td className="py-3 pr-2 text-right">
-                                {isHoursLine ? (
-                                  <span className="text-[var(--workspace-shell-text-muted)]">
-                                    —
-                                  </span>
-                                ) : (
-                                  <Input
-                                    type="text"
-                                    inputMode="decimal"
-                                    value={unitPriceInputValue(row, index)}
+                                  disabled={readOnly}
+                                  placeholder="Description"
+                                  className={`mb-2 ${inputClassName}`}
+                                />
+                                <Input
+                                  value={row.description_detail ?? ''}
+                                  onChange={(e) =>
+                                    updateItem(index, {
+                                      description_detail: e.target.value,
+                                    })
+                                  }
+                                  disabled={readOnly}
+                                  placeholder="Additional details (optional)"
+                                  className={`text-xs ${inputClassName}`}
+                                />
+                                <div className="mt-2 grid gap-2 sm:grid-cols-2">
+                                  <select
+                                    value={row.line_type}
                                     onChange={(e) => {
-                                      const key = unitPriceRowKey(row, index);
-                                      setUnitPriceDrafts((prev) => ({
-                                        ...prev,
-                                        [key]: e.target.value,
-                                      }));
+                                      const lineType = normalizeInvoiceLineType(
+                                        e.target.value,
+                                      );
+                                      updateItem(index, {
+                                        line_type: lineType,
+                                        unit_price_pence:
+                                          resolveInvoiceLineUnitPricePence({
+                                            lineType,
+                                            unitPricePence:
+                                              row.unit_price_pence,
+                                            defaultHourlyRatePence,
+                                          }),
+                                      });
                                     }}
-                                    onBlur={() => commitUnitPriceDraft(index)}
                                     disabled={readOnly}
-                                    placeholder="0.00"
-                                    className={`text-right ${inputClassName}`}
-                                  />
+                                    className="w-full rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-xs text-[var(--ozer-text-on-light)]"
+                                  >
+                                    <option value="quantity">Quantity</option>
+                                    <option value="hours">Hours</option>
+                                  </select>
+                                  <select
+                                    value={row.job_id ?? ''}
+                                    onChange={(e) =>
+                                      updateItem(index, {
+                                        job_id: e.target.value || null,
+                                      })
+                                    }
+                                    disabled={readOnly || jobsLoading}
+                                    className="w-full rounded-md border border-[color:var(--ozer-border-on-light)] bg-white px-2 py-1.5 text-xs text-[var(--ozer-text-on-light)]"
+                                  >
+                                    <option value="">
+                                      Link to job (optional)
+                                    </option>
+                                    {jobsForClient.map((j) => (
+                                      <option key={j.id} value={j.id}>
+                                        {j.title}
+                                      </option>
+                                    ))}
+                                  </select>
+                                </div>
+                              </td>
+                              <td className="py-3 pr-2 text-right">
+                                <span className="mb-1 block text-[10px] text-[var(--workspace-shell-text-muted)] sm:hidden">
+                                  {invoiceLineQuantityColumnLabel(
+                                    row.line_type,
+                                  )}
+                                </span>
+                                <Input
+                                  type="number"
+                                  min={0}
+                                  step={0.01}
+                                  inputMode="decimal"
+                                  value={row.quantity}
+                                  onChange={(e) =>
+                                    updateItem(index, {
+                                      quantity: parseInvoiceQuantityInput(
+                                        e.target.value,
+                                      ),
+                                    })
+                                  }
+                                  disabled={readOnly}
+                                  className={`text-right ${inputClassName}`}
+                                />
+                              </td>
+                              {showUnitPriceColumn ? (
+                                <td className="py-3 pr-2 text-right">
+                                  {isHoursLine ? (
+                                    <span className="text-[var(--workspace-shell-text-muted)]">
+                                      —
+                                    </span>
+                                  ) : (
+                                    <Input
+                                      type="text"
+                                      inputMode="decimal"
+                                      value={unitPriceInputValue(row, index)}
+                                      onChange={(e) => {
+                                        const key = unitPriceRowKey(row, index);
+                                        setUnitPriceDrafts((prev) => ({
+                                          ...prev,
+                                          [key]: e.target.value,
+                                        }));
+                                      }}
+                                      onBlur={() => commitUnitPriceDraft(index)}
+                                      disabled={readOnly}
+                                      placeholder="0.00"
+                                      className={`text-right ${inputClassName}`}
+                                    />
+                                  )}
+                                </td>
+                              ) : null}
+                              <td className="py-3 pr-2 text-right font-medium text-[var(--ozer-text-on-light)]">
+                                {formatInvoiceMoney(
+                                  calculateInvoiceLineTotalPence(
+                                    row.quantity,
+                                    row.unit_price_pence,
+                                  ),
+                                  currency,
                                 )}
                               </td>
-                            ) : null}
-                            <td className="py-3 pr-2 text-right font-medium text-[var(--ozer-text-on-light)]">
-                              {formatInvoiceMoney(
-                                calculateInvoiceLineTotalPence(
-                                  row.quantity,
-                                  row.unit_price_pence,
-                                ),
-                                currency,
-                              )}
-                            </td>
-                            {!readOnly ? (
-                              <td className="py-3">
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-[var(--workspace-shell-text-muted)] hover:text-red-500"
-                                  onClick={() => removeRow(index)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
-                              </td>
-                            ) : null}
-                          </tr>
+                              {!readOnly ? (
+                                <td className="py-3">
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    className="h-8 w-8 p-0 text-[var(--workspace-shell-text-muted)] hover:text-red-500"
+                                    onClick={() => removeRow(index)}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </td>
+                              ) : null}
+                            </tr>
                           );
                         })
                       )}

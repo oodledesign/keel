@@ -405,12 +405,7 @@ export async function loadIndexableSource(
   }
 
   if (sourceType === 'email_thread') {
-    return mapEmailThreadToIndexable(
-      admin,
-      accountId,
-      accountSlug,
-      sourceId,
-    );
+    return mapEmailThreadToIndexable(admin, accountId, accountSlug, sourceId);
   }
 
   const records = await loadAccountIndexables(admin, accountId);

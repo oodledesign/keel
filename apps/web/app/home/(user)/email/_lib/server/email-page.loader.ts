@@ -148,9 +148,7 @@ export const loadEmailPageData = cache(
       },
       threads: await enrichEmailThreadLinks(
         client,
-        pageRows.map((row) =>
-          mapThreadRow(row as Record<string, unknown>),
-        ),
+        pageRows.map((row) => mapThreadRow(row as Record<string, unknown>)),
       ),
       hasMoreThreads: hasMoreInitial,
       workspaces: workspaces.map((workspace) => ({

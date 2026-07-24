@@ -340,11 +340,10 @@ export async function buildSeoReportSnapshot(params: {
     version: 1,
     generatedAt: new Date().toISOString(),
     targetDomain,
-    title: `SEO Report — ${projectName}`,
+    title: `SEO + AI Search Report — ${projectName}`,
     overallScore,
     clientHeadline: null,
-    executiveSummary:
-      audit?.report.executive_summary?.trim() || null,
+    executiveSummary: audit?.report.executive_summary?.trim() || null,
     nextSteps: [],
     pillars,
     recommendations,

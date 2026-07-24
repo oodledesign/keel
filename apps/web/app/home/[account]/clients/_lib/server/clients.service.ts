@@ -499,14 +499,12 @@ class ClientsService {
       input.last_name !== undefined ||
       input.company_name !== undefined;
 
-    let current:
-      | {
-          client_type?: string | null;
-          first_name?: string | null;
-          last_name?: string | null;
-          company_name?: string | null;
-        }
-      | null = null;
+    let current: {
+      client_type?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      company_name?: string | null;
+    } | null = null;
 
     if (shouldRecalculateDisplayName) {
       current = (await this.getClient({
@@ -529,11 +527,7 @@ class ClientsService {
     if (shouldRecalculateDisplayName) {
       const clientType =
         current?.client_type === 'individual' ? 'individual' : 'business';
-      const firstName = (
-        input.first_name ??
-        current?.first_name ??
-        ''
-      ).trim();
+      const firstName = (input.first_name ?? current?.first_name ?? '').trim();
       const lastName = (input.last_name ?? current?.last_name ?? '').trim();
       const companyName = (
         input.company_name ??

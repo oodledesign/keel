@@ -2,7 +2,7 @@
 
 **Status:** Audit only. No policy prose.  
 **Generated from:** `apps/web`, `packages/*`, `supabase/migrations`, and `/Users/danjamespotter/OzerAssistant` (Swift).  
-**Last audited:** 16 July 2026  
+**Last audited:** 24 July 2026  
 **Composio:** Not built — exclude from compliance copy until shipped.
 
 ---

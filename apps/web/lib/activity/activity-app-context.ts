@@ -549,18 +549,16 @@ function parseEmailBlockContext(
   }
 
   const subject =
-    fromTitle?.item?.trim() ||
-    block.windowTitle.trim() ||
-    'Email';
+    fromTitle?.item?.trim() || block.windowTitle.trim() || 'Email';
 
-  const recipientMeta = emailTo ? `To: ${emailTo}` : fromTitle?.meta ?? null;
+  const recipientMeta = emailTo ? `To: ${emailTo}` : (fromTitle?.meta ?? null);
 
   return {
     kind: 'email',
     item: subject,
     detail: emailFrom ?? fromTitle?.detail ?? null,
-    meta: emailFrom ? recipientMeta : fromTitle?.meta ?? null,
-    context: emailFrom ? 'Sender' : fromTitle?.context ?? null,
+    meta: emailFrom ? recipientMeta : (fromTitle?.meta ?? null),
+    context: emailFrom ? 'Sender' : (fromTitle?.context ?? null),
   };
 }
 
@@ -596,8 +594,7 @@ function parseClaudeDesktopContext(title: string): ActivityAppContext | null {
   }
 
   const item = parts[0]!.trim();
-  const secondary =
-    parts.length > 1 ? parts.slice(1).join(' · ') : null;
+  const secondary = parts.length > 1 ? parts.slice(1).join(' · ') : null;
 
   return {
     kind: 'assistant',

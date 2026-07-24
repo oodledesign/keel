@@ -102,11 +102,7 @@ function blockDedupeKey(block: EditablePlanBlock): string {
   }
 
   const title = normalizeTitle(block.title);
-  const kind = block.isCalendarEvent
-    ? 'cal'
-    : block.isBreak
-      ? 'break'
-      : 'task';
+  const kind = block.isCalendarEvent ? 'cal' : block.isBreak ? 'break' : 'task';
 
   return `${kind}:${block.startMinutes}:${block.endMinutes}:${title}`;
 }

@@ -4,7 +4,10 @@ import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { cn } from '@kit/ui/utils';
 
 import type { ActivityReportRow } from '~/lib/activity/activity-history';
-import { ACTIVITY_REPORT_UNASSIGNED, formatDuration } from '~/lib/activity/activity-history';
+import {
+  ACTIVITY_REPORT_UNASSIGNED,
+  formatDuration,
+} from '~/lib/activity/activity-history';
 
 type ActivitySummaryBreakdownProps = {
   title: string;
@@ -59,7 +62,8 @@ export function ActivitySummaryBreakdown({
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex min-w-0 items-center gap-2">
-                      {showClientAvatars && row.id !== ACTIVITY_REPORT_UNASSIGNED ? (
+                      {showClientAvatars &&
+                      row.id !== ACTIVITY_REPORT_UNASSIGNED ? (
                         <ProfileAvatar
                           displayName={row.label}
                           pictureUrl={row.imageUrl}

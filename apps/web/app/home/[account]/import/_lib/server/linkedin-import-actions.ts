@@ -11,15 +11,15 @@ import pathsConfig from '~/config/paths.config';
 import { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 import { createDeal } from '~/home/(user)/pipeline/actions';
 import {
-  findClientDuplicate,
   type ExistingClientSnapshot,
+  findClientDuplicate,
 } from '~/lib/clients/client-import';
 import {
+  type LinkedInImportDestination,
   buildLinkedInClientDrafts,
   buildLinkedInPipelineDrafts,
   findClientDuplicatesForDrafts,
   findPipelineDuplicate,
-  type LinkedInImportDestination,
 } from '~/lib/integrations/linkedin/linkedin-import';
 
 import { createClientsService } from '../../../clients/_lib/server/clients.service';
@@ -137,11 +137,7 @@ export const previewLinkedInImportAction = enhanceAction(
               ? draft.companyName || `Row ${draft.rowIndex + 1}`
               : [draft.firstName, draft.lastName].filter(Boolean).join(' ') ||
                 `Row ${draft.rowIndex + 1}`,
-          detail: [
-            draft.email,
-            draft.contact?.role,
-            draft.contact?.email,
-          ]
+          detail: [draft.email, draft.contact?.role, draft.contact?.email]
             .filter(Boolean)
             .join(' · '),
           errors: draft.errors,
@@ -184,9 +180,7 @@ export const previewLinkedInImportAction = enhanceAction(
 
     const duplicates = pipelineDrafts
       .map((draft) => findPipelineDuplicate(draft, existingDealsList))
-      .filter(
-        (match): match is NonNullable<typeof match> => match !== null,
-      );
+      .filter((match): match is NonNullable<typeof match> => match !== null);
 
     return {
       destination: 'pipeline' as LinkedInImportDestination,

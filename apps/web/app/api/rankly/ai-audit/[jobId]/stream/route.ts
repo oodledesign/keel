@@ -56,7 +56,10 @@ export async function GET(_request: NextRequest, context: RouteContext) {
 
     return createJobSseResponse(
       async () => {
-        const { data: job, error } = await supabaseCustomSchema(client, 'rankly')
+        const { data: job, error } = await supabaseCustomSchema(
+          client,
+          'rankly',
+        )
           .from('ai_audit_jobs')
           .select('id, status, error_msg, pages_crawled, credits_used')
           .eq('id', jobId)

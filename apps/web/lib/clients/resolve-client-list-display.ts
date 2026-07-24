@@ -20,9 +20,7 @@ export function resolveStoredClientDisplayName(params: {
     return person || params.firstName?.trim() || 'Unnamed';
   }
 
-  return (
-    params.companyName?.trim() || person || 'Unnamed company'
-  );
+  return params.companyName?.trim() || person || 'Unnamed company';
 }
 
 /** Title shown in the clients list and cards. */

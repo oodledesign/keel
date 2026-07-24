@@ -240,7 +240,7 @@ export async function buildSeoReportPdf(params: {
   drawText(page, brand, MARGIN, PAGE_HEIGHT - 28, 10, fontBold, COLORS.coral);
   drawText(
     page,
-    'SEO Report',
+    'SEO + AI Search Report',
     MARGIN,
     PAGE_HEIGHT - 52,
     26,

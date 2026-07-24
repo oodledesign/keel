@@ -393,35 +393,35 @@ export function PortalInvoiceView({
             {(data.items ?? []).map((row, index) => {
               const lineType = normalizeInvoiceLineType(row.line_type);
               return (
-              <tr
-                key={index}
-                className="border-b border-[color:var(--workspace-shell-border)]/70 text-[var(--workspace-shell-text-muted)]"
-              >
-                <td className="py-3 pr-4">
-                  <div>{row.description}</div>
-                  {row.description_detail ? (
-                    <div className="text-xs text-[var(--workspace-shell-text-muted)]">
-                      {row.description_detail}
-                    </div>
-                  ) : null}
-                </td>
-                <td className="py-3 pr-4 text-right">
-                  <span className="mr-2 text-[10px] uppercase tracking-wide text-[var(--workspace-shell-text-muted)] sm:hidden">
-                    {invoiceLineQuantityColumnLabel(lineType)}
-                  </span>
-                  {formatInvoiceQuantity(Number(row.quantity))}
-                </td>
-                {showUnitPriceColumn ? (
-                  <td className="py-3 pr-4 text-right">
-                    {invoiceLineShowsUnitPrice(lineType)
-                      ? money(row.unit_price_pence)
-                      : '—'}
+                <tr
+                  key={index}
+                  className="border-b border-[color:var(--workspace-shell-border)]/70 text-[var(--workspace-shell-text-muted)]"
+                >
+                  <td className="py-3 pr-4">
+                    <div>{row.description}</div>
+                    {row.description_detail ? (
+                      <div className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        {row.description_detail}
+                      </div>
+                    ) : null}
                   </td>
-                ) : null}
-                <td className="py-3 pr-4 text-right">
-                  {money(row.total_pence)}
-                </td>
-              </tr>
+                  <td className="py-3 pr-4 text-right">
+                    <span className="mr-2 text-[10px] tracking-wide text-[var(--workspace-shell-text-muted)] uppercase sm:hidden">
+                      {invoiceLineQuantityColumnLabel(lineType)}
+                    </span>
+                    {formatInvoiceQuantity(Number(row.quantity))}
+                  </td>
+                  {showUnitPriceColumn ? (
+                    <td className="py-3 pr-4 text-right">
+                      {invoiceLineShowsUnitPrice(lineType)
+                        ? money(row.unit_price_pence)
+                        : '—'}
+                    </td>
+                  ) : null}
+                  <td className="py-3 pr-4 text-right">
+                    {money(row.total_pence)}
+                  </td>
+                </tr>
               );
             })}
           </tbody>

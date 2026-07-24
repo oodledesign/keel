@@ -4,12 +4,12 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
-import { createInvoicePaymentSettingsService } from '../../_lib/server/invoice-payment-settings.service';
 
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
 import { InvoiceEditIndyContent } from '../../_components/invoice-edit-indy-content';
+import { createInvoicePaymentSettingsService } from '../../_lib/server/invoice-payment-settings.service';
 import { loadInvoicesPageData } from '../../_lib/server/invoices-page.loader';
 import { getInvoice } from '../../_lib/server/server-actions';
 
@@ -58,17 +58,21 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
 
   const [brand, accountResult, userSettings, paymentSettings] =
     await Promise.all([
-    loadAccountBrandResolved(accountId).catch(() => null),
-    supabase.from('accounts').select('name').eq('id', accountId).maybeSingle(),
-    auth?.id
-      ? supabase
-          .from('user_settings')
-          .select('first_name, last_name')
-          .eq('user_id', auth.id)
-          .maybeSingle()
-      : Promise.resolve({ data: null }),
-    createInvoicePaymentSettingsService(supabase).getSettings(accountId),
-  ]);
+      loadAccountBrandResolved(accountId).catch(() => null),
+      supabase
+        .from('accounts')
+        .select('name')
+        .eq('id', accountId)
+        .maybeSingle(),
+      auth?.id
+        ? supabase
+            .from('user_settings')
+            .select('first_name, last_name')
+            .eq('user_id', auth.id)
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+      createInvoicePaymentSettingsService(supabase).getSettings(accountId),
+    ]);
 
   const meta = (auth?.user_metadata ?? {}) as {
     first_name?: string | null;

@@ -421,14 +421,16 @@ export function EmailPageClient({ initialData }: Props) {
       {showSettings ? (
         <div className="shrink-0">
           <EmailSettingsCard
-          connectedEmail={initialData.connection?.googleEmail ?? null}
-          initialStyleNotes={initialData.settings.styleNotes}
-          initialSignature={initialData.settings.signature}
-          initialSignatureIsHtml={initialData.settings.signatureIsHtml}
-          initialAutoTriageEnabled={initialData.settings.autoTriageEnabled}
-          initialAutoDraftEnabled={initialData.settings.autoDraftEnabled}
-          initialAutoSaveGmailDrafts={initialData.settings.autoSaveGmailDrafts}
-          lastSyncedAt={initialData.settings.lastSyncedAt}
+            connectedEmail={initialData.connection?.googleEmail ?? null}
+            initialStyleNotes={initialData.settings.styleNotes}
+            initialSignature={initialData.settings.signature}
+            initialSignatureIsHtml={initialData.settings.signatureIsHtml}
+            initialAutoTriageEnabled={initialData.settings.autoTriageEnabled}
+            initialAutoDraftEnabled={initialData.settings.autoDraftEnabled}
+            initialAutoSaveGmailDrafts={
+              initialData.settings.autoSaveGmailDrafts
+            }
+            lastSyncedAt={initialData.settings.lastSyncedAt}
           />
         </div>
       ) : null}

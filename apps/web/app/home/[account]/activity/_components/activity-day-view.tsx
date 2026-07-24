@@ -361,7 +361,9 @@ function MemoryAppGroup({
                 `${appGroup.appKey}::${sessionGroup.sessionKey}`,
               )}
               onToggle={() =>
-                onToggleSession(`${appGroup.appKey}::${sessionGroup.sessionKey}`)
+                onToggleSession(
+                  `${appGroup.appKey}::${sessionGroup.sessionKey}`,
+                )
               }
               showMember={showMember}
               canEdit={canEdit}

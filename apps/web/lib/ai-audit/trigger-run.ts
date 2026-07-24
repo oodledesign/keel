@@ -35,10 +35,7 @@ export function getAiAuditRunUrl(jobId: string): string {
  * Waiting with a short AbortSignal timed out in production and logged false
  * errors on the status poll, then retried and stacked extra /run calls.
  */
-async function kickAiAuditRun(
-  jobId: string,
-  secret: string,
-): Promise<boolean> {
+async function kickAiAuditRun(jobId: string, secret: string): Promise<boolean> {
   const url = getAiAuditRunUrl(jobId);
 
   for (let attempt = 1; attempt <= RUN_TRIGGER_ATTEMPTS; attempt += 1) {

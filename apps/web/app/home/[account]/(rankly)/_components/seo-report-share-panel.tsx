@@ -590,7 +590,7 @@ export function SeoReportSharePanel(props: {
     >
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="font-semibold">Client SEO report</h2>
+          <h2 className="font-semibold">Client SEO + AI Search report</h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             One click runs Site Explorer, PageSpeed, Site Crawler, and AI Search
             Audit, then builds a client-friendly public link + PDF. Larger sites

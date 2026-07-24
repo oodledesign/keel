@@ -23,7 +23,7 @@ function mapRow(row: Record<string, unknown>): SeoReportSnapshotRow {
     project_id: String(row.project_id),
     account_id: String(row.account_id),
     created_by: (row.created_by as string | null) ?? null,
-    title: String(row.title ?? 'SEO Report'),
+    title: String(row.title ?? 'SEO + AI Search Report'),
     target_domain: String(row.target_domain),
     public_share_enabled: Boolean(row.public_share_enabled),
     public_share_token: (row.public_share_token as string | null) ?? null,

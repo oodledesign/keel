@@ -76,6 +76,7 @@ export function VideoCard(props: {
           </Link>
           <p className="text-muted-foreground mt-0.5 text-xs">
             {new Date(video.created_at).toLocaleDateString()}
+            {video.source === 'screen_recording' ? ' · Screen recording' : ''}
           </p>
         </div>
 

@@ -48,9 +48,9 @@ describe('taskTitlesFromPlanMarkdown', () => {
 1pm–2pm · Reply to Sarah · Oodle · ~30min
 `;
 
-    expect(
-      taskTitlesFromPlanMarkdown(markdown, '2026-07-22T12:00:00'),
-    ).toEqual(['Write proposal', 'Reply to Sarah']);
+    expect(taskTitlesFromPlanMarkdown(markdown, '2026-07-22T12:00:00')).toEqual(
+      ['Write proposal', 'Reply to Sarah'],
+    );
   });
 });
 
@@ -85,8 +85,10 @@ describe('resolvePlannedTasks', () => {
   });
 
   it('returns all open tasks when no ids or markdown titles are available', () => {
-    expect(
-      resolvePlannedTasks(available, {}).map((item) => item.id),
-    ).toEqual(['a', 'b', 'c']);
+    expect(resolvePlannedTasks(available, {}).map((item) => item.id)).toEqual([
+      'a',
+      'b',
+      'c',
+    ]);
   });
 });

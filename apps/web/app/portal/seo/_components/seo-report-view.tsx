@@ -181,7 +181,7 @@ export function SeoReportView(props: {
               </p>
             ) : null}
             <h1 className="font-[family-name:var(--ozer-font-display,inherit)] text-3xl font-bold tracking-tight sm:text-4xl">
-              SEO Report
+              SEO + AI Search Report
             </h1>
             <p className="text-sm text-[#B7A4AC]">
               {snapshot.targetDomain} ·{' '}

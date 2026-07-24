@@ -85,8 +85,7 @@ export function ClientCard({
   onCall,
 }: ClientCardProps) {
   const subtitle =
-    tagline?.trim() ||
-    [company_name, city].filter(Boolean).join(' · ');
+    tagline?.trim() || [company_name, city].filter(Boolean).join(' · ');
 
   const rowClassName = cn(
     'group border-b border-[color:var(--workspace-shell-border)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',

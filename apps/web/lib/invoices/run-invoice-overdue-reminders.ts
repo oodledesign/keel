@@ -31,9 +31,7 @@ function firstRelation<T>(value: T | T[] | null | undefined): T | null {
   return Array.isArray(value) ? (value[0] ?? null) : value;
 }
 
-function clientNameFromRow(
-  client: OverdueInvoiceRow['clients'],
-): string {
+function clientNameFromRow(client: OverdueInvoiceRow['clients']): string {
   const row = firstRelation(client);
   if (!row) return 'Client';
 

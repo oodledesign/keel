@@ -3,9 +3,8 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
-
-import { queueBrainDeleteSource } from '~/lib/brain/sync';
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
+import { queueBrainDeleteSource } from '~/lib/brain/sync';
 
 import { syncSuggestedActionItemsFromThreadLink } from './action-item-links';
 

@@ -4,7 +4,7 @@ UK GDPR Article 28 terms for customers who use Ozer as a processor.
 
 **Solicitor review status:** this DPA has been prepared for customer review. Clauses marked [LEGAL REVIEW NEEDED] remain subject to solicitor confirmation.
 
-**Version:** [DATE]. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
+**Version:** 24 July 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
 
 ## 1. Roles and subject matter
 

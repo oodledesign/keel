@@ -23,11 +23,7 @@ export async function syncEmailThreadToBrain(threadId: string) {
     return;
   }
 
-  queueBrainIndexSource(
-    thread.account_id as string,
-    'email_thread',
-    threadId,
-  );
+  queueBrainIndexSource(thread.account_id as string, 'email_thread', threadId);
 }
 
 export function queueEmailThreadBrainSync(threadId: string) {

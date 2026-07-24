@@ -177,7 +177,8 @@ export async function buildInvoicePdfPayload(
     show_payment_link: options.show_payment_link ?? true,
     items: (items ?? []).map((item) => ({
       ...item,
-      line_type: (item as { line_type?: string | null }).line_type ?? 'quantity',
+      line_type:
+        (item as { line_type?: string | null }).line_type ?? 'quantity',
       quantity: Number(item.quantity),
     })),
     client: clientRow ?? null,

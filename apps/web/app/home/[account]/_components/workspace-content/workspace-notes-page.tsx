@@ -22,6 +22,13 @@ import { useSupabase } from '@kit/supabase/hooks/use-supabase';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
+import {
   DropdownMenu,
   DropdownMenuCheckboxItem,
   DropdownMenuContent,
@@ -30,13 +37,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
-import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -1055,7 +1055,9 @@ function UploadFileSheet({
         </Button>
       </div>
       <div className="space-y-2">
-        <Label className="text-[var(--workspace-shell-text-muted)]">Title</Label>
+        <Label className="text-[var(--workspace-shell-text-muted)]">
+          Title
+        </Label>
         <Input
           value={title}
           onChange={(e) => setTitle(e.target.value)}

@@ -1,6 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { getBrainIndexStats } from '~/lib/brain/indexer';
+
 import { getTeamAccountAccess } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { KnowledgeBaseSettings } from '../_components/knowledge-base-settings';

@@ -59,6 +59,15 @@ export function VideoListRow(props: {
         <p className="text-muted-foreground text-xs">
           {formatDuration(video.duration_seconds)} ·{' '}
           {new Date(video.created_at).toLocaleDateString()}
+          {video.source === 'screen_recording' ? (
+            <>
+              {' '}
+              ·{' '}
+              <span className="text-[var(--workspace-shell-text)]">
+                Screen recording
+              </span>
+            </>
+          ) : null}
         </p>
       </div>
 

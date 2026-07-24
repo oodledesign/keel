@@ -2,16 +2,9 @@ import { type NextRequest } from 'next/server';
 
 import { z } from 'zod';
 
-import { createBunnyStreamClient } from '@kit/bunny';
-
-import { assertVideoCreateAllowed } from '~/lib/billing/entitlements';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { createVideoUploadForAccount } from '~/lib/videos/server/create-video-upload';
 import { requireVideoAccountAccess } from '~/lib/videos/server/videos-access';
-import {
-  getBunnyCdnHostname,
-  resolveAccountBunnyApiKey,
-  resolveAccountBunnyLibraryId,
-} from '~/lib/videos/server/videos-data';
 
 export const runtime = 'nodejs';
 
@@ -38,79 +31,22 @@ export async function POST(request: NextRequest) {
       return jsonErr('FORBIDDEN', 'Not a member of this account', 403);
     }
 
-    const accountId = parsed.data.accountId;
-
-    const { count: videoCount } = await access.client
-      .from('videos')
-      .select('id', { count: 'exact', head: true })
-      .eq('account_id', accountId);
-
-    const limitCheck = await assertVideoCreateAllowed(
-      access.client,
-      accountId,
-      videoCount ?? 0,
-    );
-
-    if (!limitCheck.allowed) {
-      return jsonErr(
-        'PLAN_LIMIT',
-        limitCheck.reason ?? 'Video limit reached for your plan',
-        402,
-      );
-    }
-
-    const libraryId =
-      parsed.data.libraryId?.trim() ||
-      (await resolveAccountBunnyLibraryId(
-        access.client,
-        parsed.data.accountId,
-      ));
-    const apiKey = await resolveAccountBunnyApiKey(
-      access.client,
-      parsed.data.accountId,
-    );
-    const bunny = createBunnyStreamClient(apiKey);
-    const created = await bunny.createVideo(libraryId, parsed.data.title);
-
-    const expiry = Math.floor(Date.now() / 1000) + 60 * 60 * 24;
-    const { signature } = bunny.getUploadSignature(
-      libraryId,
-      created.videoId,
-      expiry,
-    );
-
-    const { data: row, error } = await access.client
-      .from('videos')
-      .insert({
-        account_id: parsed.data.accountId,
-        folder_id: parsed.data.folderId ?? null,
-        title: parsed.data.title,
-        bunny_video_id: created.videoId,
-        bunny_library_id: libraryId,
-        status: 'uploading',
-        original_filename: parsed.data.originalFilename ?? null,
-      })
-      .select('id')
-      .single();
-
-    if (error || !row) {
-      return jsonErr(
-        'DB_ERROR',
-        error?.message ?? 'Failed to create video',
-        500,
-      );
-    }
-
-    return jsonOk({
-      videoId: row.id as string,
-      bunnyVideoId: created.videoId,
-      uploadUrl: created.uploadUrl,
-      signature,
-      expiry,
-      tusEndpoint: 'https://video.bunnycdn.com/tusupload',
-      libraryId,
-      cdnHostname: getBunnyCdnHostname(),
+    const created = await createVideoUploadForAccount(access.client, {
+      accountId: parsed.data.accountId,
+      title: parsed.data.title,
+      folderId: parsed.data.folderId,
+      originalFilename: parsed.data.originalFilename,
+      source: 'upload',
     });
+
+    if (!created.ok) {
+      if (created.code === 'PLAN_LIMIT') {
+        return jsonErr('PLAN_LIMIT', created.message, 402);
+      }
+      return jsonErr('DB_ERROR', created.message, 500);
+    }
+
+    return jsonOk(created.data);
   } catch (error) {
     console.error('[videos] create-upload', error);
     return jsonErr(

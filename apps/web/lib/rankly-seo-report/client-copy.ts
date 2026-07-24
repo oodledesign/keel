@@ -185,7 +185,8 @@ export function enrichPillarForClient(
 } {
   const explainer = PILLAR_EXPLAINERS[pillar.id] ?? {
     whatItMeans: 'A health score for this area of your online presence.',
-    whyItMatters: 'Higher scores usually mean customers can find you more easily.',
+    whyItMatters:
+      'Higher scores usually mean customers can find you more easily.',
   };
   const band = scoreBand(pillar.available ? pillar.score : null);
 

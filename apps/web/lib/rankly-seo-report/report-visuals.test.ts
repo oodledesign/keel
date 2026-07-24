@@ -14,7 +14,7 @@ function baseSnapshot(
     version: 1,
     generatedAt: '2026-07-23T00:00:00.000Z',
     targetDomain: 'example.com',
-    title: 'SEO Report',
+    title: 'SEO + AI Search Report',
     overallScore: 42,
     executiveSummary: null,
     pillars: [

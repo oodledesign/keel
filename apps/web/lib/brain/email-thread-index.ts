@@ -127,7 +127,9 @@ export function buildEmailThreadIndexText(params: {
   if (params.actionItems?.length) {
     lines.push('', '## Suggested action items');
     for (const item of params.actionItems) {
-      lines.push(`- ${item.title}${item.status !== 'suggested' ? ` (${item.status})` : ''}`);
+      lines.push(
+        `- ${item.title}${item.status !== 'suggested' ? ` (${item.status})` : ''}`,
+      );
       if (item.detail?.trim()) {
         lines.push(`  ${item.detail.trim()}`);
       }
@@ -159,9 +161,10 @@ function emailThreadUpdatedAt(
     }
   }
 
-  return candidates.reduce((latest, value) =>
-    value && value > latest ? value : latest,
-  thread.updated_at);
+  return candidates.reduce(
+    (latest, value) => (value && value > latest ? value : latest),
+    thread.updated_at,
+  );
 }
 
 async function loadLinkedNames(
@@ -182,7 +185,7 @@ async function loadLinkedNames(
       clientName =
         (data.display_name as string | null)?.trim() ||
         (data.company_name as string | null)?.trim() ||
-        [(data.first_name as string | null), data.last_name as string | null]
+        [data.first_name as string | null, data.last_name as string | null]
           .filter(Boolean)
           .join(' ')
           .trim() ||

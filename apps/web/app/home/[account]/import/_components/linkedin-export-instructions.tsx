@@ -29,8 +29,8 @@ export function LinkedInExportInstructions({
         </li>
         <li>
           Choose <strong>Want something in particular?</strong>, tick{' '}
-          <strong>Connections</strong>, then click <strong>Request archive</strong>.
-          Confirm with your password if asked.
+          <strong>Connections</strong>, then click{' '}
+          <strong>Request archive</strong>. Confirm with your password if asked.
         </li>
         <li>
           LinkedIn emails you when the file is ready — usually within{' '}

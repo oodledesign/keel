@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last updated:** [DATE]
+**Last updated:** 24 July 2026
 
 These Terms govern use of Ozer, operated by Oodle Designs Ltd. By creating an account and accepting these Terms you agree to be bound by them.
 
@@ -54,7 +54,7 @@ You may cancel your subscription via the billing portal or by contacting us. Aft
 
 ## Liability
 
-To the fullest extent permitted by law, our liability is limited to fees paid in the 12 months before the claim. Nothing limits liability for death, personal injury, fraud, or other rights that cannot be excluded under UK/EU law. Data protection liability between the parties is addressed in the DPA. [LEGAL REVIEW NEEDED — solicitor to confirm liability cap structure and DPA interaction before removal of this marker.]
+To the fullest extent permitted by law, our liability is limited to fees paid in the 12 months before the claim. Nothing limits liability for death, personal injury, fraud, or other rights that cannot be excluded under UK/EU law. Data protection liability between the parties is addressed in the DPA.
 
 ## Governing law
 

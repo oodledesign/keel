@@ -27,8 +27,8 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import { parseCsv } from '~/lib/csv/parse-csv';
 import {
-  isLinkedInConnectionsCsv,
   type LinkedInImportDestination,
+  isLinkedInConnectionsCsv,
 } from '~/lib/integrations/linkedin/linkedin-import';
 
 import {
@@ -326,39 +326,39 @@ export function LinkedInImportPageClient({
         <div className="space-y-4">
           <LinkedInExportInstructions compact />
           <div className={cn(panelClass, 'p-8 text-center')}>
-          <Upload className="mx-auto mb-3 h-8 w-8 text-[var(--ozer-accent-muted)]" />
-          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-            Upload Connections.csv
-          </p>
-          <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-            Importing into{' '}
-            {destination === 'pipeline' ? 'pipeline leads' : 'clients'}
-          </p>
-          <div className="mt-4">
-            <Label
-              htmlFor="linkedin-csv-upload"
-              className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-[var(--ozer-accent)] px-4 py-2 text-sm font-medium text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-            >
-              Choose file
-            </Label>
-          </div>
-          <input
-            id="linkedin-csv-upload"
-            type="file"
-            accept=".csv,text/csv"
-            className="sr-only"
-            onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
-          />
-          <div className="mt-4">
-            <Button
-              type="button"
-              variant="outline"
-              className="border-[color:var(--workspace-shell-border)]"
-              onClick={() => setStep('setup')}
-            >
-              Back
-            </Button>
-          </div>
+            <Upload className="mx-auto mb-3 h-8 w-8 text-[var(--ozer-accent-muted)]" />
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Upload Connections.csv
+            </p>
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              Importing into{' '}
+              {destination === 'pipeline' ? 'pipeline leads' : 'clients'}
+            </p>
+            <div className="mt-4">
+              <Label
+                htmlFor="linkedin-csv-upload"
+                className="inline-flex cursor-pointer items-center justify-center rounded-xl bg-[var(--ozer-accent)] px-4 py-2 text-sm font-medium text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+              >
+                Choose file
+              </Label>
+            </div>
+            <input
+              id="linkedin-csv-upload"
+              type="file"
+              accept=".csv,text/csv"
+              className="sr-only"
+              onChange={(event) => handleFile(event.target.files?.[0] ?? null)}
+            />
+            <div className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[color:var(--workspace-shell-border)]"
+                onClick={() => setStep('setup')}
+              >
+                Back
+              </Button>
+            </div>
           </div>
         </div>
       ) : null}
@@ -475,17 +475,16 @@ export function LinkedInImportPageClient({
                   Existing: {row.existingLabel} ({row.matchReason})
                 </p>
                 <div className="mt-2 flex flex-wrap gap-3 text-sm">
-                  {(
-                    destination === 'clients'
-                      ? ([
-                          ['keep', 'Keep existing'],
-                          ['overwrite', 'Overwrite'],
-                          ['create_new', 'Import as new'],
-                        ] as const)
-                      : ([
-                          ['keep', 'Keep existing'],
-                          ['create_new', 'Import as new'],
-                        ] as const)
+                  {(destination === 'clients'
+                    ? ([
+                        ['keep', 'Keep existing'],
+                        ['overwrite', 'Overwrite'],
+                        ['create_new', 'Import as new'],
+                      ] as const)
+                    : ([
+                        ['keep', 'Keep existing'],
+                        ['create_new', 'Import as new'],
+                      ] as const)
                   ).map(([value, label]) => (
                     <label
                       key={value}
