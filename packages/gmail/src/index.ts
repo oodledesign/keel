@@ -16,7 +16,12 @@ export {
   plainTextToHtml,
   stripTrailingPlainSignature,
 } from './mime';
-export { backfill, incrementalSync, syncMailbox } from './sync';
+export {
+  backfill,
+  incrementalSync,
+  syncGmailThread,
+  syncMailbox,
+} from './sync';
 export type {
   BuildRawMessageInput,
   GmailHistoryRecord,

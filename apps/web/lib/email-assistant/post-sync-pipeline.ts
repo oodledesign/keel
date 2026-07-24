@@ -9,6 +9,7 @@ import { isFromOwner } from './address-utils';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
+import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
 import { buildThreadText } from './thread-text';
 
 const MAX_CLASSIFY_PER_RUN = 8;
@@ -87,6 +88,16 @@ export async function runEmailAssistantPipeline(
   if (!owner) {
     result.errors.push('Could not resolve mailbox owner');
     return result;
+  }
+
+  try {
+    await reconcileRepliedNeedsReplyThreads({ userId });
+  } catch (error) {
+    result.errors.push(
+      error instanceof Error
+        ? error.message
+        : 'Failed to reconcile replied threads',
+    );
   }
 
   const { data: threadRows, error: threadsError } = await admin

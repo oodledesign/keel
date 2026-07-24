@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadPersonalSidebarWorkspaces } from '~/home/(user)/_lib/server/personal-sidebar-workspaces.loader';
+import { refreshAndReconcileNeedsReplyThreads } from '~/lib/email-assistant/refresh-needs-reply-threads';
 import {
   EMAIL_THREAD_LINK_SELECT,
   enrichEmailThreadLinks,
@@ -82,6 +83,12 @@ export const loadEmailPageData = cache(
   async (): Promise<EmailPageInitialData> => {
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
+
+    try {
+      await refreshAndReconcileNeedsReplyThreads({ userId: user.id });
+    } catch (error) {
+      console.error('[email] needs-reply reconcile', error);
+    }
 
     const [connectionResult, settingsResult, threadsResult, workspaces] =
       await Promise.all([

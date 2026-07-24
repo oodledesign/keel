@@ -13,7 +13,7 @@ import {
 import { parseMessage, participantsFromMessage } from './mime';
 import type { GmailMessage, GmailSyncResult } from './types';
 
-const BACKFILL_QUERY = 'in:inbox newer_than:30d';
+const BACKFILL_QUERY = 'newer_than:30d (in:inbox OR in:sent)';
 /** Keep each serverless invocation under Vercel's 300s limit (full fetch per message). */
 const BACKFILL_MAX_MESSAGES_PER_RUN = 40;
 
@@ -237,4 +237,52 @@ export async function syncMailbox(userId: string): Promise<GmailSyncResult> {
   }
 
   return incrementalSync(userId);
+}
+
+type GmailThreadResponse = {
+  id?: string | null;
+  messages?: GmailMessage[] | null;
+};
+
+/**
+ * Fetches a single Gmail thread and persists any missing messages
+ * (including Sent replies that inbox-only backfill may have skipped).
+ *
+ * Use `format: 'metadata'` for a lighter refresh (headers + labels only).
+ */
+export async function syncGmailThread(
+  userId: string,
+  gmailThreadId: string,
+  options?: { format?: 'full' | 'metadata' },
+): Promise<{ messagesProcessed: number; latestIsSent: boolean }> {
+  const format = options?.format ?? 'full';
+  const search = new URLSearchParams({ format });
+
+  if (format === 'metadata') {
+    for (const header of ['From', 'To', 'Cc', 'Subject', 'Date']) {
+      search.append('metadataHeaders', header);
+    }
+  }
+
+  const thread = await gmailFetch<GmailThreadResponse>(
+    userId,
+    `/threads/${encodeURIComponent(gmailThreadId)}?${search.toString()}`,
+  );
+
+  const messages = [...(thread.messages ?? [])].sort((a, b) => {
+    const aDate = Number(a.internalDate ?? 0);
+    const bDate = Number(b.internalDate ?? 0);
+    return aDate - bDate;
+  });
+
+  let processed = 0;
+  for (const message of messages) {
+    await persistMessage(userId, message);
+    processed += 1;
+  }
+
+  const latest = messages.at(-1);
+  const latestIsSent = (latest?.labelIds ?? []).includes('SENT');
+
+  return { messagesProcessed: processed, latestIsSent };
 }

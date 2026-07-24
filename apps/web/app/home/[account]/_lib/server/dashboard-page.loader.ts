@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
+import { refreshAndReconcileNeedsReplyThreads } from '~/lib/email-assistant/refresh-needs-reply-threads';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import { PROJECT_PRIMARY_CLIENT_EMBED } from '~/lib/projects/delivery-project-db';
 
@@ -184,6 +185,12 @@ async function loadDashboardPageDataImpl(
   const client = getSupabaseServerClient();
   const accountId = account.id;
 
+  try {
+    await refreshAndReconcileNeedsReplyThreads({ accountId });
+  } catch (error) {
+    console.error('[dashboard] needs-reply reconcile', error);
+  }
+
   const todayIso = new Date().toISOString().slice(0, 10);
 
   const monthStart = new Date();
@@ -290,9 +297,12 @@ async function loadDashboardPageDataImpl(
     client.from('projects').select('id').eq('account_id', accountId),
     client
       .from('email_threads')
-      .select('id, subject, snippet, participants, last_message_at, client_id', {
-        count: 'exact',
-      })
+      .select(
+        'id, subject, snippet, participants, last_message_at, client_id',
+        {
+          count: 'exact',
+        },
+      )
       .eq('account_id', accountId)
       .eq('assistant_category', 'needs_reply')
       .order('last_message_at', { ascending: false, nullsFirst: false })
