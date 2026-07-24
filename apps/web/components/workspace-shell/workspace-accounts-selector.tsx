@@ -1,6 +1,6 @@
 'use client';
 
-import { useContext, useState } from 'react';
+import { useContext, useMemo, useState } from 'react';
 
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -8,6 +8,7 @@ import { useRouter } from 'next/navigation';
 import { CaretSortIcon } from '@radix-ui/react-icons';
 import { CheckCircle, Mail, Plus } from 'lucide-react';
 
+import { usePersonalAccountData } from '@kit/accounts/hooks/use-personal-account-data';
 import { CreateTeamAccountDialog } from '@kit/team-accounts/components';
 import { Button } from '@kit/ui/button';
 import {
@@ -35,6 +36,12 @@ import {
   isPersonalWorkspaceValue,
 } from '~/lib/workspace-personal-switcher';
 
+type PersonalAccountSeed = {
+  id: string | null;
+  name: string | null;
+  picture_url: string | null;
+};
+
 type WorkspaceAccountsSelectorProps = {
   selectedAccount: string;
   userId: string;
@@ -44,6 +51,8 @@ type WorkspaceAccountsSelectorProps = {
   /** Popover (default) or inline expand — inline pushes sibling content down (mobile menu). */
   variant?: 'popover' | 'inline';
   onNavigate?: () => void;
+  /** Optional seed so the personal icon can render before the client fetch settles. */
+  personalAccount?: PersonalAccountSeed;
 };
 
 export function WorkspaceAccountsSelector({
@@ -54,14 +63,34 @@ export function WorkspaceAccountsSelector({
   enableTeamCreation = true,
   variant = 'popover',
   onNavigate,
+  personalAccount,
 }: WorkspaceAccountsSelectorProps) {
   const router = useRouter();
   const ctx = useContext(SidebarContext);
   const collapsed = !ctx?.open;
   const [open, setOpen] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const { data: personalData } = usePersonalAccountData(
+    userId,
+    personalAccount,
+  );
 
-  const selected = accounts.find((a) => a.value === selectedAccount);
+  const accountsWithPersonalPhoto = useMemo(() => {
+    const personalImage = personalData?.picture_url ?? null;
+    if (!personalImage) {
+      return accounts;
+    }
+
+    return accounts.map((account) =>
+      isPersonalWorkspaceValue(account.value) && !account.image
+        ? { ...account, image: personalImage }
+        : account,
+    );
+  }, [accounts, personalData?.picture_url]);
+
+  const selected = accountsWithPersonalPhoto.find(
+    (a) => a.value === selectedAccount,
+  );
 
   function navigateTo(account: WorkspaceSwitcherAccount) {
     setOpen(false);
@@ -131,7 +160,7 @@ export function WorkspaceAccountsSelector({
     <Command className="bg-transparent text-[var(--workspace-shell-text)]">
       <CommandList className={workspaceComboboxListClass}>
         <CommandGroup heading="Your workspaces">
-          {accounts.map((account) => (
+          {accountsWithPersonalPhoto.map((account) => (
             <WorkspaceSwitcherAccountRow
               key={account.id}
               account={account}

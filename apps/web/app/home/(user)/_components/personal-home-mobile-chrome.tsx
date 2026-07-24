@@ -55,6 +55,15 @@ export function PersonalHomeMobileChrome({
               selectedAccount={PERSONAL_WORKSPACE_VALUE}
               userId={userId}
               accounts={switcherAccounts}
+              personalAccount={
+                workspace.workspace
+                  ? {
+                      id: workspace.workspace.id,
+                      name: workspace.workspace.name,
+                      picture_url: workspace.workspace.picture_url,
+                    }
+                  : undefined
+              }
               className="h-9 max-w-none justify-start px-1"
               enableTeamCreation={false}
             />

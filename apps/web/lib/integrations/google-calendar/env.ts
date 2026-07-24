@@ -7,7 +7,19 @@ const optionalGoogleCalendarEnv = z.object({
   GOOGLE_CLIENT_ID: z.string().min(1).optional(),
   GOOGLE_CLIENT_SECRET: z.string().min(1).optional(),
   GOOGLE_REDIRECT_URI: z.string().url().optional(),
+  // Shared Gmail OAuth client fallback (same Google Cloud client often lists both callbacks).
+  GOOGLE_GMAIL_CLIENT_ID: z.string().min(1).optional(),
+  GOOGLE_GMAIL_CLIENT_SECRET: z.string().min(1).optional(),
+  NEXT_PUBLIC_SITE_URL: z.string().url().optional(),
 });
+
+function defaultCalendarRedirectUri(siteUrl: string | undefined) {
+  if (!siteUrl) {
+    return undefined;
+  }
+
+  return `${siteUrl.replace(/\/$/, '')}/api/integrations/google-calendar/callback`;
+}
 
 export function getOptionalGoogleCalendarEnv() {
   const parsed = optionalGoogleCalendarEnv.safeParse(process.env);
@@ -16,11 +28,19 @@ export function getOptionalGoogleCalendarEnv() {
   }
 
   const env = parsed.data;
-  const clientId = env.GOOGLE_OAUTH_CLIENT_ID ?? env.GOOGLE_CLIENT_ID;
+  const clientId =
+    env.GOOGLE_OAUTH_CLIENT_ID ??
+    env.GOOGLE_CLIENT_ID ??
+    env.GOOGLE_GMAIL_CLIENT_ID;
   const clientSecret =
-    env.GOOGLE_OAUTH_CLIENT_SECRET ?? env.GOOGLE_CLIENT_SECRET;
+    env.GOOGLE_OAUTH_CLIENT_SECRET ??
+    env.GOOGLE_CLIENT_SECRET ??
+    env.GOOGLE_GMAIL_CLIENT_SECRET;
   const redirectUri =
-    env.GOOGLE_CALENDAR_REDIRECT_URI ?? env.GOOGLE_REDIRECT_URI;
+    env.GOOGLE_CALENDAR_REDIRECT_URI ??
+    // Never fall back to GOOGLE_REDIRECT_URI / Gmail callback — those are a different path
+    // and cause redirect_uri_mismatch when only the calendar callback is authorized.
+    defaultCalendarRedirectUri(env.NEXT_PUBLIC_SITE_URL);
 
   if (!clientId || !clientSecret || !redirectUri) {
     return null;
@@ -33,7 +53,7 @@ export function getGoogleCalendarEnv() {
   const env = getOptionalGoogleCalendarEnv();
   if (!env) {
     throw new Error(
-      'Google Calendar OAuth is not configured. Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, and GOOGLE_CALENDAR_REDIRECT_URI.',
+      'Google Calendar OAuth is not configured. Set GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, and GOOGLE_CALENDAR_REDIRECT_URI (or NEXT_PUBLIC_SITE_URL).',
     );
   }
   return env;

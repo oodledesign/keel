@@ -73,6 +73,15 @@ export function HomeSidebar(props: HomeSidebarProps) {
             selectedAccount={PERSONAL_WORKSPACE_VALUE}
             userId={user.id}
             accounts={switcherAccounts}
+            personalAccount={
+              workspace
+                ? {
+                    id: workspace.id,
+                    name: workspace.name,
+                    picture_url: workspace.picture_url,
+                  }
+                : undefined
+            }
             className="w-full px-0"
             enableTeamCreation={featureFlagsConfig.enableTeamCreation}
           />
