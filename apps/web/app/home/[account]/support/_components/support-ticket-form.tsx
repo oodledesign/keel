@@ -49,9 +49,11 @@ const priorityOptions: { value: TicketPriority; label: string }[] = [
 export function SupportTicketForm({
   accountId,
   accountSlug,
+  defaultClientOrgId,
 }: {
   accountId: string;
   accountSlug: string;
+  defaultClientOrgId?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -64,7 +66,7 @@ export function SupportTicketForm({
   const [form, setForm] = useState({
     title: '',
     description: '',
-    client_org_id: '',
+    client_org_id: defaultClientOrgId ?? '',
     website_id: '',
     project_id: '',
     recording_url: '',

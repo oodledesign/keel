@@ -1,14 +1,17 @@
 import Link from 'next/link';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import {
+  formatPlatformSupportCategory,
+  formatPlatformTicketNumber,
+} from '~/lib/support/platform-support.types';
 
 import { HomeLayoutPageHeader } from '../_components/home-page-header';
 import { PlatformSupportTicketForm } from './_components/platform-support-ticket-form';
-import { formatPlatformTicketNumber } from '~/lib/support/platform-support.types';
 
 export const metadata = { title: 'Support' };
 
@@ -23,7 +26,9 @@ async function PlatformSupportPage() {
       .eq('user_id', user.id),
     client
       .from('platform_support_tickets')
-      .select('id, ticket_number, subject, status, created_at, updated_at')
+      .select(
+        'id, ticket_number, subject, status, category, created_at, updated_at',
+      )
       .eq('user_id', user.id)
       .order('created_at', { ascending: false })
       .limit(20),
@@ -67,8 +72,15 @@ async function PlatformSupportPage() {
                     {formatPlatformTicketNumber(ticket.ticket_number as number)}{' '}
                     {ticket.subject}
                   </Link>
-                  <p className="text-muted-foreground mt-1 text-xs capitalize">
-                    {ticket.status} ·{' '}
+                  <p className="text-muted-foreground mt-1 text-xs">
+                    {formatPlatformSupportCategory(
+                      (ticket as { category?: string | null }).category,
+                    )}
+                    {' · '}
+                    <span className="capitalize">
+                      {ticket.status as string}
+                    </span>
+                    {' · '}
                     {new Date(ticket.created_at as string).toLocaleString()}
                   </p>
                 </li>

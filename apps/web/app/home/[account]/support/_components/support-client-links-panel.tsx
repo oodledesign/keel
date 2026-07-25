@@ -11,6 +11,7 @@ import {
 } from '@kit/ui/select';
 
 import { ClientSupportLinkCard } from '../../clients/_components/client-support-link-card';
+import { ClientWorkspaceLinkCard } from '../../clients/_components/client-workspace-link-card';
 import { listSupportClientOrgs } from '../_lib/server/server-actions';
 
 type ClientOrgOption = { id: string; name: string };
@@ -73,12 +74,20 @@ export function SupportClientLinksPanel({
       </div>
 
       {selectedOrgId ? (
-        <ClientSupportLinkCard
-          accountId={accountId}
-          clientOrgId={selectedOrgId}
-          accountSlug={accountSlug}
-          compact
-        />
+        <div className="space-y-3">
+          <ClientSupportLinkCard
+            accountId={accountId}
+            clientOrgId={selectedOrgId}
+            accountSlug={accountSlug}
+            compact
+          />
+          <ClientWorkspaceLinkCard
+            accountId={accountId}
+            clientOrgId={selectedOrgId}
+            accountSlug={accountSlug}
+            compact
+          />
+        </div>
       ) : null}
     </div>
   );

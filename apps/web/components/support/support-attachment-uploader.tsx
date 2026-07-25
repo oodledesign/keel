@@ -15,8 +15,10 @@ export type SupportAttachmentItem = {
 };
 
 type Props = {
-  accountId: string;
+  accountId?: string;
   supportToken?: string;
+  /** Authenticated platform (Ozer product) support uploads. */
+  platformSupport?: boolean;
   value: SupportAttachmentItem[];
   onChange: (attachments: SupportAttachmentItem[]) => void;
   max?: number;
@@ -25,6 +27,7 @@ type Props = {
 export function SupportAttachmentUploader({
   accountId,
   supportToken,
+  platformSupport = false,
   value,
   onChange,
   max = 5,
@@ -48,8 +51,12 @@ export function SupportAttachmentUploader({
         body.set('file', file);
         if (supportToken) {
           body.set('supportToken', supportToken);
-        } else {
+        } else if (platformSupport) {
+          body.set('platformSupport', '1');
+        } else if (accountId) {
           body.set('accountId', accountId);
+        } else {
+          throw new Error('Missing upload context');
         }
 
         const response = await fetch('/api/support/upload-attachment', {

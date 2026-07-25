@@ -8,7 +8,10 @@ import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import { DataTable } from '@kit/ui/enhanced-data-table';
 
-import { formatPlatformTicketNumber } from '~/lib/support/platform-support.types';
+import {
+  formatPlatformSupportCategory,
+  formatPlatformTicketNumber,
+} from '~/lib/support/platform-support.types';
 
 export type AdminSupportTicketRow = {
   id: string;
@@ -16,6 +19,7 @@ export type AdminSupportTicketRow = {
   subject: string;
   status: string;
   priority: string;
+  category?: string | null;
   created_at: string;
   user_id: string;
 };
@@ -53,6 +57,14 @@ const columns: ColumnDef<AdminSupportTicketRow>[] = [
           {row.original.subject}
         </Link>
       </div>
+    ),
+  },
+  {
+    header: 'Category',
+    cell: ({ row }) => (
+      <Badge variant="secondary">
+        {formatPlatformSupportCategory(row.original.category)}
+      </Badge>
     ),
   },
   {

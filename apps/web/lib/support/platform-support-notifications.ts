@@ -4,7 +4,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
-import { formatPlatformTicketNumber } from './platform-support.types';
+import {
+  formatPlatformSupportCategory,
+  formatPlatformTicketNumber,
+} from './platform-support.types';
 
 function getSupportInbox(): string | null {
   return (
@@ -38,6 +41,19 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
+function attachmentsHtml(
+  attachments?: Array<{ name: string; url: string }> | null,
+) {
+  if (!attachments?.length) return '';
+  const items = attachments
+    .map(
+      (file) =>
+        `<li><a href="${escapeHtml(file.url)}">${escapeHtml(file.name)}</a></li>`,
+    )
+    .join('');
+  return `<p><strong>Attachments:</strong></p><ul>${items}</ul>`;
+}
+
 async function loadUserEmail(
   admin: SupabaseClient,
   userId: string,
@@ -54,6 +70,8 @@ export async function notifySupportTeamNewTicket(
     ticketNumber: number;
     subject: string;
     body: string;
+    category?: string | null;
+    attachments?: Array<{ name: string; url: string }> | null;
     userId: string;
     accountName?: string | null;
   },
@@ -64,6 +82,7 @@ export async function notifySupportTeamNewTicket(
 
   const userEmail = await loadUserEmail(admin, input.userId);
   const ticketLabel = formatPlatformTicketNumber(input.ticketNumber);
+  const categoryLabel = formatPlatformSupportCategory(input.category);
   const adminUrl = new URL(
     `/admin/support/${input.ticketId}`,
     config.siteUrl,
@@ -74,9 +93,10 @@ export async function notifySupportTeamNewTicket(
     mail: {
       to: inbox,
       from: config.sender,
-      subject: `[${config.productName} support] ${ticketLabel} ${input.subject}`,
+      subject: `[${config.productName} support] ${categoryLabel}: ${ticketLabel} ${input.subject}`,
       html: wrapEmail(
         `<p>New platform support ticket ${escapeHtml(ticketLabel)}.</p>
+      <p><strong>Category:</strong> ${escapeHtml(categoryLabel)}</p>
       <p><strong>From:</strong> ${escapeHtml(userEmail ?? input.userId)}</p>
       ${
         input.accountName
@@ -85,6 +105,7 @@ export async function notifySupportTeamNewTicket(
       }
       <p><strong>Subject:</strong> ${escapeHtml(input.subject)}</p>
       <p style="white-space:pre-wrap">${escapeHtml(input.body)}</p>
+      ${attachmentsHtml(input.attachments)}
       <p><a href="${adminUrl}">View in admin</a></p>`,
       ),
     },
@@ -100,6 +121,7 @@ export async function notifyUserSupportReply(
     subject: string;
     userId: string;
     replyBody: string;
+    attachments?: Array<{ name: string; url: string }> | null;
   },
 ): Promise<void> {
   const config = getEmailConfig();
@@ -123,6 +145,7 @@ export async function notifyUserSupportReply(
       html: wrapEmail(
         `<p>The ${escapeHtml(config.productName)} team replied to your support ticket ${escapeHtml(ticketLabel)}.</p>
       <p style="white-space:pre-wrap">${escapeHtml(input.replyBody)}</p>
+      ${attachmentsHtml(input.attachments)}
       <p><a href="${ticketUrl}">View ticket</a></p>`,
       ),
     },
@@ -138,6 +161,7 @@ export async function notifySupportTeamUserReply(
     subject: string;
     userId: string;
     replyBody: string;
+    attachments?: Array<{ name: string; url: string }> | null;
   },
 ): Promise<void> {
   const config = getEmailConfig();
@@ -160,6 +184,7 @@ export async function notifySupportTeamUserReply(
       html: wrapEmail(
         `<p>${escapeHtml(userEmail ?? 'A user')} replied on ticket ${escapeHtml(ticketLabel)}: ${escapeHtml(input.subject)}</p>
       <p style="white-space:pre-wrap">${escapeHtml(input.replyBody)}</p>
+      ${attachmentsHtml(input.attachments)}
       <p><a href="${adminUrl}">View in admin</a></p>`,
       ),
     },

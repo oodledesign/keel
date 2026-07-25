@@ -57,6 +57,7 @@ type Props = {
   ranklyClientImportOptions?: RanklyClientImportOption[];
   initialClient?: ClientSeed | null;
   overviewSeed?: ClientDetailOverviewSeed;
+  supportEnabled?: boolean;
 };
 
 export function ClientDetailPageContent({
@@ -80,6 +81,7 @@ export function ClientDetailPageContent({
   ranklyClientImportOptions = [],
   initialClient = null,
   overviewSeed,
+  supportEnabled = false,
 }: Props) {
   const router = useRouter();
 
@@ -113,6 +115,7 @@ export function ClientDetailPageContent({
       ranklyClientImportOptions={ranklyClientImportOptions}
       initialClient={initialClient}
       overviewSeed={overviewSeed}
+      supportEnabled={supportEnabled}
     />
   );
 }

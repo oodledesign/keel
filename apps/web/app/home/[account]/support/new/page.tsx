@@ -12,12 +12,14 @@ import { loadSupportPageData } from '../_lib/server/support-page.loader';
 
 interface SupportNewPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ clientOrgId?: string }>;
 }
 
 export const generateMetadata = async () => ({ title: 'New support ticket' });
 
-async function SupportNewPage({ params }: SupportNewPageProps) {
+async function SupportNewPage({ params, searchParams }: SupportNewPageProps) {
   const accountSlug = (await params).account;
+  const { clientOrgId } = await searchParams;
   const workspace = await loadTeamWorkspace(accountSlug);
   const { accountId, canViewSupport } = await loadSupportPageData(accountSlug);
 
@@ -43,7 +45,11 @@ async function SupportNewPage({ params }: SupportNewPageProps) {
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
-        <SupportTicketForm accountId={accountId} accountSlug={accountSlug} />
+        <SupportTicketForm
+          accountId={accountId}
+          accountSlug={accountSlug}
+          defaultClientOrgId={clientOrgId ?? null}
+        />
       </PageBody>
     </>
   );

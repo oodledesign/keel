@@ -26,6 +26,23 @@ function formatTicketNumber(ticketNumber: number) {
   return `#${String(ticketNumber).padStart(4, '0')}`;
 }
 
+/** client_orgs.linked_account_id may be missing from generated Database types. */
+async function loadLinkedAccountId(
+  admin: SupabaseClient,
+  clientOrgId: string,
+): Promise<string | null> {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data } = await (admin.from('client_orgs') as any)
+    .select('linked_account_id')
+    .eq('id', clientOrgId)
+    .maybeSingle();
+
+  return (
+    (data as { linked_account_id?: string | null } | null)?.linked_account_id ??
+    null
+  );
+}
+
 async function loadWorkspaceNotifyEmails(
   admin: SupabaseClient,
   accountId: string,
@@ -88,7 +105,75 @@ async function loadClientNotifyEmails(
     }
   }
 
+  const linkedAccountId = await loadLinkedAccountId(admin, input.clientOrgId);
+
+  if (linkedAccountId) {
+    const { data: memberships } = await admin
+      .from('accounts_memberships')
+      .select('user_id')
+      .eq('account_id', linkedAccountId);
+
+    for (const row of memberships ?? []) {
+      const userId = (row as { user_id?: string }).user_id;
+      if (!userId) continue;
+      const { data } = await admin.auth.admin.getUserById(userId);
+      if (data.user?.email) {
+        emails.add(data.user.email.toLowerCase());
+      }
+    }
+  }
+
   return [...emails];
+}
+
+async function resolveClientTicketUrl(
+  admin: SupabaseClient,
+  input: {
+    siteUrl: string;
+    ticketId: string;
+    clientOrgId: string | null;
+    clientOrgSlug: string | null;
+    publicToken: string | null;
+  },
+): Promise<string> {
+  if (input.clientOrgId) {
+    const linkedAccountId = await loadLinkedAccountId(admin, input.clientOrgId);
+
+    if (linkedAccountId) {
+      const { data: account } = await admin
+        .from('accounts')
+        .select('slug')
+        .eq('id', linkedAccountId)
+        .maybeSingle();
+
+      const slug = (account as { slug?: string | null } | null)?.slug;
+      if (slug) {
+        return new URL(
+          pathsConfig.app.accountPartnerSupportDetail
+            .replace('[account]', slug)
+            .replace('[id]', input.ticketId),
+          input.siteUrl,
+        ).toString();
+      }
+    }
+  }
+
+  if (input.clientOrgSlug) {
+    return new URL(
+      pathsConfig.app.clientPortalSupportDetail
+        .replace('[clientSlug]', input.clientOrgSlug)
+        .replace('[id]', input.ticketId),
+      input.siteUrl,
+    ).toString();
+  }
+
+  const token = await ensureTicketPublicToken(
+    admin,
+    input.ticketId,
+    input.publicToken,
+  );
+
+  return new URL(`/portal/support/ticket/${token}`, input.siteUrl).toString();
 }
 
 async function ensureTicketPublicToken(
@@ -255,26 +340,13 @@ export async function notifyWorkspaceSupportAgencyReply(
   if (recipients.length === 0) return;
 
   const label = formatTicketNumber(input.ticketNumber);
-  const token = await ensureTicketPublicToken(
-    admin,
-    input.ticketId,
-    input.publicToken,
-  );
-
-  let ticketUrl: string;
-  if (input.clientOrgSlug) {
-    ticketUrl = new URL(
-      pathsConfig.app.clientPortalSupportDetail
-        .replace('[clientSlug]', input.clientOrgSlug)
-        .replace('[id]', input.ticketId),
-      config.siteUrl,
-    ).toString();
-  } else {
-    ticketUrl = new URL(
-      `/portal/support/ticket/${token}`,
-      config.siteUrl,
-    ).toString();
-  }
+  const ticketUrl = await resolveClientTicketUrl(admin, {
+    siteUrl: config.siteUrl,
+    ticketId: input.ticketId,
+    clientOrgId: input.clientOrgId,
+    clientOrgSlug: input.clientOrgSlug,
+    publicToken: input.publicToken,
+  });
 
   const html = wrapNotificationEmail(
     `<p>You have a new reply on support ticket ${escapeNotificationHtml(label)}.</p>

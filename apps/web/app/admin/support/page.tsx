@@ -1,10 +1,10 @@
 import { AdminGuard } from '@kit/admin/components/admin-guard';
-import { PageBody, PageHeader } from '@kit/ui/page';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { PageBody, PageHeader } from '@kit/ui/page';
 
 import {
-  AdminSupportTicketsTable,
   type AdminSupportTicketRow,
+  AdminSupportTicketsTable,
 } from './_components/admin-support-tickets-table';
 
 export const metadata = { title: 'Platform support' };
@@ -12,9 +12,13 @@ export const metadata = { title: 'Platform support' };
 async function AdminSupportPage() {
   const client = getSupabaseServerClient();
 
-  const { data: tickets, error } = await client
-    .from('platform_support_tickets')
-    .select('id, ticket_number, subject, status, priority, created_at, user_id')
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: tickets, error } = await (
+    client.from('platform_support_tickets') as any
+  )
+    .select(
+      'id, ticket_number, subject, status, priority, category, created_at, user_id',
+    )
     .order('created_at', { ascending: false })
     .limit(100);
 

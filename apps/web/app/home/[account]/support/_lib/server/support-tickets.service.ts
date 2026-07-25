@@ -307,6 +307,10 @@ class SupportTicketsService {
       query = query.eq('project_id', input.projectId);
     }
 
+    if (input.clientOrgId) {
+      query = query.eq('client_org_id', input.clientOrgId);
+    }
+
     if (input.q?.trim()) {
       const raw = input.q
         .trim()

@@ -1,14 +1,24 @@
 'use client';
 
-import { useTransition } from 'react';
+import { useState, useTransition } from 'react';
+
+import { useRouter } from 'next/navigation';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
+import {
+  type SupportAttachmentItem,
+  SupportAttachmentUploader,
+} from '~/components/support/support-attachment-uploader';
 import type { PlatformSupportMessage } from '~/lib/support/load-platform-support-ticket';
-import { formatPlatformTicketNumber } from '~/lib/support/platform-support.types';
+import {
+  formatPlatformSupportCategory,
+  formatPlatformTicketNumber,
+} from '~/lib/support/platform-support.types';
+import type { SupportAttachmentMeta } from '~/lib/support/support-attachment.types';
 
 export function PlatformSupportTicketThread(props: {
   ticketNumber: number;
@@ -16,6 +26,8 @@ export function PlatformSupportTicketThread(props: {
   openingBody: string;
   createdAt: string;
   status: string;
+  category?: string | null;
+  attachments?: SupportAttachmentMeta[];
   messages: PlatformSupportMessage[];
   userEmail?: string | null;
   accountName?: string | null;
@@ -30,6 +42,11 @@ export function PlatformSupportTicketThread(props: {
           <Badge variant="outline" className="capitalize">
             {props.status.replace('_', ' ')}
           </Badge>
+          {props.category ? (
+            <Badge variant="secondary">
+              {formatPlatformSupportCategory(props.category)}
+            </Badge>
+          ) : null}
         </div>
         <h1 className="text-xl font-semibold">{props.subject}</h1>
         {props.accountName ? (
@@ -44,6 +61,7 @@ export function PlatformSupportTicketThread(props: {
           author={props.userEmail ?? 'You'}
           createdAt={props.createdAt}
           body={props.openingBody}
+          attachments={props.attachments}
         />
         {props.messages.map((message) => (
           <MessageBubble
@@ -56,6 +74,7 @@ export function PlatformSupportTicketThread(props: {
             createdAt={message.createdAt}
             body={message.body}
             muted={message.isInternalNote}
+            attachments={message.attachments}
           />
         ))}
       </div>
@@ -68,6 +87,7 @@ function MessageBubble(props: {
   createdAt: string;
   body: string;
   muted?: boolean;
+  attachments?: SupportAttachmentMeta[];
 }) {
   return (
     <article
@@ -83,7 +103,34 @@ function MessageBubble(props: {
           {new Date(props.createdAt).toLocaleString('en-GB')}
         </time>
       </div>
-      <p className="whitespace-pre-wrap text-sm">{props.body}</p>
+      <p className="text-sm whitespace-pre-wrap">{props.body}</p>
+      {props.attachments?.length ? (
+        <ul className="mt-3 space-y-2">
+          {props.attachments.map((file) => (
+            <li key={file.url}>
+              {file.mimeType.startsWith('image/') ? (
+                <a href={file.url} target="_blank" rel="noreferrer">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={file.url}
+                    alt={file.name}
+                    className="max-h-64 max-w-full rounded-md border object-contain"
+                  />
+                </a>
+              ) : (
+                <a
+                  href={file.url}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="text-sm underline"
+                >
+                  {file.name}
+                </a>
+              )}
+            </li>
+          ))}
+        </ul>
+      ) : null}
     </article>
   );
 }
@@ -95,31 +142,39 @@ export function PlatformSupportReplyForm(props: {
     ticketId: string;
     body: string;
     isInternalNote?: boolean;
-  }) => Promise<void>;
+    attachments?: SupportAttachmentItem[];
+  }) => Promise<unknown>;
   allowInternalNote?: boolean;
 }) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [body, setBody] = useState('');
+  const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
 
   return (
     <form
       className="space-y-3"
       onSubmit={(e) => {
         e.preventDefault();
-        const form = new FormData(e.currentTarget);
-        const body = String(form.get('body') ?? '').trim();
-        const isInternalNote = form.get('internal') === 'on';
+        const trimmed = body.trim();
+        const isInternalNote =
+          props.allowInternalNote &&
+          new FormData(e.currentTarget).get('internal') === 'on';
 
-        if (!body) return;
+        if (!trimmed) return;
 
         startTransition(async () => {
           try {
             await props.onSubmit({
               ticketId: props.ticketId,
-              body,
+              body: trimmed,
               isInternalNote: props.allowInternalNote ? isInternalNote : false,
+              attachments,
             });
-            e.currentTarget.reset();
+            setBody('');
+            setAttachments([]);
             toast.success('Reply sent');
+            router.refresh();
           } catch (err) {
             toast.error(err instanceof Error ? err.message : 'Could not send');
           }
@@ -127,10 +182,16 @@ export function PlatformSupportReplyForm(props: {
       }}
     >
       <Textarea
-        name="body"
+        value={body}
+        onChange={(event) => setBody(event.target.value)}
         required
         rows={4}
         placeholder={props.placeholder ?? 'Write a reply…'}
+      />
+      <SupportAttachmentUploader
+        platformSupport
+        value={attachments}
+        onChange={setAttachments}
       />
       {props.allowInternalNote ? (
         <label className="text-muted-foreground flex items-center gap-2 text-sm">

@@ -22,6 +22,7 @@ export const ListTicketsSchema = z.object({
   status: TicketStatusSchema.optional(),
   priority: TicketPrioritySchema.optional(),
   projectId: z.string().uuid().optional(),
+  clientOrgId: z.string().uuid().optional(),
   q: z.string().optional(),
 });
 

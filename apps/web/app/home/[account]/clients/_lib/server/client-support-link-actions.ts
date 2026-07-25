@@ -9,11 +9,11 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import {
   ensureClientOrgSupportToken,
   rotateClientOrgSupportToken,
 } from '~/lib/support/public-support.service';
+import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 
 import { createWebsitesService } from '../../../websites/_lib/server/websites.service';
 
@@ -43,7 +43,10 @@ async function assertAccountManager(accountId: string) {
  * Verify the org exists and belongs to this workspace.
  * Uses admin for the org lookup — `client_orgs` RLS often blocks the user client.
  */
-async function assertCanManageClientOrg(accountId: string, clientOrgId: string) {
+async function assertCanManageClientOrg(
+  accountId: string,
+  clientOrgId: string,
+) {
   await assertAccountManager(accountId);
 
   const admin = getSupabaseServerAdminClient();
@@ -139,6 +142,150 @@ export const rotateClientSupportLinkAction = enhanceAction(
       token,
       url: buildSupportUrl(token),
     };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      clientOrgId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+    }),
+  },
+);
+
+export const getClientWorkspaceLinkAction = enhanceAction(
+  async (input: { accountId: string; clientOrgId: string }) => {
+    await assertCanManageClientOrg(input.accountId, input.clientOrgId);
+    const admin = getSupabaseServerAdminClient();
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: org } = await (admin.from('client_orgs') as any)
+      .select('linked_account_id')
+      .eq('id', input.clientOrgId)
+      .maybeSingle();
+
+    const linkedAccountId =
+      (org as { linked_account_id?: string | null } | null)
+        ?.linked_account_id ?? null;
+
+    if (!linkedAccountId) {
+      return {
+        linked: false as const,
+        accountId: null,
+        slug: null,
+        name: null,
+      };
+    }
+
+    const { data: account } = await admin
+      .from('accounts')
+      .select('id, slug, name')
+      .eq('id', linkedAccountId)
+      .maybeSingle();
+
+    return {
+      linked: true as const,
+      accountId: linkedAccountId,
+      slug: (account as { slug?: string | null } | null)?.slug ?? null,
+      name:
+        (account as { name?: string | null } | null)?.name?.trim() ||
+        (account as { slug?: string | null } | null)?.slug ||
+        null,
+    };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      clientOrgId: z.string().uuid(),
+    }),
+  },
+);
+
+export const linkClientWorkspaceAction = enhanceAction(
+  async (input: {
+    accountId: string;
+    clientOrgId: string;
+    accountSlug: string;
+    workspaceSlug: string;
+  }) => {
+    await assertCanManageClientOrg(input.accountId, input.clientOrgId);
+    const admin = getSupabaseServerAdminClient();
+    const slug = input.workspaceSlug.trim().toLowerCase();
+    if (!slug) throw new Error('Workspace slug is required');
+
+    const { data: account } = await admin
+      .from('accounts')
+      .select('id, slug, name, is_personal_account')
+      .eq('slug', slug)
+      .maybeSingle();
+
+    if (!account) {
+      throw new Error('No workspace found with that slug');
+    }
+
+    if ((account as { is_personal_account?: boolean }).is_personal_account) {
+      throw new Error('Link a team workspace, not a personal account');
+    }
+
+    const linkedId = (account as { id: string }).id;
+    if (linkedId === input.accountId) {
+      throw new Error('Cannot link a workspace to itself');
+    }
+
+    const { error } = await admin
+      .from('client_orgs')
+      .update({ linked_account_id: linkedId } as never)
+      .eq('id', input.clientOrgId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath(
+      pathsConfig.app.accountClients.replace('[account]', input.accountSlug),
+    );
+    revalidatePath(
+      pathsConfig.app.accountSupport.replace('[account]', input.accountSlug),
+    );
+
+    return {
+      linked: true as const,
+      accountId: linkedId,
+      slug: (account as { slug: string }).slug,
+      name:
+        (account as { name?: string | null }).name?.trim() ||
+        (account as { slug: string }).slug,
+    };
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      clientOrgId: z.string().uuid(),
+      accountSlug: z.string().min(1),
+      workspaceSlug: z.string().min(1).max(80),
+    }),
+  },
+);
+
+export const unlinkClientWorkspaceAction = enhanceAction(
+  async (input: {
+    accountId: string;
+    clientOrgId: string;
+    accountSlug: string;
+  }) => {
+    await assertCanManageClientOrg(input.accountId, input.clientOrgId);
+    const admin = getSupabaseServerAdminClient();
+    const { error } = await admin
+      .from('client_orgs')
+      .update({ linked_account_id: null } as never)
+      .eq('id', input.clientOrgId);
+
+    if (error) throw new Error(error.message);
+
+    revalidatePath(
+      pathsConfig.app.accountClients.replace('[account]', input.accountSlug),
+    );
+    revalidatePath(
+      pathsConfig.app.accountSupport.replace('[account]', input.accountSlug),
+    );
+
+    return { linked: false as const };
   },
   {
     schema: z.object({

@@ -88,7 +88,7 @@ import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
 import { ClientNotesBlock } from './client-notes-block';
 import { ClientRanklyBlock } from './client-rankly-block';
-import { ClientSupportLinkCard } from './client-support-link-card';
+import { ClientSupportBlock } from './client-support-block';
 import { ClientTasksBlock } from './client-tasks-block';
 import { ClientUpcomingBookingsBlock } from './client-upcoming-bookings-block';
 
@@ -129,7 +129,8 @@ type DetailTab =
   | 'finance'
   | 'meetings'
   | 'notes'
-  | 'tasks';
+  | 'tasks'
+  | 'support';
 
 type ClientJobSummary = {
   id: string;
@@ -268,6 +269,7 @@ export function ClientDetailSidebar({
   ranklyClientImportOptions = [],
   initialClient = null,
   overviewSeed,
+  supportEnabled = false,
 }: {
   accountSlug: string;
   accountId: string;
@@ -292,6 +294,7 @@ export function ClientDetailSidebar({
   ranklyClientImportOptions?: RanklyClientImportOption[];
   initialClient?: Client | null;
   overviewSeed?: ClientDetailOverviewSeed;
+  supportEnabled?: boolean;
 }) {
   const workspaceCurrency = useWorkspaceCurrency();
   const formatMoney = (pence: number) =>
@@ -321,7 +324,7 @@ export function ClientDetailSidebar({
   );
 
   useEffect(() => {
-    if (!canEditClients) return;
+    if (!supportEnabled && !canEditClients) return;
     if (resolvedClientOrgId) return;
 
     void ensureClientOrgForCrmClientAction({ accountId, clientId })
@@ -333,7 +336,13 @@ export function ClientDetailSidebar({
       .catch(() => {
         /* support link stays hidden until org can be resolved */
       });
-  }, [accountId, canEditClients, clientId, resolvedClientOrgId]);
+  }, [
+    accountId,
+    canEditClients,
+    clientId,
+    resolvedClientOrgId,
+    supportEnabled,
+  ]);
 
   const fetchClient = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -500,6 +509,7 @@ export function ClientDetailSidebar({
         ['meetings', 'Meetings'],
         ['notes', 'Notes'],
         ['tasks', 'Tasks'],
+        ...(supportEnabled ? [['support', 'Support']] : []),
       ] as Array<[DetailTab, string]>
     ).map(([key, label]) => ({
       key,
@@ -511,7 +521,7 @@ export function ClientDetailSidebar({
             ? formatMoney(totalValuePence)
             : undefined,
     }));
-  }, [client, isContractorView, jobsCount, totalValuePence]);
+  }, [client, isContractorView, jobsCount, totalValuePence, supportEnabled]);
 
   const handleArchive = async () => {
     setArchiving(true);
@@ -904,14 +914,6 @@ export function ClientDetailSidebar({
               </div>
             ) : null}
 
-            {canEditClients && resolvedClientOrgId ? (
-              <ClientSupportLinkCard
-                accountId={accountId}
-                clientOrgId={resolvedClientOrgId}
-                accountSlug={accountSlug}
-              />
-            ) : null}
-
             <p className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
               <Eye className="h-4 w-4 shrink-0" />
               {formatLastUpdated(client.updated_at)}
@@ -1026,6 +1028,17 @@ export function ClientDetailSidebar({
           canEditClients={canEditClients}
           tasksHref={pathsConfig.app.home + '/tasks'}
           workspaceAccountId={accountId}
+        />
+      );
+    }
+
+    if (activeTab === 'support' && supportEnabled) {
+      return (
+        <ClientSupportBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientOrgId={resolvedClientOrgId}
+          canManageLinks={canEditClients}
         />
       );
     }

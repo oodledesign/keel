@@ -51,6 +51,8 @@ async function PlatformSupportTicketPage({
           openingBody={ticket.body}
           createdAt={ticket.createdAt}
           status={ticket.status}
+          category={ticket.category}
+          attachments={ticket.attachments}
           messages={ticket.messages}
           userEmail={ticket.userEmail}
           accountName={ticket.accountName}

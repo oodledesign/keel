@@ -24,6 +24,26 @@ function safeSegment(name: string) {
   return name.replace(/[/\\]/g, '_').replace(/\.\./g, '_').trim().slice(0, 180);
 }
 
+async function orgBelongsToProviderAccount(
+  businessId: string | null | undefined,
+  providerAccountId: string,
+): Promise<boolean> {
+  if (!businessId) return false;
+  if (businessId === providerAccountId) return true;
+
+  const admin = getSupabaseServerAdminClient();
+  const { data: business } = await admin
+    .from('businesses')
+    .select('account_id')
+    .eq('id', businessId)
+    .maybeSingle();
+
+  return (
+    (business as { account_id?: string | null } | null)?.account_id ===
+    providerAccountId
+  );
+}
+
 async function assertAccountMembership(accountId: string, userId: string) {
   const client = getSupabaseServerClient();
 
@@ -42,34 +62,47 @@ async function assertAccountMembership(accountId: string, userId: string) {
     .eq('user_id', userId)
     .limit(50);
 
-  if (!portalMember?.length) return false;
+  if (portalMember?.length) {
+    const orgIds = portalMember.map(
+      (row) => (row as { client_org_id: string }).client_org_id,
+    );
 
-  const orgIds = portalMember.map(
-    (row) => (row as { client_org_id: string }).client_org_id,
+    const { data: orgs } = await client
+      .from('client_orgs')
+      .select('id, business_id')
+      .in('id', orgIds);
+
+    for (const org of orgs ?? []) {
+      const row = org as {
+        business_id?: string | null;
+      };
+      if (await orgBelongsToProviderAccount(row.business_id, accountId)) {
+        return true;
+      }
+    }
+  }
+
+  // Linked workspace (partner) members may upload to the provider account.
+  const { data: userMemberships } = await client
+    .from('accounts_memberships')
+    .select('account_id')
+    .eq('user_id', userId);
+
+  const linkedAccountIds = (userMemberships ?? []).map(
+    (row) => (row as { account_id: string }).account_id,
   );
 
-  const { data: orgs } = await client
-    .from('client_orgs')
-    .select('id, business_id')
-    .in('id', orgIds);
+  if (linkedAccountIds.length > 0) {
+    const admin = getSupabaseServerAdminClient();
+    // linked_account_id may be missing from generated Database types.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data: linkedOrgs } = await (admin.from('client_orgs') as any)
+      .select('id, business_id')
+      .in('linked_account_id', linkedAccountIds);
 
-  for (const org of orgs ?? []) {
-    const row = org as {
-      business_id?: string | null;
-    };
-    if (row.business_id === accountId) {
-      return true;
-    }
-    if (row.business_id) {
-      const { data: business } = await client
-        .from('businesses')
-        .select('account_id')
-        .eq('id', row.business_id)
-        .maybeSingle();
-      if (
-        (business as { account_id?: string | null } | null)?.account_id ===
-        accountId
-      ) {
+    for (const org of linkedOrgs ?? []) {
+      const row = org as { business_id?: string | null };
+      if (await orgBelongsToProviderAccount(row.business_id, accountId)) {
         return true;
       }
     }
@@ -88,6 +121,8 @@ export async function POST(request: Request) {
 
   const supportToken = String(formData.get('supportToken') ?? '').trim();
   const accountId = String(formData.get('accountId') ?? '').trim();
+  const platformSupport =
+    String(formData.get('platformSupport') ?? '').trim() === '1';
   const file = formData.get('file');
 
   if (!(file instanceof File)) {
@@ -124,6 +159,16 @@ export async function POST(request: Request) {
       }
       resolvedAccountId = ticket.accountId;
     }
+  } else if (platformSupport) {
+    const userClient = getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await userClient.auth.getUser();
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    // Super admins and ticket authors upload under a stable platform prefix.
+    resolvedAccountId = `platform/${user.id}`;
   } else {
     const userClient = getSupabaseServerClient();
     const {

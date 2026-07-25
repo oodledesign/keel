@@ -15,11 +15,30 @@ import {
   notifySupportTeamUserReply,
   notifyUserSupportReply,
 } from './platform-support-notifications';
+import type { SupportAttachmentMeta } from './support-attachment.types';
+
+const AttachmentSchema = z.object({
+  name: z.string(),
+  url: z.string().url(),
+  mimeType: z.string(),
+  size: z.number(),
+});
 
 const createTicketSchema = z.object({
   subject: z.string().min(3).max(200),
   body: z.string().min(10).max(10000),
+  category: z
+    .enum([
+      'bug',
+      'feedback',
+      'feature_request',
+      'question',
+      'billing',
+      'other',
+    ])
+    .default('question'),
   accountId: z.string().uuid().optional().nullable(),
+  attachments: z.array(AttachmentSchema).max(5).optional(),
 });
 
 export const createPlatformSupportTicketAction = enhanceAction(
@@ -39,15 +58,20 @@ export const createPlatformSupportTicketAction = enhanceAction(
       }
     }
 
-    const { data, error } = await client
-      .from('platform_support_tickets')
+    // category column added by migration; generated types may lag until typegen.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (
+      client.from('platform_support_tickets') as any
+    )
       .insert({
         user_id: user.id,
         account_id: input.accountId ?? null,
         subject: input.subject.trim(),
         body: input.body.trim(),
+        category: input.category,
+        attachments: (input.attachments ?? []) as SupportAttachmentMeta[],
       })
-      .select('id, ticket_number, subject, body')
+      .select('id, ticket_number, subject, body, category')
       .single();
 
     if (error) {
@@ -65,6 +89,8 @@ export const createPlatformSupportTicketAction = enhanceAction(
       ticketNumber: data.ticket_number as number,
       subject: data.subject as string,
       body: data.body as string,
+      category: (data.category as string | undefined) ?? input.category,
+      attachments: input.attachments ?? [],
       userId: user.id,
       accountName,
     }).catch(() => undefined);
@@ -78,6 +104,7 @@ export const createPlatformSupportTicketAction = enhanceAction(
 const replySchema = z.object({
   ticketId: z.string().uuid(),
   body: z.string().min(1).max(10000),
+  attachments: z.array(AttachmentSchema).max(5).optional(),
 });
 
 export const replyPlatformSupportTicketAction = enhanceAction(
@@ -99,11 +126,15 @@ export const replyPlatformSupportTicketAction = enhanceAction(
     }
 
     const body = input.body.trim();
-    const { error } = await client.from('platform_support_messages').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (
+      client.from('platform_support_messages') as any
+    ).insert({
       ticket_id: input.ticketId,
       author_user_id: user.id,
       body,
       is_internal_note: false,
+      attachments: input.attachments ?? [],
     });
 
     if (error) {
@@ -125,6 +156,7 @@ export const replyPlatformSupportTicketAction = enhanceAction(
       subject: (ticket as { subject: string }).subject,
       userId: user.id,
       replyBody: body,
+      attachments: input.attachments ?? [],
     }).catch(() => undefined);
 
     revalidatePath('/app/support');
@@ -140,6 +172,16 @@ const updateTicketSchema = z.object({
   ticketId: z.string().uuid(),
   status: z.enum(['open', 'in_progress', 'waiting', 'resolved', 'closed']),
   priority: z.enum(['low', 'normal', 'high', 'urgent']).optional(),
+  category: z
+    .enum([
+      'bug',
+      'feedback',
+      'feature_request',
+      'question',
+      'billing',
+      'other',
+    ])
+    .optional(),
   adminNotes: z.string().max(10000).optional().nullable(),
 });
 
@@ -151,11 +193,12 @@ export const adminUpdatePlatformSupportTicketAction = enhanceAction(
       throw new Error('Super admin access required');
     }
 
-    const { error } = await client
-      .from('platform_support_tickets')
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (client.from('platform_support_tickets') as any)
       .update({
         status: input.status,
         priority: input.priority,
+        category: input.category,
         admin_notes: input.adminNotes ?? undefined,
         updated_at: new Date().toISOString(),
       })
@@ -177,6 +220,7 @@ const adminReplySchema = z.object({
   ticketId: z.string().uuid(),
   body: z.string().min(1).max(10000),
   isInternalNote: z.boolean().optional(),
+  attachments: z.array(AttachmentSchema).max(5).optional(),
   status: z
     .enum(['open', 'in_progress', 'waiting', 'resolved', 'closed'])
     .optional(),
@@ -203,11 +247,15 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
     const body = input.body.trim();
     const isInternal = input.isInternalNote ?? false;
 
-    const { error } = await client.from('platform_support_messages').insert({
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (
+      client.from('platform_support_messages') as any
+    ).insert({
       ticket_id: input.ticketId,
       author_user_id: user.id,
       body,
       is_internal_note: isInternal,
+      attachments: input.attachments ?? [],
     });
 
     if (error) {
@@ -240,6 +288,7 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
         subject: (ticket as { subject: string }).subject,
         userId: (ticket as { user_id: string }).user_id,
         replyBody: body,
+        attachments: input.attachments ?? [],
       }).catch(() => undefined);
     }
 

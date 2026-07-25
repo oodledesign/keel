@@ -1,10 +1,12 @@
 'use client';
 
-import Link from 'next/link';
 import { useTransition } from 'react';
+
+import Link from 'next/link';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
+import { PageBody, PageHeader } from '@kit/ui/page';
 import {
   Select,
   SelectContent,
@@ -12,25 +14,26 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { PageBody, PageHeader } from '@kit/ui/page';
 import { toast } from '@kit/ui/sonner';
 
+import {
+  PlatformSupportReplyForm,
+  PlatformSupportTicketThread,
+} from '~/home/(user)/support/_components/platform-support-ticket-detail';
 import type { PlatformSupportTicketDetail } from '~/lib/support/load-platform-support-ticket';
 import {
   adminReplyPlatformSupportTicketAction,
   adminUpdatePlatformSupportTicketAction,
 } from '~/lib/support/platform-support.actions';
 import {
+  PLATFORM_SUPPORT_CATEGORIES,
+  PLATFORM_SUPPORT_CATEGORY_LABELS,
   PLATFORM_SUPPORT_PRIORITIES,
   PLATFORM_SUPPORT_STATUSES,
+  type PlatformSupportTicketCategory,
   type PlatformSupportTicketPriority,
   type PlatformSupportTicketStatus,
 } from '~/lib/support/platform-support.types';
-
-import {
-  PlatformSupportReplyForm,
-  PlatformSupportTicketThread,
-} from '~/home/(user)/support/_components/platform-support-ticket-detail';
 
 export function AdminPlatformSupportTicketDetail(props: {
   ticket: PlatformSupportTicketDetail;
@@ -62,17 +65,24 @@ export function AdminPlatformSupportTicketDetail(props: {
           openingBody={ticket.body}
           createdAt={ticket.createdAt}
           status={ticket.status}
+          category={ticket.category}
+          attachments={ticket.attachments}
           messages={ticket.messages}
           userEmail={ticket.userEmail}
           accountName={ticket.accountName}
         />
 
-        <div className="grid gap-3 sm:grid-cols-2">
+        <div className="grid gap-3 sm:grid-cols-3">
           <StatusSelect ticketId={ticket.id} value={ticket.status} />
           <PrioritySelect
             ticketId={ticket.id}
             status={ticket.status}
             value={ticket.priority}
+          />
+          <CategorySelect
+            ticketId={ticket.id}
+            status={ticket.status}
+            value={ticket.category}
           />
         </div>
 
@@ -185,6 +195,46 @@ function PrioritySelect(props: {
         {PLATFORM_SUPPORT_PRIORITIES.map((p) => (
           <SelectItem key={p} value={p} className="capitalize">
             {p}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+}
+
+function CategorySelect(props: {
+  ticketId: string;
+  status: string;
+  value: string;
+}) {
+  const [pending, startTransition] = useTransition();
+
+  return (
+    <Select
+      defaultValue={props.value}
+      disabled={pending}
+      onValueChange={(category) => {
+        startTransition(async () => {
+          try {
+            await adminUpdatePlatformSupportTicketAction({
+              ticketId: props.ticketId,
+              status: props.status as PlatformSupportTicketStatus,
+              category: category as PlatformSupportTicketCategory,
+            });
+            toast.success('Category updated');
+          } catch (e) {
+            toast.error(e instanceof Error ? e.message : 'Update failed');
+          }
+        });
+      }}
+    >
+      <SelectTrigger>
+        <SelectValue placeholder="Category" />
+      </SelectTrigger>
+      <SelectContent>
+        {PLATFORM_SUPPORT_CATEGORIES.map((category) => (
+          <SelectItem key={category} value={category}>
+            {PLATFORM_SUPPORT_CATEGORY_LABELS[category]}
           </SelectItem>
         ))}
       </SelectContent>

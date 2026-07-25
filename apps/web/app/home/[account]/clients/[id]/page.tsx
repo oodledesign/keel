@@ -41,6 +41,7 @@ export default async function ClientDetailPage({ params }: Props) {
           ranklyClientImportOptions={data.ranklyClientImportOptions}
           initialClient={data.client}
           overviewSeed={data.overviewSeed}
+          supportEnabled={data.supportEnabled}
         />
       </div>
     </PageBody>

@@ -74,6 +74,9 @@ async function loadClientDetailPageDataImpl(
   const transcriptsService = createMeetingTranscriptsService(client);
   const schedulingService = createSchedulingService(client);
   const ranklyEnabled = isWorkModuleEnabled(workspace.moduleSettings, 'rankly');
+  const supportEnabled =
+    access.canViewDashboard &&
+    isWorkModuleEnabled(workspace.moduleSettings, 'support_tickets');
 
   const clientPromise = clientsService.getClient({ accountId, clientId });
 
@@ -234,5 +237,6 @@ async function loadClientDetailPageDataImpl(
     ranklyImportSeed,
     ranklyClientImportOptions,
     overviewSeed,
+    supportEnabled,
   };
 }

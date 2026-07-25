@@ -50,6 +50,7 @@ const iconClasses = 'w-4';
 
 export type WorkNavCounts = {
   supportOpenCount?: number;
+  hasPartnerSupportLinks?: boolean;
 };
 
 export type NavChild = {
@@ -385,6 +386,15 @@ function buildWorkNavItemsForKeys(
         const planner = plannerFactory();
         if (planner) items.push(planner);
       }
+    }
+    if (key === 'support_tickets' && navCounts?.hasPartnerSupportLinks) {
+      items.push({
+        label: 'Partner support',
+        path: createPath(pathsConfig.app.accountPartnerSupport, account),
+        Icon: <MessageSquare className={iconClasses} />,
+        description:
+          'Raise tickets with agencies that linked this workspace as a client.',
+      });
     }
   }
 
