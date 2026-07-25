@@ -9,6 +9,7 @@ import {
   AddTicketMessageSchema,
   CreateTicketSchema,
   GetTicketSchema,
+  ListProjectsForOrgSchema,
   ListTicketsSchema,
   ListWebsitesForOrgSchema,
   UpdateTicketSchema,
@@ -45,6 +46,12 @@ export const listSupportWebsitesForOrg = enhanceAction(
   async (input) =>
     getService().listWebsitesForOrg(input.accountId, input.clientOrgId),
   { schema: ListWebsitesForOrgSchema },
+);
+
+export const listSupportProjectsForOrg = enhanceAction(
+  async (input) =>
+    getService().listProjectsForOrg(input.accountId, input.clientOrgId),
+  { schema: ListProjectsForOrgSchema },
 );
 
 export const listSupportTeamMembers = enhanceAction(

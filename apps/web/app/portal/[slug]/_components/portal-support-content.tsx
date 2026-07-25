@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -18,6 +18,8 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { SupportAttachmentUploader } from '~/components/support/support-attachment-uploader';
+import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 import pathsConfig from '~/config/paths.config';
 
 import type { PortalTicketPriority } from '../_lib/schema/portal.schema';
@@ -28,6 +30,7 @@ import type {
 import {
   addPortalTicketMessage,
   createPortalTicket,
+  listPortalProjects,
 } from '../_lib/server/server-actions';
 import {
   PortalTicketPriorityBadge,
@@ -36,29 +39,39 @@ import {
   formatPortalTicketNumber,
 } from './portal-badges';
 
+type ProjectOption = { id: string; name: string };
+
 export function PortalSupportDetailContent({
   ticket: initialTicket,
   initialMessages,
   clientOrgId,
   clientSlug,
+  accountId,
+  accountSlug,
 }: {
   ticket: PortalTicketDetail;
   initialMessages: PortalTicketMessage[];
   clientOrgId: string;
   clientSlug: string;
+  accountId: string;
+  accountSlug: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [ticket] = useState(initialTicket);
+  const [ticket, setTicket] = useState(initialTicket);
   const [messages, setMessages] = useState(initialMessages);
   const [reply, setReply] = useState('');
+  const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
+  const [externalUrl, setExternalUrl] = useState('');
 
   const listHref = pathsConfig.app.clientPortalSupport.replace(
     '[clientSlug]',
     clientSlug,
   );
 
-  const handleReply = (event: React.FormEvent) => {
+  const isClosed = ticket.status === 'closed' || ticket.status === 'resolved';
+
+  const handleReply = (event: React.FormEvent, reopen = false) => {
     event.preventDefault();
     if (!reply.trim()) {
       toast.error('Message is required');
@@ -70,10 +83,20 @@ export function PortalSupportDetailContent({
         const message = await addPortalTicketMessage({
           clientOrgId,
           ticketId: ticket.id,
+          accountId,
+          accountSlug,
           message: reply.trim(),
+          attachments,
+          external_url: externalUrl.trim() || null,
+          reopen: reopen || isClosed,
         });
         setMessages((current) => [...current, message]);
         setReply('');
+        setAttachments([]);
+        setExternalUrl('');
+        if (reopen || isClosed) {
+          setTicket((current) => ({ ...current, status: 'open' }));
+        }
         router.refresh();
       } catch (error) {
         toast.error(
@@ -135,35 +158,85 @@ export function PortalSupportDetailContent({
                 <p className="text-sm whitespace-pre-wrap text-slate-800">
                   {message.message}
                 </p>
+                {message.attachments?.length ? (
+                  <ul className="mt-2 space-y-1">
+                    {message.attachments.map((file) => (
+                      <li key={file.url}>
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-xs text-[var(--ozer-accent)] underline"
+                        >
+                          {file.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
+                {message.externalUrl ? (
+                  <a
+                    href={message.externalUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="mt-2 block text-xs text-[var(--ozer-accent)] underline"
+                  >
+                    External link
+                  </a>
+                ) : null}
               </div>
             ))
           )}
         </div>
 
-        {ticket.status !== 'closed' ? (
-          <form
-            onSubmit={handleReply}
-            className="space-y-3 border-t border-slate-200 px-4 py-4"
-          >
-            <Label htmlFor="reply">Reply</Label>
-            <Textarea
-              id="reply"
-              value={reply}
-              onChange={(event) => setReply(event.target.value)}
-              rows={4}
-              placeholder="Write your message…"
+        <form
+          onSubmit={(event) => handleReply(event)}
+          className="space-y-3 border-t border-slate-200 px-4 py-4"
+        >
+          <Label htmlFor="reply">
+            {isClosed ? 'Reopen with a reply' : 'Reply'}
+          </Label>
+          <Textarea
+            id="reply"
+            value={reply}
+            onChange={(event) => setReply(event.target.value)}
+            rows={4}
+            placeholder="Write your message…"
+          />
+          <div className="space-y-2">
+            <Label htmlFor="portal-reply-link">Link (optional)</Label>
+            <Input
+              id="portal-reply-link"
+              value={externalUrl}
+              onChange={(event) => setExternalUrl(event.target.value)}
+              placeholder="https://"
             />
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isPending}>
-                {isPending ? 'Sending…' : 'Send reply'}
-              </Button>
-            </div>
-          </form>
-        ) : (
-          <div className="border-t border-slate-200 px-4 py-4 text-sm text-[var(--ozer-text-on-light-muted)]">
-            This ticket is closed. Open a new ticket if you need further help.
           </div>
-        )}
+          <SupportAttachmentUploader
+            accountId={accountId}
+            value={attachments}
+            onChange={setAttachments}
+          />
+          <div className="flex justify-end gap-2">
+            {isClosed ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={isPending}
+                onClick={(event) => handleReply(event, true)}
+              >
+                Reopen ticket
+              </Button>
+            ) : null}
+            <Button type="submit" disabled={isPending}>
+              {isPending
+                ? 'Sending…'
+                : isClosed
+                  ? 'Reopen & send'
+                  : 'Send reply'}
+            </Button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -179,19 +252,32 @@ const priorityOptions: { value: PortalTicketPriority; label: string }[] = [
 export function PortalSupportNewForm({
   clientOrgId,
   accountId,
+  accountSlug,
   clientSlug,
 }: {
   clientOrgId: string;
   accountId: string;
+  accountSlug: string;
   clientSlug: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
     priority: 'medium' as PortalTicketPriority,
+    project_id: '',
+    recording_url: '',
+    external_url: '',
   });
+
+  useEffect(() => {
+    listPortalProjects({ clientOrgId, accountId })
+      .then((rows) => setProjects(rows ?? []))
+      .catch(() => setProjects([]));
+  }, [accountId, clientOrgId]);
 
   const listHref = pathsConfig.app.clientPortalSupport.replace(
     '[clientSlug]',
@@ -211,9 +297,14 @@ export function PortalSupportNewForm({
         const created = await createPortalTicket({
           clientOrgId,
           accountId,
+          accountSlug,
           title: form.title.trim(),
           description: form.description.trim(),
           priority: form.priority,
+          project_id: form.project_id || null,
+          recording_url: form.recording_url.trim() || null,
+          external_url: form.external_url.trim() || null,
+          attachments,
         });
 
         router.push(
@@ -263,29 +354,92 @@ export function PortalSupportNewForm({
           />
         </div>
 
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Priority</Label>
+            <Select
+              value={form.priority}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  priority: value as PortalTicketPriority,
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {priorityOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Project (optional)</Label>
+            <Select
+              value={form.project_id || '__none__'}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  project_id: value === '__none__' ? '' : value,
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select project" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No project</SelectItem>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
         <div className="space-y-2">
-          <Label>Priority</Label>
-          <Select
-            value={form.priority}
-            onValueChange={(value) =>
+          <Label htmlFor="recording_url">Recording URL (optional)</Label>
+          <Input
+            id="recording_url"
+            value={form.recording_url}
+            onChange={(event) =>
               setForm((current) => ({
                 ...current,
-                priority: value as PortalTicketPriority,
+                recording_url: event.target.value,
               }))
             }
-          >
-            <SelectTrigger>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {priorityOptions.map((option) => (
-                <SelectItem key={option.value} value={option.value}>
-                  {option.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            placeholder="https://loom.com/…"
+          />
         </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="external_url">External link (optional)</Label>
+          <Input
+            id="external_url"
+            value={form.external_url}
+            onChange={(event) =>
+              setForm((current) => ({
+                ...current,
+                external_url: event.target.value,
+              }))
+            }
+            placeholder="https://"
+          />
+        </div>
+
+        <SupportAttachmentUploader
+          accountId={accountId}
+          value={attachments}
+          onChange={setAttachments}
+        />
       </div>
 
       <div className="flex flex-wrap items-center gap-3">

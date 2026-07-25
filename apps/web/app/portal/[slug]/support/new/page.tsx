@@ -28,6 +28,7 @@ export default async function PortalSupportNewPage({
       <PortalSupportNewForm
         clientOrgId={ctx.clientOrgId}
         accountId={ctx.accountId}
+        accountSlug={ctx.accountSlug}
         clientSlug={slug}
       />
     </div>

@@ -71,6 +71,7 @@ import { meetingDisplayDate } from '../../meetings/_lib/format-meeting-date';
 import { listClientUpcomingBookingsAction } from '../../scheduling/_lib/server/scheduling-actions';
 import type { ClientBookingRow } from '../../scheduling/_lib/server/scheduling.service';
 import type { ClientDetailOverviewSeed } from '../_lib/client-detail.types';
+import { ensureClientOrgForCrmClientAction } from '../_lib/server/client-support-link-actions';
 import {
   deleteClient,
   getClient,
@@ -87,12 +88,14 @@ import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
 import { ClientNotesBlock } from './client-notes-block';
 import { ClientRanklyBlock } from './client-rankly-block';
+import { ClientSupportLinkCard } from './client-support-link-card';
 import { ClientTasksBlock } from './client-tasks-block';
 import { ClientUpcomingBookingsBlock } from './client-upcoming-bookings-block';
 
 type Client = {
   id: string;
   account_id: string;
+  client_org_id?: string | null;
   client_type?: string | null;
   first_name: string | null;
   last_name: string | null;
@@ -313,6 +316,24 @@ export function ClientDetailSidebar({
   const [overviewBookings, setOverviewBookings] = useState<
     ClientBookingPreview[]
   >(overviewSeed?.bookings ?? []);
+  const [resolvedClientOrgId, setResolvedClientOrgId] = useState<string | null>(
+    initialClient?.client_org_id ?? null,
+  );
+
+  useEffect(() => {
+    if (!canEditClients) return;
+    if (resolvedClientOrgId) return;
+
+    void ensureClientOrgForCrmClientAction({ accountId, clientId })
+      .then((result) => {
+        if (result?.clientOrgId) {
+          setResolvedClientOrgId(result.clientOrgId);
+        }
+      })
+      .catch(() => {
+        /* support link stays hidden until org can be resolved */
+      });
+  }, [accountId, canEditClients, clientId, resolvedClientOrgId]);
 
   const fetchClient = useCallback(
     async (opts?: { silent?: boolean }) => {
@@ -324,6 +345,9 @@ export function ClientDetailSidebar({
           clientId,
         })) as unknown as Client;
         setClient(data);
+        if (data?.client_org_id) {
+          setResolvedClientOrgId(data.client_org_id);
+        }
         const [jobHistory, notesData, meetingsData, bookingsData] =
           await Promise.all([
             getJobHistory({ accountId, clientId }),
@@ -878,6 +902,13 @@ export function ClientDetailSidebar({
                     : 'Never'}
                 </p>
               </div>
+            ) : null}
+
+            {canEditClients && resolvedClientOrgId ? (
+              <ClientSupportLinkCard
+                clientOrgId={resolvedClientOrgId}
+                accountSlug={accountSlug}
+              />
             ) : null}
 
             <p className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">

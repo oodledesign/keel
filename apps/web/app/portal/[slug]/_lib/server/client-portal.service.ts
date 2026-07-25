@@ -71,10 +71,22 @@ export type PortalTicketDetail = PortalTicket & {
 export type PortalTicketMessage = {
   id: string;
   ticketId: string;
-  userId: string;
+  userId: string | null;
   message: string;
   createdAt: string;
   authorName: string | null;
+  attachments: Array<{
+    name: string;
+    url: string;
+    mimeType: string;
+    size: number;
+  }>;
+  externalUrl: string | null;
+};
+
+export type PortalProjectOption = {
+  id: string;
+  name: string;
 };
 
 export type PortalInvoice = {
@@ -414,7 +426,9 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('ticket_messages')
-      .select('id, ticket_id, user_id, message, created_at')
+      .select(
+        'id, ticket_id, user_id, message, created_at, attachments, external_url, author_name',
+      )
       .eq('ticket_id', ticketId)
       .eq('is_internal', false)
       .order('created_at', { ascending: true });
@@ -427,12 +441,17 @@ class ClientPortalService {
     const rows = (data ?? []) as Array<{
       id: string;
       ticket_id: string;
-      user_id: string;
+      user_id: string | null;
       message: string;
       created_at: string;
+      attachments?: unknown;
+      external_url?: string | null;
+      author_name?: string | null;
     }>;
 
-    const authors = await this.loadAuthorNames(rows.map((row) => row.user_id));
+    const authors = await this.loadAuthorNames(
+      rows.map((row) => row.user_id).filter((id): id is string => Boolean(id)),
+    );
 
     return rows.map((row) => ({
       id: row.id,
@@ -440,7 +459,49 @@ class ClientPortalService {
       userId: row.user_id,
       message: row.message,
       createdAt: row.created_at,
-      authorName: authors.get(row.user_id) ?? null,
+      authorName:
+        row.author_name?.trim() ||
+        (row.user_id ? (authors.get(row.user_id) ?? null) : null),
+      attachments: Array.isArray(row.attachments)
+        ? (row.attachments as PortalTicketMessage['attachments'])
+        : [],
+      externalUrl: row.external_url ?? null,
+    }));
+  }
+
+  async listProjects(
+    clientOrgId: string,
+    accountId: string,
+  ): Promise<PortalProjectOption[]> {
+    await this.ensureMember(clientOrgId);
+
+    const { data: clients } = await this.db
+      .from('clients')
+      .select('id')
+      .eq('client_org_id', clientOrgId);
+
+    const clientIds = (clients ?? []).map((row) => (row as { id: string }).id);
+    if (clientIds.length === 0) return [];
+
+    const { data, error } = await this.db
+      .from('projects')
+      .select('id, name, title')
+      .eq('account_id', accountId)
+      .in('client_id', clientIds)
+      .order('updated_at', { ascending: false })
+      .limit(50);
+
+    if (error) return [];
+
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        name?: string | null;
+        title?: string | null;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      name: row.name?.trim() || row.title?.trim() || 'Project',
     }));
   }
 
@@ -448,22 +509,90 @@ class ClientPortalService {
     input: CreatePortalTicketInput,
   ): Promise<PortalTicketDetail> {
     const user = await this.ensureMember(input.clientOrgId);
-    const ticketNumber = await this.allocateTicketNumber(input.accountId);
+    const { data: org } = await this.db
+      .from('client_orgs')
+      .select('id, business_id, slug')
+      .eq('id', input.clientOrgId)
+      .maybeSingle();
+
+    if (!org) {
+      throw new Error('Client organisation not found');
+    }
+
+    const businessId = (org as { business_id?: string | null }).business_id;
+    let accountId: string | null = null;
+
+    if (businessId) {
+      const { data: business } = await this.db
+        .from('businesses')
+        .select('account_id')
+        .eq('id', businessId)
+        .maybeSingle();
+      accountId =
+        (business as { account_id?: string | null } | null)?.account_id ??
+        businessId;
+    }
+
+    if (!accountId) {
+      throw new Error('Workspace not found for client');
+    }
+
+    if (input.project_id) {
+      const projects = await this.listProjects(input.clientOrgId, accountId);
+      if (!projects.some((project) => project.id === input.project_id)) {
+        throw new Error('Invalid project for this client');
+      }
+    }
+
+    const ticketNumber = await this.allocateTicketNumber(accountId);
+    const now = new Date().toISOString();
+    const { createSupportPublicToken } =
+      await import('~/lib/support/support-tokens');
+
+    const { data: profile } = await this.db
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const submitterName =
+      (profile as { full_name?: string | null } | null)?.full_name?.trim() ||
+      user.email?.split('@')[0] ||
+      'Client';
+    const submitterEmail = user.email?.toLowerCase() ?? null;
+
+    const { data: account } = await this.db
+      .from('accounts')
+      .select('slug')
+      .eq('id', accountId)
+      .maybeSingle();
+    const accountSlug =
+      input.accountSlug?.trim() ||
+      (account as { slug?: string | null } | null)?.slug ||
+      null;
 
     const { data, error } = await this.db
       .from('support_tickets')
       .insert({
-        business_id: input.accountId,
+        business_id: accountId,
+        account_id: accountId,
         client_org_id: input.clientOrgId,
+        project_id: input.project_id ?? null,
         title: input.title,
         description: input.description,
         priority: input.priority,
         status: 'open',
         ticket_number: ticketNumber,
         created_by: user.id,
+        public_token: createSupportPublicToken(),
+        submitter_name: submitterName,
+        submitter_email: submitterEmail,
+        recording_url: input.recording_url || null,
+        external_url: input.external_url || null,
+        last_activity_at: now,
       })
       .select(
-        'id, title, description, status, priority, ticket_number, created_at',
+        'id, title, description, status, priority, ticket_number, created_at, public_token, assigned_to',
       )
       .single();
 
@@ -476,7 +605,37 @@ class ClientPortalService {
       user_id: user.id,
       message: input.description,
       is_internal: false,
+      author_name: submitterName,
+      author_email: submitterEmail,
+      attachments: input.attachments ?? [],
+      external_url: input.external_url || null,
     });
+
+    if (accountSlug) {
+      const { getSupabaseServerAdminClient } =
+        await import('@kit/supabase/server-admin-client');
+      const { notifyWorkspaceNewSupportTicket } =
+        await import('~/lib/support/workspace-support-notifications');
+      const admin = getSupabaseServerAdminClient();
+
+      void notifyWorkspaceNewSupportTicket(admin, {
+        accountId,
+        accountSlug,
+        ticketId: data.id as string,
+        ticketNumber: Number(data.ticket_number),
+        title: input.title,
+        description: input.description,
+        submitterName,
+        submitterEmail,
+        assignedTo:
+          (data as { assigned_to?: string | null }).assigned_to ?? null,
+        clientOrgSlug: (org as { slug?: string | null }).slug ?? null,
+        publicToken:
+          (data as { public_token?: string | null }).public_token ?? null,
+      }).catch((err) => {
+        console.error('[client-portal] notify new ticket failed', err);
+      });
+    }
 
     return {
       id: data.id,
@@ -499,6 +658,26 @@ class ClientPortalService {
       throw new Error('Ticket not found');
     }
 
+    const canReopen =
+      ticket.status === 'resolved' ||
+      ticket.status === 'closed' ||
+      Boolean(input.reopen);
+
+    if (ticket.status === 'closed' && !canReopen && !input.message.trim()) {
+      throw new Error('This ticket is closed');
+    }
+
+    const { data: profile } = await this.db
+      .from('profiles')
+      .select('full_name')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    const authorName =
+      (profile as { full_name?: string | null } | null)?.full_name?.trim() ||
+      user.email?.split('@')[0] ||
+      'Client';
+
     const { data, error } = await this.db
       .from('ticket_messages')
       .insert({
@@ -506,15 +685,76 @@ class ClientPortalService {
         user_id: user.id,
         message: input.message,
         is_internal: false,
+        author_name: authorName,
+        author_email: user.email?.toLowerCase() ?? null,
+        attachments: input.attachments ?? [],
+        external_url: input.external_url || null,
       })
-      .select('id, ticket_id, user_id, message, created_at')
+      .select(
+        'id, ticket_id, user_id, message, created_at, attachments, external_url',
+      )
       .single();
 
     if (error || !data) {
       this.throwErr(error, 'Failed to send message');
     }
 
-    const authors = await this.loadAuthorNames([user.id]);
+    const now = new Date().toISOString();
+    let nextStatus = ticket.status;
+    if (
+      ticket.status === 'waiting' ||
+      ticket.status === 'resolved' ||
+      ticket.status === 'closed' ||
+      input.reopen
+    ) {
+      nextStatus = 'open';
+    }
+
+    await this.db
+      .from('support_tickets')
+      .update({
+        status: nextStatus,
+        last_activity_at: now,
+        updated_at: now,
+        ...(nextStatus === 'open' ? { resolved_at: null } : {}),
+      })
+      .eq('id', input.ticketId);
+
+    if (input.accountId && input.accountSlug) {
+      const { getSupabaseServerAdminClient } =
+        await import('@kit/supabase/server-admin-client');
+      const { notifyWorkspaceSupportClientReply } =
+        await import('~/lib/support/workspace-support-notifications');
+      const admin = getSupabaseServerAdminClient();
+      const { data: fullTicket } = await admin
+        .from('support_tickets')
+        .select('assigned_to, ticket_number, title, account_id, business_id')
+        .eq('id', input.ticketId)
+        .maybeSingle();
+
+      const notifyAccountId =
+        (fullTicket as { account_id?: string | null } | null)?.account_id ??
+        (fullTicket as { business_id?: string | null } | null)?.business_id ??
+        input.accountId;
+
+      void notifyWorkspaceSupportClientReply(admin, {
+        accountId: notifyAccountId,
+        accountSlug: input.accountSlug,
+        ticketId: input.ticketId,
+        ticketNumber: Number(
+          (fullTicket as { ticket_number?: number } | null)?.ticket_number ??
+            ticket.ticketNumber,
+        ),
+        title: (fullTicket as { title?: string } | null)?.title ?? ticket.title,
+        replyBody: input.message,
+        assignedTo:
+          (fullTicket as { assigned_to?: string | null } | null)?.assigned_to ??
+          null,
+        authorName,
+      }).catch((err) => {
+        console.error('[client-portal] notify client reply failed', err);
+      });
+    }
 
     return {
       id: data.id,
@@ -522,7 +762,11 @@ class ClientPortalService {
       userId: data.user_id,
       message: data.message,
       createdAt: data.created_at,
-      authorName: authors.get(user.id) ?? null,
+      authorName,
+      attachments: Array.isArray(data.attachments)
+        ? (data.attachments as PortalTicketMessage['attachments'])
+        : [],
+      externalUrl: data.external_url ?? null,
     };
   }
 

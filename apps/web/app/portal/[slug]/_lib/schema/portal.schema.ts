@@ -28,15 +28,50 @@ export const GetPortalTicketSchema = z.object({
 export const CreatePortalTicketSchema = z.object({
   clientOrgId: z.string().uuid(),
   accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).optional(),
   title: z.string().min(1, 'Title is required'),
   description: z.string().min(1, 'Description is required'),
   priority: PortalTicketPrioritySchema.default('medium'),
+  project_id: z.string().uuid().nullable().optional(),
+  recording_url: z.string().url().nullable().optional().or(z.literal('')),
+  external_url: z.string().url().nullable().optional().or(z.literal('')),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string(),
+        url: z.string().url(),
+        mimeType: z.string(),
+        size: z.number(),
+      }),
+    )
+    .max(5)
+    .optional(),
 });
 
 export const AddPortalTicketMessageSchema = z.object({
   clientOrgId: z.string().uuid(),
   ticketId: z.string().uuid(),
+  accountId: z.string().uuid().optional(),
+  accountSlug: z.string().min(1).optional(),
   message: z.string().min(1, 'Message is required'),
+  attachments: z
+    .array(
+      z.object({
+        name: z.string(),
+        url: z.string().url(),
+        mimeType: z.string(),
+        size: z.number(),
+      }),
+    )
+    .max(5)
+    .optional(),
+  external_url: z.string().url().nullable().optional().or(z.literal('')),
+  reopen: z.boolean().optional(),
+});
+
+export const ListPortalProjectsSchema = z.object({
+  clientOrgId: z.string().uuid(),
+  accountId: z.string().uuid(),
 });
 
 export type PortalTicketStatus = z.infer<typeof PortalTicketStatusSchema>;

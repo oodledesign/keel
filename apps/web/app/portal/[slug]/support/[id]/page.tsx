@@ -2,8 +2,8 @@ import { notFound } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { PortalSupportDetailContent } from '../../_components/portal-support-content';
 import { formatPortalTicketNumber } from '../../_components/portal-badges';
+import { PortalSupportDetailContent } from '../../_components/portal-support-content';
 import { loadClientPortalContext } from '../../_lib/server/client-portal.loader';
 import { createClientPortalService } from '../../_lib/server/client-portal.service';
 
@@ -53,6 +53,8 @@ export default async function PortalSupportDetailPage({
       initialMessages={messages}
       clientOrgId={ctx.clientOrgId}
       clientSlug={slug}
+      accountId={ctx.accountId}
+      accountSlug={ctx.accountSlug}
     />
   );
 }

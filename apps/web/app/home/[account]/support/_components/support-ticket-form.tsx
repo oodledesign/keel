@@ -18,6 +18,10 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import {
+  type SupportAttachmentItem,
+  SupportAttachmentUploader,
+} from '~/components/support/support-attachment-uploader';
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -25,12 +29,14 @@ import type { TicketPriority } from '../_lib/schema/support-tickets.schema';
 import {
   createSupportTicket,
   listSupportClientOrgs,
+  listSupportProjectsForOrg,
   listSupportTeamMembers,
   listSupportWebsitesForOrg,
 } from '../_lib/server/server-actions';
 
 type ClientOrgOption = { id: string; name: string };
 type WebsiteOption = { id: string; name: string; domain: string | null };
+type ProjectOption = { id: string; name: string };
 type TeamMemberOption = { userId: string; name: string };
 
 const priorityOptions: { value: TicketPriority; label: string }[] = [
@@ -51,13 +57,18 @@ export function SupportTicketForm({
   const [isPending, startTransition] = useTransition();
   const [clientOrgs, setClientOrgs] = useState<ClientOrgOption[]>([]);
   const [websites, setWebsites] = useState<WebsiteOption[]>([]);
+  const [projects, setProjects] = useState<ProjectOption[]>([]);
   const [teamMembers, setTeamMembers] = useState<TeamMemberOption[]>([]);
+  const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
 
   const [form, setForm] = useState({
     title: '',
     description: '',
     client_org_id: '',
     website_id: '',
+    project_id: '',
+    recording_url: '',
+    external_url: '',
     priority: 'medium' as TicketPriority,
     assigned_to: '',
   });
@@ -92,6 +103,26 @@ export function SupportTicketForm({
       .catch(() => setWebsites([]));
   }, [accountId, form.client_org_id]);
 
+  useEffect(() => {
+    listSupportProjectsForOrg({
+      accountId,
+      clientOrgId: form.client_org_id || null,
+    })
+      .then((rows) => {
+        setProjects(rows ?? []);
+        setForm((current) => {
+          if (
+            current.project_id &&
+            !(rows ?? []).some((project) => project.id === current.project_id)
+          ) {
+            return { ...current, project_id: '' };
+          }
+          return current;
+        });
+      })
+      .catch(() => setProjects([]));
+  }, [accountId, form.client_org_id]);
+
   const listHref = pathsConfig.app.accountSupport.replace(
     '[account]',
     accountSlug,
@@ -109,12 +140,17 @@ export function SupportTicketForm({
       try {
         const created = await createSupportTicket({
           accountId,
+          accountSlug,
           title: form.title.trim(),
           description: form.description.trim(),
           client_org_id: form.client_org_id || null,
           website_id: form.website_id || null,
+          project_id: form.project_id || null,
+          recording_url: form.recording_url.trim() || null,
+          external_url: form.external_url.trim() || null,
           priority: form.priority,
           assigned_to: form.assigned_to || null,
+          attachments: attachments.length > 0 ? attachments : undefined,
         });
 
         router.push(
@@ -174,6 +210,7 @@ export function SupportTicketForm({
                   ...current,
                   client_org_id: value === '__none__' ? '' : value,
                   website_id: '',
+                  project_id: '',
                 }))
               }
             >
@@ -215,6 +252,75 @@ export function SupportTicketForm({
               </SelectContent>
             </Select>
           </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label>Project</Label>
+            <Select
+              value={form.project_id || '__none__'}
+              onValueChange={(value) =>
+                setForm((current) => ({
+                  ...current,
+                  project_id: value === '__none__' ? '' : value,
+                }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select project" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="__none__">No project linked</SelectItem>
+                {projects.map((project) => (
+                  <SelectItem key={project.id} value={project.id}>
+                    {project.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid gap-4 md:grid-cols-2">
+          <div className="space-y-2">
+            <Label htmlFor="recording_url">Recording URL</Label>
+            <Input
+              id="recording_url"
+              type="url"
+              value={form.recording_url}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  recording_url: event.target.value,
+                }))
+              }
+              placeholder="https://…"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="external_url">External link</Label>
+            <Input
+              id="external_url"
+              type="url"
+              value={form.external_url}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  external_url: event.target.value,
+                }))
+              }
+              placeholder="https://…"
+            />
+          </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label>Attachments</Label>
+          <SupportAttachmentUploader
+            accountId={accountId}
+            value={attachments}
+            onChange={setAttachments}
+          />
         </div>
 
         <div className="grid gap-4 md:grid-cols-2">

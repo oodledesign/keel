@@ -8,6 +8,7 @@ import {
   AddPortalTicketMessageSchema,
   CreatePortalTicketSchema,
   GetPortalTicketSchema,
+  ListPortalProjectsSchema,
 } from '../schema/portal.schema';
 import { createClientPortalService } from './client-portal.service';
 import { createPortalBillingService } from './portal-billing.service';
@@ -30,6 +31,12 @@ export const getPortalTicketMessages = enhanceAction(
   async (input) =>
     getService().listTicketMessages(input.clientOrgId, input.ticketId),
   { schema: GetPortalTicketSchema },
+);
+
+export const listPortalProjects = enhanceAction(
+  async (input) =>
+    getService().listProjects(input.clientOrgId, input.accountId),
+  { schema: ListPortalProjectsSchema },
 );
 
 export const createPortalManagePaymentSessionAction = enhanceAction(

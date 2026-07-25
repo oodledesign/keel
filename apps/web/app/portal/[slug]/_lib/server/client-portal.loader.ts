@@ -15,6 +15,7 @@ export type ClientPortalContext = {
   displayName: string;
   clientOrgId: string;
   accountId: string;
+  accountSlug: string;
   clientSlug: string;
   orgName: string;
   membershipRole: string | null;
@@ -46,7 +47,32 @@ export const loadClientPortalContext = cache(
       notFound();
     }
 
-    const accountId = org.business_id as string;
+    const businessId = (org as { business_id?: string | null }).business_id;
+    let accountId: string | null = null;
+
+    if (businessId) {
+      const { data: business } = await client
+        .from('businesses')
+        .select('account_id')
+        .eq('id', businessId)
+        .maybeSingle();
+      accountId =
+        (business as { account_id?: string | null } | null)?.account_id ??
+        businessId;
+    }
+
+    if (!accountId) {
+      notFound();
+    }
+
+    const { data: account } = await client
+      .from('accounts')
+      .select('slug')
+      .eq('id', accountId)
+      .maybeSingle();
+
+    const accountSlug =
+      (account as { slug?: string | null } | null)?.slug?.trim() || clientSlug;
 
     const { data: moduleSetting } = await client
       .from('account_module_settings')
@@ -85,6 +111,7 @@ export const loadClientPortalContext = cache(
       displayName,
       clientOrgId: org.id,
       accountId,
+      accountSlug,
       clientSlug,
       orgName: org.name?.trim() || 'Client portal',
       membershipRole: membership.role ?? null,

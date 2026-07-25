@@ -43,6 +43,7 @@ async function SupportPage({ params }: SupportPageProps) {
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
         <SupportTicketsPageContent
           accountSlug={accountSlug}
+          accountId={accountId}
           initialTickets={initialTickets}
         />
       </PageBody>

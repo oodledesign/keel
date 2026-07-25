@@ -4,10 +4,11 @@ import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
-import { LifeBuoy, Plus } from 'lucide-react';
+import { LayoutGrid, LayoutList, LifeBuoy, Plus, Search } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
+import { Input } from '@kit/ui/input';
 import {
   Select,
   SelectContent,
@@ -30,8 +31,10 @@ import {
   formatTicketDate,
   formatTicketNumber,
 } from './support-ticket-badges';
+import { SupportTicketsBoard } from './support-tickets-board';
 
 type StatusFilter = 'all' | TicketStatus;
+type ViewMode = 'list' | 'board';
 
 const statusTabs: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
@@ -49,45 +52,99 @@ const priorityOptions: { value: 'all' | TicketPriority; label: string }[] = [
   { value: 'urgent', label: 'Urgent' },
 ];
 
+const RECENT_MS = 24 * 60 * 60 * 1000;
+
+function isRecentActivity(at: string | null | undefined) {
+  if (!at) return false;
+  return Date.now() - new Date(at).getTime() < RECENT_MS;
+}
+
+function formatLastActivity(at: string | null | undefined) {
+  if (!at) return '—';
+  return new Date(at).toLocaleString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export function SupportTicketsPageContent({
   accountSlug,
+  accountId,
   initialTickets,
+  pageTitle = 'Support',
+  pageDescription,
+  backHref,
 }: {
   accountSlug: string;
+  accountId: string;
   initialTickets: SupportTicket[];
+  pageTitle?: string;
+  pageDescription?: string;
+  backHref?: string;
 }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
   const [priorityFilter, setPriorityFilter] = useState<'all' | TicketPriority>(
     'all',
   );
+  const [search, setSearch] = useState('');
+  const [viewMode, setViewMode] = useState<ViewMode>('list');
 
   const filteredTickets = useMemo(() => {
+    const q = search.trim().toLowerCase();
+
     return initialTickets.filter((ticket) => {
-      if (statusFilter !== 'all' && ticket.status !== statusFilter) {
+      if (
+        viewMode === 'list' &&
+        statusFilter !== 'all' &&
+        ticket.status !== statusFilter
+      ) {
         return false;
       }
       if (priorityFilter !== 'all' && ticket.priority !== priorityFilter) {
         return false;
       }
+      if (q) {
+        const haystack = [
+          ticket.title,
+          ticket.description ?? '',
+          ticket.clientOrgName ?? '',
+        ]
+          .join(' ')
+          .toLowerCase();
+        if (!haystack.includes(q)) return false;
+      }
       return true;
     });
-  }, [initialTickets, statusFilter, priorityFilter]);
+  }, [initialTickets, statusFilter, priorityFilter, search, viewMode]);
 
   const newHref = pathsConfig.app.accountSupportNew.replace(
     '[account]',
     accountSlug,
   );
 
+  const description =
+    pageDescription ??
+    `${filteredTickets.length} ${filteredTickets.length === 1 ? 'ticket' : 'tickets'}`;
+
   return (
     <div className="space-y-6 px-4 lg:px-0">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
+          {backHref ? (
+            <Link
+              href={backHref}
+              className="mb-2 inline-block text-sm text-[var(--workspace-shell-text)]/50 hover:text-[var(--workspace-shell-text)]"
+            >
+              ← Back to support
+            </Link>
+          ) : null}
           <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
-            Support
+            {pageTitle}
           </h1>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {filteredTickets.length}{' '}
-            {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
+            {description}
           </p>
         </div>
 
@@ -99,8 +156,67 @@ export function SupportTicketsPageContent({
         </Button>
       </div>
 
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex flex-wrap gap-2 border-b border-[color:var(--workspace-shell-border)] pb-3 sm:border-0 sm:pb-0">
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+        <div className="relative max-w-md flex-1">
+          <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text)]/30" />
+          <Input
+            value={search}
+            onChange={(event) => setSearch(event.target.value)}
+            placeholder="Search tickets…"
+            className="pl-9"
+          />
+        </div>
+
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex rounded-lg border border-[color:var(--workspace-shell-border)] p-0.5">
+            <button
+              type="button"
+              onClick={() => setViewMode('list')}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm ${
+                viewMode === 'list'
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text)]/50'
+              }`}
+            >
+              <LayoutList className="h-4 w-4" />
+              List
+            </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('board')}
+              className={`inline-flex items-center gap-1.5 rounded-md px-2.5 py-1.5 text-sm ${
+                viewMode === 'board'
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text)]/50'
+              }`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              Board
+            </button>
+          </div>
+
+          <Select
+            value={priorityFilter}
+            onValueChange={(value) =>
+              setPriorityFilter(value as 'all' | TicketPriority)
+            }
+          >
+            <SelectTrigger className="w-full sm:w-[180px]">
+              <SelectValue placeholder="Priority" />
+            </SelectTrigger>
+            <SelectContent>
+              {priorityOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      </div>
+
+      {viewMode === 'list' ? (
+        <div className="flex flex-wrap gap-2 border-b border-[color:var(--workspace-shell-border)] pb-3">
           {statusTabs.map((tab) => {
             const active = statusFilter === tab.value;
             return (
@@ -119,25 +235,7 @@ export function SupportTicketsPageContent({
             );
           })}
         </div>
-
-        <Select
-          value={priorityFilter}
-          onValueChange={(value) =>
-            setPriorityFilter(value as 'all' | TicketPriority)
-          }
-        >
-          <SelectTrigger className="w-full sm:w-[180px]">
-            <SelectValue placeholder="Priority" />
-          </SelectTrigger>
-          <SelectContent>
-            {priorityOptions.map((option) => (
-              <SelectItem key={option.value} value={option.value}>
-                {option.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
+      ) : null}
 
       {filteredTickets.length === 0 ? (
         <Card className="rounded-[24px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
@@ -158,6 +256,13 @@ export function SupportTicketsPageContent({
             </Button>
           </CardContent>
         </Card>
+      ) : viewMode === 'board' ? (
+        <SupportTicketsBoard
+          key={filteredTickets.map((t) => t.id).join(',')}
+          accountSlug={accountSlug}
+          accountId={accountId}
+          tickets={filteredTickets}
+        />
       ) : (
         <div className="overflow-hidden rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <div className="overflow-x-auto">
@@ -170,6 +275,7 @@ export function SupportTicketsPageContent({
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Priority</th>
                   <th className="px-4 py-3 font-medium">Assigned to</th>
+                  <th className="px-4 py-3 font-medium">Last activity</th>
                   <th className="px-4 py-3 font-medium">Created</th>
                 </tr>
               </thead>
@@ -178,6 +284,7 @@ export function SupportTicketsPageContent({
                   const detailHref = pathsConfig.app.accountSupportDetail
                     .replace('[account]', accountSlug)
                     .replace('[id]', ticket.id);
+                  const recent = isRecentActivity(ticket.lastActivityAt);
 
                   return (
                     <tr
@@ -211,6 +318,17 @@ export function SupportTicketsPageContent({
                       </td>
                       <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
                         {ticket.assignedToName ?? 'Unassigned'}
+                      </td>
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
+                        <span className="inline-flex items-center gap-2">
+                          {recent ? (
+                            <span
+                              className="h-2 w-2 shrink-0 rounded-full bg-[var(--ozer-accent-muted)]"
+                              title="Activity in the last 24 hours"
+                            />
+                          ) : null}
+                          {formatLastActivity(ticket.lastActivityAt)}
+                        </span>
                       </td>
                       <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
                         {formatTicketDate(ticket.createdAt)}

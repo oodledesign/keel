@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
+import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
   Select,
@@ -18,10 +19,17 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import {
+  type SupportAttachmentItem,
+  SupportAttachmentUploader,
+} from '~/components/support/support-attachment-uploader';
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
-import type { TicketStatus } from '../_lib/schema/support-tickets.schema';
+import type {
+  TicketPriority,
+  TicketStatus,
+} from '../_lib/schema/support-tickets.schema';
 import {
   addSupportTicketMessage,
   listSupportTeamMembers,
@@ -39,6 +47,13 @@ import {
 } from './support-ticket-badges';
 
 type TeamMemberOption = { userId: string; name: string };
+
+const priorityOptions: { value: TicketPriority; label: string }[] = [
+  { value: 'low', label: 'Low' },
+  { value: 'medium', label: 'Medium' },
+  { value: 'high', label: 'High' },
+  { value: 'urgent', label: 'Urgent' },
+];
 
 const statusOptions: { value: TicketStatus; label: string }[] = [
   { value: 'open', label: 'Open' },
@@ -67,6 +82,17 @@ export function SupportTicketDetailContent({
   const [showInternal, setShowInternal] = useState(true);
   const [reply, setReply] = useState('');
   const [isInternal, setIsInternal] = useState(false);
+  const [replyAttachments, setReplyAttachments] = useState<
+    SupportAttachmentItem[]
+  >([]);
+  const [replyExternalUrl, setReplyExternalUrl] = useState('');
+
+  const projectSupportHref =
+    ticket.projectId && accountSlug
+      ? pathsConfig.app.accountSupportProject
+          .replace('[account]', accountSlug)
+          .replace('[projectId]', ticket.projectId)
+      : null;
 
   useEffect(() => {
     listSupportTeamMembers({ accountSlug })
@@ -113,13 +139,26 @@ export function SupportTicketDetailContent({
       try {
         const message = await addSupportTicketMessage({
           accountId,
+          accountSlug,
           ticketId: ticket.id,
           message: reply.trim(),
           is_internal: isInternal,
+          attachments:
+            replyAttachments.length > 0 ? replyAttachments : undefined,
+          external_url: replyExternalUrl.trim() || null,
         });
         setMessages((current) => [...current, message]);
         setReply('');
         setIsInternal(false);
+        setReplyAttachments([]);
+        setReplyExternalUrl('');
+        setTicket((current) => ({
+          ...current,
+          status:
+            !isInternal && current.status === 'open'
+              ? 'waiting'
+              : current.status,
+        }));
         router.refresh();
       } catch (error) {
         toast.error(
@@ -161,6 +200,41 @@ export function SupportTicketDetailContent({
                   {ticket.websiteDomain ? ` (${ticket.websiteDomain})` : ''}
                 </span>
               ) : null}
+              {ticket.projectId && ticket.projectName ? (
+                <span>
+                  Project:{' '}
+                  {projectSupportHref ? (
+                    <Link
+                      href={projectSupportHref}
+                      className="text-[var(--ozer-accent-muted)] hover:underline"
+                    >
+                      {ticket.projectName}
+                    </Link>
+                  ) : (
+                    ticket.projectName
+                  )}
+                </span>
+              ) : null}
+              {ticket.recordingUrl ? (
+                <a
+                  href={ticket.recordingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--ozer-accent-muted)] hover:underline"
+                >
+                  Recording
+                </a>
+              ) : null}
+              {ticket.externalUrl ? (
+                <a
+                  href={ticket.externalUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-[var(--ozer-accent-muted)] hover:underline"
+                >
+                  External link
+                </a>
+              ) : null}
               <span>
                 Created by {ticket.createdByName ?? 'Unknown'} on{' '}
                 {formatTicketDate(ticket.createdAt)}
@@ -201,7 +275,7 @@ export function SupportTicketDetailContent({
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-3">
         <div className="space-y-2 rounded-[16px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <Label>Status</Label>
           <Select
@@ -219,6 +293,31 @@ export function SupportTicketDetailContent({
             </SelectTrigger>
             <SelectContent>
               {statusOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="space-y-2 rounded-[16px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
+          <Label>Priority</Label>
+          <Select
+            value={ticket.priority}
+            onValueChange={(value) =>
+              updateTicket({
+                accountId,
+                ticketId: ticket.id,
+                priority: value as TicketPriority,
+              })
+            }
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {priorityOptions.map((option) => (
                 <SelectItem key={option.value} value={option.value}>
                   {option.label}
                 </SelectItem>
@@ -297,6 +396,32 @@ export function SupportTicketDetailContent({
                 <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/80">
                   {message.message}
                 </p>
+                {message.externalUrl ? (
+                  <a
+                    href={message.externalUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-2 inline-block text-sm text-[var(--ozer-accent-muted)] hover:underline"
+                  >
+                    External link
+                  </a>
+                ) : null}
+                {message.attachments.length > 0 ? (
+                  <ul className="mt-2 space-y-1">
+                    {message.attachments.map((file) => (
+                      <li key={file.url}>
+                        <a
+                          href={file.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-[var(--ozer-accent-muted)] hover:underline"
+                        >
+                          {file.name}
+                        </a>
+                      </li>
+                    ))}
+                  </ul>
+                ) : null}
               </div>
             ))
           )}
@@ -311,6 +436,21 @@ export function SupportTicketDetailContent({
             onChange={(event) => setReply(event.target.value)}
             rows={4}
             placeholder="Write a reply…"
+          />
+          <div className="space-y-2">
+            <Label htmlFor="reply-external-url">External link (optional)</Label>
+            <Input
+              id="reply-external-url"
+              type="url"
+              value={replyExternalUrl}
+              onChange={(event) => setReplyExternalUrl(event.target.value)}
+              placeholder="https://…"
+            />
+          </div>
+          <SupportAttachmentUploader
+            accountId={accountId}
+            value={replyAttachments}
+            onChange={setReplyAttachments}
           />
           <div className="flex flex-wrap items-center justify-between gap-3">
             <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">

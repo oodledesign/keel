@@ -3,6 +3,10 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  escapeNotificationHtml,
+  wrapNotificationEmail,
+} from '~/lib/email/wrap-notification-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 export type BillingNotificationType =
@@ -204,8 +208,8 @@ function buildTrialEmail(input: {
   if (input.notificationType === 'trial_ended') {
     return {
       subject: `${input.accountName} trial ended — add billing to keep access`,
-      html: wrapEmail(
-        `<p>Your trial for <strong>${escapeHtml(input.accountName)}</strong> on ${escapeHtml(input.productName)} has ended.</p>
+      html: wrapNotificationEmail(
+        `<p>Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> on ${escapeNotificationHtml(input.productName)} has ended.</p>
         <p>Add a payment method to restore full access to this workspace.</p>
         <p><a href="${input.billingUrl}">Manage billing</a></p>`,
       ),
@@ -215,8 +219,8 @@ function buildTrialEmail(input: {
   if (input.notificationType === 'trial_ending_1d') {
     return {
       subject: `${input.accountName} trial ends tomorrow`,
-      html: wrapEmail(
-        `<p>Your trial for <strong>${escapeHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
+      html: wrapNotificationEmail(
+        `<p>Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
         <p>Subscribe now to avoid interruption.</p>
         <p><a href="${input.billingUrl}">Manage billing</a></p>`,
       ),
@@ -225,24 +229,12 @@ function buildTrialEmail(input: {
 
   return {
     subject: `${input.accountName} trial ending soon`,
-    html: wrapEmail(
-      `<p>Your trial for <strong>${escapeHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
+    html: wrapNotificationEmail(
+      `<p>Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
       <p>You can subscribe anytime from billing — your workspace data stays put.</p>
       <p><a href="${input.billingUrl}">Manage billing</a></p>`,
     ),
   };
-}
-
-function wrapEmail(body: string) {
-  return `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111">${body}</body></html>`;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
 
 export async function sendPaymentFailedEmail(
@@ -284,8 +276,8 @@ export async function sendPaymentFailedEmail(
       to: ownerEmail,
       from: sender,
       subject: `Payment failed for ${input.accountName}`,
-      html: wrapEmail(
-        `<p>We could not process the latest payment for <strong>${escapeHtml(input.accountName)}</strong> on ${escapeHtml(productName)}.</p>
+      html: wrapNotificationEmail(
+        `<p>We could not process the latest payment for <strong>${escapeNotificationHtml(input.accountName)}</strong> on ${escapeNotificationHtml(productName)}.</p>
       <p>Update your payment method to keep this workspace active.</p>
       <p><a href="${billingUrl}">Manage billing</a></p>`,
       ),
