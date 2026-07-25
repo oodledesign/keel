@@ -13,11 +13,15 @@ import {
 } from '../_lib/server/client-support-link-actions';
 
 export function ClientSupportLinkCard({
+  accountId,
   clientOrgId,
   accountSlug,
+  compact = false,
 }: {
+  accountId: string;
   clientOrgId: string;
   accountSlug: string;
+  compact?: boolean;
 }) {
   const [url, setUrl] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
@@ -26,6 +30,7 @@ export function ClientSupportLinkCard({
     startTransition(async () => {
       try {
         const result = await getClientSupportLinkAction({
+          accountId,
           clientOrgId,
           accountSlug,
         });
@@ -34,7 +39,7 @@ export function ClientSupportLinkCard({
         setUrl(null);
       }
     });
-  }, [accountSlug, clientOrgId]);
+  }, [accountId, accountSlug, clientOrgId]);
 
   function copy() {
     if (!url) return;
@@ -46,6 +51,7 @@ export function ClientSupportLinkCard({
     startTransition(async () => {
       try {
         const result = await rotateClientSupportLinkAction({
+          accountId,
           clientOrgId,
           accountSlug,
         });
@@ -60,7 +66,13 @@ export function ClientSupportLinkCard({
   }
 
   return (
-    <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+    <div
+      className={
+        compact
+          ? 'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4'
+          : 'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4'
+      }
+    >
       <div className="flex items-start gap-3">
         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]">
           <Link2 className="h-4 w-4" />

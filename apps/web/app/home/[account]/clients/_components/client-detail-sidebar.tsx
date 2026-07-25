@@ -906,6 +906,7 @@ export function ClientDetailSidebar({
 
             {canEditClients && resolvedClientOrgId ? (
               <ClientSupportLinkCard
+                accountId={accountId}
                 clientOrgId={resolvedClientOrgId}
                 accountSlug={accountSlug}
               />

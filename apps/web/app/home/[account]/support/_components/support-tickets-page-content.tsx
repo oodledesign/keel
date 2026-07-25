@@ -31,6 +31,7 @@ import {
   formatTicketDate,
   formatTicketNumber,
 } from './support-ticket-badges';
+import { SupportClientLinksPanel } from './support-client-links-panel';
 import { SupportTicketsBoard } from './support-tickets-board';
 
 type StatusFilter = 'all' | TicketStatus;
@@ -155,6 +156,13 @@ export function SupportTicketsPageContent({
           </Link>
         </Button>
       </div>
+
+      {!backHref ? (
+        <SupportClientLinksPanel
+          accountId={accountId}
+          accountSlug={accountSlug}
+        />
+      ) : null}
 
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative max-w-md flex-1">
