@@ -8,9 +8,9 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { getDefaultAccountPath } from '../../../_lib/role-access';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { SupportTicketsPageContent } from '../_components/support-tickets-page-content';
-import { loadSupportPageData } from '../_lib/server/support-page.loader';
-import { createSupportTicketsService } from '../_lib/server/support-tickets.service';
+import { SupportTicketsPageContent } from '../../_components/support-tickets-page-content';
+import { loadSupportPageData } from '../../_lib/server/support-page.loader';
+import { createSupportTicketsService } from '../../_lib/server/support-tickets.service';
 
 interface SupportProjectPageProps {
   params: Promise<{ account: string; projectId: string }>;

@@ -14,7 +14,7 @@ import { Textarea } from '@kit/ui/textarea';
 
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 
-import { replyPublicSupportTicketAction } from '../../_lib/public-support.actions';
+import { replyPublicSupportTicketAction } from '../../../_lib/public-support.actions';
 
 type Message = {
   id: string;

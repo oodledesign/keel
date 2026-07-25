@@ -22,7 +22,7 @@ import { Textarea } from '@kit/ui/textarea';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 import pathsConfig from '~/config/paths.config';
 
-import { createPublicSupportTicketAction } from '../_lib/public-support.actions';
+import { createPublicSupportTicketAction } from '../../_lib/public-support.actions';
 
 type ContactOption = { id: string; name: string; email: string | null };
 type ProjectOption = { id: string; name: string };
