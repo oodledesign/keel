@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { isMissingColumnError } from '~/home/[account]/_lib/server/supabase-errors';
+import { fetchCompanyLogoBytes } from '~/lib/clients/fetch-company-logo';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 export const runtime = 'nodejs';
@@ -61,12 +62,14 @@ async function loadClient(
   id: string;
   account_id: string;
   picture_url: string | null;
+  email: string | null;
+  website: string | null;
   pictureUrlAvailable: boolean;
 } | null> {
   const admin = getSupabaseServerAdminClient();
   const { data, error } = await admin
     .from('clients')
-    .select('id, account_id, picture_url')
+    .select('id, account_id, picture_url, email, website')
     .eq('id', clientId)
     .eq('account_id', accountId)
     .maybeSingle();
@@ -76,18 +79,47 @@ async function loadClient(
       id: data.id as string,
       account_id: data.account_id as string,
       picture_url: (data.picture_url as string | null) ?? null,
+      email: (data.email as string | null) ?? null,
+      website: (data.website as string | null) ?? null,
       pictureUrlAvailable: true,
     };
   }
 
   if (!isMissingPictureUrlColumn(error)) {
-    if (error) throw new Error(error.message);
+    if (error) {
+      // Retry without website if that column is missing (pre-migration).
+      if (isMissingColumnError(error)) {
+        const { data: legacy, error: legacyError } = await admin
+          .from('clients')
+          .select('id, account_id, picture_url, email')
+          .eq('id', clientId)
+          .eq('account_id', accountId)
+          .maybeSingle();
+
+        if (legacyError) {
+          if (!isMissingPictureUrlColumn(legacyError)) {
+            throw new Error(legacyError.message);
+          }
+        } else if (legacy) {
+          return {
+            id: legacy.id as string,
+            account_id: legacy.account_id as string,
+            picture_url: (legacy.picture_url as string | null) ?? null,
+            email: (legacy.email as string | null) ?? null,
+            website: null,
+            pictureUrlAvailable: true,
+          };
+        }
+      } else {
+        throw new Error(error.message);
+      }
+    }
     return null;
   }
 
   const { data: fallback, error: fallbackError } = await admin
     .from('clients')
-    .select('id, account_id')
+    .select('id, account_id, email')
     .eq('id', clientId)
     .eq('account_id', accountId)
     .maybeSingle();
@@ -99,8 +131,63 @@ async function loadClient(
     id: fallback.id as string,
     account_id: fallback.account_id as string,
     picture_url: null,
+    email: (fallback.email as string | null) ?? null,
+    website: null,
     pictureUrlAvailable: false,
   };
+}
+
+async function storeClientPhotoBytes(input: {
+  accountId: string;
+  clientId: string;
+  existingPictureUrl: string | null;
+  bytes: Buffer;
+  contentType: string;
+}) {
+  const admin = getSupabaseServerAdminClient();
+  const bucket = admin.storage.from(AVATARS_BUCKET);
+  const existingPath = storagePathFromPictureUrl(input.existingPictureUrl);
+  const nextPath = clientPhotoPath(input.accountId, input.clientId);
+
+  if (existingPath && existingPath !== nextPath) {
+    await bucket.remove([existingPath]);
+  }
+
+  const { error: uploadError } = await bucket.upload(nextPath, input.bytes, {
+    contentType: input.contentType || 'image/png',
+    upsert: true,
+  });
+
+  if (uploadError) {
+    console.error('[clients] upload-photo:', uploadError.message);
+    throw new Error(uploadError.message || 'Failed to upload photo.');
+  }
+
+  const publicUrl = toSupabasePublicStorageUrl(
+    bucket.getPublicUrl(nextPath).data.publicUrl,
+  );
+
+  if (!publicUrl) {
+    throw new Error('Upload succeeded but public URL could not be generated.');
+  }
+
+  const { nanoid } = await import('nanoid');
+  const pictureUrl = `${publicUrl}?v=${nanoid(16)}`;
+
+  const { error: updateError } = await admin
+    .from('clients')
+    .update({
+      picture_url: pictureUrl,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.clientId)
+    .eq('account_id', input.accountId);
+
+  if (updateError) {
+    throw new Error(updateError.message);
+  }
+
+  return pictureUrl;
 }
 
 export async function POST(request: Request) {
@@ -124,6 +211,8 @@ export async function POST(request: Request) {
     const accountId = formData.get('accountId');
     const clientId = formData.get('clientId');
     const remove = formData.get('remove') === '1';
+    const fetchFromDomain = formData.get('fetchFromDomain') === '1';
+    const domainOverride = String(formData.get('domain') ?? '').trim();
     const file = formData.get('file');
 
     if (typeof accountId !== 'string' || !accountId.trim()) {
@@ -166,7 +255,6 @@ export async function POST(request: Request) {
     const admin = getSupabaseServerAdminClient();
     const bucket = admin.storage.from(AVATARS_BUCKET);
     const existingPath = storagePathFromPictureUrl(clientRow.picture_url);
-    const nextPath = clientPhotoPath(clientRow.account_id, clientRow.id);
 
     if (remove) {
       if (existingPath) {
@@ -192,6 +280,38 @@ export async function POST(request: Request) {
       return NextResponse.json({ pictureUrl: null });
     }
 
+    if (fetchFromDomain) {
+      try {
+        const logo = await fetchCompanyLogoBytes({
+          domain: domainOverride || null,
+          website: clientRow.website,
+          email: clientRow.email,
+        });
+
+        const pictureUrl = await storeClientPhotoBytes({
+          accountId: clientRow.account_id,
+          clientId: clientRow.id,
+          existingPictureUrl: clientRow.picture_url,
+          bytes: logo.bytes,
+          contentType: logo.contentType,
+        });
+
+        return NextResponse.json({
+          pictureUrl,
+          domain: logo.domain,
+        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Failed to fetch logo.';
+        const status = /not configured/i.test(message)
+          ? 503
+          : /No logo found|Enter a company domain|work email/i.test(message)
+            ? 422
+            : 500;
+        return NextResponse.json({ error: message }, { status });
+      }
+    }
+
     if (!(file instanceof File)) {
       return NextResponse.json({ error: 'file is required' }, { status: 400 });
     }
@@ -210,53 +330,27 @@ export async function POST(request: Request) {
       );
     }
 
-    const bytes = Buffer.from(await file.arrayBuffer());
+    try {
+      const pictureUrl = await storeClientPhotoBytes({
+        accountId: clientRow.account_id,
+        clientId: clientRow.id,
+        existingPictureUrl: clientRow.picture_url,
+        bytes: Buffer.from(await file.arrayBuffer()),
+        contentType: file.type || 'image/jpeg',
+      });
 
-    if (existingPath && existingPath !== nextPath) {
-      await bucket.remove([existingPath]);
-    }
-
-    const { error: uploadError } = await bucket.upload(nextPath, bytes, {
-      contentType: file.type || 'image/jpeg',
-      upsert: true,
-    });
-
-    if (uploadError) {
-      console.error('[clients] upload-photo:', uploadError.message);
+      return NextResponse.json({ pictureUrl });
+    } catch (error) {
       return NextResponse.json(
-        { error: uploadError.message || 'Failed to upload photo.' },
+        {
+          error:
+            error instanceof Error
+              ? error.message
+              : 'Failed to upload client photo.',
+        },
         { status: 500 },
       );
     }
-
-    const publicUrl = toSupabasePublicStorageUrl(
-      bucket.getPublicUrl(nextPath).data.publicUrl,
-    );
-
-    if (!publicUrl) {
-      return NextResponse.json(
-        { error: 'Upload succeeded but public URL could not be generated.' },
-        { status: 500 },
-      );
-    }
-
-    const { nanoid } = await import('nanoid');
-    const pictureUrl = `${publicUrl}?v=${nanoid(16)}`;
-
-    const { error: updateError } = await admin
-      .from('clients')
-      .update({
-        picture_url: pictureUrl,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', clientRow.id)
-      .eq('account_id', clientRow.account_id);
-
-    if (updateError) {
-      return NextResponse.json({ error: updateError.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ pictureUrl });
   } catch (error) {
     console.error('[clients] upload-photo unhandled:', error);
     return NextResponse.json(

@@ -17,6 +17,7 @@ import {
   ExternalLink,
   Eye,
   FileText,
+  Globe,
   Mail,
   MapPin,
   Mic,
@@ -50,6 +51,7 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import { ClientSubscriptionStatusList } from '~/home/[account]/_components/client-subscription-status-list';
+import { websiteHref } from '~/lib/clients/client-logo-domain';
 import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
 import { formatWorkspaceMoney } from '~/lib/currency/workspace-currency';
 
@@ -103,6 +105,7 @@ type Client = {
   company_name: string | null;
   email: string | null;
   phone: string | null;
+  website?: string | null;
   address_line_1: string | null;
   address_line_2: string | null;
   city: string | null;
@@ -251,7 +254,7 @@ export function ClientDetailSidebar({
   clientId,
   canEditClients,
   isContractorView,
-  onClose,
+  onClose: _onClose,
   onSaved,
   onDeleted,
   fullPage = false,
@@ -639,6 +642,8 @@ export function ClientDetailSidebar({
                   clientId={client.id}
                   displayName={displayName}
                   pictureUrl={client.picture_url}
+                  email={client.email}
+                  website={client.website}
                   onUpdated={fetchClient}
                 />
               ) : (
@@ -710,6 +715,19 @@ export function ClientDetailSidebar({
                   <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
                     <Phone className="mr-1.5 inline h-4 w-4 align-text-bottom" />
                     {client.phone}
+                  </p>
+                ) : null}
+                {client.website ? (
+                  <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <Globe className="mr-1.5 inline h-4 w-4 align-text-bottom" />
+                    <a
+                      href={websiteHref(client.website) ?? '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="hover:text-[var(--ozer-accent-muted)] hover:underline"
+                    >
+                      {client.website.replace(/^https?:\/\//i, '')}
+                    </a>
                   </p>
                 ) : null}
                 {address ? (
@@ -1090,6 +1108,17 @@ export function ClientDetailSidebar({
 
               {canEditClients ? (
                 <div className="flex shrink-0 items-center gap-2">
+                  {client.website ? (
+                    <a
+                      href={websiteHref(client.website) ?? '#'}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex h-8 w-8 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] transition hover:border-[var(--ozer-accent)]/40 hover:text-[var(--ozer-accent-muted)]"
+                      aria-label="Open website"
+                    >
+                      <Globe className="h-4 w-4" />
+                    </a>
+                  ) : null}
                   {client.phone ? (
                     <a
                       href={`tel:${client.phone}`}

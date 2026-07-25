@@ -31,6 +31,7 @@ type Client = {
   company_name: string | null;
   email: string | null;
   phone: string | null;
+  website?: string | null;
   address_line_1: string | null;
   address_line_2: string | null;
   city: string | null;
@@ -91,6 +92,7 @@ export function ClientForm({
   );
   const [email, setEmail] = useState(client?.email ?? '');
   const [phone, setPhone] = useState(client?.phone ?? '');
+  const [website, setWebsite] = useState(client?.website ?? '');
   const [address_line_1, setAddressLine1] = useState(
     client?.address_line_1 ?? '',
   );
@@ -144,6 +146,7 @@ export function ClientForm({
           phone: isIndividual
             ? phone.trim() || undefined
             : contactPhone.trim() || phone.trim() || undefined,
+          website: website.trim() || undefined,
           address_line_1: address_line_1.trim() || undefined,
           address_line_2: address_line_2.trim() || undefined,
           city: city.trim() || undefined,
@@ -176,6 +179,7 @@ export function ClientForm({
           company_name: company_name.trim() || null,
           email: email.trim() || null,
           phone: phone.trim() || null,
+          website: website.trim() || null,
           address_line_1: address_line_1.trim() || null,
           address_line_2: address_line_2.trim() || null,
           city: city.trim() || null,
@@ -421,6 +425,17 @@ export function ClientForm({
           </div>
         </div>
       )}
+
+      <div className="space-y-2">
+        <Label htmlFor="website">Website</Label>
+        <Input
+          id="website"
+          value={website}
+          onChange={(e) => setWebsite(e.target.value)}
+          placeholder="acme.com"
+          readOnly={isReadOnly}
+        />
+      </div>
 
       <div className="space-y-2">
         <Label htmlFor="address_line_1">Address line 1</Label>

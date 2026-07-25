@@ -2,12 +2,17 @@
 
 import { useCallback, useEffect, useId, useRef, useState } from 'react';
 
-import { Camera, Trash2 } from 'lucide-react';
+import { Camera, Globe, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import {
+  domainFromEmail,
+  normalizeDomainInput,
+} from '~/lib/clients/client-logo-domain';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 function normalizeClientPhotoUrl(url: string | null | undefined) {
@@ -26,6 +31,8 @@ export function ClientImageUploader({
   clientId,
   displayName,
   pictureUrl,
+  email = null,
+  website = null,
   onUpdated,
   size = 'lg',
   className,
@@ -34,20 +41,33 @@ export function ClientImageUploader({
   clientId: string;
   displayName: string;
   pictureUrl: string | null;
+  email?: string | null;
+  website?: string | null;
   onUpdated: () => void;
   size?: 'md' | 'lg';
   className?: string;
 }) {
   const inputId = useId();
+  const domainInputId = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(() =>
     normalizeClientPhotoUrl(pictureUrl),
   );
+  const suggestedDomain =
+    normalizeDomainInput(website ?? '') ?? domainFromEmail(email);
+  const [domainInput, setDomainInput] = useState(suggestedDomain ?? '');
+  const [showDomainField, setShowDomainField] = useState(!suggestedDomain);
 
   useEffect(() => {
     setPreviewUrl(normalizeClientPhotoUrl(pictureUrl));
   }, [pictureUrl]);
+
+  useEffect(() => {
+    const next = normalizeDomainInput(website ?? '') ?? domainFromEmail(email);
+    setDomainInput(next ?? '');
+    setShowDomainField(!next);
+  }, [email, website]);
 
   const dimension = size === 'lg' ? 'h-24 w-24 md:h-28 md:w-28' : 'h-20 w-20';
 
@@ -111,6 +131,35 @@ export function ClientImageUploader({
     }
   }, [accountId, clientId, onUpdated]);
 
+  const onFetchFromDomain = useCallback(async () => {
+    const domain = domainInput.trim() || suggestedDomain || '';
+    if (!domain && !suggestedDomain) {
+      setShowDomainField(true);
+      toast.error('Enter a company domain to look up the logo');
+      return;
+    }
+
+    setUploading(true);
+    try {
+      const nextUrl = await fetchClientLogoViaApi(
+        accountId,
+        clientId,
+        domain || undefined,
+      );
+      setPreviewUrl(nextUrl);
+      toast.success('Logo saved from domain');
+      onUpdated();
+    } catch (error) {
+      console.error('[clients] fetch logo', error);
+      toast.error(
+        error instanceof Error ? error.message : 'Failed to fetch logo',
+      );
+      setShowDomainField(true);
+    } finally {
+      setUploading(false);
+    }
+  }, [accountId, clientId, domainInput, onUpdated, suggestedDomain]);
+
   const openPicker = () => {
     inputRef.current?.click();
   };
@@ -161,6 +210,52 @@ export function ClientImageUploader({
         className="sr-only"
         onChange={onFileSelected}
       />
+
+      <div className="flex w-full max-w-[14rem] flex-col gap-1.5">
+        {showDomainField ? (
+          <Input
+            id={domainInputId}
+            value={domainInput}
+            onChange={(event) => setDomainInput(event.target.value)}
+            placeholder="acme.com"
+            disabled={uploading}
+            className="h-8 text-xs"
+          />
+        ) : null}
+
+        <div className="flex flex-wrap gap-1">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            disabled={uploading}
+            className="h-8 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+            onClick={() => void onFetchFromDomain()}
+          >
+            <Globe className="mr-1.5 h-3.5 w-3.5" />
+            Fetch from domain
+          </Button>
+
+          {!showDomainField ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={uploading}
+              className="h-8 px-2 text-[var(--workspace-shell-text-muted)]"
+              onClick={() => setShowDomainField(true)}
+            >
+              Edit domain
+            </Button>
+          ) : null}
+        </div>
+
+        {suggestedDomain && !showDomainField ? (
+          <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+            Using {suggestedDomain}
+          </p>
+        ) : null}
+      </div>
 
       {previewUrl ? (
         <Button
@@ -224,6 +319,38 @@ async function uploadClientPhotoViaApi(
   const nextUrl = normalizeClientPhotoUrl(payload.pictureUrl);
   if (!nextUrl) {
     throw new Error('Upload succeeded but no photo URL was returned');
+  }
+
+  return nextUrl;
+}
+
+async function fetchClientLogoViaApi(
+  accountId: string,
+  clientId: string,
+  domain?: string,
+) {
+  const body = new FormData();
+  body.append('accountId', accountId);
+  body.append('clientId', clientId);
+  body.append('fetchFromDomain', '1');
+  if (domain?.trim()) {
+    body.append('domain', domain.trim());
+  }
+
+  const response = await fetch('/api/clients/upload-photo', {
+    method: 'POST',
+    body,
+  });
+
+  const payload = await readUploadPhotoResponse(response);
+
+  if (!response.ok) {
+    throw new Error(payload.error ?? 'Fetch failed');
+  }
+
+  const nextUrl = normalizeClientPhotoUrl(payload.pictureUrl);
+  if (!nextUrl) {
+    throw new Error('Logo fetched but no photo URL was returned');
   }
 
   return nextUrl;

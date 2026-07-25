@@ -410,6 +410,7 @@ class ClientsService {
         company_name: companyName,
         email: primaryContactEmail ?? input.email ?? null,
         phone: primaryContactPhone ?? input.phone ?? null,
+        website: input.website?.trim() || null,
         address_line_1: input.address_line_1 ?? null,
         address_line_2: input.address_line_2 ?? null,
         city: input.city ?? null,
@@ -544,6 +545,10 @@ class ClientsService {
     }
     if (input.email !== undefined) payload.email = input.email;
     if (input.phone !== undefined) payload.phone = input.phone;
+    if (input.website !== undefined) {
+      payload.website =
+        typeof input.website === 'string' ? input.website.trim() || null : null;
+    }
     if (input.address_line_1 !== undefined)
       payload.address_line_1 = input.address_line_1;
     if (input.address_line_2 !== undefined)
