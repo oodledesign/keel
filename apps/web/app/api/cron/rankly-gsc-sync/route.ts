@@ -7,9 +7,9 @@ import {
   cronSkippedResponse,
   isCronDisabled,
 } from '~/lib/cron/cron-guards';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { listGscConnectionsDueForSync } from '~/lib/rankly-gsc/connection';
 import { syncGscConnection } from '~/lib/rankly-gsc/sync';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const runtime = 'nodejs';
 export const maxDuration = 300;

@@ -1,4 +1,4 @@
-import { NextResponse, type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import { exchangeCode, upsertConnection } from '@kit/google-auth';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';

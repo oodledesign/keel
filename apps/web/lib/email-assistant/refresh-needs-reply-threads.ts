@@ -45,7 +45,6 @@ async function refreshAndReconcileNeedsReplyThreadsInner(params: {
   mailboxKind?: 'business' | 'personal';
   limit?: number;
 }): Promise<{ refreshed: number; cleared: number }> {
-
   const admin = getSupabaseServerAdminClient();
   const limit = params.limit ?? 12;
   const mailboxKind = params.mailboxKind ?? 'business';

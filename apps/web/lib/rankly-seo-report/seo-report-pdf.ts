@@ -4,8 +4,8 @@ import {
   PDFDocument,
   type PDFFont,
   type PDFPage,
-  type RGB,
   PDFString,
+  type RGB,
   StandardFonts,
   rgb,
 } from 'pdf-lib';
@@ -496,7 +496,9 @@ export async function buildSeoReportPdf(params: {
       bodyLines = bodyLines.slice(0, maxBodyLines);
       const last = bodyLines[maxBodyLines - 1]!;
       bodyLines[maxBodyLines - 1] =
-        last.length > 3 ? `${last.slice(0, Math.max(0, last.length - 1))}…` : '…';
+        last.length > 3
+          ? `${last.slice(0, Math.max(0, last.length - 1))}…`
+          : '…';
     }
     const hasUplift =
       pillar.available &&
@@ -518,7 +520,15 @@ export async function buildSeoReportPdf(params: {
     const tone = scoreTone(pillar.available ? pillar.score : null);
     const bottom = topY - height;
 
-    drawRoundedCard(page, x, bottom, colWidth, height, COLORS.white, COLORS.line);
+    drawRoundedCard(
+      page,
+      x,
+      bottom,
+      colWidth,
+      height,
+      COLORS.white,
+      COLORS.line,
+    );
     page.drawRectangle({
       x,
       y: bottom,
@@ -537,15 +547,7 @@ export async function buildSeoReportPdf(params: {
     let barY = topY - 38;
 
     if (pillar.available && pot?.current != null) {
-      drawBar(
-        page,
-        pBarX,
-        barY,
-        pBarW,
-        6,
-        pot.current / 100,
-        pdfRgb(tone.pdf),
-      );
+      drawBar(page, pBarX, barY, pBarW, 6, pot.current / 100, pdfRgb(tone.pdf));
       drawText(
         page,
         `${pot.current}`,
@@ -790,8 +792,7 @@ export async function buildSeoReportPdf(params: {
   // Clickable “Ozer” → homepage
   const ozerLabel = 'Ozer';
   const ozerWidth = font.widthOfTextAtSize(ozerLabel, 7);
-  const ozerX =
-    MARGIN + font.widthOfTextAtSize('Prepared with Rankly by ', 7);
+  const ozerX = MARGIN + font.widthOfTextAtSize('Prepared with Rankly by ', 7);
   const link = doc.context.register(
     doc.context.obj({
       Type: 'Annot',

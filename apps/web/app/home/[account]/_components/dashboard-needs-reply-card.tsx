@@ -125,7 +125,7 @@ export function DashboardNeedsReplyCard({
                     <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                       {thread.fromLabel}
                     </p>
-                    <span className="shrink-0 text-[10px] tabular-nums text-[var(--workspace-shell-text-muted)]">
+                    <span className="shrink-0 text-[10px] text-[var(--workspace-shell-text-muted)] tabular-nums">
                       {formatEmailDateTime(thread.lastMessageAt)}
                     </span>
                   </div>

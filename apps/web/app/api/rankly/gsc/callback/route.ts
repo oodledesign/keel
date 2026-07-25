@@ -11,9 +11,9 @@ import {
 } from '~/lib/rankly-gsc/connection';
 import { pickBestGscProperty } from '~/lib/rankly-gsc/domain';
 import {
+  GSC_OAUTH_SCOPES,
   exchangeGscCode,
   fetchGoogleAccountEmail,
-  GSC_OAUTH_SCOPES,
   stateReturnPath,
   verifyGscState,
 } from '~/lib/rankly-gsc/oauth';

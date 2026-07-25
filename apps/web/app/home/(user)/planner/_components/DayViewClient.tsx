@@ -31,7 +31,6 @@ import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { plannerTaskMetaWithoutClient } from '~/lib/planner/build-task-tree';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
-import { resolvePlannedTasks } from '~/lib/planner/planned-task-selection';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
   type PlanDocument,
@@ -54,6 +53,7 @@ import {
   shiftLocalDateYmd,
   toLocalDateYmd,
 } from '~/lib/planner/plan-storage';
+import { resolvePlannedTasks } from '~/lib/planner/planned-task-selection';
 import { plannerTaskToPageTask } from '~/lib/planner/planner-task-to-page-task';
 import { syncPlannerCalendarBlocks } from '~/lib/planner/sync-calendar-client';
 import type {

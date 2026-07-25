@@ -3,10 +3,10 @@ import { type NextRequest, NextResponse } from 'next/server';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { userIsAccountMember } from '~/lib/rankly/account-membership';
-import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { isGscConfigured } from '~/lib/rankly-gsc/env';
 import { buildGscAuthUrl } from '~/lib/rankly-gsc/oauth';
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const dynamic = 'force-dynamic';
@@ -113,9 +113,7 @@ export async function GET(request: NextRequest) {
         ? error.message
         : 'Could not start Google Search Console OAuth';
     return NextResponse.redirect(
-      absoluteUrl(
-        `${returnFallback}?gsc_error=${encodeURIComponent(message)}`,
-      ),
+      absoluteUrl(`${returnFallback}?gsc_error=${encodeURIComponent(message)}`),
     );
   }
 }

@@ -113,10 +113,10 @@ export async function createRecorderNote(params: {
   const detailPath = isPersonal
     ? pathsConfig.app.personalNoteDetail.replace('[noteId]', data.id as string)
     : slug
-      ? workAccountPath(
-          pathsConfig.app.accountNoteDetail,
-          slug,
-        ).replace('[noteId]', data.id as string)
+      ? workAccountPath(pathsConfig.app.accountNoteDetail, slug).replace(
+          '[noteId]',
+          data.id as string,
+        )
       : pathsConfig.app.personalNotes;
 
   return {
@@ -145,7 +145,9 @@ export async function listRecorderNotes(params: {
 
   const { data, error } = await admin
     .from('notes')
-    .select('id, title, content, account_id, client_id, project_id, created_at, updated_at')
+    .select(
+      'id, title, content, account_id, client_id, project_id, created_at, updated_at',
+    )
     .eq('account_id', accountId)
     .eq('created_by', params.userId)
     .order('updated_at', { ascending: false })
@@ -169,10 +171,10 @@ export async function listRecorderNotes(params: {
     const detailPath = isPersonal
       ? pathsConfig.app.personalNoteDetail.replace('[noteId]', id)
       : slug
-        ? workAccountPath(
-            pathsConfig.app.accountNoteDetail,
-            slug,
-          ).replace('[noteId]', id)
+        ? workAccountPath(pathsConfig.app.accountNoteDetail, slug).replace(
+            '[noteId]',
+            id,
+          )
         : pathsConfig.app.personalNotes;
 
     return {

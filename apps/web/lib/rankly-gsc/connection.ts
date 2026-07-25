@@ -6,7 +6,11 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import { isGscConfigured } from './env';
 import { refreshGscToken } from './oauth';
-import type { GscConnectionRow, GscConnectionStatus, GscTokenResponse } from './types';
+import type {
+  GscConnectionRow,
+  GscConnectionStatus,
+  GscTokenResponse,
+} from './types';
 
 const REFRESH_WINDOW_MS = 5 * 60_000;
 

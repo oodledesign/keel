@@ -18,11 +18,11 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 import {
   previewEmailBody,
   splitEmailQuotedHistory,
 } from '~/lib/email-assistant/message-body-display';
-import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
 import { emailApiFetch } from '../_lib/email-api';
@@ -622,7 +622,7 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                       <p className="min-w-0 truncate text-sm font-medium text-[var(--workspace-shell-text-muted)]">
                         {message.from_address ?? 'Unknown sender'}
                       </p>
-                      <p className="shrink-0 text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+                      <p className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
                         {formatEmailDateTime(message.internal_date)}
                       </p>
                     </div>
@@ -655,14 +655,14 @@ function ThreadMessages({ messages }: { messages: EmailMessageRow[] }) {
                 ) : null}
                 <div className="min-w-0 flex-1">
                   <div className="flex flex-wrap items-center justify-between gap-2">
-                    <p className="min-w-0 break-words text-sm font-medium text-[var(--workspace-shell-text)]">
+                    <p className="min-w-0 text-sm font-medium break-words text-[var(--workspace-shell-text)]">
                       {message.from_address ?? 'Unknown sender'}
                     </p>
-                    <p className="shrink-0 text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+                    <p className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
                       {formatEmailDateTime(message.internal_date)}
                     </p>
                   </div>
-                  <p className="mt-3 break-words text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
+                  <p className="mt-3 text-sm leading-relaxed break-words whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
                     {body}
                   </p>
                   {quoted ? (

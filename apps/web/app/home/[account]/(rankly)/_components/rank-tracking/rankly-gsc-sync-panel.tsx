@@ -105,7 +105,10 @@ export function RanklyGscSyncPanel(props: {
     } else if (error) {
       toast.error(error);
       router.replace(window.location.pathname);
-    } else if (props.initialStatus.connected && props.initialSites.length === 0) {
+    } else if (
+      props.initialStatus.connected &&
+      props.initialSites.length === 0
+    ) {
       void refreshStatus();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mount / oauth return only
@@ -319,10 +322,10 @@ export function RanklyGscSyncPanel(props: {
                       <td className="px-3 py-2 text-right tabular-nums">
                         {row.clicks.toLocaleString()}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-[var(--workspace-shell-text-muted)]">
+                      <td className="px-3 py-2 text-right text-[var(--workspace-shell-text-muted)] tabular-nums">
                         {row.impressions.toLocaleString()}
                       </td>
-                      <td className="px-3 py-2 text-right tabular-nums text-[var(--workspace-shell-text-muted)]">
+                      <td className="px-3 py-2 text-right text-[var(--workspace-shell-text-muted)] tabular-nums">
                         {row.position == null ? '—' : row.position.toFixed(1)}
                       </td>
                     </tr>

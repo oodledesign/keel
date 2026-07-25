@@ -391,7 +391,6 @@ function buildWorkNavItemsForKeys(
   return items;
 }
 
-
 /**
  * Work workspace sidebar items in canonical module order (account_module_settings).
  * UI label "Projects" → jobs table / module_key `jobs`.

@@ -1,8 +1,8 @@
 import { ExternalLink } from 'lucide-react';
 
 import {
-  ADMIN_SUBPROCESSOR_CATEGORIES,
   ADMIN_SUBPROCESSORS,
+  ADMIN_SUBPROCESSOR_CATEGORIES,
   type AdminSubprocessor,
 } from '../_lib/subprocessors';
 

@@ -6,9 +6,6 @@ import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { userIsAccountMember } from '~/lib/rankly/account-membership';
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
-import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { listGscSites } from '~/lib/rankly-gsc/client';
 import {
   deleteGscConnection,
@@ -21,6 +18,9 @@ import { pickBestGscProperty } from '~/lib/rankly-gsc/domain';
 import { isGscConfigured } from '~/lib/rankly-gsc/env';
 import { loadTopGscQueries } from '~/lib/rankly-gsc/metrics';
 import { syncProjectGscMetrics } from '~/lib/rankly-gsc/sync';
+import { userIsAccountMember } from '~/lib/rankly/account-membership';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { denyUnlessRanklyAddon } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 export const runtime = 'nodejs';
@@ -82,7 +82,12 @@ export async function GET(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return jsonErr('VALIDATION', 'Invalid query', 400, parsed.error.flatten());
+      return jsonErr(
+        'VALIDATION',
+        'Invalid query',
+        400,
+        parsed.error.flatten(),
+      );
     }
 
     const access = await assertProjectAccess(
@@ -245,7 +250,12 @@ export async function DELETE(request: NextRequest) {
     });
 
     if (!parsed.success) {
-      return jsonErr('VALIDATION', 'Invalid query', 400, parsed.error.flatten());
+      return jsonErr(
+        'VALIDATION',
+        'Invalid query',
+        400,
+        parsed.error.flatten(),
+      );
     }
 
     const access = await assertProjectAccess(

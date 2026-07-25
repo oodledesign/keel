@@ -138,6 +138,8 @@ export function EmailSettingsCard({
     initialAutoSaveGmailDrafts,
   ]);
 
+  const mailboxLabel =
+    mailboxKind === 'business' ? 'Business Gmail' : 'Personal Gmail';
   const connectHref = `/api/google/connect?mailbox=${mailboxKind}&returnPath=${encodeURIComponent(returnPath)}`;
 
   function saveSettings() {
@@ -169,11 +171,11 @@ export function EmailSettingsCard({
         const result = await disconnectGmailConnection({ mailboxKind });
 
         if (!result.success) {
-          toast.error(result.error ?? 'Could not disconnect Gmail');
+          toast.error(result.error ?? `Could not disconnect ${mailboxLabel}`);
           return;
         }
 
-        toast.success('Gmail disconnected');
+        toast.success(`${mailboxLabel} disconnected`);
       } finally {
         setDisconnecting(false);
       }
@@ -188,7 +190,8 @@ export function EmailSettingsCard({
             Settings
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Connect Gmail and tune how drafts are written.
+            Connect {mailboxLabel} and tune how drafts are written for this
+            mailbox.
           </p>
         </div>
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
@@ -205,7 +208,7 @@ export function EmailSettingsCard({
               </div>
               <div>
                 <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                  Gmail connected
+                  {mailboxLabel} connected
                 </p>
                 <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                   {connectedEmail}
@@ -328,11 +331,11 @@ export function EmailSettingsCard({
       <DisconnectIntegrationDialog
         open={confirmDisconnectOpen}
         onOpenChange={setConfirmDisconnectOpen}
-        title="Disconnect Gmail?"
+        title={`Disconnect ${mailboxLabel}?`}
         description={
           connectedEmail
             ? `This removes Ozer’s access to ${connectedEmail} and deletes synced email data stored in Ozer.`
-            : 'This removes Ozer’s access to this Gmail mailbox and deletes synced email data stored in Ozer.'
+            : `This removes Ozer’s access to this ${mailboxLabel} mailbox and deletes synced email data stored in Ozer.`
         }
         consequences={[...GMAIL_DISCONNECT_CONSEQUENCES]}
         confirming={disconnecting}

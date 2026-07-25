@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { getValidAccessToken, type MailboxKind } from '@kit/google-auth';
+import { type MailboxKind, getValidAccessToken } from '@kit/google-auth';
 
 const GMAIL_API_BASE = 'https://gmail.googleapis.com/gmail/v1/users/me';
 

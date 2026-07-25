@@ -32,7 +32,7 @@ export async function disconnectGoogleCalendarAction() {
 }
 
 export async function disconnectGmailFromIntegrationsAction() {
-  const result = await disconnectGmailConnection();
+  const result = await disconnectGmailConnection({ mailboxKind: 'personal' });
 
   if (result.success) {
     revalidateIntegrationSurfaces();

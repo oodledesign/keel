@@ -178,7 +178,7 @@ export function PersonalIntegrationsSection({ data }: Props) {
   );
 
   const calendarConnectHref = `/api/integrations/google-calendar/start?returnPath=${settingsReturnPath}`;
-  const gmailConnectHref = `/api/google/connect?returnPath=${settingsReturnPath}`;
+  const gmailConnectHref = `/api/google/connect?mailbox=personal&returnPath=${settingsReturnPath}`;
 
   function confirmDisconnectCalendar() {
     setConfirmTarget(null);
@@ -207,7 +207,7 @@ export function PersonalIntegrationsSection({ data }: Props) {
           toast.error(result.error ?? 'Could not disconnect Gmail');
           return;
         }
-        toast.success('Gmail disconnected');
+        toast.success('Personal Gmail disconnected');
       } finally {
         setDisconnecting(null);
       }
@@ -275,8 +275,8 @@ export function PersonalIntegrationsSection({ data }: Props) {
       <IntegrationRow
         icon={<Mail className="h-4 w-4" />}
         iconClassName="bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]"
-        title="Gmail"
-        description="Powers inbox sync, reply drafts, and email assistant settings."
+        title="Personal Gmail"
+        description="Private inbox for Personal email — separate from workspace / business Gmail."
         status={gmailStatus}
         statusLabel={
           gmailStatus === 'connected'
@@ -289,11 +289,11 @@ export function PersonalIntegrationsSection({ data }: Props) {
           data.gmail.connected
             ? `${data.gmail.googleEmail ?? 'Connected'}${formatConnectedAt(data.gmail.connectedAt) ? ` · ${formatConnectedAt(data.gmail.connectedAt)}` : ''}`
             : data.gmail.configured
-              ? 'Connect to sync threads and save drafts back to Gmail.'
+              ? 'Connect a personal Gmail account to sync private threads and drafts.'
               : 'Gmail OAuth is not configured on this server yet.'
         }
         featureHref={pathsConfig.app.personalEmailAssistant}
-        featureLabel="Open Email"
+        featureLabel="Open Personal email"
         connectHref={gmailConnectHref}
         onDisconnect={
           data.gmail.connected ? () => setConfirmTarget('gmail') : undefined
@@ -302,10 +302,26 @@ export function PersonalIntegrationsSection({ data }: Props) {
         connectDisabled={gmailConnectDisabled}
         connectDisabledReason={
           gmailConnectDisabled
-            ? 'Email assistant add-on required. Upgrade in billing, then connect Gmail here or from the Email page.'
+            ? 'Email assistant add-on required. Upgrade in billing, then connect Gmail here or from Personal email.'
             : undefined
         }
       />
+
+      {data.businessGmail.connected ? (
+        <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]">
+          Business Gmail is connected as{' '}
+          <span className="text-[var(--workspace-shell-text)]">
+            {data.businessGmail.googleEmail ?? 'your work account'}
+          </span>
+          . Manage connect, sync, and disconnect from a workspace →{' '}
+          <span className="text-[var(--workspace-shell-text)]">Emails</span>.
+        </p>
+      ) : (
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Work email lives on the workspace. Open any workspace → Emails to
+          connect business Gmail.
+        </p>
+      )}
 
       {!data.gmail.emailAssistantAllowed ? (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
@@ -332,8 +348,8 @@ export function PersonalIntegrationsSection({ data }: Props) {
       <DisconnectIntegrationDialog
         open={confirmTarget === 'gmail'}
         onOpenChange={(open) => !open && setConfirmTarget(null)}
-        title="Disconnect Gmail?"
-        description="This removes Ozer’s access to this Gmail mailbox and deletes synced email data stored in Ozer."
+        title="Disconnect Personal Gmail?"
+        description="This removes Ozer’s access to your personal Gmail mailbox and deletes synced personal email data stored in Ozer. Business Gmail is unchanged."
         consequences={[...GMAIL_DISCONNECT_CONSEQUENCES]}
         confirming={disconnecting === 'gmail'}
         onConfirm={confirmDisconnectGmail}

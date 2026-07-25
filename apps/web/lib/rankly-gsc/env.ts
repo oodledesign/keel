@@ -35,7 +35,8 @@ export function getOptionalGscEnv() {
     env.GOOGLE_OAUTH_CLIENT_SECRET ??
     env.GOOGLE_CLIENT_SECRET;
   const redirectUri =
-    env.GOOGLE_GSC_REDIRECT_URI ?? defaultGscRedirectUri(env.NEXT_PUBLIC_SITE_URL);
+    env.GOOGLE_GSC_REDIRECT_URI ??
+    defaultGscRedirectUri(env.NEXT_PUBLIC_SITE_URL);
 
   if (!clientId || !clientSecret || !redirectUri) {
     return null;

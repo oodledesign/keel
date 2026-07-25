@@ -22,22 +22,20 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { id: threadId } = await context.params;
 
-  const [
-    { data: thread, error: threadError },
-    { data: account },
-  ] = await Promise.all([
-    auth.client
-      .from('email_threads')
-      .select('id, user_id, subject, connection_id')
-      .eq('id', threadId)
-      .eq('user_id', auth.user.id)
-      .maybeSingle(),
-    auth.client
-      .from('accounts')
-      .select('name, email')
-      .eq('id', auth.user.id)
-      .maybeSingle(),
-  ]);
+  const [{ data: thread, error: threadError }, { data: account }] =
+    await Promise.all([
+      auth.client
+        .from('email_threads')
+        .select('id, user_id, subject, connection_id')
+        .eq('id', threadId)
+        .eq('user_id', auth.user.id)
+        .maybeSingle(),
+      auth.client
+        .from('accounts')
+        .select('name, email')
+        .eq('id', auth.user.id)
+        .maybeSingle(),
+    ]);
 
   if (threadError) {
     return jsonErr('LOAD_FAILED', threadError.message, 500);

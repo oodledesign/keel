@@ -24,6 +24,11 @@ export type PersonalIntegrationsData = {
     connectedAt: string | null;
     emailAssistantAllowed: boolean;
   };
+  /** Read-only status for the separate business mailbox (managed in workspace Emails). */
+  businessGmail: {
+    connected: boolean;
+    googleEmail: string | null;
+  };
 };
 
 export const loadPersonalIntegrationsData = cache(
@@ -42,8 +47,7 @@ export const loadPersonalIntegrationsData = cache(
         client
           .from('google_connections')
           .select('google_email, connected_at, mailbox_kind')
-          .eq('user_id', user.id)
-          .order('mailbox_kind', { ascending: true }),
+          .eq('user_id', user.id),
         canUseEmailAssistant(client, user.id),
       ]);
 
@@ -57,8 +61,12 @@ export const loadPersonalIntegrationsData = cache(
       connected_at?: string | null;
       mailbox_kind?: string | null;
     }>;
-    const primaryGmail =
-      gmailRows.find((row) => row.mailbox_kind === 'business') ?? gmailRows[0];
+    const personalGmail = gmailRows.find(
+      (row) => row.mailbox_kind === 'personal',
+    );
+    const businessGmail = gmailRows.find(
+      (row) => row.mailbox_kind === 'business',
+    );
 
     return {
       calendar: {
@@ -72,10 +80,14 @@ export const loadPersonalIntegrationsData = cache(
       },
       gmail: {
         configured: Boolean(getOptionalGoogleAuthEnv()),
-        connected: Boolean(primaryGmail?.google_email),
-        googleEmail: primaryGmail?.google_email?.trim() || null,
-        connectedAt: primaryGmail?.connected_at ?? null,
+        connected: Boolean(personalGmail?.google_email),
+        googleEmail: personalGmail?.google_email?.trim() || null,
+        connectedAt: personalGmail?.connected_at ?? null,
         emailAssistantAllowed,
+      },
+      businessGmail: {
+        connected: Boolean(businessGmail?.google_email),
+        googleEmail: businessGmail?.google_email?.trim() || null,
       },
     };
   },

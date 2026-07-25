@@ -1,4 +1,7 @@
-import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import type {
+  EmailParticipant,
+  EmailThreadSummary,
+} from '~/home/(user)/email/_lib/types';
 import { parseMailboxKind } from '~/lib/email-assistant/mailbox-kind';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { searchEmailThreadIds } from '~/lib/email-assistant/search-threads';
@@ -7,10 +10,7 @@ import {
   enrichEmailThreadLinks,
   mapThreadLinkFields,
 } from '~/lib/email-assistant/thread-link-display';
-import type {
-  EmailParticipant,
-  EmailThreadSummary,
-} from '~/home/(user)/email/_lib/types';
+import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const dynamic = 'force-dynamic';
 

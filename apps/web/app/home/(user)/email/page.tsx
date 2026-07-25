@@ -1,11 +1,11 @@
 import { Suspense } from 'react';
 
 import { PageBody } from '@kit/ui/page';
-
-import { withI18n } from '~/lib/i18n/with-i18n';
-import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { cn } from '@kit/ui/utils';
+
+import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { redirectIfEmailAssistantNotAllowed } from '~/lib/billing/require-email-assistant-access';
+import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { EmailPageClient } from './_components/email-page-client';
 import { loadEmailPageData } from './_lib/server/email-page.loader';
