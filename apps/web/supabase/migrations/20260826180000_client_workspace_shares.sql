@@ -1,6 +1,8 @@
 -- Multi-workspace client shares with per-module capabilities.
 -- Replaces client_orgs.linked_account_id (single partner link).
 
+CREATE EXTENSION IF NOT EXISTS pgcrypto WITH SCHEMA extensions;
+
 CREATE TABLE IF NOT EXISTS public.client_workspace_shares (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   owner_account_id uuid NOT NULL REFERENCES public.accounts (id) ON DELETE CASCADE,
@@ -80,7 +82,7 @@ BEGIN
       o.id,
       o.linked_account_id,
       'active',
-      encode(gen_random_bytes(24), 'hex'),
+      encode(extensions.gen_random_bytes(24), 'hex'),
       true,
       now()
     FROM public.client_orgs o
