@@ -6,25 +6,14 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { isMissingColumnError } from '~/home/[account]/_lib/server/supabase-errors';
 import { fetchCompanyLogoBytes } from '~/lib/clients/fetch-company-logo';
-import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+import {
+  storagePathFromClientPictureUrl,
+  storeClientPhotoBytes,
+} from '~/lib/clients/store-client-photo';
 
 export const runtime = 'nodejs';
 
-const AVATARS_BUCKET = 'account_image';
 const MAX_PHOTO_SIZE_BYTES = 5 * 1024 * 1024;
-
-function storagePathFromPictureUrl(url: string | null | undefined) {
-  const trimmed = url?.trim();
-  if (!trimmed || !trimmed.includes('/account_image/')) {
-    return null;
-  }
-
-  return trimmed.split('/account_image/')[1]?.split('?')[0] ?? null;
-}
-
-function clientPhotoPath(accountId: string, clientId: string) {
-  return `${accountId}/client-${clientId}`;
-}
 
 function isMissingPictureUrlColumn(error: unknown) {
   return isMissingColumnError(error);
@@ -137,59 +126,6 @@ async function loadClient(
   };
 }
 
-async function storeClientPhotoBytes(input: {
-  accountId: string;
-  clientId: string;
-  existingPictureUrl: string | null;
-  bytes: Buffer;
-  contentType: string;
-}) {
-  const admin = getSupabaseServerAdminClient();
-  const bucket = admin.storage.from(AVATARS_BUCKET);
-  const existingPath = storagePathFromPictureUrl(input.existingPictureUrl);
-  const nextPath = clientPhotoPath(input.accountId, input.clientId);
-
-  if (existingPath && existingPath !== nextPath) {
-    await bucket.remove([existingPath]);
-  }
-
-  const { error: uploadError } = await bucket.upload(nextPath, input.bytes, {
-    contentType: input.contentType || 'image/png',
-    upsert: true,
-  });
-
-  if (uploadError) {
-    console.error('[clients] upload-photo:', uploadError.message);
-    throw new Error(uploadError.message || 'Failed to upload photo.');
-  }
-
-  const publicUrl = toSupabasePublicStorageUrl(
-    bucket.getPublicUrl(nextPath).data.publicUrl,
-  );
-
-  if (!publicUrl) {
-    throw new Error('Upload succeeded but public URL could not be generated.');
-  }
-
-  const { nanoid } = await import('nanoid');
-  const pictureUrl = `${publicUrl}?v=${nanoid(16)}`;
-
-  const { error: updateError } = await admin
-    .from('clients')
-    .update({
-      picture_url: pictureUrl,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('id', input.clientId)
-    .eq('account_id', input.accountId);
-
-  if (updateError) {
-    throw new Error(updateError.message);
-  }
-
-  return pictureUrl;
-}
-
 export async function POST(request: Request) {
   try {
     const userClient = getSupabaseServerClient();
@@ -253,12 +189,11 @@ export async function POST(request: Request) {
     }
 
     const admin = getSupabaseServerAdminClient();
-    const bucket = admin.storage.from(AVATARS_BUCKET);
-    const existingPath = storagePathFromPictureUrl(clientRow.picture_url);
+    const existingPath = storagePathFromClientPictureUrl(clientRow.picture_url);
 
     if (remove) {
       if (existingPath) {
-        await bucket.remove([existingPath]);
+        await admin.storage.from('account_image').remove([existingPath]);
       }
 
       const { error: updateError } = await admin

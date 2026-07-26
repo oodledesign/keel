@@ -1,11 +1,14 @@
 import 'server-only';
 
+import { after } from 'next/server';
+
 import { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import { maybeAutoFetchClientLogo } from '~/lib/clients/auto-fetch-client-logo';
 import {
   composeContactFullName,
   normalizeContactRole,
@@ -427,7 +430,19 @@ class ClientsService {
     const shouldCreateContact =
       clientType === 'individual' || Boolean(input.contact?.firstName?.trim());
 
-    if (!shouldCreateContact) return data;
+    if (!shouldCreateContact) {
+      this.scheduleClientLogoFetch({
+        accountId: input.accountId,
+        clientId: data.id as string,
+        website: (data.website as string | null) ?? input.website ?? null,
+        email:
+          (data.email as string | null) ??
+          primaryContactEmail ??
+          input.email ??
+          null,
+      });
+      return data;
+    }
 
     const names =
       clientType === 'individual'
@@ -485,7 +500,29 @@ class ClientsService {
       if (linkError) throw mapClientWriteError(linkError);
     }
 
+    this.scheduleClientLogoFetch({
+      accountId: input.accountId,
+      clientId: data.id as string,
+      website: (data.website as string | null) ?? input.website ?? null,
+      email:
+        (data.email as string | null) ??
+        primaryContactEmail ??
+        input.email ??
+        null,
+    });
+
     return data;
+  }
+
+  private scheduleClientLogoFetch(input: {
+    accountId: string;
+    clientId: string;
+    website?: string | null;
+    email?: string | null;
+  }) {
+    after(() => {
+      void maybeAutoFetchClientLogo(input);
+    });
   }
 
   async updateClient(input: UpdateClientInput) {

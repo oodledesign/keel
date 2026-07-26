@@ -77,6 +77,10 @@ export type CreateDealInput = {
   businessId: string;
   /** Link this opportunity to an existing client (null = new lead). */
   clientId?: string | null;
+  /** Optional project title when creating an opportunity for an existing client. */
+  projectName?: string | null;
+  /** Optional project / opportunity brief. */
+  description?: string | null;
   /** When creating from a known workspace (optional; also derived from businesses.account_id). */
   accountId?: string | null;
   /** Revalidate team routes after mutation */
@@ -93,12 +97,18 @@ export async function createDeal(input: CreateDealInput) {
     parsed.accountId ||
     (await resolveAccountIdForBusiness(client, parsed.businessId));
 
+  const projectName = input.projectName?.trim() || '';
+  const description = input.description?.trim() || '';
+  const dealName =
+    projectName || input.companyName.trim() || input.contactName.trim();
+
   const { data, error } = await client
     .from('pipeline_deals')
     .insert({
-      name: input.companyName || input.contactName,
+      name: dealName,
       contact_name: input.contactName,
-      company_name: input.companyName,
+      company_name: projectName || input.companyName,
+      notes: description || null,
       value: input.value,
       stage: input.stage,
       next_action: input.nextAction || null,
@@ -127,6 +137,8 @@ export type UpdateDealInput = {
   nextAction?: string;
   nextActionDate?: string | null;
   businessId?: string;
+  projectName?: string | null;
+  description?: string | null;
   /** Set to a client id to link, or null to unlink (back to a new lead). */
   clientId?: string | null;
   accountSlug?: string | null;
@@ -146,6 +158,8 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   if (input.nextActionDate !== undefined)
     updates.next_action_date = input.nextActionDate || null;
   if (input.clientId !== undefined) updates.client_id = input.clientId || null;
+  if (input.description !== undefined)
+    updates.notes = input.description?.trim() || null;
 
   if (input.businessId !== undefined) {
     const parsed = parseWorkspaceDealBusinessId(input.businessId);
@@ -155,7 +169,23 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
       (await resolveAccountIdForBusiness(client, parsed.businessId));
   }
 
-  if (input.contactName !== undefined || input.companyName !== undefined) {
+  if (input.projectName !== undefined) {
+    const projectName = input.projectName?.trim() || '';
+    updates.name =
+      projectName ||
+      (input.companyName ?? '').trim() ||
+      (input.contactName ?? '').trim();
+    if (input.clientId) {
+      // Existing-client opportunities: keep company_name aligned with the
+      // optional project title (clear it when the title is cleared).
+      updates.company_name = projectName || null;
+    } else if (projectName && input.companyName === undefined) {
+      updates.company_name = projectName;
+    }
+  } else if (
+    input.contactName !== undefined ||
+    input.companyName !== undefined
+  ) {
     updates.name =
       (input.companyName ?? '').trim() || (input.contactName ?? '').trim();
   }
@@ -224,7 +254,7 @@ export async function convertWonDealToProject(
   const { data: deal, error } = await client
     .from('pipeline_deals')
     .select(
-      'id, account_id, client_id, company_name, contact_name, value, clients(display_name)',
+      'id, account_id, client_id, name, company_name, contact_name, notes, value, clients(display_name)',
     )
     .eq('id', dealId)
     .maybeSingle();
@@ -236,8 +266,10 @@ export async function convertWonDealToProject(
   const row = deal as {
     account_id?: string | null;
     client_id?: string | null;
+    name?: string | null;
     company_name?: string | null;
     contact_name?: string | null;
+    notes?: string | null;
     value?: number | null;
     clients?: { display_name?: string | null } | null;
   } | null;
@@ -249,10 +281,12 @@ export async function convertWonDealToProject(
   const accountId = row.account_id;
   const clientName = row.clients?.display_name?.trim() || null;
   const title =
+    row.name?.trim() ||
     row.company_name?.trim() ||
     clientName ||
     row.contact_name?.trim() ||
     'New project';
+  const description = row.notes?.trim() || undefined;
   const valuePence =
     row.value != null && !Number.isNaN(Number(row.value))
       ? Math.round(Number(row.value) * 100)
@@ -266,6 +300,7 @@ export async function convertWonDealToProject(
       accountId,
       client_id: row.client_id,
       title,
+      description,
       value_pence: valuePence,
     });
 

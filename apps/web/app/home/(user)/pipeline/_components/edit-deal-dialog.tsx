@@ -21,6 +21,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import {
@@ -160,6 +161,11 @@ export function EditDealDialog({
       }
     }
 
+    const projectName =
+      mode === 'client' ? (form.get('projectName') as string).trim() : '';
+    const description =
+      mode === 'client' ? (form.get('description') as string).trim() : '';
+
     const resolvedBusinessId =
       businessId ||
       pickDefaultPipelineTargetId(businesses, { workspaceScoped });
@@ -174,13 +180,15 @@ export function EditDealDialog({
     startTransition(async () => {
       const result = await updateDeal(deal.id, {
         contactName,
-        companyName,
+        companyName: projectName || companyName,
         value,
         stage,
         nextAction: nextAction || undefined,
         nextActionDate: nextActionDate || undefined,
         businessId: resolvedBusinessId,
         clientId: linkedClientId,
+        projectName: mode === 'client' ? projectName || null : undefined,
+        description: mode === 'client' ? description || null : undefined,
         accountSlug: accountSlug ?? null,
       });
 
@@ -193,7 +201,9 @@ export function EditDealDialog({
       onDealUpdated({
         ...deal,
         contactName,
-        companyName,
+        companyName: projectName || companyName,
+        projectName: mode === 'client' ? projectName || null : deal.projectName,
+        description: mode === 'client' ? description || null : deal.description,
         value,
         stage,
         nextAction,
@@ -252,18 +262,56 @@ export function EditDealDialog({
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
           {mode === 'client' ? (
-            <div className="space-y-2">
-              <Label className="text-[var(--workspace-shell-text-muted)]">
-                Client *
-              </Label>
-              <ClientCombobox
-                clients={clients}
-                value={clientId}
-                onValueChange={setClientId}
-                loading={clientsLoading}
-                placeholder="Select an existing client"
-              />
-            </div>
+            <>
+              <div className="space-y-2">
+                <Label className="text-[var(--workspace-shell-text-muted)]">
+                  Client *
+                </Label>
+                <ClientCombobox
+                  clients={clients}
+                  value={clientId}
+                  onValueChange={setClientId}
+                  loading={clientsLoading}
+                  placeholder="Select an existing client"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-projectName"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Project name
+                </Label>
+                <Input
+                  id="edit-projectName"
+                  name="projectName"
+                  key={`projectName-${deal.id}-${deal.projectName ?? ''}`}
+                  defaultValue={deal.projectName ?? ''}
+                  placeholder="Website redesign"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                  Optional — used when this opportunity is marked Won.
+                </p>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-description"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Description
+                </Label>
+                <Textarea
+                  id="edit-description"
+                  name="description"
+                  key={`description-${deal.id}-${deal.description ?? ''}`}
+                  rows={3}
+                  defaultValue={deal.description ?? ''}
+                  placeholder="Brief for the new project…"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+              </div>
+            </>
           ) : (
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">

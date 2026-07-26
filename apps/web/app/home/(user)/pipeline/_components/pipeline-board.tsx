@@ -39,9 +39,9 @@ import {
   X,
 } from 'lucide-react';
 
-import pathsConfig from '~/config/paths.config';
 import { Button } from '@kit/ui/button';
 
+import pathsConfig from '~/config/paths.config';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 
 import type {
@@ -460,6 +460,18 @@ function DealCard({
     ...(stageColor && !isOverlay ? { backgroundColor: stageColor.tint } : {}),
   };
 
+  const title = deal.clientId
+    ? deal.clientName || deal.contactName
+    : deal.contactName || deal.clientName;
+  const clientLabel = deal.clientName || deal.contactName || '';
+  const subtitle = deal.clientId
+    ? deal.projectName && deal.projectName !== clientLabel
+      ? deal.projectName
+      : deal.companyName && deal.companyName !== clientLabel
+        ? deal.companyName
+        : null
+    : deal.companyName || null;
+
   return (
     <div
       ref={isOverlay ? undefined : setNodeRef}
@@ -477,11 +489,13 @@ function DealCard({
         <div className="flex items-start gap-2">
           <div>
             <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              {deal.contactName || deal.clientName}
+              {title}
             </p>
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              {deal.companyName || (deal.clientId ? deal.clientName : '')}
-            </p>
+            {subtitle ? (
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                {subtitle}
+              </p>
+            ) : null}
             {deal.clientId ? (
               <span className="mt-1 inline-flex items-center rounded-full bg-[color:var(--ozer-accent)]/15 px-2 py-0.5 text-[10px] font-medium text-[color:var(--ozer-accent)]">
                 Existing client

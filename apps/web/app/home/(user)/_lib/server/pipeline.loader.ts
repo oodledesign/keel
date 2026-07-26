@@ -18,6 +18,10 @@ export type PipelineDeal = {
   id: string;
   contactName: string;
   companyName: string;
+  /** Opportunity / project title (used when converting a won client deal). */
+  projectName: string | null;
+  /** Longer brief for the opportunity / project. */
+  description: string | null;
   value: number;
   stage: string;
   nextAction: string;
@@ -41,8 +45,10 @@ export type PipelineData = {
 
 type PipelineDealRow = {
   id: string;
+  name?: string | null;
   contact_name?: string | null;
   company_name?: string | null;
+  notes?: string | null;
   value?: number | null;
   stage?: string | null;
   next_action?: string | null;
@@ -70,10 +76,28 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
       ? `${PIPELINE_WORKSPACE_BUSINESS_PREFIX}${row.account_id}`
       : '');
   const clientName = row.clients?.display_name?.trim() || null;
+  const contactName = row.contact_name?.trim() || '';
+  const companyName = row.company_name?.trim() || '';
+  const rawName = row.name?.trim() || '';
+  // For existing-client opportunities, `name` falls back to the client label when
+  // no project title was set — treat that as "no project name".
+  const projectName = (() => {
+    if (!row.client_id) {
+      return rawName || companyName || null;
+    }
+    const clientLabel = clientName || contactName;
+    const candidate = rawName || companyName || null;
+    if (!candidate || candidate === clientLabel) {
+      return companyName && companyName !== clientLabel ? companyName : null;
+    }
+    return candidate;
+  })();
   return {
     id: row.id,
     contactName: row.contact_name ?? '',
     companyName: row.company_name ?? '',
+    projectName,
+    description: row.notes?.trim() || null,
     value: row.value ?? 0,
     stage: row.stage ?? 'lead',
     nextAction: row.next_action ?? '',
@@ -89,7 +113,7 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
 export { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 
 const DEAL_SELECT =
-  'id, contact_name, company_name, value, stage, next_action, next_action_date, business_id, account_id, client_id, businesses(name, colour), accounts(name), clients(display_name)';
+  'id, name, contact_name, company_name, notes, value, stage, next_action, next_action_date, business_id, account_id, client_id, businesses(name, colour), accounts(name), clients(display_name)';
 
 // ─── Loader ──────────────────────────────────────────────────────────
 
