@@ -209,9 +209,16 @@ function buildTrialEmail(input: {
     return {
       subject: `${input.accountName} trial ended — add billing to keep access`,
       html: wrapNotificationEmail(
-        `<p>Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> on ${escapeNotificationHtml(input.productName)} has ended.</p>
-        <p>Add a payment method to restore full access to this workspace.</p>
-        <p><a href="${input.billingUrl}">Manage billing</a></p>`,
+        `<p style="margin:0 0 12px;">Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> on ${escapeNotificationHtml(input.productName)} has ended.</p>
+        <p style="margin:0;">Add a payment method to restore full access to this workspace.</p>`,
+        {
+          productName: input.productName,
+          title: 'Your trial has ended',
+          heading: 'Your trial has ended',
+          preview: `${input.accountName} trial ended`,
+          cta: { label: 'Manage billing', href: input.billingUrl },
+          footerNote: `You're receiving this because you own a ${escapeNotificationHtml(input.productName)} workspace.`,
+        },
       ),
     };
   }
@@ -220,9 +227,16 @@ function buildTrialEmail(input: {
     return {
       subject: `${input.accountName} trial ends tomorrow`,
       html: wrapNotificationEmail(
-        `<p>Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
-        <p>Subscribe now to avoid interruption.</p>
-        <p><a href="${input.billingUrl}">Manage billing</a></p>`,
+        `<p style="margin:0 0 12px;">Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
+        <p style="margin:0;">Subscribe now to avoid interruption.</p>`,
+        {
+          productName: input.productName,
+          title: 'Your trial ends tomorrow',
+          heading: 'Your trial ends tomorrow',
+          preview: `${input.accountName} trial ends tomorrow`,
+          cta: { label: 'Manage billing', href: input.billingUrl },
+          footerNote: `You're receiving this because you own a ${escapeNotificationHtml(input.productName)} workspace.`,
+        },
       ),
     };
   }
@@ -230,9 +244,16 @@ function buildTrialEmail(input: {
   return {
     subject: `${input.accountName} trial ending soon`,
     html: wrapNotificationEmail(
-      `<p>Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
-      <p>You can subscribe anytime from billing — your workspace data stays put.</p>
-      <p><a href="${input.billingUrl}">Manage billing</a></p>`,
+      `<p style="margin:0 0 12px;">Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
+      <p style="margin:0;">You can subscribe anytime from billing — your workspace data stays put.</p>`,
+      {
+        productName: input.productName,
+        title: 'Your trial is ending soon',
+        heading: 'Your trial is ending soon',
+        preview: `${input.accountName} trial ending soon`,
+        cta: { label: 'Manage billing', href: input.billingUrl },
+        footerNote: `You're receiving this because you own a ${escapeNotificationHtml(input.productName)} workspace.`,
+      },
     ),
   };
 }
@@ -277,9 +298,16 @@ export async function sendPaymentFailedEmail(
       from: sender,
       subject: `Payment failed for ${input.accountName}`,
       html: wrapNotificationEmail(
-        `<p>We could not process the latest payment for <strong>${escapeNotificationHtml(input.accountName)}</strong> on ${escapeNotificationHtml(productName)}.</p>
-      <p>Update your payment method to keep this workspace active.</p>
-      <p><a href="${billingUrl}">Manage billing</a></p>`,
+        `<p style="margin:0 0 12px;">We could not process the latest payment for <strong>${escapeNotificationHtml(input.accountName)}</strong> on ${escapeNotificationHtml(productName)}.</p>
+      <p style="margin:0;">Update your payment method to keep this workspace active.</p>`,
+        {
+          productName,
+          title: 'Payment failed',
+          heading: 'Payment failed',
+          preview: `Payment failed for ${input.accountName}`,
+          cta: { label: 'Manage billing', href: billingUrl },
+          footerNote: `You're receiving this because you own a ${escapeNotificationHtml(productName)} workspace.`,
+        },
       ),
     },
     metadata: {

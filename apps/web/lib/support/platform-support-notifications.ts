@@ -2,6 +2,10 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import {
+  escapeNotificationHtml,
+  wrapNotificationEmail,
+} from '~/lib/email/wrap-notification-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 import {
@@ -29,18 +33,6 @@ function getEmailConfig() {
   return { sender, siteUrl, productName };
 }
 
-function wrapEmail(body: string) {
-  return `<!DOCTYPE html><html><body style="font-family:system-ui,sans-serif;line-height:1.5;color:#111">${body}</body></html>`;
-}
-
-function escapeHtml(value: string) {
-  return value
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
-}
-
 function attachmentsHtml(
   attachments?: Array<{ name: string; url: string }> | null,
 ) {
@@ -48,10 +40,10 @@ function attachmentsHtml(
   const items = attachments
     .map(
       (file) =>
-        `<li><a href="${escapeHtml(file.url)}">${escapeHtml(file.name)}</a></li>`,
+        `<li><a href="${escapeNotificationHtml(file.url)}">${escapeNotificationHtml(file.name)}</a></li>`,
     )
     .join('');
-  return `<p><strong>Attachments:</strong></p><ul>${items}</ul>`;
+  return `<p style="margin:12px 0 0;"><strong>Attachments:</strong></p><ul style="margin:8px 0 0;padding-left:18px;">${items}</ul>`;
 }
 
 async function loadUserEmail(
@@ -94,19 +86,25 @@ export async function notifySupportTeamNewTicket(
       to: inbox,
       from: config.sender,
       subject: `[${config.productName} support] ${categoryLabel}: ${ticketLabel} ${input.subject}`,
-      html: wrapEmail(
-        `<p>New platform support ticket ${escapeHtml(ticketLabel)}.</p>
-      <p><strong>Category:</strong> ${escapeHtml(categoryLabel)}</p>
-      <p><strong>From:</strong> ${escapeHtml(userEmail ?? input.userId)}</p>
+      html: wrapNotificationEmail(
+        `<p style="margin:0 0 12px;">New platform support ticket ${escapeNotificationHtml(ticketLabel)}.</p>
+      <p style="margin:0 0 8px;"><strong>Category:</strong> ${escapeNotificationHtml(categoryLabel)}</p>
+      <p style="margin:0 0 8px;"><strong>From:</strong> ${escapeNotificationHtml(userEmail ?? input.userId)}</p>
       ${
         input.accountName
-          ? `<p><strong>Workspace:</strong> ${escapeHtml(input.accountName)}</p>`
+          ? `<p style="margin:0 0 8px;"><strong>Workspace:</strong> ${escapeNotificationHtml(input.accountName)}</p>`
           : ''
       }
-      <p><strong>Subject:</strong> ${escapeHtml(input.subject)}</p>
-      <p style="white-space:pre-wrap">${escapeHtml(input.body)}</p>
-      ${attachmentsHtml(input.attachments)}
-      <p><a href="${adminUrl}">View in admin</a></p>`,
+      <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.subject)}</p>
+      <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.body)}</p>
+      ${attachmentsHtml(input.attachments)}`,
+        {
+          productName: config.productName,
+          title: `New support ticket ${ticketLabel}`,
+          heading: `New support ticket ${ticketLabel}`,
+          preview: `${categoryLabel}: ${input.subject}`,
+          cta: { label: 'View in admin', href: adminUrl },
+        },
       ),
     },
     metadata: { ticket_id: input.ticketId, ticket_number: input.ticketNumber },
@@ -142,11 +140,17 @@ export async function notifyUserSupportReply(
       to: userEmail,
       from: config.sender,
       subject: `Re: ${ticketLabel} ${input.subject}`,
-      html: wrapEmail(
-        `<p>The ${escapeHtml(config.productName)} team replied to your support ticket ${escapeHtml(ticketLabel)}.</p>
-      <p style="white-space:pre-wrap">${escapeHtml(input.replyBody)}</p>
-      ${attachmentsHtml(input.attachments)}
-      <p><a href="${ticketUrl}">View ticket</a></p>`,
+      html: wrapNotificationEmail(
+        `<p style="margin:0 0 12px;">The ${escapeNotificationHtml(config.productName)} team replied to your support ticket ${escapeNotificationHtml(ticketLabel)}.</p>
+      <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>
+      ${attachmentsHtml(input.attachments)}`,
+        {
+          productName: config.productName,
+          title: `Reply on ${ticketLabel}`,
+          heading: `New reply on ${ticketLabel}`,
+          preview: `Reply on ${ticketLabel}: ${input.subject}`,
+          cta: { label: 'View ticket', href: ticketUrl },
+        },
       ),
     },
     metadata: { ticket_id: input.ticketId, ticket_number: input.ticketNumber },
@@ -181,11 +185,17 @@ export async function notifySupportTeamUserReply(
       to: inbox,
       from: config.sender,
       subject: `[${config.productName} support] User reply on ${ticketLabel}`,
-      html: wrapEmail(
-        `<p>${escapeHtml(userEmail ?? 'A user')} replied on ticket ${escapeHtml(ticketLabel)}: ${escapeHtml(input.subject)}</p>
-      <p style="white-space:pre-wrap">${escapeHtml(input.replyBody)}</p>
-      ${attachmentsHtml(input.attachments)}
-      <p><a href="${adminUrl}">View in admin</a></p>`,
+      html: wrapNotificationEmail(
+        `<p style="margin:0 0 12px;">${escapeNotificationHtml(userEmail ?? 'A user')} replied on ticket ${escapeNotificationHtml(ticketLabel)}: ${escapeNotificationHtml(input.subject)}</p>
+      <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>
+      ${attachmentsHtml(input.attachments)}`,
+        {
+          productName: config.productName,
+          title: `User reply on ${ticketLabel}`,
+          heading: `User reply on ${ticketLabel}`,
+          preview: `Reply on ${ticketLabel}: ${input.subject}`,
+          cta: { label: 'View in admin', href: adminUrl },
+        },
       ),
     },
     metadata: { ticket_id: input.ticketId, ticket_number: input.ticketNumber },
@@ -206,7 +216,7 @@ export async function loadTicketAccountName(
 
   if (!data) return null;
   return (
-    (data as { name?: string | null; slug?: string | null }).name ??
+    (data as { name?: string | null }).name ??
     (data as { slug?: string | null }).slug ??
     null
   );

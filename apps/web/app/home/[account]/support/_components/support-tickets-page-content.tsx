@@ -111,6 +111,8 @@ export function SupportTicketsPageContent({
           ticket.title,
           ticket.description ?? '',
           ticket.clientOrgName ?? '',
+          ticket.submitterName ?? '',
+          ticket.submitterEmail ?? '',
         ]
           .join(' ')
           .toLowerCase();
@@ -289,6 +291,7 @@ export function SupportTicketsPageContent({
                 <tr>
                   <th className="px-4 py-3 font-medium">Ticket</th>
                   <th className="px-4 py-3 font-medium">Title</th>
+                  <th className="px-4 py-3 font-medium">Submitted by</th>
                   <th className="px-4 py-3 font-medium">Client</th>
                   <th className="px-4 py-3 font-medium">Status</th>
                   <th className="px-4 py-3 font-medium">Priority</th>
@@ -324,6 +327,20 @@ export function SupportTicketsPageContent({
                         >
                           {ticket.title}
                         </Link>
+                      </td>
+                      <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
+                        <div className="space-y-0.5">
+                          <div>
+                            {ticket.submitterName?.trim() ||
+                              ticket.createdByName?.trim() ||
+                              '—'}
+                          </div>
+                          {ticket.submitterEmail ? (
+                            <div className="text-xs text-[var(--workspace-shell-text)]/45">
+                              {ticket.submitterEmail}
+                            </div>
+                          ) : null}
+                        </div>
                       </td>
                       <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
                         {ticket.clientOrgName ?? '—'}

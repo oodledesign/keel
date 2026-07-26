@@ -295,10 +295,19 @@ function TicketCard({
       >
         {ticket.title}
       </Link>
-      {ticket.clientOrgName ? (
-        <p className="mt-2 truncate text-xs text-[var(--workspace-shell-text)]/50">
-          {ticket.clientOrgName}
-        </p>
+      {ticket.submitterName?.trim() || ticket.clientOrgName ? (
+        <div className="mt-2 space-y-0.5">
+          {ticket.submitterName?.trim() ? (
+            <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]/70">
+              {ticket.submitterName.trim()}
+            </p>
+          ) : null}
+          {ticket.clientOrgName ? (
+            <p className="truncate text-xs text-[var(--workspace-shell-text)]/50">
+              {ticket.clientOrgName}
+            </p>
+          ) : null}
+        </div>
       ) : null}
     </div>
   );

@@ -298,11 +298,18 @@ export async function notifyWorkspaceNewSupportTicket(
   ).toString();
 
   const html = wrapNotificationEmail(
-    `<p>New support ticket ${escapeNotificationHtml(label)} on ${escapeNotificationHtml(config.productName)}.</p>
-    <p><strong>From:</strong> ${escapeNotificationHtml(who)}</p>
-    <p><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
-    <p style="white-space:pre-wrap">${escapeNotificationHtml(input.description)}</p>
-    <p><a href="${agencyUrl}">View ticket</a></p>`,
+    `<p style="margin:0 0 12px;">A new support ticket was opened on your workspace.</p>
+    <p style="margin:0 0 8px;"><strong>From:</strong> ${escapeNotificationHtml(who)}</p>
+    <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
+    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.description)}</p>`,
+    {
+      productName: config.productName,
+      title: `New support ticket ${label}`,
+      heading: `New support ticket ${label}`,
+      preview: `${who} opened ${label}: ${input.title}`,
+      cta: { label: 'View ticket', href: agencyUrl },
+      footerNote: `You're receiving this because you're on the support team for this ${escapeNotificationHtml(config.productName)} workspace.`,
+    },
   );
 
   await Promise.all(
@@ -375,10 +382,17 @@ export async function notifyWorkspaceSupportClientReply(
   ).toString();
 
   const html = wrapNotificationEmail(
-    `<p>${escapeNotificationHtml(authorName)} replied on support ticket ${escapeNotificationHtml(label)}.</p>
-    <p><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
-    <p style="white-space:pre-wrap">${escapeNotificationHtml(input.replyBody)}</p>
-    <p><a href="${agencyUrl}">View ticket</a></p>`,
+    `<p style="margin:0 0 12px;"><strong>${escapeNotificationHtml(authorName)}</strong> replied on support ticket ${escapeNotificationHtml(label)}.</p>
+    <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
+    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>`,
+    {
+      productName: config.productName,
+      title: `Reply on ${label}`,
+      heading: `New reply on ${label}`,
+      preview: `${authorName} replied: ${input.title}`,
+      cta: { label: 'View ticket', href: agencyUrl },
+      footerNote: `You're receiving this because you're on the support team for this ${escapeNotificationHtml(config.productName)} workspace.`,
+    },
   );
 
   await Promise.all(
@@ -448,10 +462,17 @@ export async function notifyWorkspaceSupportAgencyReply(
   });
 
   const html = wrapNotificationEmail(
-    `<p>You have a new reply on support ticket ${escapeNotificationHtml(label)}.</p>
-    <p><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
-    <p style="white-space:pre-wrap">${escapeNotificationHtml(input.replyBody)}</p>
-    <p><a href="${ticketUrl}">View ticket</a></p>`,
+    `<p style="margin:0 0 12px;">You have a new reply on support ticket ${escapeNotificationHtml(label)}.</p>
+    <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
+    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>`,
+    {
+      productName: config.productName,
+      title: `Reply on ${label}`,
+      heading: `New reply on ${label}`,
+      preview: `New reply on ${label}: ${input.title}`,
+      cta: { label: 'View ticket', href: ticketUrl },
+      footerNote: `You're receiving this because you submitted or follow this support ticket on ${escapeNotificationHtml(config.productName)}.`,
+    },
   );
 
   await Promise.all(

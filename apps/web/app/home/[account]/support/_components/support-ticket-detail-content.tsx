@@ -317,7 +317,7 @@ export function SupportTicketDetailContent({
   };
 
   return (
-    <div className="mx-auto flex max-w-6xl flex-col gap-6">
+    <div className="flex w-full flex-col gap-6 px-4 lg:px-0">
       <div className="space-y-4">
         <Link
           href={listHref}

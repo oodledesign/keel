@@ -522,24 +522,18 @@ async function sendShareInviteEmail(input: {
   }
 
   const subject = `${input.ownerName} shared a client with you on ${productName}`;
-  const html = wrapNotificationEmail(`
-    <p style="margin:0 0 16px;font-size:15px;line-height:1.5;color:#1a1a1a;">
-      <strong>${escapeNotificationHtml(input.ownerName)}</strong> invited your
-      workspace to access
-      <strong>${escapeNotificationHtml(input.clientName)}</strong> on
-      ${escapeNotificationHtml(productName)}.
-    </p>
-    <p style="margin:0 0 24px;">
-      <a href="${escapeNotificationHtml(input.acceptUrl)}"
-        style="display:inline-block;padding:10px 18px;border-radius:8px;background:#111;color:#fff;text-decoration:none;font-size:14px;">
-        Review and accept
-      </a>
-    </p>
-    <p style="margin:0;font-size:13px;color:#666;">
-      Or open this link:<br />
-      <a href="${escapeNotificationHtml(input.acceptUrl)}">${escapeNotificationHtml(input.acceptUrl)}</a>
-    </p>
-  `);
+  const html = wrapNotificationEmail(
+    `<p style="margin:0 0 12px;"><strong>${escapeNotificationHtml(input.ownerName)}</strong> invited your workspace to access <strong>${escapeNotificationHtml(input.clientName)}</strong> on ${escapeNotificationHtml(productName)}.</p>
+    <p style="margin:0;font-size:13px;color:#5A4450;">Or open this link:<br /><a href="${escapeNotificationHtml(input.acceptUrl)}" style="color:#FF5C34;word-break:break-all;">${escapeNotificationHtml(input.acceptUrl)}</a></p>`,
+    {
+      productName,
+      title: 'Client workspace invite',
+      heading: "You've been invited to a shared client",
+      preview: `${input.ownerName} shared ${input.clientName} with you`,
+      cta: { label: 'Review and accept', href: input.acceptUrl },
+      footerNote: `You're receiving this because someone shared a client workspace with you on ${escapeNotificationHtml(productName)}.`,
+    },
+  );
 
   try {
     await sendPlatformEmail({
