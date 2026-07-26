@@ -303,9 +303,10 @@ export async function POST(request: Request) {
       } catch (error) {
         const message =
           error instanceof Error ? error.message : 'Failed to fetch logo.';
-        const status = /not configured/i.test(message)
-          ? 503
-          : /No logo found|Enter a company domain|work email/i.test(message)
+        const status =
+          /No logo found|Enter a company domain|work email|cannot be used/i.test(
+            message,
+          )
             ? 422
             : 500;
         return NextResponse.json({ error: message }, { status });

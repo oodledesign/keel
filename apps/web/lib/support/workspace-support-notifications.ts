@@ -8,15 +8,31 @@ import {
   escapeNotificationHtml,
   wrapNotificationEmail,
 } from '~/lib/email/wrap-notification-email';
+import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import {
+  notifySupportAgencyReplyInApp,
+  notifySupportClientReplyInApp,
+  notifySupportNewTicketInApp,
+} from '~/lib/support/support-in-app-notifications';
 import { createSupportPublicToken } from '~/lib/support/support-tokens';
 
 function getEmailConfig() {
-  const sender = process.env.EMAIL_SENDER?.trim();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
+  const sender = resolveTransactionalEmailFrom(productName);
 
-  if (!sender || !siteUrl) {
+  if (!siteUrl) {
+    console.warn(
+      '[support-notifications] NEXT_PUBLIC_SITE_URL is not set; skipping email',
+    );
+    return null;
+  }
+
+  if (!sender) {
+    console.warn(
+      '[support-notifications] No email sender configured (ZEPTOMAIL_FROM_ADDRESS or EMAIL_SENDER); skipping email',
+    );
     return null;
   }
 
@@ -53,7 +69,7 @@ async function loadWorkspaceNotifyEmails(
     .from('accounts_memberships')
     .select('user_id, account_role')
     .eq('account_id', accountId)
-    .in('account_role', ['owner', 'admin']);
+    .in('account_role', ['owner', 'admin', 'staff']);
 
   for (const row of memberships ?? []) {
     const userId = (row as { user_id?: string }).user_id;
@@ -106,7 +122,8 @@ async function loadClientNotifyEmails(
     const { data: memberships } = await admin
       .from('accounts_memberships')
       .select('user_id')
-      .eq('account_id', linkedAccountId);
+      .eq('account_id', linkedAccountId)
+      .in('account_role', ['owner', 'admin', 'staff']);
 
     for (const row of memberships ?? []) {
       const userId = (row as { user_id?: string }).user_id;
@@ -119,6 +136,45 @@ async function loadClientNotifyEmails(
   }
 
   return [...emails];
+}
+
+async function notifyGuestWorkspacesInApp(
+  admin: SupabaseClient,
+  input: {
+    clientOrgId: string | null;
+    ticketId: string;
+    ticketNumber: number;
+    title: string;
+  },
+) {
+  if (!input.clientOrgId) return;
+
+  const guestAccountIds = await loadSupportGuestAccountIds(
+    admin,
+    input.clientOrgId,
+  );
+
+  await Promise.all(
+    guestAccountIds.map(async (guestAccountId) => {
+      const { data: account } = await admin
+        .from('accounts')
+        .select('slug')
+        .eq('id', guestAccountId)
+        .maybeSingle();
+
+      const slug = (account as { slug?: string | null } | null)?.slug;
+      if (!slug) return;
+
+      await notifySupportAgencyReplyInApp({
+        accountId: guestAccountId,
+        accountSlug: slug,
+        ticketId: input.ticketId,
+        ticketNumber: input.ticketNumber,
+        title: input.title,
+        partnerView: true,
+      });
+    }),
+  );
 }
 
 async function resolveClientTicketUrl(
@@ -204,6 +260,19 @@ export async function notifyWorkspaceNewSupportTicket(
     publicToken: string | null;
   },
 ): Promise<void> {
+  const who = input.submitterName
+    ? `${input.submitterName}${input.submitterEmail ? ` (${input.submitterEmail})` : ''}`
+    : (input.submitterEmail ?? 'A client');
+
+  await notifySupportNewTicketInApp({
+    accountId: input.accountId,
+    accountSlug: input.accountSlug,
+    ticketId: input.ticketId,
+    ticketNumber: input.ticketNumber,
+    title: input.title,
+    submitterLabel: who,
+  });
+
   const config = getEmailConfig();
   if (!config) return;
 
@@ -212,7 +281,13 @@ export async function notifyWorkspaceNewSupportTicket(
     input.accountId,
     input.assignedTo,
   );
-  if (recipients.length === 0) return;
+  if (recipients.length === 0) {
+    console.warn(
+      '[support-notifications] No workspace recipients for new ticket',
+      { accountId: input.accountId, ticketId: input.ticketId },
+    );
+    return;
+  }
 
   const label = formatTicketNumber(input.ticketNumber);
   const agencyUrl = new URL(
@@ -221,10 +296,6 @@ export async function notifyWorkspaceNewSupportTicket(
       .replace('[id]', input.ticketId),
     config.siteUrl,
   ).toString();
-
-  const who = input.submitterName
-    ? `${input.submitterName}${input.submitterEmail ? ` (${input.submitterEmail})` : ''}`
-    : (input.submitterEmail ?? 'A client');
 
   const html = wrapNotificationEmail(
     `<p>New support ticket ${escapeNotificationHtml(label)} on ${escapeNotificationHtml(config.productName)}.</p>
@@ -268,6 +339,17 @@ export async function notifyWorkspaceSupportClientReply(
     authorName: string | null;
   },
 ): Promise<void> {
+  const authorName = input.authorName ?? 'A client';
+
+  await notifySupportClientReplyInApp({
+    accountId: input.accountId,
+    accountSlug: input.accountSlug,
+    ticketId: input.ticketId,
+    ticketNumber: input.ticketNumber,
+    title: input.title,
+    authorName,
+  });
+
   const config = getEmailConfig();
   if (!config) return;
 
@@ -276,7 +358,13 @@ export async function notifyWorkspaceSupportClientReply(
     input.accountId,
     input.assignedTo,
   );
-  if (recipients.length === 0) return;
+  if (recipients.length === 0) {
+    console.warn(
+      '[support-notifications] No workspace recipients for client reply',
+      { accountId: input.accountId, ticketId: input.ticketId },
+    );
+    return;
+  }
 
   const label = formatTicketNumber(input.ticketNumber);
   const agencyUrl = new URL(
@@ -287,7 +375,7 @@ export async function notifyWorkspaceSupportClientReply(
   ).toString();
 
   const html = wrapNotificationEmail(
-    `<p>${escapeNotificationHtml(input.authorName ?? 'A client')} replied on support ticket ${escapeNotificationHtml(label)}.</p>
+    `<p>${escapeNotificationHtml(authorName)} replied on support ticket ${escapeNotificationHtml(label)}.</p>
     <p><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
     <p style="white-space:pre-wrap">${escapeNotificationHtml(input.replyBody)}</p>
     <p><a href="${agencyUrl}">View ticket</a></p>`,
@@ -328,6 +416,13 @@ export async function notifyWorkspaceSupportAgencyReply(
     publicToken: string | null;
   },
 ): Promise<void> {
+  await notifyGuestWorkspacesInApp(admin, {
+    clientOrgId: input.clientOrgId,
+    ticketId: input.ticketId,
+    ticketNumber: input.ticketNumber,
+    title: input.title,
+  });
+
   const config = getEmailConfig();
   if (!config) return;
 
@@ -335,7 +430,13 @@ export async function notifyWorkspaceSupportAgencyReply(
     clientOrgId: input.clientOrgId,
     submitterEmail: input.submitterEmail,
   });
-  if (recipients.length === 0) return;
+  if (recipients.length === 0) {
+    console.warn(
+      '[support-notifications] No client recipients for agency reply',
+      { accountId: input.accountId, ticketId: input.ticketId },
+    );
+    return;
+  }
 
   const label = formatTicketNumber(input.ticketNumber);
   const ticketUrl = await resolveClientTicketUrl(admin, {

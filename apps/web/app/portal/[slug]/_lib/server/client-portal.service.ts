@@ -433,11 +433,6 @@ class ClientPortalService {
       .eq('is_internal', false)
       .order('created_at', { ascending: true });
 
-    if (error) {
-      console.error('[client-portal] listTicketMessages:', error.message);
-      return [];
-    }
-
     const rows = (data ?? []) as Array<{
       id: string;
       ticket_id: string;
@@ -448,6 +443,26 @@ class ClientPortalService {
       external_url?: string | null;
       author_name?: string | null;
     }>;
+
+    if ((error || rows.length === 0) && ticket.description?.trim()) {
+      return [
+        {
+          id: `opening-${ticket.id}`,
+          ticketId: ticket.id,
+          userId: null,
+          message: ticket.description,
+          createdAt: ticket.createdAt,
+          authorName: 'Client',
+          attachments: [],
+          externalUrl: null,
+        },
+      ];
+    }
+
+    if (error) {
+      console.error('[client-portal] listTicketMessages:', error.message);
+      return [];
+    }
 
     const authors = await this.loadAuthorNames(
       rows.map((row) => row.user_id).filter((id): id is string => Boolean(id)),
@@ -600,16 +615,28 @@ class ClientPortalService {
       this.throwErr(error, 'Failed to create ticket');
     }
 
-    await this.db.from('ticket_messages').insert({
-      ticket_id: data.id,
-      user_id: user.id,
-      message: input.description,
-      is_internal: false,
-      author_name: submitterName,
-      author_email: submitterEmail,
-      attachments: input.attachments ?? [],
-      external_url: input.external_url || null,
-    });
+    const { error: messageError } = await this.db
+      .from('ticket_messages')
+      .insert({
+        ticket_id: data.id,
+        user_id: user.id,
+        message: input.description,
+        is_internal: false,
+        author_name: submitterName,
+        author_email: submitterEmail,
+        attachments: input.attachments ?? [],
+        external_url: input.external_url || null,
+      });
+
+    if (messageError) {
+      console.error(
+        '[client-portal] opening message insert failed:',
+        messageError.message,
+      );
+      throw new Error(
+        messageError.message || 'Failed to save opening ticket message',
+      );
+    }
 
     if (accountSlug) {
       const { getSupabaseServerAdminClient } =

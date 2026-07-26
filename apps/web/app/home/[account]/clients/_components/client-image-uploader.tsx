@@ -147,7 +147,7 @@ export function ClientImageUploader({
         domain || undefined,
       );
       setPreviewUrl(nextUrl);
-      toast.success('Logo saved from domain');
+      toast.success('Icon saved from website');
       onUpdated();
     } catch (error) {
       console.error('[clients] fetch logo', error);

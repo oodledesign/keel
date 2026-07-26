@@ -295,7 +295,7 @@ export async function createPublicSupportTicket(input: {
     throw new Error(error?.message ?? 'Failed to create ticket');
   }
 
-  await client.from('ticket_messages').insert({
+  const { error: messageError } = await client.from('ticket_messages').insert({
     ticket_id: data.id,
     user_id: null,
     message: input.description.trim(),
@@ -305,6 +305,16 @@ export async function createPublicSupportTicket(input: {
     attachments: input.attachments ?? [],
     external_url: input.externalUrl?.trim() || null,
   });
+
+  if (messageError) {
+    console.error(
+      '[public-support] opening message insert failed:',
+      messageError.message,
+    );
+    throw new Error(
+      messageError.message || 'Failed to save opening ticket message',
+    );
+  }
 
   void notifyWorkspaceNewSupportTicket(client, {
     accountId: ctx.accountId,
@@ -339,7 +349,7 @@ export async function loadPublicSupportTicketByToken(
   const { data: ticket, error } = await client
     .from('support_tickets')
     .select(
-      'id, title, description, status, priority, ticket_number, public_token, recording_url, external_url, submitter_name, submitter_email, account_id, business_id, client_org_id, assigned_to, project_id, projects(name, title), client_orgs(slug)',
+      'id, title, description, status, priority, ticket_number, public_token, recording_url, external_url, submitter_name, submitter_email, account_id, business_id, client_org_id, assigned_to, project_id, created_at, projects(name, title), client_orgs(slug)',
     )
     .eq('public_token', trimmed)
     .maybeSingle();
@@ -431,25 +441,53 @@ export async function loadPublicSupportTicketByToken(
       (ticket as { client_org_id?: string | null }).client_org_id ?? null,
     clientOrgSlug: orgRow?.slug ?? null,
     assignedTo: (ticket as { assigned_to?: string | null }).assigned_to ?? null,
-    messages: ((messages ?? []) as Array<Record<string, unknown>>).map(
-      (row) => {
-        const userId = row.user_id as string | null;
-        return {
-          id: String(row.id),
-          message: String(row.message ?? ''),
-          createdAt: String(row.created_at),
-          authorName:
-            (row.author_name as string | null) ||
-            (userId ? (authorNames.get(userId) ?? null) : null) ||
-            'Support',
-          isInternal: Boolean(row.is_internal),
-          attachments: Array.isArray(row.attachments)
-            ? (row.attachments as SupportAttachmentMeta[])
-            : [],
-          externalUrl: (row.external_url as string | null) ?? null,
-        };
-      },
-    ),
+    messages: (() => {
+      const mapped = ((messages ?? []) as Array<Record<string, unknown>>)
+        .map((row) => {
+          const userId = row.user_id as string | null;
+          return {
+            id: String(row.id),
+            message: String(row.message ?? ''),
+            createdAt: String(row.created_at),
+            authorName:
+              (row.author_name as string | null) ||
+              (userId ? (authorNames.get(userId) ?? null) : null) ||
+              ((ticket as { submitter_name?: string | null }).submitter_name ??
+                null) ||
+              'Support',
+            isInternal: Boolean(row.is_internal),
+            attachments: Array.isArray(row.attachments)
+              ? (row.attachments as SupportAttachmentMeta[])
+              : [],
+            externalUrl: (row.external_url as string | null) ?? null,
+          };
+        })
+        .filter((row) => row.message.trim());
+
+      const description =
+        (ticket as { description?: string | null }).description?.trim() ?? '';
+      if (mapped.length === 0 && description) {
+        return [
+          {
+            id: `opening-${(ticket as { id: string }).id}`,
+            message: description,
+            createdAt: String(
+              (ticket as { created_at?: string | null }).created_at ??
+                new Date().toISOString(),
+            ),
+            authorName:
+              (ticket as { submitter_name?: string | null }).submitter_name ??
+              'Client',
+            isInternal: false,
+            attachments: [] as SupportAttachmentMeta[],
+            externalUrl:
+              (ticket as { external_url?: string | null }).external_url ?? null,
+          },
+        ];
+      }
+
+      return mapped;
+    })(),
   };
 }
 
@@ -477,7 +515,7 @@ export async function addPublicSupportTicketReply(input: {
       ? 'open'
       : ticket.status;
 
-  await client.from('ticket_messages').insert({
+  const { error: replyError } = await client.from('ticket_messages').insert({
     ticket_id: ticket.id,
     user_id: null,
     message: input.message.trim(),
@@ -488,6 +526,10 @@ export async function addPublicSupportTicketReply(input: {
     attachments: input.attachments ?? [],
     external_url: input.externalUrl?.trim() || null,
   });
+
+  if (replyError) {
+    throw new Error(replyError.message || 'Failed to send reply');
+  }
 
   await client
     .from('support_tickets')

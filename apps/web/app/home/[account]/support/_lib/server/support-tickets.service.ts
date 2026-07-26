@@ -136,6 +136,10 @@ function supportTicketAccountFilter(accountId: string) {
   return `business_id.eq.${accountId},account_id.eq.${accountId}`;
 }
 
+/**
+ * Tickets that need agency attention: new or reopened after a client reply.
+ * (`waiting` means waiting on the client after an agency reply.)
+ */
 export async function countOpenSupportTickets(
   client: SupabaseClient,
   accountId: string,
@@ -144,7 +148,7 @@ export async function countOpenSupportTickets(
     .from('support_tickets')
     .select('id', { count: 'exact', head: true })
     .or(supportTicketAccountFilter(accountId))
-    .in('status', ['open', 'in-progress', 'waiting']);
+    .eq('status', 'open');
 
   if (error) {
     const message = [error.message, error.details, error.code]
@@ -370,7 +374,11 @@ class SupportTicketsService {
     const ticket = await this.getTicket({ accountId, ticketId });
     if (!ticket) return [];
 
-    const { data, error } = await this.db
+    const { getSupabaseServerAdminClient } =
+      await import('@kit/supabase/server-admin-client');
+    const admin = getSupabaseServerAdminClient();
+
+    const { data, error } = await admin
       .from('ticket_messages')
       .select(
         'id, ticket_id, user_id, message, is_internal, created_at, attachments, external_url, author_name',
@@ -380,10 +388,32 @@ class SupportTicketsService {
 
     if (error) {
       console.error('[support] listTicketMessages:', error.message);
-      return [];
     }
 
-    const rows = (data ?? []) as MessageRow[];
+    const rows = (
+      error ? [] : ((data ?? []) as unknown as MessageRow[])
+    ).filter((row) => Boolean(row.message?.trim()));
+
+    if (rows.length === 0 && ticket.description?.trim()) {
+      return [
+        {
+          id: `opening-${ticket.id}`,
+          ticketId: ticket.id,
+          userId: ticket.createdBy,
+          message: ticket.description,
+          isInternal: false,
+          createdAt: ticket.createdAt,
+          authorName:
+            ticket.submitterName?.trim() ||
+            ticket.createdByName?.trim() ||
+            'Client',
+          authorAvatarUrl: null,
+          attachments: [],
+          externalUrl: ticket.externalUrl,
+        },
+      ];
+    }
+
     const profiles = await this.loadProfiles(
       rows.map((row) => row.user_id).filter((id): id is string => Boolean(id)),
     );
@@ -399,7 +429,9 @@ class SupportTicketsService {
         row.author_name?.trim() ||
         (row.user_id
           ? (profiles.get(row.user_id)?.full_name?.trim() ?? null)
-          : null),
+          : null) ||
+        ticket.submitterName?.trim() ||
+        null,
       authorAvatarUrl: row.user_id
         ? (profiles.get(row.user_id)?.avatar_url ?? null)
         : null,
@@ -605,13 +637,32 @@ class SupportTicketsService {
 
     const ticket = data as TicketRow;
 
-    await this.db.from('ticket_messages').insert({
-      ticket_id: ticket.id,
-      user_id: user.id,
-      message: input.description,
-      is_internal: false,
-      attachments: input.attachments ?? [],
-    });
+    {
+      const { getSupabaseServerAdminClient } =
+        await import('@kit/supabase/server-admin-client');
+      const admin = getSupabaseServerAdminClient();
+      // ticket_messages columns may lag generated Database types.
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error: messageError } = await (admin as any)
+        .from('ticket_messages')
+        .insert({
+          ticket_id: ticket.id,
+          user_id: user.id,
+          message: input.description,
+          is_internal: false,
+          attachments: input.attachments ?? [],
+        });
+
+      if (messageError) {
+        console.error(
+          '[support] opening message insert failed:',
+          messageError.message,
+        );
+        throw new Error(
+          messageError.message || 'Failed to save opening ticket message',
+        );
+      }
+    }
 
     if (input.accountSlug) {
       const { getSupabaseServerAdminClient } =

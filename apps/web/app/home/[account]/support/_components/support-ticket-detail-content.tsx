@@ -236,8 +236,11 @@ export function SupportTicketDetailContent({
                 </a>
               ) : null}
               <span>
-                Created by {ticket.createdByName ?? 'Unknown'} on{' '}
-                {formatTicketDate(ticket.createdAt)}
+                Created by{' '}
+                {ticket.submitterName?.trim() ||
+                  ticket.createdByName?.trim() ||
+                  'Client'}{' '}
+                on {formatTicketDate(ticket.createdAt)}
               </span>
             </div>
           </div>
