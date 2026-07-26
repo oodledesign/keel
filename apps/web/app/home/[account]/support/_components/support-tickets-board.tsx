@@ -150,7 +150,7 @@ export function SupportTicketsBoard({
   );
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-2">
+    <div className="flex h-full min-h-0 flex-1 flex-col gap-2">
       {isPending ? (
         <p className="shrink-0 text-xs text-amber-400">Updating status…</p>
       ) : null}
@@ -160,7 +160,7 @@ export function SupportTicketsBoard({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
       >
-        <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto overscroll-x-contain pb-2">
+        <div className="flex h-full min-h-0 flex-1 items-stretch gap-4 overflow-x-auto overscroll-x-contain pb-2">
           {STATUSES.map((status) => (
             <StatusColumn
               key={status.key}

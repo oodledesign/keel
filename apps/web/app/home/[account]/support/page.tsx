@@ -40,7 +40,7 @@ async function SupportPage({ params }: SupportPageProps) {
 
   return (
     <>
-      <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+      <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
         <SupportTicketsPageContent
           accountSlug={accountSlug}
           accountId={accountId}

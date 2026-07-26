@@ -133,7 +133,7 @@ export function SupportTicketsPageContent({
     <div
       className={
         viewMode === 'board'
-          ? 'flex min-h-0 flex-1 flex-col gap-4 px-4 lg:px-0'
+          ? 'flex h-[calc(100svh-3.5rem)] flex-col gap-4 overflow-hidden px-4 pb-4 lg:px-0'
           : 'space-y-6 px-4 lg:px-0'
       }
     >
@@ -273,7 +273,7 @@ export function SupportTicketsPageContent({
           </CardContent>
         </Card>
       ) : viewMode === 'board' ? (
-        <div className="min-h-0 flex-1">
+        <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
           <SupportTicketsBoard
             key={filteredTickets.map((t) => t.id).join(',')}
             accountSlug={accountSlug}
