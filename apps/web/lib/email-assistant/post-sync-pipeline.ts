@@ -10,6 +10,7 @@ import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
 import type { MailboxKind } from './mailbox-kind';
+import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
 import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
 import { buildThreadText } from './thread-text';
 
@@ -232,7 +233,23 @@ export async function runEmailAssistantPipeline(
         }
       }
 
-      queueEmailThreadBrainSync(thread.id);
+      // Workspace email page passes preferredAccountId (e.g. Oodle) — stamp it
+      // when auto-link did not find a client/project.
+      try {
+        await ensureNeedsReplyWorkspaceAffinity(admin, {
+          userId,
+          threadId: thread.id,
+          preferredAccountId,
+        });
+      } catch (error) {
+        result.errors.push(
+          error instanceof Error
+            ? error.message
+            : 'Workspace affinity failed',
+        );
+      }
+
+      queueEmailThreadBrainSync(thread.id, preferredAccountId);
 
       continue;
     }
@@ -317,7 +334,19 @@ export async function runEmailAssistantPipeline(
       }
     }
 
-    queueEmailThreadBrainSync(thread.id);
+    try {
+      await ensureNeedsReplyWorkspaceAffinity(admin, {
+        userId,
+        threadId: thread.id,
+        preferredAccountId,
+      });
+    } catch (error) {
+      result.errors.push(
+        error instanceof Error ? error.message : 'Workspace affinity failed',
+      );
+    }
+
+    queueEmailThreadBrainSync(thread.id, preferredAccountId);
 
     if (
       category === 'needs_reply' &&

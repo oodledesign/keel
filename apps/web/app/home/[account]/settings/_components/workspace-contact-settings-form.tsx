@@ -73,7 +73,7 @@ export function WorkspaceContactSettingsForm({
       <div>
         <h2 className="text-base font-semibold">Business contact</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Shown on invoices and other client-facing documents.
+          Shown on invoices and used as the Reply-To address on invoice emails.
         </p>
       </div>
 

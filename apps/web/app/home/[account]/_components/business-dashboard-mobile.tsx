@@ -6,7 +6,6 @@ import { ArrowUpRight, ChevronRight, StickyNote } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
-import { DashboardTaskDetailTrigger } from '~/components/dashboard/dashboard-task-detail-trigger';
 import { HapticLink } from '~/components/haptic-link';
 import { workspaceDashboardMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
@@ -21,6 +20,7 @@ import type {
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
 import { DashboardNeedsReplyCard } from './dashboard-needs-reply-card';
+import { DashboardUpcomingTaskItem } from './dashboard-upcoming-task-item';
 import { NoteAssignmentLabels } from './note-assignment-labels';
 
 const FinanceTrendBarChart = dynamic(
@@ -41,13 +41,6 @@ const panelClass =
 
 const dashboardLinkClass =
   'flex items-center gap-0.5 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--ozer-accent)]';
-
-const dashboardTaskBackgrounds = [
-  'border-[color:var(--ozer-coral-alpha-45)] bg-[var(--ozer-coral-50)]',
-  'border-[color:color-mix(in_srgb,var(--ozer-sky-100)_80%,var(--ozer-info))] bg-[color-mix(in_srgb,var(--ozer-sky-100)_75%,var(--ozer-white))]',
-  'border-[color:color-mix(in_srgb,var(--ozer-gold-500)_45%,transparent)] bg-[color-mix(in_srgb,var(--ozer-gold-500)_22%,var(--ozer-cream-50))]',
-  'border-[color:color-mix(in_srgb,var(--ozer-lime-400)_40%,transparent)] bg-[color-mix(in_srgb,var(--ozer-lime-400)_24%,var(--ozer-cream-50))]',
-] as const;
 
 type BusinessDashboardMobileProps = {
   accountSlug: string;
@@ -175,35 +168,19 @@ export function BusinessDashboardMobile({
               No upcoming tasks.
             </li>
           ) : (
-            upcomingTasks.map((task, index) => (
-              <li key={task.id}>
-                <DashboardTaskDetailTrigger
-                  taskId={task.id}
-                  workspaceAccountId={accountId}
-                  className={cn(
-                    'flex flex-col gap-0.5 rounded-xl border px-3 py-2.5 transition-colors active:scale-[0.99]',
-                    dashboardTaskBackgrounds[
-                      index % dashboardTaskBackgrounds.length
-                    ],
-                  )}
-                >
-                  <span className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                    {task.title}
-                  </span>
-                  <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                    {[task.projectName, formatTaskDue(task.dueDate)]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </span>
-                </DashboardTaskDetailTrigger>
-              </li>
+            upcomingTasks.map((task) => (
+              <DashboardUpcomingTaskItem
+                key={task.id}
+                task={task}
+                workspaceAccountId={accountId}
+              />
             ))
           )}
         </ul>
       </section>
 
-      <section>
-        <div className="mb-2 flex items-center justify-between px-0.5">
+      <section className="xl:col-span-2">
+        <div className="mb-2 flex items-center justify-between">
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
             Recent notes
           </h2>
@@ -225,7 +202,7 @@ export function BusinessDashboardMobile({
         ) : (
           <div
             data-horizontal-scroll
-            className="-mx-3 flex touch-pan-x snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain px-3 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex touch-pan-x snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-pl-0 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {recentNotes.map((note) => (
               <HapticLink
@@ -233,7 +210,7 @@ export function BusinessDashboardMobile({
                 href={noteDetailPath(note.id)}
                 className={cn(
                   panelClass,
-                  'w-[calc(50%-0.375rem)] shrink-0 snap-start p-3 transition-transform active:scale-[0.98] md:w-56 lg:w-64',
+                  'w-[min(16rem,calc(100%-1.5rem))] shrink-0 snap-start snap-always p-3 transition-transform active:scale-[0.98] sm:w-56 lg:w-64',
                 )}
               >
                 <div className="mb-2 flex items-start justify-between gap-2">
@@ -261,18 +238,6 @@ export function BusinessDashboardMobile({
       </section>
     </div>
   );
-}
-
-function formatTaskDue(iso: string | null): string | null {
-  if (!iso) return 'No due date';
-  try {
-    return new Date(iso).toLocaleDateString('en-GB', {
-      day: 'numeric',
-      month: 'short',
-    });
-  } catch {
-    return null;
-  }
 }
 
 function formatRelativeDate(iso: string): string {

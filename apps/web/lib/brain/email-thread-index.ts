@@ -38,7 +38,7 @@ type EmailActionItemForBrain = {
 
 const MAX_MESSAGES_PER_THREAD = 20;
 
-/** Threads indexed into second brain: workspace-linked or flagged needs reply. */
+/** Threads indexed into second brain: needs-reply (workspace-stamped) or client/project-linked. */
 export function shouldIndexEmailThreadForBrain(thread: {
   account_id?: string | null;
   assistant_category?: string | null;

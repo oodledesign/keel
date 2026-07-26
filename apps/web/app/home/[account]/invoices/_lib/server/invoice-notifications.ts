@@ -39,6 +39,66 @@ function buildInvoiceEmailFrom(accountName: string | null | undefined) {
   return resolveTransactionalEmailFrom(accountName ?? undefined);
 }
 
+/**
+ * Prefer the workspace business contact email (Settings → Business contact),
+ * then account email, sender email, then primary owner/admin.
+ */
+async function resolveInvoiceReplyToEmail(
+  admin: ReturnType<typeof getSupabaseServerAdminClient>,
+  params: {
+    accountId: string;
+    accountSlug?: string | null;
+    brandContactEmail?: string | null;
+    accountEmail?: string | null;
+    senderEmail?: string | null;
+  },
+): Promise<string | null> {
+  const preferred = [
+    params.brandContactEmail,
+    params.accountEmail,
+    params.senderEmail,
+  ]
+    .map((value) => value?.trim().toLowerCase() || null)
+    .find((value): value is string => Boolean(value));
+
+  if (preferred) {
+    return preferred;
+  }
+
+  let slug = params.accountSlug?.trim() || null;
+
+  if (!slug) {
+    const { data: account } = await admin
+      .from('accounts')
+      .select('slug, email, primary_owner_user_id')
+      .eq('id', params.accountId)
+      .maybeSingle();
+
+    const accountEmail = (account?.email as string | null | undefined)?.trim();
+    if (accountEmail) {
+      return accountEmail.toLowerCase();
+    }
+
+    slug = (account?.slug as string | null | undefined)?.trim() || null;
+  }
+
+  if (!slug) {
+    return null;
+  }
+
+  const { data: members } = await admin.rpc('get_account_members', {
+    account_slug: slug,
+  });
+
+  const ownerAdmin = (members ?? []).find(
+    (member: { role?: string | null; email?: string | null }) =>
+      (member.role === 'owner' || member.role === 'admin') &&
+      Boolean(member.email?.trim()),
+  ) as { email?: string | null } | undefined;
+
+  return ownerAdmin?.email?.trim().toLowerCase() || null;
+}
+
 function invoicePdfFilename(input: {
   invoiceNumber: string;
   clientCompany?: string | null;
@@ -83,7 +143,7 @@ export async function sendInvoicePaidNotifications(params: {
   const [{ data: account }, { data: client }] = await Promise.all([
     admin
       .from('accounts')
-      .select('id, name, slug')
+      .select('id, name, slug, email')
       .eq('id', params.accountId)
       .maybeSingle(),
     admin
@@ -101,6 +161,14 @@ export async function sendInvoicePaidNotifications(params: {
   if (!from) {
     return;
   }
+
+  const brand = await loadAccountBrandResolved(params.accountId);
+  const replyTo = await resolveInvoiceReplyToEmail(admin, {
+    accountId: params.accountId,
+    accountSlug: account.slug,
+    brandContactEmail: brand.contact_email,
+    accountEmail: account.email,
+  });
 
   const { data: members } = await admin.rpc('get_account_members', {
     account_slug: account.slug,
@@ -146,8 +214,6 @@ export async function sendInvoicePaidNotifications(params: {
     ? new URL(`/portal/invoices/${invoice.public_token}`, siteUrl).href
     : null;
 
-  const brand = await loadAccountBrandResolved(params.accountId);
-
   const customerSubject = `Payment received for invoice ${invoice.invoice_number}`;
   const customerInner = `
       <h2 style="margin:0 0 16px">Payment received</h2>
@@ -190,6 +256,7 @@ export async function sendInvoicePaidNotifications(params: {
           to: clientEmail,
           subject: customerSubject,
           html: customerHtml,
+          ...(replyTo ? { replyTo } : {}),
         },
         metadata: { invoice_id: params.invoiceId, event: 'paid_customer' },
       }),
@@ -261,7 +328,7 @@ export async function sendInvoiceIssuedEmail(params: {
   const [{ data: account }, clientResult] = await Promise.all([
     admin
       .from('accounts')
-      .select('name')
+      .select('name, slug, email')
       .eq('id', params.accountId)
       .maybeSingle(),
     invoice.client_id
@@ -278,6 +345,15 @@ export async function sendInvoiceIssuedEmail(params: {
   if (!from) {
     return;
   }
+
+  const brand = await loadAccountBrandResolved(params.accountId);
+  const replyTo = await resolveInvoiceReplyToEmail(admin, {
+    accountId: params.accountId,
+    accountSlug: account?.slug,
+    brandContactEmail: brand.contact_email,
+    accountEmail: account?.email,
+    senderEmail: params.sender?.email,
+  });
 
   const recipient = invoice.client_id
     ? await resolveClientRecipientEmail(admin, invoice.client_id, {
@@ -357,7 +433,6 @@ export async function sendInvoiceIssuedEmail(params: {
     mimeType: 'application/pdf',
   };
 
-  const brand = await loadAccountBrandResolved(params.accountId);
   const issuedInner = `
       <h2 style="margin:0 0 16px">${subject}</h2>
       <p>${bodyText.replace(/\n/g, '<br />')}</p>
@@ -383,6 +458,7 @@ export async function sendInvoiceIssuedEmail(params: {
         innerHtml: issuedInner,
       }),
       attachments: [pdfAttachment],
+      ...(replyTo ? { replyTo } : {}),
     },
     metadata: { invoice_id: params.invoiceId, event: 'issued' },
   });

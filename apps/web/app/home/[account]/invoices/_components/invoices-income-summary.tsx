@@ -103,21 +103,29 @@ export function InvoicesIncomeSummary({
 
       {hasChartData ? (
         <div className="mt-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 shadow-sm">
-          <div className="flex h-20 items-end gap-1">
-            {summary.chart.map((point) => (
-              <div
-                key={point.date}
-                className="group relative flex-1"
-                title={`${point.date}: ${formatInvoiceMoney(point.amount_pence, currency)}`}
-              >
+          <p className="mb-3 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+            Issued by day
+          </p>
+          <div className="flex h-24 items-end gap-1.5">
+            {summary.chart.map((point) => {
+              const heightPct = Math.max(
+                8,
+                Math.round((point.amount_pence / maxBar) * 100),
+              );
+
+              return (
                 <div
-                  className="w-full rounded-t bg-[var(--ozer-accent)]/70 transition-all group-hover:bg-[var(--ozer-accent)]"
-                  style={{
-                    height: `${Math.max(4, (point.amount_pence / maxBar) * 100)}%`,
-                  }}
-                />
-              </div>
-            ))}
+                  key={point.date}
+                  className="group relative flex h-full min-w-0 flex-1 flex-col justify-end"
+                  title={`${point.date}: ${formatInvoiceMoney(point.amount_pence, currency)}`}
+                >
+                  <div
+                    className="w-full rounded-t bg-[var(--ozer-accent)]/75 transition-colors group-hover:bg-[var(--ozer-accent)]"
+                    style={{ height: `${heightPct}%` }}
+                  />
+                </div>
+              );
+            })}
           </div>
         </div>
       ) : null}

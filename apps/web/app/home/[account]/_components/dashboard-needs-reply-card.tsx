@@ -7,7 +7,6 @@ import { useRouter } from 'next/navigation';
 import { ChevronRight, Mail, X } from 'lucide-react';
 
 import { toast } from '@kit/ui/sonner';
-import { cn } from '@kit/ui/utils';
 
 import { HapticLink } from '~/components/haptic-link';
 import pathsConfig from '~/config/paths.config';
@@ -85,7 +84,7 @@ export function DashboardNeedsReplyCard({
   }
 
   return (
-    <section className={cn(panelClass, 'xl:col-span-2')}>
+    <section className={panelClass}>
       <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
         <div className="min-w-0">
           <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
