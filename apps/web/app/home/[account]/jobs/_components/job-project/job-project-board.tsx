@@ -21,9 +21,24 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, Plus } from 'lucide-react';
+import { GripVertical, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
@@ -36,7 +51,11 @@ import type {
   PhaseListItem,
   PhaseTemplateListItem,
 } from '../../_lib/schema/project-phases.schema';
-import { createJobTask, moveTask } from '../../_lib/server/server-actions';
+import {
+  createJobTask,
+  deletePhase,
+  moveTask,
+} from '../../_lib/server/server-actions';
 import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
@@ -167,6 +186,8 @@ function PhaseColumn({
   memberLookup,
   onAddTask,
   addingTask,
+  onDeletePhase,
+  deletingPhase,
 }: {
   phase: PhaseListItem | null;
   tasks: JobBoardTask[];
@@ -176,6 +197,8 @@ function PhaseColumn({
   memberLookup: MemberLookup;
   onAddTask: (phaseId: string | null, title: string) => void;
   addingTask: boolean;
+  onDeletePhase?: (phaseId: string) => void;
+  deletingPhase?: boolean;
 }) {
   const columnId = phase?.id ?? UNPHASED_KEY;
   const { setNodeRef, isOver } = useDroppable({
@@ -183,6 +206,7 @@ function PhaseColumn({
     data: { phaseId: phase?.id ?? null },
   });
   const [draftTitle, setDraftTitle] = useState('');
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const colour = phase?.colour ?? '#64748B';
 
@@ -198,27 +222,93 @@ function PhaseColumn({
     >
       <div className="border-b border-[color:var(--workspace-shell-border)]/80 p-3">
         {phase ? (
-          <Link
-            href={phasePath(accountSlug, jobId, phase.id)}
-            prefetch={false}
-            className="group block"
-          >
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)] group-hover:underline">
-                {phase.name}
-              </h3>
-              <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
-                  PHASE_STATUS_STYLES[phase.status]
-                }`}
-              >
-                {PHASE_STATUS_LABELS[phase.status]}
-              </span>
-            </div>
-            <p className="mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
-              Due {formatShortDate(phase.due_date)} · {phase.progressPct}% done
-            </p>
-          </Link>
+          <div className="flex items-start gap-1">
+            <Link
+              href={phasePath(accountSlug, jobId, phase.id)}
+              prefetch={false}
+              className="group min-w-0 flex-1 block"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)] group-hover:underline">
+                  {phase.name}
+                </h3>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium ${
+                    PHASE_STATUS_STYLES[phase.status]
+                  }`}
+                >
+                  {PHASE_STATUS_LABELS[phase.status]}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                Due {formatShortDate(phase.due_date)} · {phase.progressPct}%
+                done
+              </p>
+            </Link>
+
+            {canEditJobs && onDeletePhase ? (
+              <>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 shrink-0 p-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                      aria-label={`Phase options for ${phase.name}`}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="end"
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+                  >
+                    <DropdownMenuItem
+                      className="cursor-pointer text-red-700 focus:text-red-800"
+                      onSelect={() => setDeleteOpen(true)}
+                    >
+                      <Trash2 className="mr-2 h-3.5 w-3.5" />
+                      Delete phase
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+
+                <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+                  <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>
+                        Delete “{phase.name}”?
+                      </AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tasks in this phase stay on the project and move to
+                        Unassigned.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter className="gap-2 sm:gap-0">
+                      <AlertDialogCancel
+                        disabled={deletingPhase}
+                        className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+                      >
+                        Cancel
+                      </AlertDialogCancel>
+                      <Button
+                        variant="destructive"
+                        disabled={deletingPhase}
+                        className="bg-red-600 hover:bg-red-500"
+                        onClick={() => {
+                          onDeletePhase(phase.id);
+                          setDeleteOpen(false);
+                        }}
+                      >
+                        {deletingPhase ? 'Deleting…' : 'Delete phase'}
+                      </Button>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </>
+            ) : null}
+          </div>
         ) : (
           <h3 className="text-sm font-semibold text-[var(--workspace-shell-text-muted)]">
             Unassigned
@@ -286,6 +376,8 @@ function SortablePhaseColumn(props: {
   memberLookup: MemberLookup;
   onAddTask: (phaseId: string | null, title: string) => void;
   addingTask: boolean;
+  onDeletePhase?: (phaseId: string) => void;
+  deletingPhase?: boolean;
 }) {
   return <PhaseColumn {...props} />;
 }
@@ -322,6 +414,7 @@ export function JobProjectBoard({
 }) {
   const [activeTask, setActiveTask] = useState<JobBoardTask | null>(null);
   const [addingTask, setAddingTask] = useState(false);
+  const [deletingPhase, setDeletingPhase] = useState(false);
   const [isPending, startTransition] = useTransition();
 
   const memberLookup = useMemo<MemberLookup>(() => {
@@ -495,6 +588,50 @@ export function JobProjectBoard({
     ],
   );
 
+  const handleDeletePhase = useCallback(
+    (phaseId: string) => {
+      setDeletingPhase(true);
+      startTransition(async () => {
+        try {
+          await deletePhase({
+            accountId,
+            accountSlug,
+            jobId,
+            phaseId,
+          });
+
+          const phaseTasks = tasksByPhase[phaseId] ?? [];
+          const nextTasks = { ...tasksByPhase };
+          delete nextTasks[phaseId];
+          nextTasks[UNPHASED_KEY] = [
+            ...(nextTasks[UNPHASED_KEY] ?? []),
+            ...phaseTasks.map((task) => ({ ...task, phase_id: null })),
+          ];
+
+          onBoardChange({
+            ...board,
+            phases: board.phases.filter((phase) => phase.id !== phaseId),
+            tasksByPhase: nextTasks,
+          });
+          toast.success('Phase deleted');
+        } catch (err) {
+          toast.error(getErrorMessage(err));
+        } finally {
+          setDeletingPhase(false);
+        }
+      });
+    },
+    [
+      accountId,
+      accountSlug,
+      board,
+      jobId,
+      onBoardChange,
+      startTransition,
+      tasksByPhase,
+    ],
+  );
+
   if (phases.length === 0) {
     const primaryTemplate =
       phaseTemplates.find((item) => item.name === 'Standard delivery') ??
@@ -565,6 +702,8 @@ export function JobProjectBoard({
               memberLookup={memberLookup}
               onAddTask={handleAddTask}
               addingTask={addingTask}
+              onDeletePhase={handleDeletePhase}
+              deletingPhase={deletingPhase}
             />
           ))}
           {unphasedTasks.length > 0 && (

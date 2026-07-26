@@ -2,8 +2,20 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
-import { CheckCircle2 } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
+import { CheckCircle2, Trash2 } from 'lucide-react';
+
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -16,9 +28,11 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import pathsConfig from '~/config/paths.config';
+
 import { getErrorMessage } from '../../_lib/error-message';
 import type { PhaseStatus } from '../../_lib/schema/project-phases.schema';
-import { updatePhase } from '../../_lib/server/server-actions';
+import { deletePhase, updatePhase } from '../../_lib/server/server-actions';
 import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
@@ -60,8 +74,11 @@ export function PhaseMetaPanel({
   canEdit: boolean;
   onPhaseChange: (phase: PhaseRecord) => void;
 }) {
+  const router = useRouter();
   const [, startTransition] = useTransition();
   const [name, setName] = useState(phase.name);
+  const [deleteOpen, setDeleteOpen] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     setName(phase.name);
@@ -99,6 +116,31 @@ export function PhaseMetaPanel({
       } catch (err) {
         toast.error(getErrorMessage(err));
         onPhaseChange(phase);
+      }
+    });
+  };
+
+  const handleDelete = () => {
+    setDeleting(true);
+    startTransition(async () => {
+      try {
+        await deletePhase({
+          accountId,
+          accountSlug,
+          jobId,
+          phaseId: phase.id,
+        });
+        toast.success('Phase deleted');
+        router.push(
+          pathsConfig.app.accountJobDetail
+            .replace('[account]', accountSlug)
+            .replace('[id]', jobId),
+        );
+        router.refresh();
+      } catch (err) {
+        toast.error(getErrorMessage(err));
+        setDeleting(false);
+        setDeleteOpen(false);
       }
     });
   };
@@ -142,17 +184,61 @@ export function PhaseMetaPanel({
           )}
         </div>
 
-        {canEdit && phase.status !== 'complete' && (
-          <Button
-            type="button"
-            size="sm"
-            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-            onClick={() => patch({ status: 'complete' })}
-          >
-            <CheckCircle2 className="mr-1.5 h-4 w-4" />
-            Mark complete
-          </Button>
-        )}
+        <div className="flex flex-wrap items-center gap-2">
+          {canEdit && phase.status !== 'complete' && (
+            <Button
+              type="button"
+              size="sm"
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+              onClick={() => patch({ status: 'complete' })}
+            >
+              <CheckCircle2 className="mr-1.5 h-4 w-4" />
+              Mark complete
+            </Button>
+          )}
+
+          {canEdit ? (
+            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+              <AlertDialogTrigger asChild>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="border-red-500/40 text-red-700 hover:bg-red-500/10 hover:text-red-800"
+                >
+                  <Trash2 className="mr-1.5 h-4 w-4" />
+                  Delete phase
+                </Button>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Delete “{phase.name}”?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    This removes the phase from the project. Tasks in this phase
+                    stay on the project and move to Unassigned. Notes and docs
+                    linked to the phase are unlinked.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="gap-2 sm:gap-0">
+                  <AlertDialogCancel
+                    disabled={deleting}
+                    className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Cancel
+                  </AlertDialogCancel>
+                  <Button
+                    variant="destructive"
+                    disabled={deleting}
+                    onClick={handleDelete}
+                    className="bg-red-600 hover:bg-red-500"
+                  >
+                    {deleting ? 'Deleting…' : 'Delete phase'}
+                  </Button>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          ) : null}
+        </div>
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">

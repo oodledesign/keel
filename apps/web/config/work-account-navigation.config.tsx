@@ -265,7 +265,7 @@ function buildWorkNavItemsForKeys(
             Icon: <LifeBuoy className={iconClasses} />,
             renderAction:
               openCount > 0 ? (
-                <SidebarMenuBadge className="bg-amber-500/20 text-amber-200">
+                <SidebarMenuBadge className="bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]">
                   {openCount > 99 ? '99+' : openCount}
                 </SidebarMenuBadge>
               ) : undefined,

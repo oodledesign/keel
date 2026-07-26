@@ -483,7 +483,7 @@ function DealCard({
               {deal.companyName || (deal.clientId ? deal.clientName : '')}
             </p>
             {deal.clientId ? (
-              <span className="mt-1 inline-flex items-center rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-medium text-[var(--ozer-accent-muted)]">
+              <span className="mt-1 inline-flex items-center rounded-full bg-[color:var(--ozer-accent)]/15 px-2 py-0.5 text-[10px] font-medium text-[color:var(--ozer-accent)]">
                 Existing client
               </span>
             ) : null}
@@ -502,7 +502,7 @@ function DealCard({
         </button>
       </div>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-semibold text-[var(--ozer-accent-muted)]">
+        <span className="text-sm font-semibold text-[color:var(--ozer-accent)]">
           {formatCurrency(deal.value)}
         </span>
         <span className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">

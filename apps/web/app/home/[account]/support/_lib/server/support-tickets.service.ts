@@ -183,7 +183,12 @@ function mapTicketRow(
     projectId: row.project_id ?? null,
     title: row.title ?? 'Untitled',
     description: row.description ?? null,
-    status: (row.status as TicketStatus) ?? 'open',
+    status: (() => {
+      const raw = row.status ?? 'open';
+      if (raw === 'in_progress') return 'in-progress';
+      if (raw === 'awaiting_client') return 'waiting';
+      return (raw as TicketStatus) ?? 'open';
+    })(),
     priority: (row.priority as TicketPriority) ?? 'medium',
     ticketNumber: row.ticket_number ?? 0,
     assignedTo: row.assigned_to ?? null,

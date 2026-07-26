@@ -336,7 +336,7 @@ export function JobsPageContent({
             onClick={() => setTypeFilter(key)}
             className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
               typeFilter === key
-                ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
+                ? 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]'
                 : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
             }`}
           >

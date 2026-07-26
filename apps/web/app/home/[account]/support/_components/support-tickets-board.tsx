@@ -137,7 +137,8 @@ export function SupportTicketsBoard({
           setTickets((prev) =>
             prev.map((t) => (t.id === ticketId ? updated : t)),
           );
-        } catch {
+        } catch (error) {
+          console.error('[support-board] status update failed', error);
           setTickets((prev) =>
             prev.map((t) =>
               t.id === ticketId ? { ...t, status: current.status } : t,
