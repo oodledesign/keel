@@ -150,9 +150,9 @@ export function SupportTicketsBoard({
   );
 
   return (
-    <div className="space-y-3">
+    <div className="flex min-h-0 flex-1 flex-col gap-2">
       {isPending ? (
-        <p className="text-xs text-amber-400">Updating status…</p>
+        <p className="shrink-0 text-xs text-amber-400">Updating status…</p>
       ) : null}
       <DndContext
         sensors={sensors}
@@ -160,7 +160,7 @@ export function SupportTicketsBoard({
         onDragStart={onDragStart}
         onDragEnd={onDragEnd}
       >
-        <div className="flex gap-4 overflow-x-auto pb-2">
+        <div className="flex min-h-0 flex-1 gap-4 overflow-x-auto overscroll-x-contain pb-2">
           {STATUSES.map((status) => (
             <StatusColumn
               key={status.key}
@@ -204,11 +204,11 @@ function StatusColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex max-w-[280px] min-w-[240px] flex-1 flex-col transition-colors ${
+      className={`flex h-full max-w-[280px] min-w-[240px] flex-1 flex-col transition-colors ${
         isOver ? 'rounded-xl bg-[var(--workspace-shell-sidebar-accent)]' : ''
       }`}
     >
-      <div className="mb-3 flex items-center gap-2">
+      <div className="mb-3 flex shrink-0 items-center gap-2">
         <span className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           {label}
         </span>
@@ -221,9 +221,9 @@ function StatusColumn({
         items={tickets.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex flex-col gap-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto">
           {tickets.length === 0 ? (
-            <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-8 text-center text-xs text-[var(--workspace-shell-text)]/40">
+            <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-8 text-center text-xs text-[var(--workspace-shell-text)]/40">
               Drop tickets here
             </div>
           ) : (

@@ -25,13 +25,13 @@ import type {
   TicketStatus,
 } from '../_lib/schema/support-tickets.schema';
 import type { SupportTicket } from '../_lib/server/support-tickets.service';
+import { SupportClientLinksPanel } from './support-client-links-panel';
 import {
   TicketPriorityBadge,
   TicketStatusBadge,
   formatTicketDate,
   formatTicketNumber,
 } from './support-ticket-badges';
-import { SupportClientLinksPanel } from './support-client-links-panel';
 import { SupportTicketsBoard } from './support-tickets-board';
 
 type StatusFilter = 'all' | TicketStatus;
@@ -90,7 +90,7 @@ export function SupportTicketsPageContent({
     'all',
   );
   const [search, setSearch] = useState('');
-  const [viewMode, setViewMode] = useState<ViewMode>('list');
+  const [viewMode, setViewMode] = useState<ViewMode>('board');
 
   const filteredTickets = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -130,8 +130,14 @@ export function SupportTicketsPageContent({
     `${filteredTickets.length} ${filteredTickets.length === 1 ? 'ticket' : 'tickets'}`;
 
   return (
-    <div className="space-y-6 px-4 lg:px-0">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className={
+        viewMode === 'board'
+          ? 'flex min-h-0 flex-1 flex-col gap-4 px-4 lg:px-0'
+          : 'space-y-6 px-4 lg:px-0'
+      }
+    >
+      <div className="flex shrink-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           {backHref ? (
             <Link
@@ -158,13 +164,15 @@ export function SupportTicketsPageContent({
       </div>
 
       {!backHref ? (
-        <SupportClientLinksPanel
-          accountId={accountId}
-          accountSlug={accountSlug}
-        />
+        <div className="shrink-0">
+          <SupportClientLinksPanel
+            accountId={accountId}
+            accountSlug={accountSlug}
+          />
+        </div>
       ) : null}
 
-      <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+      <div className="flex shrink-0 flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div className="relative max-w-md flex-1">
           <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text)]/30" />
           <Input
@@ -265,12 +273,14 @@ export function SupportTicketsPageContent({
           </CardContent>
         </Card>
       ) : viewMode === 'board' ? (
-        <SupportTicketsBoard
-          key={filteredTickets.map((t) => t.id).join(',')}
-          accountSlug={accountSlug}
-          accountId={accountId}
-          tickets={filteredTickets}
-        />
+        <div className="min-h-0 flex-1">
+          <SupportTicketsBoard
+            key={filteredTickets.map((t) => t.id).join(',')}
+            accountSlug={accountSlug}
+            accountId={accountId}
+            tickets={filteredTickets}
+          />
+        </div>
       ) : (
         <div className="overflow-hidden rounded-[20px] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <div className="overflow-x-auto">
