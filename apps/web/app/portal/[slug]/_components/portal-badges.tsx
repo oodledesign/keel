@@ -101,7 +101,7 @@ export function portalExternalHref(url: string | null | undefined) {
 }
 
 export function formatPortalTicketNumber(ticketNumber: number) {
-  return `#${String(ticketNumber).padStart(3, '0')}`;
+  return `#${ticketNumber}`;
 }
 
 export function formatPortalDate(value: string | null | undefined) {

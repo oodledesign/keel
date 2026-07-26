@@ -113,7 +113,7 @@ export function PublicSupportTicketThread({
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-10">
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
         <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-          Ticket #{String(ticketNumber).padStart(4, '0')} · {status}
+          Ticket #{ticketNumber} · {status}
         </p>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
           {title}

@@ -98,5 +98,5 @@ export function formatTicketDate(value: string | null | undefined) {
 }
 
 export function formatTicketNumber(ticketNumber: number) {
-  return `#${String(ticketNumber).padStart(3, '0')}`;
+  return `#${ticketNumber}`;
 }

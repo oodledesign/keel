@@ -42,7 +42,7 @@ function getEmailConfig() {
 }
 
 function formatTicketNumber(ticketNumber: number) {
-  return `#${String(ticketNumber).padStart(4, '0')}`;
+  return `#${ticketNumber}`;
 }
 
 /** Active guest workspaces with Support access on this client_org. */

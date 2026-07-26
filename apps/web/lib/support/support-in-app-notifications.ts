@@ -4,7 +4,7 @@ import pathsConfig from '~/config/paths.config';
 import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
 
 function formatTicketNumber(ticketNumber: number) {
-  return `#${String(ticketNumber).padStart(4, '0')}`;
+  return `#${ticketNumber}`;
 }
 
 function agencyTicketLink(accountSlug: string, ticketId: string) {

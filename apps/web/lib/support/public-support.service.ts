@@ -65,18 +65,9 @@ function admin() {
 }
 
 async function allocateTicketNumber(accountId: string) {
-  const client = admin();
-  const { data } = await client
-    .from('support_tickets')
-    .select('ticket_number')
-    .or(`account_id.eq.${accountId},business_id.eq.${accountId}`)
-    .order('ticket_number', { ascending: false })
-    .limit(1)
-    .maybeSingle();
-
-  return (
-    Number((data as { ticket_number?: number } | null)?.ticket_number ?? 0) + 1
-  );
+  const { allocateSupportTicketNumber } =
+    await import('~/lib/support/allocate-support-ticket-number');
+  return allocateSupportTicketNumber(admin(), accountId);
 }
 
 async function loadContactsForOrg(clientOrgId: string) {

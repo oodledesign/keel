@@ -302,18 +302,9 @@ class SupportTicketsService {
   }
 
   private async allocateTicketNumber(accountId: string) {
-    const { data } = await this.db
-      .from('support_tickets')
-      .select('ticket_number')
-      .or(supportTicketAccountFilter(accountId))
-      .order('ticket_number', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return (
-      ((data as { ticket_number?: number | null } | null)?.ticket_number ?? 0) +
-      1
-    );
+    const { allocateSupportTicketNumber } =
+      await import('~/lib/support/allocate-support-ticket-number');
+    return allocateSupportTicketNumber(this.db, accountId);
   }
 
   async listTickets(input: ListTicketsInput): Promise<SupportTicket[]> {
