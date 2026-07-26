@@ -252,13 +252,32 @@ export async function listPartnerTicketMessages(
 
   const names = new Map<string, string>();
   if (userIds.length > 0) {
+    const unique = [...new Set(userIds)];
     const { data: profiles } = await admin
       .from('profiles')
       .select('id, full_name')
-      .in('id', userIds);
+      .in('id', unique);
     for (const profile of profiles ?? []) {
       const row = profile as { id: string; full_name?: string | null };
-      if (row.full_name) names.set(row.id, row.full_name);
+      if (row.full_name?.trim()) names.set(row.id, row.full_name.trim());
+    }
+
+    const missing = unique.filter((id) => !names.has(id));
+    if (missing.length > 0) {
+      const { data: accounts } = await admin
+        .from('accounts')
+        .select('id, name, email')
+        .in('id', missing);
+      for (const account of accounts ?? []) {
+        const row = account as {
+          id: string;
+          name?: string | null;
+          email?: string | null;
+        };
+        const name =
+          row.name?.trim() || row.email?.split('@')[0]?.trim() || null;
+        if (name) names.set(row.id, name);
+      }
     }
   }
 
@@ -271,7 +290,8 @@ export async function listPartnerTicketMessages(
       createdAt: String(row.created_at),
       authorName:
         (row.author_name as string | null)?.trim() ||
-        (userId ? (names.get(userId) ?? null) : null),
+        (userId ? (names.get(userId) ?? null) : null) ||
+        'Support',
       attachments: Array.isArray(row.attachments)
         ? (row.attachments as SupportAttachmentMeta[])
         : [],
@@ -378,6 +398,7 @@ export async function createPartnerTicket(input: {
     assignedTo: null,
     clientOrgSlug: org.clientOrgSlug,
     publicToken,
+    attachments: input.attachments ?? [],
   }).catch((err) => {
     console.error('[partner-support] notify new ticket failed', err);
   });
@@ -475,6 +496,7 @@ export async function addPartnerTicketReply(input: {
     assignedTo:
       (full as { assigned_to?: string | null } | null)?.assigned_to ?? null,
     authorName,
+    attachments: input.attachments ?? [],
   }).catch((err) => {
     console.error('[partner-support] notify reply failed', err);
   });

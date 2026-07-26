@@ -29,6 +29,7 @@ import {
   type SupportAttachmentItem,
   SupportAttachmentUploader,
 } from '~/components/support/support-attachment-uploader';
+import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -107,7 +108,7 @@ function MessageBubble({ message }: { message: TicketMessage }) {
     >
       <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
         <span className="font-medium text-[var(--workspace-shell-text)]">
-          {message.authorName ?? 'Team member'}
+          {message.authorName?.trim() || 'Support'}
         </span>
         <span>{formatTicketDate(message.createdAt)}</span>
         {message.isInternal ? (
@@ -129,22 +130,7 @@ function MessageBubble({ message }: { message: TicketMessage }) {
           External link
         </a>
       ) : null}
-      {message.attachments.length > 0 ? (
-        <ul className="mt-2 space-y-1">
-          {message.attachments.map((file) => (
-            <li key={file.url}>
-              <a
-                href={file.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-sm text-[var(--ozer-accent-muted)] hover:underline"
-              >
-                {file.name}
-              </a>
-            </li>
-          ))}
-        </ul>
-      ) : null}
+      <SupportMessageAttachments attachments={message.attachments} />
     </div>
   );
 }

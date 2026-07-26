@@ -20,6 +20,7 @@ import { Textarea } from '@kit/ui/textarea';
 
 import { SupportAttachmentUploader } from '~/components/support/support-attachment-uploader';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
+import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
 import pathsConfig from '~/config/paths.config';
 
 import type { PortalTicketPriority } from '../_lib/schema/portal.schema';
@@ -151,29 +152,14 @@ export function PortalSupportDetailContent({
               >
                 <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--ozer-text-on-light-muted)]">
                   <span className="font-medium text-[var(--ozer-text-on-light-muted)]">
-                    {message.authorName ?? 'Team member'}
+                    {message.authorName?.trim() || 'Support'}
                   </span>
                   <span>{formatPortalDate(message.createdAt)}</span>
                 </div>
                 <p className="text-sm whitespace-pre-wrap text-slate-800">
                   {message.message}
                 </p>
-                {message.attachments?.length ? (
-                  <ul className="mt-2 space-y-1">
-                    {message.attachments.map((file) => (
-                      <li key={file.url}>
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-[var(--ozer-accent)] underline"
-                        >
-                          {file.name}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                <SupportMessageAttachments attachments={message.attachments} />
                 {message.externalUrl ? (
                   <a
                     href={message.externalUrl}

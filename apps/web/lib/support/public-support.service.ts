@@ -328,6 +328,7 @@ export async function createPublicSupportTicket(input: {
     assignedTo: null,
     clientOrgSlug: ctx.clientOrgSlug,
     publicToken: data.public_token as string,
+    attachments: input.attachments ?? [],
   }).catch((err) => {
     console.error('[public-support] notify new ticket failed', err);
   });
@@ -549,6 +550,7 @@ export async function addPublicSupportTicketReply(input: {
     replyBody: input.message.trim(),
     assignedTo: ticket.assignedTo,
     authorName: input.authorName.trim() || ticket.submitterName,
+    attachments: input.attachments ?? [],
   }).catch((err) => {
     console.error('[public-support] notify client reply failed', err);
   });

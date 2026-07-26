@@ -7,6 +7,7 @@ import {
   wrapNotificationEmail,
 } from '~/lib/email/wrap-notification-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import { renderSupportAttachmentsEmailHtml } from '~/lib/support/support-attachments-email';
 
 import {
   formatPlatformSupportCategory,
@@ -31,19 +32,6 @@ function getEmailConfig() {
   }
 
   return { sender, siteUrl, productName };
-}
-
-function attachmentsHtml(
-  attachments?: Array<{ name: string; url: string }> | null,
-) {
-  if (!attachments?.length) return '';
-  const items = attachments
-    .map(
-      (file) =>
-        `<li><a href="${escapeNotificationHtml(file.url)}">${escapeNotificationHtml(file.name)}</a></li>`,
-    )
-    .join('');
-  return `<p style="margin:12px 0 0;"><strong>Attachments:</strong></p><ul style="margin:8px 0 0;padding-left:18px;">${items}</ul>`;
 }
 
 async function loadUserEmail(
@@ -97,7 +85,7 @@ export async function notifySupportTeamNewTicket(
       }
       <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.subject)}</p>
       <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.body)}</p>
-      ${attachmentsHtml(input.attachments)}`,
+      ${renderSupportAttachmentsEmailHtml(input.attachments)}`,
         {
           productName: config.productName,
           title: `New support ticket ${ticketLabel}`,
@@ -143,7 +131,7 @@ export async function notifyUserSupportReply(
       html: wrapNotificationEmail(
         `<p style="margin:0 0 12px;">The ${escapeNotificationHtml(config.productName)} team replied to your support ticket ${escapeNotificationHtml(ticketLabel)}.</p>
       <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>
-      ${attachmentsHtml(input.attachments)}`,
+      ${renderSupportAttachmentsEmailHtml(input.attachments)}`,
         {
           productName: config.productName,
           title: `Reply on ${ticketLabel}`,
@@ -188,7 +176,7 @@ export async function notifySupportTeamUserReply(
       html: wrapNotificationEmail(
         `<p style="margin:0 0 12px;">${escapeNotificationHtml(userEmail ?? 'A user')} replied on ticket ${escapeNotificationHtml(ticketLabel)}: ${escapeNotificationHtml(input.subject)}</p>
       <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>
-      ${attachmentsHtml(input.attachments)}`,
+      ${renderSupportAttachmentsEmailHtml(input.attachments)}`,
         {
           productName: config.productName,
           title: `User reply on ${ticketLabel}`,

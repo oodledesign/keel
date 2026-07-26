@@ -273,6 +273,34 @@ class SupportTicketsService {
     return map;
   }
 
+  /** Best-effort display name for a user (profile → account → email). */
+  private async resolveAuthorName(
+    userId: string,
+    email?: string | null,
+  ): Promise<string> {
+    const profiles = await this.loadProfiles([userId]);
+    const fromProfile = profiles.get(userId)?.full_name?.trim();
+    if (fromProfile) return fromProfile;
+
+    const { data: account } = await this.db
+      .from('accounts')
+      .select('name, email')
+      .eq('id', userId)
+      .maybeSingle();
+
+    const fromAccount =
+      (account as { name?: string | null } | null)?.name?.trim() ||
+      (account as { email?: string | null } | null)?.email
+        ?.split('@')[0]
+        ?.trim();
+    if (fromAccount) return fromAccount;
+
+    const fromEmail = email?.split('@')[0]?.trim();
+    if (fromEmail) return fromEmail;
+
+    return 'Support';
+  }
+
   private async allocateTicketNumber(accountId: string) {
     const { data } = await this.db
       .from('support_tickets')
@@ -414,32 +442,64 @@ class SupportTicketsService {
       ];
     }
 
-    const profiles = await this.loadProfiles(
-      rows.map((row) => row.user_id).filter((id): id is string => Boolean(id)),
-    );
+    const userIds = rows
+      .map((row) => row.user_id)
+      .filter((id): id is string => Boolean(id));
+    const profiles = await this.loadProfiles(userIds);
+    const authorNames = new Map<string, string>();
 
-    return rows.map((row) => ({
-      id: row.id,
-      ticketId: row.ticket_id,
-      userId: row.user_id,
-      message: row.message,
-      isInternal: row.is_internal,
-      createdAt: row.created_at,
-      authorName:
+    for (const id of userIds) {
+      const fromProfile = profiles.get(id)?.full_name?.trim();
+      if (fromProfile) authorNames.set(id, fromProfile);
+    }
+
+    const missing = [...new Set(userIds)].filter((id) => !authorNames.has(id));
+    if (missing.length > 0) {
+      const { data: accounts } = await this.db
+        .from('accounts')
+        .select('id, name, email')
+        .in('id', missing);
+
+      for (const row of (accounts ?? []) as Array<{
+        id: string;
+        name?: string | null;
+        email?: string | null;
+      }>) {
+        const name =
+          row.name?.trim() || row.email?.split('@')[0]?.trim() || null;
+        if (name) authorNames.set(row.id, name);
+      }
+    }
+
+    return rows.map((row) => {
+      const resolvedName =
         row.author_name?.trim() ||
-        (row.user_id
-          ? (profiles.get(row.user_id)?.full_name?.trim() ?? null)
-          : null) ||
-        ticket.submitterName?.trim() ||
-        null,
-      authorAvatarUrl: row.user_id
-        ? (profiles.get(row.user_id)?.avatar_url ?? null)
-        : null,
-      attachments: Array.isArray(row.attachments)
-        ? (row.attachments as TicketMessage['attachments'])
-        : [],
-      externalUrl: row.external_url ?? null,
-    }));
+        (row.user_id ? authorNames.get(row.user_id) : undefined) ||
+        null;
+
+      return {
+        id: row.id,
+        ticketId: row.ticket_id,
+        userId: row.user_id,
+        message: row.message,
+        isInternal: row.is_internal,
+        createdAt: row.created_at,
+        authorName:
+          resolvedName ||
+          (!row.user_id
+            ? ticket.submitterName?.trim() || 'Client'
+            : row.is_internal
+              ? 'Support'
+              : ticket.submitterName?.trim() || 'Client'),
+        authorAvatarUrl: row.user_id
+          ? (profiles.get(row.user_id)?.avatar_url ?? null)
+          : null,
+        attachments: Array.isArray(row.attachments)
+          ? (row.attachments as TicketMessage['attachments'])
+          : [],
+        externalUrl: row.external_url ?? null,
+      };
+    });
   }
 
   async listClientOrgs(accountId: string): Promise<ClientOrgOption[]> {
@@ -641,6 +701,7 @@ class SupportTicketsService {
       const { getSupabaseServerAdminClient } =
         await import('@kit/supabase/server-admin-client');
       const admin = getSupabaseServerAdminClient();
+      const authorName = await this.resolveAuthorName(user.id, user.email);
       // ticket_messages columns may lag generated Database types.
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { error: messageError } = await (admin as any)
@@ -650,6 +711,7 @@ class SupportTicketsService {
           user_id: user.id,
           message: input.description,
           is_internal: false,
+          author_name: authorName,
           attachments: input.attachments ?? [],
         });
 
@@ -686,6 +748,7 @@ class SupportTicketsService {
         assignedTo: input.assigned_to ?? null,
         clientOrgSlug: org?.slug ?? null,
         publicToken: ticket.public_token ?? null,
+        attachments: input.attachments ?? [],
       }).catch((err) => {
         console.error('[support] notify new ticket failed', err);
       });
@@ -758,6 +821,8 @@ class SupportTicketsService {
       throw new Error('Ticket not found');
     }
 
+    const authorName = await this.resolveAuthorName(user.id, user.email);
+
     const { data, error } = await this.db
       .from('ticket_messages')
       .insert({
@@ -765,6 +830,7 @@ class SupportTicketsService {
         user_id: user.id,
         message: input.message,
         is_internal: input.is_internal,
+        author_name: authorName,
         attachments: input.attachments ?? [],
         external_url: input.external_url || null,
       })
@@ -821,6 +887,7 @@ class SupportTicketsService {
         clientOrgSlug,
         submitterEmail: ticket.submitterEmail,
         publicToken: ticket.publicToken,
+        attachments: input.attachments ?? [],
       }).catch((err) => {
         console.error('[support] notify agency reply failed', err);
       });
@@ -836,7 +903,7 @@ class SupportTicketsService {
       message: row.message,
       isInternal: row.is_internal,
       createdAt: row.created_at,
-      authorName: profiles.get(user.id)?.full_name?.trim() ?? null,
+      authorName: row.author_name?.trim() || authorName,
       authorAvatarUrl: profiles.get(user.id)?.avatar_url ?? null,
       attachments: Array.isArray(row.attachments)
         ? (row.attachments as TicketMessage['attachments'])

@@ -152,16 +152,36 @@ class ClientPortalService {
     const map = new Map<string, string>();
     if (userIds.length === 0) return map;
 
+    const unique = [...new Set(userIds)];
     const { data } = await this.db
       .from('profiles')
       .select('id, full_name')
-      .in('id', userIds);
+      .in('id', unique);
 
     for (const row of (data ?? []) as Array<{
       id: string;
       full_name?: string | null;
     }>) {
-      map.set(row.id, row.full_name?.trim() || 'Team member');
+      const name = row.full_name?.trim();
+      if (name) map.set(row.id, name);
+    }
+
+    const missing = unique.filter((id) => !map.has(id));
+    if (missing.length === 0) return map;
+
+    const { data: accounts } = await this.db
+      .from('accounts')
+      .select('id, name, email')
+      .in('id', missing);
+
+    for (const row of (accounts ?? []) as Array<{
+      id: string;
+      name?: string | null;
+      email?: string | null;
+    }>) {
+      const name =
+        row.name?.trim() || row.email?.split('@')[0]?.trim() || null;
+      if (name) map.set(row.id, name);
     }
 
     return map;
@@ -476,7 +496,8 @@ class ClientPortalService {
       createdAt: row.created_at,
       authorName:
         row.author_name?.trim() ||
-        (row.user_id ? (authors.get(row.user_id) ?? null) : null),
+        (row.user_id ? (authors.get(row.user_id) ?? null) : null) ||
+        'Support',
       attachments: Array.isArray(row.attachments)
         ? (row.attachments as PortalTicketMessage['attachments'])
         : [],
@@ -659,6 +680,7 @@ class ClientPortalService {
         clientOrgSlug: (org as { slug?: string | null }).slug ?? null,
         publicToken:
           (data as { public_token?: string | null }).public_token ?? null,
+        attachments: input.attachments ?? [],
       }).catch((err) => {
         console.error('[client-portal] notify new ticket failed', err);
       });
@@ -778,6 +800,7 @@ class ClientPortalService {
           (fullTicket as { assigned_to?: string | null } | null)?.assigned_to ??
           null,
         authorName,
+        attachments: input.attachments ?? [],
       }).catch((err) => {
         console.error('[client-portal] notify client reply failed', err);
       });

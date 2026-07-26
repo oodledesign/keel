@@ -13,6 +13,7 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
+import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
 
 import { replyPublicSupportTicketAction } from '../../../_lib/public-support.actions';
 
@@ -169,20 +170,17 @@ export function PublicSupportTicketThread({
             <p className="text-sm whitespace-pre-wrap text-zinc-800">
               {row.message}
             </p>
-            {row.attachments.length > 0 ? (
-              <div className="mt-2 flex flex-wrap gap-2">
-                {row.attachments.map((file) => (
-                  <a
-                    key={file.url}
-                    href={file.url}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs text-sky-700 hover:underline"
-                  >
-                    {file.name}
-                  </a>
-                ))}
-              </div>
+            <SupportMessageAttachments attachments={row.attachments} />
+            {row.externalUrl ? (
+              <a
+                href={row.externalUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="mt-2 inline-flex items-center gap-1 text-xs text-sky-700 hover:underline"
+              >
+                <ExternalLink className="h-3 w-3" />
+                External link
+              </a>
             ) : null}
           </div>
         ))}

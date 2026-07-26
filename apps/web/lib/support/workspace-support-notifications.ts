@@ -10,6 +10,8 @@ import {
 } from '~/lib/email/wrap-notification-email';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
+import type { SupportAttachmentMeta } from '~/lib/support/support-attachment.types';
+import { renderSupportAttachmentsEmailHtml } from '~/lib/support/support-attachments-email';
 import {
   notifySupportAgencyReplyInApp,
   notifySupportClientReplyInApp,
@@ -258,6 +260,7 @@ export async function notifyWorkspaceNewSupportTicket(
     assignedTo: string | null;
     clientOrgSlug: string | null;
     publicToken: string | null;
+    attachments?: SupportAttachmentMeta[] | null;
   },
 ): Promise<void> {
   const who = input.submitterName
@@ -301,7 +304,8 @@ export async function notifyWorkspaceNewSupportTicket(
     `<p style="margin:0 0 12px;">A new support ticket was opened on your workspace.</p>
     <p style="margin:0 0 8px;"><strong>From:</strong> ${escapeNotificationHtml(who)}</p>
     <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
-    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.description)}</p>`,
+    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.description)}</p>
+    ${renderSupportAttachmentsEmailHtml(input.attachments)}`,
     {
       productName: config.productName,
       title: `New support ticket ${label}`,
@@ -344,6 +348,7 @@ export async function notifyWorkspaceSupportClientReply(
     replyBody: string;
     assignedTo: string | null;
     authorName: string | null;
+    attachments?: SupportAttachmentMeta[] | null;
   },
 ): Promise<void> {
   const authorName = input.authorName ?? 'A client';
@@ -384,7 +389,8 @@ export async function notifyWorkspaceSupportClientReply(
   const html = wrapNotificationEmail(
     `<p style="margin:0 0 12px;"><strong>${escapeNotificationHtml(authorName)}</strong> replied on support ticket ${escapeNotificationHtml(label)}.</p>
     <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
-    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>`,
+    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>
+    ${renderSupportAttachmentsEmailHtml(input.attachments)}`,
     {
       productName: config.productName,
       title: `Reply on ${label}`,
@@ -428,6 +434,7 @@ export async function notifyWorkspaceSupportAgencyReply(
     clientOrgSlug: string | null;
     submitterEmail: string | null;
     publicToken: string | null;
+    attachments?: SupportAttachmentMeta[] | null;
   },
 ): Promise<void> {
   await notifyGuestWorkspacesInApp(admin, {
@@ -464,7 +471,8 @@ export async function notifyWorkspaceSupportAgencyReply(
   const html = wrapNotificationEmail(
     `<p style="margin:0 0 12px;">You have a new reply on support ticket ${escapeNotificationHtml(label)}.</p>
     <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
-    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>`,
+    <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.replyBody)}</p>
+    ${renderSupportAttachmentsEmailHtml(input.attachments)}`,
     {
       productName: config.productName,
       title: `Reply on ${label}`,

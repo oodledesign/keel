@@ -22,6 +22,7 @@ import {
   type SupportAttachmentItem,
   SupportAttachmentUploader,
 } from '~/components/support/support-attachment-uploader';
+import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
 import pathsConfig from '~/config/paths.config';
 import {
   TicketPriorityBadge,
@@ -162,29 +163,14 @@ export function PartnerSupportDetailContent({
               >
                 <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
                   <span className="font-medium">
-                    {message.authorName ?? 'Team member'}
+                    {message.authorName?.trim() || 'Support'}
                   </span>
                   <span>{formatTicketDate(message.createdAt)}</span>
                 </div>
                 <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
                   {message.message}
                 </p>
-                {message.attachments?.length ? (
-                  <ul className="mt-2 space-y-1">
-                    {message.attachments.map((file) => (
-                      <li key={file.url}>
-                        <a
-                          href={file.url}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-xs text-[var(--workspace-shell-accent)] underline"
-                        >
-                          {file.name}
-                        </a>
-                      </li>
-                    ))}
-                  </ul>
-                ) : null}
+                <SupportMessageAttachments attachments={message.attachments} />
                 {message.externalUrl ? (
                   <a
                     href={message.externalUrl}
