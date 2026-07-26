@@ -3,6 +3,10 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  countSupportSharesForGuest,
+  listSupportSharedOrgIds,
+} from '~/lib/clients/client-workspace-shares.service';
 import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import type { SupportAttachmentMeta } from '~/lib/support/support-attachment.types';
 import { createSupportPublicToken } from '~/lib/support/support-tokens';
@@ -78,17 +82,7 @@ function adminTable(admin: { from: (table: string) => any }, table: string) {
 export async function countPartnerSupportLinks(
   linkedAccountId: string,
 ): Promise<number> {
-  const admin = getSupabaseServerAdminClient();
-  const { count, error } = await adminTable(admin, 'client_orgs')
-    .select('id', { count: 'exact', head: true })
-    .eq('linked_account_id', linkedAccountId);
-
-  if (error) {
-    console.warn('[partner-support] count links:', error.message);
-    return 0;
-  }
-
-  return count ?? 0;
+  return countSupportSharesForGuest(linkedAccountId);
 }
 
 export async function listPartnerLinkedOrgs(
@@ -96,10 +90,12 @@ export async function listPartnerLinkedOrgs(
 ): Promise<PartnerLinkedOrg[]> {
   await assertLinkedAccountMember(linkedAccountId);
   const admin = getSupabaseServerAdminClient();
+  const orgIds = await listSupportSharedOrgIds(linkedAccountId);
+  if (orgIds.length === 0) return [];
 
   const { data: orgs, error } = await adminTable(admin, 'client_orgs')
     .select('id, name, slug, business_id')
-    .eq('linked_account_id', linkedAccountId)
+    .in('id', orgIds)
     .order('name');
 
   if (error) {

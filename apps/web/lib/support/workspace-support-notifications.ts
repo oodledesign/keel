@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import pathsConfig from '~/config/paths.config';
+import { listGuestAccountIdsWithSupportAccess } from '~/lib/clients/client-workspace-shares.service';
 import {
   escapeNotificationHtml,
   wrapNotificationEmail,
@@ -26,21 +27,12 @@ function formatTicketNumber(ticketNumber: number) {
   return `#${String(ticketNumber).padStart(4, '0')}`;
 }
 
-/** client_orgs.linked_account_id may be missing from generated Database types. */
-async function loadLinkedAccountId(
-  admin: SupabaseClient,
+/** Active guest workspaces with Support access on this client_org. */
+async function loadSupportGuestAccountIds(
+  _admin: SupabaseClient,
   clientOrgId: string,
-): Promise<string | null> {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const { data } = await (admin.from('client_orgs') as any)
-    .select('linked_account_id')
-    .eq('id', clientOrgId)
-    .maybeSingle();
-
-  return (
-    (data as { linked_account_id?: string | null } | null)?.linked_account_id ??
-    null
-  );
+): Promise<string[]> {
+  return listGuestAccountIdsWithSupportAccess(clientOrgId);
 }
 
 async function loadWorkspaceNotifyEmails(
@@ -105,9 +97,12 @@ async function loadClientNotifyEmails(
     }
   }
 
-  const linkedAccountId = await loadLinkedAccountId(admin, input.clientOrgId);
+  const linkedAccountIds = await loadSupportGuestAccountIds(
+    admin,
+    input.clientOrgId,
+  );
 
-  if (linkedAccountId) {
+  for (const linkedAccountId of linkedAccountIds) {
     const { data: memberships } = await admin
       .from('accounts_memberships')
       .select('user_id')
@@ -137,9 +132,12 @@ async function resolveClientTicketUrl(
   },
 ): Promise<string> {
   if (input.clientOrgId) {
-    const linkedAccountId = await loadLinkedAccountId(admin, input.clientOrgId);
+    const linkedAccountIds = await loadSupportGuestAccountIds(
+      admin,
+      input.clientOrgId,
+    );
 
-    if (linkedAccountId) {
+    for (const linkedAccountId of linkedAccountIds) {
       const { data: account } = await admin
         .from('accounts')
         .select('slug')

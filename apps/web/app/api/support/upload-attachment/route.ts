@@ -94,16 +94,31 @@ async function assertAccountMembership(accountId: string, userId: string) {
 
   if (linkedAccountIds.length > 0) {
     const admin = getSupabaseServerAdminClient();
-    // linked_account_id may be missing from generated Database types.
+    // Table may be missing from generated Database types until typegen.
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: linkedOrgs } = await (admin.from('client_orgs') as any)
-      .select('id, business_id')
-      .in('linked_account_id', linkedAccountIds);
+    const sharesClient = admin as any;
+    const { data: shares } = await sharesClient
+      .from('client_workspace_shares')
+      .select('client_org_id')
+      .in('guest_account_id', linkedAccountIds)
+      .eq('status', 'active')
+      .eq('can_support', true);
 
-    for (const org of linkedOrgs ?? []) {
-      const row = org as { business_id?: string | null };
-      if (await orgBelongsToProviderAccount(row.business_id, accountId)) {
-        return true;
+    const sharedOrgIds = ((shares ?? []) as Array<{ client_org_id?: string }>)
+      .map((row) => row.client_org_id)
+      .filter((id): id is string => Boolean(id));
+
+    if (sharedOrgIds.length > 0) {
+      const { data: linkedOrgs } = await admin
+        .from('client_orgs')
+        .select('id, business_id')
+        .in('id', sharedOrgIds);
+
+      for (const org of linkedOrgs ?? []) {
+        const row = org as { business_id?: string | null };
+        if (await orgBelongsToProviderAccount(row.business_id, accountId)) {
+          return true;
+        }
       }
     }
   }

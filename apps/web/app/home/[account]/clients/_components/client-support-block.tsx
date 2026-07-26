@@ -25,17 +25,19 @@ import type { SupportTicket } from '~/home/[account]/support/_lib/server/support
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import { ClientSupportLinkCard } from './client-support-link-card';
-import { ClientWorkspaceLinkCard } from './client-workspace-link-card';
+import { ClientWorkspaceSharesCard } from './client-workspace-shares-card';
 
 export function ClientSupportBlock({
   accountSlug,
   accountId,
   clientOrgId,
+  clientId = null,
   canManageLinks,
 }: {
   accountSlug: string;
   accountId: string;
   clientOrgId: string | null;
+  clientId?: string | null;
   canManageLinks: boolean;
 }) {
   const [tickets, setTickets] = useState<SupportTicket[]>([]);
@@ -108,9 +110,10 @@ export function ClientSupportBlock({
             clientOrgId={clientOrgId}
             accountSlug={accountSlug}
           />
-          <ClientWorkspaceLinkCard
+          <ClientWorkspaceSharesCard
             accountId={accountId}
             clientOrgId={clientOrgId}
+            clientId={clientId}
             accountSlug={accountSlug}
           />
         </div>

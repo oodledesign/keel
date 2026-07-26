@@ -7,6 +7,7 @@ import type { PostgrestError, SupabaseClient } from '@supabase/supabase-js';
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { countOpenSupportTickets } from '~/home/[account]/support/_lib/server/support-tickets.service';
+import { countActiveSharesForGuest } from '~/lib/clients/client-workspace-shares.service';
 import { countPartnerSupportLinks } from '~/lib/support/partner-support.service';
 
 function formatSupabaseError(error: PostgrestError | null | undefined): string {
@@ -40,6 +41,19 @@ export async function loadWorkNavCounts(
     if (!pgError?.code || !isMissingRelationError(pgError)) {
       console.warn(
         '[work-nav-counts] hasPartnerSupportLinks:',
+        formatSupabaseError(pgError),
+      );
+    }
+  }
+
+  try {
+    const sharedCount = await countActiveSharesForGuest(accountId);
+    counts.hasSharedClients = sharedCount > 0;
+  } catch (error) {
+    const pgError = error as PostgrestError;
+    if (!pgError?.code || !isMissingRelationError(pgError)) {
+      console.warn(
+        '[work-nav-counts] hasSharedClients:',
         formatSupabaseError(pgError),
       );
     }

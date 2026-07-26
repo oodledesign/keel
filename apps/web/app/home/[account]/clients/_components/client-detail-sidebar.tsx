@@ -1056,6 +1056,7 @@ export function ClientDetailSidebar({
           accountSlug={accountSlug}
           accountId={accountId}
           clientOrgId={resolvedClientOrgId}
+          clientId={client.id}
           canManageLinks={canEditClients}
         />
       );

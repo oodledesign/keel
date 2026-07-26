@@ -51,6 +51,7 @@ const iconClasses = 'w-4';
 export type WorkNavCounts = {
   supportOpenCount?: number;
   hasPartnerSupportLinks?: boolean;
+  hasSharedClients?: boolean;
 };
 
 export type NavChild = {
@@ -387,13 +388,36 @@ function buildWorkNavItemsForKeys(
         if (planner) items.push(planner);
       }
     }
+    if (key === 'clients' && navCounts?.hasSharedClients) {
+      items.push({
+        label: 'Shared clients',
+        path: createPath(pathsConfig.app.accountSharedClients, account),
+        Icon: <Share2 className={iconClasses} />,
+        description: 'Clients shared with this workspace by partners.',
+      });
+    }
     if (key === 'support_tickets' && navCounts?.hasPartnerSupportLinks) {
       items.push({
         label: 'Partner support',
         path: createPath(pathsConfig.app.accountPartnerSupport, account),
         Icon: <MessageSquare className={iconClasses} />,
         description:
-          'Raise tickets with agencies that linked this workspace as a client.',
+          'Raise tickets with agencies that shared support access with this workspace.',
+      });
+    }
+  }
+
+  if (navCounts?.hasSharedClients) {
+    const sharedPath = createPath(
+      pathsConfig.app.accountSharedClients,
+      account,
+    );
+    if (!items.some((item) => 'path' in item && item.path === sharedPath)) {
+      items.push({
+        label: 'Shared clients',
+        path: sharedPath,
+        Icon: <Share2 className={iconClasses} />,
+        description: 'Clients shared with this workspace by partners.',
       });
     }
   }
