@@ -666,24 +666,26 @@ class ClientPortalService {
         await import('~/lib/support/workspace-support-notifications');
       const admin = getSupabaseServerAdminClient();
 
-      void notifyWorkspaceNewSupportTicket(admin, {
-        accountId,
-        accountSlug,
-        ticketId: data.id as string,
-        ticketNumber: Number(data.ticket_number),
-        title: input.title,
-        description: input.description,
-        submitterName,
-        submitterEmail,
-        assignedTo:
-          (data as { assigned_to?: string | null }).assigned_to ?? null,
-        clientOrgSlug: (org as { slug?: string | null }).slug ?? null,
-        publicToken:
-          (data as { public_token?: string | null }).public_token ?? null,
-        attachments: input.attachments ?? [],
-      }).catch((err) => {
+      try {
+        await notifyWorkspaceNewSupportTicket(admin, {
+          accountId,
+          accountSlug,
+          ticketId: data.id as string,
+          ticketNumber: Number(data.ticket_number),
+          title: input.title,
+          description: input.description,
+          submitterName,
+          submitterEmail,
+          assignedTo:
+            (data as { assigned_to?: string | null }).assigned_to ?? null,
+          clientOrgSlug: (org as { slug?: string | null }).slug ?? null,
+          publicToken:
+            (data as { public_token?: string | null }).public_token ?? null,
+          attachments: input.attachments ?? [],
+        });
+      } catch (err) {
         console.error('[client-portal] notify new ticket failed', err);
-      });
+      }
     }
 
     return {
@@ -786,24 +788,27 @@ class ClientPortalService {
         (fullTicket as { business_id?: string | null } | null)?.business_id ??
         input.accountId;
 
-      void notifyWorkspaceSupportClientReply(admin, {
-        accountId: notifyAccountId,
-        accountSlug: input.accountSlug,
-        ticketId: input.ticketId,
-        ticketNumber: Number(
-          (fullTicket as { ticket_number?: number } | null)?.ticket_number ??
-            ticket.ticketNumber,
-        ),
-        title: (fullTicket as { title?: string } | null)?.title ?? ticket.title,
-        replyBody: input.message,
-        assignedTo:
-          (fullTicket as { assigned_to?: string | null } | null)?.assigned_to ??
-          null,
-        authorName,
-        attachments: input.attachments ?? [],
-      }).catch((err) => {
+      try {
+        await notifyWorkspaceSupportClientReply(admin, {
+          accountId: notifyAccountId,
+          accountSlug: input.accountSlug,
+          ticketId: input.ticketId,
+          ticketNumber: Number(
+            (fullTicket as { ticket_number?: number } | null)?.ticket_number ??
+              ticket.ticketNumber,
+          ),
+          title:
+            (fullTicket as { title?: string } | null)?.title ?? ticket.title,
+          replyBody: input.message,
+          assignedTo:
+            (fullTicket as { assigned_to?: string | null } | null)
+              ?.assigned_to ?? null,
+          authorName,
+          attachments: input.attachments ?? [],
+        });
+      } catch (err) {
         console.error('[client-portal] notify client reply failed', err);
-      });
+      }
     }
 
     return {

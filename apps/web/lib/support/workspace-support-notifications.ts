@@ -279,62 +279,105 @@ export async function notifyWorkspaceNewSupportTicket(
   const config = getEmailConfig();
   if (!config) return;
 
+  const label = formatTicketNumber(input.ticketNumber);
   const recipients = await loadWorkspaceNotifyEmails(
     admin,
     input.accountId,
     input.assignedTo,
   );
+
   if (recipients.length === 0) {
     console.warn(
       '[support-notifications] No workspace recipients for new ticket',
       { accountId: input.accountId, ticketId: input.ticketId },
     );
-    return;
-  }
+  } else {
+    const agencyUrl = new URL(
+      pathsConfig.app.accountSupportDetail
+        .replace('[account]', input.accountSlug)
+        .replace('[id]', input.ticketId),
+      config.siteUrl,
+    ).toString();
 
-  const label = formatTicketNumber(input.ticketNumber);
-  const agencyUrl = new URL(
-    pathsConfig.app.accountSupportDetail
-      .replace('[account]', input.accountSlug)
-      .replace('[id]', input.ticketId),
-    config.siteUrl,
-  ).toString();
-
-  const html = wrapNotificationEmail(
-    `<p style="margin:0 0 12px;">A new support ticket was opened on your workspace.</p>
+    const html = wrapNotificationEmail(
+      `<p style="margin:0 0 12px;">A new support ticket was opened on your workspace.</p>
     <p style="margin:0 0 8px;"><strong>From:</strong> ${escapeNotificationHtml(who)}</p>
     <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
     <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.description)}</p>
     ${renderSupportAttachmentsEmailHtml(input.attachments)}`,
-    {
-      productName: config.productName,
-      title: `New support ticket ${label}`,
-      heading: `New support ticket ${label}`,
-      preview: `${who} opened ${label}: ${input.title}`,
-      cta: { label: 'View ticket', href: agencyUrl },
-      footerNote: `You're receiving this because you're on the support team for this ${escapeNotificationHtml(config.productName)} workspace.`,
-    },
-  );
+      {
+        productName: config.productName,
+        title: `New support ticket ${label}`,
+        heading: `New support ticket ${label}`,
+        preview: `${who} opened ${label}: ${input.title}`,
+        cta: { label: 'View ticket', href: agencyUrl },
+        footerNote: `You're receiving this because you're on the support team for this ${escapeNotificationHtml(config.productName)} workspace.`,
+      },
+    );
 
-  await Promise.all(
-    recipients.map((to) =>
-      sendPlatformEmail({
-        type: 'support_ticket',
-        accountId: input.accountId,
-        mail: {
-          to,
-          from: config.sender,
-          subject: `[Support] ${label} ${input.title}`,
-          html,
-        },
-        metadata: {
-          ticket_id: input.ticketId,
-          ticket_number: input.ticketNumber,
-          kind: 'workspace_new_ticket',
-        },
-      }),
-    ),
-  );
+    await Promise.all(
+      recipients.map((to) =>
+        sendPlatformEmail({
+          type: 'support_ticket',
+          accountId: input.accountId,
+          mail: {
+            to,
+            from: config.sender,
+            subject: `[Support] ${label} ${input.title}`,
+            html,
+          },
+          metadata: {
+            ticket_id: input.ticketId,
+            ticket_number: input.ticketNumber,
+            kind: 'workspace_new_ticket',
+          },
+        }),
+      ),
+    );
+  }
+
+  // Confirmation to the person who opened the ticket (public/portal forms).
+  const submitter = input.submitterEmail?.trim().toLowerCase();
+  if (submitter && !recipients.includes(submitter)) {
+    const ticketUrl = await resolveClientTicketUrl(admin, {
+      siteUrl: config.siteUrl,
+      ticketId: input.ticketId,
+      clientOrgId: null,
+      clientOrgSlug: input.clientOrgSlug,
+      publicToken: input.publicToken,
+    });
+
+    const confirmHtml = wrapNotificationEmail(
+      `<p style="margin:0 0 12px;">We've received your support request.</p>
+      <p style="margin:0 0 8px;"><strong>Subject:</strong> ${escapeNotificationHtml(input.title)}</p>
+      <p style="margin:0;white-space:pre-wrap;">${escapeNotificationHtml(input.description)}</p>
+      ${renderSupportAttachmentsEmailHtml(input.attachments)}`,
+      {
+        productName: config.productName,
+        title: `We received ${label}`,
+        heading: `We received your ticket ${label}`,
+        preview: `We received ${label}: ${input.title}`,
+        cta: { label: 'View ticket', href: ticketUrl },
+        footerNote: `You're receiving this because you submitted a support ticket on ${escapeNotificationHtml(config.productName)}.`,
+      },
+    );
+
+    await sendPlatformEmail({
+      type: 'support_ticket',
+      accountId: input.accountId,
+      mail: {
+        to: submitter,
+        from: config.sender,
+        subject: `[Support] ${label} ${input.title}`,
+        html: confirmHtml,
+      },
+      metadata: {
+        ticket_id: input.ticketId,
+        ticket_number: input.ticketNumber,
+        kind: 'submitter_new_ticket',
+      },
+    });
+  }
 }
 
 export async function notifyWorkspaceSupportClientReply(

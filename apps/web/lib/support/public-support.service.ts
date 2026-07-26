@@ -316,22 +316,24 @@ export async function createPublicSupportTicket(input: {
     );
   }
 
-  void notifyWorkspaceNewSupportTicket(client, {
-    accountId: ctx.accountId,
-    accountSlug: ctx.accountSlug,
-    ticketId: data.id as string,
-    ticketNumber: Number(data.ticket_number),
-    title: input.title.trim(),
-    description: input.description.trim(),
-    submitterName,
-    submitterEmail,
-    assignedTo: null,
-    clientOrgSlug: ctx.clientOrgSlug,
-    publicToken: data.public_token as string,
-    attachments: input.attachments ?? [],
-  }).catch((err) => {
+  try {
+    await notifyWorkspaceNewSupportTicket(client, {
+      accountId: ctx.accountId,
+      accountSlug: ctx.accountSlug,
+      ticketId: data.id as string,
+      ticketNumber: Number(data.ticket_number),
+      title: input.title.trim(),
+      description: input.description.trim(),
+      submitterName,
+      submitterEmail,
+      assignedTo: null,
+      clientOrgSlug: ctx.clientOrgSlug,
+      publicToken: data.public_token as string,
+      attachments: input.attachments ?? [],
+    });
+  } catch (err) {
     console.error('[public-support] notify new ticket failed', err);
-  });
+  }
 
   return {
     ticketId: data.id as string,
@@ -541,19 +543,21 @@ export async function addPublicSupportTicketReply(input: {
     })
     .eq('id', ticket.id);
 
-  void notifyWorkspaceSupportClientReply(client, {
-    accountId: ticket.accountId,
-    accountSlug: ticket.accountSlug,
-    ticketId: ticket.id,
-    ticketNumber: ticket.ticketNumber,
-    title: ticket.title,
-    replyBody: input.message.trim(),
-    assignedTo: ticket.assignedTo,
-    authorName: input.authorName.trim() || ticket.submitterName,
-    attachments: input.attachments ?? [],
-  }).catch((err) => {
+  try {
+    await notifyWorkspaceSupportClientReply(client, {
+      accountId: ticket.accountId,
+      accountSlug: ticket.accountSlug,
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: ticket.title,
+      replyBody: input.message.trim(),
+      assignedTo: ticket.assignedTo,
+      authorName: input.authorName.trim() || ticket.submitterName,
+      attachments: input.attachments ?? [],
+    });
+  } catch (err) {
     console.error('[public-support] notify client reply failed', err);
-  });
+  }
 }
 
 export async function ensureClientOrgSupportToken(

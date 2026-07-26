@@ -736,22 +736,24 @@ class SupportTicketsService {
         ? ticket.client_orgs[0]
         : ticket.client_orgs;
 
-      void notifyWorkspaceNewSupportTicket(admin, {
-        accountId: input.accountId,
-        accountSlug: input.accountSlug,
-        ticketId: ticket.id,
-        ticketNumber: ticket.ticket_number ?? ticketNumber,
-        title: input.title,
-        description: input.description,
-        submitterName: null,
-        submitterEmail: null,
-        assignedTo: input.assigned_to ?? null,
-        clientOrgSlug: org?.slug ?? null,
-        publicToken: ticket.public_token ?? null,
-        attachments: input.attachments ?? [],
-      }).catch((err) => {
+      try {
+        await notifyWorkspaceNewSupportTicket(admin, {
+          accountId: input.accountId,
+          accountSlug: input.accountSlug,
+          ticketId: ticket.id,
+          ticketNumber: ticket.ticket_number ?? ticketNumber,
+          title: input.title,
+          description: input.description,
+          submitterName: null,
+          submitterEmail: null,
+          assignedTo: input.assigned_to ?? null,
+          clientOrgSlug: org?.slug ?? null,
+          publicToken: ticket.public_token ?? null,
+          attachments: input.attachments ?? [],
+        });
+      } catch (err) {
         console.error('[support] notify new ticket failed', err);
-      });
+      }
     }
 
     const profiles = await this.loadProfiles(
@@ -876,21 +878,23 @@ class SupportTicketsService {
         clientOrgSlug = (org as { slug?: string | null } | null)?.slug ?? null;
       }
 
-      void notifyWorkspaceSupportAgencyReply(admin, {
-        accountId: input.accountId,
-        accountSlug: input.accountSlug,
-        ticketId: ticket.id,
-        ticketNumber: ticket.ticketNumber,
-        title: ticket.title,
-        replyBody: input.message,
-        clientOrgId: ticket.clientOrgId,
-        clientOrgSlug,
-        submitterEmail: ticket.submitterEmail,
-        publicToken: ticket.publicToken,
-        attachments: input.attachments ?? [],
-      }).catch((err) => {
+      try {
+        await notifyWorkspaceSupportAgencyReply(admin, {
+          accountId: input.accountId,
+          accountSlug: input.accountSlug,
+          ticketId: ticket.id,
+          ticketNumber: ticket.ticketNumber,
+          title: ticket.title,
+          replyBody: input.message,
+          clientOrgId: ticket.clientOrgId,
+          clientOrgSlug,
+          submitterEmail: ticket.submitterEmail,
+          publicToken: ticket.publicToken,
+          attachments: input.attachments ?? [],
+        });
+      } catch (err) {
         console.error('[support] notify agency reply failed', err);
-      });
+      }
     }
 
     const row = data as MessageRow;

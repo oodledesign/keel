@@ -386,23 +386,24 @@ export async function createPartnerTicket(input: {
     external_url: input.externalUrl?.trim() || null,
   });
 
-  void notifyWorkspaceNewSupportTicket(admin, {
-    accountId: org.providerAccountId,
-    accountSlug: org.providerAccountSlug,
-    ticketId: data.id as string,
-    ticketNumber: Number(data.ticket_number),
-    title: input.title.trim(),
-    description: input.description.trim(),
-    submitterName,
-    submitterEmail,
-    assignedTo: null,
-    clientOrgSlug: org.clientOrgSlug,
-    publicToken,
-    attachments: input.attachments ?? [],
-  }).catch((err) => {
+  try {
+    await notifyWorkspaceNewSupportTicket(admin, {
+      accountId: org.providerAccountId,
+      accountSlug: org.providerAccountSlug,
+      ticketId: data.id as string,
+      ticketNumber: Number(data.ticket_number),
+      title: input.title.trim(),
+      description: input.description.trim(),
+      submitterName,
+      submitterEmail,
+      assignedTo: null,
+      clientOrgSlug: org.clientOrgSlug,
+      publicToken,
+      attachments: input.attachments ?? [],
+    });
+  } catch (err) {
     console.error('[partner-support] notify new ticket failed', err);
-  });
-
+  }
   return {
     id: data.id as string,
     title: (data as { title?: string }).title ?? input.title,
@@ -486,21 +487,22 @@ export async function addPartnerTicketReply(input: {
     .eq('id', input.ticketId)
     .maybeSingle();
 
-  void notifyWorkspaceSupportClientReply(admin, {
-    accountId: ticket.providerAccountId,
-    accountSlug: ticket.providerAccountSlug,
-    ticketId: ticket.id,
-    ticketNumber: ticket.ticketNumber,
-    title: ticket.title,
-    replyBody: input.message.trim(),
-    assignedTo:
-      (full as { assigned_to?: string | null } | null)?.assigned_to ?? null,
-    authorName,
-    attachments: input.attachments ?? [],
-  }).catch((err) => {
+  try {
+    await notifyWorkspaceSupportClientReply(admin, {
+      accountId: ticket.providerAccountId,
+      accountSlug: ticket.providerAccountSlug,
+      ticketId: ticket.id,
+      ticketNumber: ticket.ticketNumber,
+      title: ticket.title,
+      replyBody: input.message.trim(),
+      assignedTo:
+        (full as { assigned_to?: string | null } | null)?.assigned_to ?? null,
+      authorName,
+      attachments: input.attachments ?? [],
+    });
+  } catch (err) {
     console.error('[partner-support] notify reply failed', err);
-  });
-
+  }
   return {
     id: data.id as string,
     ticketId: data.ticket_id as string,
