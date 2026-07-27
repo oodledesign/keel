@@ -29,6 +29,7 @@ import {
 import { CSS } from '@dnd-kit/utilities';
 
 import pathsConfig from '~/config/paths.config';
+import { SupportPartyIdentity } from '~/components/support/support-party-identity';
 
 import type { TicketStatus } from '../_lib/schema/support-tickets.schema';
 import { updateSupportTicket } from '../_lib/server/server-actions';
@@ -47,7 +48,7 @@ const STATUSES: { key: TicketStatus; label: string }[] = [
 ];
 
 const panelClass =
-  'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_8px_24px_rgba(4,10,24,0.12)]';
+  'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]';
 
 type Props = {
   accountSlug: string;
@@ -275,7 +276,9 @@ function TicketCard({
       ref={isOverlay ? undefined : setNodeRef}
       style={isOverlay ? undefined : style}
       className={`${panelClass} cursor-grab p-3 active:cursor-grabbing ${
-        isOverlay ? 'scale-105 rotate-1 shadow-2xl' : ''
+        isOverlay
+          ? 'scale-105 rotate-1 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]'
+          : ''
       }`}
       {...(isOverlay ? {} : { ...attributes, ...listeners })}
     >
@@ -297,16 +300,35 @@ function TicketCard({
         {ticket.title}
       </Link>
       {ticket.submitterName?.trim() || ticket.clientOrgName ? (
-        <div className="mt-2 space-y-0.5">
+        <div className="mt-2 space-y-1.5">
           {ticket.submitterName?.trim() ? (
             <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]/70">
               {ticket.submitterName.trim()}
             </p>
           ) : null}
-          {ticket.clientOrgName ? (
-            <p className="truncate text-xs text-[var(--workspace-shell-text)]/50">
-              {ticket.clientOrgName}
-            </p>
+          {ticket.clientOrgName || ticket.businessName ? (
+            <div className="flex flex-wrap items-center gap-2">
+              {ticket.clientOrgName ? (
+                <SupportPartyIdentity
+                  party={{
+                    name: ticket.clientOrgName,
+                    logoUrl: ticket.clientPictureUrl,
+                  }}
+                  size="sm"
+                  nameClassName="text-xs text-[var(--workspace-shell-text)]/60"
+                />
+              ) : null}
+              {ticket.businessName ? (
+                <SupportPartyIdentity
+                  party={{
+                    name: ticket.businessName,
+                    logoUrl: ticket.businessLogoUrl,
+                  }}
+                  size="sm"
+                  nameClassName="text-xs text-[var(--workspace-shell-text)]/45"
+                />
+              ) : null}
+            </div>
           ) : null}
         </div>
       ) : null}

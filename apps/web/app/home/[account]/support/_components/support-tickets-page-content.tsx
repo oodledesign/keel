@@ -18,6 +18,7 @@ import {
 } from '@kit/ui/select';
 
 import pathsConfig from '~/config/paths.config';
+import { SupportPartyIdentity } from '~/components/support/support-party-identity';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type {
@@ -343,7 +344,32 @@ export function SupportTicketsPageContent({
                         </div>
                       </td>
                       <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
-                        {ticket.clientOrgName ?? '—'}
+                        {ticket.clientOrgName || ticket.businessName ? (
+                          <div className="space-y-1.5">
+                            {ticket.clientOrgName ? (
+                              <SupportPartyIdentity
+                                party={{
+                                  name: ticket.clientOrgName,
+                                  logoUrl: ticket.clientPictureUrl,
+                                }}
+                                size="sm"
+                                nameClassName="text-sm text-[var(--workspace-shell-text)]/80"
+                              />
+                            ) : null}
+                            {ticket.businessName ? (
+                              <SupportPartyIdentity
+                                party={{
+                                  name: ticket.businessName,
+                                  logoUrl: ticket.businessLogoUrl,
+                                }}
+                                size="sm"
+                                nameClassName="text-xs text-[var(--workspace-shell-text)]/55"
+                              />
+                            ) : null}
+                          </div>
+                        ) : (
+                          '—'
+                        )}
                       </td>
                       <td className="px-4 py-3">
                         <TicketStatusBadge status={ticket.status} />

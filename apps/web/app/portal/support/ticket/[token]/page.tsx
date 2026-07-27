@@ -33,6 +33,10 @@ export default async function PublicSupportTicketPage({ params }: PageProps) {
         externalUrl={ticket.externalUrl}
         submitterName={ticket.submitterName}
         submitterEmail={ticket.submitterEmail}
+        workspaceName={ticket.accountName}
+        workspaceLogoUrl={ticket.accountLogoUrl}
+        clientName={ticket.clientOrgName}
+        clientPictureUrl={ticket.clientPictureUrl}
         messages={ticket.messages}
         closed={ticket.status === 'closed'}
       />

@@ -13,6 +13,10 @@ import type {
   TicketStatus,
   UpdateTicketInput,
 } from '../schema/support-tickets.schema';
+import {
+  loadClientPicturesByOrgIds,
+  loadSupportBusinessBrand,
+} from '~/lib/support/support-party-branding';
 
 export type SupportTicket = {
   id: string;
@@ -32,6 +36,9 @@ export type SupportTicket = {
   updatedAt: string;
   lastActivityAt: string | null;
   clientOrgName: string | null;
+  clientPictureUrl: string | null;
+  businessName: string | null;
+  businessLogoUrl: string | null;
   websiteName: string | null;
   websiteDomain: string | null;
   projectName: string | null;
@@ -168,6 +175,11 @@ export async function countOpenSupportTickets(
 function mapTicketRow(
   row: TicketRow,
   profiles: Map<string, ProfileRow>,
+  branding?: {
+    clientPictureUrl?: string | null;
+    businessName?: string | null;
+    businessLogoUrl?: string | null;
+  },
 ): SupportTicket {
   const org = Array.isArray(row.client_orgs)
     ? row.client_orgs[0]
@@ -198,6 +210,9 @@ function mapTicketRow(
     updatedAt: row.updated_at,
     lastActivityAt: row.last_activity_at ?? row.updated_at ?? null,
     clientOrgName: org?.name?.trim() ?? null,
+    clientPictureUrl: branding?.clientPictureUrl ?? null,
+    businessName: branding?.businessName ?? null,
+    businessLogoUrl: branding?.businessLogoUrl ?? null,
     websiteName: website?.name?.trim() ?? null,
     websiteDomain: website?.domain ?? null,
     projectName: project?.name?.trim() || project?.title?.trim() || null,
@@ -363,8 +378,25 @@ class SupportTicketsService {
       ),
     ];
     const profiles = await this.loadProfiles(userIds);
+    const [clientPictures, businessBrand] = await Promise.all([
+      loadClientPicturesByOrgIds(
+        this.db,
+        rows
+          .map((row) => row.client_org_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+      loadSupportBusinessBrand(input.accountId),
+    ]);
 
-    return rows.map((row) => mapTicketRow(row, profiles));
+    return rows.map((row) =>
+      mapTicketRow(row, profiles, {
+        clientPictureUrl: row.client_org_id
+          ? (clientPictures.get(row.client_org_id) ?? null)
+          : null,
+        businessName: businessBrand.name,
+        businessLogoUrl: businessBrand.logoUrl,
+      }),
+    );
   }
 
   async getTicket(input: GetTicketInput): Promise<SupportTicket | null> {
@@ -385,8 +417,21 @@ class SupportTicketsService {
     const profiles = await this.loadProfiles(
       [row.assigned_to, row.created_by].filter(Boolean) as string[],
     );
+    const [clientPictures, businessBrand] = await Promise.all([
+      loadClientPicturesByOrgIds(
+        this.db,
+        row.client_org_id ? [row.client_org_id] : [],
+      ),
+      loadSupportBusinessBrand(input.accountId),
+    ]);
 
-    return mapTicketRow(row, profiles);
+    return mapTicketRow(row, profiles, {
+      clientPictureUrl: row.client_org_id
+        ? (clientPictures.get(row.client_org_id) ?? null)
+        : null,
+      businessName: businessBrand.name,
+      businessLogoUrl: businessBrand.logoUrl,
+    });
   }
 
   async listTicketMessages(
@@ -755,7 +800,10 @@ class SupportTicketsService {
     const profiles = await this.loadProfiles(
       [user.id, input.assigned_to].filter(Boolean) as string[],
     );
-    return mapTicketRow(ticket, profiles);
+    return this.enrichTicketBranding(
+      input.accountId,
+      mapTicketRow(ticket, profiles),
+    );
   }
 
   async updateTicket(input: UpdateTicketInput): Promise<SupportTicket> {
@@ -804,7 +852,32 @@ class SupportTicketsService {
       [row.assigned_to, row.created_by].filter(Boolean) as string[],
     );
 
-    return mapTicketRow(row, profiles);
+    return this.enrichTicketBranding(
+      input.accountId,
+      mapTicketRow(row, profiles),
+    );
+  }
+
+  private async enrichTicketBranding(
+    accountId: string,
+    ticket: SupportTicket,
+  ): Promise<SupportTicket> {
+    const [clientPictures, businessBrand] = await Promise.all([
+      loadClientPicturesByOrgIds(
+        this.db,
+        ticket.clientOrgId ? [ticket.clientOrgId] : [],
+      ),
+      loadSupportBusinessBrand(accountId),
+    ]);
+
+    return {
+      ...ticket,
+      clientPictureUrl: ticket.clientOrgId
+        ? (clientPictures.get(ticket.clientOrgId) ?? null)
+        : null,
+      businessName: businessBrand.name,
+      businessLogoUrl: businessBrand.logoUrl,
+    };
   }
 
   async addTicketMessage(input: AddTicketMessageInput): Promise<TicketMessage> {

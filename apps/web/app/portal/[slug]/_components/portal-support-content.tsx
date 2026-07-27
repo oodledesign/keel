@@ -21,6 +21,7 @@ import { Textarea } from '@kit/ui/textarea';
 import { SupportAttachmentUploader } from '~/components/support/support-attachment-uploader';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import pathsConfig from '~/config/paths.config';
 
 import type { PortalTicketPriority } from '../_lib/schema/portal.schema';
@@ -49,6 +50,10 @@ export function PortalSupportDetailContent({
   clientSlug,
   accountId,
   accountSlug,
+  clientName,
+  clientPictureUrl,
+  businessName,
+  businessLogoUrl,
 }: {
   ticket: PortalTicketDetail;
   initialMessages: PortalTicketMessage[];
@@ -56,6 +61,10 @@ export function PortalSupportDetailContent({
   clientSlug: string;
   accountId: string;
   accountSlug: string;
+  clientName?: string | null;
+  clientPictureUrl?: string | null;
+  businessName?: string | null;
+  businessLogoUrl?: string | null;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -127,6 +136,22 @@ export function PortalSupportDetailContent({
         <h1 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
           {ticket.title}
         </h1>
+        {(businessName || clientName) && (
+          <SupportDualPartyIdentity
+            className="mt-3"
+            size="sm"
+            business={
+              businessName
+                ? { name: businessName, logoUrl: businessLogoUrl }
+                : null
+            }
+            client={
+              clientName
+                ? { name: clientName, logoUrl: clientPictureUrl }
+                : null
+            }
+          />
+        )}
         <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
           Opened {formatPortalDate(ticket.createdAt)}
         </p>

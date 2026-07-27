@@ -26,7 +26,9 @@ export default async function PublicSupportSubmitPage({ params }: PageProps) {
       <PublicSupportSubmitForm
         token={token}
         workspaceName={org.accountName}
+        workspaceLogoUrl={org.accountLogoUrl}
         clientName={org.clientOrgName}
+        clientPictureUrl={org.clientPictureUrl}
         contacts={org.contacts}
         projects={org.projects}
       />

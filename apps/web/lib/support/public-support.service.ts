@@ -5,6 +5,10 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { createSupportPublicToken } from '~/lib/support/support-tokens';
 import type { SupportAttachmentMeta } from '~/lib/support/support-tokens';
 import {
+  loadClientPicturesByOrgIds,
+  loadSupportBusinessBrand,
+} from '~/lib/support/support-party-branding';
+import {
   notifyWorkspaceNewSupportTicket,
   notifyWorkspaceSupportClientReply,
 } from '~/lib/support/workspace-support-notifications';
@@ -24,9 +28,11 @@ export type PublicSupportOrgContext = {
   clientOrgId: string;
   clientOrgName: string;
   clientOrgSlug: string;
+  clientPictureUrl: string | null;
   accountId: string;
   accountSlug: string;
   accountName: string;
+  accountLogoUrl: string | null;
   contacts: PublicSupportContactOption[];
   projects: PublicSupportProjectOption[];
 };
@@ -46,8 +52,12 @@ export type PublicTicketThread = {
   submitterEmail: string | null;
   accountId: string;
   accountSlug: string;
+  accountName: string | null;
+  accountLogoUrl: string | null;
   clientOrgId: string | null;
   clientOrgSlug: string | null;
+  clientOrgName: string | null;
+  clientPictureUrl: string | null;
   assignedTo: string | null;
   messages: Array<{
     id: string;
@@ -189,10 +199,14 @@ export async function loadPublicSupportOrgByToken(
 
   if (!account?.slug) return null;
 
-  const [contacts, projects] = await Promise.all([
-    loadContactsForOrg((org as { id: string }).id),
-    loadProjectsForOrg(accountId, (org as { id: string }).id),
-  ]);
+  const [contacts, projects, clientPictures, businessBrand] = await Promise.all(
+    [
+      loadContactsForOrg((org as { id: string }).id),
+      loadProjectsForOrg(accountId, (org as { id: string }).id),
+      loadClientPicturesByOrgIds(client, [(org as { id: string }).id]),
+      loadSupportBusinessBrand(accountId),
+    ],
+  );
 
   return {
     clientOrgId: (org as { id: string }).id,
@@ -200,11 +214,15 @@ export async function loadPublicSupportOrgByToken(
       (org as { name?: string | null }).name?.trim() ||
       (org as { slug: string }).slug,
     clientOrgSlug: (org as { slug: string }).slug,
+    clientPictureUrl:
+      clientPictures.get((org as { id: string }).id) ?? null,
     accountId,
     accountSlug: account.slug as string,
     accountName:
       (account as { name?: string | null }).name?.trim() ||
+      businessBrand.name ||
       (account.slug as string),
+    accountLogoUrl: businessBrand.logoUrl,
     contacts,
     projects,
   };
@@ -343,7 +361,7 @@ export async function loadPublicSupportTicketByToken(
   const { data: ticket, error } = await client
     .from('support_tickets')
     .select(
-      'id, title, description, status, priority, ticket_number, public_token, recording_url, external_url, submitter_name, submitter_email, account_id, business_id, client_org_id, assigned_to, project_id, created_at, projects(name, title), client_orgs(slug)',
+      'id, title, description, status, priority, ticket_number, public_token, recording_url, external_url, submitter_name, submitter_email, account_id, business_id, client_org_id, assigned_to, project_id, created_at, projects(name, title), client_orgs(name, slug)',
     )
     .eq('public_token', trimmed)
     .maybeSingle();
@@ -357,9 +375,17 @@ export async function loadPublicSupportTicketByToken(
 
   const { data: account } = await client
     .from('accounts')
-    .select('slug')
+    .select('slug, name')
     .eq('id', accountId)
     .maybeSingle();
+
+  const clientOrgId =
+    (ticket as { client_org_id?: string | null }).client_org_id ?? null;
+
+  const [clientPictures, businessBrand] = await Promise.all([
+    loadClientPicturesByOrgIds(client, clientOrgId ? [clientOrgId] : []),
+    loadSupportBusinessBrand(accountId),
+  ]);
 
   const { data: messages } = await client
     .from('ticket_messages')
@@ -402,8 +428,8 @@ export async function loadPublicSupportTicketByToken(
   const org = (
     ticket as {
       client_orgs?:
-        | { slug?: string | null }
-        | Array<{ slug?: string | null }>
+        | { name?: string | null; slug?: string | null }
+        | Array<{ name?: string | null; slug?: string | null }>
         | null;
     }
   ).client_orgs;
@@ -431,9 +457,16 @@ export async function loadPublicSupportTicketByToken(
       (ticket as { submitter_email?: string | null }).submitter_email ?? null,
     accountId,
     accountSlug: (account as { slug?: string } | null)?.slug ?? '',
-    clientOrgId:
-      (ticket as { client_org_id?: string | null }).client_org_id ?? null,
+    accountName:
+      (account as { name?: string | null } | null)?.name?.trim() ||
+      businessBrand.name,
+    accountLogoUrl: businessBrand.logoUrl,
+    clientOrgId,
     clientOrgSlug: orgRow?.slug ?? null,
+    clientOrgName: orgRow?.name?.trim() ?? null,
+    clientPictureUrl: clientOrgId
+      ? (clientPictures.get(clientOrgId) ?? null)
+      : null,
     assignedTo: (ticket as { assigned_to?: string | null }).assigned_to ?? null,
     messages: (() => {
       const mapped = ((messages ?? []) as Array<Record<string, unknown>>)

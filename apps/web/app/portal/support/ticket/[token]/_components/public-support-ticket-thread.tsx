@@ -12,6 +12,7 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
 
@@ -36,6 +37,10 @@ export function PublicSupportTicketThread({
   externalUrl,
   submitterName,
   submitterEmail,
+  workspaceName,
+  workspaceLogoUrl,
+  clientName,
+  clientPictureUrl,
   messages,
   closed,
 }: {
@@ -48,6 +53,10 @@ export function PublicSupportTicketThread({
   externalUrl: string | null;
   submitterName: string | null;
   submitterEmail: string | null;
+  workspaceName?: string | null;
+  workspaceLogoUrl?: string | null;
+  clientName?: string | null;
+  clientPictureUrl?: string | null;
   messages: Message[];
   closed: boolean;
 }) {
@@ -112,6 +121,22 @@ export function PublicSupportTicketThread({
   return (
     <div className="mx-auto w-full max-w-2xl space-y-6 px-4 py-10">
       <div className="rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
+        {workspaceName || clientName ? (
+          <SupportDualPartyIdentity
+            className="mb-4"
+            size="sm"
+            business={
+              workspaceName
+                ? { name: workspaceName, logoUrl: workspaceLogoUrl }
+                : null
+            }
+            client={
+              clientName
+                ? { name: clientName, logoUrl: clientPictureUrl }
+                : null
+            }
+          />
+        ) : null}
         <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
           Ticket #{ticketNumber} · {status}
         </p>

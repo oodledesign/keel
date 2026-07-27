@@ -19,6 +19,7 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 import pathsConfig from '~/config/paths.config';
 
@@ -32,13 +33,17 @@ const OTHER = '__other__';
 export function PublicSupportSubmitForm({
   token,
   workspaceName,
+  workspaceLogoUrl,
   clientName,
+  clientPictureUrl,
   contacts,
   projects,
 }: {
   token: string;
   workspaceName: string;
+  workspaceLogoUrl?: string | null;
   clientName: string;
+  clientPictureUrl?: string | null;
   contacts: ContactOption[];
   projects: ProjectOption[];
 }) {
@@ -126,9 +131,12 @@ export function PublicSupportSubmitForm({
   return (
     <div className="mx-auto w-full max-w-xl space-y-5 rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm">
       <div>
-        <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-          {workspaceName}
-        </p>
+        <SupportDualPartyIdentity
+          className="mb-4"
+          size="md"
+          business={{ name: workspaceName, logoUrl: workspaceLogoUrl }}
+          client={{ name: clientName, logoUrl: clientPictureUrl }}
+        />
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
           Support request
         </h1>

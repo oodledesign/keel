@@ -23,6 +23,7 @@ import {
   SupportAttachmentUploader,
 } from '~/components/support/support-attachment-uploader';
 import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import pathsConfig from '~/config/paths.config';
 import {
   TicketPriorityBadge,
@@ -132,9 +133,20 @@ export function PartnerSupportDetailContent({
         <h1 className="text-2xl font-semibold text-[var(--workspace-shell-text)]">
           {ticket.title}
         </h1>
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          {ticket.providerAccountName} · Opened{' '}
-          {formatTicketDate(ticket.createdAt)}
+        <SupportDualPartyIdentity
+          className="mt-2"
+          size="sm"
+          client={{
+            name: ticket.clientOrgName,
+            logoUrl: ticket.clientPictureUrl,
+          }}
+          business={{
+            name: ticket.providerAccountName,
+            logoUrl: ticket.providerAccountLogoUrl,
+          }}
+        />
+        <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+          Opened {formatTicketDate(ticket.createdAt)}
         </p>
         {ticket.description ? (
           <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/90">

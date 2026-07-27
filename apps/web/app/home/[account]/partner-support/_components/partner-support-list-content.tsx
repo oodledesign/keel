@@ -10,6 +10,7 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 
 import pathsConfig from '~/config/paths.config';
+import { SupportPartyIdentity } from '~/components/support/support-party-identity';
 import {
   TicketPriorityBadge,
   TicketStatusBadge,
@@ -147,12 +148,26 @@ export function PartnerSupportListContent({
                         >
                           {ticket.title}
                         </Link>
-                        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                          {ticket.clientOrgName}
+                        <p className="mt-1">
+                          <SupportPartyIdentity
+                            party={{
+                              name: ticket.clientOrgName,
+                              logoUrl: ticket.clientPictureUrl,
+                            }}
+                            size="sm"
+                            nameClassName="text-xs text-[var(--workspace-shell-text-muted)]"
+                          />
                         </p>
                       </td>
                       <td className="px-4 py-3 text-[var(--workspace-shell-text-muted)]">
-                        {ticket.providerAccountName}
+                        <SupportPartyIdentity
+                          party={{
+                            name: ticket.providerAccountName,
+                            logoUrl: ticket.providerAccountLogoUrl,
+                          }}
+                          size="sm"
+                          nameClassName="text-sm text-[var(--workspace-shell-text-muted)]"
+                        />
                       </td>
                       <td className="px-4 py-3">
                         <TicketStatusBadge

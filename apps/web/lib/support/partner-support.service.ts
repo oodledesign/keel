@@ -9,6 +9,10 @@ import {
 } from '~/lib/clients/client-workspace-shares.service';
 import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import type { SupportAttachmentMeta } from '~/lib/support/support-attachment.types';
+import {
+  loadClientPicturesByOrgIds,
+  loadSupportBusinessBrand,
+} from '~/lib/support/support-party-branding';
 import { createSupportPublicToken } from '~/lib/support/support-tokens';
 import {
   notifyWorkspaceNewSupportTicket,
@@ -19,9 +23,11 @@ export type PartnerLinkedOrg = {
   clientOrgId: string;
   clientOrgName: string;
   clientOrgSlug: string;
+  clientPictureUrl: string | null;
   providerAccountId: string;
   providerAccountSlug: string;
   providerAccountName: string;
+  providerAccountLogoUrl: string | null;
 };
 
 export type PartnerTicket = {
@@ -33,7 +39,9 @@ export type PartnerTicket = {
   createdAt: string;
   clientOrgId: string;
   clientOrgName: string;
+  clientPictureUrl: string | null;
   providerAccountName: string;
+  providerAccountLogoUrl: string | null;
 };
 
 export type PartnerTicketDetail = PartnerTicket & {
@@ -104,6 +112,10 @@ export async function listPartnerLinkedOrgs(
   }
 
   const results: PartnerLinkedOrg[] = [];
+  const pictures = await loadClientPicturesByOrgIds(
+    admin,
+    (orgs ?? []).map((org) => (org as { id: string }).id),
+  );
 
   for (const org of orgs ?? []) {
     const row = org as {
@@ -115,11 +127,14 @@ export async function listPartnerLinkedOrgs(
     const providerAccountId = await resolveClientOrgAccountId(admin, row);
     if (!providerAccountId) continue;
 
-    const { data: account } = await admin
-      .from('accounts')
-      .select('slug, name')
-      .eq('id', providerAccountId)
-      .maybeSingle();
+    const [{ data: account }, businessBrand] = await Promise.all([
+      admin
+        .from('accounts')
+        .select('slug, name')
+        .eq('id', providerAccountId)
+        .maybeSingle(),
+      loadSupportBusinessBrand(providerAccountId),
+    ]);
 
     if (!account?.slug) continue;
 
@@ -127,11 +142,14 @@ export async function listPartnerLinkedOrgs(
       clientOrgId: row.id,
       clientOrgName: row.name?.trim() || row.slug,
       clientOrgSlug: row.slug,
+      clientPictureUrl: pictures.get(row.id) ?? null,
       providerAccountId,
       providerAccountSlug: account.slug as string,
       providerAccountName:
         (account as { name?: string | null }).name?.trim() ||
+        businessBrand.name ||
         (account.slug as string),
+      providerAccountLogoUrl: businessBrand.logoUrl,
     });
   }
 
@@ -172,7 +190,9 @@ export async function listPartnerTickets(
       createdAt: String(row.created_at),
       clientOrgId,
       clientOrgName: org?.clientOrgName ?? 'Client',
+      clientPictureUrl: org?.clientPictureUrl ?? null,
       providerAccountName: org?.providerAccountName ?? 'Agency',
+      providerAccountLogoUrl: org?.providerAccountLogoUrl ?? null,
     };
   });
 }
@@ -215,7 +235,9 @@ export async function getPartnerTicket(
     createdAt: (data as { created_at: string }).created_at,
     clientOrgId,
     clientOrgName: org.clientOrgName,
+    clientPictureUrl: org.clientPictureUrl,
     providerAccountName: org.providerAccountName,
+    providerAccountLogoUrl: org.providerAccountLogoUrl,
     providerAccountId: org.providerAccountId,
     providerAccountSlug: org.providerAccountSlug,
   };
@@ -407,7 +429,9 @@ export async function createPartnerTicket(input: {
     createdAt: (data as { created_at: string }).created_at,
     clientOrgId: org.clientOrgId,
     clientOrgName: org.clientOrgName,
+    clientPictureUrl: org.clientPictureUrl,
     providerAccountName: org.providerAccountName,
+    providerAccountLogoUrl: org.providerAccountLogoUrl,
     providerAccountId: org.providerAccountId,
     providerAccountSlug: org.providerAccountSlug,
   };

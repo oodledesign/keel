@@ -55,6 +55,10 @@ export default async function PortalSupportDetailPage({
       clientSlug={slug}
       accountId={ctx.accountId}
       accountSlug={ctx.accountSlug}
+      clientName={ctx.orgName}
+      clientPictureUrl={ctx.clientPictureUrl}
+      businessName={ctx.accountName}
+      businessLogoUrl={ctx.accountLogoUrl}
     />
   );
 }

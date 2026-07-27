@@ -8,6 +8,10 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  loadClientPicturesByOrgIds,
+  loadSupportBusinessBrand,
+} from '~/lib/support/support-party-branding';
 
 export type ClientPortalContext = {
   userId: string;
@@ -16,8 +20,11 @@ export type ClientPortalContext = {
   clientOrgId: string;
   accountId: string;
   accountSlug: string;
+  accountName: string;
+  accountLogoUrl: string | null;
   clientSlug: string;
   orgName: string;
+  clientPictureUrl: string | null;
   membershipRole: string | null;
 };
 
@@ -105,6 +112,11 @@ export const loadClientPortalContext = cache(
     const displayName =
       profile?.full_name?.trim() || user.email?.split('@')[0] || 'there';
 
+    const [clientPictures, businessBrand] = await Promise.all([
+      loadClientPicturesByOrgIds(client, [org.id]),
+      loadSupportBusinessBrand(accountId),
+    ]);
+
     return {
       userId: user.id,
       userEmail: user.email ?? null,
@@ -112,8 +124,11 @@ export const loadClientPortalContext = cache(
       clientOrgId: org.id,
       accountId,
       accountSlug,
+      accountName: businessBrand.name,
+      accountLogoUrl: businessBrand.logoUrl,
       clientSlug,
       orgName: org.name?.trim() || 'Client portal',
+      clientPictureUrl: clientPictures.get(org.id) ?? null,
       membershipRole: membership.role ?? null,
     };
   },

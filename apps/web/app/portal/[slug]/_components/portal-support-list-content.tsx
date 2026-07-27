@@ -10,6 +10,7 @@ import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 
 import pathsConfig from '~/config/paths.config';
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 
 import type { PortalTicketStatus } from '../_lib/schema/portal.schema';
 import type { PortalTicket } from '../_lib/server/client-portal.service';
@@ -34,9 +35,17 @@ const statusTabs: { value: StatusFilter; label: string }[] = [
 export function PortalSupportListContent({
   clientSlug,
   initialTickets,
+  clientName,
+  clientPictureUrl,
+  businessName,
+  businessLogoUrl,
 }: {
   clientSlug: string;
   initialTickets: PortalTicket[];
+  clientName?: string | null;
+  clientPictureUrl?: string | null;
+  businessName?: string | null;
+  businessLogoUrl?: string | null;
 }) {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
 
@@ -54,6 +63,22 @@ export function PortalSupportListContent({
     <div className="space-y-6">
       <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
+          {(businessName || clientName) && (
+            <SupportDualPartyIdentity
+              className="mb-3"
+              size="sm"
+              business={
+                businessName
+                  ? { name: businessName, logoUrl: businessLogoUrl }
+                  : null
+              }
+              client={
+                clientName
+                  ? { name: clientName, logoUrl: clientPictureUrl }
+                  : null
+              }
+            />
+          )}
           <h2 className="text-xl font-semibold text-[var(--ozer-text-on-light)]">
             Support
           </h2>

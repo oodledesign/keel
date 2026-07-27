@@ -1,3 +1,5 @@
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
+
 import { PortalSupportNewForm } from '../../_components/portal-support-content';
 import { loadClientPortalContext } from '../../_lib/server/client-portal.loader';
 
@@ -16,6 +18,22 @@ export default async function PortalSupportNewPage({
   return (
     <div className="space-y-6">
       <div>
+        {(ctx.accountName || ctx.orgName) && (
+          <SupportDualPartyIdentity
+            className="mb-3"
+            size="sm"
+            business={
+              ctx.accountName
+                ? { name: ctx.accountName, logoUrl: ctx.accountLogoUrl }
+                : null
+            }
+            client={
+              ctx.orgName
+                ? { name: ctx.orgName, logoUrl: ctx.clientPictureUrl }
+                : null
+            }
+          />
+        )}
         <h2 className="text-2xl font-semibold text-[var(--ozer-text-on-light)]">
           Raise a ticket
         </h2>

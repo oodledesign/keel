@@ -30,6 +30,7 @@ import {
   SupportAttachmentUploader,
 } from '~/components/support/support-attachment-uploader';
 import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -511,13 +512,32 @@ export function SupportTicketDetailContent({
 
           <SidebarSection title="About">
             <dl className="space-y-3 text-sm">
-              {ticket.clientOrgName ? (
+              {ticket.clientOrgName || ticket.businessName ? (
                 <div>
-                  <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
-                    Client
+                  <dt className="mb-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                    Parties
                   </dt>
-                  <dd className="text-[var(--workspace-shell-text)]">
-                    {ticket.clientOrgName}
+                  <dd>
+                    <SupportDualPartyIdentity
+                      layout="stack"
+                      size="sm"
+                      client={
+                        ticket.clientOrgName
+                          ? {
+                              name: ticket.clientOrgName,
+                              logoUrl: ticket.clientPictureUrl,
+                            }
+                          : null
+                      }
+                      business={
+                        ticket.businessName
+                          ? {
+                              name: ticket.businessName,
+                              logoUrl: ticket.businessLogoUrl,
+                            }
+                          : null
+                      }
+                    />
                   </dd>
                 </div>
               ) : null}
