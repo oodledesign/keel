@@ -19,7 +19,7 @@ export type WrapNotificationEmailOptions = {
 
 /**
  * Shared transactional email shell used by trial reminders, platform support,
- * and workspace client-support notifications.
+ * workspace client-support notifications, and scheduling booking emails.
  *
  * Renders the branded Ozer HTML template (plum header, cream canvas, coral CTA).
  */

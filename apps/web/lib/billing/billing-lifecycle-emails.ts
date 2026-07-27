@@ -101,6 +101,29 @@ function wrapOzerEmail(input: {
   });
 }
 
+/** Paid workspace capabilities that stop working when a trial ends / plan is cancelled. */
+export const PAID_FEATURES_LOST_WITHOUT_SUBSCRIPTION = [
+  'Clients and CRM',
+  'Projects and jobs',
+  'Invoices, proposals and contracts',
+  'Pipeline',
+  'Scheduling and bookings',
+  'Docs and finances',
+  'AI credits and assistant',
+  'Team workspace access',
+] as const;
+
+export function featuresLostWithoutSubscriptionHtml() {
+  const items = PAID_FEATURES_LOST_WITHOUT_SUBSCRIPTION.map(
+    (feature) =>
+      `<li style="margin:0 0 6px;padding:0;">${escapeHtml(feature)}</li>`,
+  ).join('');
+
+  return `<p style="margin:16px 0 8px;"><strong>If you don’t subscribe, you’ll lose access to:</strong></p>
+    <ul style="margin:0 0 16px;padding-left:20px;">${items}</ul>
+    <p style="margin:0;">Your data is kept — subscribe anytime to restore full access.</p>`;
+}
+
 export function buildBillingLifecycleEmail(input: {
   emailKind: BillingEmailKind;
   productName: string;
@@ -133,7 +156,7 @@ export function buildBillingLifecycleEmail(input: {
     case 'trial_ending_3d':
       return {
         subject: `${safeAccountName} trial ends in 3 days`,
-        preview: 'Add billing when you’re ready — your data stays put.',
+        preview: 'Add billing when you’re ready — see what you’d lose without a plan.',
         html: wrapOzerEmail({
           productName: input.productName,
           preview: 'Trial ending in three days',
@@ -141,7 +164,8 @@ export function buildBillingLifecycleEmail(input: {
           ctaLabel: 'Review plans & billing',
           ctaUrl: input.billingUrl,
           bodyHtml: `<p>Your trial for <strong>${name}</strong> ends on <strong>${ends}</strong>.</p>
-            <p>Have a look at Solo and Team pricing, then add a payment method when you’re ready. Nothing is charged until the trial finishes.</p>`,
+            <p>Have a look at Solo and Team pricing, then add a payment method when you’re ready. Nothing is charged until the trial finishes.</p>
+            ${featuresLostWithoutSubscriptionHtml()}`,
         }),
       };
 
@@ -156,7 +180,8 @@ export function buildBillingLifecycleEmail(input: {
           ctaLabel: 'Add payment method',
           ctaUrl: input.billingUrl,
           bodyHtml: `<p>Your trial for <strong>${name}</strong> ends on <strong>${ends}</strong>.</p>
-            <p>Without an active plan, paid workspace features (clients, projects, invoices, pipeline, and scheduling) will move to a limited state. Your data is kept.</p>`,
+            <p>Without an active plan, paid workspace features will lock until you subscribe.</p>
+            ${featuresLostWithoutSubscriptionHtml()}`,
         }),
       };
 
@@ -171,7 +196,8 @@ export function buildBillingLifecycleEmail(input: {
           ctaLabel: 'Restore access',
           ctaUrl: input.billingUrl,
           bodyHtml: `<p>The trial for <strong>${name}</strong> on ${product} has finished.</p>
-            <p>Add a payment method to unlock the full workspace again. Nothing has been deleted.</p>`,
+            <p>Add a payment method to unlock the full workspace again. Nothing has been deleted.</p>
+            ${featuresLostWithoutSubscriptionHtml()}`,
         }),
       };
 

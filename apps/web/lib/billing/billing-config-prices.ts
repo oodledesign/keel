@@ -189,8 +189,9 @@ export function translationLine(plan: BillingPlanPrice): string {
   }
 
   if (plan.maxTeamMembers && plan.maxTeamMembers >= 4) {
-    const perPerson = plan.monthlyPriceGbp / 4;
-    return `For a 4-person studio, that is ${formatGbp(perPerson, 2)} per person per month (flat price for the whole team, up to ${plan.maxTeamMembers} members).`;
+    const seats = plan.maxTeamMembers;
+    const perPerson = plan.monthlyPriceGbp / seats;
+    return `For a ${seats}-person studio, that is ${formatGbp(perPerson, 2)} per person per month (flat price for the whole team, up to ${seats} members).`;
   }
 
   if (plan.maxTeamMembers) {

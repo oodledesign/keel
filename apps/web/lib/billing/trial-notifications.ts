@@ -9,6 +9,8 @@ import {
 } from '~/lib/email/wrap-notification-email';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
+import { featuresLostWithoutSubscriptionHtml } from './billing-lifecycle-emails';
+
 export type BillingNotificationType =
   | 'trial_ending_3d'
   | 'trial_ending_1d'
@@ -204,13 +206,15 @@ function buildTrialEmail(input: {
     dateStyle: 'medium',
     timeStyle: 'short',
   });
+  const lostFeatures = featuresLostWithoutSubscriptionHtml();
 
   if (input.notificationType === 'trial_ended') {
     return {
       subject: `${input.accountName} trial ended — add billing to keep access`,
       html: wrapNotificationEmail(
         `<p style="margin:0 0 12px;">Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> on ${escapeNotificationHtml(input.productName)} has ended.</p>
-        <p style="margin:0;">Add a payment method to restore full access to this workspace.</p>`,
+        <p style="margin:0 0 12px;">Add a payment method to restore full access to this workspace.</p>
+        ${lostFeatures}`,
         {
           productName: input.productName,
           title: 'Your trial has ended',
@@ -228,7 +232,8 @@ function buildTrialEmail(input: {
       subject: `${input.accountName} trial ends tomorrow`,
       html: wrapNotificationEmail(
         `<p style="margin:0 0 12px;">Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
-        <p style="margin:0;">Subscribe now to avoid interruption.</p>`,
+        <p style="margin:0 0 12px;">Subscribe now to avoid interruption.</p>
+        ${lostFeatures}`,
         {
           productName: input.productName,
           title: 'Your trial ends tomorrow',
@@ -245,7 +250,8 @@ function buildTrialEmail(input: {
     subject: `${input.accountName} trial ending soon`,
     html: wrapNotificationEmail(
       `<p style="margin:0 0 12px;">Your trial for <strong>${escapeNotificationHtml(input.accountName)}</strong> ends on ${endsLabel}.</p>
-      <p style="margin:0;">You can subscribe anytime from billing — your workspace data stays put.</p>`,
+      <p style="margin:0 0 12px;">You can subscribe anytime from billing — your workspace data stays put.</p>
+      ${lostFeatures}`,
       {
         productName: input.productName,
         title: 'Your trial is ending soon',

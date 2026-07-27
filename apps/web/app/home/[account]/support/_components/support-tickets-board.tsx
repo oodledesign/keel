@@ -290,7 +290,10 @@ function TicketCard({
         >
           {formatTicketNumber(ticket.ticketNumber)}
         </Link>
-        <TicketPriorityBadge priority={ticket.priority} />
+        <div className="flex flex-wrap items-center justify-end gap-1.5">
+          <TicketStatusBadge status={ticket.status} />
+          <TicketPriorityBadge priority={ticket.priority} />
+        </div>
       </div>
       <Link
         href={detailHref}

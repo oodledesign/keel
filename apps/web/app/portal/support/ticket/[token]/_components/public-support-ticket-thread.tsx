@@ -15,6 +15,10 @@ import { Textarea } from '@kit/ui/textarea';
 import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
+import {
+  TicketStatusBadge,
+  ticketStatusLabel,
+} from '~/components/support/ticket-status-badge';
 
 import { replyPublicSupportTicketAction } from '../../../_lib/public-support.actions';
 
@@ -137,9 +141,13 @@ export function PublicSupportTicketThread({
             }
           />
         ) : null}
-        <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
-          Ticket #{ticketNumber} · {status}
-        </p>
+        <div className="flex flex-wrap items-center gap-2">
+          <p className="text-xs font-medium tracking-wide text-zinc-500 uppercase">
+            Ticket #{ticketNumber}
+          </p>
+          <TicketStatusBadge status={status || 'open'} />
+          <span className="sr-only">Stage: {ticketStatusLabel(status)}</span>
+        </div>
         <h1 className="mt-1 text-2xl font-semibold tracking-tight text-zinc-900">
           {title}
         </h1>

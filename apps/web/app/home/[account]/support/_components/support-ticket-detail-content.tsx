@@ -434,7 +434,7 @@ export function SupportTicketDetailContent({
         <aside className="space-y-4 lg:sticky lg:top-4">
           <SidebarSection title="Details">
             <div className="space-y-2">
-              <Label>Status</Label>
+              <Label>Stage</Label>
               <Select
                 value={ticket.status}
                 onValueChange={(value) =>
@@ -512,6 +512,15 @@ export function SupportTicketDetailContent({
 
           <SidebarSection title="About">
             <dl className="space-y-3 text-sm">
+              <div>
+                <dt className="mb-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Stage
+                </dt>
+                <dd>
+                  <TicketStatusBadge status={ticket.status} />
+                </dd>
+              </div>
+
               {ticket.clientOrgName || ticket.businessName ? (
                 <div>
                   <dt className="mb-2 text-xs text-[var(--workspace-shell-text-muted)]">
