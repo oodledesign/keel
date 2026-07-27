@@ -340,18 +340,56 @@ export function VideoEditorClient(props: Props) {
 
   if (!props.hasMaster) {
     return (
-      <div className={cn(workspacePanelCard, 'p-8')}>
+      <div className={cn(workspacePanelCard, 'space-y-4 p-8')}>
         <p className="text-[var(--workspace-shell-text)]">
-          This video does not have an editable master yet. Re-upload from the
-          Ozer desktop recorder (it now keeps a master), or upload a master file
-          from the library.
+          This video does not have an editable master yet. The desktop recorder
+          uploaded the published file, but not a re-editable master copy.
         </p>
-        <Link
-          href={videoHref}
-          className="mt-4 inline-flex text-sm text-[var(--ozer-accent)]"
-        >
-          Back to player
-        </Link>
+        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+          You can create one from the published Bunny video (good for cuts /
+          zooms). Click ripples need a new recording from an updated Mac app.
+        </p>
+        <div className="flex flex-wrap gap-3">
+          <Button
+            type="button"
+            onClick={() => {
+              startTransition(async () => {
+                try {
+                  toast.message('Importing master from published video…');
+                  const res = await fetch(
+                    `/api/videos/${props.videoId}/master/import-from-stream`,
+                    { method: 'POST' },
+                  );
+                  const json = await res.json();
+                  if (!json.ok) {
+                    throw new Error(json.error ?? 'Import failed');
+                  }
+                  toast.success('Master ready — reloading editor');
+                  window.location.reload();
+                } catch (err) {
+                  toast.error(getErrorMessage(err));
+                }
+              });
+            }}
+            disabled={isPending}
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+          >
+            {isPending ? (
+              <>
+                <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+                Importing…
+              </>
+            ) : (
+              'Use published video as master'
+            )}
+          </Button>
+          <Link
+            href={videoHref}
+            className="inline-flex h-9 items-center text-sm text-[var(--ozer-accent)]"
+          >
+            Back to player
+          </Link>
+        </div>
       </div>
     );
   }
