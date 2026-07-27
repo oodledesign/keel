@@ -30,6 +30,16 @@ export type VideoClickStyle = {
   fadeMs: number;
 };
 
+export type VideoAudioTrackMix = {
+  gain: number;
+  muted: boolean;
+};
+
+export type VideoAudioMix = {
+  mic: VideoAudioTrackMix;
+  system: VideoAudioTrackMix;
+};
+
 export type VideoEditTimeline = {
   version: 1;
   sourceDurationMs: number;
@@ -37,6 +47,7 @@ export type VideoEditTimeline = {
   clicks: VideoClickEvent[];
   zooms: VideoZoomKeyframe[];
   clickStyle: VideoClickStyle;
+  audio: VideoAudioMix;
 };
 
 export type VideoTranscriptWord = {
@@ -53,6 +64,11 @@ export const DEFAULT_CLICK_STYLE: VideoClickStyle = {
   fadeMs: 500,
 };
 
+export const DEFAULT_AUDIO_MIX: VideoAudioMix = {
+  mic: { gain: 1, muted: false },
+  system: { gain: 1, muted: false },
+};
+
 export function createDefaultTimeline(
   sourceDurationMs: number,
   clicks: VideoClickEvent[] = [],
@@ -65,6 +81,10 @@ export function createDefaultTimeline(
     clicks,
     zooms: [],
     clickStyle: { ...DEFAULT_CLICK_STYLE },
+    audio: {
+      mic: { ...DEFAULT_AUDIO_MIX.mic },
+      system: { ...DEFAULT_AUDIO_MIX.system },
+    },
   };
 }
 
@@ -132,7 +152,32 @@ export function normalizeTimeline(
       ...(obj.clickStyle ?? {}),
       color: obj.clickStyle?.color || DEFAULT_CLICK_STYLE.color,
     },
+    audio: normalizeAudioMix(obj.audio),
   };
+}
+
+function normalizeAudioMix(raw: unknown): VideoAudioMix {
+  const obj =
+    raw && typeof raw === 'object' ? (raw as Partial<VideoAudioMix>) : {};
+  return {
+    mic: normalizeAudioTrack(obj.mic),
+    system: normalizeAudioTrack(obj.system),
+  };
+}
+
+function normalizeAudioTrack(raw: unknown): VideoAudioTrackMix {
+  const obj =
+    raw && typeof raw === 'object' ? (raw as Partial<VideoAudioTrackMix>) : {};
+  const gain = Number(obj.gain);
+  return {
+    gain: Number.isFinite(gain) ? Math.min(2, Math.max(0, gain)) : 1,
+    muted: Boolean(obj.muted),
+  };
+}
+
+/** Effective linear gain after mute (0–2). */
+export function effectiveTrackGain(track: VideoAudioTrackMix) {
+  return track.muted ? 0 : track.gain;
 }
 
 export function clamp01(n: number) {
@@ -195,6 +240,87 @@ export function editedDurationMs(keepRanges: VideoKeepRange[]) {
 
 export function isTimeKept(keepRanges: VideoKeepRange[], sourceMs: number) {
   return keepRanges.some((r) => sourceMs >= r.startMs && sourceMs < r.endMs);
+}
+
+/** Gaps between keep ranges (deleted segments that can be restored). */
+export function deletedGaps(
+  keepRanges: VideoKeepRange[],
+  sourceDurationMs: number,
+): VideoKeepRange[] {
+  const sorted = [...keepRanges].sort((a, b) => a.startMs - b.startMs);
+  const gaps: VideoKeepRange[] = [];
+  let cursor = 0;
+  for (const range of sorted) {
+    if (range.startMs > cursor + 40) {
+      gaps.push({ startMs: cursor, endMs: range.startMs });
+    }
+    cursor = Math.max(cursor, range.endMs);
+  }
+  if (sourceDurationMs > cursor + 40) {
+    gaps.push({ startMs: cursor, endMs: sourceDurationMs });
+  }
+  return gaps;
+}
+
+/** Re-insert a deleted range into keepRanges (merge adjacent). */
+export function restoreRangeToKeep(
+  keepRanges: VideoKeepRange[],
+  fromMs: number,
+  toMs: number,
+): VideoKeepRange[] {
+  const from = Math.min(fromMs, toMs);
+  const to = Math.max(fromMs, toMs);
+  if (to - from < 40) return keepRanges;
+
+  const merged = [...keepRanges, { startMs: from, endMs: to }].sort(
+    (a, b) => a.startMs - b.startMs,
+  );
+  const next: VideoKeepRange[] = [];
+  for (const range of merged) {
+    const last = next[next.length - 1];
+    if (!last || range.startMs > last.endMs + 1) {
+      next.push({ ...range });
+    } else {
+      last.endMs = Math.max(last.endMs, range.endMs);
+    }
+  }
+  return next;
+}
+
+/** Next kept source time at or after fromMs (for playback skip). */
+export function nextKeptTime(
+  keepRanges: VideoKeepRange[],
+  fromMs: number,
+): number | null {
+  for (const r of keepRanges) {
+    if (r.endMs <= fromMs) continue;
+    if (fromMs < r.startMs) return r.startMs;
+    if (fromMs < r.endMs) return fromMs;
+  }
+  return null;
+}
+
+/**
+ * Evenly space words across duration when the desktop app only provides
+ * plain text (Apple Speech has no word timings).
+ */
+export function wordsFromPlainText(
+  plainText: string,
+  durationMs: number,
+): VideoTranscriptWord[] {
+  const tokens = plainText
+    .trim()
+    .split(/\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean);
+  if (tokens.length === 0 || durationMs <= 0) return [];
+
+  const slot = durationMs / tokens.length;
+  return tokens.map((text, i) => ({
+    text,
+    startMs: Math.round(i * slot),
+    endMs: Math.round((i + 1) * slot),
+  }));
 }
 
 /** Active zoom at a source timestamp, with interpolated scale. */

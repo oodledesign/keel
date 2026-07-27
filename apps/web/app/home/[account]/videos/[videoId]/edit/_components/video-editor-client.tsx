@@ -14,9 +14,11 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   Loader2,
+  RotateCcw,
   Scissors,
   Sparkles,
   Trash2,
+  Undo2,
   ZoomIn,
 } from 'lucide-react';
 import * as tus from 'tus-js-client';
@@ -31,15 +33,23 @@ import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import { bakeEditedVideo } from '~/lib/videos/bake-edited-video.client';
 import {
   type VideoEditTimeline,
+  type VideoKeepRange,
   type VideoTranscriptWord,
   type VideoZoomKeyframe,
+  deletedGaps,
   editedDurationMs,
+  effectiveTrackGain,
+  isTimeKept,
+  nextKeptTime,
   normalizeTimeline,
   removeRangeFromKeep,
+  restoreRangeToKeep,
   suggestZoomsFromClicks,
   zoomAtTime,
 } from '~/lib/videos/edit-timeline';
 import { workspacePanelCard } from '~/lib/workspace-ui';
+
+import { TimelineWaveform } from './timeline-waveform';
 
 type Props = {
   accountSlug: string;
@@ -77,6 +87,9 @@ export function VideoEditorClient(props: Props) {
     props.publishedRevision,
   );
   const [masterUrl, setMasterUrl] = useState<string | null>(null);
+  const [micUrl, setMicUrl] = useState<string | null>(null);
+  const [systemUrl, setSystemUrl] = useState<string | null>(null);
+  const [hasDualAudio, setHasDualAudio] = useState(false);
   const [selection, setSelection] = useState<{
     startMs: number;
     endMs: number;
@@ -88,13 +101,102 @@ export function VideoEditorClient(props: Props) {
   const [publishing, setPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState<string | null>(null);
   const [selectedZoomId, setSelectedZoomId] = useState<string | null>(null);
+  const [undoStack, setUndoStack] = useState<VideoKeepRange[][]>([]);
 
   const videoRef = useRef<HTMLVideoElement>(null);
+  const micAudioRef = useRef<HTMLAudioElement>(null);
+  const systemAudioRef = useRef<HTMLAudioElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef<{ startMs: number } | null>(null);
+  const seekingRef = useRef(false);
+  const previewAudioCtxRef = useRef<AudioContext | null>(null);
+  const micGainNodeRef = useRef<GainNode | null>(null);
+  const systemGainNodeRef = useRef<GainNode | null>(null);
+
+  useEffect(() => {
+    if (!hasDualAudio || !masterUrl) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const ctx = new AudioContext();
+    previewAudioCtxRef.current = ctx;
+    video.muted = true;
+
+    if (micUrl && micAudioRef.current) {
+      const src = ctx.createMediaElementSource(micAudioRef.current);
+      const gain = ctx.createGain();
+      gain.gain.value = effectiveTrackGain(timeline.audio.mic);
+      src.connect(gain).connect(ctx.destination);
+      micGainNodeRef.current = gain;
+    }
+    if (systemUrl && systemAudioRef.current) {
+      const src = ctx.createMediaElementSource(systemAudioRef.current);
+      const gain = ctx.createGain();
+      gain.gain.value = effectiveTrackGain(timeline.audio.system);
+      src.connect(gain).connect(ctx.destination);
+      systemGainNodeRef.current = gain;
+    }
+
+    const sync = () => {
+      const t = video.currentTime;
+      if (micAudioRef.current && Math.abs(micAudioRef.current.currentTime - t) > 0.15) {
+        micAudioRef.current.currentTime = t;
+      }
+      if (
+        systemAudioRef.current &&
+        Math.abs(systemAudioRef.current.currentTime - t) > 0.15
+      ) {
+        systemAudioRef.current.currentTime = t;
+      }
+    };
+    const onPlay = () => {
+      void ctx.resume();
+      void micAudioRef.current?.play().catch(() => undefined);
+      void systemAudioRef.current?.play().catch(() => undefined);
+    };
+    const onPause = () => {
+      micAudioRef.current?.pause();
+      systemAudioRef.current?.pause();
+    };
+    video.addEventListener('timeupdate', sync);
+    video.addEventListener('play', onPlay);
+    video.addEventListener('pause', onPause);
+    return () => {
+      video.removeEventListener('timeupdate', sync);
+      video.removeEventListener('play', onPlay);
+      video.removeEventListener('pause', onPause);
+      video.muted = false;
+      void ctx.close().catch(() => undefined);
+      previewAudioCtxRef.current = null;
+      micGainNodeRef.current = null;
+      systemGainNodeRef.current = null;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- reconnect when URLs change
+  }, [hasDualAudio, masterUrl, micUrl, systemUrl]);
+
+  useEffect(() => {
+    if (micGainNodeRef.current) {
+      micGainNodeRef.current.gain.value = effectiveTrackGain(timeline.audio.mic);
+    }
+    if (systemGainNodeRef.current) {
+      systemGainNodeRef.current.gain.value = effectiveTrackGain(
+        timeline.audio.system,
+      );
+    } else if (videoRef.current && !hasDualAudio) {
+      videoRef.current.volume = Math.min(
+        1,
+        effectiveTrackGain(timeline.audio.mic),
+      );
+      videoRef.current.muted = timeline.audio.mic.muted;
+    }
+  }, [timeline.audio, hasDualAudio]);
 
   const dirty = revision !== publishedRevision;
   const editedLen = editedDurationMs(timeline.keepRanges);
+  const gaps = useMemo(
+    () => deletedGaps(timeline.keepRanges, timeline.sourceDurationMs),
+    [timeline.keepRanges, timeline.sourceDurationMs],
+  );
 
   useEffect(() => {
     if (!props.hasMaster) return;
@@ -102,6 +204,9 @@ export function VideoEditorClient(props: Props) {
       .then((r) => r.json())
       .then((j) => {
         if (j.ok && j.url) setMasterUrl(j.url as string);
+        setMicUrl((j.micUrl as string | null) ?? null);
+        setSystemUrl((j.systemUrl as string | null) ?? null);
+        setHasDualAudio(Boolean(j.micUrl || j.systemUrl));
       })
       .catch(() => toast.error('Could not load master preview'));
   }, [props.hasMaster, props.videoId]);
@@ -138,13 +243,87 @@ export function VideoEditorClient(props: Props) {
       toast.error('Cannot delete the entire video');
       return;
     }
+    setUndoStack((stack) => [...stack.slice(-19), timeline.keepRanges]);
     setSelection(null);
     saveTimeline({ ...timeline, keepRanges });
-    toast.success('Removed selection');
+    toast.success('Removed selection — click a grey gap to restore');
   }, [selection, timeline, saveTimeline]);
+
+  const restoreGap = useCallback(
+    (gap: VideoKeepRange) => {
+      setUndoStack((stack) => [...stack.slice(-19), timeline.keepRanges]);
+      const keepRanges = restoreRangeToKeep(
+        timeline.keepRanges,
+        gap.startMs,
+        gap.endMs,
+      );
+      saveTimeline({ ...timeline, keepRanges });
+      toast.success('Restored deleted segment');
+    },
+    [timeline, saveTimeline],
+  );
+
+  const undoKeepRanges = useCallback(() => {
+    const previous = undoStack[undoStack.length - 1];
+    if (!previous) return;
+    setUndoStack((stack) => stack.slice(0, -1));
+    saveTimeline({ ...timeline, keepRanges: previous });
+    toast.success('Undid cut');
+  }, [undoStack, timeline, saveTimeline]);
+
+  const skipDeletedDuringPlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (!video || seekingRef.current) return;
+    const ms = video.currentTime * 1000;
+    setPlayheadMs(ms);
+    if (video.paused) return;
+    if (isTimeKept(timeline.keepRanges, ms)) return;
+
+    const next = nextKeptTime(timeline.keepRanges, ms + 1);
+    if (next == null) {
+      video.pause();
+      return;
+    }
+    seekingRef.current = true;
+    video.currentTime = next / 1000;
+  }, [timeline.keepRanges]);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    const onSeeked = () => {
+      seekingRef.current = false;
+      setPlayheadMs(video.currentTime * 1000);
+    };
+    const onPlay = () => {
+      const ms = video.currentTime * 1000;
+      if (isTimeKept(timeline.keepRanges, ms)) return;
+      const next = nextKeptTime(timeline.keepRanges, ms);
+      if (next == null) {
+        video.pause();
+        return;
+      }
+      seekingRef.current = true;
+      video.currentTime = next / 1000;
+    };
+    video.addEventListener('seeked', onSeeked);
+    video.addEventListener('play', onPlay);
+    return () => {
+      video.removeEventListener('seeked', onSeeked);
+      video.removeEventListener('play', onPlay);
+    };
+  }, [timeline.keepRanges, masterUrl]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
+        const tag = (e.target as HTMLElement)?.tagName;
+        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (undoStack.length === 0) return;
+        e.preventDefault();
+        undoKeepRanges();
+        return;
+      }
       if (e.key !== 'Backspace' && e.key !== 'Delete') return;
       const tag = (e.target as HTMLElement)?.tagName;
       if (tag === 'INPUT' || tag === 'TEXTAREA') return;
@@ -154,7 +333,7 @@ export function VideoEditorClient(props: Props) {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selection, deleteSelection]);
+  }, [selection, deleteSelection, undoStack, undoKeepRanges]);
 
   const activeZoom = useMemo(
     () => zoomAtTime(timeline.zooms, playheadMs),
@@ -245,6 +424,7 @@ export function VideoEditorClient(props: Props) {
       toast.error('Cannot delete the entire video');
       return;
     }
+    setUndoStack((stack) => [...stack.slice(-19), timeline.keepRanges]);
     setSelectedWordIndexes([]);
     saveTimeline({ ...timeline, keepRanges });
     toast.success('Removed transcript selection from video');
@@ -256,74 +436,75 @@ export function VideoEditorClient(props: Props) {
       return;
     }
     setPublishing(true);
-    setPublishProgress('Saving timeline…');
+    setPublishProgress('Publishing…');
     try {
-      // Persist latest timeline first
-      const saveRes = await fetch(`/api/videos/${props.videoId}/edit`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ timeline }),
-      });
-      const saveJson = await saveRes.json();
-      if (!saveJson.ok) throw new Error('Could not save timeline');
-      const latest = normalizeTimeline(saveJson.timeline);
-      setRevision(saveJson.revision);
-      setTimeline(latest);
-
-      setPublishProgress('Starting publish…');
-      const startRes = await fetch(
-        `/api/videos/${props.videoId}/edit/republish`,
-        { method: 'POST' },
-      );
-      const startJson = await startRes.json();
-      if (!startJson.ok) throw new Error(startJson.error ?? 'Publish failed');
-
-      setPublishProgress('Rendering edit…');
-      const blob = await bakeEditedVideo({
-        masterUrl,
-        timeline: latest,
-        onProgress: (p) =>
-          setPublishProgress(
-            `${p.message ?? 'Rendering'} (${Math.round(p.progress * 100)}%)`,
-          ),
-      });
-
-      setPublishProgress('Uploading…');
-      const file = new File([blob], 'edited.webm', { type: blob.type });
-      await uploadBlobToBunny(file, {
-        bunnyVideoId: startJson.bunnyVideoId,
-        libraryId: startJson.libraryId,
-        signature: startJson.signature,
-        expiry: startJson.expiry,
-        tusEndpoint: startJson.tusEndpoint,
-        title: props.videoTitle,
-      });
-
-      setPublishProgress('Finalizing…');
-      const completeRes = await fetch(
-        `/api/videos/${props.videoId}/edit/republish/complete`,
+      const publishRes = await fetch(
+        `/api/videos/${props.videoId}/edit/publish`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jobId: startJson.jobId,
-            bunnyVideoId: startJson.bunnyVideoId,
-            durationSeconds: Math.round(
-              editedDurationMs(latest.keepRanges) / 1000,
-            ),
-          }),
+          body: JSON.stringify({ timeline }),
         },
       );
-      const completeJson = await completeRes.json();
-      if (!completeJson.ok) {
-        throw new Error(completeJson.error ?? 'Finalize failed');
+      const publishJson = await publishRes.json();
+      if (!publishJson.ok) {
+        throw new Error(publishJson.error ?? 'Publish failed');
       }
+      const latest = normalizeTimeline(publishJson.timeline);
+      setRevision(publishJson.revision);
+      setPublishedRevision(publishJson.publishedRevision);
+      setTimeline(latest);
+      toast.success('Live on public link — optimizing embed in background…');
+      setPublishing(false);
+      setPublishProgress(null);
 
-      setPublishedRevision(completeJson.publishedRevision);
-      toast.success('Published edit — public link unchanged');
+      // Background Bunny bake for embeds / CDN (does not block the watch URL).
+      void (async () => {
+        try {
+          const startRes = await fetch(
+            `/api/videos/${props.videoId}/edit/republish`,
+            { method: 'POST' },
+          );
+          const startJson = await startRes.json();
+          if (!startJson.ok) return;
+
+          const blob = await bakeEditedVideo({
+            masterUrl,
+            micUrl,
+            systemUrl,
+            timeline: latest,
+          });
+
+          const file = new File([blob], 'edited.webm', { type: blob.type });
+          await uploadBlobToBunny(file, {
+            bunnyVideoId: startJson.bunnyVideoId,
+            libraryId: startJson.libraryId,
+            signature: startJson.signature,
+            expiry: startJson.expiry,
+            tusEndpoint: startJson.tusEndpoint,
+            title: props.videoTitle,
+          });
+
+          await fetch(`/api/videos/${props.videoId}/edit/republish/complete`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              jobId: startJson.jobId,
+              bunnyVideoId: startJson.bunnyVideoId,
+              durationSeconds: Math.round(
+                editedDurationMs(latest.keepRanges) / 1000,
+              ),
+            }),
+          });
+          toast.message('Embed optimized');
+        } catch {
+          toast.message(
+            'Public link is live; embed optimization can retry later',
+          );
+        }
+      })();
     } catch (err) {
       toast.error(getErrorMessage(err));
-    } finally {
       setPublishing(false);
       setPublishProgress(null);
     }
@@ -437,7 +618,7 @@ export function VideoEditorClient(props: Props) {
                 {publishProgress ?? 'Publishing…'}
               </>
             ) : (
-              'Update published video'
+              'Publish to link'
             )}
           </Button>
         </div>
@@ -463,15 +644,31 @@ export function VideoEditorClient(props: Props) {
                     : undefined
                 }
                 controls
-                onTimeUpdate={(e) =>
-                  setPlayheadMs(e.currentTarget.currentTime * 1000)
-                }
+                onTimeUpdate={skipDeletedDuringPlayback}
               />
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-[var(--workspace-shell-text-muted)]">
                 Loading master…
               </div>
             )}
+            {micUrl ? (
+              <audio
+                ref={micAudioRef}
+                src={micUrl}
+                preload="auto"
+                crossOrigin="anonymous"
+                className="hidden"
+              />
+            ) : null}
+            {systemUrl ? (
+              <audio
+                ref={systemAudioRef}
+                src={systemUrl}
+                preload="auto"
+                crossOrigin="anonymous"
+                className="hidden"
+              />
+            ) : null}
             {activeClicks.map((c) => {
               const age = playheadMs - c.tMs;
               const t = age / timeline.clickStyle.fadeMs;
@@ -502,22 +699,47 @@ export function VideoEditorClient(props: Props) {
               <span>
                 {selection
                   ? `Selection ${formatMs(Math.abs(selection.endMs - selection.startMs))} — Backspace to delete`
-                  : 'Drag on the timeline to select a range'}
+                  : gaps.length
+                    ? 'Drag to select · click a grey gap to restore'
+                    : 'Drag on the timeline to select a range'}
               </span>
             </div>
 
             <div
-              className="relative h-14 cursor-crosshair rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
+              className="relative h-20 cursor-crosshair overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
               onPointerDown={onTimelinePointerDown}
               onPointerMove={onTimelinePointerMove}
               onPointerUp={onTimelinePointerUp}
               onPointerLeave={onTimelinePointerUp}
             >
+              <TimelineWaveform
+                masterUrl={masterUrl}
+                sourceDurationMs={timeline.sourceDurationMs}
+                keepRanges={timeline.keepRanges}
+              />
+              {/* Deleted gaps (restorable) */}
+              {gaps.map((g) => (
+                <button
+                  key={`gap-${g.startMs}-${g.endMs}`}
+                  type="button"
+                  title={`Restore ${formatMs(g.endMs - g.startMs)}`}
+                  className="absolute top-1 bottom-1 z-[1] rounded-md bg-[color:var(--workspace-shell-text-muted)]/20 hover:bg-[color:var(--workspace-shell-text-muted)]/35"
+                  style={{
+                    left: `${(g.startMs / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
+                    width: `${((g.endMs - g.startMs) / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
+                  }}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    restoreGap(g);
+                  }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                />
+              ))}
               {/* Kept segments */}
               {timeline.keepRanges.map((r) => (
                 <div
                   key={`${r.startMs}-${r.endMs}`}
-                  className="absolute top-1 bottom-1 rounded-md bg-[var(--ozer-accent)]/25"
+                  className="pointer-events-none absolute top-1 bottom-1 z-[1] rounded-md bg-[var(--ozer-accent)]/15"
                   style={{
                     left: `${(r.startMs / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
                     width: `${((r.endMs - r.startMs) / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
@@ -528,7 +750,7 @@ export function VideoEditorClient(props: Props) {
               {timeline.clicks.map((c) => (
                 <div
                   key={`c-${c.tMs}-${c.x}`}
-                  className="absolute top-0 h-full w-px bg-[color:#F5C518]/70"
+                  className="absolute top-0 z-[2] h-full w-px bg-[color:#F5C518]/70"
                   style={{
                     left: `${(c.tMs / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
                   }}
@@ -540,7 +762,7 @@ export function VideoEditorClient(props: Props) {
                   key={z.id}
                   type="button"
                   className={cn(
-                    'absolute top-0 h-2 rounded-b',
+                    'absolute top-0 z-[2] h-2 rounded-b',
                     selectedZoomId === z.id
                       ? 'bg-[var(--ozer-info)]'
                       : 'bg-[var(--ozer-info)]/50',
@@ -558,7 +780,7 @@ export function VideoEditorClient(props: Props) {
               ))}
               {selection ? (
                 <div
-                  className="absolute top-0 bottom-0 bg-rose-500/30"
+                  className="absolute top-0 bottom-0 z-[2] bg-rose-500/30"
                   style={{
                     left: `${(Math.min(selection.startMs, selection.endMs) / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
                     width: `${(Math.abs(selection.endMs - selection.startMs) / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
@@ -566,7 +788,7 @@ export function VideoEditorClient(props: Props) {
                 />
               ) : null}
               <div
-                className="absolute top-0 bottom-0 w-0.5 bg-[var(--workspace-shell-text)]"
+                className="absolute top-0 bottom-0 z-[3] w-0.5 bg-[var(--workspace-shell-text)]"
                 style={{
                   left: `${(playheadMs / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
                 }}
@@ -584,6 +806,42 @@ export function VideoEditorClient(props: Props) {
                 <Trash2 className="mr-1.5 h-4 w-4" />
                 Delete selection
               </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={undoKeepRanges}
+                disabled={undoStack.length === 0}
+              >
+                <Undo2 className="mr-1.5 h-4 w-4" />
+                Undo cut
+              </Button>
+              {gaps.length > 0 ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    setUndoStack((stack) => [
+                      ...stack.slice(-19),
+                      timeline.keepRanges,
+                    ]);
+                    saveTimeline({
+                      ...timeline,
+                      keepRanges: [
+                        {
+                          startMs: 0,
+                          endMs: timeline.sourceDurationMs,
+                        },
+                      ],
+                    });
+                    toast.success('Restored full timeline');
+                  }}
+                >
+                  <RotateCcw className="mr-1.5 h-4 w-4" />
+                  Restore all
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 variant="outline"
@@ -634,6 +892,124 @@ export function VideoEditorClient(props: Props) {
         </div>
 
         <div className="flex flex-col gap-4">
+          <div className={cn(workspacePanelCard, 'p-4')}>
+            <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Audio mix
+            </h3>
+            {hasDualAudio ? (
+              <div className="mt-3 space-y-4 text-sm">
+                {(
+                  [
+                    ['mic', 'Microphone', micUrl] as const,
+                    ['system', 'System sound', systemUrl] as const,
+                  ] as const
+                ).map(([key, label, url]) => {
+                  const track = timeline.audio[key];
+                  const available = Boolean(url);
+                  return (
+                    <div key={key} className="space-y-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                          {label}
+                          {!available ? ' (not recorded)' : ''}
+                        </span>
+                        <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                          Mute
+                          <Switch
+                            checked={track.muted || !available}
+                            disabled={!available}
+                            onCheckedChange={(muted) =>
+                              saveTimeline({
+                                ...timeline,
+                                audio: {
+                                  ...timeline.audio,
+                                  [key]: { ...track, muted },
+                                },
+                              })
+                            }
+                          />
+                        </label>
+                      </div>
+                      <input
+                        type="range"
+                        min={0}
+                        max={2}
+                        step={0.05}
+                        disabled={!available || track.muted}
+                        value={track.gain}
+                        className="w-full"
+                        onChange={(e) =>
+                          saveTimeline({
+                            ...timeline,
+                            audio: {
+                              ...timeline.audio,
+                              [key]: {
+                                ...track,
+                                gain: Number(e.target.value),
+                              },
+                            },
+                          })
+                        }
+                      />
+                    </div>
+                  );
+                })}
+                <p className="text-[10px] text-[var(--workspace-shell-text-muted)]">
+                  Levels apply on the public link immediately after publish. The
+                  embed bake mixes them into one track.
+                </p>
+              </div>
+            ) : (
+              <div className="mt-3 space-y-2 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    Master volume
+                  </span>
+                  <label className="flex items-center gap-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                    Mute
+                    <Switch
+                      checked={timeline.audio.mic.muted}
+                      onCheckedChange={(muted) =>
+                        saveTimeline({
+                          ...timeline,
+                          audio: {
+                            ...timeline.audio,
+                            mic: { ...timeline.audio.mic, muted },
+                          },
+                        })
+                      }
+                    />
+                  </label>
+                </div>
+                <p className="text-[10px] text-[var(--workspace-shell-text-muted)]">
+                  Dual mic/system levels need a new recording from the updated
+                  Mac app.
+                </p>
+                <input
+                  type="range"
+                  min={0}
+                  max={2}
+                  step={0.05}
+                  disabled={timeline.audio.mic.muted}
+                  value={timeline.audio.mic.gain}
+                  className="w-full"
+                  onChange={(e) =>
+                    saveTimeline({
+                      ...timeline,
+                      audio: {
+                        ...timeline.audio,
+                        mic: {
+                          ...timeline.audio.mic,
+                          gain: Number(e.target.value),
+                        },
+                      },
+                    })
+                  }
+                />
+              </div>
+            )}
+          </div>
+
           <div className={cn(workspacePanelCard, 'p-4')}>
             <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
               Zoom
@@ -734,7 +1110,7 @@ export function VideoEditorClient(props: Props) {
                 disabled={isPending}
               >
                 <Scissors className="mr-1.5 h-4 w-4" />
-                {transcript ? 'Re-run' : 'Generate'}
+                {transcript ? 'Re-time with Whisper' : 'Generate'}
               </Button>
             </div>
             {transcript?.words?.length ? (
@@ -789,8 +1165,8 @@ export function VideoEditorClient(props: Props) {
               </>
             ) : (
               <p className="mt-3 text-xs text-[var(--workspace-shell-text-muted)]">
-                Generate a word-timed transcript, then highlight text and remove
-                those moments from the video.
+                Desktop transcripts upload with the recording. Or generate a
+                word-timed Whisper transcript here, then highlight text to cut.
               </p>
             )}
           </div>

@@ -45,6 +45,12 @@ const TimelineSchema = z.object({
       fadeMs: z.number(),
     })
     .optional(),
+  audio: z
+    .object({
+      mic: z.object({ gain: z.number(), muted: z.boolean() }),
+      system: z.object({ gain: z.number(), muted: z.boolean() }),
+    })
+    .optional(),
 });
 
 export async function GET(_request: Request, context: RouteContext) {

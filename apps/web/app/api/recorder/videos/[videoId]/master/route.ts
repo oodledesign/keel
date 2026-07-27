@@ -9,8 +9,11 @@ import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
 import {
   clicksStoragePath,
   masterStoragePath,
+  micAudioStoragePath,
+  systemAudioStoragePath,
   upsertVideoMaster,
   ensureEditProject,
+  upsertDesktopTranscript,
   VIDEO_MASTERS_BUCKET,
 } from '~/lib/videos/server/video-edit.service';
 import type { VideoClickEvent } from '~/lib/videos/edit-timeline';
@@ -38,6 +41,11 @@ const BodySchema = z.object({
       }),
     )
     .optional(),
+  /** Plain transcript from desktop Apple Speech (no word timings). */
+  transcriptPlainText: z.string().optional(),
+  /** Request signed upload URLs for separate mic / system AAC sidecars. */
+  includeMicAudio: z.boolean().optional(),
+  includeSystemAudio: z.boolean().optional(),
 });
 
 export async function POST(request: Request, context: RouteContext) {
@@ -86,6 +94,12 @@ export async function POST(request: Request, context: RouteContext) {
 
   const accountId = video.account_id as string;
   const path = masterStoragePath(accountId, videoId);
+  const micPath = parsed.data.includeMicAudio
+    ? micAudioStoragePath(accountId, videoId)
+    : null;
+  const systemPath = parsed.data.includeSystemAudio
+    ? systemAudioStoragePath(accountId, videoId)
+    : null;
 
   // Signed upload URL for the Mac app (or browser) to PUT the master.
   const { data: signed, error: signError } = await admin.storage
@@ -97,6 +111,33 @@ export async function POST(request: Request, context: RouteContext) {
       { error: signError?.message ?? 'Could not create upload URL' },
       { status: 500 },
     );
+  }
+
+  let micSignedUrl: string | null = null;
+  let systemSignedUrl: string | null = null;
+  if (micPath) {
+    const { data: micSigned, error: micErr } = await admin.storage
+      .from(VIDEO_MASTERS_BUCKET)
+      .createSignedUploadUrl(micPath);
+    if (micErr || !micSigned) {
+      return NextResponse.json(
+        { error: micErr?.message ?? 'Could not create mic upload URL' },
+        { status: 500 },
+      );
+    }
+    micSignedUrl = micSigned.signedUrl;
+  }
+  if (systemPath) {
+    const { data: sysSigned, error: sysErr } = await admin.storage
+      .from(VIDEO_MASTERS_BUCKET)
+      .createSignedUploadUrl(systemPath);
+    if (sysErr || !sysSigned) {
+      return NextResponse.json(
+        { error: sysErr?.message ?? 'Could not create system upload URL' },
+        { status: 500 },
+      );
+    }
+    systemSignedUrl = sysSigned.signedUrl;
   }
 
   const durationMs =
@@ -116,6 +157,8 @@ export async function POST(request: Request, context: RouteContext) {
     height: parsed.data.height ?? null,
     durationMs,
     sha256: parsed.data.sha256 ?? null,
+    micStoragePath: micPath,
+    systemStoragePath: systemPath,
   });
 
   const clicks = (parsed.data.clicks ?? []) as VideoClickEvent[];
@@ -138,11 +181,26 @@ export async function POST(request: Request, context: RouteContext) {
     userId: auth.user_id,
   });
 
+  const transcriptPlainText = parsed.data.transcriptPlainText?.trim();
+  if (transcriptPlainText) {
+    await upsertDesktopTranscript({
+      client: admin,
+      videoId,
+      accountId,
+      plainText: transcriptPlainText,
+      durationMs: durationMs ?? 0,
+    });
+  }
+
   return NextResponse.json({
     ok: true,
     path,
     signedUrl: signed.signedUrl,
     token: signed.token,
     bucket: VIDEO_MASTERS_BUCKET,
+    micPath,
+    micSignedUrl,
+    systemPath,
+    systemSignedUrl,
   });
 }

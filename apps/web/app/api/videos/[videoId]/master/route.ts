@@ -48,15 +48,38 @@ export async function GET(_request: Request, context: RouteContext) {
   }
 
   const url = await createSignedMasterUrl(String(master.storage_path));
+  let micUrl: string | null = null;
+  let systemUrl: string | null = null;
+  if (master.mic_storage_path) {
+    try {
+      micUrl = await createSignedMasterUrl(String(master.mic_storage_path));
+    } catch {
+      micUrl = null;
+    }
+  }
+  if (master.system_storage_path) {
+    try {
+      systemUrl = await createSignedMasterUrl(
+        String(master.system_storage_path),
+      );
+    } catch {
+      systemUrl = null;
+    }
+  }
+
   return NextResponse.json({
     ok: true,
     url,
+    micUrl,
+    systemUrl,
     master: {
       durationMs: master.duration_ms,
       width: master.width,
       height: master.height,
       byteSize: master.byte_size,
       contentType: master.content_type,
+      hasMicAudio: Boolean(master.mic_storage_path),
+      hasSystemAudio: Boolean(master.system_storage_path),
     },
   });
 }

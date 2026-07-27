@@ -14,6 +14,8 @@ import type { VideoPlayerConfigValues } from '../player-config-types';
 export type PublicVideoPageData = {
   video: VideoRow;
   config: VideoPlayerConfigValues;
+  /** Prefer player-composed master + published timeline (instant edits). */
+  useTimelinePlayer: boolean;
 };
 
 export async function loadPublicVideoByToken(
@@ -51,6 +53,12 @@ export async function loadPublicVideoByToken(
     cdnHostname,
   );
 
+  const useTimelinePlayer = Boolean(
+    video.has_master &&
+      video.published_timeline &&
+      Number(video.published_revision ?? 0) > 0,
+  );
+
   return {
     video: {
       ...video,
@@ -58,5 +66,6 @@ export async function loadPublicVideoByToken(
       thumbnail_candidates,
     },
     config: resolved.config,
+    useTimelinePlayer,
   };
 }

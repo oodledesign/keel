@@ -81,7 +81,7 @@ export async function POST(request: Request, context: RouteContext) {
     .update({
       bunny_video_id: parsed.data.bunnyVideoId,
       status: 'processing',
-      published_revision: editRevision,
+      baked_revision: editRevision,
       duration_seconds: parsed.data.durationSeconds ?? video.duration_seconds,
       thumbnail_url: null,
       updated_at: new Date().toISOString(),
@@ -122,7 +122,8 @@ export async function POST(request: Request, context: RouteContext) {
   return NextResponse.json({
     ok: true,
     bunnyVideoId: parsed.data.bunnyVideoId,
-    publishedRevision: editRevision,
+    bakedRevision: editRevision,
+    publishedRevision: Number(video.published_revision ?? 0),
     cdnHostname: getBunnyCdnHostname(),
   });
 }

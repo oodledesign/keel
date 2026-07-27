@@ -3,6 +3,8 @@ import { notFound } from 'next/navigation';
 import { aspectRatioCss, buildEmbedUrl } from '~/lib/videos/embed';
 import { loadPublicVideoByToken } from '~/lib/videos/server/public-video.loader';
 
+import { PublicTimelineWatchPlayer } from './_components/public-timeline-watch-player';
+
 type PublicWatchPageProps = {
   params: Promise<{ token: string }>;
 };
@@ -48,7 +50,7 @@ export default async function PublicWatchPage({
     notFound();
   }
 
-  const { video, config } = data;
+  const { video, config, useTimelinePlayer } = data;
   const embedUrl = buildEmbedUrl(
     video.bunny_library_id,
     video.bunny_video_id,
@@ -78,7 +80,9 @@ export default async function PublicWatchPage({
           className="mx-auto w-full overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black shadow-2xl"
           style={{ maxWidth: config.max_width_px ?? undefined }}
         >
-          {isReady ? (
+          {useTimelinePlayer ? (
+            <PublicTimelineWatchPlayer token={token} aspectRatio={ratio} />
+          ) : isReady ? (
             <div className="relative w-full" style={{ aspectRatio: ratio }}>
               <iframe
                 src={embedUrl}

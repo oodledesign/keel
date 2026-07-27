@@ -21,6 +21,8 @@ export type VideoRow = {
   has_master?: boolean;
   edit_revision?: number;
   published_revision?: number;
+  baked_revision?: number;
+  published_timeline?: unknown | null;
   created_at: string;
   updated_at: string;
   /** Populated server-side for library UI; not stored in the database. */

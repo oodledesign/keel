@@ -1,12 +1,15 @@
 /**
  * Client-side bake: play the master through keep-ranges on a canvas with
  * zoom + click ripples, capture via MediaRecorder, return a Blob for TUS upload.
+ * Mixes mic/system sidecars with timeline gains into a single audio track.
  */
 import {
   type VideoClickEvent,
   type VideoEditTimeline,
   editedDurationMs,
+  effectiveTrackGain,
   isTimeKept,
+  nextKeptTime,
   zoomAtTime,
 } from '~/lib/videos/edit-timeline';
 
@@ -15,18 +18,6 @@ export type BakeProgress = {
   progress: number;
   message?: string;
 };
-
-function nextKeptTime(
-  timeline: VideoEditTimeline,
-  fromMs: number,
-): number | null {
-  for (const r of timeline.keepRanges) {
-    if (r.endMs <= fromMs) continue;
-    if (fromMs < r.startMs) return r.startMs;
-    if (fromMs < r.endMs) return fromMs;
-  }
-  return null;
-}
 
 function drawClickRipples(
   ctx: CanvasRenderingContext2D,
@@ -77,9 +68,28 @@ function hexToRgba(hex: string, alpha: number) {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+function createSilentAudioEl(url: string) {
+  const el = document.createElement('audio');
+  el.crossOrigin = 'anonymous';
+  el.preload = 'auto';
+  el.src = url;
+  return el;
+}
+
+async function waitLoaded(el: HTMLMediaElement, signal?: AbortSignal) {
+  if (el.readyState >= 2) return;
+  await new Promise<void>((resolve, reject) => {
+    el.onloadeddata = () => resolve();
+    el.onerror = () => reject(new Error('Could not load media'));
+    signal?.addEventListener('abort', () => reject(new Error('Aborted')));
+  });
+}
+
 export async function bakeEditedVideo(input: {
   masterUrl: string;
   timeline: VideoEditTimeline;
+  micUrl?: string | null;
+  systemUrl?: string | null;
   onProgress?: (p: BakeProgress) => void;
   signal?: AbortSignal;
 }): Promise<Blob> {
@@ -96,11 +106,14 @@ export async function bakeEditedVideo(input: {
   video.muted = false;
   video.src = masterUrl;
 
-  await new Promise<void>((resolve, reject) => {
-    video.onloadeddata = () => resolve();
-    video.onerror = () => reject(new Error('Could not load master video'));
-    signal?.addEventListener('abort', () => reject(new Error('Aborted')));
-  });
+  await waitLoaded(video, signal);
+
+  const micEl = input.micUrl ? createSilentAudioEl(input.micUrl) : null;
+  const systemEl = input.systemUrl
+    ? createSilentAudioEl(input.systemUrl)
+    : null;
+  if (micEl) await waitLoaded(micEl, signal);
+  if (systemEl) await waitLoaded(systemEl, signal);
 
   const width = video.videoWidth || 1280;
   const height = video.videoHeight || 720;
@@ -112,10 +125,30 @@ export async function bakeEditedVideo(input: {
 
   const stream = canvas.captureStream(30);
   const audioCtx = new AudioContext();
-  const source = audioCtx.createMediaElementSource(video);
   const dest = audioCtx.createMediaStreamDestination();
-  source.connect(dest);
-  // Do not connect to audioCtx.destination — avoids loud preview during bake.
+
+  if (micEl || systemEl) {
+    video.muted = true;
+    if (micEl) {
+      const src = audioCtx.createMediaElementSource(micEl);
+      const gain = audioCtx.createGain();
+      gain.gain.value = effectiveTrackGain(timeline.audio.mic);
+      src.connect(gain).connect(dest);
+    }
+    if (systemEl) {
+      const src = audioCtx.createMediaElementSource(systemEl);
+      const gain = audioCtx.createGain();
+      gain.gain.value = effectiveTrackGain(timeline.audio.system);
+      src.connect(gain).connect(dest);
+    }
+  } else {
+    const source = audioCtx.createMediaElementSource(video);
+    const gain = audioCtx.createGain();
+    // Legacy single-track masters: use mic gain as the master level.
+    gain.gain.value = effectiveTrackGain(timeline.audio.mic);
+    source.connect(gain).connect(dest);
+  }
+
   for (const track of dest.stream.getAudioTracks()) {
     stream.addTrack(track);
   }
@@ -140,15 +173,25 @@ export async function bakeEditedVideo(input: {
 
   recorder.start(250);
 
-  const startKept = nextKeptTime(timeline, 0);
+  const startKept = nextKeptTime(timeline.keepRanges, 0);
   if (startKept == null) {
     recorder.stop();
     throw new Error('Nothing left to publish — all ranges were deleted.');
   }
 
-  video.currentTime = startKept / 1000;
-  await waitSeek(video);
+  const seekAll = async (ms: number) => {
+    video.currentTime = ms / 1000;
+    if (micEl) micEl.currentTime = ms / 1000;
+    if (systemEl) systemEl.currentTime = ms / 1000;
+    await waitSeek(video);
+    if (micEl) await waitSeek(micEl);
+    if (systemEl) await waitSeek(systemEl);
+  };
+
+  await seekAll(startKept);
   await video.play();
+  await micEl?.play().catch(() => undefined);
+  await systemEl?.play().catch(() => undefined);
 
   await new Promise<void>((resolve, reject) => {
     const onAbort = () => {
@@ -162,15 +205,16 @@ export async function bakeEditedVideo(input: {
       const sourceMs = video.currentTime * 1000;
 
       if (!isTimeKept(timeline.keepRanges, sourceMs)) {
-        const next = nextKeptTime(timeline, sourceMs + 1);
+        const next = nextKeptTime(timeline.keepRanges, sourceMs + 1);
         if (next == null) {
           cleanup();
           resolve();
           return;
         }
-        video.currentTime = next / 1000;
-        waitSeek(video).then(() => {
+        void seekAll(next).then(() => {
           void video.play();
+          void micEl?.play().catch(() => undefined);
+          void systemEl?.play().catch(() => undefined);
           raf = requestAnimationFrame(tick);
         });
         return;
@@ -218,7 +262,7 @@ export async function bakeEditedVideo(input: {
       });
 
       if (video.ended || sourceMs >= timeline.sourceDurationMs - 30) {
-        const next = nextKeptTime(timeline, sourceMs + 1);
+        const next = nextKeptTime(timeline.keepRanges, sourceMs + 1);
         if (next == null) {
           cleanup();
           resolve();
@@ -233,6 +277,8 @@ export async function bakeEditedVideo(input: {
       cancelAnimationFrame(raf);
       signal?.removeEventListener('abort', onAbort);
       video.pause();
+      micEl?.pause();
+      systemEl?.pause();
       try {
         recorder.stop();
       } catch {
@@ -265,12 +311,15 @@ export async function bakeEditedVideo(input: {
   return new Blob(chunks, { type: mime });
 }
 
-function waitSeek(video: HTMLVideoElement) {
+function waitSeek(media: HTMLMediaElement) {
   return new Promise<void>((resolve) => {
+    if (Math.abs(media.currentTime - media.currentTime) < 0.001) {
+      // always wait for seeked once
+    }
     const onSeeked = () => {
-      video.removeEventListener('seeked', onSeeked);
+      media.removeEventListener('seeked', onSeeked);
       resolve();
     };
-    video.addEventListener('seeked', onSeeked);
+    media.addEventListener('seeked', onSeeked);
   });
 }

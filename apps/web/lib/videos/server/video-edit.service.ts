@@ -7,8 +7,10 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import {
   type VideoClickEvent,
   type VideoEditTimeline,
+  type VideoTranscriptWord,
   createDefaultTimeline,
   normalizeTimeline,
+  wordsFromPlainText,
 } from '~/lib/videos/edit-timeline';
 
 export const VIDEO_MASTERS_BUCKET = 'video-masters';
@@ -19,6 +21,14 @@ export function masterStoragePath(accountId: string, videoId: string) {
 
 export function clicksStoragePath(accountId: string, videoId: string) {
   return `${accountId}/${videoId}/clicks.json`;
+}
+
+export function micAudioStoragePath(accountId: string, videoId: string) {
+  return `${accountId}/${videoId}/audio-mic.m4a`;
+}
+
+export function systemAudioStoragePath(accountId: string, videoId: string) {
+  return `${accountId}/${videoId}/audio-system.m4a`;
 }
 
 export async function upsertVideoMaster(input: {
@@ -32,8 +42,10 @@ export async function upsertVideoMaster(input: {
   height?: number | null;
   durationMs?: number | null;
   sha256?: string | null;
+  micStoragePath?: string | null;
+  systemStoragePath?: string | null;
 }) {
-  const payload = {
+  const payload: Record<string, unknown> = {
     video_id: input.videoId,
     account_id: input.accountId,
     storage_path: input.storagePath,
@@ -45,6 +57,13 @@ export async function upsertVideoMaster(input: {
     sha256: input.sha256 ?? null,
     updated_at: new Date().toISOString(),
   };
+
+  if (input.micStoragePath !== undefined) {
+    payload.mic_storage_path = input.micStoragePath;
+  }
+  if (input.systemStoragePath !== undefined) {
+    payload.system_storage_path = input.systemStoragePath;
+  }
 
   const { data, error } = await input.client
     .from('video_masters')
@@ -168,6 +187,122 @@ export async function saveEditTimeline(input: {
     .eq('id', input.videoId);
 
   return { project: data, timeline, revision: nextRevision };
+}
+
+/**
+ * Instant Loom-style publish: pin timeline for the public watch player.
+ * Does not wait for Bunny bake.
+ */
+export async function publishTimelineInstant(input: {
+  client: SupabaseClient;
+  videoId: string;
+  accountId: string;
+  timeline: VideoEditTimeline;
+  userId?: string | null;
+}) {
+  const saved = await saveEditTimeline({
+    client: input.client,
+    videoId: input.videoId,
+    accountId: input.accountId,
+    timeline: input.timeline,
+    userId: input.userId,
+  });
+
+  const { data: video, error: videoError } = await input.client
+    .from('videos')
+    .select('public_share_enabled, public_share_token, has_master')
+    .eq('id', input.videoId)
+    .single();
+
+  if (videoError) throw new Error(videoError.message);
+  if (!video?.has_master) {
+    throw new Error('Upload a master recording before publishing edits.');
+  }
+
+  let shareToken = video.public_share_token as string | null;
+  const shareEnabled = Boolean(video.public_share_enabled);
+
+  const patch: Record<string, unknown> = {
+    published_timeline: saved.timeline,
+    published_revision: saved.revision,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (!shareEnabled || !shareToken) {
+    shareToken = shareToken || crypto.randomUUID().replace(/-/g, '');
+    patch.public_share_enabled = true;
+    patch.public_share_token = shareToken;
+  }
+
+  const { error } = await input.client
+    .from('videos')
+    .update(patch)
+    .eq('id', input.videoId);
+
+  if (error) throw new Error(error.message);
+
+  return {
+    revision: saved.revision,
+    timeline: saved.timeline,
+    publicShareToken: shareToken as string,
+  };
+}
+
+/**
+ * Seed editor transcript from desktop plain text (Apple Speech).
+ * Does not overwrite a ready Whisper/manual transcript unless force=true.
+ */
+export async function upsertDesktopTranscript(input: {
+  client: SupabaseClient;
+  videoId: string;
+  accountId: string;
+  plainText: string;
+  durationMs?: number | null;
+  force?: boolean;
+}) {
+  const plainText = input.plainText.trim();
+  if (!plainText) return null;
+
+  if (!input.force) {
+    const { data: existing } = await input.client
+      .from('video_transcripts')
+      .select('status, provider')
+      .eq('video_id', input.videoId)
+      .maybeSingle();
+
+    if (
+      existing?.status === 'ready' &&
+      existing.provider &&
+      existing.provider !== 'desktop-speech'
+    ) {
+      return existing;
+    }
+  }
+
+  const words: VideoTranscriptWord[] = wordsFromPlainText(
+    plainText,
+    Math.max(0, input.durationMs ?? 0),
+  );
+
+  const { data, error } = await input.client
+    .from('video_transcripts')
+    .upsert(
+      {
+        video_id: input.videoId,
+        account_id: input.accountId,
+        plain_text: plainText,
+        words,
+        provider: 'desktop-speech',
+        status: 'ready',
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'video_id' },
+    )
+    .select('*')
+    .single();
+
+  if (error) throw new Error(error.message);
+  return data;
 }
 
 export async function createSignedMasterUrl(
