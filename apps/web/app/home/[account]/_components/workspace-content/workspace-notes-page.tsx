@@ -812,8 +812,10 @@ function NoteFormSheet({
         toast.success(note || savedNoteId ? 'Note saved' : 'Note created');
         onOpenChange(false);
         onSaved();
-      } catch {
-        toast.error('Could not save note');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save note',
+        );
       }
     });
   };

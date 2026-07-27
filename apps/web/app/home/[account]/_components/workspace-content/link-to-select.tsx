@@ -46,16 +46,19 @@ export function LinkToSelect({
       <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
-      <SelectContent>
+      <SelectContent className="w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)]">
         <SelectItem value="__none__">None</SelectItem>
         {options.map((opt) => (
           <SelectItem
             key={`${opt.type}:${opt.id}`}
             value={`${opt.type}:${opt.id}`}
+            className="items-start"
           >
-            {opt.label}
-            <span className="text-muted-foreground ml-2 text-xs capitalize">
-              ({opt.type === 'job' ? 'project' : opt.type})
+            <span className="line-clamp-2 break-words">
+              {opt.label}
+              <span className="ml-2 text-xs capitalize opacity-60">
+                ({opt.type === 'job' ? 'project' : opt.type})
+              </span>
             </span>
           </SelectItem>
         ))}

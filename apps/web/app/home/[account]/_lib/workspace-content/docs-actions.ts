@@ -37,8 +37,9 @@ function linkToColumns(link: z.infer<typeof LinkSchema>) {
       cols.project_id = link.id;
       break;
     case 'client':
+      // Link options use CRM `clients.id`. Do not write that id into
+      // `client_org_id` (FK to `client_orgs`) — that breaks doc saves.
       cols.client_id = link.id;
-      cols.client_org_id = link.id;
       break;
     case 'property':
       cols.property_id = link.id;

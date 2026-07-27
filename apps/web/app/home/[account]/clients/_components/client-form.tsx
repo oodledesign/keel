@@ -513,35 +513,35 @@ export function ClientForm({
                   className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
                   align="start"
                 >
-                  <Command
-                    className="bg-[var(--workspace-shell-panel)]"
-                    shouldFilter={false}
-                  >
-                    <CommandInput
-                      placeholder="Search by name or email…"
-                      value={searchQuery}
-                      onValueChange={setSearchQuery}
-                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                    />
-                    <CommandList>
-                      <CommandEmpty>
-                        {loadingContacts
-                          ? 'Searching…'
-                          : 'No contacts found in this workspace.'}
-                      </CommandEmpty>
-                      <CommandGroup>
-                        {filteredContacts.map((contact) => {
-                          const label = `${contact.full_name}${contact.email ? ` · ${contact.email}` : ''}`;
-                          return (
-                            <CommandItem
-                              key={contact.id}
-                              value={label}
-                              onSelect={() => {
-                                setSelectedContactId(contact.id);
-                                setSearchOpen(false);
-                              }}
-                              className="text-[var(--workspace-shell-text-muted)] aria-selected:bg-[var(--workspace-control-surface)]"
-                            >
+                <Command
+                  className="bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+                  shouldFilter={false}
+                >
+                  <CommandInput
+                    placeholder="Search by name or email…"
+                    value={searchQuery}
+                    onValueChange={setSearchQuery}
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                  />
+                  <CommandList>
+                    <CommandEmpty className="text-[var(--workspace-shell-text-muted)]">
+                      {loadingContacts
+                        ? 'Searching…'
+                        : 'No contacts found in this workspace.'}
+                    </CommandEmpty>
+                    <CommandGroup>
+                      {filteredContacts.map((contact) => {
+                        const label = `${contact.full_name}${contact.email ? ` · ${contact.email}` : ''}`;
+                        return (
+                          <CommandItem
+                            key={contact.id}
+                            value={label}
+                            onSelect={() => {
+                              setSelectedContactId(contact.id);
+                              setSearchOpen(false);
+                            }}
+                            className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-panel-hover)] aria-selected:text-[var(--workspace-shell-text)]"
+                          >
                               <Check
                                 className={cn(
                                   'mr-2 h-4 w-4',

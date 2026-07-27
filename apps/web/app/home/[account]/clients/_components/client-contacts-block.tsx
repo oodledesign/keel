@@ -530,7 +530,7 @@ function AddContactForm({
                 align="start"
               >
                 <Command
-                  className="bg-[var(--workspace-shell-panel)]"
+                  className="bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
                   shouldFilter={false}
                 >
                   <CommandInput
@@ -540,7 +540,7 @@ function AddContactForm({
                     className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                   />
                   <CommandList>
-                    <CommandEmpty>
+                    <CommandEmpty className="text-[var(--workspace-shell-text-muted)]">
                       {loadingContacts
                         ? 'Searching…'
                         : 'No contacts found in this workspace.'}
@@ -556,7 +556,7 @@ function AddContactForm({
                               setSelectedContactId(contact.id);
                               setSearchOpen(false);
                             }}
-                            className="text-[var(--workspace-shell-text-muted)] aria-selected:bg-[var(--workspace-control-surface)]"
+                            className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-panel-hover)] aria-selected:text-[var(--workspace-shell-text)]"
                           >
                             <Check
                               className={cn(
