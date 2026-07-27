@@ -77,6 +77,7 @@ export function VideoCard(props: {
           <p className="text-muted-foreground mt-0.5 text-xs">
             {new Date(video.created_at).toLocaleDateString()}
             {video.source === 'screen_recording' ? ' · Screen recording' : ''}
+            {video.has_master ? ' · Editable' : ''}
           </p>
         </div>
 
@@ -90,6 +91,11 @@ export function VideoCard(props: {
             <DropdownMenuItem asChild>
               <Link href={playerConfigPath}>Edit player config</Link>
             </DropdownMenuItem>
+            {video.has_master ? (
+              <DropdownMenuItem asChild>
+                <Link href={`${playerConfigPath}/edit`}>Edit recording</Link>
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={() => props.onPreview(video)}>
               Preview
             </DropdownMenuItem>

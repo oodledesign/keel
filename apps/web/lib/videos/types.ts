@@ -18,6 +18,9 @@ export type VideoRow = {
   public_share_token: string | null;
   source?: 'upload' | 'screen_recording';
   recorded_at?: string | null;
+  has_master?: boolean;
+  edit_revision?: number;
+  published_revision?: number;
   created_at: string;
   updated_at: string;
   /** Populated server-side for library UI; not stored in the database. */

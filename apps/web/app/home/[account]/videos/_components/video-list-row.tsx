@@ -68,6 +68,13 @@ export function VideoListRow(props: {
               </span>
             </>
           ) : null}
+          {video.has_master ? (
+            <>
+              {' '}
+              ·{' '}
+              <span className="text-[var(--ozer-accent)]">Editable</span>
+            </>
+          ) : null}
         </p>
       </div>
 
@@ -95,6 +102,11 @@ export function VideoListRow(props: {
             <DropdownMenuItem asChild>
               <Link href={playerConfigPath}>Edit player config</Link>
             </DropdownMenuItem>
+            {video.has_master ? (
+              <DropdownMenuItem asChild>
+                <Link href={`${playerConfigPath}/edit`}>Edit recording</Link>
+              </DropdownMenuItem>
+            ) : null}
             <DropdownMenuItem onClick={() => props.onPreview(video)}>
               Preview
             </DropdownMenuItem>

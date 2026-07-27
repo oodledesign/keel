@@ -148,13 +148,21 @@ export function PlayerConfigPageClient(props: {
 
   return (
     <div className="space-y-6 px-4 lg:px-0">
-      <Link
-        href={videosPath}
-        className="text-muted-foreground inline-flex items-center gap-1.5 text-sm hover:text-[var(--workspace-shell-text)]"
-      >
-        <ArrowLeft className="h-4 w-4" />
-        Back to videos
-      </Link>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <Link
+          href={videosPath}
+          className="text-muted-foreground inline-flex items-center gap-1.5 text-sm hover:text-[var(--workspace-shell-text)]"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          Back to videos
+        </Link>
+        <Link
+          href={`${videosPath}/${props.video.id}/edit`}
+          className="inline-flex h-9 items-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 text-sm font-medium text-[var(--workspace-shell-text)] hover:border-[var(--ozer-accent)]/40"
+        >
+          Edit recording
+        </Link>
+      </div>
 
       <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
         <div className="min-w-0 space-y-6">
