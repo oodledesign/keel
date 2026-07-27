@@ -279,7 +279,8 @@ export async function saveGoogleCalendarConnection(
       ...(upgradeTarget
         ? {}
         : {
-            busy_calendar_ids: [],
+            // Seed primary so availability checks work immediately after connect.
+            busy_calendar_ids: ['primary'],
             personal_calendar_ids: [],
           }),
     },

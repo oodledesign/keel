@@ -410,10 +410,12 @@ async function loadBusySafe(
   hostUserId: string,
   from: Date,
   to: Date,
+  timeZone: string,
 ) {
   try {
     return await getBusyIntervals(accountId, from, to, {
       hostUserId,
+      timeZone,
     });
   } catch (error) {
     if (
@@ -466,9 +468,17 @@ export async function fetchPublicAvailableSlots(input: FetchSlotsInput) {
     ? (await loadBookingByManagementToken(input.excludeManagementToken))?.id
     : undefined;
 
-  const [scheduleBundle, busyIntervals, existingBookings] = await Promise.all([
-    loadScheduleBundle(eventType.availabilityScheduleId),
-    loadBusySafe(page.accountId, page.hostUserId, from, to),
+  const scheduleBundle = await loadScheduleBundle(
+    eventType.availabilityScheduleId,
+  );
+  const [busyIntervals, existingBookings] = await Promise.all([
+    loadBusySafe(
+      page.accountId,
+      page.hostUserId,
+      from,
+      to,
+      scheduleBundle.schedule.timezone,
+    ),
     loadExistingBookings(eventType.id, page.accountId, excludeBookingId),
   ]);
 
@@ -738,9 +748,17 @@ async function assertSlotStillAvailable(input: {
   const from = new Date(input.startAt.getTime() - 24 * 60 * 60 * 1000);
   const to = new Date(endAt.getTime() + 24 * 60 * 60 * 1000);
 
-  const [scheduleBundle, busyIntervals, existingBookings] = await Promise.all([
-    loadScheduleBundle(input.eventType.availabilityScheduleId),
-    loadBusySafe(input.page.accountId, input.page.hostUserId, from, to),
+  const scheduleBundle = await loadScheduleBundle(
+    input.eventType.availabilityScheduleId,
+  );
+  const [busyIntervals, existingBookings] = await Promise.all([
+    loadBusySafe(
+      input.page.accountId,
+      input.page.hostUserId,
+      from,
+      to,
+      scheduleBundle.schedule.timezone,
+    ),
     loadExistingBookings(
       input.eventType.id,
       input.page.accountId,

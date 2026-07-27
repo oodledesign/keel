@@ -1,14 +1,17 @@
 import Link from 'next/link';
 
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
+import { cn } from '@kit/ui/utils';
 
 type Props = {
-  title: string;
+  title?: string | null;
   description?: string | null;
   brandColour?: string | null;
   logoUrl?: string | null;
   hostName?: string | null;
   hostPictureUrl?: string | null;
+  /** Wider shell without page title / host chrome — used on the event booking step. */
+  variant?: 'default' | 'event';
   children: React.ReactNode;
   footerNote?: string;
 };
@@ -20,14 +23,21 @@ export function BookShell({
   logoUrl,
   hostName,
   hostPictureUrl,
+  variant = 'default',
   children,
   footerNote,
 }: Props) {
   const accent = brandColour || '#FF5C34';
+  const isEvent = variant === 'event';
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-3xl flex-col px-4 py-10 sm:px-6">
-      <header className="mb-8">
+    <main
+      className={cn(
+        'mx-auto flex min-h-screen w-full flex-col px-4 py-10 sm:px-6',
+        isEvent ? 'max-w-5xl' : 'max-w-3xl',
+      )}
+    >
+      <header className={cn(isEvent ? 'mb-6' : 'mb-8')}>
         <div className="mb-5 flex items-center justify-between gap-3">
           <div className="flex min-w-0 items-center gap-3">
             {logoUrl ? (
@@ -45,7 +55,7 @@ export function BookShell({
               />
             )}
           </div>
-          {hostName || hostPictureUrl ? (
+          {!isEvent && (hostName || hostPictureUrl) ? (
             <div className="flex shrink-0 items-center gap-2">
               {hostName ? (
                 <span className="hidden text-sm text-[color:var(--ozer-text-muted,#6B5B63)] sm:inline">
@@ -61,13 +71,17 @@ export function BookShell({
           ) : null}
         </div>
 
-        <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
-          {title}
-        </h1>
-        {description ? (
-          <p className="mt-3 max-w-2xl text-base text-[color:var(--ozer-text-muted,#6B5B63)]">
-            {description}
-          </p>
+        {!isEvent && title ? (
+          <>
+            <h1 className="text-3xl font-bold tracking-tight sm:text-4xl">
+              {title}
+            </h1>
+            {description ? (
+              <p className="mt-3 max-w-2xl text-base text-[color:var(--ozer-text-muted,#6B5B63)]">
+                {description}
+              </p>
+            ) : null}
+          </>
         ) : null}
       </header>
 

@@ -15,8 +15,13 @@ import {
   ArrowLeft,
   CalendarPlus,
   Check,
+  Clock,
   Download,
+  Globe,
   Loader2,
+  MapPin,
+  Phone,
+  Video,
   X,
 } from 'lucide-react';
 
@@ -25,6 +30,7 @@ import { Calendar, CalendarDayButton } from '@kit/ui/calendar';
 import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import {
   Select,
   SelectContent,
@@ -121,12 +127,19 @@ function AvailabilityDayButton({
   modifiers,
   ...props
 }: ComponentProps<typeof CalendarDayButton>) {
+  const isToday = Boolean(modifiers.today);
+  const isSelected = Boolean(modifiers.selected);
+
   return (
     <CalendarDayButton
       className={cn(
         className,
         'relative pb-2 text-[color:var(--ozer-plum-950,#2A1720)]',
         'hover:bg-black/[0.06] hover:text-[color:var(--ozer-plum-950,#2A1720)]',
+        // Today needs a light wash so the date number stays readable on cream.
+        isToday &&
+          !isSelected &&
+          'bg-[color:var(--ozer-cream-100,#F5EFE0)] font-semibold text-[color:var(--ozer-plum-950,#2A1720)]',
         'data-[selected-single=true]:bg-[color-mix(in_srgb,var(--book-accent,#FF5C34)_18%,white)]',
         'data-[selected-single=true]:text-[color:var(--ozer-plum-950,#2A1720)]',
         'data-[selected-single=true]:hover:bg-[color-mix(in_srgb,var(--book-accent,#FF5C34)_24%,white)]',
@@ -144,6 +157,38 @@ function AvailabilityDayButton({
       ) : null}
     </CalendarDayButton>
   );
+}
+
+function locationLabel(locationType: string, locationDetail?: string | null) {
+  switch (locationType) {
+    case 'google_meet':
+      return 'Google Meet';
+    case 'zoom':
+      return 'Zoom';
+    case 'teams':
+      return 'Microsoft Teams';
+    case 'phone':
+      return locationDetail?.trim() || 'Phone';
+    case 'in_person':
+      return locationDetail?.trim() || 'In person';
+    case 'custom':
+      return locationDetail?.trim() || 'Custom location';
+    default:
+      return locationDetail?.trim() || 'Meeting';
+  }
+}
+
+function LocationIcon({ locationType }: { locationType: string }) {
+  const className = 'h-4 w-4 shrink-0 text-[color:var(--ozer-text-muted,#6B5B63)]';
+  switch (locationType) {
+    case 'phone':
+      return <Phone className={className} aria-hidden />;
+    case 'in_person':
+    case 'custom':
+      return <MapPin className={className} aria-hidden />;
+    default:
+      return <Video className={className} aria-hidden />;
+  }
 }
 
 export function BookingWizard({ page, eventType, formFields }: Props) {
@@ -499,81 +544,116 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
   }
 
   const today = startOfLocalDay(new Date());
+  const placeLabel = locationLabel(
+    eventType.locationType,
+    eventType.locationDetail,
+  );
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          {!eventType.isPrivate ? (
-            <Link
-              href={`/book/${page.slug}`}
-              className="inline-flex items-center gap-2 text-sm text-[color:var(--ozer-text-muted,#6B5B63)] hover:text-inherit"
-            >
-              <ArrowLeft className="h-4 w-4" />
-              All meeting types
-            </Link>
-          ) : null}
-          <h2
-            className={`text-2xl font-semibold ${eventType.isPrivate ? '' : 'mt-2'}`}
-          >
+    <div className="space-y-4">
+      {!eventType.isPrivate ? (
+        <Link
+          href={`/book/${page.slug}`}
+          className="inline-flex items-center gap-2 text-sm text-[color:var(--ozer-text-muted,#6B5B63)] hover:text-inherit"
+        >
+          <ArrowLeft className="h-4 w-4" />
+          All meeting types
+        </Link>
+      ) : null}
+
+      <div
+        className="grid gap-0 overflow-hidden rounded-2xl border border-black/10 bg-white lg:grid-cols-[minmax(220px,280px)_minmax(0,1fr)_minmax(200px,260px)]"
+        style={{ ['--book-accent' as string]: accent }}
+      >
+        {/* Meeting info — Cal.com-style left rail */}
+        <aside className="border-b border-black/10 p-5 lg:border-r lg:border-b-0 lg:p-6">
+          <div className="flex items-center gap-3">
+            <ProfileAvatar
+              displayName={page.hostName ?? 'Host'}
+              pictureUrl={page.hostPictureUrl}
+              className="h-11 w-11"
+            />
+            <div className="min-w-0">
+              <p className="truncate text-sm font-semibold text-[color:var(--ozer-plum-950,#2A1720)]">
+                {page.hostName ?? 'Host'}
+              </p>
+            </div>
+          </div>
+
+          <h2 className="mt-5 text-2xl font-semibold tracking-tight text-[color:var(--ozer-plum-950,#2A1720)]">
             {eventType.name}
           </h2>
           {eventType.description ? (
-            <p className="mt-1 text-sm text-[color:var(--ozer-text-muted,#6B5B63)]">
+            <p className="mt-2 text-sm leading-relaxed text-[color:var(--ozer-text-muted,#6B5B63)]">
               {eventType.description}
             </p>
           ) : null}
-        </div>
-        <div className="flex flex-wrap gap-2">
-          {eventType.durations.length > 1 ? (
-            <Select
-              value={String(durationMinutes)}
-              onValueChange={(value) => {
-                setDurationMinutes(Number(value));
-                setSelectedStart(null);
-              }}
-            >
-              <SelectTrigger className="w-[140px] rounded-full bg-white">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {eventType.durations.map((minutes) => (
-                  <SelectItem key={minutes} value={String(minutes)}>
-                    {minutes} min
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          ) : null}
-          <Select
-            value={inviteeTimezone}
-            onValueChange={(value) => {
-              setInviteeTimezone(value);
-              setSelectedStart(null);
-            }}
-          >
-            <SelectTrigger className="w-[200px] rounded-full bg-white">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {[
-                inviteeTimezone,
-                ...TIMEZONES.filter((tz) => tz !== inviteeTimezone),
-              ].map((tz) => (
-                <SelectItem key={tz} value={tz}>
-                  {tz}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      </div>
 
-      <div
-        className="grid gap-4 rounded-2xl border border-black/10 bg-white p-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,280px)] md:p-5"
-        style={{ ['--book-accent' as string]: accent }}
-      >
-        <div className="flex flex-col items-center">
+          <ul className="mt-5 space-y-3 text-sm text-[color:var(--ozer-plum-950,#2A1720)]">
+            <li className="flex items-center gap-2.5">
+              <Clock
+                className="h-4 w-4 shrink-0 text-[color:var(--ozer-text-muted,#6B5B63)]"
+                aria-hidden
+              />
+              {eventType.durations.length > 1 ? (
+                <Select
+                  value={String(durationMinutes)}
+                  onValueChange={(value) => {
+                    setDurationMinutes(Number(value));
+                    setSelectedStart(null);
+                  }}
+                >
+                  <SelectTrigger className="h-8 w-[120px] rounded-full border-black/10 bg-transparent px-3">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventType.durations.map((minutes) => (
+                      <SelectItem key={minutes} value={String(minutes)}>
+                        {minutes} min
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <span>{durationMinutes}m</span>
+              )}
+            </li>
+            <li className="flex items-center gap-2.5">
+              <LocationIcon locationType={eventType.locationType} />
+              <span>{placeLabel}</span>
+            </li>
+            <li className="flex items-center gap-2.5">
+              <Globe
+                className="h-4 w-4 shrink-0 text-[color:var(--ozer-text-muted,#6B5B63)]"
+                aria-hidden
+              />
+              <Select
+                value={inviteeTimezone}
+                onValueChange={(value) => {
+                  setInviteeTimezone(value);
+                  setSelectedStart(null);
+                }}
+              >
+                <SelectTrigger className="h-8 min-w-0 flex-1 rounded-full border-black/10 bg-transparent px-3">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    inviteeTimezone,
+                    ...TIMEZONES.filter((tz) => tz !== inviteeTimezone),
+                  ].map((tz) => (
+                    <SelectItem key={tz} value={tz}>
+                      {tz}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </li>
+          </ul>
+        </aside>
+
+        {/* Calendar */}
+        <div className="flex flex-col items-center border-b border-black/10 p-4 sm:p-5 lg:border-r lg:border-b-0">
           <Calendar
             mode="single"
             month={month}
@@ -598,6 +678,10 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
             modifiersClassNames={{
               available: 'font-medium',
             }}
+            classNames={{
+              today:
+                'bg-[color:var(--ozer-cream-100,#F5EFE0)] text-[color:var(--ozer-plum-950,#2A1720)] rounded-md',
+            }}
             components={{
               DayButton: AvailabilityDayButton,
             }}
@@ -611,7 +695,8 @@ export function BookingWizard({ page, eventType, formFields }: Props) {
           ) : null}
         </div>
 
-        <div className="flex min-h-[280px] flex-col border-t border-black/10 pt-4 md:border-t-0 md:border-l md:pt-0 md:pl-5">
+        {/* Time slots */}
+        <div className="flex min-h-[280px] flex-col p-4 sm:p-5">
           <p className="text-sm font-semibold">
             {selectedDay
               ? selectedDay.toLocaleDateString(undefined, {
