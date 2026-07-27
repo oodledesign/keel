@@ -273,7 +273,7 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
             <div
               key={draft.id}
               className={cn(
-                'rounded-2xl border bg-[var(--workspace-shell-panel)] p-4 shadow-[0_18px_50px_rgba(4,10,24,0.24)] transition-colors',
+                'rounded-2xl border bg-[var(--workspace-shell-panel)] p-4 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)] transition-colors',
                 draft.enabled
                   ? 'border-[var(--ozer-accent)]/40 ring-1 ring-[var(--ozer-accent)]/25'
                   : 'border-[color:var(--workspace-shell-border)]',

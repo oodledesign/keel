@@ -52,9 +52,19 @@ export const workspaceControlSurface = 'bg-[var(--workspace-control-surface)]';
 export const workspacePanelBorder =
   'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
+/**
+ * Soft elevation for workspace cards/panels.
+ * Prefer this over heavy `rgba(4,10,24,0.18+)` shadows on cream surfaces.
+ */
+export const workspacePanelShadow =
+  'shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]';
+
+/** Slightly lifted state (drag overlay, sticky bars) — still soft on cream. */
+export const workspacePanelShadowRaised =
+  'shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]';
+
 /** Light panel chrome for cream/light workspaces (avoids dark-mode drop shadows). */
-export const workspacePanelCard =
-  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.05),0_4px_14px_rgba(42,23,32,0.05)]';
+export const workspacePanelCard = `rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] ${workspacePanelShadow}`;
 
 export const workspaceIconChip =
   'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]';

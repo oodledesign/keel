@@ -122,7 +122,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
         />
       ) : null}
       {!isClient ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
           <div>
             <h2 className="text-base font-semibold">Desktop recorder</h2>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -140,7 +140,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
       ) : null}
 
       {!isClient ? (
-        <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+        <div className="flex flex-col gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
           <div>
             <h2 className="text-base font-semibold">Dashboard shortcuts</h2>
             <p className="text-muted-foreground mt-1 text-sm">
@@ -154,7 +154,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
         </div>
       ) : null}
 
-      <div className="flex flex-1 flex-col gap-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="flex flex-1 flex-col gap-6 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
         {isClient ? (
           <TeamAccountDangerZone
             account={account}

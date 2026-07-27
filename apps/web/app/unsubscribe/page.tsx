@@ -30,7 +30,7 @@ export default async function UnsubscribePage({
 
   return (
     <main className="flex min-h-screen items-center justify-center bg-[var(--ozer-surface-canvas)] px-6 py-12">
-      <div className="w-full max-w-lg rounded-3xl bg-[var(--ozer-surface-panel)] p-8 text-center shadow-xl">
+      <div className="w-full max-w-lg rounded-3xl bg-[var(--ozer-surface-panel)] p-8 text-center shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
         <p className="text-sm font-semibold tracking-[0.2em] text-[var(--ozer-accent)] uppercase">
           {productName}
         </p>

@@ -92,7 +92,7 @@ const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
   };
 
 const panelClass =
-  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_36px_rgba(4,10,24,0.18)]';
+  'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]';
 
 function formatCurrency(value: number) {
   return new Intl.NumberFormat('en-GB', {
@@ -476,7 +476,7 @@ function DealCard({
     <div
       ref={isOverlay ? undefined : setNodeRef}
       style={isOverlay ? undefined : style}
-      className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${isOverlay ? 'scale-105 rotate-2 shadow-2xl' : ''}`}
+      className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${isOverlay ? 'scale-105 rotate-2 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]' : ''}`}
       {...(isOverlay ? {} : { ...attributes, ...listeners })}
     >
       {stageColor && !isOverlay && (

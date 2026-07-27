@@ -32,7 +32,7 @@ export default async function DesktopRecorderConnectPage({
   if (!state) {
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16">
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 text-[var(--workspace-shell-text)] shadow-xl">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 text-[var(--workspace-shell-text)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
           <h1 className="text-2xl font-bold tracking-tight">
             Connect Ozer Assistant
           </h1>
@@ -74,7 +74,7 @@ export default async function DesktopRecorderConnectPage({
         : 'Could not connect Ozer Assistant.';
     return (
       <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center px-4 py-16">
-        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 text-[var(--workspace-shell-text)] shadow-xl">
+        <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] p-8 text-[var(--workspace-shell-text)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
           <h1 className="text-2xl font-bold tracking-tight">
             Connection failed
           </h1>

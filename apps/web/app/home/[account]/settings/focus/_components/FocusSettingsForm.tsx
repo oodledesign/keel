@@ -116,7 +116,7 @@ export function FocusSettingsForm({
         />
         <OOOSection form={form} accountId={accountId} persisted={persisted} />
 
-        <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/95 p-4 shadow-lg backdrop-blur">
+        <div className="sticky bottom-4 z-10 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/95 p-4 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] backdrop-blur">
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {isDirty ? (
               <span className="text-amber-200">Unsaved changes</span>

@@ -134,7 +134,7 @@ export function PaymentSettingsForm({
         </div>
       ) : null}
 
-      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
         <div className="flex items-start justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold">Stripe Connect</h2>
@@ -204,7 +204,7 @@ export function PaymentSettingsForm({
         ) : null}
       </div>
 
-      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
         <h2 className="text-base font-semibold">Invoice defaults</h2>
         <p className="text-muted-foreground mt-1 text-sm">
           New invoices use these defaults. Currency is set in{' '}
@@ -275,7 +275,7 @@ export function PaymentSettingsForm({
         </div>
       </div>
 
-      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
         <div className="flex items-center justify-between gap-4">
           <div>
             <h2 className="text-base font-semibold">Bank transfer</h2>

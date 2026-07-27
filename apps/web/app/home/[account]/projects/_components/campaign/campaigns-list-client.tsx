@@ -154,7 +154,7 @@ export function CampaignsListClient({
             <Link
               key={project.id}
               href={detailPath(project.id)}
-              className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_18px_50px_rgba(4,10,24,0.24)] transition hover:border-[color:var(--workspace-shell-border)]"
+              className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)] transition hover:border-[color:var(--workspace-shell-border)]"
             >
               <p className="font-semibold text-[var(--workspace-shell-text)]">
                 {project.name}

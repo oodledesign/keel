@@ -1171,7 +1171,7 @@ function ActivityBulkActionBar({
   }
 
   return (
-    <div className="sticky bottom-4 z-20 mx-auto flex max-w-4xl flex-wrap items-center gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/95 p-3 shadow-[0_8px_32px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+    <div className="sticky bottom-4 z-20 mx-auto flex max-w-4xl flex-wrap items-center gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/95 p-3 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] backdrop-blur-xl">
       <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
         {blockIds.length} selected
       </p>

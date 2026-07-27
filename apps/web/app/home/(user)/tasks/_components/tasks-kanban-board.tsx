@@ -150,7 +150,7 @@ function BoardCard({
     ? 'rounded-xl border border-rose-400/30 border-l-[3px] border-l-rose-500 bg-rose-500/[0.08]'
     : 'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)]';
   const interactClass = isOverlay
-    ? 'shadow-[0_18px_48px_rgba(4,10,24,0.45)]'
+    ? 'shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]'
     : isDragging
       ? 'opacity-40'
       : 'hover:border-[color:var(--workspace-shell-border)]';

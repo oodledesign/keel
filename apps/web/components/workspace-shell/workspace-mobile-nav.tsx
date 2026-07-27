@@ -267,7 +267,7 @@ export function WorkspaceMobileBottomNav({
         )}
         aria-label="Menu controls"
       >
-        <div className="pointer-events-auto flex h-12 min-w-[6.5rem] items-center justify-between gap-6 rounded-full border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 px-2 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+        <div className="pointer-events-auto flex h-12 min-w-[6.5rem] items-center justify-between gap-6 rounded-full border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 px-2 shadow-[0_4px_16px_rgba(42,23,32,0.12),0_8px_28px_rgba(42,23,32,0.1)] backdrop-blur-xl">
           <HapticLink
             href={settingsHref}
             onClick={() => onMenuOpenChange(false)}
@@ -310,7 +310,7 @@ export function WorkspaceMobileBottomNav({
       <div className="pointer-events-auto flex justify-start">
         <WorkspaceMobileBackButton />
       </div>
-      <div className="pointer-events-auto flex h-12 items-center gap-0.5 justify-self-center rounded-full border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 px-1.5 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl">
+      <div className="pointer-events-auto flex h-12 items-center gap-0.5 justify-self-center rounded-full border border-[var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 px-1.5 shadow-[0_4px_16px_rgba(42,23,32,0.12),0_8px_28px_rgba(42,23,32,0.1)] backdrop-blur-xl">
         {bottomNavTabs.map((tab) => {
           const tabPathname = navHrefPathname(tab.path);
           const active =

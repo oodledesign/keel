@@ -106,7 +106,7 @@ export function OzerContextsStep({
               onClick={() => setters[key](!on)}
               className={cn(
                 'flex w-full items-start gap-4 rounded-2xl border px-4 py-4 text-left transition-colors',
-                'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]',
+                'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]',
                 on
                   ? 'border-[var(--ozer-accent)]/40 ring-1 ring-[var(--ozer-accent)]/30'
                   : 'hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel)]/90',

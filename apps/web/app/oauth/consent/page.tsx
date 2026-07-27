@@ -30,7 +30,7 @@ function signInPath(authorizationId: string) {
 function ConsentError({ title, message }: { title: string; message: string }) {
   return (
     <main className="mx-auto flex min-h-svh max-w-lg flex-col justify-center bg-[var(--workspace-shell-canvas)] px-4 py-16">
-      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-[var(--workspace-shell-text)] shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-8 text-[var(--workspace-shell-text)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
         <h1 className="text-xl font-bold tracking-tight">{title}</h1>
         <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
           {message}

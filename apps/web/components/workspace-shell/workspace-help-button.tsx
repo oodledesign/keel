@@ -34,8 +34,8 @@ export function WorkspaceHelpButton({
         className={cn(
           triggerBaseClass,
           variant === 'inline'
-            ? 'h-12 w-12 bg-[var(--workspace-shell-panel)]/98 shadow-[0_8px_32px_rgba(0,0,0,0.5)] backdrop-blur-xl'
-            : 'fixed bottom-6 right-4 z-[35] hidden h-11 w-11 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_8px_24px_rgba(0,0,0,0.35)] lg:flex',
+            ? 'h-12 w-12 bg-[var(--workspace-shell-panel)]/98 shadow-[0_4px_16px_rgba(42,23,32,0.12),0_8px_28px_rgba(42,23,32,0.1)] backdrop-blur-xl'
+            : 'fixed bottom-6 right-4 z-[35] hidden h-11 w-11 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] lg:flex',
           className,
         )}
         aria-label="Help and feedback"

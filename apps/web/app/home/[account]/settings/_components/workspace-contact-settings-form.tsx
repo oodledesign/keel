@@ -69,7 +69,7 @@ export function WorkspaceContactSettingsForm({
   };
 
   return (
-    <div className="flex flex-col gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_18px_50px_rgba(4,10,24,0.24)]">
+    <div className="flex flex-col gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]">
       <div>
         <h2 className="text-base font-semibold">Business contact</h2>
         <p className="text-muted-foreground mt-1 text-sm">

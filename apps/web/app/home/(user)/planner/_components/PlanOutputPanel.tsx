@@ -64,7 +64,7 @@ export function PlanOutputPanel({
     editableBlockCount > 0;
 
   return (
-    <section className="min-w-0 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 shadow-[0_18px_50px_rgba(4,10,24,0.22)] md:sticky md:top-4 md:min-h-[min(80vh,720px)] md:p-5">
+    <section className="min-w-0 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)] md:sticky md:top-4 md:min-h-[min(80vh,720px)] md:p-5">
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-base font-semibold">Generated plan</h2>
