@@ -74,6 +74,10 @@ export const CreateClientSchema = z
     country: optionalString,
     /** Primary contact created with a new business client. */
     contact: InitialContactSchema.optional(),
+    /** Link an existing workspace contact as the primary contact. */
+    existingContactId: z.string().uuid().optional(),
+    /** Role applied when linking an existing contact. */
+    existingContactRole: optionalString,
   })
   .superRefine((data, ctx) => {
     if (data.client_type === 'individual') {
@@ -92,6 +96,14 @@ export const CreateClientSchema = z
         code: z.ZodIssueCode.custom,
         message: 'Company name is required',
         path: ['company_name'],
+      });
+    }
+
+    if (data.contact?.firstName?.trim() && data.existingContactId) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Choose either a new or existing primary contact',
+        path: ['existingContactId'],
       });
     }
   });

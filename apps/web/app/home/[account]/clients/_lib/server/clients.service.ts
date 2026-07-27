@@ -394,10 +394,45 @@ class ClientsService {
       lastName: personLast,
     });
 
+    const existingContactId =
+      clientType === 'business' ? input.existingContactId : undefined;
+
+    let existingContact: {
+      id: string;
+      email: string | null;
+      phone: string | null;
+    } | null = null;
+
+    if (existingContactId) {
+      const { data: contact, error: contactError } = await this.adminDb
+        .from('contacts')
+        .select('id, email, phone')
+        .eq('id', existingContactId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (contactError) throw contactError;
+      if (!contact) {
+        throw new Error('Contact not found in this workspace.');
+      }
+
+      existingContact = {
+        id: contact.id,
+        email: (contact.email as string | null) ?? null,
+        phone: (contact.phone as string | null) ?? null,
+      };
+    }
+
     const primaryContactEmail =
-      input.contact?.email?.trim() || input.email?.trim() || null;
+      existingContact?.email?.trim() ||
+      input.contact?.email?.trim() ||
+      input.email?.trim() ||
+      null;
     const primaryContactPhone =
-      input.contact?.phone?.trim() || input.phone?.trim() || null;
+      existingContact?.phone?.trim() ||
+      input.contact?.phone?.trim() ||
+      input.phone?.trim() ||
+      null;
 
     const { data, error } = await this.adminDb
       .from('clients')
@@ -426,6 +461,38 @@ class ClientsService {
 
     if (error) throw mapClientWriteError(error);
     if (!data?.id) return data;
+
+    if (existingContact) {
+      const { error: linkError } = await this.adminDb
+        .from('client_contacts')
+        .insert({
+          client_id: data.id,
+          contact_id: existingContact.id,
+          role: normalizeContactRole(input.existingContactRole) ?? null,
+          is_primary: true,
+        });
+
+      if (linkError) {
+        if (isMissingRelationError(linkError)) {
+          throw new Error(
+            'Shared contacts require the latest database migration. Run `pnpm exec supabase db push` from apps/web.',
+          );
+        }
+        throw mapClientWriteError(linkError);
+      }
+
+      this.scheduleClientLogoFetch({
+        accountId: input.accountId,
+        clientId: data.id as string,
+        website: (data.website as string | null) ?? input.website ?? null,
+        email:
+          (data.email as string | null) ??
+          primaryContactEmail ??
+          input.email ??
+          null,
+      });
+      return data;
+    }
 
     const shouldCreateContact =
       clientType === 'individual' || Boolean(input.contact?.firstName?.trim());

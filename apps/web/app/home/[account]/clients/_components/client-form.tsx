@@ -1,13 +1,23 @@
 'use client';
 
-import { useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Building2, User } from 'lucide-react';
+import { Building2, Check, ChevronsUpDown, User } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@kit/ui/command';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import {
   CONTACT_ROLE_LABELS,
@@ -18,6 +28,7 @@ import {
 import {
   createClient,
   deleteClient,
+  listWorkspaceContacts,
   updateClient,
 } from '../_lib/server/server-actions';
 
@@ -46,6 +57,14 @@ export type CreateInitialValues = {
 };
 
 type ClientType = 'individual' | 'business';
+type PrimaryContactMode = 'new' | 'existing';
+
+type WorkspaceContactOption = {
+  id: string;
+  full_name: string;
+  email: string | null;
+  phone: string | null;
+};
 
 export function ClientForm({
   accountId,
@@ -103,6 +122,7 @@ export function ClientForm({
   const [postcode, setPostcode] = useState(client?.postcode ?? '');
   const [country, setCountry] = useState(client?.country ?? '');
 
+  const [contactMode, setContactMode] = useState<PrimaryContactMode>('new');
   const [contactFirstName, setContactFirstName] = useState('');
   const [contactLastName, setContactLastName] = useState('');
   const [contactEmail, setContactEmail] = useState('');
@@ -110,10 +130,53 @@ export function ClientForm({
   const [contactRole, setContactRole] = useState<ContactRolePreset | ''>(
     'founder',
   );
+  const [selectedContactId, setSelectedContactId] = useState('');
+  const [workspaceContacts, setWorkspaceContacts] = useState<
+    WorkspaceContactOption[]
+  >([]);
+  const [loadingContacts, setLoadingContacts] = useState(false);
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const isReadOnly = mode === 'edit' && !canEdit;
   const isIndividual = clientType === 'individual';
   const showCreateContact = mode === 'create' && !isIndividual;
+
+  const loadWorkspaceContacts = useCallback(async () => {
+    setLoadingContacts(true);
+    try {
+      const result = (await listWorkspaceContacts({
+        accountId,
+      })) as { data?: WorkspaceContactOption[] };
+      setWorkspaceContacts(Array.isArray(result?.data) ? result.data : []);
+    } catch {
+      setWorkspaceContacts([]);
+    } finally {
+      setLoadingContacts(false);
+    }
+  }, [accountId]);
+
+  useEffect(() => {
+    if (!showCreateContact || contactMode !== 'existing') return;
+    void loadWorkspaceContacts();
+  }, [contactMode, loadWorkspaceContacts, showCreateContact]);
+
+  const filteredContacts = useMemo(() => {
+    const search = searchQuery.trim().toLowerCase();
+    if (!search) return workspaceContacts;
+    return workspaceContacts.filter((contact) => {
+      const name = contact.full_name?.toLowerCase() ?? '';
+      const contactEmailValue = contact.email?.toLowerCase() ?? '';
+      return name.includes(search) || contactEmailValue.includes(search);
+    });
+  }, [searchQuery, workspaceContacts]);
+
+  const selectedContact = useMemo(
+    () =>
+      workspaceContacts.find((contact) => contact.id === selectedContactId) ??
+      null,
+    [selectedContactId, workspaceContacts],
+  );
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -125,8 +188,12 @@ export function ClientForm({
       toast.error('Company name is required for a business client');
       return;
     }
-    if (showCreateContact && !contactFirstName.trim()) {
+    if (showCreateContact && contactMode === 'new' && !contactFirstName.trim()) {
       toast.error('Add a primary contact with a first name');
+      return;
+    }
+    if (showCreateContact && contactMode === 'existing' && !selectedContactId) {
+      toast.error('Select an existing contact as the primary');
       return;
     }
     setSaving(true);
@@ -142,26 +209,39 @@ export function ClientForm({
           company_name: company_name.trim() || undefined,
           email: isIndividual
             ? email.trim() || undefined
-            : contactEmail.trim() || email.trim() || undefined,
+            : contactMode === 'new'
+              ? contactEmail.trim() || email.trim() || undefined
+              : selectedContact?.email || email.trim() || undefined,
           phone: isIndividual
             ? phone.trim() || undefined
-            : contactPhone.trim() || phone.trim() || undefined,
+            : contactMode === 'new'
+              ? contactPhone.trim() || phone.trim() || undefined
+              : selectedContact?.phone || phone.trim() || undefined,
           website: website.trim() || undefined,
           address_line_1: address_line_1.trim() || undefined,
           address_line_2: address_line_2.trim() || undefined,
           city: city.trim() || undefined,
           postcode: postcode.trim() || undefined,
           country: country.trim() || undefined,
-          contact: showCreateContact
-            ? {
-                firstName: contactFirstName.trim(),
-                lastName: contactLastName.trim() || undefined,
-                email: contactEmail.trim() || undefined,
-                phone: contactPhone.trim() || undefined,
-                role: contactRole || undefined,
-                isPrimary: true,
-              }
-            : undefined,
+          contact:
+            showCreateContact && contactMode === 'new'
+              ? {
+                  firstName: contactFirstName.trim(),
+                  lastName: contactLastName.trim() || undefined,
+                  email: contactEmail.trim() || undefined,
+                  phone: contactPhone.trim() || undefined,
+                  role: contactRole || undefined,
+                  isPrimary: true,
+                }
+              : undefined,
+          existingContactId:
+            showCreateContact && contactMode === 'existing'
+              ? selectedContactId
+              : undefined,
+          existingContactRole:
+            showCreateContact && contactMode === 'existing'
+              ? contactRole || undefined
+              : undefined,
         });
         toast.success(
           isIndividual
@@ -316,65 +396,172 @@ export function ClientForm({
 
       {showCreateContact && (
         <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-          <div>
-            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              Primary contact *
-            </p>
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Used for proposals, contracts, and notifications. Mark someone as
-              Finance later for invoice emails.
-            </p>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="contact_first_name" className="text-xs">
-                First name *
-              </Label>
-              <Input
-                id="contact_first_name"
-                value={contactFirstName}
-                onChange={(e) => setContactFirstName(e.target.value)}
-                placeholder="e.g. Jane"
-                required
-              />
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Primary contact *
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Used for proposals, contracts, and notifications. Mark someone
+                as Finance later for invoice emails.
+              </p>
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="contact_last_name" className="text-xs">
-                Last name
-              </Label>
-              <Input
-                id="contact_last_name"
-                value={contactLastName}
-                onChange={(e) => setContactLastName(e.target.value)}
-                placeholder="e.g. Smith"
-              />
-            </div>
-          </div>
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="contact_email" className="text-xs">
-                Email
-              </Label>
-              <Input
-                id="contact_email"
-                type="email"
-                value={contactEmail}
-                onChange={(e) => setContactEmail(e.target.value)}
-                placeholder="jane@acme.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="contact_phone" className="text-xs">
-                Phone
-              </Label>
-              <Input
-                id="contact_phone"
-                value={contactPhone}
-                onChange={(e) => setContactPhone(e.target.value)}
-                placeholder="Phone number"
-              />
+            <div className="flex shrink-0 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setContactMode('new')}
+                className={cn(
+                  'rounded px-2 py-1',
+                  contactMode === 'new'
+                    ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                )}
+              >
+                New
+              </button>
+              <button
+                type="button"
+                onClick={() => setContactMode('existing')}
+                className={cn(
+                  'rounded px-2 py-1',
+                  contactMode === 'existing'
+                    ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                )}
+              >
+                Existing
+              </button>
             </div>
           </div>
+
+          {contactMode === 'new' ? (
+            <>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="contact_first_name" className="text-xs">
+                    First name *
+                  </Label>
+                  <Input
+                    id="contact_first_name"
+                    value={contactFirstName}
+                    onChange={(e) => setContactFirstName(e.target.value)}
+                    placeholder="e.g. Jane"
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact_last_name" className="text-xs">
+                    Last name
+                  </Label>
+                  <Input
+                    id="contact_last_name"
+                    value={contactLastName}
+                    onChange={(e) => setContactLastName(e.target.value)}
+                    placeholder="e.g. Smith"
+                  />
+                </div>
+              </div>
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="contact_email" className="text-xs">
+                    Email
+                  </Label>
+                  <Input
+                    id="contact_email"
+                    type="email"
+                    value={contactEmail}
+                    onChange={(e) => setContactEmail(e.target.value)}
+                    placeholder="jane@acme.com"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="contact_phone" className="text-xs">
+                    Phone
+                  </Label>
+                  <Input
+                    id="contact_phone"
+                    value={contactPhone}
+                    onChange={(e) => setContactPhone(e.target.value)}
+                    placeholder="Phone number"
+                  />
+                </div>
+              </div>
+            </>
+          ) : (
+            <div className="space-y-2">
+              <Label className="text-xs">Contact *</Label>
+              <Popover open={searchOpen} onOpenChange={setSearchOpen}>
+                <PopoverTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={searchOpen}
+                    className={cn(
+                      'w-full justify-between border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]',
+                      !selectedContact &&
+                        'text-[var(--workspace-shell-text-muted)]',
+                    )}
+                  >
+                    {selectedContact
+                      ? `${selectedContact.full_name}${selectedContact.email ? ` · ${selectedContact.email}` : ''}`
+                      : 'Search workspace contacts…'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent
+                  className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
+                  align="start"
+                >
+                  <Command
+                    className="bg-[var(--workspace-shell-panel)]"
+                    shouldFilter={false}
+                  >
+                    <CommandInput
+                      placeholder="Search by name or email…"
+                      value={searchQuery}
+                      onValueChange={setSearchQuery}
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                    />
+                    <CommandList>
+                      <CommandEmpty>
+                        {loadingContacts
+                          ? 'Searching…'
+                          : 'No contacts found in this workspace.'}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {filteredContacts.map((contact) => {
+                          const label = `${contact.full_name}${contact.email ? ` · ${contact.email}` : ''}`;
+                          return (
+                            <CommandItem
+                              key={contact.id}
+                              value={label}
+                              onSelect={() => {
+                                setSelectedContactId(contact.id);
+                                setSearchOpen(false);
+                              }}
+                              className="text-[var(--workspace-shell-text-muted)] aria-selected:bg-[var(--workspace-control-surface)]"
+                            >
+                              <Check
+                                className={cn(
+                                  'mr-2 h-4 w-4',
+                                  selectedContactId === contact.id
+                                    ? 'opacity-100'
+                                    : 'opacity-0',
+                                )}
+                              />
+                              {label}
+                            </CommandItem>
+                          );
+                        })}
+                      </CommandGroup>
+                    </CommandList>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+            </div>
+          )}
+
           <div className="space-y-2">
             <Label htmlFor="contact_role" className="text-xs">
               Role
