@@ -1,6 +1,11 @@
 import 'server-only';
 
 import {
+  ahrefsDrInteger,
+  getDomainRatings,
+  normaliseAhrefsDomain,
+} from '~/lib/ahrefs/client';
+import {
   countryToLocationCode,
   deduplicateBy,
   normalise,
@@ -121,30 +126,37 @@ export async function enrichCompetitors(
   competitors: CompetitorWithOpr[];
   targetOpr: number;
   targetOprDecimal: number;
+  targetAhrefsDr: number | null;
   targetReferringDomains: number | null;
   competitorBacklinks: Record<string, number>;
 }> {
   const allDomains = [...competitors, targetDomain];
 
-  const [oprScores, backlinkCounts] = await Promise.all([
+  const [oprScores, ahrefsScores, backlinkCounts] = await Promise.all([
     getPageRanks(allDomains),
+    getDomainRatings(allDomains),
     compareBacklinks(allDomains),
   ]);
 
   const targetKey = normaliseOprDomain(targetDomain);
+  const targetAhrefsKey = normaliseAhrefsDomain(targetDomain);
   const targetBacklinkKey = normaliseDomain(targetDomain);
   const targetOpr = oprScores[targetKey];
+  const targetAhrefs = ahrefsScores[targetAhrefsKey];
 
   const enriched = competitors.map((domain) => {
     const oprKey = normaliseOprDomain(domain);
+    const ahrefsKey = normaliseAhrefsDomain(domain);
     const backlinkKey = normaliseDomain(domain);
     const opr = oprScores[oprKey];
+    const ahrefs = ahrefsScores[ahrefsKey];
     const referringDomains = backlinkCounts[backlinkKey];
 
     return {
       domain,
       opr: opr?.page_rank_integer ?? 0,
       opr_decimal: opr?.page_rank_decimal ?? 0,
+      ahrefs_dr: ahrefsDrInteger(ahrefs),
       referring_domains:
         referringDomains !== undefined ? referringDomains : null,
     };
@@ -163,6 +175,7 @@ export async function enrichCompetitors(
     competitors: enriched,
     targetOpr: targetOpr?.page_rank_integer ?? 0,
     targetOprDecimal: targetOpr?.page_rank_decimal ?? 0,
+    targetAhrefsDr: ahrefsDrInteger(targetAhrefs),
     targetReferringDomains:
       targetReferring !== undefined ? targetReferring : null,
     competitorBacklinks,

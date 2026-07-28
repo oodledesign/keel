@@ -2,23 +2,30 @@ import 'server-only';
 
 import type { MailboxKind } from '@kit/google-auth';
 
-import { GmailApiError, gmailFetch, gmailFetchPaginated } from './client';
+import { GmailApiError, gmailFetch } from './client';
 import {
   deleteEmailMessage,
   listSyncedGmailMessageIds,
   loadAssistantSettings,
   resolveConnectionId,
   saveAssistantCursor,
-  touchAssistantSyncTime,
   upsertEmailMessage,
   upsertEmailThread,
 } from './db';
-import { parseMessage, participantsFromMessage } from './mime';
+import {
+  htmlSignatureToPlain,
+  parseMessage,
+  participantsFromMessage,
+} from './mime';
 import type { GmailMessage, GmailSyncResult } from './types';
 
-const BACKFILL_QUERY = 'newer_than:30d (in:inbox OR in:sent)';
-/** Keep each serverless invocation under Vercel's 300s limit (full fetch per message). */
-const BACKFILL_MAX_MESSAGES_PER_RUN = 40;
+/** Recent mail only — older threads stay in Gmail; already-synced rows remain in Ozer. */
+const BACKFILL_QUERY = 'newer_than:14d (in:inbox OR in:sent)';
+/** Parallel full fetches stay under the Gmail sync route maxDuration (120s). */
+const BACKFILL_MAX_MESSAGES_PER_RUN = 60;
+const INCREMENTAL_MAX_MESSAGES_PER_RUN = 80;
+const FETCH_CONCURRENCY = 8;
+const MAX_BODY_TEXT_CHARS = 20_000;
 
 type GmailListMessage = { id?: string | null; threadId?: string | null };
 type GmailProfile = { historyId?: string | null; emailAddress?: string | null };
@@ -31,6 +38,37 @@ type SyncContext = {
 
 function isUnread(labelIds: string[] | null | undefined) {
   return (labelIds ?? []).includes('UNREAD');
+}
+
+function truncateBodyText(value: string | null): string | null {
+  if (!value) return null;
+  if (value.length <= MAX_BODY_TEXT_CHARS) return value;
+  return `${value.slice(0, MAX_BODY_TEXT_CHARS)}\n…`;
+}
+
+async function mapPool<T, R>(
+  items: T[],
+  concurrency: number,
+  fn: (item: T) => Promise<R>,
+): Promise<R[]> {
+  if (!items.length) return [];
+
+  const results: R[] = new Array(items.length);
+  let next = 0;
+
+  async function worker() {
+    while (next < items.length) {
+      const index = next;
+      next += 1;
+      results[index] = await fn(items[index]!);
+    }
+  }
+
+  await Promise.all(
+    Array.from({ length: Math.min(concurrency, items.length) }, () => worker()),
+  );
+
+  return results;
 }
 
 async function requireSyncContext(
@@ -64,6 +102,11 @@ async function persistMessage(ctx: SyncContext, message: GmailMessage) {
   }
 
   const parsed = parseMessage(message);
+  const bodyText = truncateBodyText(
+    parsed.bodyText?.trim() ||
+      (parsed.bodyHtml ? htmlSignatureToPlain(parsed.bodyHtml) : null),
+  );
+
   const threadId = await upsertEmailThread({
     userId: ctx.userId,
     connectionId: ctx.connectionId,
@@ -86,25 +129,75 @@ async function persistMessage(ctx: SyncContext, message: GmailMessage) {
     ccAddresses: parsed.cc,
     subject: parsed.subject,
     snippet: message.snippet ?? null,
-    bodyText: parsed.bodyText,
-    bodyHtml: parsed.bodyHtml,
+    bodyText,
+    // UI + assistant use body_text; skip storing HTML to cut write size.
+    bodyHtml: null,
     internalDate: parsed.internalDate,
   });
 }
 
-async function listBackfillMessageIds(ctx: SyncContext): Promise<string[]> {
-  const listed = await gmailFetchPaginated<GmailListMessage>(
-    ctx.userId,
-    '/messages',
-    { q: BACKFILL_QUERY, maxResults: '100' },
-    (page) => (page.messages as GmailListMessage[] | undefined) ?? [],
-    (page) => page.nextPageToken as string | undefined,
-    ctx.mailboxKind,
-  );
+/**
+ * List message IDs until we have enough unsynced ones (or the query ends).
+ * Avoids re-paging the entire 14-day window on every backfill visit.
+ */
+async function listPendingBackfillMessageIds(
+  ctx: SyncContext,
+  limit: number,
+): Promise<{ pending: string[]; exhausted: boolean }> {
+  const pending: string[] = [];
+  let pageToken: string | undefined;
+  let exhausted = false;
 
-  return listed
-    .map((item) => item.id)
-    .filter((id): id is string => Boolean(id));
+  do {
+    const search = new URLSearchParams({
+      q: BACKFILL_QUERY,
+      maxResults: '100',
+    });
+    if (pageToken) {
+      search.set('pageToken', pageToken);
+    }
+
+    const page = await gmailFetch<{
+      messages?: GmailListMessage[];
+      nextPageToken?: string | null;
+    }>(
+      ctx.userId,
+      `/messages?${search.toString()}`,
+      undefined,
+      ctx.mailboxKind,
+    );
+
+    const pageIds = (page.messages ?? [])
+      .map((item) => item.id)
+      .filter((id): id is string => Boolean(id));
+
+    if (!pageIds.length) {
+      exhausted = true;
+      break;
+    }
+
+    const syncedIds = await listSyncedGmailMessageIds(
+      ctx.userId,
+      pageIds,
+      ctx.connectionId,
+    );
+
+    for (const id of pageIds) {
+      if (!syncedIds.has(id)) {
+        pending.push(id);
+        if (pending.length >= limit) {
+          return { pending, exhausted: false };
+        }
+      }
+    }
+
+    pageToken = page.nextPageToken ?? undefined;
+    if (!pageToken) {
+      exhausted = true;
+    }
+  } while (pageToken);
+
+  return { pending, exhausted };
 }
 
 async function fetchProfileHistoryId(ctx: SyncContext): Promise<string | null> {
@@ -122,24 +215,19 @@ export async function backfill(
   mailboxKind: MailboxKind = 'business',
 ): Promise<GmailSyncResult> {
   const ctx = await requireSyncContext(userId, mailboxKind);
-  const messageIds = await listBackfillMessageIds(ctx);
-  const syncedIds = await listSyncedGmailMessageIds(
-    userId,
-    messageIds,
-    ctx.connectionId,
+  const { pending, exhausted } = await listPendingBackfillMessageIds(
+    ctx,
+    BACKFILL_MAX_MESSAGES_PER_RUN,
   );
-  const pending = messageIds.filter((id) => !syncedIds.has(id));
   const batch = pending.slice(0, BACKFILL_MAX_MESSAGES_PER_RUN);
-  let processed = 0;
 
-  for (const messageId of batch) {
+  await mapPool(batch, FETCH_CONCURRENCY, async (messageId) => {
     const message = await fetchMessage(ctx, messageId);
     await persistMessage(ctx, message);
-    processed += 1;
-  }
+  });
 
-  const remainingEstimate = Math.max(pending.length - batch.length, 0);
-  const backfillComplete = remainingEstimate === 0;
+  const processed = batch.length;
+  const backfillComplete = exhausted && pending.length <= batch.length;
 
   if (backfillComplete) {
     const historyId = await fetchProfileHistoryId(ctx);
@@ -154,14 +242,15 @@ export async function backfill(
     };
   }
 
-  await touchAssistantSyncTime(userId, mailboxKind);
-
+  // Do not bump last_synced_at mid-backfill — keeps cron/UI prioritising catch-up.
   return {
     mode: 'backfill',
     messagesProcessed: processed,
     historyId: null,
     backfillComplete: false,
-    remainingEstimate,
+    remainingEstimate: exhausted
+      ? Math.max(pending.length - batch.length, 0)
+      : Math.max(pending.length - batch.length, 1),
   };
 }
 
@@ -171,12 +260,8 @@ function collectHistoryMessageIds(
   const ids = new Set<string>();
 
   for (const record of records ?? []) {
-    const buckets = [
-      record.messagesAdded,
-      record.labelsAdded,
-      record.labelsRemoved,
-      record.messages,
-    ];
+    // messageAdded / messageDeleted only — label noise used to force full refetches.
+    const buckets = [record.messagesAdded, record.messagesDeleted];
 
     for (const bucket of buckets) {
       if (!Array.isArray(bucket)) {
@@ -185,17 +270,13 @@ function collectHistoryMessageIds(
 
       for (const entry of bucket) {
         const message = (entry as { message?: { id?: string | null } }).message;
-        if (message?.id) {
+        if (!message?.id) continue;
+
+        if (bucket === record.messagesDeleted) {
+          ids.add(`__delete__:${message.id}`);
+        } else {
           ids.add(message.id);
         }
-      }
-    }
-
-    for (const deleted of (record.messagesDeleted as Array<{
-      message?: { id?: string | null };
-    }> | null) ?? []) {
-      if (deleted.message?.id) {
-        ids.add(`__delete__:${deleted.message.id}`);
       }
     }
   }
@@ -219,11 +300,16 @@ export async function incrementalSync(
     let processed = 0;
     let latestHistoryId = settings.last_history_id;
     let pageToken: string | undefined;
+    const toFetch: string[] = [];
+    const toDelete: string[] = [];
+    let hitCap = false;
 
     do {
       const search = new URLSearchParams({
         startHistoryId: latestHistoryId,
       });
+      search.append('historyTypes', 'messageAdded');
+      search.append('historyTypes', 'messageDeleted');
 
       if (pageToken) {
         search.set('pageToken', pageToken);
@@ -239,26 +325,37 @@ export async function incrementalSync(
 
       for (const token of messageIds) {
         if (token.startsWith('__delete__:')) {
-          await deleteEmailMessage(
-            userId,
-            token.replace('__delete__:', ''),
-            ctx.connectionId,
-          );
-          processed += 1;
-          continue;
+          toDelete.push(token.replace('__delete__:', ''));
+        } else {
+          toFetch.push(token);
         }
 
-        const message = await fetchMessage(ctx, token);
-        await persistMessage(ctx, message);
-        processed += 1;
+        if (
+          toFetch.length + toDelete.length >=
+          INCREMENTAL_MAX_MESSAGES_PER_RUN
+        ) {
+          hitCap = true;
+          break;
+        }
       }
 
       if (page.historyId) {
         latestHistoryId = page.historyId;
       }
 
-      pageToken = page.nextPageToken ?? undefined;
+      pageToken = hitCap ? undefined : (page.nextPageToken ?? undefined);
     } while (pageToken);
+
+    for (const gmailMessageId of toDelete) {
+      await deleteEmailMessage(userId, gmailMessageId, ctx.connectionId);
+      processed += 1;
+    }
+
+    await mapPool(toFetch, FETCH_CONCURRENCY, async (messageId) => {
+      const message = await fetchMessage(ctx, messageId);
+      await persistMessage(ctx, message);
+    });
+    processed += toFetch.length;
 
     await saveAssistantCursor(userId, latestHistoryId, mailboxKind);
 

@@ -1,5 +1,10 @@
 import 'server-only';
 
+import {
+  ahrefsDrInteger,
+  getDomainRatings,
+  normaliseAhrefsDomain,
+} from '~/lib/ahrefs/client';
 import { delay } from '~/lib/clusters/utils';
 import { type DfsResponse, dfsPost } from '~/lib/dataforseo/client';
 import { getPageRanks, normaliseOprDomain } from '~/lib/openpagerank/client';
@@ -495,7 +500,10 @@ export async function checkAiCitations(
     ...new Set(platforms.flatMap((platform) => platform.citedQueries)),
   ];
   const competingBrandList = [...competingBrands];
-  const oprScores = await getPageRanks(competingBrandList);
+  const [oprScores, ahrefsScores] = await Promise.all([
+    getPageRanks(competingBrandList),
+    getDomainRatings(competingBrandList),
+  ]);
 
   return {
     platforms,
@@ -505,12 +513,15 @@ export async function checkAiCitations(
     competingBrands: competingBrandList,
     competingBrandsOpr: competingBrandList.map((brand) => {
       const key = normaliseOprDomain(brand);
+      const ahrefsKey = normaliseAhrefsDomain(brand);
       const opr = oprScores[key];
+      const ahrefs = ahrefsScores[ahrefsKey];
 
       return {
         domain: brand,
         opr: opr?.page_rank_integer ?? 0,
         opr_decimal: opr?.page_rank_decimal ?? 0,
+        ahrefs_dr: ahrefsDrInteger(ahrefs),
       };
     }),
     truncated,

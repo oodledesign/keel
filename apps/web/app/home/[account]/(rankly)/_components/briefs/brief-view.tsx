@@ -14,6 +14,7 @@ import type {
   SuggestedLink,
 } from '~/lib/briefs/types';
 
+import { AhrefsDrAttribution, AhrefsDrBadge } from '../shared/ahrefs-dr-badge';
 import { BacklinkBar, BacklinkSourceNote } from '../shared/backlink-bar';
 import { OprBadge } from '../shared/opr-badge';
 
@@ -67,6 +68,7 @@ function CompetitorDomainsTable({
               <tr>
                 <th className="pr-2 pb-2">Domain</th>
                 <th className="pr-2 pb-2">OPR</th>
+                <th className="pr-2 pb-2">DR</th>
                 <th className="pb-2">Referring domains</th>
               </tr>
             </thead>
@@ -83,6 +85,9 @@ function CompetitorDomainsTable({
                       decimal={competitor.opr_decimal}
                     />
                   </td>
+                  <td className="py-2 pr-2">
+                    <AhrefsDrBadge score={competitor.ahrefs_dr} />
+                  </td>
                   <td className="py-2">
                     <BacklinkBar
                       domain={competitor.domain}
@@ -95,6 +100,9 @@ function CompetitorDomainsTable({
             </tbody>
           </table>
         </div>
+      ) : null}
+      {rows.some((row) => row.ahrefs_dr != null) ? (
+        <AhrefsDrAttribution />
       ) : null}
     </div>
   );

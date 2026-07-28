@@ -30,6 +30,8 @@ export type CompetitorWithOpr = {
   domain: string;
   opr: number;
   opr_decimal: number;
+  /** Ahrefs Domain Rating 0–100; null/absent when unavailable */
+  ahrefs_dr?: number | null;
   referring_domains: number | null;
 };
 
@@ -125,6 +127,7 @@ export type BriefSynthesisInput = {
   domainKeywords: DomainKeyword[];
   competitors: CompetitorWithOpr[];
   targetOpr: number;
+  targetAhrefsDr: number | null;
   targetReferringDomains: number | null;
   keywordGaps: KeywordGap[];
   serpResults: SerpOrganicResult[];

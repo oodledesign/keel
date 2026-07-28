@@ -98,7 +98,11 @@ export function RanklyProjectDashboard(props: {
         <StatCard
           label="Domain Power"
           value={props.overview?.domainPower ?? '—'}
-          hint="Site Explorer →"
+          hint={
+            props.overview?.ahrefsDr != null
+              ? `Ahrefs DR ${Math.round(props.overview.ahrefsDr)} · Site Explorer →`
+              : 'Site Explorer →'
+          }
           href={paths.siteExplorer}
           icon={siteExplorerSection.icon}
         />

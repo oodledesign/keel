@@ -19,6 +19,7 @@ import {
 import { analyzeCrawlAccess } from '~/lib/crawl/access-summary';
 
 import { CrawlAccessBanner } from '../crawl-access-banner';
+import { AhrefsDrAttribution, AhrefsDrBadge } from '../shared/ahrefs-dr-badge';
 import { BacklinkBar, BacklinkSourceNote } from '../shared/backlink-bar';
 import { OprBadge } from '../shared/opr-badge';
 
@@ -265,6 +266,14 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
             />
           </div>
         ) : null}
+        {report.ahrefs_dr != null ? (
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="text-[var(--workspace-shell-text-muted)]">
+              Ahrefs DR:
+            </span>
+            <AhrefsDrBadge score={Number(report.ahrefs_dr)} />
+          </div>
+        ) : null}
         {report.referring_domains != null ? (
           <div className="min-w-[200px] flex-1 space-y-1">
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
@@ -278,6 +287,9 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
           </div>
         ) : null}
       </div>
+      {report.ahrefs_dr != null ? (
+        <AhrefsDrAttribution className="text-xs text-[var(--workspace-shell-text-muted)] underline-offset-2 hover:underline" />
+      ) : null}
     </div>
   );
 
@@ -296,7 +308,10 @@ function AiCitationStatus({ report }: { report: AuditReportRow }) {
               <li key={brand.domain} className="space-y-1">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <span>{brand.domain}</span>
-                  <OprBadge score={brand.opr} decimal={brand.opr_decimal} />
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <OprBadge score={brand.opr} decimal={brand.opr_decimal} />
+                    <AhrefsDrBadge score={brand.ahrefs_dr} />
+                  </div>
                 </div>
                 <BacklinkBar
                   domain={brand.domain}

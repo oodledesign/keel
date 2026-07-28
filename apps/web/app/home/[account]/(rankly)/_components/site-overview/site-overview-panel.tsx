@@ -158,6 +158,11 @@ export function SiteOverviewPanel(props: {
               sub={`AR ${data.authorityRank} · LT ${data.linkTrust}`}
             />
             <MetricCard
+              label="Ahrefs DR"
+              value={data.ahrefsDr ?? '—'}
+              sub="Domain Rating by Ahrefs"
+            />
+            <MetricCard
               label="Brand Signal"
               value={data.brandSignal ?? '—'}
               sub="Rankly composite from AI + authority"
@@ -167,14 +172,14 @@ export function SiteOverviewPanel(props: {
               value={data.aiOverviewsCount}
               sub="Sampled ranked keywords citing this domain"
             />
+          </div>
+
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               label="Page Authority"
               value={data.pageAuthority}
               sub="Rankly equivalent · backlink rank"
             />
-          </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
             <MetricCard
               label="Referring domains"
               value={data.referringDomains.toLocaleString()}
@@ -186,9 +191,8 @@ export function SiteOverviewPanel(props: {
             <MetricCard
               label="Link Trust"
               value={data.linkTrust}
-              sub={`CS ${data.citationStrength}`}
+              sub={`CS ${data.citationStrength} · spam ${data.spamScore}`}
             />
-            <MetricCard label="Spam score" value={data.spamScore} />
           </div>
 
           <div className="grid gap-4 lg:grid-cols-2">
@@ -251,7 +255,20 @@ export function SiteOverviewPanel(props: {
                 Brand visibility
               </p>
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Rankly metrics — not Ahrefs DR / Moz DA / Majestic TF
+                Rankly Domain Power is not Moz DA / Majestic TF
+                {data.ahrefsDr != null ? (
+                  <>
+                    {' · '}
+                    <a
+                      href="https://ahrefs.com/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="underline-offset-2 hover:underline"
+                    >
+                      Domain Rating by Ahrefs
+                    </a>
+                  </>
+                ) : null}
               </p>
             </div>
 

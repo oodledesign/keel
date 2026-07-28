@@ -24,12 +24,12 @@ TOP 5 COMPETITORS:
 ${input.competitors
   .map(
     (c) =>
-      `- ${c.domain} (OPR: ${c.opr}/10, Referring domains: ${c.referring_domains ?? 'unknown'})`,
+      `- ${c.domain} (OPR: ${c.opr}/10, Ahrefs DR: ${c.ahrefs_dr ?? 'unknown'}, Referring domains: ${c.referring_domains ?? 'unknown'})`,
   )
   .join('\n')}
 
 TARGET DOMAIN:
-- ${input.targetDomain} (OPR: ${input.targetOpr}/10, Referring domains: ${input.targetReferringDomains ?? 'unknown'})
+- ${input.targetDomain} (OPR: ${input.targetOpr}/10, Ahrefs DR: ${input.targetAhrefsDr ?? 'unknown'}, Referring domains: ${input.targetReferringDomains ?? 'unknown'})
 
 KEYWORD GAP OPPORTUNITIES (informational, vol >1k, KD <40):
 ${input.keywordGaps

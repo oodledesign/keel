@@ -21,6 +21,8 @@ export type SiteOverviewSnapshot = {
   countryCode: string;
   domainPower: number;
   authorityRank: number;
+  /** Ahrefs Domain Rating 0–100 when available */
+  ahrefsDr: number | null;
   linkTrust: number;
   citationStrength: number;
   spamScore: number;
@@ -51,6 +53,7 @@ export type SiteOverviewRow = {
   country_code: string;
   domain_power: number | null;
   authority_rank: number | null;
+  ahrefs_dr: number | null;
   link_trust: number | null;
   citation_strength: number | null;
   spam_score: number | null;

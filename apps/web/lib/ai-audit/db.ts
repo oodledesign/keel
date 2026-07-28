@@ -189,6 +189,7 @@ export async function saveAuditReport(
     platforms: PlatformCitationResult[];
     oprScore: number;
     oprDecimal: number;
+    ahrefsDr: number | null;
     referringDomains: number | null;
     topReferringDomains: ReferringDomainRow[];
     competitorBacklinks: Record<string, number>;
@@ -215,6 +216,7 @@ export async function saveAuditReport(
       ai_citations_by_platform: aiCitation.platforms,
       opr_score: aiCitation.oprScore,
       opr_decimal: aiCitation.oprDecimal,
+      ahrefs_dr: aiCitation.ahrefsDr,
       referring_domains: aiCitation.referringDomains,
       top_referring_domains: aiCitation.topReferringDomains,
       competitor_backlinks: aiCitation.competitorBacklinks,

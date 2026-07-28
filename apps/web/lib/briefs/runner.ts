@@ -46,6 +46,7 @@ export async function runBriefJob(jobId: string): Promise<void> {
     let domainKeywords: DomainKeyword[] = [];
     let competitorDomains: CompetitorWithOpr[] = [];
     let targetOpr = 0;
+    let targetAhrefsDr: number | null = null;
     let targetReferringDomains: number | null = null;
     let competitorBacklinks: Record<string, number> = {};
     let keywordGaps: KeywordGap[] = [];
@@ -72,6 +73,7 @@ export async function runBriefJob(jobId: string): Promise<void> {
       );
       competitorDomains = enriched.competitors;
       targetOpr = enriched.targetOpr;
+      targetAhrefsDr = enriched.targetAhrefsDr;
       targetReferringDomains = enriched.targetReferringDomains;
       competitorBacklinks = enriched.competitorBacklinks;
 
@@ -163,6 +165,7 @@ export async function runBriefJob(jobId: string): Promise<void> {
       domainKeywords,
       competitors: competitorDomains,
       targetOpr,
+      targetAhrefsDr,
       targetReferringDomains,
       keywordGaps,
       serpResults: serpData.organic,

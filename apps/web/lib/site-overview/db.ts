@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { ahrefsDrInteger, getDomainRating } from '~/lib/ahrefs/client';
 import type { PlatformCitationResult } from '~/lib/ai-audit/types';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
@@ -40,6 +41,7 @@ export function mapSiteOverviewRow(row: SiteOverviewRow): SiteOverviewSnapshot {
     countryCode: row.country_code,
     domainPower: row.domain_power ?? 0,
     authorityRank: row.authority_rank ?? 0,
+    ahrefsDr: row.ahrefs_dr != null ? Number(row.ahrefs_dr) : null,
     linkTrust: row.link_trust ?? 0,
     citationStrength: row.citation_strength ?? 0,
     spamScore: row.spam_score ?? 0,
@@ -145,11 +147,18 @@ export async function refreshSiteOverview(input: {
 
   const rankMetrics = await fetchDomainRankMetrics(domain, locationCode);
 
-  const backlinkResult = await fetchBacklinkSummary(domain);
+  const [backlinkResult, ahrefsResult] = await Promise.all([
+    fetchBacklinkSummary(domain),
+    getDomainRating(domain).catch((error) => {
+      console.error('[site-overview] ahrefs DR', error);
+      return null;
+    }),
+  ]);
   const backlinks = backlinkResult.metrics;
   if (backlinkResult.warning) {
     warnings.push(backlinkResult.warning);
   }
+  const ahrefsDr = ahrefsResult != null ? ahrefsDrInteger(ahrefsResult) : null;
 
   const aiOverviewsCount = await countAiOverviewCitations(domain, locationCode);
 
@@ -175,6 +184,7 @@ export async function refreshSiteOverview(input: {
     country_code: input.countryCode.toLowerCase(),
     domain_power: ranklyScores.domainPower,
     authority_rank: ranklyScores.authorityRank,
+    ahrefs_dr: ahrefsDr,
     link_trust: ranklyScores.linkTrust,
     citation_strength: ranklyScores.citationStrength,
     spam_score: backlinks.spamScore,

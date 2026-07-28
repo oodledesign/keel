@@ -1,5 +1,6 @@
 import 'server-only';
 
+import { ahrefsDrInteger, getDomainRating } from '~/lib/ahrefs/client';
 import { countryToLocationCode } from '~/lib/clusters/utils';
 import {
   compareBacklinks,
@@ -179,9 +180,10 @@ export async function runAuditJob(
         return { completed: false };
       }
 
-      const [targetOpr, targetBacklinks, competitorBacklinks] =
+      const [targetOpr, targetAhrefs, targetBacklinks, competitorBacklinks] =
         await Promise.all([
           getPageRank(domain),
+          getDomainRating(domain),
           getBacklinkSummary(domain, 200),
           compareBacklinks(aiCitations.competingBrands),
         ]);
@@ -207,6 +209,7 @@ export async function runAuditJob(
           competingBrandsOpr,
           oprScore: targetOpr.page_rank_integer,
           oprDecimal: targetOpr.page_rank_decimal,
+          ahrefsDr: ahrefsDrInteger(targetAhrefs),
           referringDomains: backlinksEnabled
             ? targetBacklinks.referring_domains
             : null,
@@ -252,6 +255,7 @@ export async function runAuditJob(
         platforms: citationBundle.aiCitations.platforms,
         oprScore: citationBundle.oprScore,
         oprDecimal: citationBundle.oprDecimal,
+        ahrefsDr: citationBundle.ahrefsDr ?? null,
         referringDomains: citationBundle.referringDomains,
         topReferringDomains: citationBundle.topReferringDomains,
         competitorBacklinks: citationBundle.competitorBacklinks,

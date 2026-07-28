@@ -15,6 +15,7 @@ export type AuditJobProgress = {
     competingBrandsOpr: CompetingBrandOpr[];
     oprScore: number;
     oprDecimal: number;
+    ahrefsDr: number | null;
     referringDomains: number | null;
     topReferringDomains: ReferringDomainRow[];
     competitorBacklinks: Record<string, number>;
@@ -153,6 +154,8 @@ export type CompetingBrandOpr = {
   domain: string;
   opr: number;
   opr_decimal: number;
+  /** Ahrefs Domain Rating 0–100; null when unavailable */
+  ahrefs_dr?: number | null;
   referring_domains?: number | null;
 };
 
@@ -221,6 +224,7 @@ export type AuditReportRow = {
   ai_citations_by_platform: PlatformCitationResult[] | null;
   opr_score: number | null;
   opr_decimal: number | null;
+  ahrefs_dr: number | null;
   referring_domains: number | null;
   top_referring_domains: ReferringDomainRow[] | null;
   competitor_backlinks: Record<string, number> | null;

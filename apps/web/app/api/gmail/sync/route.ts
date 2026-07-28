@@ -97,18 +97,23 @@ async function syncAllConnectedUsers() {
     1,
     Number(process.env.GMAIL_SYNC_BATCH_SIZE ?? DEFAULT_GMAIL_SYNC_BATCH_SIZE),
   );
-  const claimBatch = admin.rpc as unknown as (
-    name: 'claim_gmail_sync_batch',
-    args: { p_batch_size: number },
-  ) => Promise<{
-    data: Array<{
-      connection_id: string;
-      user_id: string;
-      mailbox_kind: string;
-    }> | null;
-    error: { message: string } | null;
-  }>;
-  const { data, error } = await claimBatch('claim_gmail_sync_batch', {
+
+  // Keep the method bound to the client (extracting `.rpc` loses `this`).
+  const { data, error } = await (
+    admin as unknown as {
+      rpc: (
+        fn: string,
+        args: { p_batch_size: number },
+      ) => Promise<{
+        data: Array<{
+          connection_id: string;
+          user_id: string;
+          mailbox_kind: string;
+        }> | null;
+        error: { message: string } | null;
+      }>;
+    }
+  ).rpc('claim_gmail_sync_batch', {
     p_batch_size: batchSize,
   });
 
@@ -125,28 +130,8 @@ async function syncAllConnectedUsers() {
 
     try {
       const syncResult = await syncMailbox(userId, mailboxKind);
-      let assistant: Awaited<
-        ReturnType<typeof runEmailAssistantPipeline>
-      > | null = null;
-
-      if (syncResult.messagesProcessed > 0) {
-        try {
-          assistant = await runEmailAssistantPipeline(userId, { mailboxKind });
-        } catch (pipelineError) {
-          assistant = {
-            classified: 0,
-            linked: 0,
-            draftsCreated: 0,
-            draftsSavedToGmail: 0,
-            skipped: 0,
-            errors: [
-              pipelineError instanceof Error
-                ? pipelineError.message
-                : 'Assistant pipeline failed',
-            ],
-          };
-        }
-      }
+      // Cron stays mail-only so each batch finishes within maxDuration.
+      // Assistant triage/drafts run on the Email page POST sync path.
 
       results.push({
         userId,
@@ -155,7 +140,7 @@ async function syncAllConnectedUsers() {
         ok: true,
         mode: syncResult.mode,
         messagesProcessed: syncResult.messagesProcessed,
-        assistant: assistant ?? undefined,
+        assistant: undefined,
       });
     } catch (syncError) {
       results.push({
