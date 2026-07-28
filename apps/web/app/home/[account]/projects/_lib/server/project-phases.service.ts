@@ -354,9 +354,14 @@ class ProjectPhasesService {
       .eq('account_id', input.accountId)
       .eq('project_id', input.jobId)
       .select()
-      .single();
+      .maybeSingle();
 
     if (error) this.throwErr(error);
+    if (!data) {
+      throw new Error(
+        'Phase could not be updated. Check you have edit access and try again.',
+      );
+    }
 
     if (input.description !== undefined || input.status !== undefined) {
       queueBrainIndexSource(input.accountId, 'phase', input.phaseId);

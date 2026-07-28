@@ -16,8 +16,80 @@ function replySubject(subject: string | null | undefined) {
   return /^re:/i.test(trimmed) ? trimmed : `Re: ${trimmed}`;
 }
 
-function pickReplyTo(from: string | null, to: string | null) {
-  return from?.trim() || to?.trim() || '';
+function extractEmail(address: string): string | null {
+  const angle = address.match(/<([^>]+@[^>]+)>/);
+  if (angle?.[1]) {
+    return angle[1].trim().toLowerCase();
+  }
+
+  const bare = address.match(/([^\s,<>]+@[^\s,<>]+)/);
+  return bare?.[1]?.trim().toLowerCase() ?? null;
+}
+
+function splitAddressList(value: string | null | undefined): string[] {
+  if (!value?.trim()) {
+    return [];
+  }
+
+  return value
+    .split(',')
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+/**
+ * Gmail-style Reply All recipients:
+ * - To = original From + other original To (excluding the mailbox owner)
+ * - Cc = original Cc (excluding owner and anyone already in To)
+ */
+export function buildReplyAllRecipients(input: {
+  from: string | null;
+  to: string | null;
+  cc: string | null;
+  ownerEmail?: string | null;
+}): { to: string; cc?: string } {
+  const owner = input.ownerEmail?.trim().toLowerCase() ?? '';
+
+  const isOwner = (address: string) => {
+    const email = extractEmail(address);
+    return Boolean(email && owner && email === owner);
+  };
+
+  const seen = new Set<string>();
+  const pushUnique = (bucket: string[], address: string) => {
+    const email = extractEmail(address);
+    if (!email || isOwner(address) || seen.has(email)) {
+      return;
+    }
+    seen.add(email);
+    bucket.push(address.trim());
+  };
+
+  const toList: string[] = [];
+  if (input.from?.trim()) {
+    pushUnique(toList, input.from);
+  }
+  for (const address of splitAddressList(input.to)) {
+    pushUnique(toList, address);
+  }
+
+  const ccList: string[] = [];
+  for (const address of splitAddressList(input.cc)) {
+    pushUnique(ccList, address);
+  }
+
+  if (toList.length === 0) {
+    const fallback =
+      input.from?.trim() ||
+      splitAddressList(input.to).find((address) => !isOwner(address)) ||
+      '';
+    return { to: fallback };
+  }
+
+  return {
+    to: toList.join(', '),
+    cc: ccList.length > 0 ? ccList.join(', ') : undefined,
+  };
 }
 
 export async function saveDraftToGmail(input: {
@@ -169,6 +241,7 @@ export async function saveDraftToGmail(input: {
   const headers = await loadGmailReplyHeaders(
     input.userId,
     replyMessageGmailId,
+    mailboxKind,
   );
 
   const ownerEmail = ownerConnection?.google_email ?? undefined;
@@ -179,9 +252,21 @@ export async function saveDraftToGmail(input: {
     Boolean(settingsRow?.signature_is_html),
   );
 
+  const recipients = buildReplyAllRecipients({
+    from: headers.from,
+    to: headers.to,
+    cc: headers.cc,
+    ownerEmail,
+  });
+
+  if (!recipients.to.trim()) {
+    throw new Error('Could not determine reply recipients');
+  }
+
   const raw = buildRawMessage({
     from: ownerEmail,
-    to: pickReplyTo(headers.from, headers.to),
+    to: recipients.to,
+    cc: recipients.cc,
     subject: replySubject(draftRecord.subject ?? threadRecord.subject),
     body: bodyText,
     signatureHtml: signature.html,

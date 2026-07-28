@@ -14,6 +14,7 @@ describe('gmail mime', () => {
     const raw = buildRawMessage({
       from: 'me@example.com',
       to: 'client@example.com',
+      cc: 'other@example.com',
       subject: 'Re: Project update',
       body: 'Thanks — I will send the quote tomorrow.',
       inReplyTo: '<msg-123@mail.gmail.com>',
@@ -23,6 +24,7 @@ describe('gmail mime', () => {
     const decoded = decodeBase64Url(raw);
 
     expect(decoded).toContain('To: client@example.com');
+    expect(decoded).toContain('Cc: other@example.com');
     expect(decoded).toContain('In-Reply-To: <msg-123@mail.gmail.com>');
     expect(decoded).toContain('multipart/alternative');
     expect(decoded).toContain('Thanks — I will send the quote tomorrow.');

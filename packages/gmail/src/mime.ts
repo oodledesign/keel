@@ -192,6 +192,7 @@ export function buildRawMessage(input: BuildRawMessageInput): string {
   const headers = [
     input.from ? `From: ${input.from}` : null,
     `To: ${input.to}`,
+    input.cc?.trim() ? `Cc: ${input.cc.trim()}` : null,
     `Subject: ${input.subject}`,
     input.inReplyTo ? `In-Reply-To: ${input.inReplyTo}` : null,
     input.references ? `References: ${input.references}` : null,

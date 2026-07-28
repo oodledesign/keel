@@ -34,6 +34,7 @@ import type {
 import { CreateFolderDialog } from './create-folder-dialog';
 import { FolderSidebar } from './folder-sidebar';
 import { MoveToFolderDialog } from './move-to-folder-dialog';
+import { RenameVideoDialog } from './rename-video-dialog';
 import { VideoCard } from './video-card';
 import { VideoListRow } from './video-list-row';
 import { VideoPreviewDialog } from './video-preview-dialog';
@@ -88,6 +89,9 @@ export function VideoLibraryClient(props: {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [previewVideo, setPreviewVideo] = useState<VideoRow | null>(null);
   const [moveVideoTarget, setMoveVideoTarget] = useState<VideoRow | null>(null);
+  const [renameVideoTarget, setRenameVideoTarget] = useState<VideoRow | null>(
+    null,
+  );
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
   const notifiedReady = useRef(new Set<string>());
 
@@ -230,22 +234,25 @@ export function VideoLibraryClient(props: {
     }
   };
 
-  const renameVideo = async (video: VideoRow) => {
-    const nextTitle = window.prompt('Rename video', video.title)?.trim();
-    if (!nextTitle || nextTitle === video.title) return;
+  const renameVideo = async (nextTitle: string) => {
+    if (!renameVideoTarget) return;
+    const trimmed = nextTitle.trim();
+    if (!trimmed || trimmed === renameVideoTarget.title) return;
 
     try {
-      const res = await fetch(`/api/videos/${video.id}`, {
+      const res = await fetch(`/api/videos/${renameVideoTarget.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title: nextTitle }),
+        body: JSON.stringify({ title: trimmed }),
       });
       const json = await res.json();
       if (!json.ok) throw new Error(json.error.message);
       toast.success('Video renamed');
+      setRenameVideoTarget(null);
       router.refresh();
     } catch (error) {
       toast.error(getErrorMessage(error));
+      throw error;
     }
   };
 
@@ -463,7 +470,7 @@ export function VideoLibraryClient(props: {
                   onPreview={setPreviewVideo}
                   onCopyEmbed={copyEmbed}
                   onCopyPublicLink={copyPublicLink}
-                  onRename={renameVideo}
+                  onRename={setRenameVideoTarget}
                   onMove={setMoveVideoTarget}
                   onDelete={deleteVideo}
                 />
@@ -479,7 +486,7 @@ export function VideoLibraryClient(props: {
                   onPreview={setPreviewVideo}
                   onCopyEmbed={copyEmbed}
                   onCopyPublicLink={copyPublicLink}
-                  onRename={renameVideo}
+                  onRename={setRenameVideoTarget}
                   onMove={setMoveVideoTarget}
                   onDelete={deleteVideo}
                 />
@@ -497,6 +504,14 @@ export function VideoLibraryClient(props: {
         defaultFolderId={selectedFolderId}
       />
 
+      <RenameVideoDialog
+        video={renameVideoTarget}
+        open={renameVideoTarget != null}
+        onOpenChange={(open) => {
+          if (!open) setRenameVideoTarget(null);
+        }}
+        onConfirm={renameVideo}
+      />
       <CreateFolderDialog
         open={createFolderOpen}
         parentFolderName={selectedFolderName}

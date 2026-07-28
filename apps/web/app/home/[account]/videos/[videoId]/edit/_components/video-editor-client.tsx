@@ -14,6 +14,8 @@ import Link from 'next/link';
 import {
   ArrowLeft,
   Loader2,
+  Pause,
+  Play,
   RotateCcw,
   Scissors,
   Sparkles,
@@ -42,6 +44,7 @@ import {
   isTimeKept,
   nextKeptTime,
   normalizeTimeline,
+  objectContainRect,
   removeRangeFromKeep,
   restoreRangeToKeep,
   suggestZoomsFromClicks,
@@ -101,7 +104,15 @@ export function VideoEditorClient(props: Props) {
   const [publishing, setPublishing] = useState(false);
   const [publishProgress, setPublishProgress] = useState<string | null>(null);
   const [selectedZoomId, setSelectedZoomId] = useState<string | null>(null);
+  const [selectedGap, setSelectedGap] = useState<VideoKeepRange | null>(null);
   const [undoStack, setUndoStack] = useState<VideoKeepRange[][]>([]);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [frameBox, setFrameBox] = useState({
+    left: 0,
+    top: 0,
+    width: 0,
+    height: 0,
+  });
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const micAudioRef = useRef<HTMLAudioElement>(null);
@@ -245,23 +256,23 @@ export function VideoEditorClient(props: Props) {
     }
     setUndoStack((stack) => [...stack.slice(-19), timeline.keepRanges]);
     setSelection(null);
+    setSelectedGap(null);
     saveTimeline({ ...timeline, keepRanges });
-    toast.success('Removed selection — click a grey gap to restore');
+    toast.success('Removed selection — select a grey gap, then Backspace to restore');
   }, [selection, timeline, saveTimeline]);
 
-  const restoreGap = useCallback(
-    (gap: VideoKeepRange) => {
-      setUndoStack((stack) => [...stack.slice(-19), timeline.keepRanges]);
-      const keepRanges = restoreRangeToKeep(
-        timeline.keepRanges,
-        gap.startMs,
-        gap.endMs,
-      );
-      saveTimeline({ ...timeline, keepRanges });
-      toast.success('Restored deleted segment');
-    },
-    [timeline, saveTimeline],
-  );
+  const restoreSelectedGap = useCallback(() => {
+    if (!selectedGap) return;
+    setUndoStack((stack) => [...stack.slice(-19), timeline.keepRanges]);
+    const keepRanges = restoreRangeToKeep(
+      timeline.keepRanges,
+      selectedGap.startMs,
+      selectedGap.endMs,
+    );
+    setSelectedGap(null);
+    saveTimeline({ ...timeline, keepRanges });
+    toast.success('Restored deleted segment');
+  }, [selectedGap, timeline, saveTimeline]);
 
   const undoKeepRanges = useCallback(() => {
     const previous = undoStack[undoStack.length - 1];
@@ -296,6 +307,7 @@ export function VideoEditorClient(props: Props) {
       setPlayheadMs(video.currentTime * 1000);
     };
     const onPlay = () => {
+      setIsPlaying(true);
       const ms = video.currentTime * 1000;
       if (isTimeKept(timeline.keepRanges, ms)) return;
       const next = nextKeptTime(timeline.keepRanges, ms);
@@ -306,34 +318,93 @@ export function VideoEditorClient(props: Props) {
       seekingRef.current = true;
       video.currentTime = next / 1000;
     };
+    const onPause = () => setIsPlaying(false);
     video.addEventListener('seeked', onSeeked);
     video.addEventListener('play', onPlay);
+    video.addEventListener('pause', onPause);
     return () => {
       video.removeEventListener('seeked', onSeeked);
       video.removeEventListener('play', onPlay);
+      video.removeEventListener('pause', onPause);
     };
   }, [timeline.keepRanges, masterUrl]);
 
+  const updateFrameBox = useCallback(() => {
+    const stage = stageRef.current;
+    const video = videoRef.current;
+    if (!stage || !video) return;
+    const mediaW = video.videoWidth || 16;
+    const mediaH = video.videoHeight || 9;
+    setFrameBox(
+      objectContainRect(stage.clientWidth, stage.clientHeight, mediaW, mediaH),
+    );
+  }, []);
+
+  useEffect(() => {
+    updateFrameBox();
+    const stage = stageRef.current;
+    if (!stage || typeof ResizeObserver === 'undefined') return;
+    const observer = new ResizeObserver(() => updateFrameBox());
+    observer.observe(stage);
+    return () => observer.disconnect();
+  }, [updateFrameBox, masterUrl]);
+
+  const togglePlayback = useCallback(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    if (video.paused) {
+      void video.play();
+    } else {
+      video.pause();
+    }
+  }, []);
+
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
+      const tag = (e.target as HTMLElement)?.tagName;
+      const editable =
+        tag === 'INPUT' ||
+        tag === 'TEXTAREA' ||
+        (e.target as HTMLElement)?.isContentEditable;
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === 'z') {
-        const tag = (e.target as HTMLElement)?.tagName;
-        if (tag === 'INPUT' || tag === 'TEXTAREA') return;
+        if (editable) return;
         if (undoStack.length === 0) return;
         e.preventDefault();
         undoKeepRanges();
         return;
       }
+
+      if (e.key === ' ' || e.code === 'Space') {
+        if (editable) return;
+        e.preventDefault();
+        togglePlayback();
+        return;
+      }
+
       if (e.key !== 'Backspace' && e.key !== 'Delete') return;
-      const tag = (e.target as HTMLElement)?.tagName;
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return;
-      if (!selection) return;
-      e.preventDefault();
-      deleteSelection();
+      if (editable) return;
+      if (selection) {
+        e.preventDefault();
+        deleteSelection();
+        return;
+      }
+      if (selectedGap) {
+        e.preventDefault();
+        restoreSelectedGap();
+      }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [selection, deleteSelection, undoStack, undoKeepRanges]);
+  }, [
+    selection,
+    selectedGap,
+    deleteSelection,
+    restoreSelectedGap,
+    undoStack,
+    undoKeepRanges,
+    togglePlayback,
+  ]);
 
   const activeZoom = useMemo(
     () => zoomAtTime(timeline.zooms, playheadMs),
@@ -356,6 +427,7 @@ export function VideoEditorClient(props: Props) {
     );
     const ms = Math.round(ratio * timeline.sourceDurationMs);
     draggingRef.current = { startMs: ms };
+    setSelectedGap(null);
     setSelection({ startMs: ms, endMs: ms });
     setPlayheadMs(ms);
     if (videoRef.current) videoRef.current.currentTime = ms / 1000;
@@ -631,21 +703,52 @@ export function VideoEditorClient(props: Props) {
             className="relative aspect-video overflow-hidden rounded-xl bg-black"
           >
             {masterUrl ? (
-              <video
-                ref={videoRef}
-                src={masterUrl}
-                className="h-full w-full object-contain"
-                style={
-                  activeZoom
-                    ? {
-                        transform: `scale(${activeZoom.scale})`,
-                        transformOrigin: `${activeZoom.cx * 100}% ${activeZoom.cy * 100}%`,
-                      }
-                    : undefined
-                }
-                controls
-                onTimeUpdate={skipDeletedDuringPlayback}
-              />
+              <div
+                className="absolute overflow-hidden"
+                style={{
+                  left: frameBox.left,
+                  top: frameBox.top,
+                  width: frameBox.width || '100%',
+                  height: frameBox.height || '100%',
+                  transform: activeZoom
+                    ? `scale(${activeZoom.scale})`
+                    : undefined,
+                  transformOrigin: activeZoom
+                    ? `${activeZoom.cx * 100}% ${activeZoom.cy * 100}%`
+                    : undefined,
+                }}
+              >
+                <video
+                  ref={videoRef}
+                  src={masterUrl}
+                  className="h-full w-full object-fill"
+                  controls={false}
+                  playsInline
+                  onLoadedMetadata={updateFrameBox}
+                  onTimeUpdate={skipDeletedDuringPlayback}
+                />
+                {activeClicks.map((c) => {
+                  const age = playheadMs - c.tMs;
+                  const t = age / timeline.clickStyle.fadeMs;
+                  return (
+                    <span
+                      key={`${c.tMs}-${c.x}-${c.y}`}
+                      className="pointer-events-none absolute rounded-full border-2"
+                      style={{
+                        left: `${c.x * 100}%`,
+                        top: `${c.y * 100}%`,
+                        width:
+                          timeline.clickStyle.radiusPx * (0.6 + t * 1.4) * 2,
+                        height:
+                          timeline.clickStyle.radiusPx * (0.6 + t * 1.4) * 2,
+                        transform: 'translate(-50%, -50%)',
+                        borderColor: timeline.clickStyle.color,
+                        opacity: 1 - t,
+                      }}
+                    />
+                  );
+                })}
+              </div>
             ) : (
               <div className="flex h-full items-center justify-center text-sm text-[var(--workspace-shell-text-muted)]">
                 Loading master…
@@ -669,25 +772,32 @@ export function VideoEditorClient(props: Props) {
                 className="hidden"
               />
             ) : null}
-            {activeClicks.map((c) => {
-              const age = playheadMs - c.tMs;
-              const t = age / timeline.clickStyle.fadeMs;
-              return (
-                <span
-                  key={`${c.tMs}-${c.x}-${c.y}`}
-                  className="pointer-events-none absolute rounded-full border-2"
-                  style={{
-                    left: `${c.x * 100}%`,
-                    top: `${c.y * 100}%`,
-                    width: timeline.clickStyle.radiusPx * (0.6 + t * 1.4) * 2,
-                    height: timeline.clickStyle.radiusPx * (0.6 + t * 1.4) * 2,
-                    transform: 'translate(-50%, -50%)',
-                    borderColor: timeline.clickStyle.color,
-                    opacity: 1 - t,
-                  }}
-                />
-              );
-            })}
+          </div>
+
+          <div className="mt-2 flex items-center gap-3">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={togglePlayback}
+              disabled={!masterUrl}
+            >
+              {isPlaying ? (
+                <>
+                  <Pause className="mr-1.5 h-4 w-4" />
+                  Pause
+                </>
+              ) : (
+                <>
+                  <Play className="mr-1.5 h-4 w-4" />
+                  Play
+                </>
+              )}
+            </Button>
+            <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {formatMs(playheadMs)} / {formatMs(timeline.sourceDurationMs)} ·
+              Space to play/pause
+            </span>
           </div>
 
           <div className="mt-3 space-y-2">
@@ -698,10 +808,12 @@ export function VideoEditorClient(props: Props) {
               </span>
               <span>
                 {selection
-                  ? `Selection ${formatMs(Math.abs(selection.endMs - selection.startMs))} — Backspace to delete`
-                  : gaps.length
-                    ? 'Drag to select · click a grey gap to restore'
-                    : 'Drag on the timeline to select a range'}
+                  ? `Selection ${formatMs(Math.abs(selection.endMs - selection.startMs))} — Backspace to cut`
+                  : selectedGap
+                    ? `Cut selected (${formatMs(selectedGap.endMs - selectedGap.startMs)}) — Backspace to restore`
+                    : gaps.length
+                      ? 'Drag to select · click a grey gap to select it'
+                      : 'Drag on the timeline to select a range'}
               </span>
             </div>
 
@@ -717,24 +829,38 @@ export function VideoEditorClient(props: Props) {
                 sourceDurationMs={timeline.sourceDurationMs}
                 keepRanges={timeline.keepRanges}
               />
-              {/* Deleted gaps (restorable) */}
-              {gaps.map((g) => (
-                <button
-                  key={`gap-${g.startMs}-${g.endMs}`}
-                  type="button"
-                  title={`Restore ${formatMs(g.endMs - g.startMs)}`}
-                  className="absolute top-1 bottom-1 z-[1] rounded-md bg-[color:var(--workspace-shell-text-muted)]/20 hover:bg-[color:var(--workspace-shell-text-muted)]/35"
-                  style={{
-                    left: `${(g.startMs / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
-                    width: `${((g.endMs - g.startMs) / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
-                  }}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    restoreGap(g);
-                  }}
-                  onPointerDown={(e) => e.stopPropagation()}
-                />
-              ))}
+              {/* Deleted gaps (selectable; Backspace restores) */}
+              {gaps.map((g) => {
+                const isSelected =
+                  selectedGap?.startMs === g.startMs &&
+                  selectedGap?.endMs === g.endMs;
+                return (
+                  <button
+                    key={`gap-${g.startMs}-${g.endMs}`}
+                    type="button"
+                    title={`Select cut ${formatMs(g.endMs - g.startMs)} — Backspace to restore`}
+                    className={cn(
+                      'absolute top-1 bottom-1 z-[1] rounded-md bg-[color:var(--workspace-shell-text-muted)]/20 hover:bg-[color:var(--workspace-shell-text-muted)]/35',
+                      isSelected &&
+                        'ring-2 ring-[var(--ozer-accent)] ring-offset-1 ring-offset-[var(--workspace-control-surface)]',
+                    )}
+                    style={{
+                      left: `${(g.startMs / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
+                      width: `${((g.endMs - g.startMs) / Math.max(1, timeline.sourceDurationMs)) * 100}%`,
+                    }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelection(null);
+                      setSelectedGap(g);
+                      setPlayheadMs(g.startMs);
+                      if (videoRef.current) {
+                        videoRef.current.currentTime = g.startMs / 1000;
+                      }
+                    }}
+                    onPointerDown={(e) => e.stopPropagation()}
+                  />
+                );
+              })}
               {/* Kept segments */}
               {timeline.keepRanges.map((r) => (
                 <div
@@ -810,6 +936,16 @@ export function VideoEditorClient(props: Props) {
                 type="button"
                 variant="outline"
                 size="sm"
+                onClick={restoreSelectedGap}
+                disabled={!selectedGap}
+              >
+                <RotateCcw className="mr-1.5 h-4 w-4" />
+                Restore cut
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
                 onClick={undoKeepRanges}
                 disabled={undoStack.length === 0}
               >
@@ -826,6 +962,7 @@ export function VideoEditorClient(props: Props) {
                       ...stack.slice(-19),
                       timeline.keepRanges,
                     ]);
+                    setSelectedGap(null);
                     saveTimeline({
                       ...timeline,
                       keepRanges: [

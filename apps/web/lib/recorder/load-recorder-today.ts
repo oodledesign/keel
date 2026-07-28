@@ -349,6 +349,7 @@ export async function loadRecorderToday(
     .from('tasks')
     .select(TASK_SELECT)
     .eq('user_id', userId)
+    .not('status', 'in', '("done","cancelled")')
     .order('due_date', { ascending: true, nullsFirst: false })
     .limit(TASK_LIST_LIMIT);
 
@@ -374,7 +375,16 @@ export async function loadRecorderToday(
 
   const overdueTasks = openTasks.filter((task) => task.overdue).sort(sortTasks);
 
-  const allOpenTasks = [...openTasks].sort(sortTasks);
+  // Active = due today, overdue, or currently in progress (not the full backlog).
+  const listedIds = new Set([
+    ...tasksDueToday.map((task) => task.id),
+    ...overdueTasks.map((task) => task.id),
+  ]);
+  const inProgressTasks = openTasks
+    .filter((task) => task.status === 'in_progress' && !listedIds.has(task.id))
+    .sort(sortTasks);
+
+  const allOpenTasks = [...overdueTasks, ...tasksDueToday, ...inProgressTasks];
 
   return {
     date: todayYmd,

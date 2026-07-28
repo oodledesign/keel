@@ -2,7 +2,7 @@
 
 **Status:** Audit only. No policy prose.  
 **Generated from:** `apps/web`, `packages/*`, `supabase/migrations`, and `/Users/danjamespotter/OzerAssistant` (Swift).  
-**Last audited:** 24 July 2026  
+**Last audited:** 28 July 2026   
 **Composio:** Not built — exclude from compliance copy until shipped.
 
 ---
@@ -25,6 +25,7 @@
 | Transactional email | to/from/subject/html; `platform_email_log` metadata | Product emails | ZeptoMail EU API (+ optional Resend) | ZeptoMail (default) | Live |
 | Video hosting | title, description, filename, Bunny IDs | Host/play videos | Supabase metadata + Bunny Stream binary | Bunny.net | Live |
 | MCP (`/api/mcp`) | Tasks, projects, deals, clients, notes (RLS-scoped) — **not** email bodies | External AI clients | Same Supabase | Customer’s MCP client | Live |
+| Product analytics | Page views, in-product events, device/browser metadata, user/account IDs; session replay of UI (inputs masked, 30-day retention) | Product improvement / diagnostics | PostHog EU Cloud | **PostHog** (consent-gated) | Live (SDK wiring) |
 | Composio | — | — | — | — | **Not built** |
 
 ---
@@ -98,6 +99,7 @@
 | ZeptoMail | Transactional email | Recipient, subject, HTML body | EU API endpoint used in code |
 | Bunny.net Stream | Video hosting | Media files + video metadata | [LEGAL REVIEW NEEDED: region] |
 | Voyage AI | Embeddings (Second Brain) when keyed | Chunk/query text | [LEGAL REVIEW NEEDED] |
+| PostHog, Inc. | Product analytics, feature flags, errors/replay | Usage events, device data, user/account IDs; session recordings (masked inputs, 30 days) | EU Cloud; PostHog DPA |
 | Soniox | Cloud realtime STT (web recorder path) | Audio stream / transcript | [LEGAL REVIEW NEEDED] |
 
 **Exclude until shipped:** Composio.

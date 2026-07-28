@@ -44,7 +44,7 @@ export const loadUserPlatformSupportTicket = cache(
     const client = getSupabaseServerClient();
 
     // category column may lag generated Database types until typegen.
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { data: ticket, error } = await (
       client.from('platform_support_tickets') as any
     )
@@ -72,7 +72,7 @@ export const loadAdminPlatformSupportTicket = cache(
   async (ticketId: string): Promise<PlatformSupportTicketDetail | null> => {
     const client = getSupabaseServerClient();
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+     
     const { data: ticket, error } = await (
       client.from('platform_support_tickets') as any
     )

@@ -1,11 +1,15 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { ArrowLeft } from 'lucide-react';
 
+import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
@@ -44,11 +48,18 @@ export function PlayerConfigPageClient(props: {
   detectedAspectRatio: AspectRatio;
   cdnHostname: string;
 }) {
+  const router = useRouter();
   const [config, setConfig] = useState(props.initialConfig);
   const [presets, setPresets] = useState(props.initialPresets);
   const [captions, setCaptions] = useState(props.initialCaptions);
+  const [title, setTitle] = useState(props.video.title);
   const [saving, setSaving] = useState(false);
+  const [savingTitle, setSavingTitle] = useState(false);
   const [uploadingCaption, setUploadingCaption] = useState(false);
+
+  useEffect(() => {
+    setTitle(props.video.title);
+  }, [props.video.title]);
 
   const persistConfig = useCallback(
     async (nextConfig: VideoPlayerConfigValues) => {
@@ -79,6 +90,35 @@ export function PlayerConfigPageClient(props: {
   const handleSave = () => void persistConfig(config);
 
   const handleBlurSave = () => void persistConfig(config);
+
+  const saveTitle = async () => {
+    const nextTitle = title.trim();
+    if (!nextTitle) {
+      toast.error('Video name can’t be empty');
+      setTitle(props.video.title);
+      return;
+    }
+    if (nextTitle === props.video.title) return;
+
+    setSavingTitle(true);
+    try {
+      const res = await fetch(`/api/videos/${props.video.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ title: nextTitle }),
+      });
+      const json = await res.json();
+      if (!json.ok) throw new Error(json.error?.message ?? 'Rename failed');
+      setTitle(nextTitle);
+      toast.success('Video renamed');
+      router.refresh();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+      setTitle(props.video.title);
+    } finally {
+      setSavingTitle(false);
+    }
+  };
 
   const handleReset = () => {
     setConfig({
@@ -156,12 +196,42 @@ export function PlayerConfigPageClient(props: {
           <ArrowLeft className="h-4 w-4" />
           Back to videos
         </Link>
-        <Link
-          href={`${videosPath}/${props.video.id}/edit`}
-          className="inline-flex h-9 items-center rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 text-sm font-medium text-[var(--workspace-shell-text)] hover:border-[var(--ozer-accent)]/40"
-        >
-          Edit recording
-        </Link>
+      </div>
+
+      <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+        <div className="space-y-2">
+          <Label htmlFor="video-title">Video name</Label>
+          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+            <Input
+              id="video-title"
+              value={title}
+              onChange={(e) => setTitle(e.target.value)}
+              onBlur={() => void saveTitle()}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  void saveTitle();
+                }
+              }}
+              maxLength={500}
+              disabled={savingTitle}
+              className="bg-[var(--workspace-shell-panel)]"
+            />
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="shrink-0"
+              disabled={savingTitle || title.trim() === props.video.title}
+              onClick={() => void saveTitle()}
+            >
+              {savingTitle ? 'Saving…' : 'Save name'}
+            </Button>
+          </div>
+          <p className="text-muted-foreground text-xs">
+            Shown on the public watch page and in your video library.
+          </p>
+        </div>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[3fr_2fr]">
@@ -185,7 +255,7 @@ export function PlayerConfigPageClient(props: {
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <PublicSharePanel
               videoId={props.video.id}
-              videoTitle={props.video.title}
+              videoTitle={title}
               initialEnabled={props.video.publicShareEnabled}
               initialToken={props.video.publicShareToken}
               initialPublicUrl={props.video.publicShareUrl}
@@ -204,12 +274,21 @@ export function PlayerConfigPageClient(props: {
         </div>
 
         <aside className="xl:sticky xl:top-6 xl:self-start">
-          <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+          <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
             <PlayerPreview
               libraryId={props.video.bunny_library_id}
               bunnyVideoId={props.video.bunny_video_id}
               config={config}
             />
+            <Link
+              href={`${videosPath}/${props.video.id}/edit`}
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)] inline-flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold shadow-sm transition-colors"
+            >
+              Edit recording
+            </Link>
+            <p className="text-muted-foreground text-center text-xs">
+              Cut dead air, add zooms, and tidy the transcript before sharing.
+            </p>
           </div>
         </aside>
       </div>

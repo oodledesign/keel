@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last updated:** 24 July 2026
+**Last updated:** 28 July 2026
 
 These Terms govern use of Ozer, operated by Oodle Designs Ltd. By creating an account and accepting these Terms you agree to be bound by them.
 
@@ -33,6 +33,10 @@ Where you instruct Ozer to process personal data of your staff, clients, contact
 ## Meeting recording and attendee notice
 
 If you use meeting recording or transcription, you must inform attendees as required by applicable law and your own policies. Consent or enablement inside the Ozer product does **not** replace your duty to notify attendees.
+
+## Privacy and product analytics
+
+Our [Privacy Policy](/privacy-policy) and [Cookie Policy](/cookie-policy) explain how we process personal data, including product analytics via PostHog (with consent where cookies or similar technologies require it). Our [Data Processing Agreement](/dpa) applies where we process personal data as your processor.
 
 ## Data Processing Agreement
 

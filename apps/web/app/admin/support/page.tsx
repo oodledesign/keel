@@ -12,7 +12,7 @@ export const metadata = { title: 'Platform support' };
 async function AdminSupportPage() {
   const client = getSupabaseServerClient();
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+   
   const { data: tickets, error } = await (
     client.from('platform_support_tickets') as any
   )

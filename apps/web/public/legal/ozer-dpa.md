@@ -4,7 +4,7 @@ UK GDPR Article 28 terms for customers who use Ozer as a processor.
 
 **Solicitor review status:** this DPA has been prepared for customer review. Clauses marked [LEGAL REVIEW NEEDED] remain subject to solicitor confirmation.
 
-**Version:** 24 July 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
+**Version:** 28 July 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
 
 ## 1. Roles and subject matter
 
@@ -16,7 +16,7 @@ This DPA applies for the term of the Controller's agreement with Ozer and until 
 
 ## 3. Nature and purpose of processing
 
-Processing is for providing the Ozer workspace and related features (CRM, invoicing, email assist, calendar, bookings, transcripts, activity tracking, signatures, AI features, transactional email, video, MCP access) as enabled by the Controller. Categories are in Annex A.
+Processing is for providing the Ozer workspace and related features (CRM, invoicing, email assist, calendar, bookings, transcripts, activity tracking, signatures, AI features, transactional email, video, MCP access) as enabled by the Controller, and for Ozer's own product analytics and security logging as controller. Categories are in Annex A.
 
 ## 4. Types of personal data and data subjects
 
@@ -91,6 +91,7 @@ On data protection processing matters, this DPA prevails over the Terms of Servi
 - Transactional email: sender/recipient, subject, body, and delivery log metadata.
 - Video: title, description, filename, hosting identifiers and media files.
 - MCP: tasks, projects, deals, clients, notes (workspace-permission scoped; not email bodies).
+- Product analytics (Ozer as controller): usage events, device/browser metadata, user/account identifiers; session replay of product UI with input masking (30-day recording retention; may incidentally include on-screen Controller data).
 
 ## Annex B — Sub-processor schedule
 
@@ -106,6 +107,7 @@ The authoritative register, kept current, is published on the Trust Centre. As a
 | ZeptoMail (Zoho) | Transactional email | Recipient, subject, body | EU data centre | Zoho DPA with standard contractual clauses |
 | Bunny.net (BunnyWay d.o.o.) | Video hosting | Media files, video metadata | Slovenia (EU) | Not a restricted transfer; DPA in place |
 | Voyage AI | Semantic search embeddings | Text excerpts, search queries | US | Voyage AI DPA with EU SCCs and UK ICO Addendum |
+| PostHog, Inc. | Product analytics, feature flags, error/session diagnostics, session replay | Usage events, device/browser data, user/account identifiers; UI session recordings (inputs masked; 30-day retention) | EU (PostHog EU Cloud) | Not a restricted transfer for EU Cloud hosting; PostHog DPA applies |
 
 Changes to this schedule follow the notice and objection process in Section 6.
 

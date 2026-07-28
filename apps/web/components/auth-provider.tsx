@@ -62,6 +62,13 @@ function useDispatchAppEventFromAuthEvent() {
 
           break;
 
+        case 'SIGNED_OUT':
+          emit({
+            type: 'user.signedOut',
+            payload: {},
+          });
+          break;
+
         case 'USER_UPDATED':
           emit({
             type: 'user.updated',

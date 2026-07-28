@@ -60,24 +60,24 @@ export default async function PublicWatchPage({
   const isReady = video.status === 'ready';
 
   return (
-    <main className="min-h-screen bg-[#0a0f14] text-[var(--workspace-shell-text)]">
+    <main className="min-h-screen bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-900)]">
       <div className="mx-auto flex min-h-screen max-w-5xl flex-col px-4 py-8 sm:px-6">
         <header className="mb-6 space-y-2">
-          <p className="text-muted-foreground text-xs tracking-wide uppercase">
+          <p className="text-xs tracking-wide text-[var(--ozer-text-muted)] uppercase">
             Hosted video
           </p>
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+          <h1 className="font-heading text-2xl font-semibold tracking-tight text-[var(--ozer-plum-900)] sm:text-3xl">
             {video.title}
           </h1>
           {video.description ? (
-            <p className="text-muted-foreground max-w-3xl text-sm leading-relaxed">
+            <p className="max-w-3xl text-sm leading-relaxed text-[var(--ozer-text-muted)]">
               {video.description}
             </p>
           ) : null}
         </header>
 
         <div
-          className="mx-auto w-full overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-black shadow-2xl"
+          className="mx-auto w-full overflow-hidden rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-black shadow-lg shadow-[color:var(--ozer-plum-900)]/10"
           style={{ maxWidth: config.max_width_px ?? undefined }}
         >
           {useTimelinePlayer ? (
@@ -105,7 +105,7 @@ export default async function PublicWatchPage({
                   className="absolute inset-0 h-full w-full object-cover opacity-40"
                 />
               ) : null}
-              <p className="relative z-10 px-6 text-center text-sm text-[var(--workspace-shell-text)]/80">
+              <p className="relative z-10 px-6 text-center text-sm text-[var(--ozer-text-on-dark)]/80">
                 {video.status === 'failed'
                   ? 'This video failed to process.'
                   : 'This video is still processing. Check back soon.'}

@@ -328,6 +328,21 @@ function TrustCenterPage() {
                         [LEGAL REVIEW NEEDED]
                       </td>
                     </tr>
+                    <tr className="border-border/60 border-b">
+                      <td className="py-2.5 pr-3 align-top">PostHog, Inc.</td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Product analytics, feature flags, error/session
+                        diagnostics, and session replay
+                      </td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Usage events, device/browser data, user/account
+                        identifiers; UI session recordings (inputs masked;
+                        30-day retention)
+                      </td>
+                      <td className="py-2.5 align-top">
+                        EU (PostHog EU Cloud); PostHog DPA
+                      </td>
+                    </tr>
                     <tr>
                       <td className="py-2.5 pr-3 align-top">Soniox</td>
                       <td className="py-2.5 pr-3 align-top">

@@ -84,7 +84,7 @@ export async function loadEmailThreadDetail(
     return { ok: false, error: draftResult.error.message };
   }
 
-  let actionItems = (actionItemsResult.data ?? []) as EmailActionItemRow[];
+  const actionItems = (actionItemsResult.data ?? []) as EmailActionItemRow[];
 
   // Best-effort link backfill — paint with in-memory ids first; persist async.
   if (thread.link.linked && (thread.link.clientId || thread.link.projectId)) {

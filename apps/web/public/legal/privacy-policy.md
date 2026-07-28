@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 24 July 2026
+**Last updated:** 28 July 2026
 
 Oodle Designs Ltd ("Ozer", "we", "us") is the data controller for personal data we process for our own purposes (account and authentication data, product analytics and security logs, and SaaS billing records). Where you use Ozer to store or process your clients', staff, or invitees' personal data, we typically act as a **processor** on your instructions. See our [Data Processing Agreement](/dpa) for that relationship. We comply with the UK GDPR, EU GDPR, and the Data Protection Act 2018.
 
@@ -9,13 +9,13 @@ Oodle Designs Ltd ("Ozer", "we", "us") is the data controller for personal data 
 - Account details: name, email, password hash, workspace membership.
 - Workspace content you create: tasks, notes, clients, contacts, invoices, files, and related CRM records.
 - Billing data processed by Stripe (we do not store full card numbers).
-- Usage, device, and security logs; optional analytics cookies with consent.
+- Usage, device, and security logs; product analytics events; optional analytics cookies / similar technologies with consent (see Product analytics and [Cookie Policy](/cookie-policy)).
 - AI feature inputs and outputs where you use Ozer AI features.
 - Optional integration data described in the feature sections below (email, calendar, transcription, activity tracking, signatures, bookings, video).
 
 ## Lawful bases
 
-We process data to perform our contract with you, for legitimate interests (security, product improvement), with consent where required (marketing/analytics cookies; meeting recording and activity tracking as described below), and to meet legal obligations (tax, fraud prevention). Where we act as your processor, you are responsible for ensuring you have a lawful basis for the personal data you instruct us to process.
+We process data to perform our contract with you, for legitimate interests (security, product improvement), with consent where required (marketing/analytics cookies and similar technologies; meeting recording and activity tracking as described below), and to meet legal obligations (tax, fraud prevention). Where we act as your processor, you are responsible for ensuring you have a lawful basis for the personal data you instruct us to process.
 
 ## Core workspace CRM
 
@@ -137,6 +137,20 @@ Ozer's Microsoft access is read-only: we read directory profiles and photos to b
 - `admin.directory.user.readonly` — read user directory data for staff sync.
 - `gmail.settings.basic` — apply the signature to Gmail send-as settings.
 
+## Product analytics (PostHog)
+
+**Data:** page views and in-product events; device and browser information; approximate location derived from IP; referrer/UTM data; performance and error telemetry; and, where you are signed in, a stable user or account identifier (and limited account traits such as plan tier where we choose to send them). We do **not** intentionally send workspace CRM content, email bodies, invoice line items, or meeting transcript text to PostHog as analytics properties.
+
+**Optional session replay:** Session replay is enabled. PostHog stores recordings for **30 days**. Input fields are masked. Replay may still incidentally include on-screen workspace text visible in the UI. Contact privacy@ozer.so with questions about replay settings.
+
+**Purpose:** understand product usage, diagnose bugs, improve features, and measure onboarding and conversion — as controller for product analytics.
+
+**UK GDPR basis:** legitimate interests in operating and improving the service; where cookies or similar technologies require consent under UK/EU ePrivacy rules, we obtain consent via the cookie banner before loading non-essential analytics.
+
+**Sub-processors:** PostHog, Inc. (EU Cloud — see Sub-processors table).
+
+**Retention:** analytics events follow PostHog project retention settings; **session recordings are retained for 30 days**. We may delete or anonymise sooner on request where feasible.
+
 ## Platform billing and client payments
 
 **Platform billing data:** billing customer records and subscription status. We do not store card numbers; Stripe processes card payments.
@@ -197,6 +211,7 @@ We use the following sub-processors to operate Ozer. A matching register is publ
 | ZeptoMail (Zoho) | Transactional email | Recipient, subject, message body | EU data centre — Zoho DPA with standard contractual clauses |
 | Bunny.net (BunnyWay d.o.o.) | Video hosting and streaming | Media files and video metadata | Slovenia (EU) — EU-headquartered; DPA in place; EU storage region |
 | Voyage AI | Semantic search embeddings | Text excerpts and search queries | US — Voyage AI DPA with EU SCCs and UK ICO Addendum (incorporated in commercial terms) |
+| PostHog, Inc. | Product analytics, feature flags, error/session diagnostics, and session replay | Usage events, device/browser data, user/account identifiers; UI session recordings (inputs masked; 30-day recording retention) | EU (PostHog EU Cloud) — PostHog DPA with EU SCCs and UK Addendum |
 
 ## International transfers
 

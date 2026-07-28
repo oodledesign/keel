@@ -13,6 +13,14 @@ import {
 } from '@kit/shared/events';
 import { isBrowser } from '@kit/shared/utils';
 
+import {
+  capturePostHogEvent,
+  identifyPostHogUser,
+  resetPostHogUser,
+} from '~/lib/analytics/posthog-browser';
+
+import { PostHogProvider } from './posthog-provider';
+
 type AnalyticsMapping<
   T extends ConsumerProvidedEventTypes = NonNullable<unknown>,
 > = {
@@ -71,28 +79,33 @@ const analyticsMapping: AnalyticsMapping = {
     const { userId, ...traits } = event.payload;
 
     if (userId) {
-      return analytics.identify(userId, traits);
+      void analytics.identify(userId, traits);
+      identifyPostHogUser(userId, traits);
     }
   },
+  'user.signedOut': () => {
+    resetPostHogUser();
+  },
   'user.signedUp': (event) => {
-    return analytics.trackEvent(event.type, event.payload);
+    void analytics.trackEvent(event.type, event.payload);
+    capturePostHogEvent(event.type, event.payload);
   },
   'checkout.started': (event) => {
-    return analytics.trackEvent(event.type, event.payload);
+    void analytics.trackEvent(event.type, event.payload);
+    capturePostHogEvent(event.type, event.payload);
   },
   'user.updated': (event) => {
-    return analytics.trackEvent(event.type, event.payload);
+    void analytics.trackEvent(event.type, event.payload);
+    capturePostHogEvent(event.type, event.payload);
   },
 };
 
 function AnalyticsProviderBrowser(props: React.PropsWithChildren) {
-  // Subscribe to app events and map them to analytics actions
   useAnalyticsMapping(analyticsMapping);
 
-  // Report page views to the analytics service
+  // PostHog captures App Router navigations via history_change; keep kit analytics pageviews.
   useReportPageView(useCallback((url) => analytics.trackPageView(url), []));
 
-  // Render children
   return props.children;
 }
 
@@ -104,7 +117,11 @@ export function AnalyticsProvider(props: React.PropsWithChildren) {
     return props.children;
   }
 
-  return <AnalyticsProviderBrowser>{props.children}</AnalyticsProviderBrowser>;
+  return (
+    <PostHogProvider>
+      <AnalyticsProviderBrowser>{props.children}</AnalyticsProviderBrowser>
+    </PostHogProvider>
+  );
 }
 
 /**

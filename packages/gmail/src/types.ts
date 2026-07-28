@@ -42,6 +42,8 @@ export type BuildRawMessageInput = {
   to: string;
   subject: string;
   body: string;
+  /** Optional Cc list (comma-separated), used for reply-all drafts. */
+  cc?: string;
   inReplyTo?: string;
   references?: string;
   from?: string;

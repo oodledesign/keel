@@ -413,6 +413,27 @@ export function suggestZoomsFromClicks(
   return zooms;
 }
 
+/** Layout box for `object-fit: contain` media inside a container. */
+export function objectContainRect(
+  containerW: number,
+  containerH: number,
+  mediaW: number,
+  mediaH: number,
+): { left: number; top: number; width: number; height: number } {
+  if (containerW <= 0 || containerH <= 0 || mediaW <= 0 || mediaH <= 0) {
+    return { left: 0, top: 0, width: Math.max(0, containerW), height: Math.max(0, containerH) };
+  }
+  const scale = Math.min(containerW / mediaW, containerH / mediaH);
+  const width = mediaW * scale;
+  const height = mediaH * scale;
+  return {
+    left: (containerW - width) / 2,
+    top: (containerH - height) / 2,
+    width,
+    height,
+  };
+}
+
 /** Build ffmpeg filter args for cuts + optional zoompan (server/client export). */
 export function buildFfmpegCutArgs(timeline: VideoEditTimeline): string[] {
   const ranges = timeline.keepRanges;
