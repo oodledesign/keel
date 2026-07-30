@@ -1,5 +1,6 @@
 'use client';
 
+import type { Editor } from '@tiptap/react';
 import {
   Bold,
   Heading1,
@@ -11,58 +12,38 @@ import {
 
 import { cn } from '@kit/ui/utils';
 
-import {
-  type MarkdownFormat,
-  applyMarkdownFormat,
-} from '~/lib/markdown-editor';
-
 type NoteMarkdownToolbarProps = {
-  textareaRef: React.RefObject<HTMLTextAreaElement | null>;
-  onChange: (value: string) => void;
+  editor: Editor | null;
   className?: string;
 };
 
 export function NoteMarkdownToolbar({
-  textareaRef,
-  onChange,
+  editor,
   className,
 }: NoteMarkdownToolbarProps) {
-  const apply = (format: MarkdownFormat) => {
-    const node = textareaRef.current;
-    if (!node) return;
-
-    const { value, selectionStart, selectionEnd } = applyMarkdownFormat(
-      node.value,
-      node.selectionStart,
-      node.selectionEnd,
-      format,
-    );
-
-    onChange(value);
-
-    requestAnimationFrame(() => {
-      node.focus();
-      node.setSelectionRange(selectionStart, selectionEnd);
-    });
-  };
-
   const btn = (
     label: string,
-    format: MarkdownFormat,
+    active: boolean,
+    onClick: () => void,
     icon: React.ReactNode,
   ) => (
     <button
-      key={format}
+      key={label}
       type="button"
+      disabled={!editor}
       className={cn(
-        'flex h-8 w-8 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] transition-colors',
-        'hover:bg-white/6 hover:text-[var(--workspace-shell-text)]',
+        'flex h-8 w-8 items-center justify-center rounded-md transition-colors',
+        active
+          ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+          : 'text-[var(--workspace-shell-text-muted)] hover:bg-white/6 hover:text-[var(--workspace-shell-text)]',
+        !editor && 'opacity-50',
       )}
       aria-label={label}
       title={label}
+      aria-pressed={active}
       onMouseDown={(event) => {
         event.preventDefault();
-        apply(format);
+        onClick();
       }}
     >
       {icon}
@@ -78,12 +59,42 @@ export function NoteMarkdownToolbar({
       role="toolbar"
       aria-label="Formatting"
     >
-      {btn('Bold', 'bold', <Bold className="h-4 w-4" />)}
-      {btn('Italic', 'italic', <Italic className="h-4 w-4" />)}
-      {btn('Underline', 'underline', <Underline className="h-4 w-4" />)}
-      {btn('Bullet list', 'bullet', <List className="h-4 w-4" />)}
-      {btn('Title', 'title', <Heading1 className="h-4 w-4" />)}
-      {btn('Subheading', 'subheading', <Heading2 className="h-4 w-4" />)}
+      {btn(
+        'Bold',
+        editor?.isActive('bold') ?? false,
+        () => editor?.chain().focus().toggleBold().run(),
+        <Bold className="h-4 w-4" />,
+      )}
+      {btn(
+        'Italic',
+        editor?.isActive('italic') ?? false,
+        () => editor?.chain().focus().toggleItalic().run(),
+        <Italic className="h-4 w-4" />,
+      )}
+      {btn(
+        'Underline',
+        editor?.isActive('underline') ?? false,
+        () => editor?.chain().focus().toggleUnderline().run(),
+        <Underline className="h-4 w-4" />,
+      )}
+      {btn(
+        'Bullet list',
+        editor?.isActive('bulletList') ?? false,
+        () => editor?.chain().focus().toggleBulletList().run(),
+        <List className="h-4 w-4" />,
+      )}
+      {btn(
+        'Title',
+        editor?.isActive('heading', { level: 1 }) ?? false,
+        () => editor?.chain().focus().toggleHeading({ level: 1 }).run(),
+        <Heading1 className="h-4 w-4" />,
+      )}
+      {btn(
+        'Subheading',
+        editor?.isActive('heading', { level: 2 }) ?? false,
+        () => editor?.chain().focus().toggleHeading({ level: 2 }).run(),
+        <Heading2 className="h-4 w-4" />,
+      )}
     </div>
   );
 }

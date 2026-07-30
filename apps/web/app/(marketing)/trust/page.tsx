@@ -82,7 +82,7 @@ function TrustCenterPage() {
             about how we do it.
           </p>
           <p className="text-muted-foreground text-xs tracking-wide uppercase">
-            Last updated: July 2026
+            Last updated: 30 July 2026
           </p>
         </div>
       </div>
@@ -120,18 +120,21 @@ function TrustCenterPage() {
                 <div>
                   <h3 className={h3Class}>GDPR</h3>
                   <p className={pClass}>
-                    {appConfig.name} is designed to comply with the UK GDPR and
-                    EU GDPR. We act as a Data Processor for the data you store
-                    in {appConfig.name}, and as a Data Controller for the
-                    account and usage data we collect directly. We do not sell
-                    your data to third parties under any circumstances.
+                    {appConfig.name} is designed to comply with the UK GDPR, EU
+                    GDPR, and the Data Protection Act 2018. We act as a{' '}
+                    <strong>processor</strong> for personal data you store in
+                    your workspace (for example clients, notes, and transcripts)
+                    and as a <strong>controller</strong> for account and
+                    authentication data, product analytics and security logs,
+                    and SaaS billing records. We do not sell your data to third
+                    parties.
                   </p>
                 </div>
 
                 <div>
                   <h3 className={h3Class}>UK ICO Registration</h3>
                   <p className={pClass}>
-                    {appConfig.name} is operated by Oodle Design Ltd, a UK
+                    {appConfig.name} is operated by Oodle Designs Ltd, a UK
                     registered company. We are registered with the UK
                     Information Commissioner&apos;s Office (ICO) as a data
                     controller.
@@ -141,8 +144,8 @@ function TrustCenterPage() {
                 <div>
                   <h3 className={h3Class}>Data Processing Agreement</h3>
                   <p className={pClass}>
-                    Our standalone Data Processing Agreement (UK GDPR Article
-                    28) is available at{' '}
+                    Our Data Processing Agreement (UK GDPR Article 28) is in
+                    effect for business customers and is available at{' '}
                     <Link
                       href="/dpa"
                       className="text-primary font-medium underline-offset-4 hover:underline"
@@ -156,10 +159,28 @@ function TrustCenterPage() {
                     >
                       /legal/ozer-dpa.md
                     </Link>
-                    . Questions:{' '}
+                    . Counsel review of the full agreement remains in progress.
+                    Questions:{' '}
                     <TrustEmail href="mailto:privacy@ozer.so">
                       privacy@ozer.so
                     </TrustEmail>
+                    .
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className={h3Class}>Google API Limited Use</h3>
+                  <p className={pClass}>
+                    {appConfig.name}&apos;s use of information received from
+                    Google Workspace APIs adheres to the Google API Services
+                    User Data Policy, including the Limited Use requirements.
+                    See the{' '}
+                    <Link
+                      href="/privacy-policy"
+                      className="text-primary font-medium underline-offset-4 hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
                     .
                   </p>
                 </div>
@@ -230,7 +251,7 @@ function TrustCenterPage() {
                         scope="col"
                         className="text-foreground py-2 font-semibold"
                       >
-                        Location note
+                        Location &amp; transfer mechanism
                       </th>
                     </tr>
                   </thead>
@@ -243,92 +264,107 @@ function TrustCenterPage() {
                       <td className="py-2.5 pr-3 align-top">
                         Workspace and account data
                       </td>
-                      <td className="py-2.5 align-top">EU West (Ireland)</td>
+                      <td className="py-2.5 align-top">
+                        EU West (Ireland) — no restricted transfer
+                      </td>
                     </tr>
                     <tr className="border-border/60 border-b">
                       <td className="py-2.5 pr-3 align-top">Stripe</td>
                       <td className="py-2.5 pr-3 align-top">
-                        SaaS billing and Connect
+                        SaaS billing and Connect payments
                       </td>
                       <td className="py-2.5 pr-3 align-top">
-                        Customer IDs, subscription status; card PAN stays with
-                        Stripe
+                        Customer IDs, subscription status; card numbers stay
+                        with Stripe
                       </td>
                       <td className="py-2.5 align-top">
-                        [LEGAL REVIEW NEEDED]
+                        US — Stripe Data Transfers Addendum (UK IDTA
+                        incorporated; EU-US Data Privacy Framework incl. UK
+                        Extension)
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
                       <td className="py-2.5 pr-3 align-top">Anthropic</td>
-                      <td className="py-2.5 pr-3 align-top">LLM features</td>
+                      <td className="py-2.5 pr-3 align-top">
+                        AI language model features
+                      </td>
                       <td className="py-2.5 pr-3 align-top">
                         Workspace / email / transcript text prompts
                       </td>
                       <td className="py-2.5 align-top">
-                        [LEGAL REVIEW NEEDED]
+                        US — DPA with EU SCCs and UK Addendum; EU-US Data Privacy
+                        Framework
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
                       <td className="py-2.5 pr-3 align-top">Google</td>
                       <td className="py-2.5 pr-3 align-top">
-                        Gmail, Calendar, Workspace; Gemini if enabled
+                        Gmail, Calendar, Workspace directory
                       </td>
                       <td className="py-2.5 pr-3 align-top">
-                        Mailbox, calendar, directory; AI prompts if wired
+                        Mailbox, calendar, and directory data
                       </td>
                       <td className="py-2.5 align-top">
-                        [LEGAL REVIEW NEEDED]
+                        US/global — Google Data Processing Terms (SCCs and UK
+                        Addendum incorporated)
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
-                      <td className="py-2.5 pr-3 align-top">Microsoft Graph</td>
+                      <td className="py-2.5 pr-3 align-top">Microsoft</td>
                       <td className="py-2.5 pr-3 align-top">
-                        Signatures directory and mailbox settings
+                        Signatures directory sync
                       </td>
                       <td className="py-2.5 pr-3 align-top">
-                        Staff profile, photo, mailbox settings
+                        Staff profile and photo data
                       </td>
                       <td className="py-2.5 align-top">
-                        [LEGAL REVIEW NEEDED]
+                        US/global — Microsoft Products and Services Data
+                        Protection Addendum (SCCs and UK Addendum incorporated)
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
-                      <td className="py-2.5 pr-3 align-top">ZeptoMail</td>
+                      <td className="py-2.5 pr-3 align-top">
+                        ZeptoMail (Zoho)
+                      </td>
                       <td className="py-2.5 pr-3 align-top">
                         Transactional email
                       </td>
                       <td className="py-2.5 pr-3 align-top">
-                        Recipient, subject, HTML body
+                        Recipient, subject, message body
                       </td>
                       <td className="py-2.5 align-top">
-                        EU API endpoint used in product
+                        EU data centre — Zoho DPA with standard contractual
+                        clauses
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
-                      <td className="py-2.5 pr-3 align-top">Bunny.net</td>
                       <td className="py-2.5 pr-3 align-top">
-                        Video hosting (Stream)
+                        Bunny.net (BunnyWay d.o.o.)
+                      </td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Video hosting and streaming
                       </td>
                       <td className="py-2.5 pr-3 align-top">
                         Media files and video metadata
                       </td>
                       <td className="py-2.5 align-top">
-                        [LEGAL REVIEW NEEDED]
+                        Slovenia (EU) — EU-headquartered; DPA in place; EU
+                        storage region
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
                       <td className="py-2.5 pr-3 align-top">Voyage AI</td>
                       <td className="py-2.5 pr-3 align-top">
-                        Embeddings (Second Brain) when keyed
+                        Semantic search embeddings
                       </td>
                       <td className="py-2.5 pr-3 align-top">
-                        Chunk / query text
+                        Text excerpts and search queries
                       </td>
                       <td className="py-2.5 align-top">
-                        [LEGAL REVIEW NEEDED]
+                        US — Voyage AI DPA with EU SCCs and UK ICO Addendum
                       </td>
                     </tr>
-                    <tr className="border-border/60 border-b">
+                    <tr>
                       <td className="py-2.5 pr-3 align-top">PostHog, Inc.</td>
                       <td className="py-2.5 pr-3 align-top">
                         Product analytics, feature flags, error/session
@@ -337,31 +373,29 @@ function TrustCenterPage() {
                       <td className="py-2.5 pr-3 align-top">
                         Usage events, device/browser data, user/account
                         identifiers; UI session recordings (inputs masked;
-                        30-day retention)
+                        30-day recording retention)
                       </td>
                       <td className="py-2.5 align-top">
-                        EU (PostHog EU Cloud); PostHog DPA
-                      </td>
-                    </tr>
-                    <tr>
-                      <td className="py-2.5 pr-3 align-top">Soniox</td>
-                      <td className="py-2.5 pr-3 align-top">
-                        Cloud realtime STT (web path)
-                      </td>
-                      <td className="py-2.5 pr-3 align-top">
-                        Audio stream / transcript
-                      </td>
-                      <td className="py-2.5 align-top">
-                        [LEGAL REVIEW NEEDED]
+                        EU (PostHog EU Cloud) — PostHog DPA with EU SCCs and UK
+                        Addendum
                       </td>
                     </tr>
                   </tbody>
                 </table>
               </div>
               <p className={`${pClass} pt-4`}>
-                We will update this page when sub-processors change. Formal
-                change-notification timing under the DPA is{' '}
-                <strong>[LEGAL REVIEW NEEDED — TBD]</strong>.
+                We give at least <strong>30 days&apos; notice</strong> of
+                intended additions or replacements of sub-processors, via update
+                to this Trust Centre register and, for material changes, by
+                email to the Controller&apos;s account contact, with an
+                opportunity to object on reasonable grounds (see the{' '}
+                <Link
+                  href="/dpa"
+                  className="text-primary font-medium underline-offset-4 hover:underline"
+                >
+                  DPA
+                </Link>
+                ).
               </p>
             </section>
 
@@ -401,11 +435,10 @@ function TrustCenterPage() {
                 <div>
                   <h3 className={h3Class}>Row-Level Security</h3>
                   <p className={pClass}>
-                    All data tables in {appConfig.name} enforce Row-Level
-                    Security (RLS) policies at the database level. This means
-                    every query is scoped to the authenticated user&apos;s
-                    workspace — it is architecturally impossible for one
-                    customer&apos;s data to be accessed by another.
+                    Data tables in {appConfig.name} enforce Row-Level Security
+                    (RLS) policies at the database level so workspace data is
+                    scoped to the correct account and cannot be accessed across
+                    workspaces via the standard application path.
                   </p>
                 </div>
 
@@ -432,26 +465,42 @@ function TrustCenterPage() {
                   <h3 className={h3Class}>Data in Transit</h3>
                   <p className={pClass}>
                     All data sent to and from {appConfig.name} is encrypted in
-                    transit using HTTPS with TLS 1.2 or above. All{' '}
-                    {appConfig.name} services reject connections using older TLS
-                    versions or insecure cipher suites.
+                    transit using HTTPS with TLS 1.2 or higher.
                   </p>
                 </div>
 
                 <div>
                   <h3 className={h3Class}>Data at Rest</h3>
                   <p className={pClass}>
-                    All data stored in {appConfig.name} is encrypted at rest
-                    using AES-256 encryption, managed by Supabase/AWS.
+                    Data stored in {appConfig.name} is encrypted at rest using
+                    AES-256 encryption via our Supabase/AWS infrastructure.
                   </p>
                 </div>
 
                 <div>
-                  <h3 className={h3Class}>Data Residency</h3>
+                  <h3 className={h3Class}>OAuth token security</h3>
                   <p className={pClass}>
-                    {appConfig.name} data is currently stored in the AWS EU West
-                    (Ireland) region. We do not transfer customer data outside
-                    of the EU/EEA without appropriate safeguards.
+                    OAuth access and refresh tokens for Google integrations
+                    (including Gmail Email Assistant and Google Calendar) are
+                    encrypted at the application layer using AES-256-GCM before
+                    storage. Microsoft 365 Signatures connection tokens are
+                    stored in our database without a separate application-layer
+                    wrap and rely on AES-256 encryption at rest. Tokens are
+                    deleted when you disconnect the integration.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className={h3Class}>Data Residency &amp; transfers</h3>
+                  <p className={pClass}>
+                    Primary customer data storage is in AWS EU West (Ireland).
+                    Where a sub-processor processes personal data outside the
+                    UK/EEA, we rely on the transfer mechanisms listed in the
+                    sub-processor table above — UK International Data Transfer
+                    Addendum and/or EU Standard Contractual Clauses incorporated
+                    into each provider&apos;s data processing terms, and, where
+                    applicable, the EU-US Data Privacy Framework and its UK
+                    Extension.
                   </p>
                 </div>
 
@@ -461,6 +510,23 @@ function TrustCenterPage() {
                     Supabase maintains automated daily database backups with
                     point-in-time recovery. Backups are stored in encrypted form
                     across multiple availability zones.
+                  </p>
+                </div>
+
+                <div>
+                  <h3 className={h3Class}>Retention</h3>
+                  <p className={pClass}>
+                    Feature-specific retention periods are set out in the{' '}
+                    <Link
+                      href="/privacy-policy"
+                      className="text-primary font-medium underline-offset-4 hover:underline"
+                    >
+                      Privacy Policy
+                    </Link>
+                    . On account termination we delete customer data across our
+                    systems within 30 days, except records we must keep for
+                    legal reasons (for example, billing records retained for 6
+                    years for tax purposes).
                   </p>
                 </div>
               </div>
@@ -539,10 +605,17 @@ function TrustCenterPage() {
                   <h3 className={h3Class}>Incident Response</h3>
                   <p className={pClass}>
                     {appConfig.name} has a documented Security Incident Response
-                    process. In the event of a security incident affecting
-                    customer data confidentiality, we will notify affected
-                    customers without undue delay and in compliance with our
-                    GDPR obligations (within 72 hours of becoming aware).
+                    process. Where a personal data breach affects Controller
+                    personal data, we notify the Controller without undue delay
+                    and in any event within 72 hours of becoming aware, in line
+                    with our{' '}
+                    <Link
+                      href="/dpa"
+                      className="text-primary font-medium underline-offset-4 hover:underline"
+                    >
+                      DPA
+                    </Link>
+                    .
                   </p>
                 </div>
 

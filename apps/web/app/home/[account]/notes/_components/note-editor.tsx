@@ -11,6 +11,7 @@ import {
 import { useRouter } from 'next/navigation';
 
 import {
+  Check,
   ChevronLeft,
   FolderKanban,
   Globe,
@@ -21,6 +22,8 @@ import {
   Users,
 } from 'lucide-react';
 
+import type { Editor } from '@tiptap/react';
+
 import { Button } from '@kit/ui/button';
 import {
   DropdownMenu,
@@ -29,6 +32,7 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
@@ -52,7 +56,7 @@ import type {
   LinkOption,
   NoteFileCategory,
 } from '../../_lib/workspace-content/types';
-import { NoteMarkdownToolbar } from './note-markdown-toolbar';
+import { NoteBodyEditor } from './note-body-editor';
 
 type NoteEditorProps = {
   accountId: string;
@@ -74,6 +78,7 @@ type NoteEditorProps = {
     propertyId?: string | null;
     projectName: string | null;
     clientName: string | null;
+    contextLogoUrl?: string | null;
   };
 };
 
@@ -116,7 +121,7 @@ export function NoteEditor({
   const isDirtyRef = useRef(false);
   const leavingRef = useRef(false);
   const titleRef = useRef<HTMLTextAreaElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const bodyEditorDomRef = useRef<HTMLElement | null>(null);
   const latestRef = useRef({
     title,
     content,
@@ -283,9 +288,13 @@ export function NoteEditor({
   }, [title, syncTextareaHeight]);
 
   useFormFieldScrollPassthroughRefs(
-    () => [titleRef.current, textareaRef.current],
+    () => [titleRef.current, bodyEditorDomRef.current],
     [title, content],
   );
+
+  const onBodyEditorReady = useCallback((editor: Editor | null) => {
+    bodyEditorDomRef.current = editor?.view.dom ?? null;
+  }, []);
 
   const onTitleChange = (value: string) => {
     isDirtyRef.current = true;
@@ -300,13 +309,12 @@ export function NoteEditor({
     setContent(value);
     setSaveState('idle');
     scheduleSave();
-    requestAnimationFrame(() => syncTextareaHeight(textareaRef.current));
   };
 
   const onTitleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key !== 'Enter') return;
     event.preventDefault();
-    textareaRef.current?.focus();
+    bodyEditorDomRef.current?.focus();
   };
 
   const onMetaChange = <T,>(setter: (value: T) => void, value: T) => {
@@ -320,7 +328,7 @@ export function NoteEditor({
     cn(
       'flex h-9 w-9 items-center justify-center rounded-lg transition-colors',
       active
-        ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent-muted)]'
+        ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
         : 'text-[var(--workspace-shell-text-muted)] hover:bg-white/6 hover:text-[var(--workspace-shell-text)]',
     );
 
@@ -355,13 +363,16 @@ export function NoteEditor({
           </Button>
           <span
             className={cn(
-              'min-w-[4.5rem] truncate text-xs',
+              'flex min-w-[4.5rem] items-center gap-1 truncate text-xs',
               saveState === 'error'
                 ? 'text-red-400'
                 : 'text-[var(--workspace-shell-text-muted)]',
             )}
             aria-live="polite"
           >
+            {saveState === 'saved' ? (
+              <Check className="h-3.5 w-3.5 shrink-0" aria-hidden />
+            ) : null}
             {saveLabel}
           </span>
         </div>
@@ -507,9 +518,17 @@ export function NoteEditor({
       </div>
 
       {(note.projectName || note.clientName) && (
-        <p className="px-4 pt-2 text-xs text-[var(--workspace-shell-text-muted)] sm:px-6 lg:px-10 xl:px-14">
-          {[note.projectName, note.clientName].filter(Boolean).join(' · ')}
-        </p>
+        <div className="flex items-center gap-2 px-4 pt-2 sm:px-6 lg:px-10 xl:px-14">
+          <ProfileAvatar
+            displayName={note.projectName || note.clientName || ''}
+            pictureUrl={note.contextLogoUrl ?? null}
+            className="h-5 w-5"
+            fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-[9px] text-[var(--workspace-shell-text)]"
+          />
+          <p className="min-w-0 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+            {[note.projectName, note.clientName].filter(Boolean).join(' · ')}
+          </p>
+        </div>
       )}
 
       <Textarea
@@ -524,21 +543,12 @@ export function NoteEditor({
         spellCheck
       />
 
-      <NoteMarkdownToolbar
-        textareaRef={textareaRef}
+      <NoteBodyEditor
+        key={note.id}
+        initialMarkdown={note.content}
         onChange={onContentChange}
-        className="px-4 sm:px-6 lg:px-10 xl:px-14"
-      />
-
-      <Textarea
-        ref={textareaRef}
-        value={content}
-        onChange={(e) => onContentChange(e.target.value)}
-        placeholder="Start writing…"
-        rows={12}
-        aria-label="Note content"
-        className="min-h-[50vh] w-full touch-pan-y resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pt-1 pb-4 text-base leading-relaxed text-[var(--workspace-shell-text)] shadow-none focus-visible:ring-0 sm:px-6 lg:px-10 lg:text-[15px] xl:px-14"
-        spellCheck
+        onEditorReady={onBodyEditorReady}
+        toolbarClassName="px-4 sm:px-6 lg:px-10 xl:px-14"
       />
     </div>
   );

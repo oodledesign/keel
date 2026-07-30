@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 28 July 2026
+**Last updated:** 30 July 2026
 
 Oodle Designs Ltd ("Ozer", "we", "us") is the data controller for personal data we process for our own purposes (account and authentication data, product analytics and security logs, and SaaS billing records). Where you use Ozer to store or process your clients', staff, or invitees' personal data, we typically act as a **processor** on your instructions. See our [Data Processing Agreement](/dpa) for that relationship. We comply with the UK GDPR, EU GDPR, and the Data Protection Act 2018.
 
@@ -172,6 +172,20 @@ When you use AI features, relevant workspace text is sent to our AI sub-processo
 **Providers:** Anthropic (language model features); Voyage AI (semantic search embeddings).
 
 We do not use your private workspace data to train public foundation models. You should not submit special category data unless you have a lawful basis and appropriate safeguards. AI outputs are assistive and may be inaccurate — you remain responsible for decisions made in your business.
+
+Ozer's use of information received from Google Workspace APIs adheres to the Google API Services User Data Policy, including the Limited Use requirements.
+
+## How we protect your data
+
+We apply technical and organisational measures appropriate to the data we process:
+
+- **Encryption in transit:** all data is transmitted over TLS 1.2 or higher.
+- **Encryption at rest:** data is encrypted at rest using AES-256 via our Supabase/AWS infrastructure.
+- **OAuth token security:** OAuth access and refresh tokens for Google integrations (including Gmail Email Assistant and Google Calendar) are encrypted at the application layer using AES-256-GCM before storage. Microsoft 365 Signatures connection tokens are stored in our database without a separate application-layer wrap and rely on AES-256 encryption at rest. Tokens are deleted when you disconnect the integration.
+- **Access controls:** we use Row-Level Security so workspace data is scoped to the correct account and cannot be accessed across workspaces.
+- **Internal access:** access to production data is restricted to authorised personnel on a need-to-know basis.
+
+Further detail is available on our [Trust Centre](/trust).
 
 ## Transactional email
 

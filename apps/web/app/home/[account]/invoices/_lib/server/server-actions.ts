@@ -8,6 +8,7 @@ import {
   CreateInvoiceCheckoutSessionByTokenSchema,
   CreateInvoiceSchema,
   DeleteInvoiceSchema,
+  DeleteRecurringSeriesSchema,
   DuplicateInvoiceSchema,
   GetInvoiceForPortalSchema,
   GetInvoicePortalLinkSchema,
@@ -29,6 +30,7 @@ import { createInvoiceCheckoutSessionByToken as createInvoiceCheckoutByToken } f
 import { createInvoicePaymentSettingsService } from './invoice-payment-settings.service';
 import {
   archiveInvoice,
+  deleteRecurringSeries,
   duplicateInvoice,
   getInvoiceSummary,
   getInvoiceTabCounts,
@@ -160,6 +162,14 @@ export const updateRecurringSeriesStatusAction = enhanceAction(
   async (input) =>
     updateRecurringSeriesStatus(input.accountId, input.seriesId, input.status),
   { schema: UpdateRecurringSeriesStatusSchema },
+);
+
+export const deleteRecurringSeriesAction = enhanceAction(
+  async (input) => {
+    await deleteRecurringSeries(input.accountId, input.seriesId);
+    return { success: true };
+  },
+  { schema: DeleteRecurringSeriesSchema },
 );
 
 export const getPaymentSettingsAction = enhanceAction(

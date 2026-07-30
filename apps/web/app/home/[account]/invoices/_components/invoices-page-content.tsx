@@ -7,6 +7,15 @@ import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 
 import { FileText, PlusCircle, RefreshCw, Repeat, Search } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import {
   Dialog,
@@ -28,6 +37,7 @@ import { formatInvoiceMoney } from '../_lib/invoice-currency';
 import type { ListInvoicesInput } from '../_lib/schema/invoices.schema';
 import {
   createInvoice,
+  deleteRecurringSeriesAction,
   getInvoiceSummaryAction,
   getInvoiceTabCountsAction,
   listInvoices,
@@ -37,6 +47,10 @@ import {
 import { InvoiceRowMenu } from './invoice-row-menu';
 import { InvoiceStatusBadge } from './invoice-status-badge';
 import { InvoicesIncomeSummary } from './invoices-income-summary';
+import {
+  RecurringSeriesEditDialog,
+  type RecurringSeriesEditModel,
+} from './recurring-series-edit-dialog';
 
 type InvoiceRow = {
   id: string;
@@ -122,6 +136,13 @@ export function InvoicesPageContent({
   >(initialClients ?? []);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [selectedClientId, setSelectedClientId] = useState('');
+  const [editingSeries, setEditingSeries] =
+    useState<RecurringSeriesEditModel | null>(null);
+  const [seriesPendingDelete, setSeriesPendingDelete] = useState<{
+    id: string;
+    title: string;
+  } | null>(null);
+  const [deletingSeries, setDeletingSeries] = useState(false);
   const pageSize = 20;
 
   const fetchCounts = useCallback(async () => {
@@ -446,6 +467,7 @@ export function InvoicesPageContent({
                     <th className="pr-4 pb-2">Client</th>
                     <th className="pr-4 pb-2">Frequency</th>
                     <th className="pr-4 pb-2">Next issue</th>
+                    <th className="pr-4 pb-2">Due</th>
                     <th className="pr-4 pb-2">Status</th>
                     <th className="pb-2" />
                   </tr>
@@ -472,52 +494,117 @@ export function InvoicesPageContent({
                       <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
                         {formatDate(String(series.next_issue_at ?? ''))}
                       </td>
+                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)]">
+                        {typeof series.due_days === 'number'
+                          ? `${series.due_days} day${series.due_days === 1 ? '' : 's'}`
+                          : '7 days'}
+                      </td>
                       <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)] capitalize">
                         {String(series.status ?? '')}
                       </td>
                       <td className="py-3">
-                        {canEditInvoices && series.status === 'active' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              try {
-                                await updateRecurringSeriesStatusAction({
-                                  accountId,
-                                  seriesId: String(series.id),
-                                  status: 'paused',
-                                });
-                                toast.success('Series paused');
-                                void fetchInvoices();
-                              } catch (error) {
-                                toast.error(getErrorMessage(error));
+                        <div className="flex flex-wrap items-center justify-end gap-2">
+                          {canEditInvoices ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() =>
+                                setEditingSeries({
+                                  id: String(series.id),
+                                  client_id: String(series.client_id),
+                                  title: String(series.title ?? ''),
+                                  currency:
+                                    typeof series.currency === 'string'
+                                      ? series.currency
+                                      : null,
+                                  frequency: String(
+                                    series.frequency ?? 'monthly',
+                                  ),
+                                  next_issue_at: String(
+                                    series.next_issue_at ?? '',
+                                  ),
+                                  end_at:
+                                    typeof series.end_at === 'string'
+                                      ? series.end_at
+                                      : null,
+                                  auto_send: Boolean(series.auto_send),
+                                  due_days:
+                                    typeof series.due_days === 'number'
+                                      ? series.due_days
+                                      : 7,
+                                  max_occurrences:
+                                    typeof series.max_occurrences === 'number'
+                                      ? series.max_occurrences
+                                      : null,
+                                  template:
+                                    (series.template as Record<
+                                      string,
+                                      unknown
+                                    > | null) ?? {},
+                                })
                               }
-                            }}
-                          >
-                            Pause
-                          </Button>
-                        ) : null}
-                        {canEditInvoices && series.status === 'paused' ? (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={async () => {
-                              try {
-                                await updateRecurringSeriesStatusAction({
-                                  accountId,
-                                  seriesId: String(series.id),
-                                  status: 'active',
-                                });
-                                toast.success('Series resumed');
-                                void fetchInvoices();
-                              } catch (error) {
-                                toast.error(getErrorMessage(error));
+                            >
+                              Edit
+                            </Button>
+                          ) : null}
+                          {canEditInvoices && series.status === 'active' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  await updateRecurringSeriesStatusAction({
+                                    accountId,
+                                    seriesId: String(series.id),
+                                    status: 'paused',
+                                  });
+                                  toast.success('Series paused');
+                                  void fetchInvoices();
+                                } catch (error) {
+                                  toast.error(getErrorMessage(error));
+                                }
+                              }}
+                            >
+                              Pause
+                            </Button>
+                          ) : null}
+                          {canEditInvoices && series.status === 'paused' ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={async () => {
+                                try {
+                                  await updateRecurringSeriesStatusAction({
+                                    accountId,
+                                    seriesId: String(series.id),
+                                    status: 'active',
+                                  });
+                                  toast.success('Series resumed');
+                                  void fetchInvoices();
+                                } catch (error) {
+                                  toast.error(getErrorMessage(error));
+                                }
+                              }}
+                            >
+                              Resume
+                            </Button>
+                          ) : null}
+                          {canEditInvoices ? (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="text-destructive hover:text-destructive"
+                              onClick={() =>
+                                setSeriesPendingDelete({
+                                  id: String(series.id),
+                                  title: String(series.title ?? 'Series'),
+                                })
                               }
-                            }}
-                          >
-                            Resume
-                          </Button>
-                        ) : null}
+                            >
+                              Delete
+                            </Button>
+                          ) : null}
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -662,6 +749,71 @@ export function InvoicesPageContent({
           </div>
         </DialogContent>
       </Dialog>
+
+      <RecurringSeriesEditDialog
+        open={Boolean(editingSeries)}
+        onOpenChange={(open) => {
+          if (!open) setEditingSeries(null);
+        }}
+        accountId={accountId}
+        series={editingSeries}
+        onSaved={() => {
+          void fetchInvoices();
+        }}
+      />
+
+      <AlertDialog
+        open={Boolean(seriesPendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) setSeriesPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="text-[var(--workspace-shell-text)]">
+              Delete recurring series?
+            </AlertDialogTitle>
+            <AlertDialogDescription className="text-[var(--workspace-shell-text-muted)]">
+              This stops future invoices from{' '}
+              <span className="font-medium text-[var(--workspace-shell-text)]">
+                {seriesPendingDelete?.title}
+              </span>
+              . Invoices already created from this series are kept.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={deletingSeries}
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              disabled={deletingSeries || !seriesPendingDelete}
+              onClick={async () => {
+                if (!seriesPendingDelete) return;
+                setDeletingSeries(true);
+                try {
+                  await deleteRecurringSeriesAction({
+                    accountId,
+                    seriesId: seriesPendingDelete.id,
+                  });
+                  toast.success('Recurring series deleted');
+                  setSeriesPendingDelete(null);
+                  void fetchInvoices();
+                } catch (error) {
+                  toast.error(getErrorMessage(error));
+                } finally {
+                  setDeletingSeries(false);
+                }
+              }}
+            >
+              {deletingSeries ? 'Deleting…' : 'Delete series'}
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

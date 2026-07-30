@@ -2,7 +2,12 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { displayTitle, parseTags, resolveNoteContext } from './context-resolve';
+import {
+  displayTitle,
+  parseTags,
+  resolveContextLogoUrl,
+  resolveNoteContext,
+} from './context-resolve';
 import type { NoteFileCategory, NoteListItem } from './types';
 import { NOTE_FILE_CATEGORY_OPTIONS } from './types';
 
@@ -11,8 +16,8 @@ const NOTES_SELECT_BASE = `
   is_public, public_token,
   project_id, client_id, client_org_id, property_id, task_id,
   created_at, updated_at,
-  projects(name),
-  clients(display_name),
+  projects(name, clients!projects_client_id_fkey(display_name, picture_url)),
+  clients(display_name, picture_url),
   properties(name),
   tasks(title)
 `;
@@ -22,8 +27,8 @@ const NOTES_SELECT = `
   is_public, public_token,
   project_id, client_id, client_org_id, property_id, task_id,
   created_at, updated_at,
-  projects(name),
-  clients(display_name),
+  projects(name, clients!projects_client_id_fkey(display_name, picture_url)),
+  clients(display_name, picture_url),
   properties(name),
   tasks(title)
 `;
@@ -68,6 +73,9 @@ function mapNoteRow(row: Record<string, unknown>): NoteListItem {
     taskId: (row.task_id as string | null) ?? null,
     context: resolveNoteContext(
       row as Parameters<typeof resolveNoteContext>[0],
+    ),
+    contextLogoUrl: resolveContextLogoUrl(
+      row as Parameters<typeof resolveContextLogoUrl>[0],
     ),
     isPublic: Boolean(row.is_public),
     publicToken: (row.public_token as string | null) ?? null,

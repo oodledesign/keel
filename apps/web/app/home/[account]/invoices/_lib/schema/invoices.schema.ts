@@ -203,6 +203,7 @@ export const UpsertRecurringSeriesSchema = z.object({
   end_at: optionalNullableString,
   max_occurrences: z.number().int().min(1).nullable().optional(),
   auto_send: z.boolean().default(true),
+  due_days: z.number().int().min(0).max(365).optional().default(7),
   template: z.record(z.unknown()),
 });
 
@@ -210,6 +211,11 @@ export const UpdateRecurringSeriesStatusSchema = z.object({
   accountId: z.string().uuid(),
   seriesId: z.string().uuid(),
   status: z.enum(['active', 'paused', 'ended']),
+});
+
+export const DeleteRecurringSeriesSchema = z.object({
+  accountId: z.string().uuid(),
+  seriesId: z.string().uuid(),
 });
 
 export const SavePaymentSettingsSchema = z.object({
@@ -226,6 +232,7 @@ export const SavePaymentSettingsSchema = z.object({
   default_invoice_currency: InvoiceCurrencySchema.optional(),
   invoice_quantity_label: z.enum(['quantity', 'hours']).optional(),
   default_hourly_rate_pence: z.number().int().min(0).nullable().optional(),
+  default_invoice_due_days: z.number().int().min(0).max(365).optional(),
 });
 
 export type ListInvoicesInput = z.infer<typeof ListInvoicesSchema>;

@@ -2,7 +2,16 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 
-import { Bell, CircleAlert, Info, TriangleAlert, XIcon } from 'lucide-react';
+import {
+  Banknote,
+  Bell,
+  CheckCircle2,
+  CircleAlert,
+  Info,
+  TriangleAlert,
+  XIcon,
+  type LucideIcon,
+} from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@kit/ui/button';
@@ -14,6 +23,50 @@ import { cn } from '@kit/ui/utils';
 
 import { useDismissNotification, useFetchNotifications } from '../hooks';
 import { Notification } from '../types';
+
+function notificationIcon(notification: Notification): {
+  Icon: LucideIcon;
+  className: string;
+} {
+  const body = notification.body.toLowerCase();
+
+  if (notification.type === 'warning') {
+    return {
+      Icon: TriangleAlert,
+      className: 'h-4 w-4 shrink-0 text-yellow-500',
+    };
+  }
+
+  if (notification.type === 'error') {
+    return {
+      Icon: CircleAlert,
+      className: 'text-destructive h-4 w-4 shrink-0',
+    };
+  }
+
+  if (body.includes('invoice') && body.includes('paid')) {
+    return {
+      Icon: Banknote,
+      className: 'h-4 w-4 shrink-0 text-emerald-600',
+    };
+  }
+
+  if (body.includes('opened invoice')) {
+    return {
+      Icon: Banknote,
+      className: 'h-4 w-4 shrink-0 text-[var(--ozer-accent)]',
+    };
+  }
+
+  if (body.includes('marked complete')) {
+    return {
+      Icon: CheckCircle2,
+      className: 'h-4 w-4 shrink-0 text-emerald-600',
+    };
+  }
+
+  return { Icon: Info, className: 'h-4 w-4 shrink-0 text-blue-500' };
+}
 
 export function NotificationsPopover({
   realtime,
@@ -192,13 +245,13 @@ export function NotificationsPopover({
 
       <PopoverContent
         className={
-          'flex w-full max-w-96 flex-col border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-[0_16px_48px_rgba(53,30,40,0.18)] lg:min-w-64 dark:shadow-[0_16px_48px_rgba(0,0,0,0.45)]'
+          'flex w-[min(24rem,calc(100vw-1.5rem))] max-w-96 flex-col border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-[0_16px_48px_rgba(53,30,40,0.18)] lg:min-w-64 dark:shadow-[0_16px_48px_rgba(0,0,0,0.45)]'
         }
         align={'end'}
-        collisionPadding={20}
+        collisionPadding={12}
         sideOffset={10}
       >
-        <div className={'flex items-center justify-between gap-3 px-3 py-2'}>
+        <div className={'flex items-center justify-between gap-3 px-4 py-2.5'}>
           <div
             className={
               'text-sm font-semibold text-[var(--workspace-shell-text)]'
@@ -220,7 +273,7 @@ export function NotificationsPopover({
         <If condition={!visibleNotifications.length}>
           <div
             className={
-              'px-3 py-3 text-sm text-[var(--workspace-shell-text-muted)]'
+              'px-4 py-3 text-sm text-[var(--workspace-shell-text-muted)]'
             }
           >
             {t('common:noNotifications')}
@@ -233,7 +286,7 @@ export function NotificationsPopover({
           }
         >
           {showSilencedNotifications && silencedNotifications.length > 0 ? (
-            <div className="px-3 py-2 text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+            <div className="px-4 py-2 text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
               While you were away
             </div>
           ) : null}
@@ -252,22 +305,14 @@ export function NotificationsPopover({
               body = body.substring(0, maxChars) + '...';
             }
 
-            const Icon = () => {
-              switch (notification.type) {
-                case 'warning':
-                  return <TriangleAlert className={'h-4 text-yellow-500'} />;
-                case 'error':
-                  return <CircleAlert className={'text-destructive h-4'} />;
-                default:
-                  return <Info className={'h-4 text-blue-500'} />;
-              }
-            };
+            const { Icon, className: iconClassName } =
+              notificationIcon(notification);
 
             return (
               <div
                 key={notification.id.toString()}
                 className={cn(
-                  'flex min-h-18 flex-col items-start justify-center gap-y-1 px-3 py-2',
+                  'flex min-h-18 flex-col items-start justify-center gap-y-1 px-4 py-2',
                   isSilenced &&
                     'bg-[var(--workspace-shell-sidebar-accent)] opacity-70',
                 )}
@@ -277,15 +322,17 @@ export function NotificationsPopover({
                   }
                 }}
               >
-                <div className={'flex w-full items-start justify-between'}>
+                <div className={'flex w-full items-start justify-between gap-2'}>
                   <div
-                    className={'flex items-start justify-start gap-x-3 py-2'}
+                    className={
+                      'flex min-w-0 items-start justify-start gap-x-3 py-2'
+                    }
                   >
                     <div className={'py-0.5'}>
-                      <Icon />
+                      <Icon className={iconClassName} aria-hidden />
                     </div>
 
-                    <div className={'flex flex-col space-y-1'}>
+                    <div className={'flex min-w-0 flex-col space-y-1'}>
                       <div className={'text-sm'}>
                         <If condition={notification.link} fallback={body}>
                           {(link) => (
@@ -306,7 +353,7 @@ export function NotificationsPopover({
                     </div>
                   </div>
 
-                  <div className={'py-2'}>
+                  <div className={'shrink-0 py-2'}>
                     <Button
                       className={'max-h-6 max-w-6'}
                       size={'icon'}

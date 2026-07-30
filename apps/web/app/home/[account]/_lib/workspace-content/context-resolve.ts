@@ -1,17 +1,43 @@
 import type { NoteContextLink } from './types';
 
+type ProjectClientEmbed = {
+  display_name?: string | null;
+  picture_url?: string | null;
+};
+
 type RawNoteRow = {
   project_id?: string | null;
   client_org_id?: string | null;
   client_id?: string | null;
   property_id?: string | null;
   task_id?: string | null;
-  projects?: { name?: string | null; title?: string | null } | null;
+  projects?: {
+    name?: string | null;
+    title?: string | null;
+    clients?: ProjectClientEmbed | ProjectClientEmbed[] | null;
+  } | null;
   client_orgs?: { name?: string | null } | null;
-  clients?: { display_name?: string | null } | null;
+  clients?: {
+    display_name?: string | null;
+    picture_url?: string | null;
+  } | null;
   properties?: { name?: string | null } | null;
   tasks?: { title?: string | null } | null;
 };
+
+function embedOne<T>(value: T | T[] | null | undefined): T | null {
+  if (!value) return null;
+  return Array.isArray(value) ? (value[0] ?? null) : value;
+}
+
+export function resolveContextLogoUrl(row: RawNoteRow): string | null {
+  const direct = row.clients?.picture_url?.trim();
+  if (direct) return direct;
+
+  const projectClient = embedOne(row.projects?.clients);
+  const fromProject = projectClient?.picture_url?.trim();
+  return fromProject || null;
+}
 
 export function displayTitle(title: string, content: string): string {
   const t = title.trim();

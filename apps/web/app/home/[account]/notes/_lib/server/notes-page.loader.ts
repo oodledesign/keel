@@ -117,6 +117,7 @@ export async function loadNoteDetailData(accountSlug: string, noteId: string) {
           ? note.context.label
           : null,
       clientName: note.context?.type === 'client' ? note.context.label : null,
+      contextLogoUrl: note.contextLogoUrl,
       propertyName:
         note.context?.type === 'property' ? note.context.label : null,
       createdAt: note.createdAt,

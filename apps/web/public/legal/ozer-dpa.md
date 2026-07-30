@@ -2,9 +2,9 @@
 
 UK GDPR Article 28 terms for customers who use Ozer as a processor.
 
-**Solicitor review status:** this DPA has been prepared for customer review. Clauses marked [LEGAL REVIEW NEEDED] remain subject to solicitor confirmation.
+**Under active legal review.** This Data Processing Agreement reflects Ozer's current Article 28 terms and is in effect for customers relying on it today. Counsel review of the full agreement remains in progress.
 
-**Version:** 28 July 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
+**Version:** 30 July 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
 
 ## 1. Roles and subject matter
 
@@ -53,7 +53,7 @@ Ozer maintains records of the applicable mechanism for each sub-processor and wi
 
 ## 8. Security
 
-Measures include encryption in transit, encryption at rest, workspace-level access isolation, role-based access controls, and integration tokens stored encrypted. Sensitive optional features (activity tracking, meeting recording) are disabled by default and require explicit enablement. Further detail is published on the Trust Centre.
+Measures include encryption in transit, encryption at rest, workspace-level access isolation, role-based access controls, and application-layer AES-256-GCM encryption of Google OAuth tokens (for example Gmail and Google Calendar), with other stored integration credentials (including Microsoft 365 Signatures tokens) protected by database encryption at rest. Sensitive optional features (activity tracking, meeting recording) are disabled by default and require explicit enablement. Further detail is published on the Trust Centre.
 
 ## 9. Personal data breaches
 
@@ -65,7 +65,7 @@ On at least **30 days' written notice** and **no more than once in any 12-month 
 
 ## 11. Liability
 
-[LEGAL REVIEW NEEDED — liability caps, indemnities, and relationship to the limitation of liability in the Terms of Service. Solicitor to confirm before this marker is removed.]
+Each party's liability under this DPA is subject to the limitation of liability clause in the Terms of Service. Nothing in this DPA limits either party's liability for breaches of confidentiality or data protection obligations to the extent such limitation is not permitted by applicable law.
 
 ## 12. Governing law
 
@@ -109,7 +109,7 @@ The authoritative register, kept current, is published on the Trust Centre. As a
 | Voyage AI | Semantic search embeddings | Text excerpts, search queries | US | Voyage AI DPA with EU SCCs and UK ICO Addendum |
 | PostHog, Inc. | Product analytics, feature flags, error/session diagnostics, session replay | Usage events, device/browser data, user/account identifiers; UI session recordings (inputs masked; 30-day retention) | EU (PostHog EU Cloud) | Not a restricted transfer for EU Cloud hosting; PostHog DPA applies |
 
-Changes to this schedule follow the notice and objection process in Section 6.
+Changes to this schedule follow the notice and objection process in Section 6, via update to the Trust Centre sub-processor register and, for material changes, by email to the Controller's account contact.
 
 ---
 

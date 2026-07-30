@@ -98,7 +98,7 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
     null;
 
   return (
-    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-4 md:px-6 md:py-6">
       <InvoiceEditIndyContent
         accountSlug={accountSlug}
         accountId={accountId}
@@ -116,6 +116,7 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
           email: auth?.email ?? null,
         }}
         defaultHourlyRatePence={paymentSettings.default_hourly_rate_pence}
+        defaultInvoiceDueDays={paymentSettings.default_invoice_due_days}
       />
     </PageBody>
   );

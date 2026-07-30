@@ -7,13 +7,14 @@ import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import { Database } from '~/lib/database.types';
+import { addDaysIso, clampDueDays } from '~/lib/invoices/invoice-due-date';
 import {
   calculateInvoiceLineTotalPence,
   normalizeInvoiceLineType,
   normalizePence,
   resolveInvoiceLineUnitPricePence,
 } from '~/lib/invoices/invoice-quantity';
-import { Database } from '~/lib/database.types';
 
 import { normalizeInvoiceCurrency } from '../invoice-currency';
 import {
@@ -332,6 +333,21 @@ class InvoicesService {
       input.project_id,
     );
 
+    let dueAt = input.due_at ?? null;
+    if (dueAt === undefined || dueAt === null || dueAt === '') {
+      const { data: paymentSettings } = await this.db
+        .from('account_payment_settings')
+        .select('default_invoice_due_days')
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+      const dueDays = clampDueDays(
+        (paymentSettings as { default_invoice_due_days?: unknown } | null)
+          ?.default_invoice_due_days,
+        7,
+      );
+      dueAt = addDaysIso(new Date(), dueDays);
+    }
+
     const { data: invoice, error } = await this.db
       .from('invoices')
       .insert({
@@ -341,7 +357,7 @@ class InvoicesService {
         invoice_number,
         status: 'draft',
         currency,
-        due_at: input.due_at ?? null,
+        due_at: dueAt,
         subtotal_pence: 0,
         total_pence: 0,
         notes: input.notes ?? null,

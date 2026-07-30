@@ -80,6 +80,7 @@ export async function loadPersonalNoteDetailData(noteId: string) {
       propertyId: note.propertyId,
       projectName: null,
       clientName: null,
+      contextLogoUrl: null,
       createdAt: note.createdAt,
       updatedAt: note.updatedAt,
     },

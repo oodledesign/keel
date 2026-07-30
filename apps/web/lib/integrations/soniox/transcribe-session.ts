@@ -41,10 +41,10 @@ export type SonioxTranscribeSession = {
     period: string;
     duration_seconds: number;
     limits: {
-      max_duration_seconds_per_month: number;
+      max_duration_seconds_per_month: number | null;
     };
     remaining: {
-      duration_seconds: number;
+      duration_seconds: number | null;
     };
   };
 };
@@ -60,6 +60,10 @@ export class SonioxTranscribeSessionError extends Error {
 }
 
 function resolveMaxSessionDurationSeconds(summary: RecorderUsageSummary) {
+  if (summary.remainingDurationSeconds == null) {
+    return SONIOX_MAX_SESSION_SECONDS;
+  }
+
   return Math.min(summary.remainingDurationSeconds, SONIOX_MAX_SESSION_SECONDS);
 }
 
@@ -67,9 +71,12 @@ export async function createSonioxTranscribeSession(
   userId: string,
   summary: RecorderUsageSummary,
 ): Promise<SonioxTranscribeSession> {
-  if (summary.remainingDurationSeconds < MIN_REMAINING_SECONDS) {
+  if (
+    summary.remainingDurationSeconds != null &&
+    summary.remainingDurationSeconds < MIN_REMAINING_SECONDS
+  ) {
     throw new SonioxTranscribeSessionError(
-      'Desktop recorder recording time limit reached for this month. Upgrade a paid workspace for more recording time.',
+      'Desktop recorder recording time limit reached for this month. Upgrade to Business Solo (or higher) for unlimited recording time.',
       429,
     );
   }

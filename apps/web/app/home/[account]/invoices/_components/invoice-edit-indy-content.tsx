@@ -15,6 +15,7 @@ import {
   Repeat,
   Send,
   Settings2,
+  Sparkles,
   Trash2,
 } from 'lucide-react';
 
@@ -83,6 +84,7 @@ import {
   upsertInvoiceItems,
   upsertRecurringSeriesAction,
 } from '../_lib/server/server-actions';
+import { InvoiceAiGenerateDialog } from './invoice-ai-generate-dialog';
 import { InvoiceRowMenu } from './invoice-row-menu';
 import { InvoiceSendPanel } from './invoice-send-panel';
 
@@ -240,6 +242,7 @@ export function InvoiceEditIndyContent({
   brandName = null,
   sender = null,
   defaultHourlyRatePence = null,
+  defaultInvoiceDueDays = 7,
 }: {
   accountSlug: string;
   accountId: string;
@@ -254,6 +257,7 @@ export function InvoiceEditIndyContent({
     email?: string | null;
   } | null;
   defaultHourlyRatePence?: number | null;
+  defaultInvoiceDueDays?: number;
 }) {
   const router = useRouter();
   const invoice = initialInvoice as unknown as InvoiceData;
@@ -269,6 +273,7 @@ export function InvoiceEditIndyContent({
 
   const [previewMode, setPreviewMode] = useState(false);
   const [showSendPanel, setShowSendPanel] = useState(false);
+  const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
   const [recurringDialogOpen, setRecurringDialogOpen] = useState(false);
   const [creatingRecurring, setCreatingRecurring] = useState(false);
@@ -282,6 +287,9 @@ export function InvoiceEditIndyContent({
     'months' | 'until_stopped'
   >('months');
   const [recurringMonths, setRecurringMonths] = useState('12');
+  const [recurringDueDays, setRecurringDueDays] = useState(
+    String(defaultInvoiceDueDays ?? 7),
+  );
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [saving, setSaving] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
@@ -657,6 +665,67 @@ export function InvoiceEditIndyContent({
     });
   }, []);
 
+  const applyAiGeneratedItems = useCallback(
+    (result: {
+      mode: 'replace' | 'append';
+      items: Array<{
+        description: string;
+        description_detail: string | null;
+        line_type: InvoiceLineType;
+        quantity: number;
+        unit_price_pence: number;
+        total_pence: number;
+      }>;
+      title: string | null;
+      notes: string | null;
+    }) => {
+      setItems((prev) => {
+        const mapped = result.items.map((item, index) => {
+          const unit_price_pence = resolveInvoiceLineUnitPricePence({
+            lineType: item.line_type,
+            unitPricePence: item.unit_price_pence,
+            defaultHourlyRatePence,
+          });
+          return {
+            sort_order: index,
+            description: item.description,
+            description_detail: item.description_detail,
+            line_type: item.line_type,
+            quantity: item.quantity,
+            unit_price_pence,
+            total_pence: calculateInvoiceLineTotalPence(
+              item.quantity,
+              unit_price_pence,
+            ),
+          };
+        });
+
+        if (result.mode === 'replace' || prev.length === 0) {
+          return mapped.map((row, index) => ({ ...row, sort_order: index }));
+        }
+
+        return [...prev, ...mapped].map((row, index) => ({
+          ...row,
+          sort_order: index,
+        }));
+      });
+
+      if (result.title?.trim() && !title.trim()) {
+        setTitle(result.title.trim());
+      }
+      if (result.notes?.trim() && !notes.trim()) {
+        setNotes(result.notes.trim());
+      }
+
+      toast.success(
+        result.mode === 'replace'
+          ? 'AI line items applied — save when ready'
+          : 'AI line items added — save when ready',
+      );
+    },
+    [defaultHourlyRatePence, notes, title],
+  );
+
   const handleEmailDraftChange = useCallback(
     (email: { subject: string; body: string; signature: string }) => {
       setEmailSubject(email.subject);
@@ -797,6 +866,10 @@ export function InvoiceEditIndyContent({
       recurringDurationMode === 'months'
         ? addMonths(recurringStartDate, months)
         : null;
+    const dueDays = Math.min(
+      365,
+      Math.max(0, parseInt(recurringDueDays, 10) || 0),
+    );
 
     setCreatingRecurring(true);
     try {
@@ -810,11 +883,11 @@ export function InvoiceEditIndyContent({
         end_at: endAt,
         max_occurrences: null,
         auto_send: false,
+        due_days: dueDays,
         template: {
           project_id: projectId || null,
           title: title.trim() || null,
           reference_number: referenceNumber.trim() || invoice.invoice_number,
-          due_at: dueAt ? new Date(dueAt).toISOString() : null,
           notes: notes.trim() || null,
           footer_message: footerMessage.trim() || null,
           discount_type: showDiscount && discountType ? discountType : null,
@@ -856,8 +929,8 @@ export function InvoiceEditIndyContent({
     recurringFrequency,
     recurringDurationMode,
     recurringMonths,
+    recurringDueDays,
     currency,
-    dueAt,
     emailBody,
     emailSignature,
     emailSubject,
@@ -905,7 +978,7 @@ export function InvoiceEditIndyContent({
   }, [invoice.id, invoice.invoice_number, pdfQuery]);
 
   const canvasClassName =
-    'rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white p-8 text-[var(--ozer-text-on-light)] shadow-sm';
+    'rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white p-4 text-[var(--ozer-text-on-light)] shadow-sm sm:p-8';
 
   const inputClassName =
     'border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)] placeholder:text-[var(--workspace-shell-text-muted)]';
@@ -960,7 +1033,10 @@ export function InvoiceEditIndyContent({
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => setRecurringDialogOpen(true)}
+                    onClick={() => {
+                      setRecurringDueDays(String(defaultInvoiceDueDays ?? 7));
+                      setRecurringDialogOpen(true);
+                    }}
                   >
                     <Repeat className="mr-2 h-4 w-4" />
                     Make recurring
@@ -1546,6 +1622,16 @@ export function InvoiceEditIndyContent({
                       type="button"
                       variant="outline"
                       size="sm"
+                      onClick={() => setAiGenerateOpen(true)}
+                      className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
+                    >
+                      <Sparkles className="mr-2 h-4 w-4 text-[var(--ozer-accent)]" />
+                      Generate with AI
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
                       onClick={() => addRow('quantity')}
                       className="border-[color:var(--ozer-border-on-light)] text-[var(--ozer-text-on-light)] hover:bg-[var(--ozer-cream-50)]"
                     >
@@ -2021,6 +2107,24 @@ export function InvoiceEditIndyContent({
             </div>
 
             <div className="space-y-2">
+              <Label htmlFor="recurring-due-days">Due date</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="recurring-due-days"
+                  type="number"
+                  min={0}
+                  max={365}
+                  value={recurringDueDays}
+                  onChange={(event) => setRecurringDueDays(event.target.value)}
+                  className="max-w-[7rem] font-mono"
+                />
+                <span className="text-muted-foreground text-sm">
+                  days after each issue
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-2">
               <Label>Duration</Label>
               <RadioGroup
                 value={recurringDurationMode}
@@ -2128,6 +2232,16 @@ export function InvoiceEditIndyContent({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <InvoiceAiGenerateDialog
+        open={aiGenerateOpen}
+        onOpenChange={setAiGenerateOpen}
+        accountId={accountId}
+        invoiceId={invoice.id}
+        currency={currency}
+        hasExistingItems={items.some((item) => item.description.trim())}
+        onApply={applyAiGeneratedItems}
+      />
     </div>
   );
 }

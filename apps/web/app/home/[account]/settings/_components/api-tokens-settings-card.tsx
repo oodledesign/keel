@@ -106,7 +106,7 @@ export function ApiTokensSettingsCard({
   };
 
   const formatMinutes = (seconds: number) =>
-    Math.max(1, Math.round(seconds / 60));
+    Math.max(0, Math.round(seconds / 60));
 
   return (
     <div className="space-y-5">
@@ -115,21 +115,24 @@ export function ApiTokensSettingsCard({
           <p>
             Plan:{' '}
             <span className="font-medium text-[var(--workspace-shell-text)]">
-              {usageSummary.tier === 'standard'
-                ? 'Included with paid workspace'
-                : 'Personal / Business Lite'}
+              {usageSummary.tier === 'unlimited'
+                ? 'Unlimited (Business Solo+ / Community / Property)'
+                : 'Personal / Business Lite — 2 hours / month'}
             </span>
           </p>
           <p className="mt-1">
-            This month: {formatMinutes(usageSummary.durationSeconds)} of{' '}
-            {formatMinutes(usageSummary.limits.maxDurationSecondsPerMonth)}{' '}
-            minutes recorded.
+            This month: {formatMinutes(usageSummary.durationSeconds)} minutes
+            recorded
+            {usageSummary.limits.maxDurationSecondsPerMonth == null
+              ? ' (no monthly cap).'
+              : ` of ${formatMinutes(usageSummary.limits.maxDurationSecondsPerMonth)} minutes.`}
           </p>
           {usageSummary.tier === 'limited' ? (
             <p className="mt-2 text-xs">
-              Personal accounts without a paid workspace include 45 minutes per
-              month. Business Lite, Business, Community, and Property workspaces
-              include 5 hours.
+              Personal accounts and Business Lite include 2 hours of meeting
+              transcription / screen capture per person per month. Business
+              Solo, Team, Scale, Community, and Property unlock unlimited
+              recorder time for each member.
             </p>
           ) : null}
         </div>

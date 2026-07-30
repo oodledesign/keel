@@ -164,9 +164,15 @@ export function AdminBillingGrantsPanel(props: {
         </Button>
       </CardHeader>
       <CardContent className="space-y-6">
+        <p className="text-muted-foreground text-sm">
+          Presets set <strong>Business Solo / Team / Scale</strong> seat limits
+          on this workspace. Workspace access grants are different product types
+          (Community / Lite / Property) — do not stack them to “upgrade” a
+          Business plan.
+        </p>
         <div>
           <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">
-            Quick plan presets
+            Quick plan presets (tier limits)
           </p>
           <div className="flex flex-wrap gap-2">
             {QUICK_PLANS.map((plan) => (
@@ -185,7 +191,7 @@ export function AdminBillingGrantsPanel(props: {
         </div>
 
         <EntitlementGroup
-          title="Workspace access"
+          title="Workspace type access (not Solo/Team/Scale)"
           items={WORKSPACE_ENTITLEMENTS}
           hasKey={hasKey}
           pending={pending}

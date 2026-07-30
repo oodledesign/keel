@@ -4,6 +4,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
+import { addDaysIso, clampDueDays } from '~/lib/invoices/invoice-due-date';
 import { notifyInvoiceViewedInApp } from '~/lib/invoices/invoice-in-app-notifications';
 
 import { normalizeInvoiceCurrency } from '../invoice-currency';
@@ -389,8 +390,10 @@ export async function upsertRecurringSeries(input: {
   end_at?: string | null;
   max_occurrences?: number | null;
   auto_send: boolean;
+  due_days?: number;
   template: Record<string, unknown>;
 }) {
+  const dueDays = clampDueDays(input.due_days, 7);
   const payload = {
     account_id: input.accountId,
     client_id: input.client_id,
@@ -401,8 +404,8 @@ export async function upsertRecurringSeries(input: {
     end_at: input.end_at ?? null,
     max_occurrences: input.max_occurrences ?? null,
     auto_send: input.auto_send,
+    due_days: dueDays,
     template: input.template,
-    status: 'active',
   };
 
   if (input.seriesId) {
@@ -419,7 +422,7 @@ export async function upsertRecurringSeries(input: {
 
   const { data, error } = await db()
     .from('invoice_recurring_series')
-    .insert(payload)
+    .insert({ ...payload, status: 'active' })
     .select('*')
     .single();
   if (error) throw new Error(error.message);
@@ -434,6 +437,18 @@ export async function updateRecurringSeriesStatus(
   const { error } = await db()
     .from('invoice_recurring_series')
     .update({ status })
+    .eq('account_id', accountId)
+    .eq('id', seriesId);
+  if (error) throw new Error(error.message);
+}
+
+export async function deleteRecurringSeries(
+  accountId: string,
+  seriesId: string,
+) {
+  const { error } = await db()
+    .from('invoice_recurring_series')
+    .delete()
     .eq('account_id', accountId)
     .eq('id', seriesId);
   if (error) throw new Error(error.message);
@@ -493,12 +508,24 @@ export async function processDueRecurringSeries() {
       }
     }
 
+    const dueDays = clampDueDays(
+      (series as { due_days?: unknown }).due_days,
+      7,
+    );
+    const issueAt = series.next_issue_at
+      ? new Date(series.next_issue_at)
+      : new Date();
+    const dueAt = addDaysIso(
+      Number.isNaN(issueAt.getTime()) ? new Date() : issueAt,
+      dueDays,
+    );
+
     const invoice = await service.createInvoice({
       accountId: series.account_id,
       client_id: series.client_id,
       project_id: invoiceProjectId,
       currency: normalizeInvoiceCurrency(series.currency),
-      due_at: template.due_at ?? null,
+      due_at: dueAt,
       notes: template.notes ?? null,
       title: template.title ?? series.title,
       reference_number: template.reference_number ?? null,

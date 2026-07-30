@@ -11,22 +11,28 @@ import {
   isAccountBillingExempt,
 } from '~/lib/billing/entitlements';
 
-export type RecorderAccessTier = 'limited' | 'standard';
+/**
+ * Recorder minutes are per-user (not shared across a team).
+ *
+ * - limited (2h/mo): personal-only, or Business Lite only
+ * - unlimited: Solo / Team / Scale Business, Community, Property, billing-exempt
+ */
+export type RecorderAccessTier = 'limited' | 'unlimited';
 
 export const RECORDER_LIMITS = {
   limited: {
-    maxDurationSecondsPerMonth: 45 * 60,
+    maxDurationSecondsPerMonth: 2 * 60 * 60,
   },
-  standard: {
-    maxDurationSecondsPerMonth: 5 * 60 * 60,
+  unlimited: {
+    maxDurationSecondsPerMonth: null,
   },
 } as const satisfies Record<
   RecorderAccessTier,
-  { maxDurationSecondsPerMonth: number }
+  { maxDurationSecondsPerMonth: number | null }
 >;
 
-const FULL_PAID_ENTITLEMENTS = [
-  'workspace_business_lite',
+/** Full paid workspaces unlock unlimited recorder time (not Business Lite). */
+const UNLIMITED_RECORDER_ENTITLEMENTS = [
   'workspace_business',
   'workspace_community',
   'workspace_property',
@@ -37,7 +43,7 @@ export type RecorderUsageSummary = {
   period: string;
   durationSeconds: number;
   limits: (typeof RECORDER_LIMITS)[RecorderAccessTier];
-  remainingDurationSeconds: number;
+  remainingDurationSeconds: number | null;
 };
 
 function currentUsagePeriod(now = new Date()) {
@@ -49,7 +55,7 @@ export async function resolveRecorderAccessTier(
   userId: string,
 ): Promise<RecorderAccessTier> {
   if (await isSuperAdmin(client)) {
-    return 'standard';
+    return 'unlimited';
   }
 
   // Recorder API routes authenticate with bearer tokens (no Supabase session cookies).
@@ -57,19 +63,19 @@ export async function resolveRecorderAccessTier(
   const admin = getSupabaseServerAdminClient();
 
   if (await isAccountBillingExempt(admin, userId)) {
-    return 'standard';
+    return 'unlimited';
   }
 
   const workspaces = await loadUserWorkspaceAccounts(admin, userId);
 
   for (const workspace of workspaces) {
     if (await isAccountBillingExempt(admin, workspace.id)) {
-      return 'standard';
+      return 'unlimited';
     }
 
-    for (const entitlement of FULL_PAID_ENTITLEMENTS) {
+    for (const entitlement of UNLIMITED_RECORDER_ENTITLEMENTS) {
       if (await hasEntitlement(admin, workspace.id, entitlement)) {
-        return 'standard';
+        return 'unlimited';
       }
     }
   }
@@ -104,16 +110,15 @@ export async function loadRecorderUsageSummary(
   const limits = RECORDER_LIMITS[tier];
   const period = currentUsagePeriod();
   const usage = await loadUsageRow(userId, period);
+  const cap = limits.maxDurationSecondsPerMonth;
 
   return {
     tier,
     period,
     durationSeconds: usage.durationSeconds,
     limits,
-    remainingDurationSeconds: Math.max(
-      0,
-      limits.maxDurationSecondsPerMonth - usage.durationSeconds,
-    ),
+    remainingDurationSeconds:
+      cap == null ? null : Math.max(0, cap - usage.durationSeconds),
   };
 }
 
@@ -134,17 +139,22 @@ export async function assertRecorderSyncAllowed(
   durationSeconds = 0,
 ) {
   const summary = await loadRecorderUsageSummary(client, userId);
+  const cap = summary.limits.maxDurationSecondsPerMonth;
+
+  if (cap == null) {
+    return summary;
+  }
+
   const nextDuration = Math.max(0, durationSeconds);
 
-  if (
-    summary.durationSeconds + nextDuration >
-    summary.limits.maxDurationSecondsPerMonth
-  ) {
-    const remainingMinutes = Math.ceil(summary.remainingDurationSeconds / 60);
+  if (summary.durationSeconds + nextDuration > cap) {
+    const remainingMinutes = Math.ceil(
+      (summary.remainingDurationSeconds ?? 0) / 60,
+    );
     throw new RecorderUsageLimitError(
       remainingMinutes > 0
-        ? `Desktop recorder limit: about ${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'} left this month. Upgrade a paid workspace for more recording time.`
-        : 'Desktop recorder recording time limit reached for this month. Upgrade a paid workspace for more recording time.',
+        ? `Desktop recorder limit: about ${remainingMinutes} minute${remainingMinutes === 1 ? '' : 's'} left this month. Upgrade to Business Solo (or higher) for unlimited recording time.`
+        : 'Desktop recorder recording time limit reached for this month. Upgrade to Business Solo (or higher) for unlimited recording time.',
       summary,
     );
   }

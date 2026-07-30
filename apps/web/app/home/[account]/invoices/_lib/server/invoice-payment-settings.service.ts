@@ -6,16 +6,17 @@ import { requireUser } from '@kit/supabase/require-user';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import type { Database } from '~/lib/database.types';
-
-import {
-  type InvoiceCurrency,
-  normalizeInvoiceCurrency,
-} from '../invoice-currency';
+import { clampDueDays } from '~/lib/invoices/invoice-due-date';
 import {
   type InvoiceQuantityLabel,
   normalizeInvoiceQuantityLabel,
   normalizePence,
 } from '~/lib/invoices/invoice-quantity';
+
+import {
+  type InvoiceCurrency,
+  normalizeInvoiceCurrency,
+} from '../invoice-currency';
 
 export type AccountPaymentSettings = {
   account_id: string;
@@ -33,6 +34,7 @@ export type AccountPaymentSettings = {
   default_invoice_currency: InvoiceCurrency;
   invoice_quantity_label: InvoiceQuantityLabel;
   default_hourly_rate_pence: number | null;
+  default_invoice_due_days: number;
 };
 
 const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
@@ -50,6 +52,7 @@ const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
   default_invoice_currency: 'gbp',
   invoice_quantity_label: 'quantity',
   default_hourly_rate_pence: null,
+  default_invoice_due_days: 7,
 };
 
 export function createInvoicePaymentSettingsService(
@@ -107,6 +110,7 @@ class InvoicePaymentSettingsService {
       default_invoice_currency?: string | null;
       invoice_quantity_label?: string | null;
       default_hourly_rate_pence?: number | null;
+      default_invoice_due_days?: number | null;
     } | null;
 
     return {
@@ -125,6 +129,10 @@ class InvoicePaymentSettingsService {
         row?.invoice_quantity_label,
       ),
       default_hourly_rate_pence: normalizePence(row?.default_hourly_rate_pence),
+      default_invoice_due_days: clampDueDays(
+        row?.default_invoice_due_days,
+        DEFAULT_SETTINGS.default_invoice_due_days,
+      ),
     };
   }
 
@@ -159,6 +167,7 @@ class InvoicePaymentSettingsService {
     default_invoice_currency?: InvoiceCurrency;
     invoice_quantity_label?: InvoiceQuantityLabel;
     default_hourly_rate_pence?: number | null;
+    default_invoice_due_days?: number;
   }) {
     await this.ensureOwnerOrAdmin(input.accountId);
 
@@ -207,6 +216,14 @@ class InvoicePaymentSettingsService {
               input.default_hourly_rate_pence == null
                 ? null
                 : Math.max(0, input.default_hourly_rate_pence),
+          }
+        : {}),
+      ...(input.default_invoice_due_days !== undefined
+        ? {
+            default_invoice_due_days: clampDueDays(
+              input.default_invoice_due_days,
+              DEFAULT_SETTINGS.default_invoice_due_days,
+            ),
           }
         : {}),
     };
@@ -336,6 +353,10 @@ export async function loadPaymentSettingsForPortal(
       row.invoice_quantity_label as string | null | undefined,
     ),
     default_hourly_rate_pence: normalizePence(row.default_hourly_rate_pence),
+    default_invoice_due_days: clampDueDays(
+      (row as { default_invoice_due_days?: unknown }).default_invoice_due_days,
+      DEFAULT_SETTINGS.default_invoice_due_days,
+    ),
   } as AccountPaymentSettings;
 }
 

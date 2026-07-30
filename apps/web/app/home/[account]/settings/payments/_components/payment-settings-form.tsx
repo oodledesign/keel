@@ -10,9 +10,6 @@ import { CreditCard, Loader2 } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { toast } from '@kit/ui/sonner';
-import { Switch } from '@kit/ui/switch';
-import { Textarea } from '@kit/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -20,6 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
+import { Textarea } from '@kit/ui/textarea';
+
+import pathsConfig from '~/config/paths.config';
+import { stripeConnectErrorMessage } from '~/lib/billing/stripe-connect-messages';
+
+import type { AccountPaymentSettings } from '../../../invoices/_lib/server/invoice-payment-settings.service';
+import {
+  disconnectStripeAction,
+  savePaymentSettingsAction,
+} from '../../../invoices/_lib/server/server-actions';
 
 function penceToPoundsInput(pence: number | null | undefined): string {
   if (pence == null || pence === 0) return '';
@@ -33,15 +42,6 @@ function poundsInputToPence(value: string): number | null {
   if (!Number.isFinite(parsed) || parsed < 0) return null;
   return Math.round(parsed * 100);
 }
-
-import pathsConfig from '~/config/paths.config';
-import { stripeConnectErrorMessage } from '~/lib/billing/stripe-connect-messages';
-
-import type { AccountPaymentSettings } from '../../../invoices/_lib/server/invoice-payment-settings.service';
-import {
-  disconnectStripeAction,
-  savePaymentSettingsAction,
-} from '../../../invoices/_lib/server/server-actions';
 
 export function PaymentSettingsForm({
   accountId,
@@ -91,6 +91,7 @@ export function PaymentSettingsForm({
           stripe_pay_now_enabled: settings.stripe_pay_now_enabled,
           invoice_starting_number: settings.invoice_starting_number,
           default_hourly_rate_pence: poundsInputToPence(hourlyRateInput),
+          default_invoice_due_days: settings.default_invoice_due_days,
         });
         setSettings(saved as AccountPaymentSettings);
         setHourlyRateInput(
@@ -144,7 +145,7 @@ export function PaymentSettingsForm({
             </p>
           </div>
           {stripeConnected ? (
-            <span className="rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-xs font-medium text-[#97D9AA]">
+            <span className="rounded-full border border-emerald-700/40 bg-emerald-500/18 px-2.5 py-1 text-xs font-medium text-emerald-900">
               Connected
             </span>
           ) : null}
@@ -270,6 +271,39 @@ export function PaymentSettingsForm({
             <p className="text-muted-foreground mt-2 text-xs">
               Used when you add hours-based line items to an invoice. You can
               still mix quantity and hours lines on the same invoice.
+            </p>
+          </div>
+          <div>
+            <Label htmlFor="default_invoice_due_days">
+              Default invoice due date
+            </Label>
+            <div className="mt-1 flex items-center gap-2">
+              <Input
+                id="default_invoice_due_days"
+                type="number"
+                min={0}
+                max={365}
+                disabled={!canEdit}
+                value={settings.default_invoice_due_days ?? 7}
+                onChange={(e) => {
+                  const n = parseInt(e.target.value, 10);
+                  setSettings((prev) => ({
+                    ...prev,
+                    default_invoice_due_days: Number.isFinite(n)
+                      ? Math.min(365, Math.max(0, n))
+                      : 7,
+                  }));
+                }}
+                className="max-w-[7rem] font-mono"
+              />
+              <span className="text-muted-foreground text-sm">
+                days after issue
+              </span>
+            </div>
+            <p className="text-muted-foreground mt-2 text-xs">
+              Applied to new invoices when no due date is set. Recurring series
+              can override this with their own due days. Use 0 for due on the
+              issue date.
             </p>
           </div>
         </div>

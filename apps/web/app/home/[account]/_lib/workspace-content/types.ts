@@ -65,6 +65,8 @@ export type NoteListItem = {
   propertyId: string | null;
   taskId: string | null;
   context: NoteContextLink | null;
+  /** Client logo when linked to a client, or the project's client logo. */
+  contextLogoUrl: string | null;
   isPublic: boolean;
   publicToken: string | null;
   updatedAt: string;
