@@ -15,8 +15,14 @@ COMMENT ON COLUMN public.accounts.space_type IS
 
 -- ---------------------------------------------------------------------------
 -- 2. Permissions
+-- New enum labels cannot be used in the same transaction that adds them
+-- (SQLSTATE 55P04). Commit via procedure before seeding role_permissions /
+-- policies that cast to app_permissions.
 -- ---------------------------------------------------------------------------
-DO $$ BEGIN
+CREATE OR REPLACE PROCEDURE public._migration_add_listings_permissions_enum()
+LANGUAGE plpgsql
+AS $$
+BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_enum e
     JOIN pg_type t ON e.enumtypid = t.oid
@@ -24,9 +30,8 @@ DO $$ BEGIN
   ) THEN
     ALTER TYPE public.app_permissions ADD VALUE 'listings.view';
   END IF;
-END $$;
+  COMMIT;
 
-DO $$ BEGIN
   IF NOT EXISTS (
     SELECT 1 FROM pg_enum e
     JOIN pg_type t ON e.enumtypid = t.oid
@@ -34,7 +39,12 @@ DO $$ BEGIN
   ) THEN
     ALTER TYPE public.app_permissions ADD VALUE 'listings.edit';
   END IF;
-END $$;
+  COMMIT;
+END;
+$$;
+
+CALL public._migration_add_listings_permissions_enum();
+DROP PROCEDURE public._migration_add_listings_permissions_enum();
 
 INSERT INTO public.role_permissions (role, permission)
 VALUES
