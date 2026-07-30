@@ -44,6 +44,10 @@ import { listClients } from '~/home/[account]/clients/_lib/server/server-actions
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import { listJobs } from '~/home/[account]/jobs/_lib/server/server-actions';
 import {
+  useFormDirtyState,
+  useUnsavedChangesWarning,
+} from '~/lib/hooks/use-unsaved-changes-warning';
+import {
   type InvoiceLineType,
   calculateInvoiceLineTotalPence,
   invoiceItemsQuantityHeader,
@@ -439,6 +443,76 @@ export function InvoiceEditIndyContent({
 
   const readOnly = previewMode || !canModifyInvoice;
 
+  const dirtyFingerprint = useMemo(
+    () => ({
+      title,
+      referenceNumber,
+      issuedAt,
+      dueAt,
+      currency,
+      clientId,
+      projectId,
+      notes,
+      footerMessage,
+      privateNote,
+      discountType,
+      discountValue,
+      taxRatePercent,
+      depositType,
+      depositValue,
+      lateFeeType,
+      lateFeeValue,
+      showDiscount,
+      showTax,
+      showDeposit,
+      showLateFee,
+      emailSubject,
+      emailBody,
+      emailSignature,
+      items: items.map((row) => ({
+        id: row.id ?? null,
+        job_id: row.job_id ?? null,
+        description: row.description,
+        description_detail: row.description_detail ?? null,
+        line_type: row.line_type,
+        quantity: row.quantity,
+        unit_price_pence: row.unit_price_pence,
+        total_pence: row.total_pence,
+      })),
+    }),
+    [
+      title,
+      referenceNumber,
+      issuedAt,
+      dueAt,
+      currency,
+      clientId,
+      projectId,
+      notes,
+      footerMessage,
+      privateNote,
+      discountType,
+      discountValue,
+      taxRatePercent,
+      depositType,
+      depositValue,
+      lateFeeType,
+      lateFeeValue,
+      showDiscount,
+      showTax,
+      showDeposit,
+      showLateFee,
+      emailSubject,
+      emailBody,
+      emailSignature,
+      items,
+    ],
+  );
+  const { isDirty, markClean } = useFormDirtyState(dirtyFingerprint, {
+    enabled: canModifyInvoice,
+  });
+  useUnsavedChangesWarning(isDirty);
+
   const jobsForClient = useMemo(
     () => jobs.filter((j) => j.client_id === clientId),
     [jobs, clientId],
@@ -798,6 +872,7 @@ export function InvoiceEditIndyContent({
       });
 
       toast.success('Invoice saved');
+      markClean();
       router.refresh();
       return true;
     } catch (err) {
@@ -820,6 +895,7 @@ export function InvoiceEditIndyContent({
     invoice.id,
     invoice.invoice_number,
     items,
+    markClean,
     notes,
     parsedDepositValue,
     parsedDiscountValue,

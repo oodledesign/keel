@@ -439,13 +439,10 @@ class ClientsService {
       .insert({
         account_id: input.accountId,
         client_type: clientType,
-        first_name:
-          clientType === 'individual'
-            ? personFirst
-            : (personFirst ?? companyName),
-        last_name: personLast,
+        first_name: clientType === 'individual' ? personFirst : null,
+        last_name: clientType === 'individual' ? personLast : null,
         display_name: displayName,
-        company_name: companyName,
+        company_name: clientType === 'individual' ? null : companyName,
         email: primaryContactEmail ?? input.email ?? null,
         phone: primaryContactPhone ?? input.phone ?? null,
         website: input.website?.trim() || null,
@@ -593,60 +590,82 @@ class ClientsService {
   }
 
   async updateClient(input: UpdateClientInput) {
-    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'clients.edit',
+    );
 
     const payload: Record<string, unknown> = {
       updated_at: new Date().toISOString(),
     };
 
-    const shouldRecalculateDisplayName =
-      input.first_name !== undefined ||
-      input.last_name !== undefined ||
-      input.company_name !== undefined;
-
-    let current: {
+    const current = (await this.getClient({
+      accountId: input.accountId,
+      clientId: input.clientId,
+    })) as {
       client_type?: string | null;
       first_name?: string | null;
       last_name?: string | null;
       company_name?: string | null;
-    } | null = null;
+      email?: string | null;
+      phone?: string | null;
+    } | null;
 
-    if (shouldRecalculateDisplayName) {
-      current = (await this.getClient({
-        accountId: input.accountId,
-        clientId: input.clientId,
-      })) as {
-        client_type?: string | null;
-        first_name?: string | null;
-        last_name?: string | null;
-        company_name?: string | null;
-      } | null;
+    if (!current) {
+      throw new Error('Client not found');
     }
 
-    if (input.first_name !== undefined) payload.first_name = input.first_name;
-    if (input.last_name !== undefined) payload.last_name = input.last_name;
-    if (input.company_name !== undefined) {
-      payload.company_name = input.company_name;
+    const clientType =
+      input.client_type ??
+      (current.client_type === 'individual' ? 'individual' : 'business');
+
+    if (input.client_type !== undefined) {
+      payload.client_type = clientType;
     }
 
-    if (shouldRecalculateDisplayName) {
-      const clientType =
-        current?.client_type === 'individual' ? 'individual' : 'business';
-      const firstName = (input.first_name ?? current?.first_name ?? '').trim();
-      const lastName = (input.last_name ?? current?.last_name ?? '').trim();
-      const companyName = (
-        input.company_name ??
-        current?.company_name ??
-        ''
-      ).trim();
+    if (clientType === 'individual') {
+      const firstName = (
+        input.first_name !== undefined ? input.first_name : current.first_name
+      )?.trim();
+      if (!firstName) {
+        throw new Error('First name is required');
+      }
+      const lastName =
+        input.last_name !== undefined
+          ? input.last_name?.trim() || null
+          : current.last_name?.trim() || null;
 
+      payload.first_name = firstName;
+      payload.last_name = lastName;
+      payload.company_name = null;
       payload.display_name = resolveStoredClientDisplayName({
-        clientType,
-        companyName: companyName || null,
-        firstName: firstName || null,
-        lastName: lastName || null,
+        clientType: 'individual',
+        companyName: null,
+        firstName,
+        lastName,
+      });
+    } else {
+      const companyName = (
+        input.company_name !== undefined
+          ? input.company_name
+          : current.company_name
+      )?.trim();
+      if (!companyName) {
+        throw new Error('Company name is required');
+      }
+
+      payload.company_name = companyName;
+      // Person fields live on contacts for businesses — keep client row clean.
+      payload.first_name = null;
+      payload.last_name = null;
+      payload.display_name = resolveStoredClientDisplayName({
+        clientType: 'business',
+        companyName,
+        firstName: null,
+        lastName: null,
       });
     }
+
     if (input.email !== undefined) payload.email = input.email;
     if (input.phone !== undefined) payload.phone = input.phone;
     if (input.website !== undefined) {
@@ -670,7 +689,136 @@ class ClientsService {
       .single();
 
     if (error) throw mapClientWriteError(error);
+
+    if (clientType === 'individual') {
+      await this.syncIndividualPrimaryContact({
+        accountId: input.accountId,
+        clientId: input.clientId,
+        userId: user.id,
+        firstName: (data.first_name as string | null) ?? null,
+        lastName: (data.last_name as string | null) ?? null,
+        email: (data.email as string | null) ?? null,
+        phone: (data.phone as string | null) ?? null,
+      });
+    }
+
     return data;
+  }
+
+  /** Keep the auto-created individual contact in sync with the client person fields. */
+  private async syncIndividualPrimaryContact(input: {
+    accountId: string;
+    clientId: string;
+    userId: string;
+    firstName: string | null;
+    lastName: string | null;
+    email: string | null;
+    phone: string | null;
+  }) {
+    const names = resolveContactNameParts({
+      firstName: input.firstName,
+      lastName: input.lastName,
+    });
+    if (!names.firstName) return;
+
+    const { data: primaryLink } = await this.adminDb
+      .from('client_contacts')
+      .select('contact_id')
+      .eq('client_id', input.clientId)
+      .eq('is_primary', true)
+      .maybeSingle();
+
+    let contactId =
+      (primaryLink?.contact_id as string | null | undefined) ?? null;
+
+    if (!contactId) {
+      const { data: anyLink } = await this.adminDb
+        .from('client_contacts')
+        .select('contact_id')
+        .eq('client_id', input.clientId)
+        .order('created_at', { ascending: true })
+        .limit(1)
+        .maybeSingle();
+      contactId = (anyLink?.contact_id as string | null | undefined) ?? null;
+    }
+
+    const contactPayload = {
+      first_name: names.firstName,
+      last_name: names.lastName,
+      full_name: names.fullName,
+      email: input.email,
+      phone: input.phone,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (contactId) {
+      const { error } = await this.adminDb
+        .from('contacts')
+        .update(contactPayload)
+        .eq('id', contactId)
+        .eq('account_id', input.accountId);
+      if (error && isMissingColumnError(error)) {
+        const {
+          first_name: _f,
+          last_name: _l,
+          ...legacyPayload
+        } = contactPayload;
+        const { error: legacyError } = await this.adminDb
+          .from('contacts')
+          .update(legacyPayload)
+          .eq('id', contactId)
+          .eq('account_id', input.accountId);
+        if (legacyError) throw mapClientWriteError(legacyError);
+      } else if (error) {
+        throw mapClientWriteError(error);
+      }
+
+      if (!primaryLink) {
+        await this.adminDb
+          .from('client_contacts')
+          .update({ is_primary: true, updated_at: new Date().toISOString() })
+          .eq('client_id', input.clientId)
+          .eq('contact_id', contactId);
+      }
+      return;
+    }
+
+    const insertPayload = {
+      account_id: input.accountId,
+      user_id: input.userId,
+      client_id: input.clientId,
+      ...contactPayload,
+      is_primary: true,
+    };
+
+    let contactInsert = await this.adminDb
+      .from('contacts')
+      .insert(insertPayload)
+      .select('id')
+      .single();
+
+    if (contactInsert.error && isMissingColumnError(contactInsert.error)) {
+      const { first_name: _f, last_name: _l, ...legacyPayload } = insertPayload;
+      contactInsert = await this.adminDb
+        .from('contacts')
+        .insert(legacyPayload)
+        .select('id')
+        .single();
+    }
+
+    if (contactInsert.error) throw mapClientWriteError(contactInsert.error);
+
+    if (contactInsert.data?.id) {
+      const { error: linkError } = await this.adminDb
+        .from('client_contacts')
+        .insert({
+          client_id: input.clientId,
+          contact_id: contactInsert.data.id,
+          role: null,
+          is_primary: true,
+        });
+      if (linkError) throw mapClientWriteError(linkError);
+    }
   }
 
   /**

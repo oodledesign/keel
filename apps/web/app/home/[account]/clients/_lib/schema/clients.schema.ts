@@ -108,22 +108,44 @@ export const CreateClientSchema = z
     }
   });
 
-export const UpdateClientSchema = z.object({
-  accountId: z.string().uuid(),
-  clientId: z.string().uuid(),
-  accountSlug: z.string().min(1).optional(),
-  first_name: z.string().min(1).optional(),
-  last_name: optionalNullableString,
-  company_name: optionalNullableString,
-  email: optionalNullableString,
-  phone: optionalNullableString,
-  website: optionalNullableString,
-  address_line_1: optionalNullableString,
-  address_line_2: optionalNullableString,
-  city: optionalNullableString,
-  postcode: optionalNullableString,
-  country: optionalNullableString,
-});
+export const UpdateClientSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    clientId: z.string().uuid(),
+    accountSlug: z.string().min(1).optional(),
+    client_type: z.enum(['individual', 'business']).optional(),
+    first_name: optionalNullableString,
+    last_name: optionalNullableString,
+    company_name: optionalNullableString,
+    email: optionalNullableString,
+    phone: optionalNullableString,
+    website: optionalNullableString,
+    address_line_1: optionalNullableString,
+    address_line_2: optionalNullableString,
+    city: optionalNullableString,
+    postcode: optionalNullableString,
+    country: optionalNullableString,
+  })
+  .superRefine((data, ctx) => {
+    if (data.client_type === 'individual' && data.first_name !== undefined) {
+      if (!data.first_name?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'First name is required',
+          path: ['first_name'],
+        });
+      }
+    }
+    if (data.client_type === 'business' && data.company_name !== undefined) {
+      if (!data.company_name?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Company name is required',
+          path: ['company_name'],
+        });
+      }
+    }
+  });
 
 export const DeleteClientSchema = z.object({
   accountId: z.string().uuid(),

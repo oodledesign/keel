@@ -184,11 +184,15 @@ export function ClientForm({
       toast.error('First name is required');
       return;
     }
-    if (!isIndividual && mode === 'create' && !company_name.trim()) {
+    if (!isIndividual && !company_name.trim()) {
       toast.error('Company name is required for a business client');
       return;
     }
-    if (showCreateContact && contactMode === 'new' && !contactFirstName.trim()) {
+    if (
+      showCreateContact &&
+      contactMode === 'new' &&
+      !contactFirstName.trim()
+    ) {
       toast.error('Add a primary contact with a first name');
       return;
     }
@@ -202,11 +206,11 @@ export function ClientForm({
         await createClient({
           accountId,
           client_type: clientType,
-          first_name: isIndividual
-            ? first_name.trim()
-            : first_name.trim() || undefined,
-          last_name: last_name.trim() || undefined,
-          company_name: company_name.trim() || undefined,
+          first_name: isIndividual ? first_name.trim() : undefined,
+          last_name: isIndividual ? last_name.trim() || undefined : undefined,
+          company_name: isIndividual
+            ? undefined
+            : company_name.trim() || undefined,
           email: isIndividual
             ? email.trim() || undefined
             : contactMode === 'new'
@@ -254,9 +258,10 @@ export function ClientForm({
           accountId,
           clientId: client.id,
           accountSlug,
-          first_name: first_name.trim() || undefined,
-          last_name: last_name.trim() || null,
-          company_name: company_name.trim() || null,
+          client_type: clientType,
+          first_name: isIndividual ? first_name.trim() : null,
+          last_name: isIndividual ? last_name.trim() || null : null,
+          company_name: isIndividual ? null : company_name.trim() || null,
           email: email.trim() || null,
           phone: phone.trim() || null,
           website: website.trim() || null,
@@ -309,75 +314,71 @@ export function ClientForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-5">
-      {mode === 'create' && (
-        <div className="space-y-2">
-          <Label>Client type</Label>
-          <div className="flex overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]">
-            <button
-              type="button"
-              onClick={() => setClientType('individual')}
-              className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
-                isIndividual
-                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
-                  : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]'
-              }`}
-            >
-              <User className="h-4 w-4" />
-              Individual
-            </button>
-            <button
-              type="button"
-              onClick={() => setClientType('business')}
-              className={`flex flex-1 items-center justify-center gap-2 border-l border-[color:var(--workspace-shell-border)] px-4 py-2.5 text-sm font-medium transition-colors ${
-                !isIndividual
-                  ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
-                  : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]'
-              }`}
-            >
-              <Building2 className="h-4 w-4" />
-              Business
-            </button>
-          </div>
-          {isIndividual ? (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              A single person. A contact record is created automatically.
-            </p>
-          ) : (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              A company with people linked as contacts (primary, finance, etc.).
-            </p>
-          )}
+      <div className="space-y-2">
+        <Label>Client type</Label>
+        <div className="flex overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]">
+          <button
+            type="button"
+            onClick={() => !isReadOnly && setClientType('individual')}
+            disabled={isReadOnly}
+            className={`flex flex-1 items-center justify-center gap-2 px-4 py-2.5 text-sm font-medium transition-colors ${
+              isIndividual
+                ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]'
+            }`}
+          >
+            <User className="h-4 w-4" />
+            Individual
+          </button>
+          <button
+            type="button"
+            onClick={() => !isReadOnly && setClientType('business')}
+            disabled={isReadOnly}
+            className={`flex flex-1 items-center justify-center gap-2 border-l border-[color:var(--workspace-shell-border)] px-4 py-2.5 text-sm font-medium transition-colors ${
+              !isIndividual
+                ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                : 'bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-panel-hover)] hover:text-[var(--workspace-shell-text)]'
+            }`}
+          >
+            <Building2 className="h-4 w-4" />
+            Business
+          </button>
         </div>
-      )}
+        {isIndividual ? (
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            A single person. Their name and email are also their contact record.
+          </p>
+        ) : (
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            A company. Add people on the Contacts tab (primary, finance, etc.).
+          </p>
+        )}
+      </div>
 
       {!isIndividual && (
         <div className="space-y-2">
-          <Label htmlFor="company_name">
-            Company name {mode === 'create' ? '*' : ''}
-          </Label>
+          <Label htmlFor="company_name">Company name *</Label>
           <Input
             id="company_name"
             value={company_name}
             onChange={(e) => setCompanyName(e.target.value)}
             placeholder="e.g. Acme Ltd"
-            required={!isIndividual && mode === 'create'}
+            required
             readOnly={isReadOnly}
           />
         </div>
       )}
 
-      {(isIndividual || mode === 'edit') && (
+      {isIndividual && (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="first_name">
-              First name {isIndividual ? '*' : ''}
-            </Label>
+            <Label htmlFor="first_name">First name *</Label>
             <Input
               id="first_name"
               value={first_name}
               onChange={(e) => setFirstName(e.target.value)}
               placeholder="e.g. John"
-              required={isIndividual}
+              required
               readOnly={isReadOnly}
             />
           </div>
@@ -513,35 +514,35 @@ export function ClientForm({
                   className="w-[var(--radix-popover-trigger-width)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0"
                   align="start"
                 >
-                <Command
-                  className="bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-                  shouldFilter={false}
-                >
-                  <CommandInput
-                    placeholder="Search by name or email…"
-                    value={searchQuery}
-                    onValueChange={setSearchQuery}
-                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                  />
-                  <CommandList>
-                    <CommandEmpty className="text-[var(--workspace-shell-text-muted)]">
-                      {loadingContacts
-                        ? 'Searching…'
-                        : 'No contacts found in this workspace.'}
-                    </CommandEmpty>
-                    <CommandGroup>
-                      {filteredContacts.map((contact) => {
-                        const label = `${contact.full_name}${contact.email ? ` · ${contact.email}` : ''}`;
-                        return (
-                          <CommandItem
-                            key={contact.id}
-                            value={label}
-                            onSelect={() => {
-                              setSelectedContactId(contact.id);
-                              setSearchOpen(false);
-                            }}
-                            className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-panel-hover)] aria-selected:text-[var(--workspace-shell-text)]"
-                          >
+                  <Command
+                    className="bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+                    shouldFilter={false}
+                  >
+                    <CommandInput
+                      placeholder="Search by name or email…"
+                      value={searchQuery}
+                      onValueChange={setSearchQuery}
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                    />
+                    <CommandList>
+                      <CommandEmpty className="text-[var(--workspace-shell-text-muted)]">
+                        {loadingContacts
+                          ? 'Searching…'
+                          : 'No contacts found in this workspace.'}
+                      </CommandEmpty>
+                      <CommandGroup>
+                        {filteredContacts.map((contact) => {
+                          const label = `${contact.full_name}${contact.email ? ` · ${contact.email}` : ''}`;
+                          return (
+                            <CommandItem
+                              key={contact.id}
+                              value={label}
+                              onSelect={() => {
+                                setSelectedContactId(contact.id);
+                                setSearchOpen(false);
+                              }}
+                              className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-panel-hover)] aria-selected:text-[var(--workspace-shell-text)]"
+                            >
                               <Check
                                 className={cn(
                                   'mr-2 h-4 w-4',
@@ -586,30 +587,44 @@ export function ClientForm({
       )}
 
       {(isIndividual || mode === 'edit') && (
-        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-          <div className="space-y-2">
-            <Label htmlFor="email">
-              {mode === 'edit' && !isIndividual ? 'Fallback email' : 'Email'}
-            </Label>
-            <Input
-              id="email"
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
-              readOnly={isReadOnly}
-            />
+        <div className="space-y-2">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="email">
+                {isIndividual ? 'Email' : 'Fallback email'}
+              </Label>
+              <Input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="email@example.com"
+                readOnly={isReadOnly}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">
+                {isIndividual ? 'Phone' : 'Fallback phone'}
+              </Label>
+              <Input
+                id="phone"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="Phone number"
+                readOnly={isReadOnly}
+              />
+            </div>
           </div>
-          <div className="space-y-2">
-            <Label htmlFor="phone">Phone</Label>
-            <Input
-              id="phone"
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              placeholder="Phone number"
-              readOnly={isReadOnly}
-            />
-          </div>
+          {!isIndividual ? (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Optional. Prefer contact emails on the Contacts tab for proposals
+              and invoices.
+            </p>
+          ) : (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Saved as this person&apos;s contact details too.
+            </p>
+          )}
         </div>
       )}
 

@@ -1,6 +1,8 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
+
+import { Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -22,12 +24,33 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
+import { Textarea } from '@kit/ui/textarea';
+
+import {
+  calculateInvoiceLineTotalPence,
+  normalizeInvoiceLineType,
+  normalizeInvoiceQuantity,
+  type InvoiceLineType,
+} from '~/lib/invoices/invoice-quantity';
 
 import { getErrorMessage } from '../_lib/error-message';
-import { normalizeInvoiceCurrency } from '../_lib/invoice-currency';
+import {
+  invoiceCurrencySymbol,
+  normalizeInvoiceCurrency,
+} from '../_lib/invoice-currency';
 import { upsertRecurringSeriesAction } from '../_lib/server/server-actions';
 
 type Frequency = 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
+
+type TemplateLineItem = {
+  key: string;
+  job_id: string | null;
+  description: string;
+  description_detail: string;
+  line_type: InvoiceLineType;
+  quantity: string;
+  unit_price: string;
+};
 
 export type RecurringSeriesEditModel = {
   id: string;
@@ -48,6 +71,72 @@ function toDateInput(value: string | null | undefined) {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value.slice(0, 10);
   return d.toISOString().slice(0, 10);
+}
+
+function penceToPoundsInput(pence: number): string {
+  if (!Number.isFinite(pence) || pence === 0) return '';
+  return (pence / 100).toFixed(2);
+}
+
+function poundsInputToPence(value: string): number {
+  const trimmed = value.trim();
+  if (!trimmed) return 0;
+  const parsed = Number.parseFloat(trimmed);
+  if (!Number.isFinite(parsed) || parsed < 0) return 0;
+  return Math.round(parsed * 100);
+}
+
+function newLineKey() {
+  return `line-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function mapTemplateItems(template: Record<string, unknown> | null | undefined) {
+  const raw = Array.isArray(template?.items) ? template.items : [];
+  if (raw.length === 0) {
+    return [
+      {
+        key: newLineKey(),
+        job_id: null,
+        description: '',
+        description_detail: '',
+        line_type: 'quantity' as InvoiceLineType,
+        quantity: '1',
+        unit_price: '',
+      },
+    ];
+  }
+
+  return raw.map((item, index) => {
+    const row = (item ?? {}) as Record<string, unknown>;
+    const quantity =
+      typeof row.quantity === 'number'
+        ? row.quantity
+        : Number.parseFloat(String(row.quantity ?? '1'));
+    const unitPricePence =
+      typeof row.unit_price_pence === 'number'
+        ? row.unit_price_pence
+        : Number.parseInt(String(row.unit_price_pence ?? '0'), 10);
+
+    return {
+      key:
+        typeof row.id === 'string'
+          ? row.id
+          : `template-${index}-${newLineKey()}`,
+      job_id: typeof row.job_id === 'string' ? row.job_id : null,
+      description: typeof row.description === 'string' ? row.description : '',
+      description_detail:
+        typeof row.description_detail === 'string'
+          ? row.description_detail
+          : '',
+      line_type: normalizeInvoiceLineType(
+        typeof row.line_type === 'string' ? row.line_type : 'quantity',
+      ),
+      quantity: Number.isFinite(quantity) ? String(quantity) : '1',
+      unit_price: penceToPoundsInput(
+        Number.isFinite(unitPricePence) ? unitPricePence : 0,
+      ),
+    };
+  });
 }
 
 export function RecurringSeriesEditDialog({
@@ -71,6 +160,11 @@ export function RecurringSeriesEditDialog({
   const [autoSend, setAutoSend] = useState(false);
   const [hasEndDate, setHasEndDate] = useState(false);
   const [endDate, setEndDate] = useState('');
+  const [notes, setNotes] = useState('');
+  const [items, setItems] = useState<TemplateLineItem[]>([]);
+
+  const currency = normalizeInvoiceCurrency(series?.currency);
+  const currencySymbol = invoiceCurrencySymbol(currency);
 
   useEffect(() => {
     if (!series || !open) return;
@@ -82,7 +176,26 @@ export function RecurringSeriesEditDialog({
     const end = toDateInput(series.end_at);
     setHasEndDate(Boolean(end));
     setEndDate(end);
+    const template = (series.template ?? {}) as Record<string, unknown>;
+    setNotes(typeof template.notes === 'string' ? template.notes : '');
+    setItems(mapTemplateItems(template));
   }, [series, open]);
+
+  const lineTotalPreview = useMemo(() => {
+    return items.reduce((sum, row) => {
+      const quantity = normalizeInvoiceQuantity(
+        Number.parseFloat(row.quantity) || 0,
+      );
+      const unitPricePence = poundsInputToPence(row.unit_price);
+      return sum + calculateInvoiceLineTotalPence(quantity, unitPricePence);
+    }, 0);
+  }, [items]);
+
+  const updateItem = (key: string, patch: Partial<TemplateLineItem>) => {
+    setItems((prev) =>
+      prev.map((row) => (row.key === key ? { ...row, ...patch } : row)),
+    );
+  };
 
   const handleSave = () => {
     if (!series) return;
@@ -120,6 +233,37 @@ export function RecurringSeriesEditDialog({
       endAt = end.toISOString();
     }
 
+    const cleanedItems = items
+      .map((row, index) => {
+        const description = row.description.trim();
+        const quantity = normalizeInvoiceQuantity(
+          Number.parseFloat(row.quantity) || 0,
+        );
+        const unit_price_pence = poundsInputToPence(row.unit_price);
+        return {
+          job_id: row.job_id,
+          sort_order: index,
+          description,
+          description_detail: row.description_detail.trim() || null,
+          line_type: row.line_type,
+          quantity,
+          unit_price_pence,
+          total_pence: calculateInvoiceLineTotalPence(
+            quantity,
+            unit_price_pence,
+          ),
+        };
+      })
+      .filter((row) => row.description.length > 0);
+
+    if (cleanedItems.length === 0) {
+      toast.error('Add at least one line item with a description');
+      return;
+    }
+
+    const existingTemplate =
+      (series.template as Record<string, unknown> | null | undefined) ?? {};
+
     startTransition(async () => {
       try {
         await upsertRecurringSeriesAction({
@@ -127,16 +271,19 @@ export function RecurringSeriesEditDialog({
           seriesId: series.id,
           client_id: series.client_id,
           title: title.trim(),
-          currency: normalizeInvoiceCurrency(series.currency),
+          currency,
           frequency,
           next_issue_at: nextIssue.toISOString(),
           end_at: endAt,
           max_occurrences: series.max_occurrences ?? null,
           auto_send: autoSend,
           due_days: parsedDueDays,
-          template:
-            (series.template as Record<string, unknown> | null | undefined) ??
-            {},
+          template: {
+            ...existingTemplate,
+            title: title.trim(),
+            notes: notes.trim() || null,
+            items: cleanedItems,
+          },
         });
         toast.success('Recurring series updated');
         onOpenChange(false);
@@ -149,16 +296,16 @@ export function RecurringSeriesEditDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+      <DialogContent className="flex max-h-[90vh] max-w-2xl flex-col overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <DialogHeader>
           <DialogTitle>Edit recurring series</DialogTitle>
           <DialogDescription>
-            Update the schedule and due date for future invoices from this
-            series. Line items stay as saved on the template.
+            Changes apply to future invoices from this series. Already issued
+            invoices are not updated.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="min-h-0 flex-1 space-y-4 overflow-y-auto pr-1">
           <div className="space-y-2">
             <Label htmlFor="recurring-edit-title">Title</Label>
             <Input
@@ -168,33 +315,35 @@ export function RecurringSeriesEditDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Frequency</Label>
-            <Select
-              value={frequency}
-              onValueChange={(value) => setFrequency(value as Frequency)}
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="fortnightly">Fortnightly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-                <SelectItem value="quarterly">Quarterly</SelectItem>
-                <SelectItem value="yearly">Yearly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>Frequency</Label>
+              <Select
+                value={frequency}
+                onValueChange={(value) => setFrequency(value as Frequency)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="weekly">Weekly</SelectItem>
+                  <SelectItem value="fortnightly">Fortnightly</SelectItem>
+                  <SelectItem value="monthly">Monthly</SelectItem>
+                  <SelectItem value="quarterly">Quarterly</SelectItem>
+                  <SelectItem value="yearly">Yearly</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="recurring-edit-next">Next issue date</Label>
-            <Input
-              id="recurring-edit-next"
-              type="date"
-              value={nextIssueDate}
-              onChange={(e) => setNextIssueDate(e.target.value)}
-            />
+            <div className="space-y-2">
+              <Label htmlFor="recurring-edit-next">Next issue date</Label>
+              <Input
+                id="recurring-edit-next"
+                type="date"
+                value={nextIssueDate}
+                onChange={(e) => setNextIssueDate(e.target.value)}
+              />
+            </div>
           </div>
 
           <div className="space-y-2">
@@ -213,6 +362,146 @@ export function RecurringSeriesEditDialog({
                 days after each issue
               </span>
             </div>
+          </div>
+
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <Label>Line items</Label>
+                <p className="text-muted-foreground text-xs">
+                  Used on each future invoice from this series
+                </p>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  setItems((prev) => [
+                    ...prev,
+                    {
+                      key: newLineKey(),
+                      job_id: null,
+                      description: '',
+                      description_detail: '',
+                      line_type: 'quantity',
+                      quantity: '1',
+                      unit_price: '',
+                    },
+                  ])
+                }
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                Add line
+              </Button>
+            </div>
+
+            <div className="space-y-3">
+              {items.map((row) => (
+                <div
+                  key={row.key}
+                  className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] p-3"
+                >
+                  <div className="flex items-start gap-2">
+                    <Input
+                      value={row.description}
+                      onChange={(e) =>
+                        updateItem(row.key, { description: e.target.value })
+                      }
+                      placeholder="Description"
+                      className="flex-1"
+                    />
+                    <Button
+                      type="button"
+                      size="icon"
+                      variant="ghost"
+                      className="text-muted-foreground shrink-0"
+                      disabled={items.length <= 1}
+                      onClick={() =>
+                        setItems((prev) =>
+                          prev.filter((item) => item.key !== row.key),
+                        )
+                      }
+                      aria-label="Remove line"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                  <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-xs">
+                        Type
+                      </Label>
+                      <Select
+                        value={row.line_type}
+                        onValueChange={(value) =>
+                          updateItem(row.key, {
+                            line_type: value as InvoiceLineType,
+                          })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="quantity">Quantity</SelectItem>
+                          <SelectItem value="hours">Hours</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-1">
+                      <Label className="text-muted-foreground text-xs">
+                        {row.line_type === 'hours' ? 'Hours' : 'Qty'}
+                      </Label>
+                      <Input
+                        type="number"
+                        min={0}
+                        step="0.01"
+                        value={row.quantity}
+                        onChange={(e) =>
+                          updateItem(row.key, { quantity: e.target.value })
+                        }
+                        className="font-mono"
+                      />
+                    </div>
+                    <div className="col-span-2 space-y-1 sm:col-span-1">
+                      <Label className="text-muted-foreground text-xs">
+                        Rate ({currencySymbol})
+                      </Label>
+                      <Input
+                        type="text"
+                        inputMode="decimal"
+                        value={row.unit_price}
+                        onChange={(e) =>
+                          updateItem(row.key, { unit_price: e.target.value })
+                        }
+                        placeholder="0.00"
+                        className="font-mono"
+                      />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-muted-foreground text-right text-xs">
+              Line total preview:{' '}
+              <span className="font-mono text-[var(--workspace-shell-text)]">
+                {currencySymbol}
+                {(lineTotalPreview / 100).toFixed(2)}
+              </span>
+            </p>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="recurring-edit-notes">Notes on invoice</Label>
+            <Textarea
+              id="recurring-edit-notes"
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              rows={3}
+              placeholder="Optional notes shown on each issued invoice"
+            />
           </div>
 
           <div className="flex items-center justify-between gap-4 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">

@@ -649,11 +649,15 @@ export function InvoicesPageContent({
                     <td className="py-3 pr-4">
                       <Link
                         href={editPathBase.replace('[id]', inv.id)}
-                        className="font-medium text-[var(--workspace-shell-text)] hover:underline"
+                        className="inline-flex items-center gap-1.5 font-medium text-[var(--workspace-shell-text)] hover:underline"
                       >
-                        {inv.invoice_number}
+                        <span>{inv.invoice_number}</span>
                         {inv.recurring_series_id ? (
-                          <Repeat className="ml-1 inline h-3.5 w-3.5 text-[var(--workspace-shell-text-muted)]" />
+                          <Repeat
+                            className="h-3.5 w-3.5 shrink-0 text-[var(--ozer-accent)]"
+                            aria-label="Recurring invoice"
+                            title="Recurring invoice"
+                          />
                         ) : null}
                       </Link>
                     </td>

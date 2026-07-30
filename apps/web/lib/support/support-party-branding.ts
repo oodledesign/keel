@@ -42,35 +42,39 @@ export async function loadClientPicturesByOrgIds(
 export async function loadSupportBusinessBrand(
   accountId: string,
 ): Promise<SupportPartyBrand> {
-  const [brand, account] = await Promise.all([
-    loadAccountBrandResolved(accountId),
-    (async () => {
-      const { getSupabaseServerAdminClient } = await import(
-        '@kit/supabase/server-admin-client'
-      );
-      const admin = getSupabaseServerAdminClient();
-      const { data } = await admin
-        .from('accounts')
-        .select('name, slug, picture_url')
-        .eq('id', accountId)
-        .maybeSingle();
-      return data as {
-        name?: string | null;
-        slug?: string | null;
-        picture_url?: string | null;
-      } | null;
-    })(),
-  ]);
+  try {
+    const [brand, account] = await Promise.all([
+      loadAccountBrandResolved(accountId),
+      (async () => {
+        const { getSupabaseServerAdminClient } =
+          await import('@kit/supabase/server-admin-client');
+        const admin = getSupabaseServerAdminClient();
+        const { data } = await admin
+          .from('accounts')
+          .select('name, slug, picture_url')
+          .eq('id', accountId)
+          .maybeSingle();
+        return data as {
+          name?: string | null;
+          slug?: string | null;
+          picture_url?: string | null;
+        } | null;
+      })(),
+    ]);
 
-  const logoUrl =
-    brand.logo_url ||
-    toSupabasePublicStorageUrl(account?.picture_url?.trim()) ||
-    null;
+    const logoUrl =
+      brand.logo_url ||
+      toSupabasePublicStorageUrl(account?.picture_url?.trim()) ||
+      null;
 
-  return {
-    name: account?.name?.trim() || account?.slug?.trim() || 'Business',
-    logoUrl,
-  };
+    return {
+      name: account?.name?.trim() || account?.slug?.trim() || 'Business',
+      logoUrl,
+    };
+  } catch (error) {
+    console.warn('[support] loadSupportBusinessBrand failed:', error);
+    return { name: 'Business', logoUrl: null };
+  }
 }
 
 export async function loadSupportClientBrand(

@@ -31,6 +31,10 @@ import {
 } from '~/components/signature-capture';
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import {
+  useFormDirtyState,
+  useUnsavedChangesWarning,
+} from '~/lib/hooks/use-unsaved-changes-warning';
 
 import { getErrorMessage } from '../_lib/error-message';
 import type { PaymentPlanItem } from '../_lib/schema/contracts.schema';
@@ -203,6 +207,41 @@ export function ContractEditContent({
     [paymentPlan],
   );
 
+  const dirtyFingerprint = useMemo(
+    () => ({
+      title,
+      contentHtml,
+      totalPence,
+      paymentPlan,
+      autoSendOnApproval,
+      authorType,
+      authorName,
+      authorCompany,
+      recipientType,
+      recipientName,
+      recipientCompany,
+      recipientEmail,
+    }),
+    [
+      title,
+      contentHtml,
+      totalPence,
+      paymentPlan,
+      autoSendOnApproval,
+      authorType,
+      authorName,
+      authorCompany,
+      recipientType,
+      recipientName,
+      recipientCompany,
+      recipientEmail,
+    ],
+  );
+  const { isDirty, markClean } = useFormDirtyState(dirtyFingerprint, {
+    enabled: canEditBody,
+  });
+  useUnsavedChangesWarning(isDirty);
+
   const buildUpdatePayload = useCallback(() => {
     const parsedTotal = Math.round(parseFloat(totalPence || '0') * 100);
     return {
@@ -246,6 +285,7 @@ export function ContractEditContent({
     try {
       await updateContract(buildUpdatePayload());
       toast.success('Draft saved');
+      markClean();
       router.refresh();
     } catch (error) {
       toast.error(getErrorMessage(error));
@@ -290,6 +330,7 @@ export function ContractEditContent({
     try {
       if (isDraft) {
         await updateContract(buildUpdatePayload());
+        markClean();
       }
       await signAuthor({
         accountId,

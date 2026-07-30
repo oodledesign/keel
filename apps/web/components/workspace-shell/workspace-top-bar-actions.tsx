@@ -1,16 +1,27 @@
 'use client';
 
-import { useMemo } from 'react';
+import { type ReactNode, useMemo } from 'react';
+
+import Link from 'next/link';
+
+import { CalendarDays, Mail } from 'lucide-react';
 
 import { NotificationsPopover } from '@kit/notifications/components';
 import type { JWTUserData } from '@kit/supabase/types';
+import { Button } from '@kit/ui/button';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
 
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import featureFlagsConfig from '~/config/feature-flags.config';
-
-import { WorkspaceSearchButton } from './workspace-search-button';
-import { WorkspaceNewMenu } from './workspace-new-menu';
+import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
+
+import { WorkspaceNewMenu } from './workspace-new-menu';
 
 type WorkspaceTopBarBaseProps = {
   userId: string;
@@ -22,6 +33,35 @@ type WorkspaceTopBarBaseProps = {
   };
   showNewMenu?: boolean;
 };
+
+function TopBarIconLink({
+  href,
+  label,
+  children,
+}: {
+  href: string;
+  label: string;
+  children: ReactNode;
+}) {
+  return (
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Button
+          asChild
+          type="button"
+          variant="ghost"
+          size="icon"
+          className="h-8 w-8 rounded-md text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+        >
+          <Link href={href} aria-label={label}>
+            {children}
+          </Link>
+        </Button>
+      </TooltipTrigger>
+      <TooltipContent side="bottom">{label}</TooltipContent>
+    </Tooltip>
+  );
+}
 
 export function WorkspaceMobileTopActions(
   props:
@@ -74,39 +114,63 @@ export function WorkspaceDesktopTopBar(
     [props.accountId, props.userId],
   );
 
+  const emailHref =
+    props.variant === 'team'
+      ? pathsConfig.app.accountEmailAssistant.replace(
+          '[account]',
+          props.accountSlug,
+        )
+      : pathsConfig.app.personalEmailAssistant;
+
+  const plannerHref =
+    props.variant === 'team'
+      ? pathsConfig.app.accountPlannerDay.replace(
+          '[account]',
+          props.accountSlug,
+        )
+      : pathsConfig.app.personalPlannerDay;
+
   return (
     <header className="sticky top-0 z-30 hidden h-14 shrink-0 items-center justify-end gap-2 border-0 bg-transparent px-4 lg:flex lg:px-6">
-      <div className="flex items-center gap-2">
-        {featureFlagsConfig.enableNotifications ? (
-          <NotificationsPopover
-            accountIds={notificationAccountIds}
-            realtime={featureFlagsConfig.realtimeNotifications}
-          />
-        ) : null}
-
-        <WorkspaceSearchButton />
-
-        {showNew ? (
-          props.variant === 'team' ? (
-            <WorkspaceNewMenu
-              variant="team"
-              account={props.accountSlug}
-              spaceType={props.spaceType}
+      <TooltipProvider delayDuration={200}>
+        <div className="flex items-center gap-1.5">
+          {featureFlagsConfig.enableNotifications ? (
+            <NotificationsPopover
+              accountIds={notificationAccountIds}
+              realtime={featureFlagsConfig.realtimeNotifications}
             />
-          ) : (
-            <WorkspaceNewMenu variant="personal" />
-          )
-        ) : null}
+          ) : null}
 
-        {props.user ? (
-          <ProfileAccountDropdownContainer
-            user={props.user}
-            account={props.account}
-            showProfileName={false}
-            className="shrink-0"
-          />
-        ) : null}
-      </div>
+          <TopBarIconLink href={emailHref} label="Email">
+            <Mail className="h-4 w-4" />
+          </TopBarIconLink>
+
+          <TopBarIconLink href={plannerHref} label="Today plan">
+            <CalendarDays className="h-4 w-4" />
+          </TopBarIconLink>
+
+          {showNew ? (
+            props.variant === 'team' ? (
+              <WorkspaceNewMenu
+                variant="team"
+                account={props.accountSlug}
+                spaceType={props.spaceType}
+              />
+            ) : (
+              <WorkspaceNewMenu variant="personal" />
+            )
+          ) : null}
+
+          {props.user ? (
+            <ProfileAccountDropdownContainer
+              user={props.user}
+              account={props.account}
+              showProfileName={false}
+              className="shrink-0"
+            />
+          ) : null}
+        </div>
+      </TooltipProvider>
     </header>
   );
 }

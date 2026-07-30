@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -17,6 +17,10 @@ import { Textarea } from '@kit/ui/textarea';
 import { DocumentRichTextEditor } from '~/components/document-rich-text';
 import pathsConfig from '~/config/paths.config';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
+import {
+  useFormDirtyState,
+  useUnsavedChangesWarning,
+} from '~/lib/hooks/use-unsaved-changes-warning';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { updateProposal } from '../_lib/server/server-actions';
@@ -157,6 +161,37 @@ export function ProposalEditContent({
     proposal.email_signature ?? '',
   );
 
+  const dirtyFingerprint = useMemo(
+    () => ({
+      title,
+      contentHtml,
+      recipientName,
+      recipientEmail,
+      expiresAt,
+      privateNote,
+      totalPenceInput,
+      emailSubject,
+      emailBody,
+      emailSignature,
+    }),
+    [
+      title,
+      contentHtml,
+      recipientName,
+      recipientEmail,
+      expiresAt,
+      privateNote,
+      totalPenceInput,
+      emailSubject,
+      emailBody,
+      emailSignature,
+    ],
+  );
+  const { isDirty, markClean } = useFormDirtyState(dirtyFingerprint, {
+    enabled: canModify,
+  });
+  useUnsavedChangesWarning(isDirty);
+
   const readOnly = previewMode || !canModify;
 
   const defaultRecipientName =
@@ -192,6 +227,7 @@ export function ProposalEditContent({
         email_signature: emailSignature.trim() || null,
       });
       toast.success('Proposal saved');
+      markClean();
       router.refresh();
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -206,6 +242,7 @@ export function ProposalEditContent({
     emailSignature,
     emailSubject,
     expiresAt,
+    markClean,
     privateNote,
     proposal.id,
     recipientEmail,

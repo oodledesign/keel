@@ -4,6 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 
+import {
+  loadClientPicturesByOrgIds,
+  loadSupportBusinessBrand,
+} from '~/lib/support/support-party-branding';
+
 import type {
   AddTicketMessageInput,
   CreateTicketInput,
@@ -13,10 +18,6 @@ import type {
   TicketStatus,
   UpdateTicketInput,
 } from '../schema/support-tickets.schema';
-import {
-  loadClientPicturesByOrgIds,
-  loadSupportBusinessBrand,
-} from '~/lib/support/support-party-branding';
 
 export type SupportTicket = {
   id: string;
@@ -333,7 +334,7 @@ class SupportTicketsService {
     let query = this.db
       .from('support_tickets')
       .select(
-        '*, client_orgs(name, slug), websites(name, domain), projects(name, title)',
+        '*, client_orgs(name, slug), websites(name, domain), projects!support_tickets_project_id_fkey(name, title)',
       )
       .or(supportTicketAccountFilter(input.accountId))
       .order('last_activity_at', { ascending: false });
@@ -363,7 +364,40 @@ class SupportTicketsService {
       query = query.or(`title.ilike.${q},description.ilike.${q}`);
     }
 
-    const { data, error } = await query;
+    let { data, error } = await query;
+    if (error) {
+      // Fallback if the project FK hint isn't available in older DBs.
+      console.warn(
+        '[support] listTickets with project FK failed, retrying:',
+        error.message,
+      );
+      let fallback = this.db
+        .from('support_tickets')
+        .select('*, client_orgs(name, slug), websites(name, domain)')
+        .or(supportTicketAccountFilter(input.accountId))
+        .order('last_activity_at', { ascending: false });
+
+      if (input.status) fallback = fallback.eq('status', input.status);
+      if (input.priority) fallback = fallback.eq('priority', input.priority);
+      if (input.projectId)
+        fallback = fallback.eq('project_id', input.projectId);
+      if (input.clientOrgId) {
+        fallback = fallback.eq('client_org_id', input.clientOrgId);
+      }
+      if (input.q?.trim()) {
+        const raw = input.q
+          .trim()
+          .replace(/[%_,.()]/g, ' ')
+          .slice(0, 80);
+        const q = `%${raw}%`;
+        fallback = fallback.or(`title.ilike.${q},description.ilike.${q}`);
+      }
+
+      const retry = await fallback;
+      data = retry.data;
+      error = retry.error;
+    }
+
     if (error) {
       console.error('[support] listTickets:', error.message);
       return [];

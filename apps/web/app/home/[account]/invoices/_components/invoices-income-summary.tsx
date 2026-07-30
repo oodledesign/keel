@@ -1,7 +1,5 @@
 'use client';
 
-import { useMemo } from 'react';
-
 import { formatInvoiceMoney } from '../_lib/invoice-currency';
 
 type Summary = {
@@ -9,6 +7,7 @@ type Summary = {
   paid_pence: number;
   unpaid_pence: number;
   overdue_pence: number;
+  draft_pence: number;
   currency?: string;
   mixed_currencies?: boolean;
   chart: Array<{ date: string; amount_pence: number }>;
@@ -26,12 +25,6 @@ export function InvoicesIncomeSummary({
   ) => void;
 }) {
   const currency = summary?.currency ?? 'gbp';
-  const maxBar = useMemo(
-    () => Math.max(...(summary?.chart.map((d) => d.amount_pence) ?? [1]), 1),
-    [summary?.chart],
-  );
-  const hasChartData =
-    summary?.chart.some((point) => point.amount_pence > 0) ?? false;
 
   if (!summary) return null;
 
@@ -66,7 +59,7 @@ export function InvoicesIncomeSummary({
         </p>
       ) : null}
 
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
         {[
           {
             label: 'Issued',
@@ -88,6 +81,11 @@ export function InvoicesIncomeSummary({
             value: summary.overdue_pence,
             color: 'text-[#C4455C]',
           },
+          {
+            label: 'Drafts',
+            value: summary.draft_pence ?? 0,
+            color: 'text-[var(--workspace-shell-text-muted)]',
+          },
         ].map((item) => (
           <div
             key={item.label}
@@ -97,38 +95,14 @@ export function InvoicesIncomeSummary({
             <p className={`mt-1 text-lg font-semibold ${item.color}`}>
               {formatInvoiceMoney(item.value, currency)}
             </p>
+            {item.label === 'Drafts' ? (
+              <p className="text-muted-foreground mt-1 text-[11px]">
+                All open drafts
+              </p>
+            ) : null}
           </div>
         ))}
       </div>
-
-      {hasChartData ? (
-        <div className="mt-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 shadow-sm">
-          <p className="mb-3 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
-            Issued by day
-          </p>
-          <div className="flex h-24 items-end gap-1.5">
-            {summary.chart.map((point) => {
-              const heightPct = Math.max(
-                8,
-                Math.round((point.amount_pence / maxBar) * 100),
-              );
-
-              return (
-                <div
-                  key={point.date}
-                  className="group relative flex h-full min-w-0 flex-1 flex-col justify-end"
-                  title={`${point.date}: ${formatInvoiceMoney(point.amount_pence, currency)}`}
-                >
-                  <div
-                    className="w-full rounded-t bg-[var(--ozer-accent)]/75 transition-colors group-hover:bg-[var(--ozer-accent)]"
-                    style={{ height: `${heightPct}%` }}
-                  />
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }

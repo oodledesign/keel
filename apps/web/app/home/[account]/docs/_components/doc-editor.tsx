@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -11,6 +11,10 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  useFormDirtyState,
+  useUnsavedChangesWarning,
+} from '~/lib/hooks/use-unsaved-changes-warning';
 
 import { AskBrainLink } from '../../brain/_components/ask-brain-link';
 import { saveWorkDocAction } from '../_lib/server/docs-server-actions';
@@ -36,6 +40,13 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
   const [content, setContent] = useState(doc.content ?? '');
   const [docType, setDocType] = useState(doc.docType ?? '');
 
+  const dirtyFingerprint = useMemo(
+    () => ({ title, content, docType }),
+    [title, content, docType],
+  );
+  const { isDirty, markClean } = useFormDirtyState(dirtyFingerprint);
+  useUnsavedChangesWarning(isDirty);
+
   const onSave = () => {
     startTransition(async () => {
       try {
@@ -48,6 +59,7 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
           docType: docType || null,
         });
         toast.success('Document saved');
+        markClean();
         router.refresh();
       } catch {
         toast.error('Could not save document');
@@ -131,11 +143,19 @@ export function DocEditor({ accountId, accountSlug, doc }: DocEditorProps) {
           type="button"
           variant="outline"
           className="border-[color:var(--workspace-shell-border)]"
-          onClick={() =>
+          onClick={() => {
+            if (
+              isDirty &&
+              !window.confirm(
+                'You have unsaved changes. Are you sure you want to leave this page?',
+              )
+            ) {
+              return;
+            }
             router.push(
               pathsConfig.app.accountDocs.replace('[account]', accountSlug),
-            )
-          }
+            );
+          }}
         >
           Back
         </Button>

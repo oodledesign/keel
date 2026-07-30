@@ -380,6 +380,54 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
     tasks,
   ]);
 
+  /** Planned tasks that aren't already listed under Due today. */
+  const plannedExtraTasks = useMemo(() => {
+    if (!hasPlan) return [] as PlannerTask[];
+    const stored = loadStoredPlan(initialData.scope, dateYmd);
+    const pool = new Map<string, PlannerTask>();
+
+    for (const task of initialData.openTasksForReplan) {
+      pool.set(task.id, task);
+    }
+    for (const task of tasks) {
+      pool.set(task.id, task);
+    }
+
+    const planned = resolvePlannedTasks([...pool.values()], {
+      storedTaskIds: stored?.taskIds,
+      planMarkdown,
+      dateIso: `${dateYmd}T12:00:00`,
+      fallbackToAllOpen: false,
+    });
+
+    const dueIds = new Set(tasks.map((task) => task.id));
+    return planned.filter((task) => !dueIds.has(task.id));
+  }, [
+    dateYmd,
+    hasPlan,
+    initialData.openTasksForReplan,
+    initialData.scope,
+    planMarkdown,
+    tasks,
+  ]);
+
+  const [plannedTaskOverrides, setPlannedTaskOverrides] = useState<
+    Record<string, PlannerTask['status']>
+  >({});
+
+  useEffect(() => {
+    setPlannedTaskOverrides({});
+  }, [dateYmd, planMarkdown, initialData.openTasksForReplan]);
+
+  const plannedTasksToShow = useMemo(() => {
+    return plannedExtraTasks
+      .map((task) => {
+        const override = plannedTaskOverrides[task.id];
+        return override ? { ...task, status: override } : task;
+      })
+      .filter((task) => task.status !== 'completed');
+  }, [plannedExtraTasks, plannedTaskOverrides]);
+
   const replanUserContext = useMemo(() => {
     const stored = loadStoredPlan(initialData.scope, dateYmd);
     return stored?.userContext?.trim() ?? '';
@@ -399,6 +447,24 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
       setTasks((prev) =>
         prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)),
       );
+      toast.error(result.error ?? 'Could not update task');
+    }
+  }
+
+  async function togglePlannedTask(task: PlannerTask) {
+    const completing = task.status !== 'completed';
+    const nextStatus = completing ? 'completed' : 'pending';
+
+    setPlannedTaskOverrides((prev) => ({ ...prev, [task.id]: nextStatus }));
+
+    const result = await updateTask(task.id, { status: nextStatus });
+
+    if (!result.success) {
+      setPlannedTaskOverrides((prev) => {
+        const next = { ...prev };
+        delete next[task.id];
+        return next;
+      });
       toast.error(result.error ?? 'Could not update task');
     }
   }
@@ -674,6 +740,38 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
             </ul>
           )}
         </section>
+
+        {hasPlan ? (
+          <section className="min-w-0 space-y-3">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
+                {isViewingToday ? "On today's plan" : 'On this day’s plan'}
+              </h2>
+              <span className="text-xs text-[var(--workspace-shell-text)]/40">
+                {plannedTasksToShow.length} open
+              </span>
+            </div>
+            {plannedTasksToShow.length === 0 ? (
+              <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/60 px-4 py-5 text-center text-sm text-[var(--workspace-shell-text)]/45">
+                {tasks.length > 0
+                  ? 'All planned tasks are already listed above, or nothing left open.'
+                  : 'No matching open tasks from the plan.'}
+              </p>
+            ) : (
+              <ul className="min-w-0 space-y-2">
+                {plannedTasksToShow.map((task) => (
+                  <TaskRow
+                    key={`planned-${task.id}`}
+                    task={task}
+                    onToggle={togglePlannedTask}
+                    workspaceAccountId={workspaceAccountId}
+                    onTaskUpdated={() => router.refresh()}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
+        ) : null}
       </div>
 
       {initialData.pipeline ? (

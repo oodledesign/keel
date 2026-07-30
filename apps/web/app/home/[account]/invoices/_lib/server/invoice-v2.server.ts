@@ -83,7 +83,11 @@ export async function getInvoiceSummary(
     from.setDate(from.getDate() - 90);
   }
 
-  const [{ data, error }, displayCurrency] = await Promise.all([
+  const [
+    { data, error },
+    { data: draftRows, error: draftError },
+    displayCurrency,
+  ] = await Promise.all([
     client
       .from('invoices')
       .select(
@@ -92,15 +96,23 @@ export async function getInvoiceSummary(
       .eq('account_id', accountId)
       .is('archived_at', null)
       .gte('issued_at', from.toISOString()),
+    client
+      .from('invoices')
+      .select('total_pence, currency')
+      .eq('account_id', accountId)
+      .eq('status', 'draft')
+      .is('archived_at', null),
     getWorkspaceCurrencyWithClient(client, accountId),
   ]);
   if (error) throw new Error(error.message);
+  if (draftError) throw new Error(draftError.message);
 
   const normalizedDisplayCurrency = normalizeInvoiceCurrency(displayCurrency);
 
   const currencies = new Set(
-    (data ?? []).map((row: { currency?: string | null }) =>
-      normalizeInvoiceCurrency(row.currency),
+    [...(data ?? []), ...(draftRows ?? [])].map(
+      (row: { currency?: string | null }) =>
+        normalizeInvoiceCurrency(row.currency),
     ),
   );
   const mixedCurrencies = currencies.size > 1;
@@ -109,6 +121,7 @@ export async function getInvoiceSummary(
   let paid = 0;
   let unpaid = 0;
   let overdue = 0;
+  let draft = 0;
   const byDay = new Map<string, number>();
 
   for (const row of data ?? []) {
@@ -134,11 +147,20 @@ export async function getInvoiceSummary(
     }
   }
 
+  for (const row of draftRows ?? []) {
+    const rowCurrency = normalizeInvoiceCurrency(
+      (row as { currency?: string | null }).currency,
+    );
+    if (rowCurrency !== normalizedDisplayCurrency) continue;
+    draft += row.total_pence ?? 0;
+  }
+
   return {
     issued_pence: issued,
     paid_pence: paid,
     unpaid_pence: unpaid,
     overdue_pence: overdue,
+    draft_pence: draft,
     currency: normalizedDisplayCurrency,
     mixed_currencies: mixedCurrencies,
     chart: [...byDay.entries()]

@@ -36,7 +36,12 @@ async function SupportPage({ params }: SupportPageProps) {
   }
 
   const service = createSupportTicketsService(getSupabaseServerClient());
-  const initialTickets = await service.listTickets({ accountId });
+  let initialTickets: Awaited<ReturnType<typeof service.listTickets>> = [];
+  try {
+    initialTickets = await service.listTickets({ accountId });
+  } catch (error) {
+    console.error('[support] failed to load tickets:', error);
+  }
 
   return (
     <>

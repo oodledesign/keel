@@ -659,11 +659,8 @@ const SidebarMenuBadge: React.FC<React.ComponentProps<'div'>> = ({
   <div
     data-sidebar="menu-badge"
     className={cn(
-      'text-sidebar-foreground pointer-events-none absolute right-1 flex h-5 min-w-5 items-center justify-center rounded-md px-1 text-xs leading-none font-medium tabular-nums select-none',
+      'text-sidebar-foreground pointer-events-none absolute top-1/2 right-1 flex h-5 min-w-5 -translate-y-1/2 items-center justify-center rounded-md px-1.5 text-xs leading-none font-medium tabular-nums select-none',
       'peer-hover/menu-button:text-sidebar-accent-foreground peer-data-[active=true]/menu-button:text-sidebar-accent-foreground',
-      'peer-data-[size=sm]/menu-button:top-1',
-      'peer-data-[size=default]/menu-button:top-1.5',
-      'peer-data-[size=lg]/menu-button:top-2.5',
       'group-data-[collapsible=icon]:hidden',
       className,
     )}
@@ -1012,9 +1009,7 @@ export function SidebarNavigation({
                               </ContentContainer>
 
                               <If condition={child.renderAction}>
-                                <SidebarMenuAction>
-                                  {child.renderAction}
-                                </SidebarMenuAction>
+                                {child.renderAction}
                               </If>
                             </SidebarMenuItem>
                           </Container>

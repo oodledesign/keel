@@ -23,6 +23,12 @@ export function resolvePlannedTasks(
     storedTaskIds?: string[];
     planMarkdown?: string;
     dateIso?: string;
+    /**
+     * When true (default), if no stored IDs / plan titles match, return all
+     * open tasks. Set false for UI lists that should only show explicitly
+     * planned tasks.
+     */
+    fallbackToAllOpen?: boolean;
   },
 ): PlannerTask[] {
   const byId = new Map<string, PlannerTask>();
@@ -53,6 +59,10 @@ export function resolvePlannedTasks(
           titles.has(normalizeTaskTitle(task.title)),
       );
     }
+  }
+
+  if (options.fallbackToAllOpen === false) {
+    return [];
   }
 
   return availableTasks.filter((task) => task.status !== 'completed');
