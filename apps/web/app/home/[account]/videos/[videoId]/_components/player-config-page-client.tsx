@@ -282,7 +282,7 @@ export function PlayerConfigPageClient(props: {
             />
             <Link
               href={`${videosPath}/${props.video.id}/edit`}
-              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)] inline-flex h-11 w-full items-center justify-center rounded-xl text-sm font-semibold shadow-sm transition-colors"
+              className="inline-flex h-11 w-full items-center justify-center rounded-xl bg-[var(--ozer-accent)] text-sm font-semibold text-[var(--ozer-white)] shadow-sm transition-colors hover:bg-[var(--ozer-accent-hover)]"
             >
               Edit recording
             </Link>

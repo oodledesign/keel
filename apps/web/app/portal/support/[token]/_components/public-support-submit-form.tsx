@@ -19,8 +19,8 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
-import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import pathsConfig from '~/config/paths.config';
 
 import { createPublicSupportTicketAction } from '../../_lib/public-support.actions';

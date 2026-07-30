@@ -8,9 +8,9 @@ import {
   CheckCircle2,
   CircleAlert,
   Info,
+  type LucideIcon,
   TriangleAlert,
   XIcon,
-  type LucideIcon,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -322,7 +322,9 @@ export function NotificationsPopover({
                   }
                 }}
               >
-                <div className={'flex w-full items-start justify-between gap-2'}>
+                <div
+                  className={'flex w-full items-start justify-between gap-2'}
+                >
                   <div
                     className={
                       'flex min-w-0 items-start justify-start gap-x-3 py-2'

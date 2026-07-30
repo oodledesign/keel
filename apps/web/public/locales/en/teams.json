@@ -15,6 +15,9 @@
   "members": {
     "pageTitle": "Members"
   },
+  "invites": {
+    "pageTitle": "Pending Invites"
+  },
   "billing": {
     "pageTitle": "Billing"
   },
@@ -101,8 +104,11 @@
   "inviteMembersSuccessMessage": "Members invited successfully",
   "inviteMembersErrorMessage": "Sorry, members could not be invited. Please try again.",
   "pendingInvitesHeading": "Pending Invites",
-  "pendingInvitesDescription": " Here you can manage the pending invitations to your team.",
+  "pendingInvitesDescription": "Manage pending invitations to your team.",
+  "viewPendingInvites": "Pending invites ({{count}})",
+  "backToMembers": "Back to team",
   "noPendingInvites": "No pending invites found",
+  "noMembersFound": "No members found",
   "loadingMembers": "Loading members...",
   "loadMembersError": "Sorry, we couldn't fetch your team's members.",
   "loadInvitedMembersError": "Sorry, we couldn't fetch your team's invited members.",

@@ -9,13 +9,8 @@ import { Edit2, Plus, Search, Trash2 } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 
-import {
-  REQUIREMENT_STATUS_LABELS,
-} from '~/lib/commercial/commercial-constants';
-import {
-  workspaceBtnPrimaryMd,
-  workspacePanelCard,
-} from '~/lib/workspace-ui';
+import { REQUIREMENT_STATUS_LABELS } from '~/lib/commercial/commercial-constants';
+import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { CommercialRequirement } from '../_lib/server/requirements.service';
 import { deleteRequirement } from '../_lib/server/server-actions';
@@ -84,7 +79,7 @@ export function RequirementsList({
       ) : (
         <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[11px] uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
+            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
               <tr>
                 <th className="px-4 py-3 font-medium">Applicant</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">

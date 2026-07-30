@@ -12,6 +12,7 @@ export const CreateViewingSchema = z.object({
   enquiryId: z.string().uuid().optional().nullable(),
   requirementId: z.string().uuid().optional().nullable(),
   clientId: z.string().uuid().optional().nullable(),
+  contactId: z.string().uuid().optional().nullable(),
   scheduledAt: z.string().optional().nullable(),
   outcome: z.string().optional().nullable(),
   feedback: z.string().optional().nullable(),

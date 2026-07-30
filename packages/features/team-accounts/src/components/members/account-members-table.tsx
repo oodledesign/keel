@@ -2,14 +2,12 @@
 
 import { useMemo, useState } from 'react';
 
-import { ColumnDef } from '@tanstack/react-table';
 import { Ellipsis } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Database } from '@kit/supabase/database';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
-import { DataTable } from '@kit/ui/data-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +18,7 @@ import { If } from '@kit/ui/if';
 import { Input } from '@kit/ui/input';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { Trans } from '@kit/ui/trans';
+import { cn } from '@kit/ui/utils';
 
 import { RemoveMemberDialog } from './remove-member-dialog';
 import { RoleBadge } from './role-badge';
@@ -55,25 +54,22 @@ export function AccountMembersTable({
   const [search, setSearch] = useState('');
   const { t } = useTranslation('teams');
 
-  const permissions = {
-    canUpdateRole: (targetRole: number) => {
-      return (
-        isPrimaryOwner || (canManageRoles && userRoleHierarchy < targetRole)
-      );
-    },
-    canRemoveFromAccount: (targetRole: number) => {
-      return (
-        isPrimaryOwner || (canManageRoles && userRoleHierarchy < targetRole)
-      );
-    },
-    canTransferOwnership: isPrimaryOwner,
-  };
-
-  const columns = useGetColumns(permissions, {
-    currentUserId,
-    currentAccountId,
-    currentRoleHierarchy: userRoleHierarchy,
-  });
+  const permissions = useMemo(
+    () => ({
+      canUpdateRole: (targetRole: number) => {
+        return (
+          isPrimaryOwner || (canManageRoles && userRoleHierarchy < targetRole)
+        );
+      },
+      canRemoveFromAccount: (targetRole: number) => {
+        return (
+          isPrimaryOwner || (canManageRoles && userRoleHierarchy < targetRole)
+        );
+      },
+      canTransferOwnership: isPrimaryOwner,
+    }),
+    [isPrimaryOwner, canManageRoles, userRoleHierarchy],
+  );
 
   const filteredMembers = members
     .filter((member) => {
@@ -87,12 +83,17 @@ export function AccountMembersTable({
 
       return (
         displayName.includes(searchString) ||
+        member.email.toLowerCase().includes(searchString) ||
         member.role.toLowerCase().includes(searchString)
       );
     })
     .sort((prev, next) => {
       if (prev.primary_owner_user_id === prev.user_id) {
-        return 0;
+        return -1;
+      }
+
+      if (next.primary_owner_user_id === next.user_id) {
+        return 1;
       }
 
       if (prev.role_hierarchy_level < next.role_hierarchy_level) {
@@ -103,107 +104,114 @@ export function AccountMembersTable({
     });
 
   return (
-    <div className={'flex flex-col space-y-2'}>
+    <div className="flex flex-col space-y-4">
       <Input
         value={search}
         onInput={(e) => setSearch((e.target as HTMLInputElement).value)}
         placeholder={t(`searchMembersPlaceholder`)}
+        className="max-w-sm border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
       />
 
-      <DataTable columns={columns} data={filteredMembers} />
+      {filteredMembers.length === 0 ? (
+        <p className="py-10 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+          <Trans i18nKey="teams:noMembersFound" defaults="No members found" />
+        </p>
+      ) : (
+        <div
+          data-test="members-card-grid"
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+        >
+          {filteredMembers.map((member) => (
+            <MemberCard
+              key={member.user_id}
+              member={member}
+              permissions={permissions}
+              currentUserId={currentUserId}
+              currentAccountId={currentAccountId}
+              currentRoleHierarchy={userRoleHierarchy}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function useGetColumns(
-  permissions: Permissions,
-  params: {
-    currentUserId: string;
-    currentAccountId: string;
-    currentRoleHierarchy: number;
-  },
-): ColumnDef<Members[0]>[] {
+function MemberCard({
+  member,
+  permissions,
+  currentUserId,
+  currentAccountId,
+  currentRoleHierarchy,
+}: {
+  member: Members[0];
+  permissions: Permissions;
+  currentUserId: string;
+  currentAccountId: string;
+  currentRoleHierarchy: number;
+}) {
   const { t } = useTranslation('teams');
+  const displayName = member.name ?? member.email.split('@')[0];
+  const isSelf = member.user_id === currentUserId;
+  const isPrimaryOwner = member.primary_owner_user_id === member.user_id;
+  const joinedLabel = new Date(member.created_at).toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 
-  return useMemo(
-    () => [
-      {
-        header: t('memberName'),
-        size: 200,
-        cell: ({ row }) => {
-          const member = row.original;
-          const displayName = member.name ?? member.email.split('@')[0];
-          const isSelf = member.user_id === params.currentUserId;
+  return (
+    <div
+      data-test="member-card"
+      className={cn(
+        'group relative flex flex-col gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-5',
+        'transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <ProfileAvatar
+          displayName={displayName}
+          pictureUrl={member.picture_url}
+          className="h-12 w-12"
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <h3 className="truncate text-base font-semibold text-[var(--workspace-shell-text)]">
+                  {displayName}
+                </h3>
+                <If condition={isSelf}>
+                  <Badge variant="outline">{t('youLabel')}</Badge>
+                </If>
+              </div>
+              <p className="mt-0.5 truncate text-sm text-[var(--workspace-shell-text-muted)]">
+                {member.email}
+              </p>
+            </div>
+            <ActionsDropdown
+              permissions={permissions}
+              member={member}
+              currentUserId={currentUserId}
+              currentTeamAccountId={currentAccountId}
+              currentRoleHierarchy={currentRoleHierarchy}
+            />
+          </div>
+        </div>
+      </div>
 
-          return (
-            <span className={'flex items-center space-x-4 text-left'}>
-              <span>
-                <ProfileAvatar
-                  displayName={displayName}
-                  pictureUrl={member.picture_url}
-                />
-              </span>
-
-              <span>{displayName}</span>
-
-              <If condition={isSelf}>
-                <Badge variant={'outline'}>{t('youLabel')}</Badge>
-              </If>
-            </span>
-          );
-        },
-      },
-      {
-        header: t('emailLabel'),
-        accessorKey: 'email',
-        cell: ({ row }) => {
-          return row.original.email ?? '-';
-        },
-      },
-      {
-        header: t('roleLabel'),
-        cell: ({ row }) => {
-          const { role, primary_owner_user_id, user_id } = row.original;
-          const isPrimaryOwner = primary_owner_user_id === user_id;
-
-          return (
-            <span className={'flex items-center space-x-1'}>
-              <RoleBadge role={role} />
-
-              <If condition={isPrimaryOwner}>
-                <span
-                  className={
-                    'rounded-md bg-yellow-400 px-2.5 py-1 text-xs font-medium dark:text-black'
-                  }
-                >
-                  {t('primaryOwnerLabel')}
-                </span>
-              </If>
-            </span>
-          );
-        },
-      },
-      {
-        header: t('joinedAtLabel'),
-        cell: ({ row }) => {
-          return new Date(row.original.created_at).toLocaleDateString();
-        },
-      },
-      {
-        header: '',
-        id: 'actions',
-        cell: ({ row }) => (
-          <ActionsDropdown
-            permissions={permissions}
-            member={row.original}
-            currentUserId={params.currentUserId}
-            currentTeamAccountId={params.currentAccountId}
-            currentRoleHierarchy={params.currentRoleHierarchy}
-          />
-        ),
-      },
-    ],
-    [t, params, permissions],
+      <div className="mt-auto flex flex-wrap items-center gap-2">
+        <RoleBadge role={member.role} />
+        <If condition={isPrimaryOwner}>
+          <span className="rounded-md bg-yellow-400/90 px-2.5 py-1 text-xs font-medium text-black">
+            {t('primaryOwnerLabel')}
+          </span>
+        </If>
+        <span className="ml-auto text-xs text-[var(--workspace-shell-text)]/45">
+          {t('joinedAtLabel')}: {joinedLabel}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -233,8 +241,6 @@ function ActionsDropdown({
   const canRemoveFromAccount =
     permissions.canRemoveFromAccount(memberRoleHierarchy);
 
-  // if has no permission to update role, transfer ownership or remove from account
-  // do not render the dropdown menu
   if (
     !canUpdateRole &&
     !permissions.canTransferOwnership &&
@@ -247,12 +253,16 @@ function ActionsDropdown({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant={'ghost'} size={'icon'}>
-            <Ellipsis className={'h-5 w-5'} />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          >
+            <Ellipsis className="h-5 w-5" />
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent>
+        <DropdownMenuContent align="end">
           <If condition={canUpdateRole}>
             <UpdateMemberRoleDialog
               userId={member.user_id}

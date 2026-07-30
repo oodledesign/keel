@@ -179,8 +179,7 @@ class ClientPortalService {
       name?: string | null;
       email?: string | null;
     }>) {
-      const name =
-        row.name?.trim() || row.email?.split('@')[0]?.trim() || null;
+      const name = row.name?.trim() || row.email?.split('@')[0]?.trim() || null;
       if (name) map.set(row.id, name);
     }
 

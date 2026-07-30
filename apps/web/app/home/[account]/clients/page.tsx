@@ -73,6 +73,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
         pageTitle={isProperty ? 'Tenants' : 'Clients'}
         addClientLabel={isProperty ? 'Add tenant' : 'Add client'}
         showCommercialRole={isCommercial}
+        showLinkedInImport={!isCommercial}
       />
     </PageBody>
   );

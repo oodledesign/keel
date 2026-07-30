@@ -6,6 +6,10 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  ensurePropertyHiveFeedToken,
+  rotatePropertyHiveFeedToken,
+} from '~/lib/commercial/property-hive-feed';
+import {
   decryptCommercialSecret,
   encryptCommercialSecret,
 } from '~/lib/commercial/commercial-crypto';
@@ -20,6 +24,8 @@ import {
 } from '~/lib/commercial/property-hive-sync';
 
 import {
+  EnsurePropertyHiveFeedSchema,
+  RotatePropertyHiveFeedSchema,
   SavePortalCredentialsSchema,
   SavePropertyHiveCredentialsSchema,
   TestPublishListingSchema,
@@ -176,4 +182,27 @@ export const testPublishListingAction = enhanceAction(
     };
   },
   { schema: TestPublishListingSchema },
+);
+
+export const ensurePropertyHiveFeedAction = enhanceAction(
+  async (input) => {
+    const result = await ensurePropertyHiveFeedToken(input.accountId);
+    return {
+      feedUrl: result.feedUrl,
+      created: result.created,
+      settings: await loadCommercialPublishingSettings(input.accountId),
+    };
+  },
+  { schema: EnsurePropertyHiveFeedSchema },
+);
+
+export const rotatePropertyHiveFeedAction = enhanceAction(
+  async (input) => {
+    const result = await rotatePropertyHiveFeedToken(input.accountId);
+    return {
+      feedUrl: result.feedUrl,
+      settings: await loadCommercialPublishingSettings(input.accountId),
+    };
+  },
+  { schema: RotatePropertyHiveFeedSchema },
 );

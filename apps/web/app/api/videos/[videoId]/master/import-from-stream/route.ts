@@ -4,10 +4,10 @@ import { createBunnyStreamClient } from '@kit/bunny';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
+  VIDEO_MASTERS_BUCKET,
   ensureEditProject,
   masterStoragePath,
   upsertVideoMaster,
-  VIDEO_MASTERS_BUCKET,
 } from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 import {
@@ -23,7 +23,11 @@ type RouteContext = {
   params: Promise<{ videoId: string }>;
 };
 
-function pickPlayUrl(cdnHostname: string, bunnyVideoId: string, resolutions: string | null) {
+function pickPlayUrl(
+  cdnHostname: string,
+  bunnyVideoId: string,
+  resolutions: string | null,
+) {
   const host = cdnHostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
   if (!host || !bunnyVideoId) return null;
 

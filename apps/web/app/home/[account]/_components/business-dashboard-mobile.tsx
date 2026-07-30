@@ -202,7 +202,7 @@ export function BusinessDashboardMobile({
         ) : (
           <div
             data-horizontal-scroll
-            className="flex touch-pan-x snap-x snap-mandatory gap-3 overflow-x-auto overscroll-x-contain scroll-pl-0 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            className="flex touch-pan-x snap-x snap-mandatory scroll-pl-0 gap-3 overflow-x-auto overscroll-x-contain pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
             {recentNotes.map((note) => (
               <HapticLink

@@ -11,9 +11,7 @@ describe('buildReplyAllRecipients', () => {
       ownerEmail: 'dan@ozer.so',
     });
 
-    expect(result.to).toBe(
-      'Alice <alice@client.com>, Bob <bob@client.com>',
-    );
+    expect(result.to).toBe('Alice <alice@client.com>, Bob <bob@client.com>');
     expect(result.cc).toBe('Carol <carol@client.com>');
   });
 

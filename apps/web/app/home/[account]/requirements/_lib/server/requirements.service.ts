@@ -13,6 +13,7 @@ export type CommercialRequirement = {
   id: string;
   accountId: string;
   clientId: string | null;
+  contactId: string | null;
   contactName: string | null;
   contactEmail: string | null;
   contactPhone: string | null;
@@ -50,6 +51,7 @@ function mapRequirement(row: Row): CommercialRequirement {
     id: row.id,
     accountId: row.account_id,
     clientId: (row.client_id as string | null) ?? null,
+    contactId: (row.contact_id as string | null) ?? null,
     contactName: (row.contact_name as string | null) ?? null,
     contactEmail: (row.contact_email as string | null) ?? null,
     contactPhone: (row.contact_phone as string | null) ?? null,
@@ -100,6 +102,7 @@ export function createRequirementsService(client: SupabaseClient) {
         .insert({
           account_id: input.accountId,
           client_id: input.clientId ?? null,
+          contact_id: input.contactId ?? null,
           contact_name: input.contactName ?? null,
           contact_email: input.contactEmail ?? null,
           contact_phone: input.contactPhone ?? null,
@@ -134,6 +137,7 @@ export function createRequirementsService(client: SupabaseClient) {
         .from('commercial_requirements')
         .update({
           ...(input.clientId !== undefined && { client_id: input.clientId }),
+          ...(input.contactId !== undefined && { contact_id: input.contactId }),
           ...(input.contactName !== undefined && {
             contact_name: input.contactName,
           }),

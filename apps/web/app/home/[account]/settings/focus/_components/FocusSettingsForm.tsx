@@ -11,14 +11,14 @@ import { Form } from '@kit/ui/form';
 import { toast } from '@kit/ui/sonner';
 
 import {
+  type WorkspaceFocusSettings,
+  WorkspaceFocusSettingsSchema,
+} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
+import {
   getWorkspaceFocusSettings,
   syncHolidayModeToGmail,
   upsertWorkspaceFocusSettings,
 } from '~/home/[account]/settings/focus/actions';
-import {
-  WorkspaceFocusSettingsSchema,
-  type WorkspaceFocusSettings,
-} from '~/home/[account]/settings/focus/_lib/focus-settings.schema';
 
 import { buildFocusFormDefaults } from '../_lib/focus-form';
 import { HolidayModeSection } from './HolidayModeSection';
@@ -101,8 +101,8 @@ export function FocusSettingsForm({
             Focus & Availability
           </h1>
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Control work hours, holiday mode, and automatic out-of-office replies
-            for this workspace.
+            Control work hours, holiday mode, and automatic out-of-office
+            replies for this workspace.
           </p>
         </div>
 

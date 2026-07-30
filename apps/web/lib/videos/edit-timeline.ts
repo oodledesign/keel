@@ -421,7 +421,12 @@ export function objectContainRect(
   mediaH: number,
 ): { left: number; top: number; width: number; height: number } {
   if (containerW <= 0 || containerH <= 0 || mediaW <= 0 || mediaH <= 0) {
-    return { left: 0, top: 0, width: Math.max(0, containerW), height: Math.max(0, containerH) };
+    return {
+      left: 0,
+      top: 0,
+      width: Math.max(0, containerW),
+      height: Math.max(0, containerH),
+    };
   }
   const scale = Math.min(containerW / mediaW, containerH / mediaH);
   const width = mediaW * scale;

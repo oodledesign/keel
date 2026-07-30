@@ -328,7 +328,7 @@ export function PipelineBoard({
               </button>
             ))}
           </div>
-          {workspaceAccountSlug ? (
+          {workspaceAccountSlug && variant !== 'commercial' ? (
             <Button
               asChild
               variant="outline"

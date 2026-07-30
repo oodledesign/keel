@@ -12,7 +12,6 @@ export const metadata = { title: 'Platform support' };
 async function AdminSupportPage() {
   const client = getSupabaseServerClient();
 
-   
   const { data: tickets, error } = await (
     client.from('platform_support_tickets') as any
   )

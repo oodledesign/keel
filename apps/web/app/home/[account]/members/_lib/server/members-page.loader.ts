@@ -7,8 +7,6 @@ import { Database } from '~/lib/database.types';
 
 /**
  * Load data for the members page
- * @param client
- * @param slug
  */
 export async function loadMembersPageData(
   client: SupabaseClient<Database>,
@@ -17,7 +15,21 @@ export async function loadMembersPageData(
   return Promise.all([
     loadAccountMembers(client, slug),
     loadInvitations(client, slug),
-    canAddMember,
+    canAddMember(),
+    loadTeamWorkspace(slug),
+  ]);
+}
+
+/**
+ * Load data for the pending invites page
+ */
+export async function loadInvitesPageData(
+  client: SupabaseClient<Database>,
+  slug: string,
+) {
+  return Promise.all([
+    loadInvitations(client, slug),
+    canAddMember(),
     loadTeamWorkspace(slug),
   ]);
 }
@@ -25,12 +37,6 @@ export async function loadMembersPageData(
 /**
  * @name canAddMember
  * @description Check if the current user can add a member to the account
- *
- * This needs additional logic to determine if the user can add a member to the account
- * Please implement the logic and return a boolean value
- *
- * The same check needs to be added when creating an invitation
- *
  */
 async function canAddMember() {
   return Promise.resolve(true);
@@ -38,8 +44,6 @@ async function canAddMember() {
 
 /**
  * Load account members
- * @param client
- * @param account
  */
 async function loadAccountMembers(
   client: SupabaseClient<Database>,
@@ -59,8 +63,6 @@ async function loadAccountMembers(
 
 /**
  * Load account invitations
- * @param client
- * @param account
  */
 async function loadInvitations(
   client: SupabaseClient<Database>,

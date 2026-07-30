@@ -7,9 +7,9 @@ import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modu
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
 import {
+  type VideoTranscriptWord,
   createDefaultTimeline,
   normalizeTimeline,
-  type VideoTranscriptWord,
 } from '~/lib/videos/edit-timeline';
 import { ensureEditProject } from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';

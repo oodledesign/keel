@@ -2,12 +2,12 @@ import { describe, expect, it } from 'vitest';
 
 import {
   createDefaultTimeline,
+  deletedGaps,
+  editedDurationMs,
   removeRangeFromKeep,
   restoreRangeToKeep,
-  deletedGaps,
-  suggestZoomsFromClicks,
   sourceMsToEditedMs,
-  editedDurationMs,
+  suggestZoomsFromClicks,
   wordsFromPlainText,
 } from './edit-timeline';
 

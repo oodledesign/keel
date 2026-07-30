@@ -23,6 +23,7 @@ export function ClientCreateDialog({
   createInitialValues,
   onSaved,
   showCommercialRole = false,
+  showLinkedInImport = true,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -32,6 +33,7 @@ export function ClientCreateDialog({
   createInitialValues?: CreateInitialValues;
   onSaved: () => void;
   showCommercialRole?: boolean;
+  showLinkedInImport?: boolean;
 }) {
   const importHref = pathsConfig.app.accountClientsImport.replace(
     '[account]',
@@ -56,14 +58,18 @@ export function ClientCreateDialog({
             >
               upload via CSV
             </Link>
-            {' · '}
-            <Link
-              href={linkedInImportHref}
-              className="font-medium text-[var(--ozer-accent)] hover:underline"
-              onClick={() => onOpenChange(false)}
-            >
-              import from LinkedIn
-            </Link>
+            {showLinkedInImport ? (
+              <>
+                {' · '}
+                <Link
+                  href={linkedInImportHref}
+                  className="font-medium text-[var(--ozer-accent)] hover:underline"
+                  onClick={() => onOpenChange(false)}
+                >
+                  import from LinkedIn
+                </Link>
+              </>
+            ) : null}
           </DialogDescription>
         </DialogHeader>
         <ClientForm

@@ -17,13 +17,13 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
-import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 import {
   deleteTask,
   loadTaskForEdit,
   updateTask,
 } from '~/home/(user)/_lib/actions/task-actions';
 import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
+import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
 
 import type { DashboardTaskSummary } from '../_lib/server/dashboard-page.loader';
 
@@ -32,10 +32,7 @@ type Props = {
   workspaceAccountId: string;
 };
 
-export function DashboardUpcomingTaskItem({
-  task,
-  workspaceAccountId,
-}: Props) {
+export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [editTask, setEditTask] = useState<TasksPageTask | null>(null);
@@ -102,7 +99,7 @@ export function DashboardUpcomingTaskItem({
         <button
           type="button"
           onClick={openTask}
-          className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/50"
+          className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/50 focus-visible:outline-none"
         >
           <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
             {task.title}

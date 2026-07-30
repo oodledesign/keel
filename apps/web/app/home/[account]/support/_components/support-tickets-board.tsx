@@ -28,8 +28,8 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 
-import pathsConfig from '~/config/paths.config';
 import { SupportPartyIdentity } from '~/components/support/support-party-identity';
+import pathsConfig from '~/config/paths.config';
 
 import type { TicketStatus } from '../_lib/schema/support-tickets.schema';
 import { updateSupportTicket } from '../_lib/server/server-actions';

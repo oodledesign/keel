@@ -10,6 +10,7 @@ export const ListRequirementsSchema = z.object({
 export const CreateRequirementSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid().optional().nullable(),
+  contactId: z.string().uuid().optional().nullable(),
   contactName: z.string().optional().nullable(),
   contactEmail: z.string().optional().nullable(),
   contactPhone: z.string().optional().nullable(),

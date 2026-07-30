@@ -292,8 +292,8 @@ function TrustCenterPage() {
                         Workspace / email / transcript text prompts
                       </td>
                       <td className="py-2.5 align-top">
-                        US — DPA with EU SCCs and UK Addendum; EU-US Data Privacy
-                        Framework
+                        US — DPA with EU SCCs and UK Addendum; EU-US Data
+                        Privacy Framework
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">

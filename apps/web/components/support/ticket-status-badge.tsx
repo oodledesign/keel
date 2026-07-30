@@ -67,7 +67,11 @@ export function ticketStatusLabel(status: string): string {
   );
 }
 
-export function TicketStatusBadge({ status }: { status: TicketStatus | string }) {
+export function TicketStatusBadge({
+  status,
+}: {
+  status: TicketStatus | string;
+}) {
   const style =
     ticketStatusStyles[status as TicketStatus] ?? ticketStatusStyles.open;
 

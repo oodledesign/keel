@@ -2,11 +2,11 @@ import 'server-only';
 
 import type { AccountBrandResolved } from '~/lib/brand/account-brand';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { OZER_EMAIL_BRAND } from '~/lib/email/ozer-transactional-shell';
 import {
   escapeNotificationHtml,
   wrapNotificationEmail,
 } from '~/lib/email/wrap-notification-email';
-import { OZER_EMAIL_BRAND } from '~/lib/email/ozer-transactional-shell';
 
 import { formatBookingWhenForEmail } from '../calendar-links';
 

@@ -150,7 +150,10 @@ export function VideoEditorClient(props: Props) {
 
     const sync = () => {
       const t = video.currentTime;
-      if (micAudioRef.current && Math.abs(micAudioRef.current.currentTime - t) > 0.15) {
+      if (
+        micAudioRef.current &&
+        Math.abs(micAudioRef.current.currentTime - t) > 0.15
+      ) {
         micAudioRef.current.currentTime = t;
       }
       if (
@@ -187,7 +190,9 @@ export function VideoEditorClient(props: Props) {
 
   useEffect(() => {
     if (micGainNodeRef.current) {
-      micGainNodeRef.current.gain.value = effectiveTrackGain(timeline.audio.mic);
+      micGainNodeRef.current.gain.value = effectiveTrackGain(
+        timeline.audio.mic,
+      );
     }
     if (systemGainNodeRef.current) {
       systemGainNodeRef.current.gain.value = effectiveTrackGain(
@@ -258,7 +263,9 @@ export function VideoEditorClient(props: Props) {
     setSelection(null);
     setSelectedGap(null);
     saveTimeline({ ...timeline, keepRanges });
-    toast.success('Removed selection — select a grey gap, then Backspace to restore');
+    toast.success(
+      'Removed selection — select a grey gap, then Backspace to restore',
+    );
   }, [selection, timeline, saveTimeline]);
 
   const restoreSelectedGap = useCallback(() => {

@@ -23,3 +23,7 @@ export const TestPublishListingSchema = AccountIdSchema.extend({
   listingId: z.string().uuid().optional(),
   portal: z.enum(['property_hive', 'rightmove', 'each']),
 });
+
+export const EnsurePropertyHiveFeedSchema = AccountIdSchema;
+
+export const RotatePropertyHiveFeedSchema = AccountIdSchema;

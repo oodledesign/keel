@@ -9,8 +9,8 @@ import { LifeBuoy, Plus } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 
-import pathsConfig from '~/config/paths.config';
 import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
+import pathsConfig from '~/config/paths.config';
 
 import type { PortalTicketStatus } from '../_lib/schema/portal.schema';
 import type { PortalTicket } from '../_lib/server/client-portal.service';

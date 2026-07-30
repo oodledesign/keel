@@ -9,6 +9,7 @@ import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { BusinessLiteDashboard } from './_components/business-lite-dashboard';
+import { CommercialAgencyDashboard } from './_components/commercial-agency-dashboard';
 import { DashboardPageContent } from './_components/dashboard-page-content';
 import { FamilyDashboard } from './_components/family-dashboard';
 import { HomegroupDashboard } from './_components/homegroup-dashboard';
@@ -19,6 +20,7 @@ import {
   getTeamAccountAccess,
 } from './_lib/role-access';
 import { isPropertyNavModuleEnabled } from './_lib/server/account-modules';
+import { loadCommercialDashboardData } from './_lib/server/commercial-dashboard.loader';
 import { loadCommunityDashboardData } from './_lib/server/community-dashboard.loader';
 import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
 import { loadFamilyDashboardData } from './_lib/server/family-dashboard.loader';
@@ -91,6 +93,26 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
             recentTasks={propertyData.recentTasks}
             financesEnabled={financesEnabled}
             financeSummary={propertyData.financeSummary}
+          />
+        </PageBody>
+      </>
+    );
+  }
+
+  if (spaceType === 'commercial-property') {
+    const commercialData = await loadCommercialDashboardData(account);
+    return (
+      <>
+        <TeamAccountLayoutPageHeader
+          account={account}
+          title={accountLabel}
+          description="Commercial agency overview."
+        />
+        <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
+          <CommercialAgencyDashboard
+            accountSlug={commercialData.accountSlug}
+            metrics={commercialData.metrics}
+            recentListings={commercialData.recentListings}
           />
         </PageBody>
       </>

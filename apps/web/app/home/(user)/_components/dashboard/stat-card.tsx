@@ -30,7 +30,7 @@ export function StatCard({
           >
             <Icon className="h-[18px] w-[18px]" />
           </span>
-          <span className="text-xs font-medium uppercase tracking-wide text-[var(--workspace-shell-text-muted)]">
+          <span className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
             {label}
           </span>
         </div>

@@ -451,9 +451,14 @@ export async function buildInvoicePdf(
   if ((invoice.deposit_due_pence ?? 0) > 0) totalsHeight += 20;
   const notesHeight =
     noteLines.length > 0 ? 14 + noteLines.length * 12 + 16 : 0;
-  const closingBlockHeight = totalsHeight + notesHeight + paymentBlockHeight + 24;
+  const closingBlockHeight =
+    totalsHeight + notesHeight + paymentBlockHeight + 24;
 
-  function drawPageFooter(target: PDFPage, pageIndex: number, pageCount: number) {
+  function drawPageFooter(
+    target: PDFPage,
+    pageIndex: number,
+    pageCount: number,
+  ) {
     let bottomY = 28;
     const pageLabel = `Page ${pageIndex} of ${pageCount} - Invoice #${invoice.invoice_number}`;
     const pageLabelWidth = font.widthOfTextAtSize(pageLabel, 8);

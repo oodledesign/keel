@@ -16,4 +16,3 @@ export const GenerateInvoiceLineItemsSchema = z.object({
 export type GenerateInvoiceLineItemsInput = z.infer<
   typeof GenerateInvoiceLineItemsSchema
 >;
-

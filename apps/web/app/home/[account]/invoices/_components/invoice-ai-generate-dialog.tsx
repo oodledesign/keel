@@ -106,10 +106,7 @@ export function InvoiceAiGenerateDialog({
     onOpenChange(next);
   };
 
-  const updateLine = (
-    index: number,
-    updates: Partial<InvoiceAiApplyItem>,
-  ) => {
+  const updateLine = (index: number, updates: Partial<InvoiceAiApplyItem>) => {
     setLines((prev) => {
       if (!prev) return prev;
       const next = [...prev];
@@ -335,7 +332,9 @@ export function InvoiceAiGenerateDialog({
                       className="items-center gap-3"
                     >
                       <RadioGroupItem value="replace" />
-                      <span className="text-sm">Replace all existing lines</span>
+                      <span className="text-sm">
+                        Replace all existing lines
+                      </span>
                     </RadioGroupItemLabel>
                   </RadioGroup>
                 </div>

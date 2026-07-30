@@ -226,7 +226,7 @@ function PhaseColumn({
             <Link
               href={phasePath(accountSlug, jobId, phase.id)}
               prefetch={false}
-              className="group min-w-0 flex-1 block"
+              className="group block min-w-0 flex-1"
             >
               <div className="flex items-start justify-between gap-2">
                 <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)] group-hover:underline">

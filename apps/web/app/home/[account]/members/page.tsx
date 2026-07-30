@@ -1,10 +1,10 @@
+import Link from 'next/link';
 import { redirect } from 'next/navigation';
 
-import { PlusCircle } from 'lucide-react';
+import { ArrowRight, PlusCircle } from 'lucide-react';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
-  AccountInvitationsTable,
   AccountMembersTable,
   InviteMembersDialogContainer,
 } from '@kit/team-accounts/components';
@@ -21,10 +21,10 @@ import { If } from '@kit/ui/if';
 import { PageBody } from '@kit/ui/page';
 import { Trans } from '@kit/ui/trans';
 
+import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-// local imports
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import {
   getDefaultAccountPath,
@@ -74,6 +74,11 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
 
   const isPrimaryOwner = account.primary_owner_user_id === user.id;
   const currentUserRoleHierarchy = account.role_hierarchy_level;
+  const pendingInvitesHref = pathsConfig.app.accountMembersInvites.replace(
+    '[account]',
+    account.slug,
+  );
+  const pendingCount = invitations.length;
 
   return (
     <>
@@ -84,10 +89,10 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
-        <div className="flex w-full max-w-4xl flex-col space-y-4 pb-32">
+        <div className="flex w-full max-w-6xl flex-col space-y-4 pb-32">
           <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-            <CardHeader className={'flex flex-row justify-between'}>
-              <div className={'flex flex-col space-y-1.5'}>
+            <CardHeader className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+              <div className="flex flex-col space-y-1.5">
                 <CardTitle>
                   <Trans i18nKey={'common:accountMembers'} />
                 </CardTitle>
@@ -97,20 +102,38 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
                 </CardDescription>
               </div>
 
-              <If condition={canManageInvitations && canAddMember}>
-                <InviteMembersDialogContainer
-                  userRoleHierarchy={currentUserRoleHierarchy}
-                  accountSlug={account.slug}
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  asChild
+                  variant="outline"
+                  size="sm"
+                  className="border-[color:var(--workspace-shell-border)]"
                 >
-                  <Button size={'sm'} data-test={'invite-members-form-trigger'}>
-                    <PlusCircle className={'mr-2 w-4'} />
+                  <Link href={pendingInvitesHref}>
+                    <Trans
+                      i18nKey="teams:viewPendingInvites"
+                      values={{ count: pendingCount }}
+                      defaults="Pending invites ({{count}})"
+                    />
+                    <ArrowRight className="ml-1.5 h-3.5 w-3.5" />
+                  </Link>
+                </Button>
 
-                    <span>
-                      <Trans i18nKey={'teams:inviteMembersButton'} />
-                    </span>
-                  </Button>
-                </InviteMembersDialogContainer>
-              </If>
+                <If condition={canManageInvitations && canAddMember}>
+                  <InviteMembersDialogContainer
+                    userRoleHierarchy={currentUserRoleHierarchy}
+                    accountSlug={account.slug}
+                  >
+                    <Button size="sm" data-test="invite-members-form-trigger">
+                      <PlusCircle className="mr-2 w-4" />
+
+                      <span>
+                        <Trans i18nKey={'teams:inviteMembersButton'} />
+                      </span>
+                    </Button>
+                  </InviteMembersDialogContainer>
+                </If>
+              </div>
             </CardHeader>
 
             <CardContent>
@@ -121,31 +144,6 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
                 members={members}
                 isPrimaryOwner={isPrimaryOwner}
                 canManageRoles={canManageRoles}
-              />
-            </CardContent>
-          </Card>
-
-          <Card className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-            <CardHeader className={'flex flex-row justify-between'}>
-              <div className={'flex flex-col space-y-1.5'}>
-                <CardTitle>
-                  <Trans i18nKey={'teams:pendingInvitesHeading'} />
-                </CardTitle>
-
-                <CardDescription>
-                  <Trans i18nKey={'teams:pendingInvitesDescription'} />
-                </CardDescription>
-              </div>
-            </CardHeader>
-
-            <CardContent>
-              <AccountInvitationsTable
-                permissions={{
-                  canUpdateInvitation: canManageRoles,
-                  canRemoveInvitation: canManageRoles,
-                  currentUserRoleHierarchy,
-                }}
-                invitations={invitations}
               />
             </CardContent>
           </Card>

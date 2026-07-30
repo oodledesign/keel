@@ -156,7 +156,8 @@ export function buildBillingLifecycleEmail(input: {
     case 'trial_ending_3d':
       return {
         subject: `${safeAccountName} trial ends in 3 days`,
-        preview: 'Add billing when you’re ready — see what you’d lose without a plan.',
+        preview:
+          'Add billing when you’re ready — see what you’d lose without a plan.',
         html: wrapOzerEmail({
           productName: input.productName,
           preview: 'Trial ending in three days',

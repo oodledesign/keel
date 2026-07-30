@@ -243,9 +243,7 @@ export async function runEmailAssistantPipeline(
         });
       } catch (error) {
         result.errors.push(
-          error instanceof Error
-            ? error.message
-            : 'Workspace affinity failed',
+          error instanceof Error ? error.message : 'Workspace affinity failed',
         );
       }
 

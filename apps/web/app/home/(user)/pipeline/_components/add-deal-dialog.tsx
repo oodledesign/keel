@@ -72,9 +72,7 @@ export function AddDealDialog({
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const [stage, setStage] = useState(
-    defaultStage ?? stages[0]?.key ?? 'lead',
-  );
+  const [stage, setStage] = useState(defaultStage ?? stages[0]?.key ?? 'lead');
   const [businessId, setBusinessId] = useState(() =>
     pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
   );

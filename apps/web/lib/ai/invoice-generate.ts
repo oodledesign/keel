@@ -4,12 +4,11 @@ import { z } from 'zod';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
+import type { AiInvoiceDraft } from '~/lib/ai/invoice-generate-types';
 import {
   calculateInvoiceLineTotalPence,
   normalizeInvoiceLineType,
 } from '~/lib/invoices/invoice-quantity';
-
-import type { AiInvoiceDraft } from '~/lib/ai/invoice-generate-types';
 
 export type { AiInvoiceDraft };
 
@@ -92,10 +91,7 @@ export function mapAiInvoiceDraft(
         line_type,
         quantity,
         unit_price_pence,
-        total_pence: calculateInvoiceLineTotalPence(
-          quantity,
-          unit_price_pence,
-        ),
+        total_pence: calculateInvoiceLineTotalPence(quantity, unit_price_pence),
       };
     }),
   };

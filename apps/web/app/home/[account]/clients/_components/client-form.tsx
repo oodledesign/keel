@@ -379,6 +379,33 @@ export function ClientForm({
         )}
       </div>
 
+      {showCommercialRole ? (
+        <div className="space-y-2">
+          <Label>Commercial role</Label>
+          <Select
+            value={commercialRole || 'none'}
+            onValueChange={(value) =>
+              setCommercialRole(
+                value === 'none' ? '' : (value as CommercialClientRole),
+              )
+            }
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {COMMERCIAL_CLIENT_ROLES.map((role) => (
+                <SelectItem key={role} value={role}>
+                  {COMMERCIAL_CLIENT_ROLE_LABELS[role]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
+
       {!isIndividual && (
         <div className="space-y-2">
           <Label htmlFor="company_name">Company name *</Label>
@@ -712,33 +739,6 @@ export function ClientForm({
           readOnly={isReadOnly}
         />
       </div>
-
-      {showCommercialRole ? (
-        <div className="space-y-2">
-          <Label>Commercial role</Label>
-          <Select
-            value={commercialRole || 'none'}
-            onValueChange={(value) =>
-              setCommercialRole(
-                value === 'none' ? '' : (value as CommercialClientRole),
-              )
-            }
-            disabled={isReadOnly}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Select role" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="none">None</SelectItem>
-              {COMMERCIAL_CLIENT_ROLES.map((role) => (
-                <SelectItem key={role} value={role}>
-                  {COMMERCIAL_CLIENT_ROLE_LABELS[role]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
 
       <div className="flex flex-wrap gap-2 pt-2">
         {!isReadOnly && (

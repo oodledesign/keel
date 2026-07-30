@@ -59,7 +59,7 @@ export const createPlatformSupportTicketAction = enhanceAction(
     }
 
     // category column added by migration; generated types may lag until typegen.
-     
+
     const { data, error } = await (
       client.from('platform_support_tickets') as any
     )
@@ -126,7 +126,7 @@ export const replyPlatformSupportTicketAction = enhanceAction(
     }
 
     const body = input.body.trim();
-     
+
     const { error } = await (
       client.from('platform_support_messages') as any
     ).insert({
@@ -247,7 +247,6 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
     const body = input.body.trim();
     const isInternal = input.isInternalNote ?? false;
 
-     
     const { error } = await (
       client.from('platform_support_messages') as any
     ).insert({

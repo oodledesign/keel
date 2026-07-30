@@ -17,8 +17,8 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 
-import pathsConfig from '~/config/paths.config';
 import { SupportPartyIdentity } from '~/components/support/support-party-identity';
+import pathsConfig from '~/config/paths.config';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type {

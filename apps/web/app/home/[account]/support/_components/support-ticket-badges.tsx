@@ -1,4 +1,7 @@
-import { TicketPriorityBadge, TicketStatusBadge } from '~/components/support/ticket-status-badge';
+import {
+  TicketPriorityBadge,
+  TicketStatusBadge,
+} from '~/components/support/ticket-status-badge';
 import {
   ticketPriorityStyles,
   ticketStatusLabel,

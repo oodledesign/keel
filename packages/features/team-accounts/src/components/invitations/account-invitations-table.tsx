@@ -1,15 +1,13 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 
-import { ColumnDef } from '@tanstack/react-table';
 import { Ellipsis } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Database } from '@kit/supabase/database';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
-import { DataTable } from '@kit/ui/data-table';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -20,6 +18,7 @@ import { If } from '@kit/ui/if';
 import { Input } from '@kit/ui/input';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { Trans } from '@kit/ui/trans';
+import { cn } from '@kit/ui/utils';
 
 import { RoleBadge } from '../members/role-badge';
 import { DeleteInvitationDialog } from './delete-invitation-dialog';
@@ -45,14 +44,10 @@ export function AccountInvitationsTable({
 }: AccountInvitationsTableProps) {
   const { t } = useTranslation('teams');
   const [search, setSearch] = useState('');
-  const columns = useGetColumns(permissions);
 
   const filteredInvitations = invitations.filter((member) => {
     const searchString = search.toLowerCase();
-
-    const email = (
-      member.email.split('@')[0]?.toLowerCase() ?? ''
-    ).toLowerCase();
+    const email = member.email.toLowerCase();
 
     return (
       email.includes(searchString) ||
@@ -61,96 +56,106 @@ export function AccountInvitationsTable({
   });
 
   return (
-    <div className={'flex flex-col space-y-2'}>
+    <div className="flex flex-col space-y-4">
       <Input
         value={search}
         onInput={(e) => setSearch((e.target as HTMLInputElement).value)}
         placeholder={t(`searchInvitations`)}
+        className="max-w-sm border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
       />
 
-      <DataTable
-        data-cy={'invitations-table'}
-        columns={columns}
-        data={filteredInvitations}
-      />
+      {filteredInvitations.length === 0 ? (
+        <p className="py-10 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+          <Trans i18nKey="teams:noPendingInvites" />
+        </p>
+      ) : (
+        <div
+          data-cy="invitations-table"
+          data-test="invitations-card-grid"
+          className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3"
+        >
+          {filteredInvitations.map((invitation) => (
+            <InvitationCard
+              key={invitation.id}
+              invitation={invitation}
+              permissions={permissions}
+            />
+          ))}
+        </div>
+      )}
     </div>
   );
 }
 
-function useGetColumns(permissions: {
-  canUpdateInvitation: boolean;
-  canRemoveInvitation: boolean;
-  currentUserRoleHierarchy: number;
-}): ColumnDef<Invitations[0]>[] {
+function InvitationCard({
+  invitation,
+  permissions,
+}: {
+  invitation: Invitations[0];
+  permissions: AccountInvitationsTableProps['permissions'];
+}) {
   const { t } = useTranslation('teams');
+  const isExpired = getIsInviteExpired(invitation.expires_at);
+  const invitedLabel = new Date(invitation.created_at).toLocaleDateString(
+    'en-GB',
+    {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    },
+  );
+  const expiresLabel = new Date(invitation.expires_at).toLocaleDateString(
+    'en-GB',
+    {
+      day: 'numeric',
+      month: 'short',
+      year: 'numeric',
+    },
+  );
 
-  return useMemo(
-    () => [
-      {
-        header: t('emailLabel'),
-        size: 200,
-        cell: ({ row }) => {
-          const member = row.original;
-          const email = member.email;
+  return (
+    <div
+      data-test="invitation-card"
+      className={cn(
+        'group relative flex flex-col gap-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] p-5',
+        'transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
+      )}
+    >
+      <div className="flex items-start gap-3">
+        <ProfileAvatar text={invitation.email} className="h-12 w-12" />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <p
+                data-test="invitation-email"
+                className="truncate text-base font-semibold text-[var(--workspace-shell-text)]"
+              >
+                {invitation.email}
+              </p>
+              <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                {t('invitedAtLabel')}: {invitedLabel}
+              </p>
+            </div>
+            <ActionsDropdown
+              permissions={permissions}
+              invitation={invitation}
+            />
+          </div>
+        </div>
+      </div>
 
-          return (
-            <span
-              data-test={'invitation-email'}
-              className={'flex items-center space-x-4 text-left'}
-            >
-              <span>
-                <ProfileAvatar text={email} />
-              </span>
-
-              <span>{email}</span>
-            </span>
-          );
-        },
-      },
-      {
-        header: t('roleLabel'),
-        cell: ({ row }) => {
-          const { role } = row.original;
-
-          return <RoleBadge role={role} />;
-        },
-      },
-      {
-        header: t('invitedAtLabel'),
-        cell: ({ row }) => {
-          return new Date(row.original.created_at).toLocaleDateString();
-        },
-      },
-      {
-        header: t('expiresAtLabel'),
-        cell: ({ row }) => {
-          return new Date(row.original.expires_at).toLocaleDateString();
-        },
-      },
-      {
-        header: t('inviteStatus'),
-        cell: ({ row }) => {
-          const isExpired = getIsInviteExpired(row.original.expires_at);
-
-          if (isExpired) {
-            return <Badge variant={'warning'}>{t('expired')}</Badge>;
-          }
-
-          return <Badge variant={'success'}>{t('active')}</Badge>;
-        },
-      },
-      {
-        header: '',
-        id: 'actions',
-        cell: ({ row }) => (
-          <ActionsDropdown
-            permissions={permissions}
-            invitation={row.original}
-          />
-        ),
-      },
-    ],
-    [permissions, t],
+      <div className="mt-auto flex flex-wrap items-center gap-2">
+        <RoleBadge role={invitation.role} />
+        {isExpired ? (
+          <Badge variant="warning">{t('expired')}</Badge>
+        ) : (
+          <Badge variant="success">{t('active')}</Badge>
+        )}
+        <span className="ml-auto text-xs text-[var(--workspace-shell-text)]/45">
+          {t('expiresAtLabel')}: {expiresLabel}
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -173,15 +178,19 @@ function ActionsDropdown({
     <>
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant={'ghost'} size={'icon'}>
-            <Ellipsis className={'h-5 w-5'} />
+          <Button
+            variant="ghost"
+            size="icon"
+            className="h-8 w-8 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          >
+            <Ellipsis className="h-5 w-5" />
           </Button>
         </DropdownMenuTrigger>
 
-        <DropdownMenuContent>
+        <DropdownMenuContent align="end">
           <If condition={permissions.canUpdateInvitation}>
             <DropdownMenuItem
-              data-test={'update-invitation-trigger'}
+              data-test="update-invitation-trigger"
               onClick={() => setIsUpdatingRole(true)}
             >
               <Trans i18nKey={'teams:updateInvitation'} />
@@ -189,7 +198,7 @@ function ActionsDropdown({
 
             <If condition={getIsInviteExpired(invitation.expires_at)}>
               <DropdownMenuItem
-                data-test={'renew-invitation-trigger'}
+                data-test="renew-invitation-trigger"
                 onClick={() => setIsRenewingInvite(true)}
               >
                 <Trans i18nKey={'teams:renewInvitation'} />
@@ -199,7 +208,7 @@ function ActionsDropdown({
 
           <If condition={permissions.canRemoveInvitation}>
             <DropdownMenuItem
-              data-test={'remove-invitation-trigger'}
+              data-test="remove-invitation-trigger"
               onClick={() => setIsDeletingInvite(true)}
             >
               <Trans i18nKey={'teams:removeInvitation'} />
@@ -239,10 +248,8 @@ function ActionsDropdown({
 }
 
 function getIsInviteExpired(isoExpiresAt: string) {
-  const currentIsoTime = new Date().toISOString();
-
   const isoExpiresAtDate = new Date(isoExpiresAt);
-  const currentIsoTimeDate = new Date(currentIsoTime);
+  const currentIsoTimeDate = new Date();
 
   return isoExpiresAtDate < currentIsoTimeDate;
 }

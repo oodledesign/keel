@@ -139,6 +139,7 @@ export function ClientsPageContent({
   pageTitle = 'Clients',
   addClientLabel = 'Add client',
   showCommercialRole = false,
+  showLinkedInImport = true,
 }: {
   accountSlug: string;
   accountId: string;
@@ -150,6 +151,7 @@ export function ClientsPageContent({
   pageTitle?: string;
   addClientLabel?: string;
   showCommercialRole?: boolean;
+  showLinkedInImport?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -442,23 +444,25 @@ export function ClientsPageContent({
                 Import CSV
               </Link>
             </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
-              asChild
-            >
-              <Link
-                href={pathsConfig.app.accountLinkedInImport.replace(
-                  '[account]',
-                  accountSlug,
-                )}
-                data-test="import-clients-linkedin-button"
+            {showLinkedInImport ? (
+              <Button
+                size="sm"
+                variant="outline"
+                className="h-8 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-xs text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)]"
+                asChild
               >
-                <Linkedin className="mr-1.5 h-3.5 w-3.5" />
-                LinkedIn
-              </Link>
-            </Button>
+                <Link
+                  href={pathsConfig.app.accountLinkedInImport.replace(
+                    '[account]',
+                    accountSlug,
+                  )}
+                  data-test="import-clients-linkedin-button"
+                >
+                  <Linkedin className="mr-1.5 h-3.5 w-3.5" />
+                  LinkedIn
+                </Link>
+              </Button>
+            ) : null}
             <Button
               size="sm"
               className="h-8 bg-[var(--ozer-accent)] text-xs hover:bg-[var(--ozer-accent-hover)]"
@@ -674,6 +678,7 @@ export function ClientsPageContent({
         createInitialValues={createFormInitialValues}
         onSaved={closeCreate}
         showCommercialRole={showCommercialRole}
+        showLinkedInImport={showLinkedInImport}
       />
     </div>
   );

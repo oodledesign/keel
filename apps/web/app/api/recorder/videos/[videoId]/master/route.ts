@@ -6,17 +6,17 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { assertWorkspaceMember } from '~/lib/api-tokens/assert-workspace-member';
 import { authenticateRecorderRequest } from '~/lib/api-tokens/recorder-auth';
+import type { VideoClickEvent } from '~/lib/videos/edit-timeline';
 import {
+  VIDEO_MASTERS_BUCKET,
   clicksStoragePath,
+  ensureEditProject,
   masterStoragePath,
   micAudioStoragePath,
   systemAudioStoragePath,
-  upsertVideoMaster,
-  ensureEditProject,
   upsertDesktopTranscript,
-  VIDEO_MASTERS_BUCKET,
+  upsertVideoMaster,
 } from '~/lib/videos/server/video-edit.service';
-import type { VideoClickEvent } from '~/lib/videos/edit-timeline';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

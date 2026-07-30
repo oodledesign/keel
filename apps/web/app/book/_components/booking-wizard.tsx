@@ -179,7 +179,8 @@ function locationLabel(locationType: string, locationDetail?: string | null) {
 }
 
 function LocationIcon({ locationType }: { locationType: string }) {
-  const className = 'h-4 w-4 shrink-0 text-[color:var(--ozer-text-muted,#6B5B63)]';
+  const className =
+    'h-4 w-4 shrink-0 text-[color:var(--ozer-text-muted,#6B5B63)]';
   switch (locationType) {
     case 'phone':
       return <Phone className={className} aria-hidden />;

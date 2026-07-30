@@ -73,7 +73,9 @@ export async function ensureNeedsReplyWorkspaceAffinity(
 ): Promise<string | null> {
   const { data: thread, error } = await admin
     .from('email_threads')
-    .select('id, user_id, account_id, assistant_category, client_id, project_id')
+    .select(
+      'id, user_id, account_id, assistant_category, client_id, project_id',
+    )
     .eq('id', params.threadId)
     .eq('user_id', params.userId)
     .maybeSingle();

@@ -246,10 +246,55 @@ class InvoicesService {
       q = q.lte('issued_at', dateTo);
     }
     if (query?.trim()) {
-      const term = `%${query.trim()}%`;
-      q = q.or(
-        `invoice_number.ilike.${term},clients.display_name.ilike.${term}`,
+      const raw = query.trim();
+      // Escape LIKE wildcards; quote for PostgREST so commas/spaces don't break .or().
+      const likePattern = `%${raw.replace(/[%_\\]/g, '\\$&')}%`;
+      const quotedLike = `"${likePattern.replace(/"/g, '')}"`;
+
+      const [{ data: clientMatches }, { data: projectMatches }] =
+        await Promise.all([
+          this.db
+            .from('clients')
+            .select('id')
+            .eq('account_id', accountId)
+            .or(
+              [
+                `display_name.ilike.${quotedLike}`,
+                `first_name.ilike.${quotedLike}`,
+                `last_name.ilike.${quotedLike}`,
+                `company_name.ilike.${quotedLike}`,
+              ].join(','),
+            )
+            .limit(100),
+          this.db
+            .from('projects')
+            .select('id')
+            .eq('account_id', accountId)
+            .eq('project_type', 'delivery')
+            .or(`name.ilike.${quotedLike}`)
+            .limit(100),
+        ]);
+
+      const clientIds = ((clientMatches ?? []) as Array<{ id: string }>).map(
+        (row) => row.id,
       );
+      const projectIds = ((projectMatches ?? []) as Array<{ id: string }>).map(
+        (row) => row.id,
+      );
+
+      const parts = [
+        `invoice_number.ilike.${quotedLike}`,
+        `title.ilike.${quotedLike}`,
+        `reference_number.ilike.${quotedLike}`,
+      ];
+      if (clientIds.length > 0) {
+        parts.push(`client_id.in.(${clientIds.join(',')})`);
+      }
+      if (projectIds.length > 0) {
+        parts.push(`project_id.in.(${projectIds.join(',')})`);
+      }
+
+      q = q.or(parts.join(','));
     }
 
     const { data, error, count } = await q;

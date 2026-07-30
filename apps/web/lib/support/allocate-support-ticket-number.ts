@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { randomInt } from 'crypto';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { randomInt } from 'crypto';
 
 /** Inclusive range for public-facing ticket references (avoids tiny sequential IDs). */
 const TICKET_NUMBER_MIN = 10_000;

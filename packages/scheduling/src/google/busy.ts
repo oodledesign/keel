@@ -1,7 +1,7 @@
 import 'server-only';
 
-import type { BusyInterval } from '../types';
 import { parseYmd, zonedDateTimeToUtc } from '../timezone';
+import type { BusyInterval } from '../types';
 import { getGoogleClientsForWorkspace } from './client';
 
 const GOOGLE_CALENDAR_API = 'https://www.googleapis.com/calendar/v3';

@@ -2,7 +2,7 @@
 
 import { useState, useTransition } from 'react';
 
-import { CheckCircle2, Loader2 } from 'lucide-react';
+import { CheckCircle2, Copy, Loader2, RefreshCw } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
@@ -27,6 +27,8 @@ import {
 import type { CommercialListing } from '../../listings/_lib/server/listings.service';
 import type { CommercialPublishingSettings } from '../_lib/server/commercial-publishing.loader';
 import {
+  ensurePropertyHiveFeedAction,
+  rotatePropertyHiveFeedAction,
   savePortalCredentialsAction,
   savePropertyHiveCredentialsAction,
   testPublishListingAction,
@@ -65,6 +67,10 @@ export function CommercialPublishingSettings({
   const [rmPending, startRmTransition] = useTransition();
   const [eachPending, startEachTransition] = useTransition();
   const [testPending, startTestTransition] = useTransition();
+  const [feedPending, startFeedTransition] = useTransition();
+  const [feedUrl, setFeedUrl] = useState(
+    initialSettings.propertyHive.feedUrl ?? '',
+  );
 
   const [phForm, setPhForm] = useState({
     siteUrl: initialSettings.propertyHive.siteUrl,
@@ -170,6 +176,57 @@ export function CommercialPublishingSettings({
     });
   };
 
+  const enableFeed = () => {
+    startFeedTransition(async () => {
+      try {
+        const result = await ensurePropertyHiveFeedAction({ accountId });
+        setSettings(result.settings);
+        setFeedUrl(result.feedUrl);
+        toast.success(
+          result.created
+            ? 'Property Hive XML feed enabled'
+            : 'Property Hive XML feed ready',
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not enable feed',
+        );
+      }
+    });
+  };
+
+  const rotateFeed = () => {
+    if (
+      !confirm(
+        'Rotate the feed token? Property Hive will stop updating until you paste the new URL.',
+      )
+    ) {
+      return;
+    }
+    startFeedTransition(async () => {
+      try {
+        const result = await rotatePropertyHiveFeedAction({ accountId });
+        setSettings(result.settings);
+        setFeedUrl(result.feedUrl);
+        toast.success('Feed token rotated — update Property Hive with the new URL');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not rotate feed',
+        );
+      }
+    });
+  };
+
+  const copyFeedUrl = async () => {
+    if (!feedUrl) return;
+    try {
+      await navigator.clipboard.writeText(feedUrl);
+      toast.success('Feed URL copied');
+    } catch {
+      toast.error('Could not copy URL');
+    }
+  };
+
   return (
     <div className="mx-auto max-w-3xl space-y-6">
       <Card className={workspacePanelCard}>
@@ -248,6 +305,84 @@ export function CommercialPublishingSettings({
             {phPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
             Save Property Hive credentials
           </Button>
+        </CardContent>
+      </Card>
+
+      <Card className={workspacePanelCard}>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+            Property Hive XML feed
+          </CardTitle>
+          <ConfiguredBadge configured={settings.propertyHive.feedEnabled} />
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-[var(--workspace-shell-text)]/60">
+            Kato-compatible XML that Property Hive can pull every 15 minutes.
+            Includes marketing / under-offer disposals, units, images and
+            documents. Prefer this over push if you already run PH Import.
+          </p>
+
+          {feedUrl ? (
+            <div className="space-y-2">
+              <Label>Feed URL</Label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input readOnly value={feedUrl} className="font-mono text-xs" />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={copyFeedUrl}
+                  className="shrink-0 gap-1.5"
+                >
+                  <Copy className="h-4 w-4" />
+                  Copy
+                </Button>
+              </div>
+              <ol className="list-decimal space-y-1 pl-4 text-xs text-[var(--workspace-shell-text)]/55">
+                <li>
+                  In Property Hive → Property Import, create/edit an import
+                </li>
+                <li>
+                  Format: <strong>Kato XML</strong> or{' '}
+                  <strong>generic XML</strong>
+                </li>
+                <li>Paste this URL, Frequency → Every 15 minutes</li>
+                <li>
+                  For reliable timing, add a real server cron (WP-Cron alone can
+                  drift)
+                </li>
+              </ol>
+            </div>
+          ) : (
+            <p className="text-sm text-[var(--workspace-shell-text)]/50">
+              Enable the feed to generate a secret URL for Property Hive.
+            </p>
+          )}
+
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              disabled={feedPending}
+              onClick={enableFeed}
+              className={workspaceBtnPrimaryMd}
+            >
+              {feedPending ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : null}
+              {feedUrl ? 'Refresh feed details' : 'Enable XML feed'}
+            </Button>
+            {feedUrl ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={feedPending}
+                onClick={rotateFeed}
+                className="gap-1.5"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Rotate token
+              </Button>
+            ) : null}
+          </div>
         </CardContent>
       </Card>
 

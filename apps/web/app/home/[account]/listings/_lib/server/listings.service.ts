@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { randomBytes } from 'crypto';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { randomBytes } from 'crypto';
 
 import { getLogger } from '@kit/shared/logger';
 
@@ -17,8 +17,14 @@ import {
 
 import type {
   CreateListingInput,
+  CreateListingMediaInput,
+  CreateListingUnitInput,
+  MediaType,
   UpdateListingInput,
+  UpdateListingUnitInput,
 } from '../schema/listings.schema';
+
+export type { MediaType };
 
 const UNPUBLISH_STATUSES: ListingStatus[] = ['withdrawn', 'let', 'sold'];
 
@@ -100,6 +106,7 @@ export type CommercialListing = {
   landlordShareToken: string | null;
   landlordShareEnabled: boolean;
   notes: string | null;
+  externalId: string | null;
   createdAt: string;
   updatedAt: string;
 };
@@ -113,6 +120,22 @@ export type CommercialListingUnit = {
   sizeSqft: number | null;
   measurementStandard: string | null;
   sortOrder: number;
+  externalId: string | null;
+};
+
+export type CommercialListingMedia = {
+  id: string;
+  listingId: string;
+  accountId: string;
+  mediaType: MediaType;
+  storagePath: string | null;
+  externalUrl: string | null;
+  fileName: string | null;
+  mimeType: string | null;
+  sortOrder: number;
+  createdAt: string;
+  /** Signed or external URL for display (filled by loader when available). */
+  url?: string | null;
 };
 
 export type CommercialEnquiry = {
@@ -159,6 +182,15 @@ type UnitRow = Record<string, unknown> & {
   listing_id: string;
   account_id: string;
   label: string;
+  sort_order: number;
+};
+
+type MediaRow = Record<string, unknown> & {
+  id: string;
+  listing_id: string;
+  account_id: string;
+  media_type: string;
+  created_at: string;
   sort_order: number;
 };
 
@@ -219,6 +251,7 @@ function mapListing(row: ListingRow): CommercialListing {
     landlordShareToken: (row.landlord_share_token as string | null) ?? null,
     landlordShareEnabled: Boolean(row.landlord_share_enabled),
     notes: (row.notes as string | null) ?? null,
+    externalId: (row.external_id as string | null) ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -234,6 +267,22 @@ function mapUnit(row: UnitRow): CommercialListingUnit {
     sizeSqft: num(row.size_sqft),
     measurementStandard: (row.measurement_standard as string | null) ?? null,
     sortOrder: row.sort_order ?? 0,
+    externalId: (row.external_id as string | null) ?? null,
+  };
+}
+
+function mapMedia(row: MediaRow): CommercialListingMedia {
+  return {
+    id: row.id,
+    listingId: row.listing_id,
+    accountId: row.account_id,
+    mediaType: (row.media_type as MediaType) ?? 'image',
+    storagePath: (row.storage_path as string | null) ?? null,
+    externalUrl: (row.external_url as string | null) ?? null,
+    fileName: (row.file_name as string | null) ?? null,
+    mimeType: (row.mime_type as string | null) ?? null,
+    sortOrder: row.sort_order ?? 0,
+    createdAt: row.created_at,
   };
 }
 
@@ -327,6 +376,7 @@ function writeColumns(input: Partial<CreateListingInput>) {
       location_copy: input.locationCopy,
     }),
     ...(input.notes !== undefined && { notes: input.notes }),
+    ...(input.externalId !== undefined && { external_id: input.externalId }),
     ...(input.instructingClientId !== undefined && {
       instructing_client_id: input.instructingClientId,
     }),
@@ -411,6 +461,7 @@ export function createListingsService(client: SupabaseClient) {
           description: input.description ?? null,
           location_copy: input.locationCopy ?? null,
           notes: input.notes ?? null,
+          external_id: input.externalId ?? null,
           instructing_client_id: input.instructingClientId ?? null,
           created_by: input.createdBy ?? null,
           on_market_at:
@@ -498,6 +549,196 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       return ((data ?? []) as UnitRow[]).map(mapUnit);
+    },
+
+    async listUnitsForAccount(
+      accountId: string,
+    ): Promise<CommercialListingUnit[]> {
+      const { data, error } = await client
+        .from('commercial_listing_units')
+        .select('*')
+        .eq('account_id', accountId)
+        .order('sort_order');
+
+      if (error) {
+        console.error('[listings] listUnitsForAccount error:', error.message);
+        return [];
+      }
+
+      return ((data ?? []) as UnitRow[]).map(mapUnit);
+    },
+
+    async createUnit(
+      input: CreateListingUnitInput,
+    ): Promise<CommercialListingUnit> {
+      const { data, error } = await client
+        .from('commercial_listing_units')
+        .insert({
+          account_id: input.accountId,
+          listing_id: input.listingId,
+          label: input.label,
+          floor_or_unit: input.floorOrUnit ?? null,
+          size_sqft: input.sizeSqft ?? null,
+          measurement_standard: input.measurementStandard ?? 'gia',
+          sort_order: input.sortOrder ?? 0,
+          external_id: input.externalId ?? null,
+        })
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to create unit');
+      }
+
+      return mapUnit(data as UnitRow);
+    },
+
+    async updateUnit(
+      unitId: string,
+      accountId: string,
+      input: UpdateListingUnitInput,
+    ): Promise<CommercialListingUnit> {
+      const patch: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (input.label !== undefined) patch.label = input.label;
+      if (input.floorOrUnit !== undefined)
+        patch.floor_or_unit = input.floorOrUnit;
+      if (input.sizeSqft !== undefined) patch.size_sqft = input.sizeSqft;
+      if (input.measurementStandard !== undefined) {
+        patch.measurement_standard = input.measurementStandard;
+      }
+      if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
+      if (input.externalId !== undefined) patch.external_id = input.externalId;
+
+      const { data, error } = await client
+        .from('commercial_listing_units')
+        .update(patch)
+        .eq('id', unitId)
+        .eq('account_id', accountId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to update unit');
+      }
+
+      return mapUnit(data as UnitRow);
+    },
+
+    async deleteUnit(unitId: string, accountId: string): Promise<void> {
+      const { error } = await client
+        .from('commercial_listing_units')
+        .delete()
+        .eq('id', unitId)
+        .eq('account_id', accountId);
+
+      if (error) throw new Error(error.message);
+    },
+
+    async listMedia(listingId: string): Promise<CommercialListingMedia[]> {
+      const { data, error } = await client
+        .from('commercial_listing_media')
+        .select('*')
+        .eq('listing_id', listingId)
+        .order('sort_order')
+        .order('created_at');
+
+      if (error) {
+        console.error('[listings] listMedia error:', error.message);
+        return [];
+      }
+
+      return ((data ?? []) as MediaRow[]).map(mapMedia);
+    },
+
+    async createMedia(
+      input: CreateListingMediaInput,
+    ): Promise<CommercialListingMedia> {
+      if (!input.storagePath && !input.externalUrl) {
+        throw new Error('Provide a file or external URL');
+      }
+
+      const { data, error } = await client
+        .from('commercial_listing_media')
+        .insert({
+          account_id: input.accountId,
+          listing_id: input.listingId,
+          media_type: input.mediaType ?? 'image',
+          storage_path: input.storagePath ?? null,
+          external_url: input.externalUrl ?? null,
+          file_name: input.fileName ?? null,
+          mime_type: input.mimeType ?? null,
+          sort_order: input.sortOrder ?? 0,
+        })
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to create media');
+      }
+
+      return mapMedia(data as MediaRow);
+    },
+
+    async deleteMedia(mediaId: string, accountId: string): Promise<void> {
+      const { data: existing, error: fetchError } = await client
+        .from('commercial_listing_media')
+        .select('storage_path')
+        .eq('id', mediaId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (fetchError) throw new Error(fetchError.message);
+
+      const storagePath = (existing as { storage_path?: string | null } | null)
+        ?.storage_path;
+
+      const { error } = await client
+        .from('commercial_listing_media')
+        .delete()
+        .eq('id', mediaId)
+        .eq('account_id', accountId);
+
+      if (error) throw new Error(error.message);
+
+      if (storagePath) {
+        const { error: storageError } = await client.storage
+          .from('commercial-listing-media')
+          .remove([storagePath]);
+        if (storageError) {
+          console.error(
+            '[listings] deleteMedia storage error:',
+            storageError.message,
+          );
+        }
+      }
+    },
+
+    async withSignedMediaUrls(
+      media: CommercialListingMedia[],
+    ): Promise<CommercialListingMedia[]> {
+      return Promise.all(
+        media.map(async (item) => {
+          if (item.externalUrl) {
+            return { ...item, url: item.externalUrl };
+          }
+          if (!item.storagePath) {
+            return { ...item, url: null };
+          }
+          const { data, error } = await client.storage
+            .from('commercial-listing-media')
+            .createSignedUrl(item.storagePath, 3600);
+          if (error) {
+            console.error(
+              '[listings] signed media url error:',
+              error.message,
+            );
+            return { ...item, url: null };
+          }
+          return { ...item, url: data.signedUrl };
+        }),
+      );
     },
 
     async listEnquiriesForListing(

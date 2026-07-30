@@ -2,12 +2,12 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { createSupportPublicToken } from '~/lib/support/support-tokens';
-import type { SupportAttachmentMeta } from '~/lib/support/support-tokens';
 import {
   loadClientPicturesByOrgIds,
   loadSupportBusinessBrand,
 } from '~/lib/support/support-party-branding';
+import { createSupportPublicToken } from '~/lib/support/support-tokens';
+import type { SupportAttachmentMeta } from '~/lib/support/support-tokens';
 import {
   notifyWorkspaceNewSupportTicket,
   notifyWorkspaceSupportClientReply,
@@ -214,8 +214,7 @@ export async function loadPublicSupportOrgByToken(
       (org as { name?: string | null }).name?.trim() ||
       (org as { slug: string }).slug,
     clientOrgSlug: (org as { slug: string }).slug,
-    clientPictureUrl:
-      clientPictures.get((org as { id: string }).id) ?? null,
+    clientPictureUrl: clientPictures.get((org as { id: string }).id) ?? null,
     accountId,
     accountSlug: account.slug as string,
     accountName:

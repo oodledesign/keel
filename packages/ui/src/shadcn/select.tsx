@@ -10,8 +10,8 @@ import {
 } from '@radix-ui/react-icons';
 import { Select as SelectPrimitive } from 'radix-ui';
 
-import { cn } from '../lib/utils';
 import { selectViewportClass } from '../lib/overlay-layout';
+import { cn } from '../lib/utils';
 
 const Select = SelectPrimitive.Root;
 
@@ -88,7 +88,7 @@ const SelectContent: React.FC<
         className={cn(
           'p-1',
           position === 'popper' &&
-            'max-h-[min(16rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] overflow-y-auto overscroll-contain touch-pan-y',
+            'max-h-[min(16rem,var(--radix-select-content-available-height))] w-[var(--radix-select-trigger-width)] max-w-[var(--radix-select-trigger-width)] touch-pan-y overflow-y-auto overscroll-contain',
         )}
       >
         {children}

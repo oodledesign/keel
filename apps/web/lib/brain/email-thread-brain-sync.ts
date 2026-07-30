@@ -63,12 +63,10 @@ export function queueEmailThreadBrainSync(
   threadId: string,
   preferredAccountId?: string | null,
 ) {
-  void syncEmailThreadToBrain(threadId, { preferredAccountId }).catch(
-    (err) => {
-      console.error('[brain] email thread sync failed', {
-        threadId,
-        error: err instanceof Error ? err.message : String(err),
-      });
-    },
-  );
+  void syncEmailThreadToBrain(threadId, { preferredAccountId }).catch((err) => {
+    console.error('[brain] email thread sync failed', {
+      threadId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+  });
 }

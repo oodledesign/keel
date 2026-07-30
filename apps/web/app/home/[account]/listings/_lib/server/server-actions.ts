@@ -4,12 +4,17 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  CreateListingMediaSchema,
   CreateListingSchema,
+  CreateListingUnitSchema,
+  DeleteListingMediaSchema,
   DeleteListingSchema,
+  DeleteListingUnitSchema,
   GetListingSchema,
   ListListingsSchema,
   SetLandlordShareSchema,
   UpdateListingSchema,
+  UpdateListingUnitSchema,
 } from '../schema/listings.schema';
 import { createListingsService } from './listings.service';
 
@@ -66,4 +71,44 @@ export const setLandlordShare = enhanceAction(
     return getService().setLandlordShare(input);
   },
   { schema: SetLandlordShareSchema },
+);
+
+export const createListingUnit = enhanceAction(
+  async (input) => {
+    return getService().createUnit(input);
+  },
+  { schema: CreateListingUnitSchema },
+);
+
+export const updateListingUnit = enhanceAction(
+  async (input) => {
+    const { unitId, accountId, ...rest } = input;
+    return getService().updateUnit(unitId, accountId, rest);
+  },
+  { schema: UpdateListingUnitSchema },
+);
+
+export const deleteListingUnit = enhanceAction(
+  async (input) => {
+    await getService().deleteUnit(input.unitId, input.accountId);
+    return { success: true };
+  },
+  { schema: DeleteListingUnitSchema },
+);
+
+export const createListingMedia = enhanceAction(
+  async (input) => {
+    const media = await getService().createMedia(input);
+    const [withUrl] = await getService().withSignedMediaUrls([media]);
+    return withUrl ?? media;
+  },
+  { schema: CreateListingMediaSchema },
+);
+
+export const deleteListingMedia = enhanceAction(
+  async (input) => {
+    await getService().deleteMedia(input.mediaId, input.accountId);
+    return { success: true };
+  },
+  { schema: DeleteListingMediaSchema },
 );

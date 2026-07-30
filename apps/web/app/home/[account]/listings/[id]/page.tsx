@@ -44,11 +44,13 @@ async function ListingDetailPage({ params }: ListingDetailPageProps) {
     notFound();
   }
 
-  const [units, enquiries, publications] = await Promise.all([
+  const [units, enquiries, publications, mediaRows] = await Promise.all([
     service.listUnits(listingId),
     service.listEnquiriesForListing(listingId),
     service.listPublicationsForListing(listingId),
+    service.listMedia(listingId),
   ]);
+  const media = await service.withSignedMediaUrls(mediaRows);
 
   return (
     <>
@@ -68,6 +70,7 @@ async function ListingDetailPage({ params }: ListingDetailPageProps) {
         <ListingDetailContent
           listing={listing}
           units={units}
+          media={media}
           enquiries={enquiries}
           publications={publications}
           accountId={accountId}

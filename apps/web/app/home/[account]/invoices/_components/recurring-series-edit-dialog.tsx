@@ -27,10 +27,10 @@ import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 
 import {
+  type InvoiceLineType,
   calculateInvoiceLineTotalPence,
   normalizeInvoiceLineType,
   normalizeInvoiceQuantity,
-  type InvoiceLineType,
 } from '~/lib/invoices/invoice-quantity';
 
 import { getErrorMessage } from '../_lib/error-message';
@@ -90,7 +90,9 @@ function newLineKey() {
   return `line-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-function mapTemplateItems(template: Record<string, unknown> | null | undefined) {
+function mapTemplateItems(
+  template: Record<string, unknown> | null | undefined,
+) {
   const raw = Array.isArray(template?.items) ? template.items : [];
   if (raw.length === 0) {
     return [

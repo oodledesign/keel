@@ -203,7 +203,9 @@ export function TimelinePlaybackPlayer(props: Props) {
   return (
     <div
       ref={stageRef}
-      className={props.className ?? 'relative h-full w-full overflow-hidden bg-black'}
+      className={
+        props.className ?? 'relative h-full w-full overflow-hidden bg-black'
+      }
     >
       <div
         className="absolute overflow-hidden"

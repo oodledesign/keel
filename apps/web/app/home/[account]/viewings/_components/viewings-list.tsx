@@ -29,17 +29,16 @@ import {
   VIEWING_STATUSES,
   type ViewingStatus,
 } from '~/lib/commercial/commercial-constants';
-import {
-  workspaceBtnPrimaryMd,
-  workspacePanelCard,
-} from '~/lib/workspace-ui';
+import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
-import type { CommercialListing } from '../../listings/_lib/server/listings.service';
-import type { CommercialViewing } from '../_lib/server/viewings.service';
 import {
-  createViewing,
-  deleteViewing,
-} from '../_lib/server/server-actions';
+  ClientContactPicker,
+  type ClientContactPickerValue,
+  emptyClientContactPickerValue,
+} from '../../clients/_components/client-contact-picker';
+import type { CommercialListing } from '../../listings/_lib/server/listings.service';
+import { createViewing, deleteViewing } from '../_lib/server/server-actions';
+import type { CommercialViewing } from '../_lib/server/viewings.service';
 
 const STATUS_LABELS: Record<ViewingStatus, string> = {
   upcoming: 'Upcoming',
@@ -65,10 +64,21 @@ export function ViewingsList({
   const [listingId, setListingId] = useState(listings[0]?.id ?? '');
   const [scheduledAt, setScheduledAt] = useState('');
   const [status, setStatus] = useState<ViewingStatus>('upcoming');
+  const [party, setParty] = useState<ClientContactPickerValue>(
+    emptyClientContactPickerValue(),
+  );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleSaved = useCallback(() => router.refresh(), [router]);
+
+  const resetForm = () => {
+    setScheduledAt('');
+    setStatus('upcoming');
+    setParty(emptyClientContactPickerValue());
+    setListingId(listings[0]?.id ?? '');
+    setError(null);
+  };
 
   const handleCreate = (e: React.FormEvent) => {
     e.preventDefault();
@@ -82,13 +92,13 @@ export function ViewingsList({
         await createViewing({
           accountId,
           listingId,
-          scheduledAt: scheduledAt
-            ? new Date(scheduledAt).toISOString()
-            : null,
+          clientId: party.clientId || null,
+          contactId: party.contactId || null,
+          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
           status,
         });
         setModalOpen(false);
-        setScheduledAt('');
+        resetForm();
         handleSaved();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to create');
@@ -116,7 +126,10 @@ export function ViewingsList({
           </p>
         </div>
         <Button
-          onClick={() => setModalOpen(true)}
+          onClick={() => {
+            resetForm();
+            setModalOpen(true);
+          }}
           disabled={listings.length === 0}
           className={workspaceBtnPrimaryMd}
         >
@@ -137,12 +150,15 @@ export function ViewingsList({
       ) : (
         <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           <table className="w-full text-left text-sm">
-            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[11px] uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
+            <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
               <tr>
                 <th className="px-4 py-3 font-medium">Listing</th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">
+                  Client
+                </th>
                 <th className="px-4 py-3 font-medium">When</th>
                 <th className="px-4 py-3 font-medium">Status</th>
-                <th className="hidden px-4 py-3 font-medium md:table-cell">
+                <th className="hidden px-4 py-3 font-medium lg:table-cell">
                   Outcome
                 </th>
                 <th className="px-4 py-3 font-medium" />
@@ -157,6 +173,20 @@ export function ViewingsList({
                   <td className="px-4 py-3 font-medium text-[var(--workspace-shell-text)]">
                     {viewing.listingName || 'Listing'}
                   </td>
+                  <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 md:table-cell">
+                    {viewing.clientName || viewing.contactName ? (
+                      <div>
+                        <div>{viewing.clientName || viewing.contactName}</div>
+                        {viewing.clientName && viewing.contactName ? (
+                          <div className="text-xs text-[var(--workspace-shell-text)]/45">
+                            {viewing.contactName}
+                          </div>
+                        ) : null}
+                      </div>
+                    ) : (
+                      '—'
+                    )}
+                  </td>
                   <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
                     {viewing.scheduledAt
                       ? new Date(viewing.scheduledAt).toLocaleString('en-GB', {
@@ -170,7 +200,7 @@ export function ViewingsList({
                       {STATUS_LABELS[viewing.status]}
                     </span>
                   </td>
-                  <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 md:table-cell">
+                  <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 lg:table-cell">
                     {viewing.outcome || '—'}
                   </td>
                   <td className="px-4 py-3 text-right">
@@ -190,8 +220,14 @@ export function ViewingsList({
         </div>
       )}
 
-      <Dialog open={modalOpen} onOpenChange={setModalOpen}>
-        <DialogContent className="border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+      <Dialog
+        open={modalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open);
+          if (!open) resetForm();
+        }}
+      >
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
             <DialogTitle>Add viewing</DialogTitle>
           </DialogHeader>
@@ -211,6 +247,17 @@ export function ViewingsList({
                 </SelectContent>
               </Select>
             </div>
+
+            <ClientContactPicker
+              accountId={accountId}
+              active={modalOpen}
+              value={party}
+              onChange={setParty}
+              onError={setError}
+              showSummary
+              allowNone
+            />
+
             <div className="space-y-1.5">
               <Label>Scheduled at</Label>
               <Input
@@ -237,14 +284,20 @@ export function ViewingsList({
                 </SelectContent>
               </Select>
             </div>
-            {error ? (
-              <p className="text-sm text-rose-600">{error}</p>
-            ) : null}
+            {error ? <p className="text-sm text-rose-600">{error}</p> : null}
             <DialogFooter>
-              <Button type="button" variant="ghost" onClick={() => setModalOpen(false)}>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setModalOpen(false)}
+              >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isPending} className={workspaceBtnPrimaryMd}>
+              <Button
+                type="submit"
+                disabled={isPending}
+                className={workspaceBtnPrimaryMd}
+              >
                 {isPending ? 'Saving…' : 'Add viewing'}
               </Button>
             </DialogFooter>

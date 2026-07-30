@@ -1,14 +1,11 @@
 'use client';
 
-import { useEffect, useRef, useState, type CSSProperties } from 'react';
+import { type CSSProperties, useEffect, useRef, useState } from 'react';
 
 import { cn } from '@kit/ui/utils';
 
 import { loadWaveformPeaks } from '~/lib/videos/audio-waveform.client';
-import {
-  type VideoKeepRange,
-  isTimeKept,
-} from '~/lib/videos/edit-timeline';
+import { type VideoKeepRange, isTimeKept } from '~/lib/videos/edit-timeline';
 
 type Props = {
   masterUrl: string | null;
@@ -76,12 +73,10 @@ export function TimelineWaveform(props: Props) {
       const barW = width / peaks.length;
       const duration = Math.max(1, props.sourceDurationMs);
 
-      const kept = getComputedStyle(container).getPropertyValue(
-        '--waveform-kept',
-      );
-      const cut = getComputedStyle(container).getPropertyValue(
-        '--waveform-cut',
-      );
+      const kept =
+        getComputedStyle(container).getPropertyValue('--waveform-kept');
+      const cut =
+        getComputedStyle(container).getPropertyValue('--waveform-cut');
       const keptColor = kept.trim() || 'rgba(255, 92, 52, 0.7)';
       const cutColor = cut.trim() || 'rgba(183, 164, 172, 0.35)';
 
@@ -92,12 +87,7 @@ export function TimelineWaveform(props: Props) {
         ctx.fillStyle = isTimeKept(props.keepRanges, tMs)
           ? keptColor
           : cutColor;
-        ctx.fillRect(
-          i * barW,
-          mid - h,
-          Math.max(1, barW - barGap),
-          h * 2,
-        );
+        ctx.fillRect(i * barW, mid - h, Math.max(1, barW - barGap), h * 2);
       }
     };
 
@@ -113,7 +103,8 @@ export function TimelineWaveform(props: Props) {
       className={cn('pointer-events-none absolute inset-0', props.className)}
       style={
         {
-          '--waveform-kept': 'color-mix(in oklab, var(--ozer-accent) 70%, transparent)',
+          '--waveform-kept':
+            'color-mix(in oklab, var(--ozer-accent) 70%, transparent)',
           '--waveform-cut':
             'color-mix(in oklab, var(--workspace-shell-text-muted) 35%, transparent)',
         } as CSSProperties

@@ -71,8 +71,7 @@ export function VideoListRow(props: {
           {video.has_master ? (
             <>
               {' '}
-              ·{' '}
-              <span className="text-[var(--ozer-accent)]">Editable</span>
+              · <span className="text-[var(--ozer-accent)]">Editable</span>
             </>
           ) : null}
         </p>

@@ -10,6 +10,7 @@ import {
 
 import { useRouter } from 'next/navigation';
 
+import type { Editor } from '@tiptap/react';
 import {
   Check,
   ChevronLeft,
@@ -21,8 +22,6 @@ import {
   Tag,
   Users,
 } from 'lucide-react';
-
-import type { Editor } from '@tiptap/react';
 
 import { Button } from '@kit/ui/button';
 import {

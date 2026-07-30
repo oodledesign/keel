@@ -1,10 +1,10 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Copy, Edit2, Link2 } from 'lucide-react';
+import { Copy, Edit2, Link2, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
@@ -14,26 +14,30 @@ import pathsConfig from '~/config/paths.config';
 import {
   DISPOSAL_TYPE_LABELS,
   ENQUIRY_STATUS_LABELS,
-  LISTING_STATUS_LABELS,
   type EnquiryStatus,
+  LISTING_STATUS_LABELS,
 } from '~/lib/commercial/commercial-constants';
-import {
-  workspaceBtnPrimaryMd,
-  workspacePanelCard,
-} from '~/lib/workspace-ui';
+import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import type {
   CommercialEnquiry,
   CommercialListing,
+  CommercialListingMedia,
   CommercialListingUnit,
   CommercialPortalPublication,
 } from '../_lib/server/listings.service';
-import { setLandlordShare } from '../_lib/server/server-actions';
+import {
+  deleteListingUnit,
+  setLandlordShare,
+} from '../_lib/server/server-actions';
 import { ListingFormModal } from './listing-form-modal';
+import { ListingMediaSection } from './listing-media-section';
+import { ListingUnitFormModal } from './listing-unit-form-modal';
 
 interface ListingDetailContentProps {
   listing: CommercialListing;
   units: CommercialListingUnit[];
+  media: CommercialListingMedia[];
   enquiries: CommercialEnquiry[];
   publications: CommercialPortalPublication[];
   accountId: string;
@@ -58,7 +62,8 @@ function daysOnMarket(onMarketAt: string | null) {
 
 export function ListingDetailContent({
   listing: initial,
-  units,
+  units: initialUnits,
+  media,
   enquiries,
   publications,
   accountId,
@@ -66,9 +71,23 @@ export function ListingDetailContent({
 }: ListingDetailContentProps) {
   const router = useRouter();
   const [listing, setListing] = useState(initial);
+  const [units, setUnits] = useState(initialUnits);
   const [modalOpen, setModalOpen] = useState(false);
+  const [unitModalOpen, setUnitModalOpen] = useState(false);
+  const [editingUnit, setEditingUnit] = useState<CommercialListingUnit | null>(
+    null,
+  );
   const [sharePending, startShareTransition] = useTransition();
+  const [, startUnitTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    setListing(initial);
+  }, [initial]);
+
+  useEffect(() => {
+    setUnits(initialUnits);
+  }, [initialUnits]);
 
   const sharePath = listing.landlordShareToken
     ? pathsConfig.app.landlordShareListing.replace(
@@ -92,7 +111,6 @@ export function ListingDetailContent({
           enabled,
         });
         setListing(updated);
-        router.refresh();
       } catch (err) {
         console.error(err);
       }
@@ -110,6 +128,28 @@ export function ListingDetailContent({
     }
   };
 
+  const openAddUnit = () => {
+    setEditingUnit(null);
+    setUnitModalOpen(true);
+  };
+
+  const openEditUnit = (unit: CommercialListingUnit) => {
+    setEditingUnit(unit);
+    setUnitModalOpen(true);
+  };
+
+  const handleDeleteUnit = (unitId: string) => {
+    if (!confirm('Delete this unit?')) return;
+    startUnitTransition(async () => {
+      try {
+        await deleteListingUnit({ unitId, accountId });
+        setUnits((prev) => prev.filter((u) => u.id !== unitId));
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -118,7 +158,7 @@ export function ListingDetailContent({
             {listing.name}
           </h2>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-            {[listing.addressLine1, listing.town, listing.postcode]
+            {[listing.addressLine1, listing.addressLine2, listing.town, listing.postcode]
               .filter(Boolean)
               .join(', ') || 'No address'}
           </p>
@@ -129,6 +169,11 @@ export function ListingDetailContent({
             <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/60">
               {DISPOSAL_TYPE_LABELS[listing.disposalType]}
             </span>
+            {listing.sector ? (
+              <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/60">
+                {listing.sector}
+              </span>
+            ) : null}
           </div>
         </div>
         <Button
@@ -163,51 +208,136 @@ export function ListingDetailContent({
         />
       </div>
 
-      {listing.summary ? (
+      <ListingMediaSection
+        accountId={accountId}
+        listingId={listing.id}
+        initialMedia={media}
+      />
+
+      <div className="grid gap-4 lg:grid-cols-2">
         <Card className={workspacePanelCard}>
           <CardHeader>
             <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-              Summary
+              Details
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="whitespace-pre-wrap text-sm text-[var(--workspace-shell-text)]/70">
-              {listing.summary}
-            </p>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-3 text-sm">
+              <DetailItem label="Tenure" value={listing.tenure} />
+              <DetailItem label="Use class" value={listing.useClass} />
+              <DetailItem label="EPC" value={listing.epcBand} />
+              <DetailItem
+                label="Available from"
+                value={
+                  listing.availableFrom
+                    ? new Date(listing.availableFrom).toLocaleDateString('en-GB')
+                    : null
+                }
+              />
+              <DetailItem
+                label="Measurement"
+                value={listing.measurementStandard?.toUpperCase() ?? null}
+              />
+              <DetailItem
+                label="Rent frequency"
+                value={listing.rentFrequency?.replace(/_/g, ' ') ?? null}
+              />
+            </dl>
           </CardContent>
         </Card>
-      ) : null}
+
+        <Card className={workspacePanelCard}>
+          <CardHeader>
+            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+              Marketing copy
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {listing.summary || listing.description || listing.locationCopy ? (
+              <>
+                {listing.summary ? (
+                  <CopyBlock title="Summary" body={listing.summary} />
+                ) : null}
+                {listing.description ? (
+                  <CopyBlock title="Description" body={listing.description} />
+                ) : null}
+                {listing.locationCopy ? (
+                  <CopyBlock title="Location" body={listing.locationCopy} />
+                ) : null}
+              </>
+            ) : (
+              <p className="text-sm text-[var(--workspace-shell-text)]/50">
+                No marketing copy yet. Use Edit to add summary, description and
+                location.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      </div>
 
       <Card className={workspacePanelCard}>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
           <CardTitle className="text-base text-[var(--workspace-shell-text)]">
             Units
           </CardTitle>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="gap-1.5"
+            onClick={openAddUnit}
+          >
+            <Plus className="h-3.5 w-3.5" />
+            Add unit
+          </Button>
         </CardHeader>
         <CardContent>
           {units.length === 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text)]/50">
-              No units recorded yet.
+              No units recorded yet. Add floor units for multi-let disposals.
             </p>
           ) : (
             <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
               {units.map((unit) => (
                 <li
                   key={unit.id}
-                  className="flex items-center justify-between py-2 text-sm"
+                  className="flex items-center justify-between gap-3 py-2.5 text-sm"
                 >
-                  <span className="text-[var(--workspace-shell-text)]">
-                    {unit.label}
-                    {unit.floorOrUnit ? (
-                      <span className="text-[var(--workspace-shell-text)]/45">
-                        {' '}
-                        · {unit.floorOrUnit}
-                      </span>
-                    ) : null}
-                  </span>
-                  <span className="text-[var(--workspace-shell-text)]/60">
-                    {unit.sizeSqft != null ? `${unit.sizeSqft} sq ft` : '—'}
-                  </span>
+                  <div className="min-w-0">
+                    <p className="font-medium text-[var(--workspace-shell-text)]">
+                      {unit.label}
+                    </p>
+                    <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                      {[
+                        unit.floorOrUnit,
+                        unit.sizeSqft != null
+                          ? `${unit.sizeSqft} sq ft`
+                          : null,
+                      ]
+                        .filter(Boolean)
+                        .join(' · ') || '—'}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7"
+                      onClick={() => openEditUnit(unit)}
+                    >
+                      <Edit2 className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="h-7 w-7 text-rose-400"
+                      onClick={() => handleDeleteUnit(unit.id)}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </Button>
+                  </div>
                 </li>
               ))}
             </ul>
@@ -229,11 +359,11 @@ export function ListingDetailContent({
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
-                <thead className="text-[11px] uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
+                <thead className="text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
                   <tr>
-                    <th className="pb-2 pr-3 font-medium">Contact</th>
-                    <th className="pb-2 pr-3 font-medium">Source</th>
-                    <th className="pb-2 pr-3 font-medium">Status</th>
+                    <th className="pr-3 pb-2 font-medium">Contact</th>
+                    <th className="pr-3 pb-2 font-medium">Source</th>
+                    <th className="pr-3 pb-2 font-medium">Status</th>
                     <th className="pb-2 font-medium">Received</th>
                   </tr>
                 </thead>
@@ -253,7 +383,7 @@ export function ListingDetailContent({
                           </div>
                         ) : null}
                       </td>
-                      <td className="py-2.5 pr-3 capitalize text-[var(--workspace-shell-text)]/70">
+                      <td className="py-2.5 pr-3 text-[var(--workspace-shell-text)]/70 capitalize">
                         {enquiry.source}
                       </td>
                       <td className="py-2.5 pr-3 text-[var(--workspace-shell-text)]/70">
@@ -294,7 +424,7 @@ export function ListingDetailContent({
                     key={pub.id}
                     className="flex items-center justify-between text-sm"
                   >
-                    <span className="capitalize text-[var(--workspace-shell-text)]">
+                    <span className="text-[var(--workspace-shell-text)] capitalize">
                       {pub.portal.replace(/_/g, ' ')}
                     </span>
                     <span className="text-[var(--workspace-shell-text)]/60">
@@ -351,7 +481,29 @@ export function ListingDetailContent({
         onClose={() => setModalOpen(false)}
         accountId={accountId}
         listing={listing}
-        onSaved={() => router.refresh()}
+        onSaved={(saved) => {
+          setListing(saved);
+          router.refresh();
+        }}
+      />
+
+      <ListingUnitFormModal
+        open={unitModalOpen}
+        onClose={() => setUnitModalOpen(false)}
+        accountId={accountId}
+        listingId={listing.id}
+        unit={editingUnit}
+        onSaved={(saved) => {
+          setUnits((prev) => {
+            const idx = prev.findIndex((u) => u.id === saved.id);
+            if (idx >= 0) {
+              const next = [...prev];
+              next[idx] = saved;
+              return next;
+            }
+            return [...prev, saved];
+          });
+        }}
       />
     </div>
   );
@@ -361,7 +513,7 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
   return (
     <Card className={workspacePanelCard}>
       <CardContent className="p-4">
-        <p className="text-[11px] uppercase tracking-wide text-[var(--workspace-shell-text)]/45">
+        <p className="text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
           {label}
         </p>
         <p className="mt-1 text-lg font-semibold text-[var(--workspace-shell-text)]">
@@ -369,5 +521,37 @@ function SummaryCard({ label, value }: { label: string; value: string }) {
         </p>
       </CardContent>
     </Card>
+  );
+}
+
+function DetailItem({
+  label,
+  value,
+}: {
+  label: string;
+  value: string | null | undefined;
+}) {
+  return (
+    <div>
+      <dt className="text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
+        {label}
+      </dt>
+      <dd className="mt-0.5 text-[var(--workspace-shell-text)]">
+        {value?.trim() ? value : '—'}
+      </dd>
+    </div>
+  );
+}
+
+function CopyBlock({ title, body }: { title: string; body: string }) {
+  return (
+    <div>
+      <p className="text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
+        {title}
+      </p>
+      <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/70">
+        {body}
+      </p>
+    </div>
   );
 }

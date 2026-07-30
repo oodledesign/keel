@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react';
 import Placeholder from '@tiptap/extension-placeholder';
 import Underline from '@tiptap/extension-underline';
 import { Markdown } from '@tiptap/markdown';
-import { EditorContent, useEditor, type Editor } from '@tiptap/react';
+import { type Editor, EditorContent, useEditor } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 
 import { cn } from '@kit/ui/utils';

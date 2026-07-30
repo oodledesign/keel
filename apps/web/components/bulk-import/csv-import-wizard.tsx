@@ -41,6 +41,8 @@ type CsvImportWizardProps = {
     filename: string;
     csv: string;
   };
+  /** Override default CSV parsing (e.g. skip title rows in Numbers exports). */
+  parseCsvText?: (text: string) => { headers: string[]; rows: string[][] };
   onSuggestMapping: (input: {
     headers: string[];
     sampleRows: string[][];
@@ -101,6 +103,7 @@ export function CsvImportWizard({
   fieldOptions,
   enableDuplicateReview = false,
   template,
+  parseCsvText = parseCsv,
   onSuggestMapping,
   onPreview,
   onCommit,
@@ -141,7 +144,7 @@ export function CsvImportWizard({
     const reader = new FileReader();
     reader.onload = () => {
       const text = String(reader.result ?? '');
-      const parsed = parseCsv(text);
+      const parsed = parseCsvText(text);
       if (!parsed.headers.length || !parsed.rows.length) {
         setError('CSV must include a header row and at least one data row.');
         return;

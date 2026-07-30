@@ -2,14 +2,14 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { resolveEffectivePlayerConfig } from './player-config-data';
-import { resolveBunnyCdnHostname } from './videos-data';
+import type { VideoPlayerConfigValues } from '../player-config-types';
 import {
   resolveVideoThumbnailCandidates,
   resolveVideoThumbnailUrl,
 } from '../thumbnail';
 import type { VideoRow } from '../types';
-import type { VideoPlayerConfigValues } from '../player-config-types';
+import { resolveEffectivePlayerConfig } from './player-config-data';
+import { resolveBunnyCdnHostname } from './videos-data';
 
 export type PublicVideoPageData = {
   video: VideoRow;
@@ -55,8 +55,8 @@ export async function loadPublicVideoByToken(
 
   const useTimelinePlayer = Boolean(
     video.has_master &&
-      video.published_timeline &&
-      Number(video.published_revision ?? 0) > 0,
+    video.published_timeline &&
+    Number(video.published_revision ?? 0) > 0,
   );
 
   return {

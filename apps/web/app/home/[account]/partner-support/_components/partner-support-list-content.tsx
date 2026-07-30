@@ -9,8 +9,8 @@ import { LifeBuoy, Plus } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 
-import pathsConfig from '~/config/paths.config';
 import { SupportPartyIdentity } from '~/components/support/support-party-identity';
+import pathsConfig from '~/config/paths.config';
 import {
   TicketPriorityBadge,
   TicketStatusBadge,

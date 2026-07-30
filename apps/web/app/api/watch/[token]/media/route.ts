@@ -41,9 +41,7 @@ export async function GET(_request: Request, context: RouteContext) {
 
   const { data: master } = await admin
     .from('video_masters')
-    .select(
-      'storage_path, mic_storage_path, system_storage_path, duration_ms',
-    )
+    .select('storage_path, mic_storage_path, system_storage_path, duration_ms')
     .eq('video_id', video.id)
     .maybeSingle();
 

@@ -6,9 +6,9 @@ import {
   type VideoEditTimeline,
   normalizeTimeline,
 } from '~/lib/videos/edit-timeline';
+import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
 import { publishTimelineInstant } from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
-import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';

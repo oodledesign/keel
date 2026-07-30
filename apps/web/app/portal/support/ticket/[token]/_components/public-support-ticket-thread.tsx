@@ -12,9 +12,9 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
-import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
 import { SupportMessageAttachments } from '~/components/support/support-message-attachments';
+import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 import {
   TicketStatusBadge,
   ticketStatusLabel,

@@ -4,12 +4,16 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { buildPropertyHiveFeedUrl } from '~/lib/commercial/property-hive-feed';
+
 export type CommercialPublishingSettings = {
   propertyHive: {
     configured: boolean;
     siteUrl: string;
     username: string;
     officeId: string | null;
+    feedUrl: string | null;
+    feedEnabled: boolean;
   };
   rightmove: {
     configured: boolean;
@@ -42,7 +46,7 @@ export async function loadCommercialPublishingSettings(
   const { data, error } = await client
     .from('commercial_portal_credentials')
     .select(
-      'portal, site_url, username, office_id, branch_id, network_id, secret_ciphertext',
+      'portal, site_url, username, office_id, branch_id, network_id, secret_ciphertext, metadata',
     )
     .eq('account_id', accountId);
 
@@ -56,6 +60,11 @@ export async function loadCommercialPublishingSettings(
   const ph = byPortal.property_hive ?? null;
   const rm = byPortal.rightmove ?? null;
   const each = byPortal.each ?? null;
+  const phMetadata = (ph?.metadata ?? {}) as Record<string, unknown>;
+  const feedToken =
+    typeof phMetadata.xml_feed_token === 'string'
+      ? phMetadata.xml_feed_token
+      : null;
 
   return {
     propertyHive: {
@@ -63,6 +72,8 @@ export async function loadCommercialPublishingSettings(
       siteUrl: (ph?.site_url as string | undefined) ?? '',
       username: (ph?.username as string | undefined) ?? '',
       officeId: (ph?.office_id as string | null | undefined) ?? null,
+      feedUrl: feedToken ? buildPropertyHiveFeedUrl(feedToken) : null,
+      feedEnabled: Boolean(feedToken),
     },
     rightmove: {
       configured: isConfigured(rm),
