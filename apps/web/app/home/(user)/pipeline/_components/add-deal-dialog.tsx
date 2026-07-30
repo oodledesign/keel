@@ -38,7 +38,7 @@ import { createDeal } from '../actions';
 
 type ClientOption = { id: string; display_name: string | null };
 
-const STAGES = [
+const WORK_STAGES = [
   { key: 'lead', label: 'Lead' },
   { key: 'qualified', label: 'Qualified' },
   { key: 'call_booked', label: 'Call Booked' },
@@ -54,6 +54,8 @@ type Props = {
   accountSlug?: string;
   /** Workspace-scoped board passes its account id so existing clients can be linked. */
   accountId?: string;
+  stages?: ReadonlyArray<{ key: string; label: string }>;
+  defaultStage?: string;
 };
 
 export function AddDealDialog({
@@ -61,6 +63,8 @@ export function AddDealDialog({
   onDealCreated,
   accountSlug,
   accountId,
+  stages = WORK_STAGES,
+  defaultStage,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [open, setOpen] = useState(false);
@@ -68,7 +72,9 @@ export function AddDealDialog({
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
 
-  const [stage, setStage] = useState('lead');
+  const [stage, setStage] = useState(
+    defaultStage ?? stages[0]?.key ?? 'lead',
+  );
   const [businessId, setBusinessId] = useState(() =>
     pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
   );
@@ -386,7 +392,7 @@ export function AddDealDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                  {STAGES.map((s) => (
+                  {stages.map((s) => (
                     <SelectItem key={s.key} value={s.key}>
                       {s.label}
                     </SelectItem>

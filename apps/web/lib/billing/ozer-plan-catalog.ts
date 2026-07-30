@@ -7,12 +7,14 @@ export type OzerPlanFamily =
   | 'business'
   | 'business_lite'
   | 'property'
+  | 'commercial_property'
   | 'addon_rankly'
   | 'addon_feedflow'
   | 'addon_videos'
   | 'addon_signatures'
   | 'addon_site_studio'
-  | 'addon_email_assistant';
+  | 'addon_email_assistant'
+  | 'addon_portal_publishing';
 
 export type OzerPlanLimits = {
   maxMembers: number | null;
@@ -157,6 +159,36 @@ const PROPERTY: OzerPlanDefinition[] = [
     entitlementKey: 'workspace_property',
     limits: { maxMembers: null, maxProperties: 20, maxVideos: null },
     workspaceProfiles: ['work_property'],
+  },
+];
+
+const COMMERCIAL_PROPERTY: OzerPlanDefinition[] = [
+  {
+    productId: 'ozer-commercial-property-solo',
+    planId: 'commercial-property-solo-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.commercial_property_solo_monthly,
+    family: 'commercial_property',
+    entitlementKey: 'workspace_commercial_property',
+    limits: { maxMembers: 1, maxProperties: null, maxVideos: null },
+    workspaceProfiles: ['commercial_property'],
+  },
+  {
+    productId: 'ozer-commercial-property-team',
+    planId: 'commercial-property-team-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.commercial_property_team_monthly,
+    family: 'commercial_property',
+    entitlementKey: 'workspace_commercial_property',
+    limits: { maxMembers: 5, maxProperties: null, maxVideos: null },
+    workspaceProfiles: ['commercial_property'],
+  },
+  {
+    productId: 'ozer-commercial-property-office',
+    planId: 'commercial-property-office-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.commercial_property_office_monthly,
+    family: 'commercial_property',
+    entitlementKey: 'workspace_commercial_property',
+    limits: { maxMembers: 15, maxProperties: null, maxVideos: null },
+    workspaceProfiles: ['commercial_property'],
   },
 ];
 
@@ -311,6 +343,14 @@ const ADDONS: OzerPlanDefinition[] = [
     entitlementKey: 'addon_email_assistant',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null },
   },
+  {
+    productId: 'ozer-addon-portal-publishing',
+    planId: 'portal-publishing-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.addon_portal_publishing_monthly,
+    family: 'addon_portal_publishing',
+    entitlementKey: 'addon_portal_publishing',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+  },
 ];
 
 export const OZER_PLAN_CATALOG: OzerPlanDefinition[] = [
@@ -318,6 +358,7 @@ export const OZER_PLAN_CATALOG: OzerPlanDefinition[] = [
   ...BUSINESS_LITE,
   ...BUSINESS,
   ...PROPERTY,
+  ...COMMERCIAL_PROPERTY,
   ...ADDONS,
 ];
 
@@ -348,6 +389,8 @@ export function requiredEntitlementForProfile(
       return 'workspace_business';
     case 'work_property':
       return 'workspace_property';
+    case 'commercial_property':
+      return 'workspace_commercial_property';
     default:
       return null;
   }
@@ -395,7 +438,8 @@ export type OzerAddonKey =
   | 'addon_rankly'
   | 'addon_feedflow'
   | 'addon_videos'
-  | 'addon_site_studio';
+  | 'addon_site_studio'
+  | 'addon_portal_publishing';
 
 /** Personal-account add-ons (entitlement on the user's personal account id). */
 export type OzerPersonalAddonKey = 'addon_email_assistant';
@@ -467,6 +511,14 @@ export const OZER_ADDON_CATALOG: Array<{
     description:
       'AI website planning: brief → canvas sitemap → wireframes → style system → SEO/AEO → export packs for Webflow (Client-First), Astro, Next.js, and Cursor/Claude prompts.',
     fromPriceGbp: 19,
+  },
+  {
+    key: 'addon_portal_publishing',
+    productId: 'ozer-addon-portal-publishing',
+    name: 'Portal Publishing',
+    description:
+      'Publish commercial listings to Rightmove, EACH, and Property Hive from Ozer.',
+    fromPriceGbp: 79,
   },
 ];
 

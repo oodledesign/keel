@@ -35,6 +35,7 @@ export async function loadWorkspaceAddonState(
     'addon_feedflow',
     'addon_videos',
     'addon_site_studio',
+    'addon_portal_publishing',
   ];
 
   const addons = {} as Record<OzerAddonKey, boolean>;

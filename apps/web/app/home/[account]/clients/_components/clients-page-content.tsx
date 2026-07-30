@@ -138,6 +138,7 @@ export function ClientsPageContent({
   initialTotal = 0,
   pageTitle = 'Clients',
   addClientLabel = 'Add client',
+  showCommercialRole = false,
 }: {
   accountSlug: string;
   accountId: string;
@@ -148,6 +149,7 @@ export function ClientsPageContent({
   initialTotal?: number;
   pageTitle?: string;
   addClientLabel?: string;
+  showCommercialRole?: boolean;
 }) {
   const pathname = usePathname();
   const router = useRouter();
@@ -671,6 +673,7 @@ export function ClientsPageContent({
         accountSlug={accountSlug}
         createInitialValues={createFormInitialValues}
         onSaved={closeCreate}
+        showCommercialRole={showCommercialRole}
       />
     </div>
   );

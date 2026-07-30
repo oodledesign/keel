@@ -36,6 +36,7 @@ type DraftWorkspace = {
 const DEFAULT_NAMES: Record<WorkspaceProfile, string> = {
   work_design: 'My Business',
   work_property: 'My Properties',
+  commercial_property: 'Commercial Property',
   family: 'Our Family',
   community: 'Our Group',
 };
@@ -50,6 +51,7 @@ function planPriceGbp(productId: string) {
 const SOLO_PRICE = planPriceGbp('ozer-business-solo');
 const TEAM_PRICE = planPriceGbp('ozer-business-team');
 const PROPERTY_PRICE = planPriceGbp('ozer-property-starter');
+const COMMERCIAL_PRICE = planPriceGbp('ozer-commercial-property-team');
 const COMMUNITY_PRICE = planPriceGbp('ozer-community');
 
 function businessCardBlurb(fullBusinessMode: boolean, propertyMode: boolean) {
@@ -66,6 +68,12 @@ function businessCardBlurb(fullBusinessMode: boolean, propertyMode: boolean) {
     return `${solo} · ${team} — clients, projects & invoices`;
   }
   return 'Lite (free) for apps — or enable full CRM below (Solo / Team)';
+}
+
+function commercialCardBlurb() {
+  const price =
+    COMMERCIAL_PRICE != null ? `From ${formatGbp(COMMERCIAL_PRICE)}/mo — ` : '';
+  return `${price}disposals, requirements, viewings & Property Hive sync`;
 }
 
 function communityCardBlurb() {
@@ -93,6 +101,7 @@ function newDraft(
 function initialDrafts(intent?: SetupIntent): DraftWorkspace[] {
   const drafts: DraftWorkspace[] = [
     newDraft('work_design'),
+    newDraft('commercial_property'),
     newDraft('family'),
     newDraft('community'),
   ];
@@ -257,11 +266,12 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
           const isBusiness =
             draft.profile === 'work_design' ||
             draft.profile === 'work_property';
+          const isCommercial = draft.profile === 'commercial_property';
           const color = workspaceColorForSpaceType(
             spaceTypeFromProfile(draft.profile),
           );
           const Icon =
-            draft.profile === 'work_property'
+            draft.profile === 'work_property' || isCommercial
               ? Building2
               : draft.profile === 'family'
                 ? Heart
@@ -299,9 +309,11 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                     <span className="text-[15px] font-semibold text-[var(--workspace-shell-text)]">
                       {isBusiness
                         ? 'Business'
-                        : draft.profile === 'family'
-                          ? 'Family'
-                          : 'Community'}
+                        : isCommercial
+                          ? 'Commercial Property'
+                          : draft.profile === 'family'
+                            ? 'Family'
+                            : 'Community'}
                     </span>
                   </span>
                   <span className="mt-1 block text-sm text-[var(--workspace-shell-text-muted)]">
@@ -310,9 +322,11 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                           !!draft.fullBusinessMode,
                           draft.profile === 'work_property',
                         )
-                      : draft.profile === 'family'
-                        ? 'Free — household tasks, calendar and meal planning'
-                        : communityCardBlurb()}
+                      : isCommercial
+                        ? commercialCardBlurb()
+                        : draft.profile === 'family'
+                          ? 'Free — household tasks, calendar and meal planning'
+                          : communityCardBlurb()}
                   </span>
                 </span>
                 <span

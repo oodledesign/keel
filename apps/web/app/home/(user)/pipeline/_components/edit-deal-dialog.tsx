@@ -38,7 +38,7 @@ import { updateDeal } from '../actions';
 
 type ClientOption = { id: string; display_name: string | null };
 
-const STAGES = [
+const WORK_STAGES = [
   { key: 'lead', label: 'Lead' },
   { key: 'qualified', label: 'Qualified' },
   { key: 'call_booked', label: 'Call Booked' },
@@ -58,6 +58,7 @@ type Props = {
   onDealUpdated: (deal: PipelineDeal) => void;
   accountSlug?: string;
   accountId?: string;
+  stages?: ReadonlyArray<{ key: string; label: string }>;
 };
 
 export function EditDealDialog({
@@ -68,6 +69,7 @@ export function EditDealDialog({
   onDealUpdated,
   accountSlug,
   accountId,
+  stages = WORK_STAGES,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [isPending, startTransition] = useTransition();
@@ -386,7 +388,7 @@ export function EditDealDialog({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                  {STAGES.map((s) => (
+                  {stages.map((s) => (
                     <SelectItem key={s.key} value={s.key}>
                       {s.label}
                     </SelectItem>

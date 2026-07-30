@@ -35,6 +35,7 @@ export default async function ClientDetailPage({ params }: Props) {
           linkOptions={data.linkOptions}
           defaultLink={data.defaultLink}
           notesVariant={data.notesVariant}
+          showCommercialRole={data.showCommercialRole}
           ranklyEnabled={data.ranklyEnabled}
           ranklyProject={data.ranklyProject}
           ranklyImportSeed={data.ranklyImportSeed}

@@ -1,11 +1,17 @@
 import {
+  COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER,
   COMMUNITY_WORKSPACE_MODULE_ORDER,
   FAMILY_WORKSPACE_MODULE_ORDER,
   PROPERTY_WORKSPACE_MODULE_ORDER,
   WORK_BUSINESS_MODULE_ORDER,
 } from '~/config/workspace-module-order';
 
-export type WorkspaceSpaceType = 'work' | 'family' | 'community' | 'property';
+export type WorkspaceSpaceType =
+  | 'work'
+  | 'family'
+  | 'community'
+  | 'property'
+  | 'commercial-property';
 
 export function normalizeSpaceType(
   raw: string | null | undefined,
@@ -13,6 +19,7 @@ export function normalizeSpaceType(
   if (raw === 'family') return 'family';
   if (raw === 'community') return 'community';
   if (raw === 'property') return 'property';
+  if (raw === 'commercial-property') return 'commercial-property';
   return 'work';
 }
 
@@ -20,6 +27,7 @@ export function normalizeSpaceType(
 export type WorkspaceProfile =
   | 'work_design'
   | 'work_property'
+  | 'commercial_property'
   | 'family'
   | 'community';
 
@@ -42,6 +50,7 @@ export function isBusinessLiteType(raw: string | null | undefined): boolean {
 /**
  * Derive workspace profile from account.space_type and optional businesses.type.
  * Legacy `accounts.space_type = 'property'` maps to work + property business.
+ * `commercial-property` is a first-class peer space type.
  */
 export function resolveWorkspaceProfile(input: {
   space_type?: string | null;
@@ -50,6 +59,7 @@ export function resolveWorkspaceProfile(input: {
   const space = normalizeSpaceType(input.space_type);
   if (space === 'family') return 'family';
   if (space === 'community') return 'community';
+  if (space === 'commercial-property') return 'commercial_property';
 
   const biz = normalizeBusinessType(input.business_type);
   if (space === 'property' || biz === 'property') {
@@ -64,6 +74,8 @@ export function moduleKeysForProfile(
   profile: WorkspaceProfile,
 ): readonly string[] {
   switch (profile) {
+    case 'commercial_property':
+      return COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER;
     case 'work_property':
       return PROPERTY_WORKSPACE_MODULE_ORDER;
     case 'family':
@@ -85,6 +97,8 @@ export function getCanonicalModuleOrder(
 /** Human-readable type label for switcher / onboarding. */
 export function workspaceTypeLabel(profile: WorkspaceProfile): string {
   switch (profile) {
+    case 'commercial_property':
+      return 'Commercial Property';
     case 'work_property':
       return 'Property';
     case 'family':
@@ -100,9 +114,10 @@ export function workspaceTypeLabel(profile: WorkspaceProfile): string {
 /** Map profile back to accounts.space_type for new workspaces. */
 export function spaceTypeForProfile(
   profile: WorkspaceProfile,
-): 'work' | 'family' | 'community' {
+): 'work' | 'family' | 'community' | 'commercial-property' {
   if (profile === 'family') return 'family';
   if (profile === 'community') return 'community';
+  if (profile === 'commercial_property') return 'commercial-property';
   return 'work';
 }
 
@@ -118,6 +133,7 @@ export function businessTypeForProfile(
 export function spaceTypeFromProfile(
   profile: WorkspaceProfile,
 ): WorkspaceSpaceType {
+  if (profile === 'commercial_property') return 'commercial-property';
   if (profile === 'work_property') return 'property';
   if (profile === 'family') return 'family';
   if (profile === 'community') return 'community';
@@ -125,11 +141,21 @@ export function spaceTypeFromProfile(
 }
 
 export function isBusinessProfile(profile: WorkspaceProfile): boolean {
-  return profile === 'work_design' || profile === 'work_property';
+  return (
+    profile === 'work_design' ||
+    profile === 'work_property' ||
+    profile === 'commercial_property'
+  );
 }
 
 export function isGroupProfile(profile: WorkspaceProfile): boolean {
   return profile === 'family' || profile === 'community';
+}
+
+export function isCommercialPropertyProfile(
+  profile: WorkspaceProfile,
+): boolean {
+  return profile === 'commercial_property';
 }
 
 /** Notes/Docs UI variant for shared workspace content components. */

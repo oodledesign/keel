@@ -5,6 +5,7 @@ import { ozerColors, ozerWorkspaceSpaceColors } from '~/lib/ozer/design-tokens';
 const SPACE_COLORS: Record<WorkspaceSpaceType, string> = {
   work: ozerWorkspaceSpaceColors.work,
   property: ozerWorkspaceSpaceColors.property,
+  'commercial-property': ozerWorkspaceSpaceColors['commercial-property'],
   family: ozerWorkspaceSpaceColors.family,
   community: ozerWorkspaceSpaceColors.community,
 };
@@ -24,6 +25,7 @@ export function workspaceAccentColor(slug: string): string {
   const hues = [
     ozerWorkspaceSpaceColors.work,
     ozerWorkspaceSpaceColors.property,
+    ozerWorkspaceSpaceColors['commercial-property'],
     ozerWorkspaceSpaceColors.family,
     ozerWorkspaceSpaceColors.community,
     '#7C3AED',

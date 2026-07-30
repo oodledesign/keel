@@ -18,6 +18,7 @@ export type AdminUserInviteRow = {
 export const ADMIN_INVITE_WORKSPACE_PROFILES = [
   'work_design',
   'work_property',
+  'commercial_property',
   'family',
   'community',
 ] as const;
@@ -48,6 +49,7 @@ export const DEFAULT_WORKSPACE_NAMES: Record<
 > = {
   work_design: 'My Business',
   work_property: 'My Properties',
+  commercial_property: 'Commercial Property',
   family: 'Our Family',
   community: 'Our Group',
 };
@@ -61,6 +63,7 @@ export const ADMIN_INVITE_ADDON_OPTIONS: Array<{
   { key: 'addon_rankly', label: 'Rankly' },
   { key: 'addon_feedflow', label: 'Feedflow' },
   { key: 'addon_videos', label: 'Videos' },
+  { key: 'addon_portal_publishing', label: 'Portal Publishing' },
 ];
 
 export const ADMIN_INVITE_LANDING_MODULES = [
@@ -91,6 +94,7 @@ export const CreateAdminUserInviteSchema = z
         'addon_rankly',
         'addon_feedflow',
         'addon_videos',
+        'addon_portal_publishing',
       ]),
     ),
     landingModule: z
@@ -190,6 +194,8 @@ export function summarizeAccessConfig(
       );
     } else if (ws.profile === 'work_property') {
       parts.push('Property workspace');
+    } else if (ws.profile === 'commercial_property') {
+      parts.push('Commercial Property workspace');
     } else if (ws.profile === 'family') {
       parts.push('Family workspace');
     } else if (ws.profile === 'community') {

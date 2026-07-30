@@ -164,6 +164,9 @@ async function applyWorkspaceDefaults(
   } else if (profile === 'work_property') {
     productId = 'ozer-property-starter';
     planId = 'property-starter-monthly';
+  } else if (profile === 'commercial_property') {
+    productId = 'ozer-commercial-property-team';
+    planId = 'commercial-property-team-monthly';
   } else if (profile === 'community') {
     productId = 'ozer-community';
     planId = 'community-monthly';

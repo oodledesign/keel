@@ -24,7 +24,10 @@ async function TeamAccountPipelinePage({
 }: TeamAccountPipelinePageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, [
+    'work',
+    'commercial-property',
+  ]);
 
   if (!isWorkModuleEnabled(workspace.moduleSettings, 'pipeline')) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
@@ -32,6 +35,8 @@ async function TeamAccountPipelinePage({
 
   const accountId = workspace.account.id as string;
   const data = await loadPipelineDataForAccount(accountId);
+  const isCommercial =
+    workspace.workspaceProfile === 'commercial_property';
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0">
@@ -39,6 +44,7 @@ async function TeamAccountPipelinePage({
         initialData={data}
         accountSlug={accountSlug}
         accountId={accountId}
+        variant={isCommercial ? 'commercial' : 'work'}
       />
     </PageBody>
   );

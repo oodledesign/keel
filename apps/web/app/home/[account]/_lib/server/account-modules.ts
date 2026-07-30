@@ -32,7 +32,13 @@ export type AccountModuleKey =
   | 'properties'
   | 'calendar'
   | 'shopping'
-  | 'meal_plan';
+  | 'meal_plan'
+  | 'listings'
+  | 'requirements'
+  | 'viewings'
+  | 'leases'
+  | 'reports'
+  | 'proposals';
 
 /** Nav label "Projects" maps to module_key `jobs` in account_module_settings. */
 export function resolveAccountModuleKey(navKey: string): string {

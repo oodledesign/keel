@@ -232,6 +232,7 @@ async function loadClientDetailPageDataImpl(
     linkOptions,
     defaultLink,
     notesVariant: notesVariantFromProfile(workspaceProfile),
+    showCommercialRole: workspaceProfile === 'commercial_property',
     ranklyEnabled,
     ranklyProject,
     ranklyImportSeed,

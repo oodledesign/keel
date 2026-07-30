@@ -46,6 +46,10 @@ const WORKSPACE_PLAN_PRESETS: Partial<
     productId: 'ozer-property-starter',
     planId: 'property-starter-monthly',
   },
+  commercial_property: {
+    productId: 'ozer-commercial-property-team',
+    planId: 'commercial-property-team-monthly',
+  },
   community: {
     productId: 'ozer-community',
     planId: 'community-monthly',

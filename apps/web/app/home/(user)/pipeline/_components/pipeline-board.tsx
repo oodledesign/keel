@@ -42,6 +42,7 @@ import {
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
+import { COMMERCIAL_PIPELINE_BOARD_STAGES } from '~/lib/commercial/commercial-constants';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 
 import type {
@@ -54,7 +55,7 @@ import { EditDealDialog } from './edit-deal-dialog';
 
 // ─── Stage definitions ───────────────────────────────────────────────
 
-const STAGES = [
+const WORK_STAGES = [
   { key: 'lead', label: 'Lead', icon: ArrowRight },
   { key: 'qualified', label: 'Qualified', icon: ArrowRight },
   { key: 'call_booked', label: 'Call Booked', icon: Phone },
@@ -63,6 +64,21 @@ const STAGES = [
   { key: 'won', label: 'Won', icon: Trophy },
   { key: 'lost', label: 'Lost', icon: X },
 ] as const;
+
+const COMMERCIAL_STAGES = COMMERCIAL_PIPELINE_BOARD_STAGES.map((stage) => ({
+  key: stage.key,
+  label: stage.label,
+  icon:
+    stage.key === 'completed'
+      ? Trophy
+      : stage.key === 'fell_through'
+        ? X
+        : stage.key === 'hots'
+          ? Send
+          : stage.key === 'viewing'
+            ? Phone
+            : ArrowRight,
+}));
 
 const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
   {
@@ -89,6 +105,29 @@ const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
     },
     won: { dot: '#FF5C34', bar: '#FF5C34', tint: 'rgba(255, 92, 52, 0.16)' },
     lost: { dot: '#64748B', bar: '#64748B', tint: 'rgba(100,116,139,0.10)' },
+    enquiry: { dot: '#3B82F6', bar: '#3B82F6', tint: 'rgba(59,130,246,0.08)' },
+    viewing: {
+      dot: '#A855F7',
+      bar: '#A855F7',
+      tint: 'rgba(168,85,247,0.08)',
+    },
+    offer: { dot: '#F97316', bar: '#F97316', tint: 'rgba(249,115,22,0.08)' },
+    hots: { dot: '#EAB308', bar: '#EAB308', tint: 'rgba(234,179,8,0.08)' },
+    solicitors: {
+      dot: '#0F766E',
+      bar: '#0F766E',
+      tint: 'rgba(15,118,110,0.10)',
+    },
+    completed: {
+      dot: '#FF5C34',
+      bar: '#FF5C34',
+      tint: 'rgba(255, 92, 52, 0.16)',
+    },
+    fell_through: {
+      dot: '#64748B',
+      bar: '#64748B',
+      tint: 'rgba(100,116,139,0.10)',
+    },
   };
 
 const panelClass =
@@ -110,6 +149,7 @@ type Props = {
   /** When set, revalidates `/app/[account]/pipeline` after server actions */
   workspaceAccountSlug?: string;
   workspaceAccountId?: string;
+  variant?: 'work' | 'commercial';
 };
 
 export function PipelineBoard({
@@ -117,7 +157,10 @@ export function PipelineBoard({
   onDealWon,
   workspaceAccountSlug,
   workspaceAccountId,
+  variant = 'work',
 }: Props) {
+  const STAGES = variant === 'commercial' ? COMMERCIAL_STAGES : WORK_STAGES;
+  const terminalWonStage = variant === 'commercial' ? 'completed' : 'won';
   const [deals, setDeals] = useState<PipelineDeal[]>(initialData.deals);
   const [filter, setFilter] = useState<string>('all');
   const [activeDeal, setActiveDeal] = useState<PipelineDeal | null>(null);
@@ -155,11 +198,11 @@ export function PipelineBoard({
       setDeals((prev) => prev.map((d) => (d.id === updated.id ? updated : d)));
       setEditOpen(false);
       setDealToEdit(null);
-      if (updated.stage === 'won') {
+      if (updated.stage === terminalWonStage) {
         onDealWon?.(updated);
       }
     },
-    [onDealWon],
+    [onDealWon, terminalWonStage],
   );
 
   const sensors = useSensors(
@@ -187,7 +230,11 @@ export function PipelineBoard({
 
   const totalValue = filteredDeals.reduce((s, d) => s + d.value, 0);
   const activeCount = filteredDeals.filter(
-    (d) => d.stage !== 'won' && d.stage !== 'lost',
+    (d) =>
+      d.stage !== 'won' &&
+      d.stage !== 'lost' &&
+      d.stage !== 'completed' &&
+      d.stage !== 'fell_through',
   ).length;
 
   const onDragStart = useCallback(
@@ -237,7 +284,7 @@ export function PipelineBoard({
               d.id === dealId ? { ...d, stage: currentDeal.stage } : d,
             ),
           );
-        } else if (newStage === 'won') {
+        } else if (newStage === 'won' || newStage === 'completed') {
           onDealWon?.(updatedDeal);
         }
       });
@@ -304,6 +351,8 @@ export function PipelineBoard({
             onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
             accountSlug={workspaceAccountSlug}
             accountId={workspaceAccountId}
+            stages={STAGES.map((s) => ({ key: s.key, label: s.label }))}
+            defaultStage={STAGES[0]?.key}
           />
         </div>
       </div>
@@ -319,6 +368,7 @@ export function PipelineBoard({
         onDealUpdated={handleDealUpdated}
         accountSlug={workspaceAccountSlug}
         accountId={workspaceAccountId}
+        stages={STAGES.map((s) => ({ key: s.key, label: s.label }))}
       />
 
       {/* Kanban */}

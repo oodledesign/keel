@@ -16,6 +16,13 @@ import {
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
@@ -24,6 +31,11 @@ import {
   CONTACT_ROLE_PRESETS,
   type ContactRolePreset,
 } from '~/lib/clients/contact-roles';
+import {
+  COMMERCIAL_CLIENT_ROLES,
+  COMMERCIAL_CLIENT_ROLE_LABELS,
+  type CommercialClientRole,
+} from '~/lib/commercial/commercial-constants';
 
 import {
   createClient,
@@ -49,6 +61,7 @@ type Client = {
   postcode: string | null;
   country: string | null;
   picture_url: string | null;
+  commercial_role?: CommercialClientRole | null;
 };
 
 export type CreateInitialValues = {
@@ -73,6 +86,7 @@ export function ClientForm({
   client,
   initialValues,
   canEdit = true,
+  showCommercialRole = false,
   onSaved,
   onDeleted,
   onCancel,
@@ -83,6 +97,7 @@ export function ClientForm({
   client?: Client | null;
   initialValues?: CreateInitialValues;
   canEdit?: boolean;
+  showCommercialRole?: boolean;
   onSaved: () => void;
   onDeleted?: () => void;
   onCancel?: () => void;
@@ -121,6 +136,9 @@ export function ClientForm({
   const [city, setCity] = useState(client?.city ?? '');
   const [postcode, setPostcode] = useState(client?.postcode ?? '');
   const [country, setCountry] = useState(client?.country ?? '');
+  const [commercialRole, setCommercialRole] = useState<
+    CommercialClientRole | ''
+  >(client?.commercial_role ?? '');
 
   const [contactMode, setContactMode] = useState<PrimaryContactMode>('new');
   const [contactFirstName, setContactFirstName] = useState('');
@@ -227,6 +245,9 @@ export function ClientForm({
           city: city.trim() || undefined,
           postcode: postcode.trim() || undefined,
           country: country.trim() || undefined,
+          commercial_role: showCommercialRole
+            ? commercialRole || null
+            : undefined,
           contact:
             showCreateContact && contactMode === 'new'
               ? {
@@ -270,6 +291,9 @@ export function ClientForm({
           city: city.trim() || null,
           postcode: postcode.trim() || null,
           country: country.trim() || null,
+          commercial_role: showCommercialRole
+            ? commercialRole || null
+            : undefined,
         });
         toast.success('Client updated');
         onSaved();
@@ -688,6 +712,33 @@ export function ClientForm({
           readOnly={isReadOnly}
         />
       </div>
+
+      {showCommercialRole ? (
+        <div className="space-y-2">
+          <Label>Commercial role</Label>
+          <Select
+            value={commercialRole || 'none'}
+            onValueChange={(value) =>
+              setCommercialRole(
+                value === 'none' ? '' : (value as CommercialClientRole),
+              )
+            }
+            disabled={isReadOnly}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Select role" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="none">None</SelectItem>
+              {COMMERCIAL_CLIENT_ROLES.map((role) => (
+                <SelectItem key={role} value={role}>
+                  {COMMERCIAL_CLIENT_ROLE_LABELS[role]}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
 
       <div className="flex flex-wrap gap-2 pt-2">
         {!isReadOnly && (

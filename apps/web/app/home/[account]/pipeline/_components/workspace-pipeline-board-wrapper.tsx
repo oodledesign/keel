@@ -22,16 +22,23 @@ type Props = {
   initialData: PipelineData;
   accountSlug: string;
   accountId: string;
+  variant?: 'work' | 'commercial';
 };
 
 export function WorkspacePipelineBoardWrapper({
   initialData,
   accountSlug,
   accountId,
+  variant = 'work',
 }: Props) {
   const router = useRouter();
 
   const handleDealWon = async (deal: PipelineDeal) => {
+    if (variant === 'commercial') {
+      // Commercial deals complete without spinning up delivery projects.
+      return;
+    }
+
     // Opportunity for an existing client → spin up a delivery project.
     if (deal.clientId) {
       const result = await convertWonDealToProject(deal.id);
@@ -63,6 +70,7 @@ export function WorkspacePipelineBoardWrapper({
         onDealWon={handleDealWon}
         workspaceAccountSlug={accountSlug}
         workspaceAccountId={accountId}
+        variant={variant}
       />
     </div>
   );

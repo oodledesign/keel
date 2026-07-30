@@ -157,6 +157,9 @@ export function AdminCreateWorkspaceDialog(props: React.PropsWithChildren) {
                     <SelectContent>
                       <SelectItem value="work_design">Business</SelectItem>
                       <SelectItem value="work_property">Property</SelectItem>
+                      <SelectItem value="commercial_property">
+                        Commercial Property
+                      </SelectItem>
                       <SelectItem value="family">Family</SelectItem>
                       <SelectItem value="community">Community</SelectItem>
                     </SelectContent>

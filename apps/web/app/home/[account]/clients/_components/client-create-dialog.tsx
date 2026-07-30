@@ -22,6 +22,7 @@ export function ClientCreateDialog({
   accountSlug,
   createInitialValues,
   onSaved,
+  showCommercialRole = false,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -30,6 +31,7 @@ export function ClientCreateDialog({
   /** Prefill for create form (e.g. from pipeline deal won). */
   createInitialValues?: CreateInitialValues;
   onSaved: () => void;
+  showCommercialRole?: boolean;
 }) {
   const importHref = pathsConfig.app.accountClientsImport.replace(
     '[account]',
@@ -68,6 +70,7 @@ export function ClientCreateDialog({
           accountId={accountId}
           mode="create"
           initialValues={createInitialValues}
+          showCommercialRole={showCommercialRole}
           onSaved={onSaved}
           onCancel={() => onOpenChange(false)}
         />

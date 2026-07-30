@@ -59,6 +59,7 @@ const WORKSPACE_OPTIONS: Array<{
     businessMode: 'full',
   },
   { profile: 'work_property', label: 'Property' },
+  { profile: 'commercial_property', label: 'Commercial Property' },
   { profile: 'family', label: 'Family' },
   { profile: 'community', label: 'Community' },
 ];

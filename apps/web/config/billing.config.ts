@@ -319,6 +319,125 @@ export default createBillingSchema({
       ],
     },
     {
+      id: 'ozer-commercial-property-solo',
+      name: 'Commercial Property Solo',
+      description: 'Solo commercial agents managing instructions and marketing',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
+      plans: [
+        {
+          id: 'commercial-property-solo-monthly',
+          name: 'Solo Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          trialDays: TRIAL_DAYS,
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.commercial_property_solo_monthly,
+              name: 'Commercial Property Solo',
+              cost: 99,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '1 team member',
+        'Listings, pipeline & requirements',
+        'Property Hive website sync',
+        'Landlord share links',
+      ],
+    },
+    {
+      id: 'ozer-commercial-property-team',
+      name: 'Commercial Property Team',
+      description: 'Agency teams with shared pipeline and portal publishing',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
+      plans: [
+        {
+          id: 'commercial-property-team-monthly',
+          name: 'Team Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          trialDays: TRIAL_DAYS,
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.commercial_property_team_monthly,
+              name: 'Commercial Property Team',
+              cost: 199,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        'Up to 5 team members',
+        'Listings, pipeline & requirements',
+        'Property Hive website sync',
+        'Portal publishing add-on ready',
+      ],
+    },
+    {
+      id: 'ozer-commercial-property-office',
+      name: 'Commercial Property Office',
+      description: 'Multi-desk offices with full commercial workflow',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
+      plans: [
+        {
+          id: 'commercial-property-office-monthly',
+          name: 'Office Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          trialDays: TRIAL_DAYS,
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.commercial_property_office_monthly,
+              name: 'Commercial Property Office',
+              cost: 399,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        'Up to 15 team members',
+        'Listings, pipeline & requirements',
+        'Property Hive website sync',
+        'Priority support',
+      ],
+    },
+    {
+      id: 'ozer-addon-portal-publishing',
+      name: 'Portal Publishing',
+      description:
+        'Publish commercial listings to Rightmove, EACH, and Property Hive',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: true,
+      plans: [
+        {
+          id: 'portal-publishing-monthly',
+          name: 'Portal Publishing Monthly',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.addon_portal_publishing_monthly,
+              name: 'Portal Publishing',
+              cost: 79,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        'Rightmove RTDF feed (coming soon)',
+        'EACH portal (coming soon)',
+        'Property Hive WordPress sync',
+      ],
+    },
+    {
       id: 'ozer-addon-email-assistant',
       name: 'Email Assistant',
       description:

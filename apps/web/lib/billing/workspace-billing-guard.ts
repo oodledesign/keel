@@ -111,5 +111,8 @@ export function workspaceProfileLabel(workspace: TeamAccountWorkspace): string {
   if (type === 'family') return 'Family';
   if (type === 'community') return 'Community';
   if (workspace.workspaceProfile === 'work_property') return 'Property';
+  if (workspace.workspaceProfile === 'commercial_property') {
+    return 'Commercial Property';
+  }
   return 'Business';
 }

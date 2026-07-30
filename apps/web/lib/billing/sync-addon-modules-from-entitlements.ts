@@ -14,6 +14,8 @@ const ADDON_ENTITLEMENT_MODULES: Record<OzerAddonKey, string[]> = {
   addon_videos: ['videos'],
   // Dedicated Apps-nav module; Websites core module is enabled separately below.
   addon_site_studio: ['site_studio'],
+  // Portal publishing is commercial-workspace capability — no separate nav module yet.
+  addon_portal_publishing: [],
 };
 
 function isEntitlementActive(row: {

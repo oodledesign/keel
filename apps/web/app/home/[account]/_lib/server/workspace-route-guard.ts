@@ -7,10 +7,15 @@ import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from './account-modules';
 import { spaceTypeFromProfile } from './workspace-profile';
 
-/** Work + property business workspaces share clients, jobs, notes, docs, etc. */
+/** Work + landlord property + commercial agency share clients, notes, docs, etc. */
 export const BUSINESS_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
   'work',
   'property',
+  'commercial-property',
+];
+
+export const COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
+  'commercial-property',
 ];
 
 export const GROUP_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [

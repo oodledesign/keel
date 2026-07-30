@@ -27,6 +27,11 @@ export const WORKSPACE_MODULE_ORDER = [
   'properties',
   'tenants',
   'maintenance',
+  'listings',
+  'requirements',
+  'viewings',
+  'leases',
+  'reports',
   'calendar',
   'shopping',
   'meal_plan',
@@ -115,6 +120,27 @@ export const PROPERTY_WORKSPACE_MODULE_ORDER = [
 
 export type PropertyWorkspaceModuleOrderKey =
   (typeof PROPERTY_WORKSPACE_MODULE_ORDER)[number];
+
+/** commercial-property — commercial agency workspace (not landlord portfolio). */
+export const COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER = [
+  'dashboard',
+  'listings',
+  'pipeline',
+  'clients',
+  'requirements',
+  'viewings',
+  'proposals',
+  'leases',
+  'reports',
+  'docs',
+  'tasks',
+  'notes',
+  'team',
+  'settings',
+] as const;
+
+export type CommercialPropertyWorkspaceModuleOrderKey =
+  (typeof COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER)[number];
 
 /** Family workspace sidebar order (`account_module_settings`). */
 export const FAMILY_WORKSPACE_MODULE_ORDER = [

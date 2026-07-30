@@ -451,6 +451,7 @@ class ClientsService {
         city: input.city ?? null,
         postcode: input.postcode ?? null,
         country: input.country ?? null,
+        commercial_role: input.commercial_role ?? null,
         created_by: user.id,
       })
       .select()
@@ -679,6 +680,9 @@ class ClientsService {
     if (input.city !== undefined) payload.city = input.city;
     if (input.postcode !== undefined) payload.postcode = input.postcode;
     if (input.country !== undefined) payload.country = input.country;
+    if (input.commercial_role !== undefined) {
+      payload.commercial_role = input.commercial_role;
+    }
 
     const { data, error } = await this.adminDb
       .from('clients')

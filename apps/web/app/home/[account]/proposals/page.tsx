@@ -35,7 +35,8 @@ async function ProposalsPage({ params }: ProposalsPageProps) {
 
   if (
     !access.canViewInvoices ||
-    !isWorkModuleEnabled(workspace.moduleSettings, 'invoices')
+    (!isWorkModuleEnabled(workspace.moduleSettings, 'invoices') &&
+      !isWorkModuleEnabled(workspace.moduleSettings, 'proposals'))
   ) {
     redirect(
       getDefaultAccountPath(
@@ -68,11 +69,17 @@ async function ProposalsPage({ params }: ProposalsPageProps) {
     user.email ||
     'Team member';
 
+  const isCommercial = workspace.workspaceProfile === 'commercial_property';
+
   return (
     <>
       <TeamAccountLayoutPageHeader
-        title="Proposals"
-        description="Create and send proposals for client approval"
+        title={isCommercial ? 'HoTs / Proposals' : 'Proposals'}
+        description={
+          isCommercial
+            ? 'Draft and send heads of terms and proposals'
+            : 'Create and send proposals for client approval'
+        }
         account={accountSlug}
       />
 

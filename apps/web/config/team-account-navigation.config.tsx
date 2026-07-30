@@ -3,6 +3,10 @@ import { Settings } from 'lucide-react';
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
 
 import {
+  buildCommercialPropertySettingsChildren,
+  buildCommercialPropertySpaceNavChildren,
+} from '~/config/commercial-property-account-navigation.config';
+import {
   buildCommunitySettingsChildren,
   buildCommunitySpaceNavChildren,
 } from '~/config/community-account-navigation.config';
@@ -81,6 +85,12 @@ const getRoutes = (
         access,
         ms,
       ) as NavRouteChild[];
+    } else if (profile === 'commercial_property') {
+      applicationChildren = buildCommercialPropertySpaceNavChildren(
+        account,
+        access,
+        ms,
+      ) as NavRouteChild[];
     } else if (profile === 'family') {
       applicationChildren = buildFamilySpaceNavChildren(
         account,
@@ -103,24 +113,26 @@ const getRoutes = (
       ? buildWorkSettingsChildren(account, access, 'work')
       : profile === 'work_property'
         ? buildPropertySettingsChildren(account, access)
-        : profile === 'family'
-          ? buildFamilySettingsChildren(account, access)
-          : profile === 'community'
-            ? buildCommunitySettingsChildren(account, access)
-            : [
-                ...(access.canViewSettings
-                  ? [
-                      {
-                        label: 'Workspace settings',
-                        path: createPath(
-                          pathsConfig.app.accountSettings,
-                          account,
-                        ),
-                        Icon: <Settings className={iconClasses} />,
-                      },
-                    ]
-                  : []),
-              ];
+        : profile === 'commercial_property'
+          ? buildCommercialPropertySettingsChildren(account, access)
+          : profile === 'family'
+            ? buildFamilySettingsChildren(account, access)
+            : profile === 'community'
+              ? buildCommunitySettingsChildren(account, access)
+              : [
+                  ...(access.canViewSettings
+                    ? [
+                        {
+                          label: 'Workspace settings',
+                          path: createPath(
+                            pathsConfig.app.accountSettings,
+                            account,
+                          ),
+                          Icon: <Settings className={iconClasses} />,
+                        },
+                      ]
+                    : []),
+                ];
 
   if (settingsChildren.length > 0) {
     routes.push({

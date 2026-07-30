@@ -58,6 +58,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
   } = await loadClientsPageData(accountSlug);
 
   const isProperty = spaceType === 'property';
+  const isCommercial = spaceType === 'commercial-property';
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
@@ -71,6 +72,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
         initialTotal={initialTotal}
         pageTitle={isProperty ? 'Tenants' : 'Clients'}
         addClientLabel={isProperty ? 'Add tenant' : 'Add client'}
+        showCommercialRole={isCommercial}
       />
     </PageBody>
   );

@@ -13,6 +13,7 @@ export type AdminWorkspaceRole = (typeof ADMIN_WORKSPACE_ROLES)[number];
 export const ADMIN_WORKSPACE_PROFILES = [
   'work_design',
   'work_property',
+  'commercial_property',
   'family',
   'community',
 ] as const;

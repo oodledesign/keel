@@ -72,6 +72,10 @@ export const CreateClientSchema = z
     city: optionalString,
     postcode: optionalString,
     country: optionalString,
+    commercial_role: z
+      .enum(['landlord', 'tenant', 'investor', 'solicitor'])
+      .nullable()
+      .optional(),
     /** Primary contact created with a new business client. */
     contact: InitialContactSchema.optional(),
     /** Link an existing workspace contact as the primary contact. */
@@ -125,6 +129,10 @@ export const UpdateClientSchema = z
     city: optionalNullableString,
     postcode: optionalNullableString,
     country: optionalNullableString,
+    commercial_role: z
+      .enum(['landlord', 'tenant', 'investor', 'solicitor'])
+      .nullable()
+      .optional(),
   })
   .superRefine((data, ctx) => {
     if (data.client_type === 'individual' && data.first_name !== undefined) {

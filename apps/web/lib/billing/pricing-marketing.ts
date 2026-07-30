@@ -40,6 +40,9 @@ const PRODUCT_PROFILE: Record<string, WorkspaceProfile> = {
   'ozer-business-scale': 'work_design',
   'ozer-property-starter': 'work_property',
   'ozer-property-portfolio': 'work_property',
+  'ozer-commercial-property-solo': 'commercial_property',
+  'ozer-commercial-property-team': 'commercial_property',
+  'ozer-commercial-property-office': 'commercial_property',
 };
 
 export const MARKETING_FREE_TIER = {
@@ -220,7 +223,8 @@ export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
       profile === 'community' ||
       profile === 'family' ||
       profile === 'work_design' ||
-      profile === 'work_property'
+      profile === 'work_property' ||
+      profile === 'commercial_property'
         ? profile
         : undefined,
     productId,

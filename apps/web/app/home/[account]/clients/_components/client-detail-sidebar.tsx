@@ -266,6 +266,7 @@ export function ClientDetailSidebar({
   linkOptions,
   defaultLink,
   notesVariant = 'work',
+  showCommercialRole = false,
   ranklyEnabled = false,
   ranklyProject = null,
   ranklyImportSeed = null,
@@ -291,6 +292,7 @@ export function ClientDetailSidebar({
   linkOptions?: LinkOption[];
   defaultLink?: LinkValue;
   notesVariant?: WorkspaceNotesVariant;
+  showCommercialRole?: boolean;
   ranklyEnabled?: boolean;
   ranklyProject?: RanklyProjectRow | null;
   ranklyImportSeed?: RanklyClientImportOption | null;
@@ -1075,6 +1077,7 @@ export function ClientDetailSidebar({
             mode="edit"
             client={client}
             canEdit={canEditClients}
+            showCommercialRole={showCommercialRole}
             onSaved={() => {
               setShowEditForm(false);
               void fetchClient({ silent: true });

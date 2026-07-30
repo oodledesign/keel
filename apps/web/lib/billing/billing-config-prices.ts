@@ -133,11 +133,22 @@ export function listPropertyPrices(): BillingPlanPrice[] {
     .filter((p): p is BillingPlanPrice => Boolean(p));
 }
 
+export function listCommercialPropertyPrices(): BillingPlanPrice[] {
+  return [
+    'ozer-commercial-property-solo',
+    'ozer-commercial-property-team',
+    'ozer-commercial-property-office',
+  ]
+    .map((id) => productPrices(id))
+    .filter((p): p is BillingPlanPrice => Boolean(p));
+}
+
 export function listAllWorkspacePrices(): BillingPlanPrice[] {
   return [
     ...listCommunityPrices(),
     ...listBusinessWorkspacePrices(),
     ...listPropertyPrices(),
+    ...listCommercialPropertyPrices(),
   ];
 }
 
