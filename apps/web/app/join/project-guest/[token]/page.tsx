@@ -20,26 +20,32 @@ import { AcceptProjectGuestForm } from './_components/accept-project-guest-form'
 
 interface PageProps {
   params: Promise<{ token: string }>;
+  searchParams: Promise<{ error?: string }>;
 }
 
 async function AcceptProjectGuestPage(props: PageProps) {
   const { token } = await props.params;
+  const { error: queryError } = await props.searchParams;
+
   if (!token || token.length < 16) {
     notFound();
   }
 
+  const acceptPath = `${pathsConfig.app.joinProjectGuest.replace('[token]', token)}/accept`;
   const client = getSupabaseServerClient();
   const auth = await requireUser(client);
-  const nextPath = pathsConfig.app.joinProjectGuest.replace('[token]', token);
 
+  // Unauthenticated: send through magic-link / invite auth for the invited email
+  // (do not dump on generic sign-in).
   if (auth.error ?? !auth.data) {
     if (auth.error instanceof MultiFactorAuthError) {
-      const urlParams = new URLSearchParams({ next: nextPath });
+      const urlParams = new URLSearchParams({
+        next: pathsConfig.app.joinProjectGuest.replace('[token]', token),
+      });
       redirect(`${pathsConfig.auth.verifyMfa}?${urlParams.toString()}`);
     }
 
-    const urlParams = new URLSearchParams({ next: nextPath });
-    redirect(`${pathsConfig.auth.signIn}?${urlParams.toString()}`);
+    redirect(acceptPath);
   }
 
   await linkPendingProjectGuestsForUser();
@@ -49,8 +55,19 @@ async function AcceptProjectGuestPage(props: PageProps) {
     notFound();
   }
 
-  const projectLabel = guest.projectName ?? 'a project';
-  const ownerName = guest.accountName ?? 'A workspace';
+  // Refresh after auto-link may have flipped pending → accepted.
+  const latest =
+    guest.status === 'pending'
+      ? await getProjectGuestByToken(token)
+      : guest;
+  const current = latest ?? guest;
+
+  const projectLabel = current.projectName ?? 'a project';
+  const ownerName = current.accountName ?? 'A workspace';
+  const signedInEmail = auth.data.email?.trim().toLowerCase() ?? '';
+  const invitedEmail = current.invitedEmail.toLowerCase();
+  const emailMismatch =
+    Boolean(signedInEmail) && signedInEmail !== invitedEmail;
 
   return (
     <AuthLayoutShell Logo={AppLogo}>
@@ -63,15 +80,33 @@ async function AcceptProjectGuestPage(props: PageProps) {
           </p>
         </div>
 
-        {guest.status === 'revoked' ? (
+        {queryError ? (
+          <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 text-sm text-red-700 dark:text-red-300">
+            {queryError}
+          </div>
+        ) : null}
+
+        {emailMismatch ? (
+          <div className="space-y-4">
+            <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 text-sm">
+              This invite was sent to <strong>{current.invitedEmail}</strong>,
+              but you are signed in as <strong>{auth.data.email}</strong>. Sign
+              out and open the invite link again, or sign in with the invited
+              address.
+            </div>
+            <Button asChild variant="outline">
+              <Link href={acceptPath}>Continue with invited email</Link>
+            </Button>
+          </div>
+        ) : current.status === 'revoked' ? (
           <div className="rounded-lg border border-red-500/30 bg-red-500/5 p-4 text-sm">
             This invite is no longer valid (revoked).
           </div>
-        ) : guest.status === 'accepted' ? (
+        ) : current.status === 'accepted' ? (
           <div className="space-y-4">
-            <p className="text-sm">This invite has already been accepted.</p>
+            <p className="text-sm">You have access to this project.</p>
             <Button asChild>
-              <Link href={buildGuestProjectPath(guest.projectId)}>
+              <Link href={buildGuestProjectPath(current.projectId)}>
                 Open project
               </Link>
             </Button>

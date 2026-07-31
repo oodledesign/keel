@@ -114,7 +114,8 @@ async function assertCanManageProject(accountId: string, projectId: string) {
 }
 
 function buildAcceptUrl(token: string) {
-  const path = pathsConfig.app.joinProjectGuest.replace('[token]', token);
+  // Magic-link entry (same pattern as /join/accept for team invites).
+  const path = pathsConfig.app.joinProjectGuestAccept.replace('[token]', token);
   const base = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ?? '';
   return base ? `${base}${path}` : path;
 }
