@@ -208,34 +208,74 @@ async function loadMeetingTranscriptPageDataImpl(
   const transcriptsService = createMeetingTranscriptsService(client);
   const clientsService = createClientsService(client);
 
-  const [transcript, clientsResult, contactsResult, membersResult, summary] =
-    await Promise.all([
-      transcriptsService.getById({
-        accountId,
-        transcriptId,
-      }),
-      clientsService.listClients({
-        accountId,
-        page: 1,
-        pageSize: 100,
-      }),
-      clientsService.listWorkspaceContacts({ accountId }),
-      client.rpc('get_account_members', { account_slug: accountSlug }),
-      loadMeetingSummary(client, {
-        meetingTranscriptId: transcriptId,
-        accountId,
-      }),
-    ]);
+  const [
+    transcript,
+    clientsResult,
+    contactsResult,
+    membersResult,
+    summary,
+    actionItemsResult,
+  ] = await Promise.all([
+    transcriptsService.getById({
+      accountId,
+      transcriptId,
+    }),
+    clientsService.listClients({
+      accountId,
+      page: 1,
+      pageSize: 100,
+    }),
+    clientsService.listWorkspaceContacts({ accountId }),
+    client.rpc('get_account_members', { account_slug: accountSlug }),
+    loadMeetingSummary(client, {
+      meetingTranscriptId: transcriptId,
+      accountId,
+    }),
+    client
+      .from('meeting_action_items')
+      .select(
+        'id, suggested_title, suggested_description, suggested_due_date, status, planner_task_id',
+      )
+      .eq('meeting_transcript_id', transcriptId)
+      .eq('account_id', accountId)
+      .in('status', ['pending_review', 'approved', 'auto_published'])
+      .order('created_at', { ascending: true }),
+  ]);
 
   if (membersResult.error) {
     throw new Error(membersResult.error.message);
   }
 
+  if (actionItemsResult.error) {
+    throw new Error(actionItemsResult.error.message);
+  }
+
+  const meetingTasks = (
+    (actionItemsResult.data ?? []) as Array<Record<string, unknown>>
+  ).map((row) => ({
+    id: row.id as string,
+    title: ((row.suggested_title as string | null) ?? 'Task').trim() || 'Task',
+    description: (row.suggested_description as string | null)?.trim() || null,
+    dueDate: (row.suggested_due_date as string | null) ?? null,
+    status: (row.status as string) ?? 'pending_review',
+  }));
+
   return {
     accountId,
     accountSlug,
-    transcript,
+    transcript: transcript
+      ? {
+          ...transcript,
+          publicShareToken: access.canEditClients
+            ? transcript.publicShareToken
+            : null,
+          publicShareEnabled: access.canEditClients
+            ? transcript.publicShareEnabled
+            : false,
+        }
+      : transcript,
     summary,
+    meetingTasks,
     clients: mapClientOptions(clientsResult.data ?? []),
     contacts: mapContactOptions(contactsResult.data ?? []),
     members: mapMemberOptions(membersResult.data ?? []),

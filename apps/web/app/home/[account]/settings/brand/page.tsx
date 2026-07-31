@@ -1,16 +1,20 @@
 import { redirect } from 'next/navigation';
 
-import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { getAgencyBrandingByBusinessId } from '~/lib/agency-branding';
 import { loadAccountBranches } from '~/lib/brand/account-branches';
+import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
 } from '../../_lib/role-access';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
-import { BrandSettingsForm } from '../_components/brand-settings-form';
+import {
+  BUSINESS_WORKSPACE_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../_lib/server/workspace-route-guard';
 import { BrandBranchesSection } from '../_components/brand-branches-section';
+import { BrandSettingsForm } from '../_components/brand-settings-form';
 
 export const generateMetadata = async () => ({
   title: 'Brand settings',
@@ -23,7 +27,7 @@ interface BrandSettingsPageProps {
 export default async function BrandSettingsPage(props: BrandSettingsPageProps) {
   const { account } = await props.params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, BUSINESS_WORKSPACE_SPACE_TYPES);
 
   const access = getTeamAccountAccess(
     workspace.account as {
@@ -47,9 +51,10 @@ export default async function BrandSettingsPage(props: BrandSettingsPageProps) {
   }
 
   const accountId = workspace.account.id as string;
-  const [brand, branches] = await Promise.all([
+  const [brand, branches, agencyBranding] = await Promise.all([
     loadAccountBrandResolved(accountId),
     loadAccountBranches(accountId),
+    getAgencyBrandingByBusinessId(accountId),
   ]);
   const canEditBrand = access.isOwner || access.isAdmin;
 
@@ -59,6 +64,7 @@ export default async function BrandSettingsPage(props: BrandSettingsPageProps) {
         accountId={accountId}
         accountSlug={account}
         initialBrand={brand}
+        initialPortalSlug={agencyBranding?.slug ?? null}
         canEdit={canEditBrand}
       />
       <BrandBranchesSection

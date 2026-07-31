@@ -25,15 +25,26 @@ function normalizeHex(input: string): string {
   return t;
 }
 
+function normalizePortalSlug(input: string): string {
+  return input
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9-]+/g, '-')
+    .replace(/-+/g, '-')
+    .replace(/^-|-$/g, '');
+}
+
 export function BrandSettingsForm({
   accountId,
   accountSlug,
   initialBrand,
+  initialPortalSlug,
   canEdit,
 }: {
   accountId: string;
   accountSlug: string;
   initialBrand: AccountBrandResolved;
+  initialPortalSlug?: string | null;
   canEdit: boolean;
 }) {
   const router = useRouter();
@@ -47,6 +58,7 @@ export function BrandSettingsForm({
   const [accent, setAccent] = useState(initialBrand.accent_color);
   const [websiteUrl, setWebsiteUrl] = useState(initialBrand.website_url ?? '');
   const [address, setAddress] = useState(initialBrand.address ?? '');
+  const [portalSlug, setPortalSlug] = useState(initialPortalSlug ?? '');
   const [saving, setSaving] = useState(false);
 
   const save = async () => {
@@ -59,6 +71,7 @@ export function BrandSettingsForm({
         accent_color: accent.trim() ? normalizeHex(accent) : null,
         website_url: websiteUrl.trim() || null,
         address: address.trim() || null,
+        portal_slug: normalizePortalSlug(portalSlug) || '',
       });
       toast.success('Brand settings saved');
       router.refresh();
@@ -68,6 +81,8 @@ export function BrandSettingsForm({
       setSaving(false);
     }
   };
+
+  const portalPreview = normalizePortalSlug(portalSlug);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-4">
@@ -90,6 +105,30 @@ export function BrandSettingsForm({
       </p>
 
       <div className="grid gap-5 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
+        <div className="space-y-2">
+          <Label htmlFor="brand-portal-slug">Client portal slug</Label>
+          <p className="text-muted-foreground text-xs">
+            Used for View as client and your branded portal URL. Letters,
+            numbers, and hyphens only.
+          </p>
+          <Input
+            id="brand-portal-slug"
+            value={portalSlug}
+            onChange={(e) => setPortalSlug(e.target.value)}
+            onBlur={() => setPortalSlug(normalizePortalSlug(portalSlug))}
+            placeholder={accountSlug}
+            disabled={!canEdit}
+            spellCheck={false}
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
+          <p className="text-muted-foreground text-xs">
+            {portalPreview
+              ? `Portal path: /portal/${portalPreview}`
+              : 'Set a slug to enable View as client.'}
+          </p>
+        </div>
+
         <ColorField
           label="Primary"
           description="Main header colour for emails and signature panels."

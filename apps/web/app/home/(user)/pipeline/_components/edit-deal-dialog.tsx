@@ -201,7 +201,8 @@ export function EditDealDialog({
     const hotsRentPsf = parseOptionalNumber(form.get('hotsRentPsf'));
     const hotsSizeSqft = parseOptionalNumber(form.get('hotsSizeSqft'));
     const hotsLeaseYears = parseOptionalNumber(form.get('hotsLeaseYears'));
-    const hotsIncentives = (form.get('hotsIncentives') as string).trim() || null;
+    const hotsIncentives =
+      (form.get('hotsIncentives') as string).trim() || null;
     const hotsSolicitorName =
       (form.get('hotsSolicitorName') as string).trim() || null;
     const hotsTargetExchangeDate =
@@ -269,9 +270,11 @@ export function EditDealDialog({
               hotsTargetExchangeDate,
               hotsNotes,
               completedAt:
-                stage === 'completed'
+                stage === 'completed' || stage === 'signed'
                   ? (deal.completedAt ?? new Date().toISOString())
-                  : deal.completedAt,
+                  : stage === 'fell_through' || stage === 'discounted'
+                    ? null
+                    : deal.completedAt,
             }
           : {}),
       });

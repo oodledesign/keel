@@ -32,15 +32,19 @@ export const DISPOSAL_TYPE_LABELS: Record<DisposalType, string> = {
   investment: 'Investment',
 };
 
-/** Commercial agency deal pipeline stages (stored on pipeline_deals.stage). */
+/**
+ * Commercial agency deal pipeline stages (stored on pipeline_deals.stage).
+ * Defaults mirror Kato interest-schedule progress statuses.
+ */
 export const COMMERCIAL_PIPELINE_STAGES = [
+  'shortlisted',
   'enquiry',
   'viewing',
-  'offer',
-  'hots',
-  'solicitors',
-  'completed',
-  'fell_through',
+  'negotiating',
+  'under_offer',
+  'signed',
+  'idle',
+  'discounted',
 ] as const;
 
 export type CommercialPipelineStage =
@@ -50,24 +54,46 @@ export const COMMERCIAL_PIPELINE_STAGE_LABELS: Record<
   CommercialPipelineStage,
   string
 > = {
+  shortlisted: 'Shortlisted',
   enquiry: 'Enquiry',
   viewing: 'Viewing',
-  offer: 'Offer',
-  hots: 'HoTs',
-  solicitors: 'Solicitors',
-  completed: 'Completed',
-  fell_through: 'Fell through',
+  negotiating: 'Negotiating',
+  under_offer: 'Under offer',
+  signed: 'Signed',
+  idle: 'Idle',
+  discounted: 'Discounted',
 };
 
+/** Stages shown on the board by default (Idle hidden until unhidden). */
 export const COMMERCIAL_PIPELINE_BOARD_STAGES = [
-  { key: 'enquiry', label: 'Enquiry' },
-  { key: 'viewing', label: 'Viewing' },
-  { key: 'offer', label: 'Offer' },
-  { key: 'hots', label: 'HoTs' },
-  { key: 'solicitors', label: 'Solicitors' },
-  { key: 'completed', label: 'Completed' },
-  { key: 'fell_through', label: 'Fell through' },
+  { key: 'shortlisted', label: 'Shortlisted', hidden: false },
+  { key: 'enquiry', label: 'Enquiry', hidden: false },
+  { key: 'viewing', label: 'Viewing', hidden: false },
+  { key: 'negotiating', label: 'Negotiating', hidden: false },
+  { key: 'under_offer', label: 'Under offer', hidden: false },
+  { key: 'signed', label: 'Signed', hidden: false },
+  { key: 'idle', label: 'Idle', hidden: true },
+  { key: 'discounted', label: 'Discounted', hidden: false },
 ] as const;
+
+/** Terminal “won” stage for commercial deals. */
+export const COMMERCIAL_PIPELINE_WON_STAGE: CommercialPipelineStage = 'signed';
+
+/** Terminal “lost” stage for commercial deals. */
+export const COMMERCIAL_PIPELINE_LOST_STAGE: CommercialPipelineStage =
+  'discounted';
+
+/** Legacy stage keys remapped to Kato defaults (see migration). */
+export const COMMERCIAL_PIPELINE_LEGACY_STAGE_MAP: Record<
+  string,
+  CommercialPipelineStage
+> = {
+  offer: 'negotiating',
+  hots: 'under_offer',
+  solicitors: 'under_offer',
+  completed: 'signed',
+  fell_through: 'discounted',
+};
 
 export const DEFAULT_PIPELINE_BOARD_STAGES = [
   { key: 'lead', label: 'Lead' },

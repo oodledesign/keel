@@ -42,6 +42,8 @@ export type MeetingTranscript = {
   createdBy: string | null;
   createdAt: string;
   updatedAt: string;
+  publicShareEnabled: boolean;
+  publicShareToken: string | null;
 };
 
 export type MeetingTranscriptListItem = MeetingTranscript & {
@@ -66,6 +68,8 @@ type MeetingTranscriptRow = {
   created_by?: string | null;
   created_at: string;
   updated_at: string;
+  public_share_enabled?: boolean | null;
+  public_share_token?: string | null;
 };
 
 function normalizeCalendarAttendees(value: unknown): MeetingCalendarAttendee[] {
@@ -115,6 +119,8 @@ function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
     createdBy: row.created_by ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+    publicShareEnabled: Boolean(row.public_share_enabled),
+    publicShareToken: row.public_share_token ?? null,
   };
 }
 
@@ -905,6 +911,57 @@ class MeetingTranscriptsService {
     }
 
     return { clients, contacts, members };
+  }
+
+  async setPublicShare(input: {
+    accountId: string;
+    transcriptId: string;
+    enabled: boolean;
+  }): Promise<{
+    publicShareEnabled: boolean;
+    publicShareToken: string | null;
+  }> {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+
+    const existing = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+
+    if (!existing) {
+      throw new Error('Meeting not found');
+    }
+
+    const { generatePublicShareToken } =
+      await import('~/lib/videos/public-share.server');
+
+    const nextToken =
+      input.enabled && !existing.publicShareToken
+        ? generatePublicShareToken()
+        : existing.publicShareToken;
+
+    const { data, error } = await this.db
+      .from('meeting_transcripts')
+      .update({
+        public_share_enabled: input.enabled,
+        public_share_token: nextToken,
+      })
+      .eq('id', input.transcriptId)
+      .eq('account_id', input.accountId)
+      .select('public_share_enabled, public_share_token')
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    return {
+      publicShareEnabled: Boolean(
+        (data as { public_share_enabled?: boolean }).public_share_enabled,
+      ),
+      publicShareToken:
+        ((data as { public_share_token?: string | null }).public_share_token as
+          | string
+          | null) ?? null,
+    };
   }
 
   async delete(input: {

@@ -548,7 +548,19 @@ export function ClientDetailSidebar({
       return;
     }
 
-    toast.error('Set up your client portal slug in workspace branding first.');
+    const brandSettingsHref = pathsConfig.app.accountBrandSettings.replace(
+      '[account]',
+      accountSlug,
+    );
+
+    toast.error('Set a client portal slug in Brand settings first.', {
+      action: {
+        label: 'Open Brand',
+        onClick: () => {
+          window.location.href = brandSettingsHref;
+        },
+      },
+    });
   };
 
   const handleInviteToPortal = async () => {

@@ -50,12 +50,16 @@ export async function generateMeetingSummaryText(
   const meetingDate = input.meetingDate?.trim() || 'Unknown date';
 
   const system = `You write meeting recaps for busy professionals.
-Write 2-4 short paragraphs of plain prose (no bullet lists, no markdown headings).
-Cover: what was discussed, decisions made, and any open questions or follow-ups.
+Use light Markdown only:
+- ## Section headings for themes such as Discussion, Decisions, and Follow-ups (omit empty sections)
+- Short paragraphs where prose helps
+- Bullet lists (- item) for decisions, owners, open questions, and action items
+Do not use tables, code fences, or horizontal rules.
+Cover what was discussed, decisions made, and open questions or follow-ups.
 Attribute speakers by name when the transcript makes who said what clear.
 Write in a neutral, professional tone suitable for forwarding to meeting attendees.
 Do not invent facts, commitments, or attendees not supported by the transcript.
-If the transcript is too thin to summarize meaningfully, say so briefly in one paragraph.`;
+If the transcript is too thin to summarize meaningfully, say so briefly in one short paragraph.`;
 
   const userContent = `Meeting title: ${title}
 Meeting date: ${meetingDate}

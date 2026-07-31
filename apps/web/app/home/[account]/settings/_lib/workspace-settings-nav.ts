@@ -87,14 +87,17 @@ export function buildWorkspaceSettingsNav(input: {
       });
     }
 
-    if (spaceType === 'work') {
+    if (isBusinessProfile(workspaceProfile)) {
       items.push({
         id: 'brand',
         label: 'Brand',
         href: settingsPath(pathsConfig.app.accountBrandSettings, accountSlug),
       });
 
-      if (isWorkModuleEnabled(moduleSettings, 'tasks')) {
+      if (
+        spaceType === 'work' &&
+        isWorkModuleEnabled(moduleSettings, 'tasks')
+      ) {
         items.push({
           id: 'task-automation',
           label: 'Task automation',

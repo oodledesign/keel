@@ -200,8 +200,8 @@ function InviteMembersForm({
 
             return (
               <div data-test={'invite-member-form-item'} key={field.id}>
-                <div className={'flex items-end gap-x-2'}>
-                  <InputGroup className={'bg-background w-full'}>
+                <div className={'flex items-center gap-x-2'}>
+                  <InputGroup className={'bg-background min-w-0 flex-1'}>
                     <InputGroupAddon align="inline-start">
                       <Mail className="h-4 w-4" />
                     </InputGroupAddon>
@@ -210,7 +210,7 @@ function InviteMembersForm({
                       name={emailInputName}
                       render={({ field }) => {
                         return (
-                          <FormItem className="w-full">
+                          <FormItem className="min-w-0 flex-1">
                             <FormControl>
                               <InputGroupInput
                                 data-test={'invite-email-input'}
@@ -232,10 +232,12 @@ function InviteMembersForm({
                     name={roleInputName}
                     render={({ field }) => {
                       return (
-                        <FormItem>
+                        <FormItem className="shrink-0">
                           <FormControl>
                             <MembershipRoleSelector
-                              triggerClassName={'m-0 bg-muted'}
+                              triggerClassName={
+                                'm-0 w-[8.5rem] shrink-0 capitalize'
+                              }
                               roles={roles}
                               value={field.value}
                               onChange={(role) => {
@@ -250,7 +252,7 @@ function InviteMembersForm({
                     }}
                   />
 
-                  <div className={'flex items-end justify-end'}>
+                  <div className={'flex shrink-0 items-center justify-end'}>
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger asChild>

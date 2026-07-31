@@ -11,6 +11,7 @@ import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { WorkspacePipelineBoardWrapper } from './_components/workspace-pipeline-board-wrapper';
+import { loadPipelineBoardStageSettings } from './_lib/server/pipeline-stage-settings.loader';
 
 interface TeamAccountPipelinePageProps {
   params: Promise<{ account: string }>;
@@ -36,17 +37,24 @@ async function TeamAccountPipelinePage({
   const isCommercial = workspace.workspaceProfile === 'commercial_property';
 
   let listings: Array<{ id: string; name: string }> = [];
+  let stageConfig = undefined;
+
   if (isCommercial) {
     const client = getSupabaseServerClient();
-    const { data: listingRows } = await client
-      .from('commercial_listings')
-      .select('id, name')
-      .eq('account_id', accountId)
-      .order('name', { ascending: true });
-    listings = (listingRows ?? []).map((row) => ({
+    const [listingResult, stages] = await Promise.all([
+      client
+        .from('commercial_listings')
+        .select('id, name')
+        .eq('account_id', accountId)
+        .order('name', { ascending: true }),
+      loadPipelineBoardStageSettings(accountId),
+    ]);
+
+    listings = (listingResult.data ?? []).map((row) => ({
       id: row.id as string,
       name: (row.name as string) || 'Untitled disposal',
     }));
+    stageConfig = stages;
   }
 
   return (
@@ -57,6 +65,7 @@ async function TeamAccountPipelinePage({
         accountId={accountId}
         variant={isCommercial ? 'commercial' : 'work'}
         listings={listings}
+        stageConfig={stageConfig}
       />
     </PageBody>
   );

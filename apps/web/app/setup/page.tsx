@@ -1,5 +1,7 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import pathsConfig from '~/config/paths.config';
 import { parseSetupIntent } from '~/lib/billing/pricing-marketing';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
@@ -20,7 +22,27 @@ export default async function WorkspaceSetupPage({
   const needsSetup = await userRequiresWorkspaceSetup(user.id);
 
   if (!needsSetup) {
-    redirect(pathsConfig.app.home);
+    const admin = getSupabaseServerAdminClient();
+    const { data: guest } = await admin
+      .from('project_guests')
+      .select('project_id')
+      .eq('user_id', user.id)
+      .eq('status', 'accepted')
+      .order('accepted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const guestProjectId = (guest as { project_id?: string } | null)
+      ?.project_id;
+
+    redirect(
+      guestProjectId
+        ? pathsConfig.app.personalGuestProject.replace(
+            '[projectId]',
+            guestProjectId,
+          )
+        : pathsConfig.app.home,
+    );
   }
 
   const sp = await searchParams;

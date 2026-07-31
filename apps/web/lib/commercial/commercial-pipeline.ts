@@ -1,6 +1,6 @@
 /**
  * Commercial Property deal pipeline stages.
- * Prefer importing from commercial-constants for labels/board stages;
+ * Prefer importing from commercial-constants / pipeline-stage-config;
  * this module re-exports a labeled array for UI scaffolding.
  */
 import {
@@ -25,4 +25,14 @@ export function commercialPipelineStageLabel(id: string): string | undefined {
 export {
   COMMERCIAL_PIPELINE_BOARD_STAGES,
   COMMERCIAL_PIPELINE_STAGE_LABELS,
+  COMMERCIAL_PIPELINE_LOST_STAGE,
+  COMMERCIAL_PIPELINE_WON_STAGE,
 } from './commercial-constants';
+
+export {
+  defaultCommercialPipelineStageConfig,
+  resolveCommercialPipelineBoardStages,
+  resolveCommercialPipelineStageConfig,
+  type PipelineStageBoardItem,
+  type PipelineStageConfigItem,
+} from './pipeline-stage-config';

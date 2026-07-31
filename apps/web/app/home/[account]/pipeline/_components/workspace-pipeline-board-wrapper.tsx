@@ -9,6 +9,9 @@ import type {
   PipelineDeal,
 } from '~/home/(user)/_lib/server/pipeline.loader';
 import { convertWonDealToProject } from '~/home/(user)/pipeline/actions';
+import type { PipelineStageConfigItem } from '~/lib/commercial/pipeline-stage-config';
+
+import { CustomizePipelinePhasesDialog } from './customize-pipeline-phases-dialog';
 
 const PipelineBoard = dynamic(
   () =>
@@ -24,6 +27,7 @@ type Props = {
   accountId: string;
   variant?: 'work' | 'commercial';
   listings?: Array<{ id: string; name: string }>;
+  stageConfig?: PipelineStageConfigItem[];
 };
 
 export function WorkspacePipelineBoardWrapper({
@@ -32,6 +36,7 @@ export function WorkspacePipelineBoardWrapper({
   accountId,
   variant = 'work',
   listings = [],
+  stageConfig,
 }: Props) {
   const router = useRouter();
 
@@ -74,6 +79,16 @@ export function WorkspacePipelineBoardWrapper({
         workspaceAccountId={accountId}
         variant={variant}
         listings={listings}
+        stageConfig={stageConfig}
+        customizePhasesSlot={
+          variant === 'commercial' ? (
+            <CustomizePipelinePhasesDialog
+              accountId={accountId}
+              accountSlug={accountSlug}
+              initialStages={stageConfig ?? []}
+            />
+          ) : null
+        }
       />
     </div>
   );

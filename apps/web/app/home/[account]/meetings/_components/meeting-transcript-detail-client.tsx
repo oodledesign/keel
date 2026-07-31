@@ -7,8 +7,10 @@ import { useRouter } from 'next/navigation';
 
 import {
   Check,
+  CheckSquare,
   ChevronLeft,
   Copy,
+  Link2,
   Loader2,
   Mic,
   Pencil,
@@ -35,13 +37,16 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { MeetingSummaryMarkdown } from '~/components/meetings/meeting-summary-markdown';
 import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 import { ExtractWorkspaceTasksClient } from '~/home/[account]/tasks/_components/extract-workspace-tasks-client';
+import { buildPublicMeetingShareUrl } from '~/lib/recorder/public-meeting-share';
 import {
   type SpeakerMappings,
   type TranscriptSegment,
@@ -51,6 +56,7 @@ import {
 import {
   deleteMeetingTranscript,
   generateMeetingSummary,
+  setMeetingPublicShare,
   updateMeetingTranscript,
   updateMeetingTranscriptContent,
 } from '../../meeting-transcripts/_lib/server/server-actions';
@@ -72,6 +78,8 @@ type Transcript = {
   dealId: string | null;
   clientName: string | null;
   dealTitle: string | null;
+  publicShareEnabled?: boolean;
+  publicShareToken?: string | null;
 };
 
 type MeetingSummary = {
@@ -79,6 +87,14 @@ type MeetingSummary = {
   attendeeEmails: string[];
   generatedAt: string;
 } | null;
+
+type MeetingTask = {
+  id: string;
+  title: string;
+  description: string | null;
+  dueDate: string | null;
+  status: string;
+};
 
 type ClientOption = { id: string; name: string };
 type ContactOption = { id: string; name: string; email?: string | null };
@@ -88,6 +104,7 @@ type Props = {
   accountSlug: string;
   transcript: Transcript;
   summary: MeetingSummary;
+  meetingTasks?: MeetingTask[];
   clients: ClientOption[];
   contacts: ContactOption[];
   members: SpeakerPickerMember[];
@@ -104,6 +121,7 @@ export function MeetingTranscriptDetailClient({
   accountSlug,
   transcript,
   summary,
+  meetingTasks = [],
   clients,
   contacts: initialContacts,
   members,
@@ -122,6 +140,12 @@ export function MeetingTranscriptDetailClient({
   );
   const [contacts, setContacts] = useState<ContactOption[]>(initialContacts);
   const [copied, setCopied] = useState(false);
+  const [shareEnabled, setShareEnabled] = useState(
+    Boolean(transcript.publicShareEnabled),
+  );
+  const [shareToken, setShareToken] = useState(
+    transcript.publicShareToken ?? null,
+  );
   const [extractOpen, setExtractOpen] = useState(false);
   const [editingTranscript, setEditingTranscript] = useState(false);
   const [draftSegments, setDraftSegments] = useState<TranscriptSegment[]>(
@@ -133,6 +157,11 @@ export function MeetingTranscriptDetailClient({
     userId: member.userId,
     name: member.name,
   }));
+
+  useEffect(() => {
+    setShareEnabled(Boolean(transcript.publicShareEnabled));
+    setShareToken(transcript.publicShareToken ?? null);
+  }, [transcript.publicShareEnabled, transcript.publicShareToken]);
 
   useEffect(() => {
     setMappings(transcript.speakerMappings);
@@ -322,6 +351,51 @@ export function MeetingTranscriptDetailClient({
     });
   };
 
+  const togglePublicShare = (enabled: boolean) => {
+    if (!canEdit) return;
+
+    startTransition(async () => {
+      try {
+        const result = await setMeetingPublicShare({
+          accountId,
+          accountSlug,
+          transcriptId: transcript.id,
+          enabled,
+        });
+        setShareEnabled(result.publicShareEnabled);
+        setShareToken(result.publicShareToken);
+        toast.success(
+          result.publicShareEnabled
+            ? 'Public meeting link enabled'
+            : 'Public meeting link disabled',
+        );
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not update share link',
+        );
+      }
+    });
+  };
+
+  const copyPublicShareLink = async () => {
+    if (!shareToken || !shareEnabled) {
+      toast.error('Enable the public link first');
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(
+        buildPublicMeetingShareUrl(shareToken),
+      );
+      toast.success('Public link copied');
+    } catch {
+      toast.error('Could not copy link');
+    }
+  };
+
   return (
     <div
       className={cn(
@@ -356,10 +430,8 @@ export function MeetingTranscriptDetailClient({
                   </p>
                 ) : null}
               </div>
-              <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm leading-relaxed text-[var(--workspace-shell-text)]">
-                {summary.summaryText.split('\n\n').map((paragraph) => (
-                  <p key={paragraph.slice(0, 40)}>{paragraph}</p>
-                ))}
+              <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+                <MeetingSummaryMarkdown markdown={summary.summaryText} />
               </div>
             </section>
           ) : canEdit && displayContent.trim() ? (
@@ -386,6 +458,46 @@ export function MeetingTranscriptDetailClient({
                 )}
                 Generate meeting summary
               </Button>
+            </section>
+          ) : null}
+
+          {meetingTasks.length > 0 ? (
+            <section className={panelClassName}>
+              <div className="mb-4 flex items-center gap-2">
+                <CheckSquare className="h-4 w-4 text-[var(--ozer-accent)]" />
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Tasks from this meeting
+                </h2>
+              </div>
+              <ul className="space-y-3">
+                {meetingTasks.map((task) => (
+                  <li
+                    key={task.id}
+                    className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-3"
+                  >
+                    <div className="flex flex-wrap items-center justify-between gap-2">
+                      <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {task.title}
+                      </p>
+                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        {task.status === 'pending_review'
+                          ? 'Needs review'
+                          : 'Published'}
+                      </span>
+                    </div>
+                    {task.description ? (
+                      <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                        {task.description}
+                      </p>
+                    ) : null}
+                    {task.dueDate ? (
+                      <p className="mt-2 text-xs text-[var(--workspace-shell-text-muted)]">
+                        Due {task.dueDate}
+                      </p>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
             </section>
           ) : null}
 
@@ -624,6 +736,47 @@ export function MeetingTranscriptDetailClient({
               </Button>
             ) : null}
           </section>
+
+          {canEdit ? (
+            <section className={panelClassName}>
+              <div className="flex items-center gap-2">
+                <Link2 className="h-4 w-4 text-[var(--ozer-accent)]" />
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Public link
+                </h2>
+              </div>
+              <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+                Share a read-only page with the summary, transcript, and
+                published tasks. Anyone with the link can view it.
+              </p>
+              <div className="mt-4 flex items-center justify-between gap-3">
+                <Label
+                  htmlFor="meeting-public-share"
+                  className="text-sm text-[var(--workspace-shell-text)]"
+                >
+                  Enable public page
+                </Label>
+                <Switch
+                  id="meeting-public-share"
+                  checked={shareEnabled}
+                  disabled={pending}
+                  onCheckedChange={togglePublicShare}
+                />
+              </div>
+              {shareEnabled && shareToken ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="mt-3 w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                  onClick={() => void copyPublicShareLink()}
+                >
+                  <Copy className="mr-2 h-4 w-4" />
+                  Copy public link
+                </Button>
+              ) : null}
+            </section>
+          ) : null}
 
           <section className={panelClassName}>
             <div className="flex items-center gap-2">

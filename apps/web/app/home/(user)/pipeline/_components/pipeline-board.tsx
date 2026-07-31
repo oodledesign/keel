@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type ReactNode,
   useCallback,
   useEffect,
   useMemo,
@@ -42,7 +43,16 @@ import {
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
-import { COMMERCIAL_PIPELINE_BOARD_STAGES } from '~/lib/commercial/commercial-constants';
+import {
+  COMMERCIAL_PIPELINE_LOST_STAGE,
+  COMMERCIAL_PIPELINE_WON_STAGE,
+} from '~/lib/commercial/commercial-constants';
+import {
+  type PipelineStageConfigItem,
+  isCommercialTerminalStage,
+  normalizeCommercialPipelineStage,
+  resolveCommercialPipelineBoardStages,
+} from '~/lib/commercial/pipeline-stage-config';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 
 import type {
@@ -65,20 +75,13 @@ const WORK_STAGES = [
   { key: 'lost', label: 'Lost', icon: X },
 ] as const;
 
-const COMMERCIAL_STAGES = COMMERCIAL_PIPELINE_BOARD_STAGES.map((stage) => ({
-  key: stage.key,
-  label: stage.label,
-  icon:
-    stage.key === 'completed'
-      ? Trophy
-      : stage.key === 'fell_through'
-        ? X
-        : stage.key === 'hots'
-          ? Send
-          : stage.key === 'viewing'
-            ? Phone
-            : ArrowRight,
-}));
+function commercialStageIcon(key: string) {
+  if (key === COMMERCIAL_PIPELINE_WON_STAGE || key === 'signed') return Trophy;
+  if (key === COMMERCIAL_PIPELINE_LOST_STAGE || key === 'discounted') return X;
+  if (key === 'viewing') return Phone;
+  if (key === 'under_offer' || key === 'negotiating') return Send;
+  return ArrowRight;
+}
 
 const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
   {
@@ -105,25 +108,38 @@ const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
     },
     won: { dot: '#FF5C34', bar: '#FF5C34', tint: 'rgba(255, 92, 52, 0.16)' },
     lost: { dot: '#64748B', bar: '#64748B', tint: 'rgba(100,116,139,0.10)' },
+    shortlisted: {
+      dot: '#64748B',
+      bar: '#64748B',
+      tint: 'rgba(100,116,139,0.08)',
+    },
     enquiry: { dot: '#3B82F6', bar: '#3B82F6', tint: 'rgba(59,130,246,0.08)' },
     viewing: {
       dot: '#A855F7',
       bar: '#A855F7',
       tint: 'rgba(168,85,247,0.08)',
     },
-    offer: { dot: '#F97316', bar: '#F97316', tint: 'rgba(249,115,22,0.08)' },
-    hots: { dot: '#EAB308', bar: '#EAB308', tint: 'rgba(234,179,8,0.08)' },
-    solicitors: {
-      dot: '#0F766E',
-      bar: '#0F766E',
-      tint: 'rgba(15,118,110,0.10)',
+    negotiating: {
+      dot: '#F97316',
+      bar: '#F97316',
+      tint: 'rgba(249,115,22,0.08)',
     },
-    completed: {
+    under_offer: {
+      dot: '#EAB308',
+      bar: '#EAB308',
+      tint: 'rgba(234,179,8,0.08)',
+    },
+    signed: {
       dot: '#FF5C34',
       bar: '#FF5C34',
       tint: 'rgba(255, 92, 52, 0.16)',
     },
-    fell_through: {
+    idle: {
+      dot: '#94A3B8',
+      bar: '#94A3B8',
+      tint: 'rgba(148,163,184,0.10)',
+    },
+    discounted: {
       dot: '#64748B',
       bar: '#64748B',
       tint: 'rgba(100,116,139,0.10)',
@@ -151,6 +167,9 @@ type Props = {
   workspaceAccountId?: string;
   variant?: 'work' | 'commercial';
   listings?: Array<{ id: string; name: string }>;
+  /** Commercial stage overrides (rename/hide). */
+  stageConfig?: PipelineStageConfigItem[];
+  customizePhasesSlot?: ReactNode;
 };
 
 export function PipelineBoard({
@@ -160,9 +179,9 @@ export function PipelineBoard({
   workspaceAccountId,
   variant = 'work',
   listings = [],
+  stageConfig,
+  customizePhasesSlot,
 }: Props) {
-  const STAGES = variant === 'commercial' ? COMMERCIAL_STAGES : WORK_STAGES;
-  const terminalWonStage = variant === 'commercial' ? 'completed' : 'won';
   const [deals, setDeals] = useState<PipelineDeal[]>(initialData.deals);
   const [filter, setFilter] = useState<string>('all');
   const [activeDeal, setActiveDeal] = useState<PipelineDeal | null>(null);
@@ -170,6 +189,43 @@ export function PipelineBoard({
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
+
+  const terminalWonStage =
+    variant === 'commercial' ? COMMERCIAL_PIPELINE_WON_STAGE : 'won';
+
+  const STAGES = useMemo(() => {
+    if (variant !== 'commercial') {
+      return WORK_STAGES.map((stage) => ({
+        key: stage.key,
+        label: stage.label,
+        icon: stage.icon,
+      }));
+    }
+
+    return resolveCommercialPipelineBoardStages({
+      stored: stageConfig,
+      dealStages: deals.map((deal) => deal.stage),
+    }).map((stage) => ({
+      key: stage.key,
+      label: stage.label,
+      icon: commercialStageIcon(stage.key),
+    }));
+  }, [variant, stageConfig, deals]);
+
+  const selectableStages = useMemo(() => {
+    if (variant !== 'commercial') {
+      return STAGES.map((stage) => ({ key: stage.key, label: stage.label }));
+    }
+
+    const visible = resolveCommercialPipelineBoardStages({
+      stored: stageConfig,
+    }).filter((stage) => !stage.forceVisible);
+
+    return (visible.length > 0 ? visible : STAGES).map((stage) => ({
+      key: stage.key,
+      label: stage.label,
+    }));
+  }, [variant, stageConfig, STAGES]);
 
   const listingNameById = useMemo(() => {
     const map = new Map<string, string>();
@@ -231,20 +287,22 @@ export function PipelineBoard({
       map.set(stage.key, []);
     }
     for (const deal of filteredDeals) {
-      const arr = map.get(deal.stage);
+      const stageKey =
+        variant === 'commercial'
+          ? normalizeCommercialPipelineStage(deal.stage)
+          : deal.stage;
+      const arr = map.get(stageKey);
       if (arr) arr.push(deal);
-      else map.set(deal.stage, [deal]);
+      else map.set(stageKey, [deal]);
     }
     return map;
-  }, [filteredDeals]);
+  }, [filteredDeals, STAGES, variant]);
 
   const totalValue = filteredDeals.reduce((s, d) => s + d.value, 0);
-  const activeCount = filteredDeals.filter(
-    (d) =>
-      d.stage !== 'won' &&
-      d.stage !== 'lost' &&
-      d.stage !== 'completed' &&
-      d.stage !== 'fell_through',
+  const activeCount = filteredDeals.filter((d) =>
+    variant === 'commercial'
+      ? !isCommercialTerminalStage(d.stage)
+      : d.stage !== 'won' && d.stage !== 'lost',
   ).length;
 
   const onDragStart = useCallback(
@@ -294,7 +352,11 @@ export function PipelineBoard({
               d.id === dealId ? { ...d, stage: currentDeal.stage } : d,
             ),
           );
-        } else if (newStage === 'won' || newStage === 'completed') {
+        } else if (
+          newStage === 'won' ||
+          newStage === COMMERCIAL_PIPELINE_WON_STAGE ||
+          newStage === 'completed'
+        ) {
           onDealWon?.(updatedDeal);
         }
       });
@@ -338,6 +400,7 @@ export function PipelineBoard({
               </button>
             ))}
           </div>
+          {customizePhasesSlot}
           {workspaceAccountSlug && variant !== 'commercial' ? (
             <Button
               asChild
@@ -361,8 +424,8 @@ export function PipelineBoard({
             onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
             accountSlug={workspaceAccountSlug}
             accountId={workspaceAccountId}
-            stages={STAGES.map((s) => ({ key: s.key, label: s.label }))}
-            defaultStage={STAGES[0]?.key}
+            stages={selectableStages}
+            defaultStage={selectableStages[0]?.key}
             listings={listings}
             commercial={variant === 'commercial'}
           />
@@ -380,7 +443,7 @@ export function PipelineBoard({
         onDealUpdated={handleDealUpdated}
         accountSlug={workspaceAccountSlug}
         accountId={workspaceAccountId}
-        stages={STAGES.map((s) => ({ key: s.key, label: s.label }))}
+        stages={selectableStages}
         listings={listings}
         commercial={variant === 'commercial'}
       />

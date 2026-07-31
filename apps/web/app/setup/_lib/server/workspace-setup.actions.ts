@@ -92,6 +92,8 @@ export async function completeWorkspaceSetup(
       planId: string;
       interval?: 'month' | 'year';
     };
+    /** Continue with personal account only — no team workspaces. */
+    skipTeamWorkspaces?: boolean;
   },
 ): Promise<{
   error?: string;
@@ -99,13 +101,69 @@ export async function completeWorkspaceSetup(
   redirectTo?: string;
   billingRequired?: boolean;
 }> {
-  if (!selections.length) {
+  const skipTeamWorkspaces = Boolean(options?.skipTeamWorkspaces);
+
+  if (!skipTeamWorkspaces && !selections.length) {
     return { error: 'Select at least one workspace type.' };
   }
 
   const user = await requireUserInServerComponent();
   const admin = getSupabaseServerAdminClient();
   const client = getSupabaseServerClient();
+
+  if (skipTeamWorkspaces) {
+    const { error: settingsError } = await client.from('user_settings').upsert(
+      {
+        user_id: user.id,
+        workspace_setup_skipped_at: new Date().toISOString(),
+        use_ozer_for_work: false,
+        use_ozer_for_family: false,
+        use_ozer_for_community: false,
+      },
+      { onConflict: 'user_id' },
+    );
+
+    if (settingsError) {
+      console.error('[workspace-setup] skip settings:', settingsError.message);
+      return { error: settingsError.message };
+    }
+
+    const { error: memErr } = await admin
+      .from('accounts_memberships')
+      .update({ onboarding_completed: true })
+      .eq('user_id', user.id);
+
+    if (memErr) {
+      console.error('[workspace-setup] onboarding_completed:', memErr.message);
+      return { error: memErr.message };
+    }
+
+    const { data: guest } = await admin
+      .from('project_guests')
+      .select('project_id')
+      .eq('user_id', user.id)
+      .eq('status', 'accepted')
+      .order('accepted_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const guestProjectId = (guest as { project_id?: string } | null)
+      ?.project_id;
+
+    revalidatePath(pathsConfig.app.workspaceSetup);
+    revalidatePath(pathsConfig.app.home);
+
+    return {
+      success: true,
+      redirectTo: guestProjectId
+        ? pathsConfig.app.personalGuestProject.replace(
+            '[projectId]',
+            guestProjectId,
+          )
+        : pathsConfig.app.home,
+      billingRequired: false,
+    };
+  }
 
   const useWork = selections.some(
     (s) => s.profile === 'work_design' || s.profile === 'work_property',
@@ -161,6 +219,7 @@ export async function completeWorkspaceSetup(
     use_ozer_for_work: useWork,
     use_ozer_for_family: useFamily,
     use_ozer_for_community: useCommunity,
+    workspace_setup_skipped_at: null,
   });
 
   // Mark every membership complete (cleans up duplicate workspaces from earlier retries).

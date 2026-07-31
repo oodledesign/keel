@@ -6,6 +6,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { Trans } from '@kit/ui/trans';
+import { cn } from '@kit/ui/utils';
 
 type Role = string;
 
@@ -15,23 +16,28 @@ export function MembershipRoleSelector({
   currentUserRole,
   onChange,
   triggerClassName,
+  contentClassName,
 }: {
   roles: Role[];
   value: Role;
   currentUserRole?: Role;
   onChange: (role: Role) => unknown;
   triggerClassName?: string;
+  contentClassName?: string;
 }) {
   return (
     <Select value={value} onValueChange={onChange}>
       <SelectTrigger
-        className={triggerClassName}
+        className={cn('min-w-[8.5rem]', triggerClassName)}
         data-test={'role-selector-trigger'}
       >
-        <SelectValue />
+        <SelectValue placeholder="Role" />
       </SelectTrigger>
 
-      <SelectContent>
+      <SelectContent
+        position="popper"
+        className={cn('min-w-[8.5rem]', contentClassName)}
+      >
         {roles.map((role) => {
           return (
             <SelectItem
@@ -39,10 +45,9 @@ export function MembershipRoleSelector({
               data-test={`role-option-${role}`}
               disabled={currentUserRole === role}
               value={role}
+              className="capitalize"
             >
-              <span className={'text-sm capitalize'}>
-                <Trans i18nKey={`common:roles.${role}.label`} defaults={role} />
-              </span>
+              <Trans i18nKey={`common:roles.${role}.label`} defaults={role} />
             </SelectItem>
           );
         })}

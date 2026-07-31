@@ -4,11 +4,11 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
   COMMERCIAL_PIPELINE_STAGES,
-  ENQUIRY_SOURCE_LABELS,
-  REQUIREMENT_STATUS_LABELS,
   type CommercialPipelineStage,
+  ENQUIRY_SOURCE_LABELS,
   type EnquirySource,
   type ListingStatus,
+  REQUIREMENT_STATUS_LABELS,
   type RequirementStatus,
   type ViewingOutcome,
 } from '~/lib/commercial/commercial-constants';
@@ -607,8 +607,10 @@ export function createCommercialReportsService(client: SupabaseClient) {
         inRange(viewingAnchorDate(row), prevStart, prevEnd),
       );
 
-      const countOutcome = (list: ViewingInsightRow[], outcome: ViewingOutcome) =>
-        list.filter((row) => row.outcome === outcome).length;
+      const countOutcome = (
+        list: ViewingInsightRow[],
+        outcome: ViewingOutcome,
+      ) => list.filter((row) => row.outcome === outcome).length;
       const countStatus = (list: ViewingInsightRow[], status: string) =>
         list.filter((row) => row.status === status).length;
 
@@ -755,7 +757,9 @@ export function createCommercialReportsService(client: SupabaseClient) {
 
       const rows = (data ?? []) as EnquiryInsightRow[];
       const receivedIn = (from: Date, to: Date) =>
-        rows.filter((row) => inRange(row.received_at || row.created_at, from, to));
+        rows.filter((row) =>
+          inRange(row.received_at || row.created_at, from, to),
+        );
 
       const current = receivedIn(start, end);
       const previous = receivedIn(prevStart, prevEnd);
@@ -882,8 +886,10 @@ export function createCommercialReportsService(client: SupabaseClient) {
           stalePercent: buildKpi(
             'Stale %',
             Math.round(stalePercent(allUnactioned) * 10) / 10,
-            Math.round(stalePercent(previous.filter((r) => r.status === 'unactioned')) * 10) /
-              10,
+            Math.round(
+              stalePercent(previous.filter((r) => r.status === 'unactioned')) *
+                10,
+            ) / 10,
             'percent',
           ),
         },
@@ -988,7 +994,12 @@ export function createCommercialReportsService(client: SupabaseClient) {
         period,
         periodLabel: periodLabelFor(period),
         kpis: {
-          active: buildKpi('Active', active.length, createdCurrent.length, 'number'),
+          active: buildKpi(
+            'Active',
+            active.length,
+            createdCurrent.length,
+            'number',
+          ),
           onHold: buildKpi('On hold', onHold.length, 0, 'number'),
           archived: buildKpi('Archived', archived.length, 0, 'number'),
           signed: buildKpi('Signed', signed.length, 0, 'number'),
@@ -1027,17 +1038,23 @@ export function createCommercialReportsService(client: SupabaseClient) {
 
       const rows = (data ?? []) as EnquiryInsightRow[];
       const inPeriod = (from: Date, to: Date) =>
-        rows.filter((row) => inRange(row.received_at || row.created_at, from, to));
+        rows.filter((row) =>
+          inRange(row.received_at || row.created_at, from, to),
+        );
 
       const current = inPeriod(start, end);
       const previous = inPeriod(prevStart, prevEnd);
 
       const enquiryVolume = (row: EnquiryInsightRow) => {
-        if (row.target_size_max_sqft != null) return Number(row.target_size_max_sqft);
-        if (row.target_size_min_sqft != null) return Number(row.target_size_min_sqft);
+        if (row.target_size_max_sqft != null)
+          return Number(row.target_size_max_sqft);
+        if (row.target_size_min_sqft != null)
+          return Number(row.target_size_min_sqft);
         const listing = row.commercial_listings;
-        if (listing?.size_max_sqft != null) return Number(listing.size_max_sqft);
-        if (listing?.size_min_sqft != null) return Number(listing.size_min_sqft);
+        if (listing?.size_max_sqft != null)
+          return Number(listing.size_max_sqft);
+        if (listing?.size_min_sqft != null)
+          return Number(listing.size_min_sqft);
         return 0;
       };
 
@@ -1065,7 +1082,9 @@ export function createCommercialReportsService(client: SupabaseClient) {
             label,
             leadCount: cur.length,
             previousLeadCount: prev.length,
-            volumeSqft: Math.round(cur.reduce((s, r) => s + enquiryVolume(r), 0)),
+            volumeSqft: Math.round(
+              cur.reduce((s, r) => s + enquiryVolume(r), 0),
+            ),
             previousVolumeSqft: Math.round(
               prev.reduce((s, r) => s + enquiryVolume(r), 0),
             ),
@@ -1103,7 +1122,7 @@ export function createCommercialReportsService(client: SupabaseClient) {
             'id, stage, value, created_at, updated_at, completed_at, commercial_listing_id, commercial_requirement_id, commercial_listings(size_min_sqft, size_max_sqft, disposal_type, on_market_at, created_at), commercial_requirements(created_at, source, size_min_sqft, size_max_sqft)',
           )
           .eq('account_id', input.accountId)
-          .eq('stage', 'completed'),
+          .eq('stage', 'signed'),
         client
           .from('commercial_leases')
           .select(
@@ -1137,8 +1156,7 @@ export function createCommercialReportsService(client: SupabaseClient) {
 
       const dealsIn = (from: Date, to: Date) =>
         deals.filter((row) => {
-          const anchor =
-            row.completed_at || row.updated_at || row.created_at;
+          const anchor = row.completed_at || row.updated_at || row.created_at;
           return (
             inRange(anchor, from, to) &&
             matchesKind(row.commercial_listings?.disposal_type)
@@ -1161,8 +1179,10 @@ export function createCommercialReportsService(client: SupabaseClient) {
 
       const dealSize = (row: DealInsightRow) => {
         const listing = row.commercial_listings;
-        if (listing?.size_max_sqft != null) return Number(listing.size_max_sqft);
-        if (listing?.size_min_sqft != null) return Number(listing.size_min_sqft);
+        if (listing?.size_max_sqft != null)
+          return Number(listing.size_max_sqft);
+        if (listing?.size_min_sqft != null)
+          return Number(listing.size_min_sqft);
         const req = row.commercial_requirements;
         if (req?.size_max_sqft != null) return Number(req.size_max_sqft);
         if (req?.size_min_sqft != null) return Number(req.size_min_sqft);
@@ -1171,15 +1191,18 @@ export function createCommercialReportsService(client: SupabaseClient) {
 
       const leaseSize = (row: LeaseInsightRow) => {
         const listing = row.commercial_listings;
-        if (listing?.size_max_sqft != null) return Number(listing.size_max_sqft);
-        if (listing?.size_min_sqft != null) return Number(listing.size_min_sqft);
+        if (listing?.size_max_sqft != null)
+          return Number(listing.size_max_sqft);
+        if (listing?.size_min_sqft != null)
+          return Number(listing.size_min_sqft);
         return null;
       };
 
       const leaseYears = (row: LeaseInsightRow) => {
         if (!row.lease_start || !row.lease_end) return null;
         const ms =
-          new Date(row.lease_end).getTime() - new Date(row.lease_start).getTime();
+          new Date(row.lease_end).getTime() -
+          new Date(row.lease_start).getTime();
         return Math.max(0, ms / (1000 * 60 * 60 * 24 * 365.25));
       };
 

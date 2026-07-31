@@ -282,12 +282,10 @@ export const generateMeetingSummary = enhanceAction(
       throw new Error('This meeting has no transcript to summarise');
     }
 
-    const { getSupabaseServerAdminClient } = await import(
-      '@kit/supabase/server-admin-client'
-    );
-    const { generateAndPersistMeetingSummary } = await import(
-      '~/lib/recorder/meeting-summary'
-    );
+    const { getSupabaseServerAdminClient } =
+      await import('@kit/supabase/server-admin-client');
+    const { generateAndPersistMeetingSummary } =
+      await import('~/lib/recorder/meeting-summary');
 
     await generateAndPersistMeetingSummary(getSupabaseServerAdminClient(), {
       meetingTranscriptId: transcript.id,
@@ -306,4 +304,28 @@ export const generateMeetingSummary = enhanceAction(
     return { ok: true as const };
   },
   { schema: GenerateSummarySchema },
+);
+
+const SetPublicShareSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200).optional(),
+  transcriptId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+
+export const setMeetingPublicShare = enhanceAction(
+  async (input) => {
+    const result = await getService().setPublicShare({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+      enabled: input.enabled,
+    });
+
+    if (input.accountSlug) {
+      revalidateMeetingPages(input.accountSlug, input.transcriptId);
+    }
+
+    return result;
+  },
+  { schema: SetPublicShareSchema },
 );
