@@ -112,6 +112,24 @@ export const ENQUIRY_STATUS_LABELS: Record<EnquiryStatus, string> = {
   archived: 'Archived',
 };
 
+export const ENQUIRY_SOURCES = [
+  'manual',
+  'website',
+  'rightmove',
+  'each',
+  'other',
+] as const;
+
+export type EnquirySource = (typeof ENQUIRY_SOURCES)[number];
+
+export const ENQUIRY_SOURCE_LABELS: Record<EnquirySource, string> = {
+  manual: 'Manual',
+  website: 'Website',
+  rightmove: 'Rightmove',
+  each: 'EACH',
+  other: 'Other',
+};
+
 /** Requirement pipeline stages (commercial_requirements.stage). */
 export const REQUIREMENT_STATUSES = [
   'unactioned',
@@ -149,6 +167,17 @@ export const VIEWING_STATUSES = [
 ] as const;
 
 export type ViewingStatus = (typeof VIEWING_STATUSES)[number];
+
+/** Sentiment captured after a viewing (stored on commercial_viewings.outcome). */
+export const VIEWING_OUTCOMES = ['positive', 'neutral', 'negative'] as const;
+
+export type ViewingOutcome = (typeof VIEWING_OUTCOMES)[number];
+
+export const VIEWING_OUTCOME_LABELS: Record<ViewingOutcome, string> = {
+  positive: 'Positive',
+  neutral: 'Neutral',
+  negative: 'Negative',
+};
 
 export const LEASE_STATUSES = ['active', 'expired', 'terminated'] as const;
 

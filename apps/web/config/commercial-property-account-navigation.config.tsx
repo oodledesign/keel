@@ -68,7 +68,7 @@ export function buildCommercialPropertySpaceNavChildren(
     pipeline: () =>
       access.canViewDashboard && isEnabled(ms, 'pipeline')
         ? {
-            label: 'Pipeline',
+            label: 'Deals',
             path: createPath(pathsConfig.app.accountPipeline, account),
             Icon: <ClipboardList className={iconClasses} />,
           }
@@ -76,7 +76,7 @@ export function buildCommercialPropertySpaceNavChildren(
     clients: () =>
       access.canViewClients && isEnabled(ms, 'clients')
         ? {
-            label: 'Clients',
+            label: 'Contacts',
             path: createPath(pathsConfig.app.accountClients, account),
             Icon: <UserRound className={iconClasses} />,
           }
@@ -108,7 +108,7 @@ export function buildCommercialPropertySpaceNavChildren(
     leases: () =>
       access.canViewDashboard && isEnabled(ms, 'leases')
         ? {
-            label: 'Leases',
+            label: 'Sales register',
             path: createPath(pathsConfig.app.accountLeases, account),
             Icon: <FileText className={iconClasses} />,
           }
@@ -116,7 +116,7 @@ export function buildCommercialPropertySpaceNavChildren(
     reports: () =>
       access.canViewDashboard && isEnabled(ms, 'reports')
         ? {
-            label: 'Reports',
+            label: 'Insights',
             path: createPath(pathsConfig.app.accountCommercialReports, account),
             Icon: <LineChart className={iconClasses} />,
           }

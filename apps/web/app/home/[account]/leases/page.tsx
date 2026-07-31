@@ -17,7 +17,7 @@ interface LeasesPageProps {
   params: Promise<{ account: string }>;
 }
 
-export const generateMetadata = async () => ({ title: 'Leases' });
+export const generateMetadata = async () => ({ title: 'Sales register' });
 
 async function LeasesPage({ params }: LeasesPageProps) {
   const { account: slug } = await params;
@@ -39,8 +39,8 @@ async function LeasesPage({ params }: LeasesPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         account={slug}
-        title="Leases"
-        description="Track active and historic commercial leases."
+        title="Sales register"
+        description="Completed lettings and lease records for the agency."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
         <LeasesList

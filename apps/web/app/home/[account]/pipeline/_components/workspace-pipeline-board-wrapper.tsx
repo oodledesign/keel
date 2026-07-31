@@ -23,6 +23,7 @@ type Props = {
   accountSlug: string;
   accountId: string;
   variant?: 'work' | 'commercial';
+  listings?: Array<{ id: string; name: string }>;
 };
 
 export function WorkspacePipelineBoardWrapper({
@@ -30,6 +31,7 @@ export function WorkspacePipelineBoardWrapper({
   accountSlug,
   accountId,
   variant = 'work',
+  listings = [],
 }: Props) {
   const router = useRouter();
 
@@ -71,6 +73,7 @@ export function WorkspacePipelineBoardWrapper({
         workspaceAccountSlug={accountSlug}
         workspaceAccountId={accountId}
         variant={variant}
+        listings={listings}
       />
     </div>
   );

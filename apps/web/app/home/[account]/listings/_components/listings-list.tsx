@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -156,11 +162,10 @@ export function ListingsList({
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-            Listings
+            Disposals
           </h2>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {filtered.length}{' '}
-            {filtered.length === 1 ? 'disposal' : 'disposals'}
+            {filtered.length} {filtered.length === 1 ? 'disposal' : 'disposals'}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -203,7 +208,7 @@ export function ListingsList({
           </Button>
           <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
             <Plus className="h-4 w-4" />
-            Add listing
+            Add disposal
           </Button>
         </div>
       </div>
@@ -229,7 +234,7 @@ export function ListingsList({
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
             <p className="font-medium text-[var(--workspace-shell-text)]">
-              No listings yet
+              No disposals yet
             </p>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
               Add a disposal instruction to get started.
@@ -239,7 +244,7 @@ export function ListingsList({
               className={`mt-4 ${workspaceBtnPrimaryMd}`}
             >
               <Plus className="h-4 w-4" />
-              Add listing
+              Add disposal
             </Button>
           </CardContent>
         </Card>
@@ -289,9 +294,18 @@ export function ListingsList({
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2.5">
                         <span
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-lg ${workspaceIconChip}`}
+                          className={`flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-lg ${workspaceIconChip}`}
                         >
-                          <Building2 className="h-3.5 w-3.5" />
+                          {listing.coverUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={listing.coverUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Building2 className="h-3.5 w-3.5" />
+                          )}
                         </span>
                         <div className="min-w-0">
                           <Link
@@ -370,9 +384,18 @@ function ListingCard({
     >
       <Link
         href={href}
-        className="relative flex aspect-[16/10] items-center justify-center bg-[var(--workspace-shell-sidebar-accent)]"
+        className="relative flex aspect-[16/10] items-center justify-center overflow-hidden bg-[var(--workspace-shell-sidebar-accent)]"
       >
-        <Building2 className="h-10 w-10 text-[var(--workspace-shell-text)]/15" />
+        {listing.coverUrl ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img
+            src={listing.coverUrl}
+            alt=""
+            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+          />
+        ) : (
+          <Building2 className="h-10 w-10 text-[var(--workspace-shell-text)]/15" />
+        )}
         <span className="absolute top-3 left-3 inline-flex rounded-full bg-[var(--workspace-shell-panel)]/95 px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)] shadow-sm">
           {LISTING_STATUS_LABELS[listing.status]}
         </span>

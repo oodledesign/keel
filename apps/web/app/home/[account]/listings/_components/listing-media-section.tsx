@@ -2,11 +2,14 @@
 
 import { useEffect, useRef, useState, useTransition } from 'react';
 
+import { useRouter } from 'next/navigation';
+
 import {
   FileText,
   ImageIcon,
   Loader2,
   Plus,
+  Star,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -33,6 +36,7 @@ import type { CommercialListingMedia } from '../_lib/server/listings.service';
 import {
   createListingMedia,
   deleteListingMedia,
+  setListingMediaCover,
 } from '../_lib/server/server-actions';
 
 const MAX_BYTES = 20 * 1024 * 1024;
@@ -64,6 +68,7 @@ export function ListingMediaSection({
   initialMedia: CommercialListingMedia[];
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
   const [media, setMedia] = useState(initialMedia);
   const [mediaType, setMediaType] = useState<MediaType>('image');
   const [error, setError] = useState<string | null>(null);
@@ -87,9 +92,7 @@ export function ListingMediaSection({
             throw new Error(`${file.name} is larger than 20MB`);
           }
           if (file.type && !ALLOWED.has(file.type)) {
-            throw new Error(
-              `${file.name}: use JPEG, PNG, WebP, GIF, or PDF`,
-            );
+            throw new Error(`${file.name}: use JPEG, PNG, WebP, GIF, or PDF`);
           }
 
           const path = `${accountId}/${listingId}/${crypto.randomUUID()}-${safeFileName(file.name)}`;
@@ -117,10 +120,28 @@ export function ListingMediaSection({
         }
 
         setMedia((prev) => [...prev, ...uploaded]);
+        router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Upload failed');
       } finally {
         if (inputRef.current) inputRef.current.value = '';
+      }
+    });
+  };
+
+  const handleSetCover = (mediaId: string) => {
+    startTransition(async () => {
+      try {
+        await setListingMediaCover({ mediaId, listingId, accountId });
+        setMedia((prev) =>
+          prev.map((item) => ({
+            ...item,
+            isCover: item.id === mediaId,
+          })),
+        );
+        router.refresh();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Could not set cover');
       }
     });
   };
@@ -233,21 +254,43 @@ export function ListingMediaSection({
                     <div className="min-w-0">
                       <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
                         {item.fileName ?? 'Untitled'}
+                        {item.isCover ? (
+                          <span className="ml-1.5 text-[10px] font-semibold text-[var(--ozer-accent)] uppercase">
+                            Cover
+                          </span>
+                        ) : null}
                       </p>
                       <p className="text-[10px] text-[var(--workspace-shell-text)]/45 uppercase">
                         {MEDIA_TYPE_LABELS[item.mediaType]}
                       </p>
                     </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      disabled={pending}
-                      className="h-7 w-7 text-rose-400"
-                      onClick={() => handleDelete(item.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex shrink-0 items-center gap-0.5">
+                      {isImage ? (
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          disabled={pending || item.isCover}
+                          title="Set as list thumbnail"
+                          className="h-7 w-7 text-[var(--workspace-shell-text-muted)]"
+                          onClick={() => handleSetCover(item.id)}
+                        >
+                          <Star
+                            className={`h-3.5 w-3.5 ${item.isCover ? 'fill-[var(--ozer-accent)] text-[var(--ozer-accent)]' : ''}`}
+                          />
+                        </Button>
+                      ) : null}
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        disabled={pending}
+                        className="h-7 w-7 text-rose-400"
+                        onClick={() => handleDelete(item.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               );

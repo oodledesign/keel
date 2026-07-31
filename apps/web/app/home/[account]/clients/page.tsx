@@ -70,8 +70,16 @@ async function ClientsPage({ params }: ClientsPageProps) {
         isContractorView={isContractorView}
         initialOverview={initialOverview}
         initialTotal={initialTotal}
-        pageTitle={isProperty ? 'Tenants' : 'Clients'}
-        addClientLabel={isProperty ? 'Add tenant' : 'Add client'}
+        pageTitle={
+          isProperty ? 'Tenants' : isCommercial ? 'Contacts' : 'Clients'
+        }
+        addClientLabel={
+          isProperty
+            ? 'Add tenant'
+            : isCommercial
+              ? 'Add contact'
+              : 'Add client'
+        }
         showCommercialRole={isCommercial}
         showLinkedInImport={!isCommercial}
       />

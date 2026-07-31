@@ -42,9 +42,13 @@ export const CreateListingSchema = z.object({
   summary: z.string().optional().nullable(),
   description: z.string().optional().nullable(),
   locationCopy: z.string().optional().nullable(),
+  keyPoints: z.array(z.string().min(1)).optional().nullable(),
   notes: z.string().optional().nullable(),
   externalId: z.string().optional().nullable(),
   instructingClientId: z.string().uuid().optional().nullable(),
+  county: z.string().optional().nullable(),
+  latitude: z.number().optional().nullable(),
+  longitude: z.number().optional().nullable(),
 });
 
 export const CreateListingUnitSchema = z.object({
@@ -119,6 +123,13 @@ export const CreateListingMediaSchema = z.object({
   fileName: z.string().optional().nullable(),
   mimeType: z.string().optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
+  isCover: z.boolean().optional(),
+});
+
+export const SetListingMediaCoverSchema = z.object({
+  mediaId: z.string().uuid(),
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
 });
 
 export const DeleteListingMediaSchema = z.object({
@@ -131,6 +142,43 @@ export const DeleteListingUnitSchema = z.object({
   accountId: z.string().uuid(),
 });
 
+export const CreateListingEnquirySchema = z.object({
+  accountId: z.string().uuid(),
+  listingId: z.string().uuid(),
+  contactName: z.string().min(1).optional().nullable(),
+  contactEmail: z.string().email().optional().nullable().or(z.literal('')),
+  contactPhone: z.string().optional().nullable(),
+  message: z.string().optional().nullable(),
+  source: z
+    .enum(['manual', 'website', 'rightmove', 'each', 'other'])
+    .optional(),
+  status: z.enum(['unactioned', 'on_schedule', 'archived']).optional(),
+});
+
+export const UpdateListingEnquirySchema = z.object({
+  enquiryId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  status: z.enum(['unactioned', 'on_schedule', 'archived']).optional(),
+  contactName: z.string().min(1).optional().nullable(),
+  contactEmail: z.string().email().optional().nullable().or(z.literal('')),
+  contactPhone: z.string().optional().nullable(),
+  message: z.string().optional().nullable(),
+  source: z
+    .enum(['manual', 'website', 'rightmove', 'each', 'other'])
+    .optional(),
+});
+
 export type CreateListingMediaInput = z.infer<typeof CreateListingMediaSchema>;
+export type SetListingMediaCoverInput = z.infer<
+  typeof SetListingMediaCoverSchema
+>;
 export type CreateListingUnitInput = z.infer<typeof CreateListingUnitSchema>;
 export type UpdateListingUnitInput = z.infer<typeof UpdateListingUnitSchema>;
+export type CreateListingInput = z.infer<typeof CreateListingSchema>;
+export type UpdateListingInput = z.infer<typeof UpdateListingSchema>;
+export type CreateListingEnquiryInput = z.infer<
+  typeof CreateListingEnquirySchema
+>;
+export type UpdateListingEnquiryInput = z.infer<
+  typeof UpdateListingEnquirySchema
+>;

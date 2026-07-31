@@ -150,6 +150,7 @@ type Props = {
   workspaceAccountSlug?: string;
   workspaceAccountId?: string;
   variant?: 'work' | 'commercial';
+  listings?: Array<{ id: string; name: string }>;
 };
 
 export function PipelineBoard({
@@ -158,6 +159,7 @@ export function PipelineBoard({
   workspaceAccountSlug,
   workspaceAccountId,
   variant = 'work',
+  listings = [],
 }: Props) {
   const STAGES = variant === 'commercial' ? COMMERCIAL_STAGES : WORK_STAGES;
   const terminalWonStage = variant === 'commercial' ? 'completed' : 'won';
@@ -168,6 +170,14 @@ export function PipelineBoard({
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
+
+  const listingNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const listing of listings) {
+      map.set(listing.id, listing.name);
+    }
+    return map;
+  }, [listings]);
 
   useEffect(() => {
     const kanban = kanbanScrollRef.current;
@@ -298,11 +308,11 @@ export function PipelineBoard({
       <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
         <div>
           <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
-            Pipeline
+            {variant === 'commercial' ? 'Deals' : 'Pipeline'}
           </h1>
           <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
-            {activeCount} active leads · {formatCurrency(totalValue)} total
-            value
+            {activeCount} active {variant === 'commercial' ? 'deals' : 'leads'}{' '}
+            · {formatCurrency(totalValue)} total value
             {isPending && (
               <span className="ml-2 text-xs text-amber-400">Saving...</span>
             )}
@@ -353,6 +363,8 @@ export function PipelineBoard({
             accountId={workspaceAccountId}
             stages={STAGES.map((s) => ({ key: s.key, label: s.label }))}
             defaultStage={STAGES[0]?.key}
+            listings={listings}
+            commercial={variant === 'commercial'}
           />
         </div>
       </div>
@@ -369,6 +381,8 @@ export function PipelineBoard({
         accountSlug={workspaceAccountSlug}
         accountId={workspaceAccountId}
         stages={STAGES.map((s) => ({ key: s.key, label: s.label }))}
+        listings={listings}
+        commercial={variant === 'commercial'}
       />
 
       {/* Kanban */}
@@ -393,6 +407,7 @@ export function PipelineBoard({
                 deals={stageDeals}
                 value={stageValue}
                 onEditDeal={handleEditDeal}
+                listingNameById={listingNameById}
               />
             );
           })}
@@ -405,6 +420,12 @@ export function PipelineBoard({
               stageColor={STAGE_COLORS[activeDeal.stage]}
               isOverlay
               onEdit={() => {}}
+              listingName={
+                activeDeal.commercialListingId
+                  ? (listingNameById.get(activeDeal.commercialListingId) ??
+                    null)
+                  : null
+              }
             />
           )}
         </DragOverlay>
@@ -421,12 +442,14 @@ function StageColumn({
   deals,
   value,
   onEditDeal,
+  listingNameById,
 }: {
   stageKey: string;
   label: string;
   deals: PipelineDeal[];
   value: number;
   onEditDeal: (deal: PipelineDeal) => void;
+  listingNameById: Map<string, string>;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stageKey}`,
@@ -472,6 +495,11 @@ function StageColumn({
                 deal={deal}
                 stageColor={STAGE_COLORS[deal.stage]}
                 onEdit={() => onEditDeal(deal)}
+                listingName={
+                  deal.commercialListingId
+                    ? (listingNameById.get(deal.commercialListingId) ?? null)
+                    : null
+                }
               />
             ))
           )}
@@ -488,11 +516,13 @@ function DealCard({
   stageColor,
   isOverlay = false,
   onEdit,
+  listingName,
 }: {
   deal: PipelineDeal;
   stageColor: { dot: string; bar: string; tint: string } | undefined;
   isOverlay?: boolean;
   onEdit: () => void;
+  listingName?: string | null;
 }) {
   const {
     attributes,
@@ -544,6 +574,11 @@ function DealCard({
             {subtitle ? (
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                 {subtitle}
+              </p>
+            ) : null}
+            {listingName ? (
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                {listingName}
               </p>
             ) : null}
             {deal.clientId ? (

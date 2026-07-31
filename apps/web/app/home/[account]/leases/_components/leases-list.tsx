@@ -4,7 +4,7 @@ import { useCallback, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { FileText, Plus, Trash2 } from 'lucide-react';
+import { FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
@@ -24,6 +24,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Textarea } from '@kit/ui/textarea';
 
 import {
   LEASE_STATUSES,
@@ -33,7 +34,11 @@ import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../../listings/_lib/server/listings.service';
 import type { CommercialLease } from '../_lib/server/leases.service';
-import { createLease, deleteLease } from '../_lib/server/server-actions';
+import {
+  createLease,
+  deleteLease,
+  updateLease,
+} from '../_lib/server/server-actions';
 
 const STATUS_LABELS: Record<LeaseStatus, string> = {
   active: 'Active',
@@ -42,6 +47,11 @@ const STATUS_LABELS: Record<LeaseStatus, string> = {
 };
 
 const NONE_LISTING = '__none__';
+
+function isoToDateInput(iso: string | null) {
+  if (!iso) return '';
+  return iso.slice(0, 10);
+}
 
 interface LeasesListProps {
   accountId: string;
@@ -57,6 +67,7 @@ export function LeasesList({
   const router = useRouter();
   const [items, setItems] = useState(initialLeases);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<CommercialLease | null>(null);
   const [listingId, setListingId] = useState(NONE_LISTING);
   const [propertyLabel, setPropertyLabel] = useState('');
   const [tenantName, setTenantName] = useState('');
@@ -66,12 +77,14 @@ export function LeasesList({
   const [leaseStart, setLeaseStart] = useState('');
   const [leaseEnd, setLeaseEnd] = useState('');
   const [status, setStatus] = useState<LeaseStatus>('active');
+  const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const handleSaved = useCallback(() => router.refresh(), [router]);
 
   const resetForm = () => {
+    setEditing(null);
     setListingId(NONE_LISTING);
     setPropertyLabel('');
     setTenantName('');
@@ -81,35 +94,71 @@ export function LeasesList({
     setLeaseStart('');
     setLeaseEnd('');
     setStatus('active');
+    setNotes('');
     setError(null);
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const openCreate = () => {
+    resetForm();
+    setModalOpen(true);
+  };
+
+  const openEdit = (lease: CommercialLease) => {
+    setEditing(lease);
+    setListingId(lease.listingId ?? NONE_LISTING);
+    setPropertyLabel(lease.propertyLabel);
+    setTenantName(lease.tenantName ?? '');
+    setTown(lease.town ?? '');
+    setPostcode(lease.postcode ?? '');
+    setHeadlineRentPsf(
+      lease.headlineRentPsf != null ? String(lease.headlineRentPsf) : '',
+    );
+    setLeaseStart(isoToDateInput(lease.leaseStart));
+    setLeaseEnd(isoToDateInput(lease.leaseEnd));
+    setStatus(lease.status);
+    setNotes(lease.notes ?? '');
+    setError(null);
+    setModalOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!propertyLabel.trim()) {
       setError('Property label is required');
       return;
     }
     setError(null);
+    const fields = {
+      accountId,
+      listingId: listingId === NONE_LISTING ? null : listingId,
+      propertyLabel: propertyLabel.trim(),
+      tenantName: tenantName.trim() || null,
+      town: town.trim() || null,
+      postcode: postcode.trim() || null,
+      headlineRentPsf: headlineRentPsf ? Number(headlineRentPsf) : null,
+      leaseStart: leaseStart || null,
+      leaseEnd: leaseEnd || null,
+      status,
+      notes: notes.trim() || null,
+    };
     startTransition(async () => {
       try {
-        await createLease({
-          accountId,
-          listingId: listingId === NONE_LISTING ? null : listingId,
-          propertyLabel: propertyLabel.trim(),
-          tenantName: tenantName.trim() || null,
-          town: town.trim() || null,
-          postcode: postcode.trim() || null,
-          headlineRentPsf: headlineRentPsf ? Number(headlineRentPsf) : null,
-          leaseStart: leaseStart || null,
-          leaseEnd: leaseEnd || null,
-          status,
-        });
+        if (editing) {
+          const updated = await updateLease({
+            leaseId: editing.id,
+            ...fields,
+          });
+          setItems((prev) =>
+            prev.map((l) => (l.id === updated.id ? updated : l)),
+          );
+        } else {
+          await createLease(fields);
+        }
         setModalOpen(false);
         resetForm();
         handleSaved();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to create');
+        setError(err instanceof Error ? err.message : 'Failed to save');
       }
     });
   };
@@ -132,16 +181,13 @@ export function LeasesList({
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-            Leases
+            Sales register
           </h2>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
             {items.length} recorded
           </p>
         </div>
-        <Button
-          onClick={() => setModalOpen(true)}
-          className={workspaceBtnPrimaryMd}
-        >
+        <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
           <Plus className="h-4 w-4" />
           Add lease
         </Button>
@@ -207,14 +253,24 @@ export function LeasesList({
                     </span>
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-rose-400"
-                      onClick={() => handleDelete(lease.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-[var(--workspace-shell-text)]/60"
+                        onClick={() => openEdit(lease)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-rose-400"
+                        onClick={() => handleDelete(lease.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -230,11 +286,11 @@ export function LeasesList({
           if (!open) resetForm();
         }}
       >
-        <DialogContent className="border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
-            <DialogTitle>Add lease</DialogTitle>
+            <DialogTitle>{editing ? 'Edit lease' : 'Add lease'}</DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4 pt-2">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label>Property label</Label>
               <Input
@@ -328,6 +384,15 @@ export function LeasesList({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Notes</Label>
+              <Textarea
+                value={notes}
+                onChange={(e) => setNotes(e.target.value)}
+                placeholder="Additional lease notes"
+                rows={3}
+              />
+            </div>
             {error ? <p className="text-sm text-rose-600">{error}</p> : null}
             <DialogFooter>
               <Button
@@ -342,7 +407,11 @@ export function LeasesList({
                 disabled={isPending}
                 className={workspaceBtnPrimaryMd}
               >
-                {isPending ? 'Saving…' : 'Add lease'}
+                {isPending
+                  ? 'Saving…'
+                  : editing
+                    ? 'Save changes'
+                    : 'Add lease'}
               </Button>
             </DialogFooter>
           </form>

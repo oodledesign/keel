@@ -9,7 +9,7 @@ import {
   COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../_lib/server/workspace-route-guard';
-import { RequirementsList } from './_components/requirements-list';
+import { RequirementsBoard } from './_components/requirements-board';
 import { createRequirementsService } from './_lib/server/requirements.service';
 
 interface RequirementsPageProps {
@@ -40,7 +40,7 @@ async function RequirementsPage({ params }: RequirementsPageProps) {
         description="Applicant briefs and acquisition criteria."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
-        <RequirementsList
+        <RequirementsBoard
           accountId={accountId}
           initialRequirements={requirements}
         />

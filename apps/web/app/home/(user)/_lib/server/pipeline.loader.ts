@@ -32,6 +32,17 @@ export type PipelineDeal = {
   /** Linked existing client (opportunity), or null for a new lead. */
   clientId: string | null;
   clientName: string | null;
+  /** Commercial disposal linked to this deal (agency workspace). */
+  commercialListingId: string | null;
+  /** Heads of Terms fields (commercial deals). */
+  hotsRentPsf: number | null;
+  hotsSizeSqft: number | null;
+  hotsLeaseYears: number | null;
+  hotsIncentives: string | null;
+  hotsSolicitorName: string | null;
+  hotsTargetExchangeDate: string | null;
+  hotsNotes: string | null;
+  completedAt: string | null;
 };
 
 export type PipelineData = {
@@ -59,6 +70,15 @@ type PipelineDealRow = {
   businesses?: { name?: string | null; colour?: string | null } | null;
   accounts?: { name?: string | null } | null;
   clients?: { display_name?: string | null } | null;
+  commercial_listing_id?: string | null;
+  hots_rent_psf?: number | null;
+  hots_size_sqft?: number | null;
+  hots_lease_years?: number | null;
+  hots_incentives?: string | null;
+  hots_solicitor_name?: string | null;
+  hots_target_exchange_date?: string | null;
+  hots_notes?: string | null;
+  completed_at?: string | null;
 };
 
 type BusinessRow = {
@@ -107,13 +127,25 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
     businessColor: row.businesses?.colour ?? null,
     clientId: row.client_id ?? null,
     clientName,
+    commercialListingId: row.commercial_listing_id ?? null,
+    hotsRentPsf:
+      row.hots_rent_psf != null ? Number(row.hots_rent_psf) : null,
+    hotsSizeSqft:
+      row.hots_size_sqft != null ? Number(row.hots_size_sqft) : null,
+    hotsLeaseYears:
+      row.hots_lease_years != null ? Number(row.hots_lease_years) : null,
+    hotsIncentives: row.hots_incentives?.trim() || null,
+    hotsSolicitorName: row.hots_solicitor_name?.trim() || null,
+    hotsTargetExchangeDate: row.hots_target_exchange_date ?? null,
+    hotsNotes: row.hots_notes?.trim() || null,
+    completedAt: row.completed_at ?? null,
   };
 }
 
 export { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 
 const DEAL_SELECT =
-  'id, name, contact_name, company_name, notes, value, stage, next_action, next_action_date, business_id, account_id, client_id, businesses(name, colour), accounts(name), clients(display_name)';
+  'id, name, contact_name, company_name, notes, value, stage, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, businesses(name, colour), accounts(name), clients(display_name)';
 
 // ─── Loader ──────────────────────────────────────────────────────────
 

@@ -149,16 +149,21 @@ export function CommercialAgencyDashboard({
           href={listingsHref}
           label="Unactioned enquiries"
           value={metrics.unactionedEnquiries}
-          hint="Review inbound interest"
+          hint={
+            metrics.unactionedEnquiries > 0
+              ? 'Open a disposal → Interest to triage'
+              : 'Added recently'
+          }
           icon={Inbox}
           emphasize
         />
         <ActionCard
           href={viewingsHref}
-          label="Upcoming viewings"
-          value={metrics.upcomingViewings}
-          hint="Diary for inspections"
+          label="Viewings awaiting feedback"
+          value={metrics.awaitingFeedbackViewings}
+          hint="Add feedback after viewings"
           icon={CalendarDays}
+          emphasize
         />
         <ActionCard
           href={listingsHref}
@@ -169,9 +174,12 @@ export function CommercialAgencyDashboard({
         />
         <ActionCard
           href={pipelineHref}
-          label="Under offer"
-          value={metrics.underOffer}
-          hint="Deals in progress"
+          label="Active deals"
+          value={Object.values(metrics.pipelineByStage).reduce(
+            (sum, n) => sum + n,
+            0,
+          )}
+          hint="Across the deals board"
           icon={Tag}
         />
       </section>
@@ -259,9 +267,9 @@ export function CommercialAgencyDashboard({
                   label: 'Requirements',
                   icon: ClipboardList,
                 },
-                { href: pipelineHref, label: 'Pipeline', icon: Tag },
+                { href: pipelineHref, label: 'Deals', icon: Tag },
                 { href: viewingsHref, label: 'Viewings', icon: CalendarDays },
-                { href: reportsHref, label: 'Reports', icon: Building2 },
+                { href: reportsHref, label: 'Insights', icon: Building2 },
               ].map((item) => (
                 <Link
                   key={item.href}

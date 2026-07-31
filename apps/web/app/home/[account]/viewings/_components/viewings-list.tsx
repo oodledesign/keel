@@ -4,7 +4,7 @@ import { useCallback, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Calendar, Plus, Trash2 } from 'lucide-react';
+import { Calendar, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
@@ -24,9 +24,13 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Textarea } from '@kit/ui/textarea';
 
 import {
+  VIEWING_OUTCOMES,
+  VIEWING_OUTCOME_LABELS,
   VIEWING_STATUSES,
+  type ViewingOutcome,
   type ViewingStatus,
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
@@ -37,7 +41,11 @@ import {
   emptyClientContactPickerValue,
 } from '../../clients/_components/client-contact-picker';
 import type { CommercialListing } from '../../listings/_lib/server/listings.service';
-import { createViewing, deleteViewing } from '../_lib/server/server-actions';
+import {
+  createViewing,
+  deleteViewing,
+  updateViewing,
+} from '../_lib/server/server-actions';
 import type { CommercialViewing } from '../_lib/server/viewings.service';
 
 const STATUS_LABELS: Record<ViewingStatus, string> = {
@@ -46,6 +54,23 @@ const STATUS_LABELS: Record<ViewingStatus, string> = {
   cancelled: 'Cancelled',
   awaiting_feedback: 'Awaiting feedback',
 };
+
+const NONE_OUTCOME = '__none__';
+
+function outcomeLabel(value: string | null) {
+  if (!value) return '—';
+  if (value in VIEWING_OUTCOME_LABELS) {
+    return VIEWING_OUTCOME_LABELS[value as ViewingOutcome];
+  }
+  return value;
+}
+
+function isoToDatetimeLocal(iso: string) {
+  const d = new Date(iso);
+  const offset = d.getTimezoneOffset();
+  const local = new Date(d.getTime() - offset * 60_000);
+  return local.toISOString().slice(0, 16);
+}
 
 interface ViewingsListProps {
   accountId: string;
@@ -61,47 +86,98 @@ export function ViewingsList({
   const router = useRouter();
   const [items, setItems] = useState(initialViewings);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<CommercialViewing | null>(null);
   const [listingId, setListingId] = useState(listings[0]?.id ?? '');
   const [scheduledAt, setScheduledAt] = useState('');
   const [status, setStatus] = useState<ViewingStatus>('upcoming');
+  const [outcome, setOutcome] = useState('');
+  const [feedback, setFeedback] = useState('');
   const [party, setParty] = useState<ClientContactPickerValue>(
     emptyClientContactPickerValue(),
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const outcomeSelectValue = VIEWING_OUTCOMES.includes(
+    outcome as ViewingOutcome,
+  )
+    ? outcome
+    : NONE_OUTCOME;
+
   const handleSaved = useCallback(() => router.refresh(), [router]);
 
   const resetForm = () => {
+    setEditing(null);
     setScheduledAt('');
     setStatus('upcoming');
+    setOutcome('');
+    setFeedback('');
     setParty(emptyClientContactPickerValue());
     setListingId(listings[0]?.id ?? '');
     setError(null);
   };
 
-  const handleCreate = (e: React.FormEvent) => {
+  const openCreate = () => {
+    resetForm();
+    setModalOpen(true);
+  };
+
+  const openEdit = (viewing: CommercialViewing) => {
+    setEditing(viewing);
+    setListingId(viewing.listingId);
+    setScheduledAt(
+      viewing.scheduledAt ? isoToDatetimeLocal(viewing.scheduledAt) : '',
+    );
+    setStatus(viewing.status);
+    setOutcome(viewing.outcome ?? '');
+    setFeedback(viewing.feedback ?? '');
+    setParty({
+      clientId: viewing.clientId ?? '',
+      contactId: viewing.contactId ?? '',
+      companyName: viewing.clientName ?? '',
+      contactName: viewing.contactName ?? '',
+      contactEmail: '',
+      contactPhone: '',
+    });
+    setError(null);
+    setModalOpen(true);
+  };
+
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!listingId) {
       setError('Select a listing');
       return;
     }
     setError(null);
+    const fields = {
+      accountId,
+      listingId,
+      clientId: party.clientId || null,
+      contactId: party.contactId || null,
+      scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
+      status,
+      outcome: outcome.trim() || null,
+      feedback: feedback.trim() || null,
+    };
     startTransition(async () => {
       try {
-        await createViewing({
-          accountId,
-          listingId,
-          clientId: party.clientId || null,
-          contactId: party.contactId || null,
-          scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
-          status,
-        });
+        if (editing) {
+          const updated = await updateViewing({
+            viewingId: editing.id,
+            ...fields,
+          });
+          setItems((prev) =>
+            prev.map((v) => (v.id === updated.id ? updated : v)),
+          );
+        } else {
+          await createViewing(fields);
+        }
         setModalOpen(false);
         resetForm();
         handleSaved();
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Failed to create');
+        setError(err instanceof Error ? err.message : 'Failed to save');
       }
     });
   };
@@ -126,10 +202,7 @@ export function ViewingsList({
           </p>
         </div>
         <Button
-          onClick={() => {
-            resetForm();
-            setModalOpen(true);
-          }}
+          onClick={openCreate}
           disabled={listings.length === 0}
           className={workspaceBtnPrimaryMd}
         >
@@ -201,17 +274,27 @@ export function ViewingsList({
                     </span>
                   </td>
                   <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 lg:table-cell">
-                    {viewing.outcome || '—'}
+                    {outcomeLabel(viewing.outcome)}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-7 w-7 text-rose-400"
-                      onClick={() => handleDelete(viewing.id)}
-                    >
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </Button>
+                    <div className="flex items-center justify-end gap-1">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-[var(--workspace-shell-text)]/60"
+                        onClick={() => openEdit(viewing)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-7 w-7 text-rose-400"
+                        onClick={() => handleDelete(viewing.id)}
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -229,9 +312,11 @@ export function ViewingsList({
       >
         <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
-            <DialogTitle>Add viewing</DialogTitle>
+            <DialogTitle>
+              {editing ? 'Edit viewing' : 'Add viewing'}
+            </DialogTitle>
           </DialogHeader>
-          <form onSubmit={handleCreate} className="space-y-4 pt-2">
+          <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
               <Label>Listing</Label>
               <Select value={listingId} onValueChange={setListingId}>
@@ -284,6 +369,36 @@ export function ViewingsList({
                 </SelectContent>
               </Select>
             </div>
+            <div className="space-y-1.5">
+              <Label>Outcome</Label>
+              <Select
+                value={outcomeSelectValue}
+                onValueChange={(v) =>
+                  setOutcome(v === NONE_OUTCOME ? '' : v)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select feedback sentiment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_OUTCOME}>Not set</SelectItem>
+                  {VIEWING_OUTCOMES.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {VIEWING_OUTCOME_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label>Feedback notes</Label>
+              <Textarea
+                value={feedback}
+                onChange={(e) => setFeedback(e.target.value)}
+                placeholder="Notes from the viewing"
+                rows={3}
+              />
+            </div>
             {error ? <p className="text-sm text-rose-600">{error}</p> : null}
             <DialogFooter>
               <Button
@@ -298,7 +413,11 @@ export function ViewingsList({
                 disabled={isPending}
                 className={workspaceBtnPrimaryMd}
               >
-                {isPending ? 'Saving…' : 'Add viewing'}
+                {isPending
+                  ? 'Saving…'
+                  : editing
+                    ? 'Save changes'
+                    : 'Add viewing'}
               </Button>
             </DialogFooter>
           </form>

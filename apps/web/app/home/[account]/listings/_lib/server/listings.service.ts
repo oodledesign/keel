@@ -16,10 +16,12 @@ import {
 } from '~/lib/commercial/property-hive-sync';
 
 import type {
+  CreateListingEnquiryInput,
   CreateListingInput,
   CreateListingMediaInput,
   CreateListingUnitInput,
   MediaType,
+  UpdateListingEnquiryInput,
   UpdateListingInput,
   UpdateListingUnitInput,
 } from '../schema/listings.schema';
@@ -82,6 +84,9 @@ export type CommercialListing = {
   town: string | null;
   postcode: string | null;
   country: string | null;
+  county: string | null;
+  latitude: number | null;
+  longitude: number | null;
   sector: string | null;
   tenure: string | null;
   disposalType: DisposalType;
@@ -101,6 +106,7 @@ export type CommercialListing = {
   summary: string | null;
   description: string | null;
   locationCopy: string | null;
+  keyPoints: string[];
   onMarketAt: string | null;
   offMarketAt: string | null;
   landlordShareToken: string | null;
@@ -109,6 +115,8 @@ export type CommercialListing = {
   externalId: string | null;
   createdAt: string;
   updatedAt: string;
+  /** Signed cover/thumbnail URL when loaded with list thumbnails. */
+  coverUrl?: string | null;
 };
 
 export type CommercialListingUnit = {
@@ -133,6 +141,7 @@ export type CommercialListingMedia = {
   fileName: string | null;
   mimeType: string | null;
   sortOrder: number;
+  isCover: boolean;
   createdAt: string;
   /** Signed or external URL for display (filled by loader when available). */
   url?: string | null;
@@ -192,6 +201,7 @@ type MediaRow = Record<string, unknown> & {
   media_type: string;
   created_at: string;
   sort_order: number;
+  is_cover?: boolean | null;
 };
 
 type EnquiryRow = Record<string, unknown> & {
@@ -214,6 +224,13 @@ function num(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+function mapKeyPoints(value: unknown): string[] {
+  if (!Array.isArray(value)) return [];
+  return value
+    .map((item) => (typeof item === 'string' ? item.trim() : ''))
+    .filter(Boolean);
+}
+
 function mapListing(row: ListingRow): CommercialListing {
   return {
     id: row.id,
@@ -226,6 +243,9 @@ function mapListing(row: ListingRow): CommercialListing {
     town: (row.town as string | null) ?? null,
     postcode: (row.postcode as string | null) ?? null,
     country: (row.country as string | null) ?? null,
+    county: (row.county as string | null) ?? null,
+    latitude: num(row.latitude),
+    longitude: num(row.longitude),
     sector: (row.sector as string | null) ?? null,
     tenure: (row.tenure as string | null) ?? null,
     disposalType: (row.disposal_type as DisposalType) ?? 'to_let',
@@ -246,6 +266,7 @@ function mapListing(row: ListingRow): CommercialListing {
     summary: (row.summary as string | null) ?? null,
     description: (row.description as string | null) ?? null,
     locationCopy: (row.location_copy as string | null) ?? null,
+    keyPoints: mapKeyPoints(row.key_points),
     onMarketAt: (row.on_market_at as string | null) ?? null,
     offMarketAt: (row.off_market_at as string | null) ?? null,
     landlordShareToken: (row.landlord_share_token as string | null) ?? null,
@@ -282,6 +303,7 @@ function mapMedia(row: MediaRow): CommercialListingMedia {
     fileName: (row.file_name as string | null) ?? null,
     mimeType: (row.mime_type as string | null) ?? null,
     sortOrder: row.sort_order ?? 0,
+    isCover: Boolean(row.is_cover),
     createdAt: row.created_at,
   };
 }
@@ -375,16 +397,84 @@ function writeColumns(input: Partial<CreateListingInput>) {
     ...(input.locationCopy !== undefined && {
       location_copy: input.locationCopy,
     }),
+    ...(input.keyPoints !== undefined && {
+      key_points: input.keyPoints ?? [],
+    }),
     ...(input.notes !== undefined && { notes: input.notes }),
     ...(input.externalId !== undefined && { external_id: input.externalId }),
     ...(input.instructingClientId !== undefined && {
       instructing_client_id: input.instructingClientId,
     }),
+    ...(input.county !== undefined && { county: input.county }),
+    ...(input.latitude !== undefined && { latitude: input.latitude }),
+    ...(input.longitude !== undefined && { longitude: input.longitude }),
   };
 }
 
 function generateShareToken() {
   return randomBytes(24).toString('hex');
+}
+
+async function signMediaUrl(
+  client: SupabaseClient,
+  item: CommercialListingMedia,
+): Promise<CommercialListingMedia> {
+  if (item.externalUrl) {
+    return { ...item, url: item.externalUrl };
+  }
+  if (!item.storagePath) {
+    return { ...item, url: null };
+  }
+  const { data, error } = await client.storage
+    .from('commercial-listing-media')
+    .createSignedUrl(item.storagePath, 3600);
+  if (error) {
+    console.error('[listings] signed media url error:', error.message);
+    return { ...item, url: null };
+  }
+  return { ...item, url: data.signedUrl };
+}
+
+async function attachCoverUrls(
+  client: SupabaseClient,
+  listings: CommercialListing[],
+): Promise<CommercialListing[]> {
+  if (listings.length === 0) return listings;
+
+  const listingIds = listings.map((l) => l.id);
+  const { data: mediaRows, error } = await client
+    .from('commercial_listing_media')
+    .select('*')
+    .in('listing_id', listingIds)
+    .or('media_type.eq.image,mime_type.ilike.image/%')
+    .order('is_cover', { ascending: false })
+    .order('sort_order', { ascending: true })
+    .order('created_at', { ascending: true });
+
+  if (error) {
+    console.error('[listings] cover media error:', error.message);
+    return listings;
+  }
+
+  const coverByListing = new Map<string, CommercialListingMedia>();
+  for (const row of (mediaRows ?? []) as MediaRow[]) {
+    const media = mapMedia(row);
+    if (!coverByListing.has(media.listingId)) {
+      coverByListing.set(media.listingId, media);
+    }
+  }
+
+  const signed = await Promise.all(
+    [...coverByListing.values()].map((item) => signMediaUrl(client, item)),
+  );
+  const urlByListing = new Map(
+    signed.map((item) => [item.listingId, item.url ?? null]),
+  );
+
+  return listings.map((listing) => ({
+    ...listing,
+    coverUrl: urlByListing.get(listing.id) ?? null,
+  }));
 }
 
 export function createListingsService(client: SupabaseClient) {
@@ -410,7 +500,8 @@ export function createListingsService(client: SupabaseClient) {
         return [];
       }
 
-      return ((data ?? []) as ListingRow[]).map(mapListing);
+      const listings = ((data ?? []) as ListingRow[]).map(mapListing);
+      return attachCoverUrls(client, listings);
     },
 
     async getListing(
@@ -425,7 +516,10 @@ export function createListingsService(client: SupabaseClient) {
         .maybeSingle();
 
       if (error || !data) return null;
-      return mapListing(data as ListingRow);
+      const [withCover] = await attachCoverUrls(client, [
+        mapListing(data as ListingRow),
+      ]);
+      return withCover ?? null;
     },
 
     async createListing(
@@ -441,6 +535,9 @@ export function createListingsService(client: SupabaseClient) {
           town: input.town ?? null,
           postcode: input.postcode ?? null,
           country: input.country ?? 'GB',
+          county: input.county ?? null,
+          latitude: input.latitude ?? null,
+          longitude: input.longitude ?? null,
           sector: input.sector ?? null,
           tenure: input.tenure ?? null,
           disposal_type: input.disposalType ?? 'to_let',
@@ -460,6 +557,7 @@ export function createListingsService(client: SupabaseClient) {
           summary: input.summary ?? null,
           description: input.description ?? null,
           location_copy: input.locationCopy ?? null,
+          key_points: input.keyPoints ?? [],
           notes: input.notes ?? null,
           external_id: input.externalId ?? null,
           instructing_client_id: input.instructingClientId ?? null,
@@ -659,23 +757,74 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error('Provide a file or external URL');
       }
 
+      const mediaType = input.mediaType ?? 'image';
+      const isImage =
+        mediaType === 'image' || Boolean(input.mimeType?.startsWith('image/'));
+
+      let isCover = Boolean(input.isCover);
+      if (isImage && !isCover) {
+        const { count } = await client
+          .from('commercial_listing_media')
+          .select('id', { count: 'exact', head: true })
+          .eq('listing_id', input.listingId)
+          .eq('is_cover', true);
+        isCover = (count ?? 0) === 0;
+      }
+
+      if (isCover) {
+        await client
+          .from('commercial_listing_media')
+          .update({ is_cover: false })
+          .eq('listing_id', input.listingId)
+          .eq('is_cover', true);
+      }
+
       const { data, error } = await client
         .from('commercial_listing_media')
         .insert({
           account_id: input.accountId,
           listing_id: input.listingId,
-          media_type: input.mediaType ?? 'image',
+          media_type: mediaType,
           storage_path: input.storagePath ?? null,
           external_url: input.externalUrl ?? null,
           file_name: input.fileName ?? null,
           mime_type: input.mimeType ?? null,
           sort_order: input.sortOrder ?? 0,
+          is_cover: isCover,
         })
         .select('*')
         .single();
 
       if (error || !data) {
         throw new Error(error?.message ?? 'Failed to create media');
+      }
+
+      return mapMedia(data as MediaRow);
+    },
+
+    async setMediaCover(input: {
+      mediaId: string;
+      listingId: string;
+      accountId: string;
+    }): Promise<CommercialListingMedia> {
+      await client
+        .from('commercial_listing_media')
+        .update({ is_cover: false })
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .eq('is_cover', true);
+
+      const { data, error } = await client
+        .from('commercial_listing_media')
+        .update({ is_cover: true, sort_order: 0 })
+        .eq('id', input.mediaId)
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to set cover image');
       }
 
       return mapMedia(data as MediaRow);
@@ -718,27 +867,7 @@ export function createListingsService(client: SupabaseClient) {
     async withSignedMediaUrls(
       media: CommercialListingMedia[],
     ): Promise<CommercialListingMedia[]> {
-      return Promise.all(
-        media.map(async (item) => {
-          if (item.externalUrl) {
-            return { ...item, url: item.externalUrl };
-          }
-          if (!item.storagePath) {
-            return { ...item, url: null };
-          }
-          const { data, error } = await client.storage
-            .from('commercial-listing-media')
-            .createSignedUrl(item.storagePath, 3600);
-          if (error) {
-            console.error(
-              '[listings] signed media url error:',
-              error.message,
-            );
-            return { ...item, url: null };
-          }
-          return { ...item, url: data.signedUrl };
-        }),
-      );
+      return Promise.all(media.map((item) => signMediaUrl(client, item)));
     },
 
     async listEnquiriesForListing(
@@ -756,6 +885,85 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       return ((data ?? []) as EnquiryRow[]).map(mapEnquiry);
+    },
+
+    async createEnquiry(
+      input: CreateListingEnquiryInput,
+    ): Promise<CommercialEnquiry> {
+      const { data, error } = await client
+        .from('commercial_enquiries')
+        .insert({
+          account_id: input.accountId,
+          listing_id: input.listingId,
+          contact_name: input.contactName?.trim() || null,
+          contact_email: input.contactEmail?.trim() || null,
+          contact_phone: input.contactPhone?.trim() || null,
+          message: input.message?.trim() || null,
+          source: input.source ?? 'manual',
+          status: input.status ?? 'unactioned',
+          received_at: new Date().toISOString(),
+        })
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to create enquiry');
+      }
+
+      return mapEnquiry(data as EnquiryRow);
+    },
+
+    async updateEnquiry(
+      enquiryId: string,
+      accountId: string,
+      input: Omit<UpdateListingEnquiryInput, 'enquiryId' | 'accountId'>,
+    ): Promise<CommercialEnquiry> {
+      const patch: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+      if (input.status !== undefined) patch.status = input.status;
+      if (input.source !== undefined) patch.source = input.source;
+      if (input.contactName !== undefined) {
+        patch.contact_name = input.contactName?.trim() || null;
+      }
+      if (input.contactEmail !== undefined) {
+        patch.contact_email = input.contactEmail?.trim() || null;
+      }
+      if (input.contactPhone !== undefined) {
+        patch.contact_phone = input.contactPhone?.trim() || null;
+      }
+      if (input.message !== undefined) {
+        patch.message = input.message?.trim() || null;
+      }
+
+      const { data, error } = await client
+        .from('commercial_enquiries')
+        .update(patch)
+        .eq('id', enquiryId)
+        .eq('account_id', accountId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to update enquiry');
+      }
+
+      return mapEnquiry(data as EnquiryRow);
+    },
+
+    async getInterestSummary(listingId: string): Promise<{
+      unactioned: number;
+      onSchedule: number;
+      archived: number;
+      total: number;
+    }> {
+      const enquiries = await this.listEnquiriesForListing(listingId);
+      return {
+        unactioned: enquiries.filter((e) => e.status === 'unactioned').length,
+        onSchedule: enquiries.filter((e) => e.status === 'on_schedule').length,
+        archived: enquiries.filter((e) => e.status === 'archived').length,
+        total: enquiries.length,
+      };
     },
 
     async listPublicationsForListing(

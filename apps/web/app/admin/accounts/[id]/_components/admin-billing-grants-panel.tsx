@@ -24,6 +24,10 @@ const WORKSPACE_ENTITLEMENTS = [
   { key: 'workspace_business_lite', label: 'Business Lite (apps shell)' },
   { key: 'workspace_business', label: 'Business workspace' },
   { key: 'workspace_property', label: 'Property workspace' },
+  {
+    key: 'workspace_commercial_property',
+    label: 'Commercial Property workspace',
+  },
 ];
 
 const ADDON_ENTITLEMENTS = [
@@ -59,6 +63,21 @@ const QUICK_PLANS = [
     label: 'Property Starter',
     productId: 'ozer-property-starter',
     planId: 'property-starter-monthly',
+  },
+  {
+    label: 'Commercial Property Solo',
+    productId: 'ozer-commercial-property-solo',
+    planId: 'commercial-property-solo-monthly',
+  },
+  {
+    label: 'Commercial Property Team',
+    productId: 'ozer-commercial-property-team',
+    planId: 'commercial-property-team-monthly',
+  },
+  {
+    label: 'Commercial Property Office',
+    productId: 'ozer-commercial-property-office',
+    planId: 'commercial-property-office-monthly',
   },
   {
     label: 'Signatures Starter add-on',
@@ -167,8 +186,9 @@ export function AdminBillingGrantsPanel(props: {
         <p className="text-muted-foreground text-sm">
           Presets set <strong>Business Solo / Team / Scale</strong> seat limits
           on this workspace. Workspace access grants are different product types
-          (Community / Lite / Property) — do not stack them to “upgrade” a
-          Business plan.
+          (Community / Lite / Property / Commercial Property) — do not stack
+          them to “upgrade” a Business plan. Granting Commercial Property also
+          switches this workspace’s type and modules.
         </p>
         <div>
           <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">

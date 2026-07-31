@@ -4,6 +4,7 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  CreateListingEnquirySchema,
   CreateListingMediaSchema,
   CreateListingSchema,
   CreateListingUnitSchema,
@@ -13,6 +14,8 @@ import {
   GetListingSchema,
   ListListingsSchema,
   SetLandlordShareSchema,
+  SetListingMediaCoverSchema,
+  UpdateListingEnquirySchema,
   UpdateListingSchema,
   UpdateListingUnitSchema,
 } from '../schema/listings.schema';
@@ -105,10 +108,34 @@ export const createListingMedia = enhanceAction(
   { schema: CreateListingMediaSchema },
 );
 
+export const setListingMediaCover = enhanceAction(
+  async (input) => {
+    const media = await getService().setMediaCover(input);
+    const [withUrl] = await getService().withSignedMediaUrls([media]);
+    return withUrl ?? media;
+  },
+  { schema: SetListingMediaCoverSchema },
+);
+
 export const deleteListingMedia = enhanceAction(
   async (input) => {
     await getService().deleteMedia(input.mediaId, input.accountId);
     return { success: true };
   },
   { schema: DeleteListingMediaSchema },
+);
+
+export const createListingEnquiry = enhanceAction(
+  async (input) => {
+    return getService().createEnquiry(input);
+  },
+  { schema: CreateListingEnquirySchema },
+);
+
+export const updateListingEnquiry = enhanceAction(
+  async (input) => {
+    const { enquiryId, accountId, ...rest } = input;
+    return getService().updateEnquiry(enquiryId, accountId, rest);
+  },
+  { schema: UpdateListingEnquirySchema },
 );

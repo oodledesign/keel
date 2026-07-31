@@ -59,7 +59,11 @@ type Props = {
   accountSlug?: string;
   accountId?: string;
   stages?: ReadonlyArray<{ key: string; label: string }>;
+  listings?: Array<{ id: string; name: string }>;
+  commercial?: boolean;
 };
+
+const NONE_LISTING = '__none__';
 
 export function EditDealDialog({
   deal,
@@ -70,6 +74,8 @@ export function EditDealDialog({
   accountSlug,
   accountId,
   stages = WORK_STAGES,
+  listings = [],
+  commercial = false,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [isPending, startTransition] = useTransition();
@@ -85,6 +91,9 @@ export function EditDealDialog({
   const [clientId, setClientId] = useState(deal?.clientId ?? '');
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [listingId, setListingId] = useState(
+    deal?.commercialListingId ?? NONE_LISTING,
+  );
 
   const showAssignField = !workspaceScoped && businesses.length > 1;
 
@@ -108,6 +117,7 @@ export function EditDealDialog({
       );
       setMode(deal.clientId ? 'client' : 'lead');
       setClientId(deal.clientId ?? '');
+      setListingId(deal.commercialListingId ?? NONE_LISTING);
       setError(null);
     }
   }, [deal, open, businesses, workspaceScoped]);
@@ -178,6 +188,25 @@ export function EditDealDialog({
     }
 
     const value = valueStr ? Math.round(parseFloat(valueStr)) : 0;
+    const commercialListingId =
+      commercial && listingId !== NONE_LISTING ? listingId : null;
+
+    const parseOptionalNumber = (raw: FormDataEntryValue | null) => {
+      const text = String(raw ?? '').trim();
+      if (!text) return null;
+      const n = Number(text);
+      return Number.isFinite(n) ? n : null;
+    };
+
+    const hotsRentPsf = parseOptionalNumber(form.get('hotsRentPsf'));
+    const hotsSizeSqft = parseOptionalNumber(form.get('hotsSizeSqft'));
+    const hotsLeaseYears = parseOptionalNumber(form.get('hotsLeaseYears'));
+    const hotsIncentives = (form.get('hotsIncentives') as string).trim() || null;
+    const hotsSolicitorName =
+      (form.get('hotsSolicitorName') as string).trim() || null;
+    const hotsTargetExchangeDate =
+      (form.get('hotsTargetExchangeDate') as string).trim() || null;
+    const hotsNotes = (form.get('hotsNotes') as string).trim() || null;
 
     startTransition(async () => {
       const result = await updateDeal(deal.id, {
@@ -192,6 +221,18 @@ export function EditDealDialog({
         projectName: mode === 'client' ? projectName || null : undefined,
         description: mode === 'client' ? description || null : undefined,
         accountSlug: accountSlug ?? null,
+        commercialListingId: commercial ? commercialListingId : undefined,
+        ...(commercial
+          ? {
+              hotsRentPsf,
+              hotsSizeSqft,
+              hotsLeaseYears,
+              hotsIncentives,
+              hotsSolicitorName,
+              hotsTargetExchangeDate,
+              hotsNotes,
+            }
+          : {}),
       });
 
       if (!result.success) {
@@ -215,6 +256,24 @@ export function EditDealDialog({
         businessColor: biz?.color ?? null,
         clientId: linkedClientId,
         clientName: linkedClientName,
+        commercialListingId: commercial
+          ? commercialListingId
+          : deal.commercialListingId,
+        ...(commercial
+          ? {
+              hotsRentPsf,
+              hotsSizeSqft,
+              hotsLeaseYears,
+              hotsIncentives,
+              hotsSolicitorName,
+              hotsTargetExchangeDate,
+              hotsNotes,
+              completedAt:
+                stage === 'completed'
+                  ? (deal.completedAt ?? new Date().toISOString())
+                  : deal.completedAt,
+            }
+          : {}),
       });
 
       onOpenChange(false);
@@ -227,9 +286,13 @@ export function EditDealDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
-          <DialogTitle>Edit pipeline item</DialogTitle>
+          <DialogTitle>
+            {commercial ? 'Edit deal' : 'Edit pipeline item'}
+          </DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-            Update the client or contact, value, stage, and next action.
+            {commercial
+              ? 'Update the contact, disposal link, value, stage, and next action.'
+              : 'Update the client or contact, value, stage, and next action.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -349,6 +412,27 @@ export function EditDealDialog({
             </div>
           )}
 
+          {commercial && listings.length > 0 ? (
+            <div className="space-y-2">
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Disposal
+              </Label>
+              <Select value={listingId} onValueChange={setListingId}>
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
+                  <SelectValue placeholder="Link a disposal (optional)" />
+                </SelectTrigger>
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                  <SelectItem value={NONE_LISTING}>None</SelectItem>
+                  {listings.map((listing) => (
+                    <SelectItem key={listing.id} value={listing.id}>
+                      {listing.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
+
           <div
             className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}
           >
@@ -449,6 +533,122 @@ export function EditDealDialog({
               />
             </div>
           </div>
+
+          {commercial ? (
+            <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Heads of Terms
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="hotsRentPsf"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Rent (£/ft²)
+                  </Label>
+                  <Input
+                    id="hotsRentPsf"
+                    name="hotsRentPsf"
+                    type="number"
+                    step="0.01"
+                    defaultValue={deal.hotsRentPsf ?? ''}
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="hotsSizeSqft"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Size (ft²)
+                  </Label>
+                  <Input
+                    id="hotsSizeSqft"
+                    name="hotsSizeSqft"
+                    type="number"
+                    step="1"
+                    defaultValue={deal.hotsSizeSqft ?? ''}
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="hotsLeaseYears"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Lease (years)
+                  </Label>
+                  <Input
+                    id="hotsLeaseYears"
+                    name="hotsLeaseYears"
+                    type="number"
+                    step="0.5"
+                    defaultValue={deal.hotsLeaseYears ?? ''}
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label
+                    htmlFor="hotsTargetExchangeDate"
+                    className="text-[var(--workspace-shell-text-muted)]"
+                  >
+                    Target exchange
+                  </Label>
+                  <Input
+                    id="hotsTargetExchangeDate"
+                    name="hotsTargetExchangeDate"
+                    type="date"
+                    defaultValue={deal.hotsTargetExchangeDate ?? ''}
+                    className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="hotsSolicitorName"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Solicitor
+                </Label>
+                <Input
+                  id="hotsSolicitorName"
+                  name="hotsSolicitorName"
+                  defaultValue={deal.hotsSolicitorName ?? ''}
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="hotsIncentives"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Incentives
+                </Label>
+                <Input
+                  id="hotsIncentives"
+                  name="hotsIncentives"
+                  defaultValue={deal.hotsIncentives ?? ''}
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label
+                  htmlFor="hotsNotes"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  HoTs notes
+                </Label>
+                <Textarea
+                  id="hotsNotes"
+                  name="hotsNotes"
+                  rows={2}
+                  defaultValue={deal.hotsNotes ?? ''}
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+                />
+              </div>
+            </div>
+          ) : null}
 
           {error && <p className="text-sm text-rose-400">{error}</p>}
 

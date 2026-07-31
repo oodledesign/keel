@@ -56,7 +56,11 @@ type Props = {
   accountId?: string;
   stages?: ReadonlyArray<{ key: string; label: string }>;
   defaultStage?: string;
+  listings?: Array<{ id: string; name: string }>;
+  commercial?: boolean;
 };
+
+const NONE_LISTING = '__none__';
 
 export function AddDealDialog({
   businesses,
@@ -65,6 +69,8 @@ export function AddDealDialog({
   accountId,
   stages = WORK_STAGES,
   defaultStage,
+  listings = [],
+  commercial = false,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [open, setOpen] = useState(false);
@@ -80,6 +86,7 @@ export function AddDealDialog({
   const [clientId, setClientId] = useState('');
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [listingId, setListingId] = useState(NONE_LISTING);
 
   // Resolve the account this deal belongs to: explicit (workspace board) or
   // derived from the selected workspace target on the personal board.
@@ -175,6 +182,8 @@ export function AddDealDialog({
     }
 
     const value = valueStr ? Math.round(parseFloat(valueStr)) : 0;
+    const commercialListingId =
+      commercial && listingId !== NONE_LISTING ? listingId : null;
 
     startTransition(async () => {
       const result = await createDeal({
@@ -189,6 +198,7 @@ export function AddDealDialog({
         projectName: projectName || null,
         description: description || null,
         accountSlug: accountSlug ?? null,
+        commercialListingId,
       });
 
       if (!result.success) {
@@ -212,12 +222,22 @@ export function AddDealDialog({
         businessColor: biz?.color ?? null,
         clientId: linkedClientId,
         clientName: linkedClientName,
+        commercialListingId,
+        hotsRentPsf: null,
+        hotsSizeSqft: null,
+        hotsLeaseYears: null,
+        hotsIncentives: null,
+        hotsSolicitorName: null,
+        hotsTargetExchangeDate: null,
+        hotsNotes: null,
+        completedAt: null,
       });
 
       setOpen(false);
-      setStage('lead');
+      setStage(defaultStage ?? stages[0]?.key ?? 'lead');
       setMode('lead');
       setClientId('');
+      setListingId(NONE_LISTING);
       setBusinessId(
         pickDefaultPipelineTargetId(businesses, { workspaceScoped }),
       );
@@ -230,14 +250,18 @@ export function AddDealDialog({
       <DialogTrigger asChild>
         <button type="button" className={workspaceBtnPrimaryMd}>
           <Plus className="h-4 w-4" />
-          Add to pipeline
+          {commercial ? 'Add deal' : 'Add to pipeline'}
         </button>
       </DialogTrigger>
       <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add to pipeline</DialogTitle>
+          <DialogTitle>
+            {commercial ? 'Add deal' : 'Add to pipeline'}
+          </DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-            Track a new lead or an opportunity for an existing client.
+            {commercial
+              ? 'Track a new deal and optionally link it to a disposal.'
+              : 'Track a new lead or an opportunity for an existing client.'}
           </DialogDescription>
         </DialogHeader>
 
@@ -350,6 +374,27 @@ export function AddDealDialog({
               </div>
             </div>
           )}
+
+          {commercial && listings.length > 0 ? (
+            <div className="space-y-2">
+              <Label className="text-[var(--workspace-shell-text-muted)]">
+                Disposal
+              </Label>
+              <Select value={listingId} onValueChange={setListingId}>
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]">
+                  <SelectValue placeholder="Link a disposal (optional)" />
+                </SelectTrigger>
+                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                  <SelectItem value={NONE_LISTING}>None</SelectItem>
+                  {listings.map((listing) => (
+                    <SelectItem key={listing.id} value={listing.id}>
+                      {listing.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          ) : null}
 
           <div
             className={`grid gap-4 ${showAssignField ? 'grid-cols-2' : 'grid-cols-1'}`}

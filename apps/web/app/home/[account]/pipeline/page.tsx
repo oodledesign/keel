@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { loadPipelineDataForAccount } from '~/home/(user)/_lib/server/pipeline.loader';
@@ -16,7 +17,7 @@ interface TeamAccountPipelinePageProps {
 }
 
 export const generateMetadata = async () => {
-  return { title: 'Pipeline' };
+  return { title: 'Deals' };
 };
 
 async function TeamAccountPipelinePage({
@@ -34,6 +35,20 @@ async function TeamAccountPipelinePage({
   const data = await loadPipelineDataForAccount(accountId);
   const isCommercial = workspace.workspaceProfile === 'commercial_property';
 
+  let listings: Array<{ id: string; name: string }> = [];
+  if (isCommercial) {
+    const client = getSupabaseServerClient();
+    const { data: listingRows } = await client
+      .from('commercial_listings')
+      .select('id, name')
+      .eq('account_id', accountId)
+      .order('name', { ascending: true });
+    listings = (listingRows ?? []).map((row) => ({
+      id: row.id as string,
+      name: (row.name as string) || 'Untitled disposal',
+    }));
+  }
+
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0">
       <WorkspacePipelineBoardWrapper
@@ -41,6 +56,7 @@ async function TeamAccountPipelinePage({
         accountSlug={accountSlug}
         accountId={accountId}
         variant={isCommercial ? 'commercial' : 'work'}
+        listings={listings}
       />
     </PageBody>
   );

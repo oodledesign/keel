@@ -20,7 +20,7 @@ interface ListingsPageProps {
 export const generateMetadata = async () => {
   const i18n = await createI18nServerInstance();
   const title = i18n.t('teams:home.pageTitle');
-  return { title: `${title} – Listings` };
+  return { title: `${title} – Disposals` };
 };
 
 async function ListingsPage({ params }: ListingsPageProps) {
@@ -40,7 +40,7 @@ async function ListingsPage({ params }: ListingsPageProps) {
     <>
       <TeamAccountLayoutPageHeader
         account={slug}
-        title="Listings"
+        title="Disposals"
         description="Disposal instructions and marketing stock."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">

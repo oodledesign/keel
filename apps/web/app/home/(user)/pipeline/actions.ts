@@ -53,9 +53,16 @@ export async function moveDealToStage(
   await requireUserInServerComponent();
   const client = getSupabaseServerClient();
 
+  const updates: Record<string, unknown> = { stage: newStage };
+  if (newStage === 'completed') {
+    updates.completed_at = new Date().toISOString();
+  } else if (newStage === 'fell_through') {
+    updates.completed_at = null;
+  }
+
   const { error } = await client
     .from('pipeline_deals')
-    .update({ stage: newStage })
+    .update(updates)
     .eq('id', dealId);
 
   if (error) {
@@ -85,6 +92,8 @@ export type CreateDealInput = {
   accountId?: string | null;
   /** Revalidate team routes after mutation */
   accountSlug?: string | null;
+  /** Commercial disposal link (agency workspaces). */
+  commercialListingId?: string | null;
 };
 
 export async function createDeal(input: CreateDealInput) {
@@ -116,6 +125,7 @@ export async function createDeal(input: CreateDealInput) {
       business_id: parsed.businessId,
       account_id: resolvedAccountId,
       client_id: input.clientId || null,
+      commercial_listing_id: input.commercialListingId || null,
     })
     .select('id')
     .single();
@@ -142,6 +152,14 @@ export type UpdateDealInput = {
   /** Set to a client id to link, or null to unlink (back to a new lead). */
   clientId?: string | null;
   accountSlug?: string | null;
+  commercialListingId?: string | null;
+  hotsRentPsf?: number | null;
+  hotsSizeSqft?: number | null;
+  hotsLeaseYears?: number | null;
+  hotsIncentives?: string | null;
+  hotsSolicitorName?: string | null;
+  hotsTargetExchangeDate?: string | null;
+  hotsNotes?: string | null;
 };
 
 export async function updateDeal(dealId: string, input: UpdateDealInput) {
@@ -158,6 +176,33 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   if (input.nextActionDate !== undefined)
     updates.next_action_date = input.nextActionDate || null;
   if (input.clientId !== undefined) updates.client_id = input.clientId || null;
+  if (input.commercialListingId !== undefined) {
+    updates.commercial_listing_id = input.commercialListingId || null;
+  }
+  if (input.hotsRentPsf !== undefined) {
+    updates.hots_rent_psf = input.hotsRentPsf;
+  }
+  if (input.hotsSizeSqft !== undefined) {
+    updates.hots_size_sqft = input.hotsSizeSqft;
+  }
+  if (input.hotsLeaseYears !== undefined) {
+    updates.hots_lease_years = input.hotsLeaseYears;
+  }
+  if (input.hotsIncentives !== undefined) {
+    updates.hots_incentives = input.hotsIncentives?.trim() || null;
+  }
+  if (input.hotsSolicitorName !== undefined) {
+    updates.hots_solicitor_name = input.hotsSolicitorName?.trim() || null;
+  }
+  if (input.hotsTargetExchangeDate !== undefined) {
+    updates.hots_target_exchange_date = input.hotsTargetExchangeDate || null;
+  }
+  if (input.hotsNotes !== undefined) {
+    updates.hots_notes = input.hotsNotes?.trim() || null;
+  }
+  if (input.stage === 'completed') {
+    updates.completed_at = new Date().toISOString();
+  }
   if (input.description !== undefined)
     updates.notes = input.description?.trim() || null;
 

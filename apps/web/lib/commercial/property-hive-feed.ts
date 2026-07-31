@@ -20,8 +20,11 @@ type ListingRow = {
   address_line_1: string | null;
   address_line_2: string | null;
   town: string | null;
+  county: string | null;
   postcode: string | null;
   country: string | null;
+  latitude: number | null;
+  longitude: number | null;
   sector: string | null;
   tenure: string | null;
   disposal_type: string;
@@ -367,10 +370,10 @@ async function renderPropertyXml(
     el('address1', listing.address_line_1),
     el('address2', listing.address_line_2),
     el('town', listing.town),
-    '<county/>',
+    el('county', listing.county),
     el('postcode', listing.postcode),
-    '<lat/>',
-    '<lon/>',
+    el('lat', listing.latitude != null ? String(listing.latitude) : ''),
+    el('lon', listing.longitude != null ? String(listing.longitude) : ''),
     el('created_at', sqlTimestamp(listing.created_at)),
     el('last_updated', sqlTimestamp(listing.updated_at)),
     el('on_market_date', sqlTimestamp(listing.on_market_at)),
