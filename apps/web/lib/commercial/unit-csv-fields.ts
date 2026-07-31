@@ -131,14 +131,14 @@ export function buildUnitImportTemplateCsv(): string {
     [
       [
         '1001',
-        '5 Angel Walk',
+        '10 Example Street',
         'Ground',
         'Retail unit',
         'No',
-        '3139',
+        '2500',
         'Retail',
         'Available',
-        '£34,500.00',
+        '£30,000.00',
         'C',
       ],
     ],

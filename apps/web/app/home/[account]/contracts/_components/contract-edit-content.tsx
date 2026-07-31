@@ -601,7 +601,7 @@ export function ContractEditContent({
                     value={authorName}
                     onChange={(e) => setAuthorName(e.target.value)}
                     disabled={authorSigned}
-                    placeholder="Jane Smith"
+                    placeholder="Full name"
                   />
                 </div>
                 {authorType === 'company' ? (

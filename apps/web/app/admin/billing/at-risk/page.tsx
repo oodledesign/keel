@@ -75,7 +75,7 @@ async function AdminBillingAtRiskPage() {
             <CardTitle className="text-base">Outreach queue</CardTitle>
             <CardDescription>
               Sorted by urgency (suspended → restricted → grace → trial ending
-              soon). Use for Thistleleaf-tier personal check-ins.
+              soon). Use for personal check-ins with at-risk accounts.
             </CardDescription>
           </CardHeader>
           <CardContent className="p-0">

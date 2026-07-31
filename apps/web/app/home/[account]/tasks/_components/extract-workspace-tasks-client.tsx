@@ -278,7 +278,7 @@ export function ExtractWorkspaceTasksClient({
               id="extract-instructions"
               value={instructions}
               onChange={(e) => setInstructions(e.target.value)}
-              placeholder="e.g. Put everything I need to email Tim into one task, with bullet points in the notes"
+              placeholder="e.g. Put everything I need to email the client into one task, with bullet points in the notes"
               className="min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
             />
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">

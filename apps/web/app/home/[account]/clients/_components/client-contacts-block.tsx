@@ -443,7 +443,7 @@ function AddContactForm({
                 id="contact_first_name"
                 value={firstName}
                 onChange={(e) => setFirstName(e.target.value)}
-                placeholder="e.g. Jane"
+                placeholder="e.g. First name"
                 className="h-8 text-sm"
                 required
               />
@@ -456,7 +456,7 @@ function AddContactForm({
                 id="contact_last_name"
                 value={lastName}
                 onChange={(e) => setLastName(e.target.value)}
-                placeholder="e.g. Smith"
+                placeholder="e.g. Last name"
                 className="h-8 text-sm"
               />
             </div>

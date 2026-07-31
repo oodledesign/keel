@@ -86,7 +86,7 @@ export function PersonalDetailsStep({
             value={lastName}
             onChange={(e) => setLastName(e.target.value)}
             className="w-full rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 px-4 py-2.5 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[color:var(--workspace-shell-border)] focus:ring-1 focus:ring-[var(--ozer-accent)]/30 focus:outline-none"
-            placeholder="eg. Smith"
+            placeholder="e.g. Last name"
           />
         </div>
       </div>

@@ -214,7 +214,7 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
                     <Input
                       {...field}
                       type="email"
-                      placeholder="amie@thistleleaf.com"
+                      placeholder="alex@example.com"
                       autoComplete="off"
                     />
                   </FormControl>
@@ -230,10 +230,10 @@ export function AdminInviteUserDialog(props: React.PropsWithChildren) {
                 <FormItem>
                   <FormLabel>Name (optional)</FormLabel>
                   <FormControl>
-                    <Input {...field} placeholder="Aimee" autoComplete="off" />
+                    <Input {...field} placeholder="Alex" autoComplete="off" />
                   </FormControl>
                   <FormDescription>
-                    Used in the invite email greeting — e.g. “Hi Aimee,”.
+                    Used in the invite email greeting — e.g. “Hi Alex,”.
                   </FormDescription>
                   <FormMessage />
                 </FormItem>

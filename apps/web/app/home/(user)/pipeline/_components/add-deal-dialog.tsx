@@ -354,7 +354,7 @@ export function AddDealDialog({
                 <Input
                   id="contactName"
                   name="contactName"
-                  placeholder="Jane Smith"
+                  placeholder="Full name"
                   className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                 />
               </div>

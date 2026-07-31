@@ -246,7 +246,7 @@ function ListingFormFields({
           <Input
             value={form.name}
             onChange={(e) => field('name', e.target.value)}
-            placeholder="e.g. 12 High Street – Ground Floor"
+            placeholder="e.g. 10 Example Street – Ground Floor"
             required
             className={inputClass}
           />

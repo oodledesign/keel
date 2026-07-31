@@ -390,7 +390,7 @@ export function EditDealDialog({
                   id="edit-contactName"
                   name="contactName"
                   defaultValue={deal.contactName}
-                  placeholder="Jane Smith"
+                  placeholder="Full name"
                   className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
                 />
               </div>

@@ -1623,7 +1623,7 @@ const FEATURE_PAGES: Record<FeatureSlug, FeaturePageConfig> = {
         {
           question: 'Is financial data included in the second brain?',
           answer:
-            "Invoice history and project financials are part of your Ozer record and accessible via search — so you can ask things like 'what did Thistleleaf spend last quarter' and get an answer.",
+            "Invoice history and project financials are part of your Ozer record and accessible via search — so you can ask things like 'what did Acme spend last quarter' and get an answer.",
         },
       ],
     },

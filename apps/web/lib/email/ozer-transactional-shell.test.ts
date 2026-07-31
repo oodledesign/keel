@@ -11,14 +11,14 @@ describe('ozer transactional email shell', () => {
       title: 'Invite',
       preview: 'You are invited',
       heading: "You're invited",
-      bodyHtml: '<p>Hello Aimee</p>',
+      bodyHtml: '<p>Hello Alex</p>',
       cta: { label: 'Accept invitation', href: 'https://ozer.so/join' },
       productName: 'Ozer',
     });
 
     expect(html).toContain('ozer-wordmark-dark.png');
     expect(html).toContain("You're invited");
-    expect(html).toContain('Hello Aimee');
+    expect(html).toContain('Hello Alex');
     expect(html).toContain('#FF5C34');
     expect(html).toContain('Accept invitation');
     expect(html).toContain('https://ozer.so/join');

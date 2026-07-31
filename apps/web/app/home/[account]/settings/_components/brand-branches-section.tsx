@@ -170,7 +170,7 @@ export function BrandBranchesSection({
                   onChange={(e) =>
                     updateRow(index, { address: e.target.value })
                   }
-                  placeholder="123 High Street, London, SW1A 1AA"
+                  placeholder="10 Example Street, Exampletown, EX1 2AB"
                   disabled={!canEdit}
                 />
               </div>

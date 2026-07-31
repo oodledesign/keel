@@ -428,7 +428,7 @@ export function ClientForm({
               id="first_name"
               value={first_name}
               onChange={(e) => setFirstName(e.target.value)}
-              placeholder="e.g. John"
+              placeholder="e.g. First name"
               required
               readOnly={isReadOnly}
             />
@@ -439,7 +439,7 @@ export function ClientForm({
               id="last_name"
               value={last_name}
               onChange={(e) => setLastName(e.target.value)}
-              placeholder="e.g. Smith"
+              placeholder="e.g. Last name"
               readOnly={isReadOnly}
             />
           </div>
@@ -497,7 +497,7 @@ export function ClientForm({
                     id="contact_first_name"
                     value={contactFirstName}
                     onChange={(e) => setContactFirstName(e.target.value)}
-                    placeholder="e.g. Jane"
+                    placeholder="e.g. First name"
                     required
                   />
                 </div>
@@ -509,7 +509,7 @@ export function ClientForm({
                     id="contact_last_name"
                     value={contactLastName}
                     onChange={(e) => setContactLastName(e.target.value)}
-                    placeholder="e.g. Smith"
+                    placeholder="e.g. Last name"
                   />
                 </div>
               </div>
@@ -523,7 +523,7 @@ export function ClientForm({
                     type="email"
                     value={contactEmail}
                     onChange={(e) => setContactEmail(e.target.value)}
-                    placeholder="jane@acme.com"
+                    placeholder="name@company.com"
                   />
                 </div>
                 <div className="space-y-2">

@@ -81,7 +81,7 @@ export type CapabilityPolicy = 'allowed' | 'blocked' | 'decision';
  * Restricted-mode draft (past_due_restricted).
  *
  * Intent: operators keep visibility; create/edit money + scheduling lock;
- * client-facing booking stays up by default so Aimee's clients are not
+ * client-facing booking stays up by default so client bookings are not
  * disrupted — flag as decision rather than assuming forever.
  */
 export const RESTRICTED_ACCESS_POLICY: Record<

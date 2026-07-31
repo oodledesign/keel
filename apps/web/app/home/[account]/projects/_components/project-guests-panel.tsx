@@ -173,7 +173,7 @@ export function ProjectGuestsPanel(props: {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="sandra@example.com"
+                placeholder="guest@example.com"
                 className="mt-1 border-[color:var(--workspace-shell-border)]"
               />
             </div>

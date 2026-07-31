@@ -266,7 +266,7 @@ export function ReplanDialog({
               id="replan-not-done"
               value={notDone}
               onChange={(event) => setNotDone(event.target.value)}
-              placeholder="e.g. Didn't start the proposal draft or reply to Sarah's email…"
+              placeholder="e.g. Didn't start the proposal draft or reply to the client email…"
               rows={3}
               className="resize-none border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30"
             />

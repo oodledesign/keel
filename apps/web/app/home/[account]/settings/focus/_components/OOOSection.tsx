@@ -235,7 +235,7 @@ export function OOOSection({ form, accountId, persisted }: OOOSectionProps) {
                           <Input
                             {...field}
                             value={field.value ?? ''}
-                            placeholder="e.g. Dan at Oodle Design"
+                            placeholder="e.g. Alex at Acme Studio"
                             className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40 text-[var(--workspace-shell-text)]"
                             onChange={(event) =>
                               field.onChange(event.target.value || null)

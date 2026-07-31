@@ -84,40 +84,11 @@ export const WEBSITE_REVAMP_IMPORT_CLIENTS: Array<{
   name: string;
   websiteUrl?: string;
 }> = [
-  { name: 'Onley Law', websiteUrl: 'https://onleylaw.ca/' },
-  { name: 'LifePoint Therapy', websiteUrl: 'https://lifepointtherapy.ca' },
-  { name: 'Willowworld', websiteUrl: 'https://willowworld.ca/' },
-  { name: 'Jon Thompson', websiteUrl: 'https://jonthompsonresources.com' },
-  { name: 'Barber Brothers', websiteUrl: 'https://barberbrothers.ca' },
-  { name: 'Ibiza Church', websiteUrl: 'https://ibizachurch.com' },
-  {
-    name: 'Mount Merrion',
-    websiteUrl: 'https://www.mountmerrionchurch.org.uk/',
-  },
-  { name: 'Anwar Knight', websiteUrl: 'https://anwarknight.com' },
-  {
-    name: 'J & S Property Management',
-    websiteUrl: 'https://jandspropertymgmt.com',
-  },
-  { name: 'Fur A Night or 2', websiteUrl: 'https://furanightor2.ca' },
-  { name: 'Relentless Youth', websiteUrl: 'https://wearerelentlessyouth.com/' },
-  { name: 'Winds of Change' },
-  {
-    name: 'Boyd Mediation & Counselling',
-    websiteUrl: 'https://boydmediationandcounselling.com',
-  },
-  {
-    name: 'Pinups & Pompadours',
-    websiteUrl: 'https://pinupsandpompadours.com/',
-  },
-  { name: 'Stay Open Safely' },
-  { name: 'Josh Gibson Media', websiteUrl: 'https://joshgibsonmedia.com/' },
-  { name: 'Dana Levenson', websiteUrl: 'https://danalevenson.com/' },
-  {
-    name: 'Royalty Bookkeeping Services',
-    websiteUrl: 'https://royaltybookkeepingservices.ca/',
-  },
-  { name: 'Tribal Partners' },
+  { name: 'Acme Consulting', websiteUrl: 'https://example.com' },
+  { name: 'Northside Bakery', websiteUrl: 'https://example.com' },
+  { name: 'River Studio', websiteUrl: 'https://example.com' },
+  { name: 'Bright Legal', websiteUrl: 'https://example.com' },
+  { name: 'Summit Fitness', websiteUrl: 'https://example.com' },
 ];
 
 export const WEBSITE_REVAMP_CAMPAIGN_NAME = 'Website Revamp Campaign';

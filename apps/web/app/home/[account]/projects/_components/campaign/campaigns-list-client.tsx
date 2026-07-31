@@ -144,8 +144,8 @@ export function CampaignsListClient({
             No campaign trackers yet
           </p>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-            Create a campaign or import the Website Revamp template for
-            Thistleleaf.
+            Create a campaign or import the Website Revamp template to get
+            started.
           </p>
         </div>
       ) : (
@@ -184,7 +184,7 @@ export function CampaignsListClient({
               <Input
                 value={name}
                 onChange={(event) => setName(event.target.value)}
-                placeholder="Website Revamp Campaign"
+                placeholder="e.g. Q3 outreach campaign"
                 className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
               />
             </div>
