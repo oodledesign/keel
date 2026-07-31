@@ -221,13 +221,24 @@ export function ProjectGuestsPanel(props: {
                       projectId: props.projectId,
                       email: email.trim(),
                       permissions,
-                    }).then((result) => {
+                    }).then(async (result) => {
                       if (result.emailSent) {
                         toast.success('Invite sent');
-                      } else {
+                        return;
+                      }
+
+                      const message =
+                        result.emailError ??
+                        'Invite created, but the email could not be sent';
+
+                      try {
+                        await navigator.clipboard.writeText(result.acceptUrl);
                         toast.error(
-                          result.emailError ??
-                            'Invite created, but the email could not be sent',
+                          `${message} Invite link copied to clipboard.`,
+                        );
+                      } catch {
+                        toast.error(
+                          `${message} Share this link: ${result.acceptUrl}`,
                         );
                       }
                     });

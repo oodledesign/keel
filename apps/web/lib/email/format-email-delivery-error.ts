@@ -54,6 +54,21 @@ export function formatEmailDeliveryError(error: unknown): string {
     return message;
   }
 
+  if (
+    /Resource Limit Exhausted/i.test(message) ||
+    /\b429\b/.test(message) ||
+    /SM_151|SMI_115|LE_102|SM_133/i.test(message) ||
+    /Per day limit exhausted/i.test(message) ||
+    /Credit exhausted/i.test(message) ||
+    /Trial mail sending limit exceeded/i.test(message)
+  ) {
+    return (
+      'Email could not be sent: ZeptoMail send limit reached (daily Agent quota or credits). ' +
+      'Check ZeptoMail → Settings → Sending limits / credits. Limits usually reset at midnight server time. ' +
+      'You can still share the invite link manually.'
+    );
+  }
+
   // Prefer ZeptoMail / API details when the top-level message is useless.
   if (!message || message === '[object Object]') {
     return 'Email could not be sent.';

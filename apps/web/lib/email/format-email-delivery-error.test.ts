@@ -26,4 +26,13 @@ describe('formatEmailDeliveryError', () => {
 
     expect(formatEmailDeliveryError(error)).toContain('Domain not verified');
   });
+
+  it('explains ZeptoMail resource / daily limit errors', () => {
+    expect(formatEmailDeliveryError('Resource Limit Exhausted.')).toContain(
+      'ZeptoMail send limit',
+    );
+    expect(
+      formatEmailDeliveryError({ error: { code: 'SM_151', message: 'limit' } }),
+    ).toContain('ZeptoMail send limit');
+  });
 });
