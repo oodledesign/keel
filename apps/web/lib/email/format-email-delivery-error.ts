@@ -3,6 +3,7 @@
  */
 export function formatEmailDeliveryError(error: unknown): string {
   const message = extractErrorMessage(error);
+  const haystack = `${message}\n${safeJson(error)}`;
 
   if (
     /AccessDenied/i.test(message) &&
@@ -55,12 +56,12 @@ export function formatEmailDeliveryError(error: unknown): string {
   }
 
   if (
-    /Resource Limit Exhausted/i.test(message) ||
-    /\b429\b/.test(message) ||
-    /SM_151|SMI_115|LE_102|SM_133/i.test(message) ||
-    /Per day limit exhausted/i.test(message) ||
-    /Credit exhausted/i.test(message) ||
-    /Trial mail sending limit exceeded/i.test(message)
+    /Resource Limit Exhausted/i.test(haystack) ||
+    /\b429\b/.test(haystack) ||
+    /SM_151|SMI_115|LE_102|SM_133/i.test(haystack) ||
+    /Per day limit exhausted/i.test(haystack) ||
+    /Credit exhausted/i.test(haystack) ||
+    /Trial mail sending limit exceeded/i.test(haystack)
   ) {
     return (
       'Email could not be sent: ZeptoMail send limit reached (daily Agent quota or credits). ' +
@@ -75,6 +76,14 @@ export function formatEmailDeliveryError(error: unknown): string {
   }
 
   return message;
+}
+
+function safeJson(value: unknown): string {
+  try {
+    return JSON.stringify(value) ?? '';
+  } catch {
+    return '';
+  }
 }
 
 export function extractErrorMessage(error: unknown): string {
