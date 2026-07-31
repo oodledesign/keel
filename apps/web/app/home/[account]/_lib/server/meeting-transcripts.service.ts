@@ -349,6 +349,10 @@ class MeetingTranscriptsService {
     throw new Error('Permission denied');
   }
 
+  async assertCanEdit(accountId: string) {
+    await this.ensureUserAndPermission(accountId, 'clients.edit');
+  }
+
   async listForAccount(input: {
     accountId: string;
   }): Promise<MeetingTranscriptListItem[]> {

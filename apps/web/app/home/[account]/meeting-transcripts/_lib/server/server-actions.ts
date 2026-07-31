@@ -237,6 +237,12 @@ export const updateMeetingTranscriptContent = enhanceAction(
   { schema: UpdateContentSchema },
 );
 
+const GenerateSummarySchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200).optional(),
+  transcriptId: z.string().uuid(),
+});
+
 export const deleteMeetingTranscript = enhanceAction(
   async (input) => {
     await getService().delete({
@@ -249,4 +255,55 @@ export const deleteMeetingTranscript = enhanceAction(
     }
   },
   { schema: DeleteSchema },
+);
+
+export const generateMeetingSummary = enhanceAction(
+  async (input, user) => {
+    const service = getService();
+    await service.assertCanEdit(input.accountId);
+
+    const transcript = await service.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+
+    if (!transcript) {
+      throw new Error('Meeting not found');
+    }
+
+    const contentFromSegments = transcript.speakerSegments
+      .map((segment) => `${segment.speaker}: ${segment.text}`.trim())
+      .filter(Boolean)
+      .join('\n\n')
+      .trim();
+    const content = transcript.content?.trim() || contentFromSegments;
+
+    if (!content) {
+      throw new Error('This meeting has no transcript to summarise');
+    }
+
+    const { getSupabaseServerAdminClient } = await import(
+      '@kit/supabase/server-admin-client'
+    );
+    const { generateAndPersistMeetingSummary } = await import(
+      '~/lib/recorder/meeting-summary'
+    );
+
+    await generateAndPersistMeetingSummary(getSupabaseServerAdminClient(), {
+      meetingTranscriptId: transcript.id,
+      accountId: input.accountId,
+      createdByUserId: user.id,
+      title: transcript.title,
+      content,
+      meetingDate: transcript.meetingDate,
+      calendarAttendees: transcript.calendarAttendees,
+    });
+
+    if (input.accountSlug) {
+      revalidateMeetingPages(input.accountSlug, input.transcriptId);
+    }
+
+    return { ok: true as const };
+  },
+  { schema: GenerateSummarySchema },
 );

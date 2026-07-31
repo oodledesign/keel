@@ -50,6 +50,7 @@ import {
 
 import {
   deleteMeetingTranscript,
+  generateMeetingSummary,
   updateMeetingTranscript,
   updateMeetingTranscriptContent,
 } from '../../meeting-transcripts/_lib/server/server-actions';
@@ -297,6 +298,30 @@ export function MeetingTranscriptDetailClient({
     });
   };
 
+  const generateSummary = () => {
+    if (!canEdit) return;
+    if (!displayContent.trim()) {
+      toast.error('Add transcript content before generating a summary');
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        await generateMeetingSummary({
+          accountId,
+          accountSlug,
+          transcriptId: transcript.id,
+        });
+        toast.success('Meeting summary generated');
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Summary generation failed',
+        );
+      }
+    });
+  };
+
   return (
     <div
       className={cn(
@@ -336,6 +361,31 @@ export function MeetingTranscriptDetailClient({
                   <p key={paragraph.slice(0, 40)}>{paragraph}</p>
                 ))}
               </div>
+            </section>
+          ) : canEdit && displayContent.trim() ? (
+            <section className={panelClassName}>
+              <div className="mb-3 flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[var(--ozer-accent)]" />
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                  Summary
+                </h2>
+              </div>
+              <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                No summary yet. Generate one from this meeting transcript.
+              </p>
+              <Button
+                type="button"
+                disabled={pending}
+                className="mt-4 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                onClick={generateSummary}
+              >
+                {pending ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="mr-2 h-4 w-4" />
+                )}
+                Generate meeting summary
+              </Button>
             </section>
           ) : null}
 

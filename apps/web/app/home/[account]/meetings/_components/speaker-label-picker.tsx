@@ -20,6 +20,7 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import {
+  workspaceComboboxItemClass,
   workspaceComboboxListClass,
   workspaceComboboxPopoverClass,
 } from '~/components/workspace-shell/workspace-combobox-styles';
@@ -133,7 +134,7 @@ function SearchableSelect({
                     onValueChange(option.id);
                     setOpen(false);
                   }}
-                  className="text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)]"
+                  className={workspaceComboboxItemClass}
                 >
                   <Check
                     className={cn(
