@@ -88,8 +88,8 @@ export async function sendPlatformEmail(params: {
     }
   } catch (error) {
     status = 'failed';
-    errorMessage = error instanceof Error ? error.message : String(error);
-    throw new Error(formatEmailDeliveryError(error));
+    errorMessage = formatEmailDeliveryError(error);
+    throw new Error(errorMessage);
   } finally {
     await insertPlatformEmailLog({
       emailType: params.type,

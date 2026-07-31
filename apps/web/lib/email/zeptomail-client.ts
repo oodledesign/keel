@@ -2,6 +2,7 @@ import 'server-only';
 
 import { SendMailClient } from 'zeptomail';
 
+import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
 import { isEmailSuppressed } from '~/lib/email/is-suppressed';
 
 // EU data centre for GDPR/data residency.
@@ -154,7 +155,11 @@ export async function sendTransactionalEmail({
           })),
         }
       : {}),
-  } as Parameters<typeof client.sendMail>[0]);
+  } as Parameters<typeof client.sendMail>[0]).catch((error: unknown) => {
+    // ZeptoMail sometimes rejects with a plain object / ApiError whose
+    // .message is unusable — normalize before bubbling up.
+    throw new Error(formatEmailDeliveryError(error));
+  });
 
   return { sent: true };
 }

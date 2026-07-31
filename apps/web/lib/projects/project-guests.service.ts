@@ -4,10 +4,12 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
 import {
   escapeNotificationHtml,
   wrapNotificationEmail,
 } from '~/lib/email/wrap-notification-email';
+import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import type {
   ProjectGuest,
   ProjectGuestPermissions,
@@ -235,7 +237,12 @@ export async function createProjectGuestInvite(input: {
   projectId: string;
   email: string;
   permissions?: Partial<ProjectGuestPermissions>;
-}): Promise<{ guest: ProjectGuest; acceptUrl: string }> {
+}): Promise<{
+  guest: ProjectGuest;
+  acceptUrl: string;
+  emailSent: boolean;
+  emailError?: string;
+}> {
   const { user, project } = await assertCanManageProject(
     input.accountId,
     input.projectId,
@@ -312,11 +319,10 @@ export async function createProjectGuestInvite(input: {
   const projectLabel =
     project.title?.trim() || project.name.trim() || 'a project';
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
-  const from =
-    process.env.EMAIL_SENDER?.trim() ||
-    (process.env.ZEPTOMAIL_FROM_ADDRESS
-      ? `${productName} <${process.env.ZEPTOMAIL_FROM_ADDRESS}>`
-      : null);
+  const from = resolveTransactionalEmailFrom(productName);
+
+  let emailSent = false;
+  let emailError: string | undefined;
 
   if (from) {
     const html = wrapNotificationEmail(
@@ -349,15 +355,19 @@ export async function createProjectGuestInvite(input: {
           guestId: guest.id,
         },
       });
+      emailSent = true;
     } catch (error) {
-      console.error('[project-guests] email failed', error);
+      emailError = formatEmailDeliveryError(error);
+      console.error('[project-guests] email failed', emailError, error);
     }
   } else {
-    console.warn('[project-guests] No email sender configured; skip invite');
+    emailError =
+      'No email sender configured (set ZEPTOMAIL_FROM_ADDRESS or EMAIL_SENDER).';
+    console.warn('[project-guests]', emailError);
   }
 
   void input.accountSlug;
-  return { guest, acceptUrl };
+  return { guest, acceptUrl, emailSent, emailError };
 }
 
 export async function acceptProjectGuestInvite(

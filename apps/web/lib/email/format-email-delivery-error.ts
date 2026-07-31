@@ -1,5 +1,5 @@
 /**
- * Turn low-level mailer errors (especially AWS SES) into admin-friendly messages.
+ * Turn low-level mailer errors (ZeptoMail / AWS SES) into admin-friendly messages.
  */
 export function formatEmailDeliveryError(error: unknown): string {
   const message = extractErrorMessage(error);
@@ -19,7 +19,10 @@ export function formatEmailDeliveryError(error: unknown): string {
     );
   }
 
-  if (/MessageRejected/i.test(message) || /Email address is not verified/i.test(message)) {
+  if (
+    /MessageRejected/i.test(message) ||
+    /Email address is not verified/i.test(message)
+  ) {
     const failedIdentities = message.match(
       /identities failed the check[^:]*:\s*([^\n]+)/i,
     )?.[1];
@@ -51,29 +54,93 @@ export function formatEmailDeliveryError(error: unknown): string {
     return message;
   }
 
-  return message || 'Email could not be sent.';
+  // Prefer ZeptoMail / API details when the top-level message is useless.
+  if (!message || message === '[object Object]') {
+    return 'Email could not be sent.';
+  }
+
+  return message;
 }
 
-function extractErrorMessage(error: unknown): string {
+export function extractErrorMessage(error: unknown): string {
+  if (typeof error === 'string' && error.trim()) {
+    return error;
+  }
+
   if (error instanceof Error) {
-    return error.message;
+    const fromMessage = cleanMessage(error.message);
+    if (fromMessage) return fromMessage;
+
+    const withExtras = error as Error & {
+      data?: unknown;
+      statusCode?: unknown;
+      response?: { data?: unknown; status?: unknown };
+      cause?: unknown;
+    };
+
+    const fromData = stringifyUnknown(withExtras.data);
+    if (fromData) return fromData;
+
+    const fromResponse = stringifyUnknown(withExtras.response?.data);
+    if (fromResponse) return fromResponse;
+
+    const fromCause = extractErrorMessage(withExtras.cause);
+    if (fromCause && fromCause !== '[object Object]') return fromCause;
+
+    return error.name || 'Email could not be sent.';
   }
 
   if (typeof error === 'object' && error !== null) {
     const record = error as Record<string, unknown>;
-    const nested = record.Error;
 
+    const nested = record.Error;
     if (typeof nested === 'object' && nested !== null && 'Message' in nested) {
       const nestedMessage = (nested as { Message?: unknown }).Message;
-      if (typeof nestedMessage === 'string') {
+      if (typeof nestedMessage === 'string' && nestedMessage.trim()) {
         return nestedMessage;
       }
     }
 
-    if (typeof record.message === 'string') {
-      return record.message;
+    for (const key of ['message', 'error', 'detail', 'details', 'code'] as const) {
+      const value = record[key];
+      if (typeof value === 'string' && value.trim() && value !== '[object Object]') {
+        return value;
+      }
+      if (typeof value === 'object' && value !== null) {
+        const nestedMessage = extractErrorMessage(value);
+        if (nestedMessage && nestedMessage !== '[object Object]') {
+          return nestedMessage;
+        }
+      }
     }
+
+    const serialized = stringifyUnknown(error);
+    if (serialized) return serialized;
   }
 
-  return String(error);
+  const fallback = String(error);
+  return fallback === '[object Object]' ? '' : fallback;
+}
+
+function cleanMessage(message: string | undefined): string {
+  if (!message?.trim() || message === '[object Object]') {
+    return '';
+  }
+  return message;
+}
+
+function stringifyUnknown(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return cleanMessage(value);
+  if (typeof value === 'number' || typeof value === 'boolean') {
+    return String(value);
+  }
+
+  try {
+    const json = JSON.stringify(value);
+    if (!json || json === '{}' || json === 'null') return '';
+    return json.length > 800 ? `${json.slice(0, 800)}…` : json;
+  } catch {
+    return '';
+  }
 }

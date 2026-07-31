@@ -221,8 +221,16 @@ export function ProjectGuestsPanel(props: {
                       projectId: props.projectId,
                       email: email.trim(),
                       permissions,
+                    }).then((result) => {
+                      if (result.emailSent) {
+                        toast.success('Invite sent');
+                      } else {
+                        toast.error(
+                          result.emailError ??
+                            'Invite created, but the email could not be sent',
+                        );
+                      }
                     });
-                    toast.success('Invite sent');
                     setInviteOpen(false);
                     await refresh();
                   } catch (e) {
