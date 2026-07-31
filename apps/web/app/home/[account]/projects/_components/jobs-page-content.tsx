@@ -249,7 +249,7 @@ export function JobsPageContent({
       return;
     }
 
-    setCreateSheetOpen(true);
+    openCreateDialog('delivery');
 
     const nextParams = new URLSearchParams(searchParams.toString());
     nextParams.delete('create');
@@ -258,7 +258,7 @@ export function JobsPageContent({
       : pathname;
 
     router.replace(nextPath, { scroll: false });
-  }, [canEditJobs, pathname, router, searchParams]);
+  }, [canEditJobs, openCreateDialog, pathname, router, searchParams]);
 
   if (!canViewJobs) {
     return (

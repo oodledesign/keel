@@ -71,8 +71,16 @@ async function TeamAccountInvitesPage({ params }: TeamAccountInvitesPageProps) {
     slug,
   );
 
-  const canManageRoles = account.permissions.includes('roles.manage');
-  const canManageInvitations = account.permissions.includes('invites.manage');
+  const access = getTeamAccountAccess(
+    account as {
+      permissions?: string[] | null;
+      role?: string | null;
+      company_role?: string | null;
+    },
+  );
+
+  const canManageInvitations =
+    account.permissions?.includes('invites.manage') || access.canManageInvites;
   const currentUserRoleHierarchy = account.role_hierarchy_level;
   const membersHref = pathsConfig.app.accountMembers.replace(
     '[account]',

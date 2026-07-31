@@ -60,12 +60,14 @@ export function InviteMembersDialogContainer({
   accountSlug,
   userRoleHierarchy,
   children,
+  defaultOpen = false,
 }: React.PropsWithChildren<{
   accountSlug: string;
   userRoleHierarchy: number;
+  defaultOpen?: boolean;
 }>) {
   const [pending, startTransition] = useTransition();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isOpen, setIsOpen] = useState(defaultOpen);
   const { t } = useTranslation('teams');
 
   // Evaluate policies when dialog is open

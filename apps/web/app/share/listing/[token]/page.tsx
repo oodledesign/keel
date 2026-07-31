@@ -1,7 +1,6 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
   DISPOSAL_TYPE_LABELS,
@@ -70,9 +69,11 @@ async function loadSharedListing(
     return null;
   }
 
-  const client = getSupabaseServerClient() as unknown as SupabaseClient;
+  // Token-gated public page — use admin client (matches /watch share pattern).
+  // Anon has no table GRANT; relying on session client would 404 for landlords.
+  const admin = getSupabaseServerAdminClient() as unknown as SupabaseClient;
 
-  const { data: listing, error } = await client
+  const { data: listing, error } = await admin
     .from('commercial_listings')
     .select(
       'id, name, address_line_1, address_line_2, town, postcode, status, disposal_type, asking_rent_pence, asking_price_pence, size_min_sqft, size_max_sqft, hide_rent_from_marketing',
@@ -84,8 +85,6 @@ async function loadSharedListing(
   if (error || !listing) {
     return null;
   }
-
-  const admin = getSupabaseServerAdminClient() as unknown as SupabaseClient;
 
   const { data: enquiryRows, error: enquiryError } = await admin
     .from('commercial_enquiries')

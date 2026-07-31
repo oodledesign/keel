@@ -56,6 +56,7 @@ import {
 import { JobProjectWorkspace } from './job-project/job-project-workspace';
 import { JobScheduleTabContent } from './job-schedule-tab';
 import { ProjectFinancePanel } from './project-finance-panel';
+import { ProjectGuestsPanel } from './project-guests-panel';
 
 type Job = {
   id: string;
@@ -834,6 +835,15 @@ export function JobDetailContent({
                     All members are already assigned.
                   </p>
                 )}
+
+              <div className="mt-6">
+                <ProjectGuestsPanel
+                  accountId={accountId}
+                  accountSlug={accountSlug}
+                  projectId={jobId}
+                  canManage={canEditJobs && !isContractorView}
+                />
+              </div>
             </>
           )}
         </TabsContent>

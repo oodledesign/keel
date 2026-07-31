@@ -36,6 +36,7 @@ import { loadMembersPageData } from './_lib/server/members-page.loader';
 
 interface TeamAccountMembersPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ create?: string }>;
 }
 
 export const generateMetadata = async () => {
@@ -47,9 +48,13 @@ export const generateMetadata = async () => {
   };
 };
 
-async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
+async function TeamAccountMembersPage({
+  params,
+  searchParams,
+}: TeamAccountMembersPageProps) {
   const client = getSupabaseServerClient();
   const slug = (await params).account;
+  const openInvite = (await searchParams).create === 'invite';
   const workspace = await loadTeamWorkspace(slug);
   const access = getTeamAccountAccess(
     workspace.account as {
@@ -69,8 +74,10 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
   const [members, invitations, canAddMember, { user, account }] =
     await loadMembersPageData(client, slug);
 
-  const canManageRoles = account.permissions.includes('roles.manage');
-  const canManageInvitations = account.permissions.includes('invites.manage');
+  const canManageRoles =
+    account.permissions?.includes('roles.manage') || access.canManageRoles;
+  const canManageInvitations =
+    account.permissions?.includes('invites.manage') || access.canManageInvites;
 
   const isPrimaryOwner = account.primary_owner_user_id === user.id;
   const currentUserRoleHierarchy = account.role_hierarchy_level;
@@ -123,6 +130,7 @@ async function TeamAccountMembersPage({ params }: TeamAccountMembersPageProps) {
                   <InviteMembersDialogContainer
                     userRoleHierarchy={currentUserRoleHierarchy}
                     accountSlug={account.slug}
+                    defaultOpen={openInvite}
                   >
                     <Button size="sm" data-test="invite-members-form-trigger">
                       <PlusCircle className="mr-2 w-4" />

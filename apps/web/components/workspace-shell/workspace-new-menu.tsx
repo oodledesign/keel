@@ -371,7 +371,7 @@ function getTeamItems(
         key: 'invite',
         label: 'Invite Member',
         icon: UserRoundPlus,
-        href: accountPath(account, pathsConfig.app.accountMembers),
+        href: `${accountPath(account, pathsConfig.app.accountMembers)}?create=invite`,
       },
     ];
   }
@@ -470,6 +470,12 @@ function getTeamItems(
       label: 'New Project',
       icon: BriefcaseBusiness,
       href: `${accountPath(account, pathsConfig.app.accountJobs)}?create=job`,
+    },
+    {
+      key: 'invite',
+      label: 'Invite Member',
+      icon: UserRoundPlus,
+      href: `${accountPath(account, pathsConfig.app.accountMembers)}?create=invite`,
     },
     {
       key: 'client',

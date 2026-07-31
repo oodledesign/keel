@@ -131,6 +131,29 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves landlord listing share links on the app host without redirecting to /app', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL(
+          'https://app.ozer.so/share/listing/ade03e1a4cc55fde1fc9eaa4adad88ee95ca45672a469603',
+        ),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL(
+          'https://www.ozer.so/share/listing/ade03e1a4cc55fde1fc9eaa4adad88ee95ca45672a469603',
+        ),
+      ),
+    ).toBe(
+      'https://app.ozer.so/share/listing/ade03e1a4cc55fde1fc9eaa4adad88ee95ca45672a469603',
+    );
+  });
+
   it('serves API routes on the app host without redirecting to /app', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
     vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
