@@ -58,6 +58,7 @@ import {
   deleteMeetingTranscript,
   generateMeetingSummary,
   setMeetingPublicShare,
+  setMeetingPublicShareShowTasks,
   updateMeetingTranscript,
   updateMeetingTranscriptContent,
 } from '../../meeting-transcripts/_lib/server/server-actions';
@@ -81,6 +82,7 @@ type Transcript = {
   dealTitle: string | null;
   publicShareEnabled?: boolean;
   publicShareToken?: string | null;
+  publicShareShowTasks?: boolean;
 };
 
 type MeetingSummary = {
@@ -151,6 +153,9 @@ export function MeetingTranscriptDetailClient({
   const [shareToken, setShareToken] = useState(
     transcript.publicShareToken ?? null,
   );
+  const [shareShowTasks, setShareShowTasks] = useState(
+    transcript.publicShareShowTasks !== false,
+  );
   const [extractOpen, setExtractOpen] = useState(false);
   const [editingTranscript, setEditingTranscript] = useState(false);
   const [draftSegments, setDraftSegments] = useState<TranscriptSegment[]>(
@@ -166,7 +171,12 @@ export function MeetingTranscriptDetailClient({
   useEffect(() => {
     setShareEnabled(Boolean(transcript.publicShareEnabled));
     setShareToken(transcript.publicShareToken ?? null);
-  }, [transcript.publicShareEnabled, transcript.publicShareToken]);
+    setShareShowTasks(transcript.publicShareShowTasks !== false);
+  }, [
+    transcript.publicShareEnabled,
+    transcript.publicShareToken,
+    transcript.publicShareShowTasks,
+  ]);
 
   useEffect(() => {
     setMappings(transcript.speakerMappings);
@@ -373,6 +383,7 @@ export function MeetingTranscriptDetailClient({
         });
         setShareEnabled(result.publicShareEnabled);
         setShareToken(result.publicShareToken);
+        setShareShowTasks(result.publicShareShowTasks);
         toast.success(
           result.publicShareEnabled
             ? 'Public meeting link enabled'
@@ -384,6 +395,34 @@ export function MeetingTranscriptDetailClient({
           error instanceof Error
             ? error.message
             : 'Could not update share link',
+        );
+      }
+    });
+  };
+
+  const togglePublicShareShowTasks = (showTasks: boolean) => {
+    if (!canEdit) return;
+
+    startTransition(async () => {
+      try {
+        const result = await setMeetingPublicShareShowTasks({
+          accountId,
+          accountSlug,
+          transcriptId: transcript.id,
+          showTasks,
+        });
+        setShareShowTasks(result.publicShareShowTasks);
+        toast.success(
+          result.publicShareShowTasks
+            ? 'Tasks will appear on the public page'
+            : 'Tasks hidden from the public page',
+        );
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not update task visibility',
         );
       }
     });
@@ -500,7 +539,9 @@ export function MeetingTranscriptDetailClient({
                 </div>
                 {canEdit &&
                 shareEnabled &&
-                meetingTasks.some((task) => task.status === 'pending_review') ? (
+                meetingTasks.some(
+                  (task) => task.status === 'pending_review',
+                ) ? (
                   <Link
                     href={pathsConfig.app.accountTasksReview.replace(
                       '[account]',
@@ -802,8 +843,8 @@ export function MeetingTranscriptDetailClient({
                 </h2>
               </div>
               <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
-                Share a read-only page with the summary, transcript, and
-                accepted tasks. Anyone with the link can view it.
+                Share a read-only page with the summary and transcript.
+                Optionally include accepted tasks for the client.
               </p>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <Label
@@ -819,6 +860,22 @@ export function MeetingTranscriptDetailClient({
                   onCheckedChange={togglePublicShare}
                 />
               </div>
+              {shareEnabled ? (
+                <div className="mt-3 flex items-center justify-between gap-3">
+                  <Label
+                    htmlFor="meeting-public-share-tasks"
+                    className="text-sm text-[var(--workspace-shell-text)]"
+                  >
+                    Show extracted tasks
+                  </Label>
+                  <Switch
+                    id="meeting-public-share-tasks"
+                    checked={shareShowTasks}
+                    disabled={pending}
+                    onCheckedChange={togglePublicShareShowTasks}
+                  />
+                </div>
+              ) : null}
               {shareEnabled && shareToken ? (
                 <Button
                   type="button"

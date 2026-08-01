@@ -19,11 +19,11 @@ export function MeetingSummaryMarkdown({
 }: Props) {
   const isPublic = variant === 'public';
   const text = isPublic
-    ? 'text-[var(--ozer-plum-900)]'
+    ? 'text-[var(--ozer-text-on-light)]'
     : 'text-[var(--workspace-shell-text)]';
-  const muted = isPublic
-    ? 'text-[var(--ozer-text-muted)]'
-    : 'text-[var(--workspace-shell-text-muted)]';
+  const body = isPublic
+    ? 'text-[var(--ozer-plum-700)]'
+    : 'text-[var(--workspace-shell-text)]';
 
   return (
     <div className={cn('meeting-summary-markdown space-y-3', className)}>
@@ -49,7 +49,9 @@ export function MeetingSummaryMarkdown({
             <h3 className={cn('text-sm font-semibold', text)}>{children}</h3>
           ),
           p: ({ children }) => (
-            <p className={cn('text-sm leading-relaxed', text)}>{children}</p>
+            <p className={cn('text-sm leading-relaxed font-normal', body)}>
+              {children}
+            </p>
           ),
           ul: ({ children }) => (
             <ul className="space-y-1.5 pl-1">{children}</ul>
@@ -60,12 +62,11 @@ export function MeetingSummaryMarkdown({
           li: ({ children }) => (
             <li
               className={cn(
-                'ml-4 list-disc text-sm leading-relaxed',
-                text,
-                muted,
+                'ml-4 list-disc text-sm leading-relaxed font-normal',
+                body,
               )}
             >
-              <span className={text}>{children}</span>
+              <span className={body}>{children}</span>
             </li>
           ),
           strong: ({ children }) => (

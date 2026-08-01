@@ -329,3 +329,27 @@ export const setMeetingPublicShare = enhanceAction(
   },
   { schema: SetPublicShareSchema },
 );
+
+const SetPublicShareShowTasksSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200).optional(),
+  transcriptId: z.string().uuid(),
+  showTasks: z.boolean(),
+});
+
+export const setMeetingPublicShareShowTasks = enhanceAction(
+  async (input) => {
+    const result = await getService().setPublicShareShowTasks({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+      showTasks: input.showTasks,
+    });
+
+    if (input.accountSlug) {
+      revalidateMeetingPages(input.accountSlug, input.transcriptId);
+    }
+
+    return result;
+  },
+  { schema: SetPublicShareShowTasksSchema },
+);

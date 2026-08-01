@@ -37,6 +37,7 @@ export type PublicMeetingPayload = {
   summaryText: string | null;
   attendeeEmails: string[];
   tasks: PublicMeetingTask[];
+  showTasks: boolean;
   business: PublicMeetingParty | null;
   client: PublicMeetingParty | null;
 };
@@ -85,7 +86,7 @@ export async function loadPublicMeetingByToken(
   const { data: transcript, error } = await admin
     .from('meeting_transcripts')
     .select(
-      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_enabled, public_share_token',
+      'id, account_id, client_id, title, content, meeting_date, speaker_segments, speaker_mappings, public_share_enabled, public_share_token, public_share_show_tasks',
     )
     .eq('public_share_token', normalized)
     .eq('public_share_enabled', true)
@@ -100,6 +101,7 @@ export async function loadPublicMeetingByToken(
   const clientId = (transcript.client_id as string | null) ?? null;
   const content = ((transcript.content as string | null) ?? '').trim();
   const mappings = normalizeSpeakerMappings(transcript.speaker_mappings);
+  const showTasks = transcript.public_share_show_tasks !== false;
 
   const clientIds = new Set<string>();
   const contactIds = new Set<string>();
@@ -126,14 +128,16 @@ export async function loadPublicMeetingByToken(
       .select('summary_text, attendee_emails')
       .eq('meeting_transcript_id', transcriptId)
       .maybeSingle(),
-    admin
-      .from('meeting_action_items')
-      .select(
-        'id, suggested_title, suggested_description, suggested_due_date, status, planner_task_id',
-      )
-      .eq('meeting_transcript_id', transcriptId)
-      .in('status', ['approved', 'auto_published'])
-      .order('created_at', { ascending: true }),
+    showTasks
+      ? admin
+          .from('meeting_action_items')
+          .select(
+            'id, suggested_title, suggested_description, suggested_due_date, status, planner_task_id',
+          )
+          .eq('meeting_transcript_id', transcriptId)
+          .in('status', ['approved', 'auto_published'])
+          .order('created_at', { ascending: true })
+      : Promise.resolve({ data: [] as Array<Record<string, unknown>> }),
     loadAccountBrandResolved(accountId),
     admin
       .from('accounts')
@@ -247,24 +251,97 @@ export async function loadPublicMeetingByToken(
   });
 
   // Fallback: planner tasks accepted via extract dialog before meeting_action_items linking.
+  // Include any client tasks created near the meeting date — older extracts often lack source='meeting'.
   const listedIds = new Set(tasks.map((task) => task.id));
   const listedTitles = new Set(
     tasks.map((task) => task.title.trim().toLowerCase()).filter(Boolean),
   );
   const meetingDateValue = (transcript.meeting_date as string | null) ?? null;
 
-  if (clientId && meetingDateValue) {
-    const meetingDay = new Date(`${meetingDateValue}T12:00:00`);
-    if (!Number.isNaN(meetingDay.getTime())) {
-      const from = new Date(meetingDay);
-      from.setDate(from.getDate() - 2);
-      const to = new Date(meetingDay);
-      to.setDate(to.getDate() + 3);
+  if (showTasks) {
+    // Also surface planner tasks linked from any action item row (including pending_review
+    // leftovers that already received a planner_task_id).
+    const { data: linkedActionItems } = await admin
+      .from('meeting_action_items')
+      .select(
+        'id, suggested_title, suggested_description, suggested_due_date, status, planner_task_id',
+      )
+      .eq('meeting_transcript_id', transcriptId)
+      .not('planner_task_id', 'is', null);
 
-      const baseSelect = () =>
-        admin
+    const extraPlannerIds = (
+      (linkedActionItems ?? []) as Array<{ planner_task_id?: string | null }>
+    )
+      .map((row) => row.planner_task_id)
+      .filter((id): id is string => Boolean(id) && !listedIds.has(id));
+
+    if (extraPlannerIds.length > 0) {
+      const { data: extraPlannerTasks } = await admin
+        .from('tasks')
+        .select('id, title, notes, due_date, status')
+        .eq('account_id', accountId)
+        .in('id', extraPlannerIds);
+
+      const titleByPlannerId = new Map(
+        (
+          (linkedActionItems ?? []) as Array<{
+            planner_task_id?: string | null;
+            suggested_title?: string | null;
+            suggested_description?: string | null;
+            suggested_due_date?: string | null;
+          }>
+        )
+          .filter((row) => row.planner_task_id)
+          .map((row) => [
+            row.planner_task_id as string,
+            {
+              title: row.suggested_title,
+              description: row.suggested_description,
+              dueDate: row.suggested_due_date,
+            },
+          ]),
+      );
+
+      for (const row of (extraPlannerTasks ?? []) as Array<{
+        id: string;
+        title?: string | null;
+        notes?: string | null;
+        due_date?: string | null;
+        status?: string | null;
+      }>) {
+        if (listedIds.has(row.id)) continue;
+        const fromAction = titleByPlannerId.get(row.id);
+        const title =
+          (fromAction?.title ?? row.title ?? 'Task').trim() || 'Task';
+        const key = title.toLowerCase();
+        if (listedTitles.has(key)) continue;
+        listedIds.add(row.id);
+        listedTitles.add(key);
+        tasks.push({
+          id: row.id,
+          title,
+          description:
+            fromAction?.description?.trim() || row.notes?.trim() || null,
+          dueDate: fromAction?.dueDate ?? row.due_date ?? null,
+          status: row.status ?? 'todo',
+          completed: row.status === 'done',
+        });
+      }
+    }
+
+    if (clientId && meetingDateValue) {
+      const meetingDay = new Date(`${meetingDateValue}T12:00:00`);
+      if (!Number.isNaN(meetingDay.getTime())) {
+        const from = new Date(meetingDay);
+        from.setDate(from.getDate() - 2);
+        const to = new Date(meetingDay);
+        to.setDate(to.getDate() + 3);
+
+        // Prefer source=meeting when present, but always include other client
+        // tasks created in-window (pre-link extracts often have null source).
+        const { data: windowTasks, error: windowError } = await admin
           .from('tasks')
-          .select('id, title, notes, due_date, status, created_at')
+          .select('id, title, notes, due_date, status, created_at, source')
           .eq('account_id', accountId)
           .eq('client_id', clientId)
           .gte('created_at', from.toISOString())
@@ -272,31 +349,52 @@ export async function loadPublicMeetingByToken(
           .order('created_at', { ascending: true })
           .limit(40);
 
-      const withSource = await baseSelect().eq('source', 'meeting');
-      const fallbackRows = withSource.error?.message?.includes('source')
-        ? (await baseSelect()).data
-        : withSource.data;
+        let fallbackRows = windowTasks;
+        if (windowError?.message?.includes('source')) {
+          const retry = await admin
+            .from('tasks')
+            .select('id, title, notes, due_date, status, created_at')
+            .eq('account_id', accountId)
+            .eq('client_id', clientId)
+            .gte('created_at', from.toISOString())
+            .lt('created_at', to.toISOString())
+            .order('created_at', { ascending: true })
+            .limit(40);
+          fallbackRows = retry.data;
+        }
 
-      for (const row of (fallbackRows ?? []) as Array<{
-        id: string;
-        title?: string | null;
-        notes?: string | null;
-        due_date?: string | null;
-        status?: string | null;
-      }>) {
-        const title = (row.title ?? 'Task').trim() || 'Task';
-        const key = title.toLowerCase();
-        if (listedIds.has(row.id) || listedTitles.has(key)) continue;
-        listedIds.add(row.id);
-        listedTitles.add(key);
-        tasks.push({
-          id: row.id,
-          title,
-          description: row.notes?.trim() || null,
-          dueDate: row.due_date ?? null,
-          status: row.status ?? 'todo',
-          completed: row.status === 'done',
-        });
+        const sorted = (
+          (fallbackRows ?? []) as Array<{
+            id: string;
+            title?: string | null;
+            notes?: string | null;
+            due_date?: string | null;
+            status?: string | null;
+            source?: string | null;
+          }>
+        )
+          .slice()
+          .sort((a, b) => {
+            const aMeet = a.source === 'meeting' ? 0 : 1;
+            const bMeet = b.source === 'meeting' ? 0 : 1;
+            return aMeet - bMeet;
+          });
+
+        for (const row of sorted) {
+          const title = (row.title ?? 'Task').trim() || 'Task';
+          const key = title.toLowerCase();
+          if (listedIds.has(row.id) || listedTitles.has(key)) continue;
+          listedIds.add(row.id);
+          listedTitles.add(key);
+          tasks.push({
+            id: row.id,
+            title,
+            description: row.notes?.trim() || null,
+            dueDate: row.due_date ?? null,
+            status: row.status ?? 'todo',
+            completed: row.status === 'done',
+          });
+        }
       }
     }
   }
@@ -336,6 +434,7 @@ export async function loadPublicMeetingByToken(
       ? (summary.attendee_emails as string[])
       : [],
     tasks,
+    showTasks,
     business: {
       name: businessName,
       logoUrl: businessLogo,

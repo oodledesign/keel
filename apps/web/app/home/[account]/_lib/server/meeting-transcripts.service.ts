@@ -44,6 +44,7 @@ export type MeetingTranscript = {
   updatedAt: string;
   publicShareEnabled: boolean;
   publicShareToken: string | null;
+  publicShareShowTasks: boolean;
 };
 
 export type MeetingTranscriptListItem = MeetingTranscript & {
@@ -70,6 +71,7 @@ type MeetingTranscriptRow = {
   updated_at: string;
   public_share_enabled?: boolean | null;
   public_share_token?: string | null;
+  public_share_show_tasks?: boolean | null;
 };
 
 function normalizeCalendarAttendees(value: unknown): MeetingCalendarAttendee[] {
@@ -121,6 +123,7 @@ function mapMeetingTranscript(row: MeetingTranscriptRow): MeetingTranscript {
     updatedAt: row.updated_at,
     publicShareEnabled: Boolean(row.public_share_enabled),
     publicShareToken: row.public_share_token ?? null,
+    publicShareShowTasks: row.public_share_show_tasks !== false,
   };
 }
 
@@ -920,6 +923,7 @@ class MeetingTranscriptsService {
   }): Promise<{
     publicShareEnabled: boolean;
     publicShareToken: string | null;
+    publicShareShowTasks: boolean;
   }> {
     await this.ensureUserAndPermission(input.accountId, 'clients.edit');
 
@@ -948,7 +952,9 @@ class MeetingTranscriptsService {
       })
       .eq('id', input.transcriptId)
       .eq('account_id', input.accountId)
-      .select('public_share_enabled, public_share_token')
+      .select(
+        'public_share_enabled, public_share_token, public_share_show_tasks',
+      )
       .single();
 
     if (error) throw new Error(error.message);
@@ -961,6 +967,44 @@ class MeetingTranscriptsService {
         ((data as { public_share_token?: string | null }).public_share_token as
           | string
           | null) ?? null,
+      publicShareShowTasks:
+        (data as { public_share_show_tasks?: boolean | null })
+          .public_share_show_tasks !== false,
+    };
+  }
+
+  async setPublicShareShowTasks(input: {
+    accountId: string;
+    transcriptId: string;
+    showTasks: boolean;
+  }): Promise<{ publicShareShowTasks: boolean }> {
+    await this.ensureUserAndPermission(input.accountId, 'clients.edit');
+
+    const existing = await this.getById({
+      accountId: input.accountId,
+      transcriptId: input.transcriptId,
+    });
+
+    if (!existing) {
+      throw new Error('Meeting not found');
+    }
+
+    const { data, error } = await this.db
+      .from('meeting_transcripts')
+      .update({
+        public_share_show_tasks: input.showTasks,
+      })
+      .eq('id', input.transcriptId)
+      .eq('account_id', input.accountId)
+      .select('public_share_show_tasks')
+      .single();
+
+    if (error) throw new Error(error.message);
+
+    return {
+      publicShareShowTasks:
+        (data as { public_share_show_tasks?: boolean | null })
+          .public_share_show_tasks !== false,
     };
   }
 

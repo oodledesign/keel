@@ -272,6 +272,9 @@ async function loadMeetingTranscriptPageDataImpl(
           publicShareEnabled: access.canEditClients
             ? transcript.publicShareEnabled
             : false,
+          publicShareShowTasks: access.canEditClients
+            ? transcript.publicShareShowTasks
+            : false,
         }
       : transcript,
     summary,
