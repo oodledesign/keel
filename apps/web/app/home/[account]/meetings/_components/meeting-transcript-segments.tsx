@@ -86,7 +86,7 @@ function SpeakerAssignPopover({
           type="button"
           disabled={disabled}
           className={cn(
-            'text-left text-xs font-semibold text-[var(--ozer-accent)]',
+            'text-left text-xs font-semibold text-[var(--workspace-shell-text)]',
             '-mx-1 rounded px-1 transition hover:bg-[var(--workspace-shell-sidebar-accent)] hover:underline',
           )}
         >
@@ -242,7 +242,7 @@ export function MeetingTranscriptSegments({
                 onContactsChange={onContactsChange}
               />
             ) : (
-              <p className="text-xs font-semibold text-[var(--ozer-accent)]">
+              <p className="text-xs font-semibold text-[var(--workspace-shell-text)]">
                 {displaySpeaker}
               </p>
             )}

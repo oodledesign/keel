@@ -134,10 +134,11 @@ export function AddDealDialog({
     e.preventDefault();
     setError(null);
     const form = new FormData(e.currentTarget);
+    const formString = (name: string) => String(form.get(name) ?? '').trim();
 
-    const valueStr = (form.get('value') as string).trim();
-    const nextAction = (form.get('nextAction') as string).trim();
-    const nextActionDate = (form.get('nextActionDate') as string).trim();
+    const valueStr = formString('value');
+    const nextAction = formString('nextAction');
+    const nextActionDate = formString('nextActionDate');
 
     let contactName = '';
     let companyName = '';
@@ -155,18 +156,16 @@ export function AddDealDialog({
       contactName = linkedClientName;
       companyName = '';
     } else {
-      contactName = (form.get('contactName') as string).trim();
-      companyName = (form.get('companyName') as string).trim();
+      contactName = formString('contactName');
+      companyName = formString('companyName');
       if (!contactName) {
         setError('Contact name is required');
         return;
       }
     }
 
-    const projectName =
-      mode === 'client' ? (form.get('projectName') as string).trim() : '';
-    const description =
-      mode === 'client' ? (form.get('description') as string).trim() : '';
+    const projectName = mode === 'client' ? formString('projectName') : '';
+    const description = mode === 'client' ? formString('description') : '';
 
     const resolvedBusinessId =
       businessId ||

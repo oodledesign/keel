@@ -144,10 +144,11 @@ export function EditDealDialog({
     if (!deal) return;
     setError(null);
     const form = new FormData(e.currentTarget);
+    const formString = (name: string) => String(form.get(name) ?? '').trim();
 
-    const valueStr = (form.get('value') as string).trim();
-    const nextAction = (form.get('nextAction') as string).trim();
-    const nextActionDate = (form.get('nextActionDate') as string).trim();
+    const valueStr = formString('value');
+    const nextAction = formString('nextAction');
+    const nextActionDate = formString('nextActionDate');
 
     let contactName = '';
     let companyName = '';
@@ -165,18 +166,16 @@ export function EditDealDialog({
       contactName = linkedClientName;
       companyName = '';
     } else {
-      contactName = (form.get('contactName') as string).trim();
-      companyName = (form.get('companyName') as string).trim();
+      contactName = formString('contactName');
+      companyName = formString('companyName');
       if (!contactName) {
         setError('Contact name is required');
         return;
       }
     }
 
-    const projectName =
-      mode === 'client' ? (form.get('projectName') as string).trim() : '';
-    const description =
-      mode === 'client' ? (form.get('description') as string).trim() : '';
+    const projectName = mode === 'client' ? formString('projectName') : '';
+    const description = mode === 'client' ? formString('description') : '';
 
     const resolvedBusinessId =
       businessId ||
@@ -198,16 +197,25 @@ export function EditDealDialog({
       return Number.isFinite(n) ? n : null;
     };
 
-    const hotsRentPsf = parseOptionalNumber(form.get('hotsRentPsf'));
-    const hotsSizeSqft = parseOptionalNumber(form.get('hotsSizeSqft'));
-    const hotsLeaseYears = parseOptionalNumber(form.get('hotsLeaseYears'));
-    const hotsIncentives =
-      (form.get('hotsIncentives') as string).trim() || null;
-    const hotsSolicitorName =
-      (form.get('hotsSolicitorName') as string).trim() || null;
-    const hotsTargetExchangeDate =
-      (form.get('hotsTargetExchangeDate') as string).trim() || null;
-    const hotsNotes = (form.get('hotsNotes') as string).trim() || null;
+    const hotsRentPsf = commercial
+      ? parseOptionalNumber(form.get('hotsRentPsf'))
+      : null;
+    const hotsSizeSqft = commercial
+      ? parseOptionalNumber(form.get('hotsSizeSqft'))
+      : null;
+    const hotsLeaseYears = commercial
+      ? parseOptionalNumber(form.get('hotsLeaseYears'))
+      : null;
+    const hotsIncentives = commercial
+      ? formString('hotsIncentives') || null
+      : null;
+    const hotsSolicitorName = commercial
+      ? formString('hotsSolicitorName') || null
+      : null;
+    const hotsTargetExchangeDate = commercial
+      ? formString('hotsTargetExchangeDate') || null
+      : null;
+    const hotsNotes = commercial ? formString('hotsNotes') || null : null;
 
     startTransition(async () => {
       const result = await updateDeal(deal.id, {

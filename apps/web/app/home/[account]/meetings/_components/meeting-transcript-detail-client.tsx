@@ -29,6 +29,7 @@ import {
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import {
   Select,
   SelectContent,
@@ -96,7 +97,11 @@ type MeetingTask = {
   status: string;
 };
 
-type ClientOption = { id: string; name: string };
+type ClientOption = {
+  id: string;
+  name: string;
+  pictureUrl?: string | null;
+};
 type ContactOption = { id: string; name: string; email?: string | null };
 
 type Props = {
@@ -189,11 +194,11 @@ export function MeetingTranscriptDetailClient({
     ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${clientId}`
     : null;
 
+  const resolvedClient =
+    clients.find((client) => client.id === clientId) ?? null;
   const resolvedClientName =
-    transcript.clientName ||
-    clients.find((client) => client.id === clientId)?.name ||
-    null;
-  const contextLabel = resolvedClientName || transcript.dealTitle;
+    transcript.clientName || resolvedClient?.name || null;
+  const resolvedClientPictureUrl = resolvedClient?.pictureUrl ?? null;
   const displayContent =
     transcript.speakerSegments.length > 0
       ? serializeResolvedTranscriptSegments(
@@ -327,7 +332,7 @@ export function MeetingTranscriptDetailClient({
     });
   };
 
-  const generateSummary = () => {
+  const generateSummary = (isRegenerate = false) => {
     if (!canEdit) return;
     if (!displayContent.trim()) {
       toast.error('Add transcript content before generating a summary');
@@ -341,7 +346,11 @@ export function MeetingTranscriptDetailClient({
           accountSlug,
           transcriptId: transcript.id,
         });
-        toast.success('Meeting summary generated');
+        toast.success(
+          isRegenerate
+            ? 'Meeting summary regenerated'
+            : 'Meeting summary generated',
+        );
         router.refresh();
       } catch (error) {
         toast.error(
@@ -422,13 +431,32 @@ export function MeetingTranscriptDetailClient({
                     Summary
                   </h2>
                 </div>
-                {summary.attendeeEmails.length > 0 ? (
-                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                    {summary.attendeeEmails.length} attendee
-                    {summary.attendeeEmails.length === 1 ? '' : 's'} from
-                    calendar
-                  </p>
-                ) : null}
+                <div className="flex flex-wrap items-center gap-3">
+                  {summary.attendeeEmails.length > 0 ? (
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      {summary.attendeeEmails.length} attendee
+                      {summary.attendeeEmails.length === 1 ? '' : 's'} from
+                      calendar
+                    </p>
+                  ) : null}
+                  {canEdit && displayContent.trim() ? (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={pending}
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                      onClick={() => generateSummary(true)}
+                    >
+                      {pending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Sparkles className="mr-2 h-4 w-4" />
+                      )}
+                      Regenerate summary
+                    </Button>
+                  ) : null}
+                </div>
               </div>
               <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
                 <MeetingSummaryMarkdown markdown={summary.summaryText} />
@@ -449,7 +477,7 @@ export function MeetingTranscriptDetailClient({
                 type="button"
                 disabled={pending}
                 className="mt-4 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-                onClick={generateSummary}
+                onClick={() => generateSummary(false)}
               >
                 {pending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -662,7 +690,14 @@ export function MeetingTranscriptDetailClient({
                       <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                         {clients.map((client) => (
                           <SelectItem key={client.id} value={client.id}>
-                            {client.name}
+                            <span className="flex items-center gap-2">
+                              <ProfileAvatar
+                                displayName={client.name}
+                                pictureUrl={client.pictureUrl}
+                                className="h-6 w-6"
+                              />
+                              <span>{client.name}</span>
+                            </span>
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -683,7 +718,7 @@ export function MeetingTranscriptDetailClient({
                     <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                       Meeting date
                     </p>
-                    <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+                    <p className="mt-1 text-sm text-[var(--workspace-shell-text)]">
                       {meetingDisplayDate(
                         transcript.meetingDate,
                         transcript.createdAt,
@@ -693,23 +728,29 @@ export function MeetingTranscriptDetailClient({
                 </>
               )}
 
-              {contextLabel ? (
-                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-                  {clientPath && resolvedClientName ? (
-                    <>
-                      Client:{' '}
-                      <Link
-                        href={clientPath}
-                        className="text-[var(--ozer-accent-muted)] hover:underline"
-                      >
-                        {resolvedClientName}
-                      </Link>
-                    </>
-                  ) : transcript.dealTitle ? (
-                    <>Linked to deal: {transcript.dealTitle}</>
-                  ) : (
-                    <>Linked to: {contextLabel}</>
-                  )}
+              {clientPath && resolvedClientName ? (
+                <Link
+                  href={clientPath}
+                  className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5 transition-colors hover:border-[var(--ozer-accent)]/35"
+                >
+                  <ProfileAvatar
+                    displayName={resolvedClientName}
+                    pictureUrl={resolvedClientPictureUrl}
+                    className="h-10 w-10"
+                  />
+                  <span className="min-w-0">
+                    <span className="block text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                      Client
+                    </span>
+                    <span className="block truncate text-sm font-semibold text-[var(--workspace-shell-text)]">
+                      {resolvedClientName}
+                    </span>
+                  </span>
+                </Link>
+              ) : transcript.dealTitle ? (
+                <p className="text-sm text-[var(--workspace-shell-text)]">
+                  Linked to deal:{' '}
+                  <span className="font-medium">{transcript.dealTitle}</span>
                 </p>
               ) : canEdit ? (
                 <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -747,7 +788,7 @@ export function MeetingTranscriptDetailClient({
               </div>
               <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 Share a read-only page with the summary, transcript, and
-                published tasks. Anyone with the link can view it.
+                accepted tasks. Anyone with the link can view it.
               </p>
               <div className="mt-4 flex items-center justify-between gap-3">
                 <Label

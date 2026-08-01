@@ -109,14 +109,16 @@ export async function createDeal(input: CreateDealInput) {
   const projectName = input.projectName?.trim() || '';
   const description = input.description?.trim() || '';
   const dealName =
-    projectName || input.companyName.trim() || input.contactName.trim();
+    projectName ||
+    (input.companyName ?? '').trim() ||
+    (input.contactName ?? '').trim();
 
   const { data, error } = await client
     .from('pipeline_deals')
     .insert({
       name: dealName,
       contact_name: input.contactName,
-      company_name: projectName || input.companyName,
+      company_name: projectName || input.companyName || '',
       notes: description || null,
       value: input.value,
       stage: input.stage,

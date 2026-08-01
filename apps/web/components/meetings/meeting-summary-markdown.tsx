@@ -39,9 +39,7 @@ export function MeetingSummaryMarkdown({
             <h2
               className={cn(
                 'pt-1 text-sm font-semibold tracking-wide uppercase',
-                isPublic
-                  ? 'text-[var(--ozer-accent)]'
-                  : 'text-[var(--ozer-accent)]',
+                text,
               )}
             >
               {children}
