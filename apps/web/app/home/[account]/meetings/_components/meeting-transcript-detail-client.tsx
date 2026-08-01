@@ -491,11 +491,26 @@ export function MeetingTranscriptDetailClient({
 
           {meetingTasks.length > 0 ? (
             <section className={panelClassName}>
-              <div className="mb-4 flex items-center gap-2">
-                <CheckSquare className="h-4 w-4 text-[var(--ozer-accent)]" />
-                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-                  Tasks from this meeting
-                </h2>
+              <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <CheckSquare className="h-4 w-4 text-[var(--ozer-accent)]" />
+                  <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                    Tasks from this meeting
+                  </h2>
+                </div>
+                {canEdit &&
+                shareEnabled &&
+                meetingTasks.some((task) => task.status === 'pending_review') ? (
+                  <Link
+                    href={pathsConfig.app.accountTasksReview.replace(
+                      '[account]',
+                      accountSlug,
+                    )}
+                    className="text-xs font-medium text-[var(--ozer-info)] hover:underline"
+                  >
+                    Approve for public share
+                  </Link>
+                ) : null}
               </div>
               <ul className="space-y-3">
                 {meetingTasks.map((task) => (
@@ -877,6 +892,7 @@ export function MeetingTranscriptDetailClient({
                 embedded
                 initialRawText={displayContent}
                 defaultClientId={clientId || transcript.clientId}
+                meetingTranscriptId={transcript.id}
                 successRedirectHref={tasksPath}
               />
             ) : null}

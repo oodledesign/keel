@@ -6,6 +6,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
 import { isFromOwner } from './address-utils';
+import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
@@ -14,14 +15,16 @@ import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affin
 import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
 import { buildThreadText } from './thread-text';
 
-const MAX_CLASSIFY_PER_RUN = 8;
+const MAX_CLASSIFY_PER_RUN = 25;
 const MAX_AUTO_DRAFT_PER_RUN = 3;
+const MAX_AUTO_EXTRACT_PER_RUN = 5;
 
 export type EmailAssistantPipelineResult = {
   classified: number;
   linked: number;
   draftsCreated: number;
   draftsSavedToGmail: number;
+  extracted: number;
   skipped: number;
   errors: string[];
 };
@@ -66,6 +69,7 @@ export async function runEmailAssistantPipeline(
     linked: 0,
     draftsCreated: 0,
     draftsSavedToGmail: 0,
+    extracted: 0,
     skipped: 0,
     errors: [],
   };
@@ -131,9 +135,14 @@ export async function runEmailAssistantPipeline(
   let draftsRemaining = settings.auto_draft_enabled
     ? MAX_AUTO_DRAFT_PER_RUN
     : 0;
+  let extractsRemaining = MAX_AUTO_EXTRACT_PER_RUN;
 
   for (const thread of (threadRows ?? []) as ThreadRow[]) {
-    if (result.classified >= MAX_CLASSIFY_PER_RUN && draftsRemaining <= 0) {
+    if (
+      result.classified >= MAX_CLASSIFY_PER_RUN &&
+      draftsRemaining <= 0 &&
+      extractsRemaining <= 0
+    ) {
       break;
     }
 
@@ -160,10 +169,34 @@ export async function runEmailAssistantPipeline(
 
     const latest = latestMessage as MessageRow;
 
-    if (
-      thread.assistant_processed_message_id === latest.id &&
-      (!settings.auto_triage_enabled || thread.assistant_category !== null)
-    ) {
+    if (thread.assistant_processed_message_id === latest.id) {
+      // Already handled this message tip — do not reclassify every sync.
+      // Still backfill suggested tasks for needs_reply threads that never extracted.
+      if (
+        thread.assistant_category === 'needs_reply' &&
+        extractsRemaining > 0
+      ) {
+        try {
+          const extractedCount = await autoExtractEmailActionItems({
+            admin,
+            userId,
+            threadId: thread.id,
+            ownerEmail: owner.email,
+            ownerDisplayName: owner.displayName,
+            preferredAccountId,
+          });
+          if (extractedCount > 0) {
+            result.extracted += extractedCount;
+            extractsRemaining -= 1;
+          }
+        } catch (error) {
+          result.errors.push(
+            error instanceof Error ? error.message : 'Auto-extract failed',
+          );
+        }
+      } else {
+        result.skipped += 1;
+      }
       continue;
     }
 
@@ -256,7 +289,7 @@ export async function runEmailAssistantPipeline(
       continue;
     }
 
-    let category: 'needs_reply' | 'no_reply' = 'no_reply';
+    let category: 'needs_reply' | 'no_reply' | null = 'no_reply';
     let reason: string | null = null;
 
     if (isFromOwner(latest.from_address, owner.email)) {
@@ -369,6 +402,27 @@ export async function runEmailAssistantPipeline(
       } catch (error) {
         result.errors.push(
           error instanceof Error ? error.message : 'Auto-draft failed',
+        );
+      }
+    }
+
+    if (category === 'needs_reply' && extractsRemaining > 0) {
+      try {
+        const extractedCount = await autoExtractEmailActionItems({
+          admin,
+          userId,
+          threadId: thread.id,
+          ownerEmail: owner.email,
+          ownerDisplayName: owner.displayName,
+          preferredAccountId,
+        });
+        if (extractedCount > 0) {
+          result.extracted += extractedCount;
+          extractsRemaining -= 1;
+        }
+      } catch (error) {
+        result.errors.push(
+          error instanceof Error ? error.message : 'Auto-extract failed',
         );
       }
     }

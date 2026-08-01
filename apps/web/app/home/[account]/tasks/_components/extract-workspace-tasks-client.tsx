@@ -37,6 +37,8 @@ type Props = {
   initialRawText?: string;
   defaultClientId?: string | null;
   successRedirectHref?: string;
+  /** When extracting from a meeting, link accepted tasks for public share. */
+  meetingTranscriptId?: string | null;
 };
 
 function assignValue(
@@ -100,6 +102,7 @@ export function ExtractWorkspaceTasksClient({
   initialRawText = '',
   defaultClientId = null,
   successRedirectHref,
+  meetingTranscriptId = null,
 }: Props) {
   const [rawText, setRawText] = useState(initialRawText);
   const [instructions, setInstructions] = useState('');
@@ -179,6 +182,7 @@ export function ExtractWorkspaceTasksClient({
         const result = await commitWorkspaceExtractedTasks({
           accountId,
           accountSlug,
+          meetingTranscriptId: meetingTranscriptId ?? undefined,
           items: prepared.map((r) => ({
             id: r.id,
             title: r.title,

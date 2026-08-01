@@ -116,7 +116,7 @@ export function parseExtractResponse(raw: string): EmailActionItem[] {
 }
 
 export function parseClassifyResponse(raw: string): {
-  category: EmailThreadCategory;
+  category: EmailThreadCategory | null;
   reason: string | null;
 } {
   const cleaned = stripJsonFences(raw);
@@ -130,20 +130,20 @@ export function parseClassifyResponse(raw: string): {
     const end = cleaned.lastIndexOf('}');
 
     if (start < 0 || end <= start) {
-      return { category: 'no_reply', reason: 'Could not parse classification' };
+      return { category: null, reason: 'Could not parse classification' };
     }
 
     try {
       json = JSON.parse(cleaned.slice(start, end + 1));
     } catch {
-      return { category: 'no_reply', reason: 'Could not parse classification' };
+      return { category: null, reason: 'Could not parse classification' };
     }
   }
 
   const parsed = ClassifyResponseSchema.safeParse(json);
 
   if (!parsed.success) {
-    return { category: 'no_reply', reason: 'Could not parse classification' };
+    return { category: null, reason: 'Could not parse classification' };
   }
 
   return {

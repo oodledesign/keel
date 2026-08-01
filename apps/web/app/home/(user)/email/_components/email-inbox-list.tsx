@@ -220,6 +220,10 @@ export function EmailInboxList({
                           <span className="inline-flex rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--ozer-accent)] uppercase">
                             Needs reply
                           </span>
+                        ) : thread.assistant_category === null ? (
+                          <span className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                            Untriaged
+                          </span>
                         ) : null}
                         {linkBadgeLabel(thread) ? (
                           <span className="inline-flex max-w-full rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">

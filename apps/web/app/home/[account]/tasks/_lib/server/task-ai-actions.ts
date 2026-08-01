@@ -169,6 +169,8 @@ const commitSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1).max(200),
   items: z.array(commitItemSchema),
+  /** When set, link accepted tasks to this meeting for public share. */
+  meetingTranscriptId: z.string().uuid().optional(),
 });
 
 export const commitWorkspaceExtractedTasks = enhanceAction(
@@ -200,6 +202,19 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
         .maybeSingle();
 
       return data ? candidate : null;
+    }
+
+    if (input.meetingTranscriptId) {
+      const { data: transcript, error: transcriptError } = await client
+        .from('meeting_transcripts')
+        .select('id')
+        .eq('id', input.meetingTranscriptId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (transcriptError || !transcript) {
+        throw new Error('Meeting not found for this workspace');
+      }
     }
 
     let created = 0;
@@ -236,6 +251,35 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
       }
       created += 1;
 
+      if (input.meetingTranscriptId) {
+        await client
+          .from('tasks')
+          .update({ source: 'meeting' })
+          .eq('id', parentResult.id)
+          .eq('account_id', input.accountId);
+
+        const { error: actionItemError } = await client
+          .from('meeting_action_items')
+          .insert({
+            account_id: input.accountId,
+            meeting_transcript_id: input.meetingTranscriptId,
+            suggested_title: item.title.trim(),
+            suggested_description: item.notes?.trim() || null,
+            suggested_due_date: item.dueDate || null,
+            status: 'approved',
+            planner_task_id: parentResult.id,
+            reviewed_at: new Date().toISOString(),
+            reviewed_by: user.id,
+          });
+
+        if (actionItemError) {
+          console.error(
+            '[commitWorkspaceExtractedTasks] meeting_action_items:',
+            actionItemError.message,
+          );
+        }
+      }
+
       lastValidProjectId = projectId;
       lastValidClientId = clientId;
 
@@ -263,10 +307,28 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
           throw new Error(subResult.error ?? 'Failed to create subtask');
         }
         created += 1;
+
+        if (input.meetingTranscriptId && subResult.id) {
+          await client
+            .from('tasks')
+            .update({ source: 'meeting' })
+            .eq('id', subResult.id)
+            .eq('account_id', input.accountId);
+        }
       }
     }
 
     revalidateWorkspaceTaskPages(input.accountSlug);
+    if (input.meetingTranscriptId) {
+      revalidatePath(
+        `/home/${input.accountSlug}/meetings/${input.meetingTranscriptId}`,
+        'page',
+      );
+      revalidatePath(
+        `/app/${input.accountSlug}/meetings/${input.meetingTranscriptId}`,
+        'page',
+      );
+    }
     return { created };
   },
   { schema: commitSchema },

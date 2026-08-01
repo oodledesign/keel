@@ -35,7 +35,7 @@ function formatDueDate(value: string | null) {
   }).format(date);
 }
 
-function PartyBadge({
+function PartyChip({
   party,
   label,
 }: {
@@ -45,29 +45,25 @@ function PartyBadge({
   const initial = party.name.trim().slice(0, 1).toUpperCase() || '?';
 
   return (
-    <div className="flex min-w-0 items-center gap-3">
-      <div className="relative flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white">
+    <div className="flex min-w-0 items-center gap-2">
+      <div className="relative flex h-7 w-7 shrink-0 items-center justify-center overflow-hidden rounded-lg border border-[color:var(--ozer-border-on-light)] bg-white">
         {party.logoUrl ? (
           // eslint-disable-next-line @next/next/no-img-element
           <img
             src={party.logoUrl}
             alt=""
-            className="h-full w-full object-contain p-1.5"
+            className="h-full w-full object-contain p-0.5"
           />
         ) : (
-          <span className="text-sm font-semibold text-[var(--ozer-plum-900)]">
+          <span className="text-[10px] font-semibold text-[var(--ozer-plum-900)]">
             {initial}
           </span>
         )}
       </div>
-      <div className="min-w-0">
-        <p className="text-[11px] font-medium tracking-wide text-[var(--ozer-text-muted)] uppercase">
-          {label}
-        </p>
-        <p className="truncate text-sm font-semibold text-[var(--ozer-plum-900)]">
-          {party.name}
-        </p>
-      </div>
+      <p className="min-w-0 truncate text-sm text-[var(--ozer-plum-900)]">
+        <span className="text-[var(--ozer-text-muted)]">{label}: </span>
+        <span className="font-medium">{party.name}</span>
+      </p>
     </div>
   );
 }
@@ -107,47 +103,42 @@ async function PublicMeetingPage({ params }: PublicMeetingPageProps) {
 
   return (
     <main className="min-h-screen bg-[var(--ozer-cream-50)] text-[var(--ozer-plum-900)]">
-      <div className="mx-auto flex min-h-screen max-w-5xl flex-col gap-6 px-4 py-10 sm:px-6">
-        <header className="space-y-5">
+      <div className="mx-auto flex min-h-screen max-w-7xl flex-col gap-6 px-4 py-10 sm:px-6 lg:px-8">
+        <header className="space-y-3">
+          <p className="text-xs tracking-wide text-[var(--ozer-text-muted)] uppercase">
+            Meeting notes
+          </p>
+          <h1 className="font-heading text-3xl font-semibold tracking-tight text-[var(--ozer-plum-900)] md:text-4xl">
+            {meeting.title}
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--ozer-text-muted)]">
+            {dateLabel ? <span>{dateLabel}</span> : null}
+            {meeting.attendeeEmails.length > 0 ? (
+              <span>
+                {meeting.attendeeEmails.length} attendee
+                {meeting.attendeeEmails.length === 1 ? '' : 's'}
+              </span>
+            ) : null}
+            {meeting.tasks.length > 0 ? (
+              <span>
+                {openTaskCount} open task
+                {openTaskCount === 1 ? '' : 's'}
+              </span>
+            ) : null}
+          </div>
           {(meeting.business || meeting.client) && (
-            <div className="grid gap-4 rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-white/80 p-4 shadow-sm sm:grid-cols-2">
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-2 pt-1">
               {meeting.business ? (
-                <PartyBadge party={meeting.business} label="From" />
-              ) : (
-                <div />
-              )}
+                <PartyChip party={meeting.business} label="From" />
+              ) : null}
               {meeting.client ? (
-                <PartyBadge party={meeting.client} label="Client" />
+                <PartyChip party={meeting.client} label="Client" />
               ) : null}
             </div>
           )}
-
-          <div className="space-y-2">
-            <p className="text-xs tracking-wide text-[var(--ozer-text-muted)] uppercase">
-              Meeting notes
-            </p>
-            <h1 className="font-heading text-3xl font-semibold tracking-tight text-[var(--ozer-plum-900)]">
-              {meeting.title}
-            </h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-[var(--ozer-text-muted)]">
-              {dateLabel ? <span>{dateLabel}</span> : null}
-              {meeting.attendeeEmails.length > 0 ? (
-                <span>
-                  {meeting.attendeeEmails.length} attendee
-                  {meeting.attendeeEmails.length === 1 ? '' : 's'}
-                </span>
-              ) : null}
-              {meeting.tasks.length > 0 ? (
-                <span>
-                  {openTaskCount} open task
-                  {openTaskCount === 1 ? '' : 's'}
-                </span>
-              ) : null}
-            </div>
-          </div>
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(0,0.9fr)] lg:items-start">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.45fr)_minmax(0,0.85fr)] lg:items-start">
           <div className="space-y-6">
             {meeting.summaryText ? (
               <section className={panelClass}>

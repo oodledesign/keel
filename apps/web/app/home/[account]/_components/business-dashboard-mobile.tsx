@@ -17,9 +17,11 @@ import type {
   DashboardMetrics,
   DashboardNeedsReplySummary,
   DashboardNoteSummary,
+  DashboardSuggestedEmailTasksSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
 import { DashboardNeedsReplyCard } from './dashboard-needs-reply-card';
+import { DashboardSuggestedEmailTasksCard } from './dashboard-suggested-email-tasks-card';
 import { DashboardUpcomingTaskItem } from './dashboard-upcoming-task-item';
 import { NoteAssignmentLabels } from './note-assignment-labels';
 
@@ -49,6 +51,7 @@ type BusinessDashboardMobileProps = {
   financeTrend: DashboardFinanceMonth[];
   upcomingTasks: DashboardTaskSummary[];
   needsReply: DashboardNeedsReplySummary;
+  suggestedEmailTasks: DashboardSuggestedEmailTasksSummary;
   recentNotes: DashboardNoteSummary[];
   shortcutsBar: React.ReactNode;
 };
@@ -60,6 +63,7 @@ export function BusinessDashboardMobile({
   financeTrend,
   upcomingTasks,
   needsReply,
+  suggestedEmailTasks,
   recentNotes,
   shortcutsBar,
 }: BusinessDashboardMobileProps) {
@@ -150,6 +154,12 @@ export function BusinessDashboardMobile({
         accountId={accountId}
         threads={needsReply.threads}
         totalCount={needsReply.totalCount}
+      />
+
+      <DashboardSuggestedEmailTasksCard
+        accountSlug={accountSlug}
+        accountId={accountId}
+        summary={suggestedEmailTasks}
       />
 
       <section className={panelClass}>

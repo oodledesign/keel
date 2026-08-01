@@ -6,7 +6,7 @@ import { parseClassifyResponse } from './json';
 import type { EmailThreadCategory } from './types';
 
 export type ClassifyResult = {
-  category: EmailThreadCategory;
+  category: EmailThreadCategory | null;
   reason: string | null;
 };
 
@@ -14,9 +14,15 @@ const CLASSIFY_SYSTEM = `You classify email threads for the mailbox owner.
 Return ONLY JSON, no prose, no markdown fences:
 { "category": "needs_reply" | "no_reply", "reason": string|null }
 
-Use needs_reply when a real person expects a personal reply from the mailbox owner.
-Use no_reply for newsletters, marketing, automated notifications, receipts, FYI-only updates, mailing lists, and threads where the owner already sent the latest message and is waiting on someone else.
-When unsure between a polite human message and automated mail, prefer needs_reply only if a personal response is clearly expected.`;
+Use needs_reply when a real person expects a personal reply from the mailbox owner. Prefer needs_reply for:
+- Direct questions or asks ("can you…", "please…", "could you…", "let me know", "what do you think")
+- Scheduling / availability requests
+- Approvals, decisions, quotes, or next-step asks
+- Client or vendor messages that clearly wait on the owner
+
+Use no_reply for newsletters, marketing, automated notifications, receipts, FYI-only updates, mailing lists, CC'd threads with no ask of the owner, and threads where the owner already sent the latest message and is waiting on someone else.
+
+When unsure between a polite human message and automated mail, choose needs_reply if a personal response is reasonably expected.`;
 
 function buildOwnerBlock(owner: DraftOwnerContext): string {
   const email = owner.email.trim();

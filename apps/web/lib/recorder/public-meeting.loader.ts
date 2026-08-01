@@ -236,7 +236,7 @@ export async function loadPublicMeetingByToken(
     const completed = plannerStatus === 'done';
 
     return {
-      id: row.id as string,
+      id: (plannerTaskId as string) || (row.id as string),
       title:
         ((row.suggested_title as string | null) ?? 'Task').trim() || 'Task',
       description: (row.suggested_description as string | null)?.trim() || null,
@@ -245,6 +245,61 @@ export async function loadPublicMeetingByToken(
       completed,
     };
   });
+
+  // Fallback: planner tasks accepted via extract dialog before meeting_action_items linking.
+  const listedIds = new Set(tasks.map((task) => task.id));
+  const listedTitles = new Set(
+    tasks.map((task) => task.title.trim().toLowerCase()).filter(Boolean),
+  );
+  const meetingDateValue = (transcript.meeting_date as string | null) ?? null;
+
+  if (clientId && meetingDateValue) {
+    const meetingDay = new Date(`${meetingDateValue}T12:00:00`);
+    if (!Number.isNaN(meetingDay.getTime())) {
+      const from = new Date(meetingDay);
+      from.setDate(from.getDate() - 2);
+      const to = new Date(meetingDay);
+      to.setDate(to.getDate() + 3);
+
+      const baseSelect = () =>
+        admin
+          .from('tasks')
+          .select('id, title, notes, due_date, status, created_at')
+          .eq('account_id', accountId)
+          .eq('client_id', clientId)
+          .gte('created_at', from.toISOString())
+          .lt('created_at', to.toISOString())
+          .order('created_at', { ascending: true })
+          .limit(40);
+
+      const withSource = await baseSelect().eq('source', 'meeting');
+      const fallbackRows = withSource.error?.message?.includes('source')
+        ? (await baseSelect()).data
+        : withSource.data;
+
+      for (const row of (fallbackRows ?? []) as Array<{
+        id: string;
+        title?: string | null;
+        notes?: string | null;
+        due_date?: string | null;
+        status?: string | null;
+      }>) {
+        const title = (row.title ?? 'Task').trim() || 'Task';
+        const key = title.toLowerCase();
+        if (listedIds.has(row.id) || listedTitles.has(key)) continue;
+        listedIds.add(row.id);
+        listedTitles.add(key);
+        tasks.push({
+          id: row.id,
+          title,
+          description: row.notes?.trim() || null,
+          dueDate: row.due_date ?? null,
+          status: row.status ?? 'todo',
+          completed: row.status === 'done',
+        });
+      }
+    }
+  }
 
   const linkedClient = clientId
     ? (clients.find((row) => row.id === clientId) ?? null)

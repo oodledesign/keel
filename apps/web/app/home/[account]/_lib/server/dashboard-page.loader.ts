@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
+import { loadSuggestedEmailActionItems } from '~/lib/email-assistant/suggested-email-tasks.loader';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
 import { PROJECT_PRIMARY_CLIENT_EMBED } from '~/lib/projects/delivery-project-db';
 
@@ -115,6 +116,20 @@ export type DashboardNeedsReplySummary = {
   totalCount: number;
 };
 
+export type DashboardSuggestedEmailTask = {
+  id: string;
+  title: string;
+  detail: string | null;
+  suggestedDueDate: string | null;
+  threadId: string;
+  threadSubject: string;
+};
+
+export type DashboardSuggestedEmailTasksSummary = {
+  items: DashboardSuggestedEmailTask[];
+  totalCount: number;
+};
+
 export type DashboardPageData = {
   accountId: string;
   accountSlug: string;
@@ -126,6 +141,7 @@ export type DashboardPageData = {
   activeJobsList: DashboardJobSummary[];
   upcomingTasks: DashboardTaskSummary[];
   needsReply: DashboardNeedsReplySummary;
+  suggestedEmailTasks: DashboardSuggestedEmailTasksSummary;
   recentNotes: DashboardNoteSummary[];
   recentInvoices: DashboardInvoiceSummary[];
   teamMembers: Array<{
@@ -624,6 +640,23 @@ async function loadDashboardPageDataImpl(
       : (needsReplyResult.count ?? needsReplyThreads.length),
   };
 
+  const suggestedEmailLoaded = await loadSuggestedEmailActionItems(
+    client,
+    workspace.user.id,
+    { accountId, limit: 5 },
+  );
+  const suggestedEmailTasks: DashboardSuggestedEmailTasksSummary = {
+    items: suggestedEmailLoaded.items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      detail: item.detail,
+      suggestedDueDate: item.suggestedDueDate,
+      threadId: item.threadId,
+      threadSubject: item.threadSubject,
+    })),
+    totalCount: suggestedEmailLoaded.totalCount,
+  };
+
   const accountName = account.name?.trim() || account.slug || accountSlug;
 
   return {
@@ -637,6 +670,7 @@ async function loadDashboardPageDataImpl(
     activeJobsList,
     upcomingTasks,
     needsReply,
+    suggestedEmailTasks,
     recentNotes,
     recentInvoices,
     teamMembers: teamMembers.map((m) => ({
