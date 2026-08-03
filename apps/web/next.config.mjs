@@ -83,7 +83,8 @@ const config = {
     turbopackFileSystemCacheForDev: true,
     /** Keep Vercel/webpack production builds inside 8 GB RAM. */
     webpackMemoryOptimizations: true,
-    webpackBuildWorker: true,
+    // Parent + worker nearly doubles peak RSS; disable on the standard 8 GB machine.
+    webpackBuildWorker: false,
     cpus: 1,
     /** Signature staff photos are sent as compressed data URLs. */
     serverActions: {
