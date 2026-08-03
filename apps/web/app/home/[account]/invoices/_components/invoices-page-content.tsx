@@ -29,6 +29,11 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import type { DateRangeSelection } from '~/components/date-range/analytics-date-range-picker';
+import {
+  currentMonthToDateSelection,
+  resolveAnalyticsDateRange,
+} from '~/lib/date-range/analytics-date-range';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 
@@ -77,6 +82,13 @@ function formatDate(value: string | null) {
   });
 }
 
+const INVOICES_DEFAULT_DATE_RANGE = currentMonthToDateSelection();
+
+function initialSummaryDateRange() {
+  const resolved = resolveAnalyticsDateRange(INVOICES_DEFAULT_DATE_RANGE);
+  return { from: resolved.fromIso, to: resolved.toIso };
+}
+
 export function InvoicesPageContent({
   accountSlug,
   accountId,
@@ -120,9 +132,13 @@ export function InvoicesPageContent({
   const [summary, setSummary] = useState<Awaited<
     ReturnType<typeof getInvoiceSummaryAction>
   > | null>(initialSummary ?? null);
-  const [summaryPeriod, setSummaryPeriod] = useState<
-    'month_to_date' | 'last_30_days' | 'last_90_days'
-  >('month_to_date');
+  const [summaryDateFrom, setSummaryDateFrom] = useState(
+    () => initialSummaryDateRange().from,
+  );
+  const [summaryDateTo, setSummaryDateTo] = useState(
+    () => initialSummaryDateRange().to,
+  );
+  const [summaryLoading, setSummaryLoading] = useState(false);
   const [loading, setLoading] = useState(initialInvoices === undefined);
   const skipInitialFetchRef = useRef(initialInvoices !== undefined);
   const [search, setSearch] = useState('');
@@ -176,16 +192,28 @@ export function InvoicesPageContent({
   }, [accountId, initialClients]);
 
   const fetchSummary = useCallback(async () => {
+    setSummaryLoading(true);
     try {
       const result = await getInvoiceSummaryAction({
         accountId,
-        period: summaryPeriod,
+        dateFrom: summaryDateFrom,
+        dateTo: summaryDateTo,
       });
       setSummary(result as typeof summary);
     } catch {
       setSummary(null);
+    } finally {
+      setSummaryLoading(false);
     }
-  }, [accountId, summaryPeriod]);
+  }, [accountId, summaryDateFrom, summaryDateTo]);
+
+  const onSummaryDateRangeApply = useCallback(
+    (fromIso: string, toIso: string, _selection: DateRangeSelection) => {
+      setSummaryDateFrom(fromIso);
+      setSummaryDateTo(toIso);
+    },
+    [],
+  );
 
   const fetchInvoices = useCallback(async () => {
     if (tab === 'recurring') {
@@ -252,14 +280,15 @@ export function InvoicesPageContent({
   useEffect(() => {
     if (
       skipInitialFetchRef.current &&
-      summaryPeriod === 'month_to_date' &&
+      summaryDateFrom === initialSummaryDateRange().from &&
+      summaryDateTo === initialSummaryDateRange().to &&
       initialSummary
     ) {
       return;
     }
 
     void fetchSummary();
-  }, [fetchSummary, initialSummary, summaryPeriod]);
+  }, [fetchSummary, initialSummary, summaryDateFrom, summaryDateTo]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -357,8 +386,10 @@ export function InvoicesPageContent({
     <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 md:px-6">
       <InvoicesIncomeSummary
         summary={summary}
-        period={summaryPeriod}
-        onPeriodChange={setSummaryPeriod}
+        dateFrom={summaryDateFrom}
+        dateTo={summaryDateTo}
+        isLoading={summaryLoading}
+        onDateRangeApply={onSummaryDateRangeApply}
       />
 
       <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-sm">

@@ -180,6 +180,14 @@ export const ResendInvoiceSchema = z.object({
 export const GetInvoiceSummarySchema = z.object({
   accountId: z.string().uuid(),
   period: z.enum(['month_to_date', 'last_30_days', 'last_90_days']).optional(),
+  dateFrom: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  dateTo: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 export const ListRecurringSeriesSchema = z.object({
@@ -228,6 +236,7 @@ export const SavePaymentSettingsSchema = z.object({
   bank_transfer_enabled: z.boolean().optional(),
   bank_transfer_instructions: optionalNullableString,
   stripe_pay_now_enabled: z.boolean().optional(),
+  stripe_card_fee_mode: z.enum(['pass_to_client', 'absorb_in_payout']).optional(),
   invoice_starting_number: z.number().int().min(1).max(999999).optional(),
   default_invoice_currency: InvoiceCurrencySchema.optional(),
   invoice_quantity_label: z.enum(['quantity', 'hours']).optional(),

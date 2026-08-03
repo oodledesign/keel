@@ -139,7 +139,12 @@ export const voidInvoiceAction = enhanceAction(
 );
 
 export const getInvoiceSummaryAction = enhanceAction(
-  async (input) => getInvoiceSummary(input.accountId, input.period),
+  async (input) =>
+    getInvoiceSummary(input.accountId, {
+      period: input.period,
+      dateFrom: input.dateFrom,
+      dateTo: input.dateTo,
+    }),
   { schema: GetInvoiceSummarySchema },
 );
 

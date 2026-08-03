@@ -128,6 +128,93 @@ function toIsoDate(d: Date) {
   return d.toISOString().slice(0, 10);
 }
 
+export function endOfMonth(d: Date) {
+  return endOfDay(new Date(d.getFullYear(), d.getMonth() + 1, 0));
+}
+
+export function startOfMonthDate(d: Date) {
+  return startOfMonth(d);
+}
+
+/** True when from/to fall in the same calendar month (any days within that month). */
+export function isSameCalendarMonth(fromIso: string, toIso: string): boolean {
+  const from = parseIsoDateLocal(fromIso);
+  const to = parseIsoDateLocal(toIso);
+  return (
+    from.getFullYear() === to.getFullYear() && from.getMonth() === to.getMonth()
+  );
+}
+
+function parseIsoDateLocal(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y!, m! - 1, d);
+}
+
+/**
+ * Shift a range by whole calendar months. Current month uses month-to-date
+ * (1st → today); other months use the full month. Returns null when the
+ * target month is in the future.
+ */
+export function shiftDateRangeByMonth(
+  fromIso: string,
+  _toIso: string,
+  deltaMonths: number,
+  now = new Date(),
+): { fromIso: string; toIso: string; selection: DateRangeSelection } | null {
+  const from = parseIsoDateLocal(fromIso);
+  const anchor = new Date(
+    from.getFullYear(),
+    from.getMonth() + deltaMonths,
+    1,
+  );
+  const currentMonthStart = startOfMonth(now);
+
+  if (anchor.getTime() > currentMonthStart.getTime()) {
+    return null;
+  }
+
+  const nextFrom = startOfMonth(anchor);
+  const isCurrentMonth = nextFrom.getTime() === currentMonthStart.getTime();
+  const nextTo = isCurrentMonth ? startOfDay(now) : endOfMonth(nextFrom);
+  const selection: DateRangeSelection = {
+    preset: 'custom',
+    customFrom: nextFrom,
+    customTo: nextTo,
+  };
+  const resolved = resolveAnalyticsDateRange(selection, now);
+
+  return {
+    fromIso: resolved.fromIso,
+    toIso: resolved.toIso,
+    selection,
+  };
+}
+
+export function formatNavigatorDateLabel(fromIso: string, toIso: string): string {
+  if (isSameCalendarMonth(fromIso, toIso)) {
+    return new Intl.DateTimeFormat('en-GB', {
+      month: 'long',
+      year: 'numeric',
+    }).format(parseIsoDateLocal(fromIso));
+  }
+
+  return formatDateRangeLabel({
+    preset: 'custom',
+    customFrom: parseIsoDateLocal(fromIso),
+    customTo: parseIsoDateLocal(toIso),
+  });
+}
+
+export function currentMonthToDateSelection(
+  now = new Date(),
+): DateRangeSelection {
+  return {
+    preset: 'custom',
+    customFrom: startOfMonth(now),
+    customTo: startOfDay(now),
+  };
+}
+
 export function resolveAnalyticsDateRange(
   selection: DateRangeSelection,
   now = new Date(),

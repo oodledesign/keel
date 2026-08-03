@@ -44,23 +44,30 @@ export const loadAdminWorkspaceDetail = cache(
       notFound();
     }
 
-    const [business, memberships, invitations] = await Promise.all([
-      admin
-        .from('businesses')
-        .select('type')
-        .eq('account_id', accountId)
-        .maybeSingle(),
-      admin
-        .from('accounts_memberships')
-        .select('user_id, account_role, created_at')
-        .eq('account_id', accountId)
-        .order('created_at', { ascending: true }),
-      admin
-        .from('invitations')
-        .select('id, email, role, created_at')
-        .eq('account_id', accountId)
-        .order('created_at', { ascending: false }),
-    ]);
+    const [business, memberships, invitations, projectGuests] =
+      await Promise.all([
+        admin
+          .from('businesses')
+          .select('type')
+          .eq('account_id', accountId)
+          .maybeSingle(),
+        admin
+          .from('accounts_memberships')
+          .select('user_id, account_role, created_at')
+          .eq('account_id', accountId)
+          .order('created_at', { ascending: true }),
+        admin
+          .from('invitations')
+          .select('id, email, role, created_at')
+          .eq('account_id', accountId)
+          .order('created_at', { ascending: false }),
+        admin
+          .from('project_guests')
+          .select('id, invited_email, status, project_id, created_at')
+          .eq('account_id', accountId)
+          .eq('status', 'pending')
+          .order('created_at', { ascending: false }),
+      ]);
 
     const memberIds = (memberships.data ?? []).map(
       (row) => row.user_id as string,
@@ -107,14 +114,64 @@ export const loadAdminWorkspaceDetail = cache(
       },
     );
 
-    const pendingInvites: AdminWorkspaceInvitation[] = (
+    const projectIds = [
+      ...new Set(
+        (projectGuests.data ?? [])
+          .map((row) => row.project_id as string | null)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+
+    const projectsById = new Map<string, string>();
+    if (projectIds.length > 0) {
+      const { data: projects } = await admin
+        .from('projects')
+        .select('id, name, title')
+        .eq('account_id', accountId)
+        .in('id', projectIds);
+
+      for (const project of (projects ?? []) as Array<{
+        id: string;
+        name?: string | null;
+        title?: string | null;
+      }>) {
+        const label =
+          project.title?.trim() || project.name?.trim() || 'Project';
+        projectsById.set(project.id, label);
+      }
+    }
+
+    const memberInvites: AdminWorkspaceInvitation[] = (
       invitations.data ?? []
     ).map((row) => ({
-      id: row.id as number,
+      id: `member:${row.id as number}`,
       email: String(row.email),
       role: String(row.role),
+      kind: 'member' as const,
+      status: 'pending' as const,
       createdAt: String(row.created_at),
+      projectName: null,
     }));
+
+    const guestInvites: AdminWorkspaceInvitation[] = (
+      projectGuests.data ?? []
+    ).map((row) => {
+      const projectId = row.project_id as string;
+      return {
+        id: `guest:${row.id as string}`,
+        email: String(row.invited_email),
+        role: 'project guest',
+        kind: 'project_guest' as const,
+        status: 'pending' as const,
+        createdAt: String(row.created_at),
+        projectName: projectsById.get(projectId) ?? null,
+      };
+    });
+
+    const pendingInvites = [...memberInvites, ...guestInvites].sort(
+      (a, b) =>
+        new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+    );
 
     return {
       id: account.id as string,

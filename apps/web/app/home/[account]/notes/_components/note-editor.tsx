@@ -33,7 +33,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { toast } from '@kit/ui/sonner';
-import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -530,7 +529,7 @@ export function NoteEditor({
         </div>
       )}
 
-      <Textarea
+      <textarea
         ref={titleRef}
         value={title}
         onChange={(e) => onTitleChange(e.target.value)}
@@ -538,7 +537,7 @@ export function NoteEditor({
         placeholder="Untitled"
         rows={1}
         aria-label="Note title"
-        className="font-heading w-full touch-pan-y resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pt-4 pb-2 text-[2.25rem] leading-tight font-bold tracking-tight text-[var(--workspace-shell-text)] shadow-none outline-none focus-visible:border-0 focus-visible:border-transparent focus-visible:ring-0 focus-visible:outline-none sm:px-6 lg:px-10 lg:text-4xl xl:px-14"
+        className="note-editor-title font-heading w-full touch-pan-y resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pt-4 pb-2 text-[2.25rem] leading-tight font-bold tracking-tight text-[var(--workspace-shell-text)] shadow-none ring-0 outline-none placeholder:text-[var(--workspace-shell-text-muted)] focus:border-0 focus:shadow-none focus:ring-0 focus:outline-none focus-visible:border-0 focus-visible:border-transparent focus-visible:shadow-none focus-visible:ring-0 focus-visible:outline-none sm:px-6 lg:px-10 lg:text-4xl xl:px-14"
         spellCheck
       />
 

@@ -50,6 +50,7 @@ import {
   renderSmartFields,
   resolveInvoiceEmailField,
 } from '../_lib/invoice-smart-fields';
+import { PASS_TO_CLIENT_FEE_NOTE } from '../_lib/invoice-stripe-fee';
 import { formatPence } from '../_lib/invoice-totals';
 import {
   getInvoicePortalLink,
@@ -173,6 +174,7 @@ export function InvoiceSendPanel({
   onSent,
   onMarkedSent,
   onClose,
+  passCardFeeToClient = false,
 }: {
   accountId: string;
   invoiceId: string;
@@ -194,14 +196,16 @@ export function InvoiceSendPanel({
   initialSignature?: string | null;
   pdfQuery?: string;
   isDraft?: boolean;
-  onEmailChange?: (email: {
+  onEmailChange?: (fields: {
     subject: string;
     body: string;
     signature: string;
   }) => void;
-  onSent: () => void;
+  onSent?: () => void;
   onMarkedSent?: () => void;
-  onClose: () => void;
+  onClose?: () => void;
+  /** When true, show copy that card payments may add a processing fee. */
+  passCardFeeToClient?: boolean;
 }) {
   const [recipients, setRecipients] = useState<Recipient[]>(() => {
     const email = defaultEmail.trim();
@@ -713,8 +717,10 @@ export function InvoiceSendPanel({
 
         <TabsContent value="link" className="mt-4 space-y-4">
           <p className="text-muted-foreground text-sm">
-            Share this link with your client to view and pay the invoice. Card
-            payments via Stripe may incur a small processing fee.
+            Share this link with your client to view and pay the invoice.
+            {passCardFeeToClient
+              ? ' Card payments via Stripe may incur a small processing fee.'
+              : ''}
           </p>
           {isDraft ? (
             <div className="flex items-center gap-2">
@@ -815,9 +821,11 @@ export function InvoiceSendPanel({
                 <p className="mt-3 text-[var(--ozer-accent)] underline">
                   View and pay invoice
                 </p>
-                <p className="mt-2 text-xs text-zinc-500">
-                  Paying online by card may incur a small processing fee.
-                </p>
+                {passCardFeeToClient ? (
+                  <p className="mt-2 text-xs text-zinc-500">
+                    {PASS_TO_CLIENT_FEE_NOTE}
+                  </p>
+                ) : null}
               </div>
               <p className="leading-relaxed whitespace-pre-wrap text-zinc-700">
                 {previewSignature}

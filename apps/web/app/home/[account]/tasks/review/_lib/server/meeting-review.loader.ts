@@ -196,3 +196,22 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
     automationSettings,
   };
 }
+
+/** Lightweight count for the tasks toolbar badge. */
+export async function loadPendingMeetingTaskReviewCount(
+  accountId: string,
+): Promise<number> {
+  const client = getSupabaseServerClient();
+  const { count, error } = await client
+    .from('meeting_action_items')
+    .select('id', { count: 'exact', head: true })
+    .eq('account_id', accountId)
+    .eq('status', 'pending_review');
+
+  if (error) {
+    console.error('loadPendingMeetingTaskReviewCount', error.message);
+    return 0;
+  }
+
+  return count ?? 0;
+}

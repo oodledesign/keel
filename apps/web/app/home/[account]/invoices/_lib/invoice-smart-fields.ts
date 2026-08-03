@@ -129,6 +129,9 @@ export function resolveInvoiceEmailField(
   return trimmed ? trimmed : fallback;
 }
 
-/** Shown on invoice PDF / portal when paying by card is available. */
-export const DEFAULT_INVOICE_FOOTER_MESSAGE =
-  'Paying online by card (Stripe payment link) may incur a small processing fee.';
+/** Default invoice footer when card fees are not passed to the client. */
+export const DEFAULT_INVOICE_FOOTER_MESSAGE = '';
+
+export {
+  PASS_TO_CLIENT_FEE_NOTE_LONG as INVOICE_CARD_FEE_FOOTER_MESSAGE,
+} from './invoice-stripe-fee';

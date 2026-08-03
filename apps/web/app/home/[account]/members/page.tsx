@@ -74,6 +74,13 @@ async function TeamAccountMembersPage({
   const [members, invitations, canAddMember, { user, account }] =
     await loadMembersPageData(client, slug);
 
+  const { data: inviteProjects } = await client
+    .from('projects')
+    .select('id, name')
+    .eq('account_id', account.id)
+    .order('name')
+    .limit(200);
+
   const canManageRoles =
     account.permissions?.includes('roles.manage') || access.canManageRoles;
   const canManageInvitations =
@@ -131,6 +138,10 @@ async function TeamAccountMembersPage({
                     userRoleHierarchy={currentUserRoleHierarchy}
                     accountSlug={account.slug}
                     defaultOpen={openInvite}
+                    projects={(inviteProjects ?? []).map((project) => ({
+                      id: project.id,
+                      name: project.name?.trim() || 'Untitled project',
+                    }))}
                   >
                     <Button size="sm" data-test="invite-members-form-trigger">
                       <PlusCircle className="mr-2 w-4" />

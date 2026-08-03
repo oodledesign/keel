@@ -89,6 +89,7 @@ export function PaymentSettingsForm({
           bank_transfer_enabled: settings.bank_transfer_enabled,
           bank_transfer_instructions: settings.bank_transfer_instructions,
           stripe_pay_now_enabled: settings.stripe_pay_now_enabled,
+          stripe_card_fee_mode: settings.stripe_card_fee_mode,
           invoice_starting_number: settings.invoice_starting_number,
           default_hourly_rate_pence: poundsInputToPence(hourlyRateInput),
           default_invoice_due_days: settings.default_invoice_due_days,
@@ -140,8 +141,8 @@ export function PaymentSettingsForm({
           <div>
             <h2 className="text-base font-semibold">Stripe Connect</h2>
             <p className="text-muted-foreground mt-1 text-sm">
-              Accept card payments on invoices. Funds go directly to your
-              connected Stripe account (destination charge, no platform fee).
+              Accept card payments on invoices. Funds transfer to your connected
+              Stripe account. Choose below how Stripe card fees are handled.
             </p>
           </div>
           {stripeConnected ? (
@@ -194,6 +195,74 @@ export function PaymentSettingsForm({
             }
           />
         </div>
+
+        {stripeConnected ? (
+          <div className="mt-4 space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-white/3 p-4">
+            <div>
+              <p className="text-sm font-medium">Card processing fees</p>
+              <p className="text-muted-foreground mt-1 text-xs">
+                Stripe charges a card fee on every payment. Choose who covers
+                it. Ozer does not keep a platform cut beyond covering that fee.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 has-[:checked]:border-[var(--ozer-accent)]/50">
+                <input
+                  type="radio"
+                  name="stripe_card_fee_mode"
+                  className="mt-1"
+                  disabled={!canEdit}
+              checked={
+                (settings.stripe_card_fee_mode ?? 'absorb_in_payout') ===
+                'absorb_in_payout'
+              }
+                  onChange={() =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      stripe_card_fee_mode: 'absorb_in_payout',
+                    }))
+                  }
+                />
+                <span>
+                  <span className="block text-sm font-medium">
+                    Deduct from what you receive
+                  </span>
+                  <span className="text-muted-foreground mt-0.5 block text-xs">
+                    Client pays the invoice total. Stripe fees come out of your
+                    payout.
+                  </span>
+                </span>
+              </label>
+              <label className="flex cursor-pointer items-start gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3 has-[:checked]:border-[var(--ozer-accent)]/50">
+                <input
+                  type="radio"
+                  name="stripe_card_fee_mode"
+                  className="mt-1"
+                  disabled={!canEdit}
+                  checked={
+                    (settings.stripe_card_fee_mode ?? 'absorb_in_payout') ===
+                    'pass_to_client'
+                  }
+                  onChange={() =>
+                    setSettings((prev) => ({
+                      ...prev,
+                      stripe_card_fee_mode: 'pass_to_client',
+                    }))
+                  }
+                />
+                <span>
+                  <span className="block text-sm font-medium">
+                    Pass fees to the client
+                  </span>
+                  <span className="text-muted-foreground mt-0.5 block text-xs">
+                    Client pays the invoice plus an estimated card fee at
+                    checkout. You receive the full invoice amount.
+                  </span>
+                </span>
+              </label>
+            </div>
+          </div>
+        ) : null}
 
         {stripeConnected ? (
           <p className="text-muted-foreground mt-3 text-xs">

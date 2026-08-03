@@ -6,6 +6,10 @@ import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import type { Database } from '~/lib/database.types';
 
 import { computeInvoiceTotals } from '../invoice-totals';
+import {
+  PASS_TO_CLIENT_FEE_NOTE_LONG,
+  normalizeStripeCardFeeMode,
+} from '../invoice-stripe-fee';
 import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
 import type { InvoiceForPdf } from './invoice-pdf';
 
@@ -137,6 +141,14 @@ export async function buildInvoicePdfPayload(
     ? `${baseUrl}/portal/invoices/${encodeURIComponent(token)}`
     : null;
 
+  const feeMode = normalizeStripeCardFeeMode(
+    paymentSettings?.stripe_card_fee_mode,
+  );
+  const defaultFeeFooter =
+    feeMode === 'pass_to_client' && paymentUrl
+      ? PASS_TO_CLIENT_FEE_NOTE_LONG
+      : null;
+
   const senderName = [sender?.first_name, sender?.last_name]
     .filter(Boolean)
     .join(' ')
@@ -158,7 +170,7 @@ export async function buildInvoicePdfPayload(
     deposit_due_pence: totals.deposit_due_pence,
     currency: invoice.currency ?? 'gbp',
     notes: invoice.notes,
-    footer_message: invoice.footer_message ?? null,
+    footer_message: invoice.footer_message?.trim() || defaultFeeFooter,
     brand_name: account?.name ?? null,
     logo_url: brand?.logo_url ?? null,
     payment_url: paymentUrl,

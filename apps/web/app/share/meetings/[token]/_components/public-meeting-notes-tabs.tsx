@@ -76,22 +76,8 @@ export function PublicMeetingNotesTabs({
         }}
         className="gap-0"
       >
-        <div className="mb-5 flex flex-wrap items-center gap-2">
-          <button
-            type="button"
-            onClick={() => void handleCopy()}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] px-2.5 py-1.5 text-xs font-medium text-[var(--ozer-plum-700)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
-            aria-label={copied ? `${copyLabel} copied` : `Copy ${copyLabel}`}
-          >
-            {copied ? (
-              <Check className="h-3.5 w-3.5 text-[var(--ozer-accent)]" />
-            ) : (
-              <Copy className="h-3.5 w-3.5" />
-            )}
-            {copied ? 'Copied' : 'Copy'}
-          </button>
-
-          <TabsList className="h-auto flex-1 justify-start gap-1 rounded-xl bg-[var(--ozer-cream-50)] p-1 text-[var(--ozer-text-on-light-muted)]">
+        <div className="mb-5 space-y-2">
+          <TabsList className="h-auto w-full justify-start gap-1 rounded-xl bg-[var(--ozer-cream-50)] p-1 text-[var(--ozer-text-on-light-muted)]">
             {hasSummary ? (
               <TabsTrigger
                 value="summary"
@@ -109,6 +95,22 @@ export function PublicMeetingNotesTabs({
               Transcript
             </TabsTrigger>
           </TabsList>
+
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={() => void handleCopy()}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] px-2.5 py-1.5 text-xs font-medium text-[var(--ozer-plum-700)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
+              aria-label={copied ? `${copyLabel} copied` : `Copy ${copyLabel}`}
+            >
+              {copied ? (
+                <Check className="h-3.5 w-3.5 text-[var(--ozer-accent)]" />
+              ) : (
+                <Copy className="h-3.5 w-3.5" />
+              )}
+              {copied ? 'Copied' : 'Copy'}
+            </button>
+          </div>
         </div>
 
         {hasSummary && summaryText ? (

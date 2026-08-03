@@ -117,6 +117,7 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
         }}
         defaultHourlyRatePence={paymentSettings.default_hourly_rate_pence}
         defaultInvoiceDueDays={paymentSettings.default_invoice_due_days}
+        stripeCardFeeMode={paymentSettings.stripe_card_fee_mode}
       />
     </PageBody>
   );

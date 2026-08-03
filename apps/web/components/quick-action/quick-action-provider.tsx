@@ -13,6 +13,8 @@ import { usePathname } from 'next/navigation';
 
 import { isReservedWorkspaceUrlSegment } from '@kit/shared/workspace-url';
 
+import { prefetchNavCatalog } from '~/lib/quick-action/nav-catalog-cache';
+
 import { QuickActionDialog } from './quick-action-dialog';
 
 type QuickActionContextValue = {
@@ -85,6 +87,13 @@ export function QuickActionProvider(props: React.PropsWithChildren) {
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
   }, [handleKeyDown]);
+
+  useEffect(() => {
+    if (!enabled) return;
+    void prefetchNavCatalog().catch(() => {
+      // Prefetch is best-effort; dialog fetch will surface errors if needed.
+    });
+  }, [enabled]);
 
   const value = useMemo(
     () => ({

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ArrowRight, Loader2, Search, X } from 'lucide-react';
+import { ArrowRight, Clock3, Loader2, Search, X } from 'lucide-react';
 
 import {
   CommandEmpty,
@@ -22,6 +22,15 @@ import {
   type NavSearchItem,
   filterNavCatalog,
 } from '~/lib/quick-action/filter-nav-catalog';
+import {
+  getCachedNavCatalog,
+  prefetchNavCatalog,
+} from '~/lib/quick-action/nav-catalog-cache';
+import {
+  loadSearchHistory,
+  pushSearchHistory,
+  type SearchHistoryItem,
+} from '~/lib/quick-action/search-history';
 
 type QuickActionDialogProps = {
   open: boolean;
@@ -42,8 +51,13 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
   const router = useRouter();
   const inputRef = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState('');
-  const [catalog, setCatalog] = useState<NavSearchItem[]>([]);
-  const [catalogLoading, setCatalogLoading] = useState(false);
+  const [catalog, setCatalog] = useState<NavSearchItem[]>(
+    () => getCachedNavCatalog() ?? [],
+  );
+  const [catalogLoading, setCatalogLoading] = useState(
+    () => !getCachedNavCatalog(),
+  );
+  const [history, setHistory] = useState<SearchHistoryItem[]>([]);
 
   useEffect(() => {
     if (!open) {
@@ -51,20 +65,22 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
       return;
     }
 
+    setHistory(loadSearchHistory());
+
+    const cached = getCachedNavCatalog();
+    if (cached) {
+      setCatalog(cached);
+      setCatalogLoading(false);
+      return;
+    }
+
     let cancelled = false;
     setCatalogLoading(true);
 
-    void fetch('/api/quick-action/nav-catalog')
-      .then(async (res) => {
-        const body = (await res.json()) as {
-          items?: NavSearchItem[];
-          error?: string;
-        };
-        if (!res.ok) {
-          throw new Error(body.error ?? 'Failed to load pages');
-        }
+    void prefetchNavCatalog()
+      .then((items) => {
         if (!cancelled) {
-          setCatalog(body.items ?? []);
+          setCatalog(items);
         }
       })
       .catch((err) => {
@@ -83,18 +99,26 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
     };
   }, [open]);
 
+  const trimmedQuery = query.trim();
   const matches = useMemo(
-    () => (query.trim() ? filterNavCatalog(catalog, query, 12) : []),
-    [catalog, query],
+    () => (trimmedQuery ? filterNavCatalog(catalog, trimmedQuery, 12) : []),
+    [catalog, trimmedQuery],
   );
 
   const goTo = useCallback(
-    (href: string) => {
+    (item: Pick<NavSearchItem, 'id' | 'label' | 'href' | 'category'>) => {
+      setHistory(pushSearchHistory(item));
       onOpenChange(false);
-      router.push(href);
+      router.push(item.href);
     },
     [onOpenChange, router],
   );
+
+  const showHistory = !trimmedQuery && history.length > 0;
+  const showTypedLoading = Boolean(trimmedQuery) && catalogLoading;
+  const showNoMatches =
+    Boolean(trimmedQuery) && !catalogLoading && matches.length === 0;
+  const showTypeHint = !trimmedQuery && history.length === 0;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -112,24 +136,19 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
           shouldFilter={false}
           className="flex flex-col overflow-hidden bg-transparent text-[var(--workspace-shell-text)]"
         >
-          <div className="flex items-center justify-between px-4 pt-3 pb-1">
-            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              Search
-            </p>
+          <div className="relative px-4 pt-4 pb-3">
             <button
               type="button"
               aria-label="Close search"
               tabIndex={-1}
-              className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] transition-colors outline-none hover:bg-black/5 hover:text-[var(--workspace-shell-text)] focus:outline-none focus-visible:outline-none"
+              className="absolute top-3 right-3 z-10 flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-[var(--workspace-shell-text-muted)] transition-colors outline-none hover:bg-black/5 hover:text-[var(--workspace-shell-text)] focus:outline-none focus-visible:outline-none"
               onClick={() => onOpenChange(false)}
             >
               <X className="h-4 w-4" />
             </button>
-          </div>
 
-          <div className="px-4 pb-3">
             <div
-              className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-white px-3 py-2.5 shadow-none"
+              className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-white py-2.5 pr-3 pl-3 shadow-none"
               cmdk-input-wrapper=""
             >
               <Search className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
@@ -140,8 +159,8 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
                 value={query}
                 onValueChange={setQuery}
                 className={cn(
-                  'flex h-8 w-full bg-transparent text-[15px] text-[var(--workspace-shell-text)] outline-none placeholder:text-[var(--workspace-shell-text-muted)]',
-                  'ring-0 focus:outline-none focus-visible:outline-none',
+                  'workspace-search-input flex h-8 w-full bg-transparent text-[15px] text-[var(--workspace-shell-text)] outline-none placeholder:text-[var(--workspace-shell-text-muted)]',
+                  'border-0 shadow-none ring-0 focus:border-0 focus:shadow-none focus:ring-0 focus:outline-none focus-visible:border-0 focus-visible:shadow-none focus-visible:ring-0 focus-visible:outline-none',
                 )}
               />
               <kbd className="hidden shrink-0 rounded border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] px-1.5 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text)]/55 sm:inline">
@@ -151,18 +170,48 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
           </div>
 
           <CommandList className="max-h-[min(60vh,420px)] border-t border-[color:var(--workspace-shell-border)] px-2 py-2">
-            <CommandEmpty className="py-6 text-center text-sm text-[var(--workspace-shell-text-muted)]">
-              {catalogLoading ? (
-                <span className="inline-flex items-center gap-2">
-                  <Loader2 className="h-4 w-4 animate-spin text-[var(--ozer-accent)]" />
-                  Loading…
-                </span>
-              ) : query.trim() ? (
-                'No matching pages'
-              ) : (
-                'Type to search pages'
-              )}
-            </CommandEmpty>
+            {showTypeHint || showTypedLoading || showNoMatches ? (
+              <CommandEmpty className="py-6 text-center text-sm text-[var(--workspace-shell-text-muted)]">
+                {showTypedLoading ? (
+                  <span className="inline-flex items-center gap-2">
+                    <Loader2 className="h-4 w-4 animate-spin text-[var(--ozer-accent)]" />
+                    Searching…
+                  </span>
+                ) : showNoMatches ? (
+                  'No matching pages'
+                ) : (
+                  'Type to search pages'
+                )}
+              </CommandEmpty>
+            ) : null}
+
+            {showHistory ? (
+              <CommandGroup
+                heading="Recent"
+                className="p-0 [&_[cmdk-group-heading]]:px-3 [&_[cmdk-group-heading]]:py-1.5 [&_[cmdk-group-heading]]:text-xs [&_[cmdk-group-heading]]:font-medium [&_[cmdk-group-heading]]:text-[var(--workspace-shell-text-muted)]"
+              >
+                {history.map((item) => (
+                  <CommandItem
+                    key={`history-${item.id}`}
+                    value={`history-${item.id}`}
+                    onSelect={() => goTo(item)}
+                    className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
+                  >
+                    <Clock3 className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {item.label}
+                      </p>
+                      {item.category ? (
+                        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                          {item.category}
+                        </p>
+                      ) : null}
+                    </div>
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            ) : null}
 
             {matches.length > 0 ? (
               <CommandGroup className="p-0">
@@ -170,7 +219,7 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
                   <CommandItem
                     key={item.id}
                     value={item.id}
-                    onSelect={() => goTo(item.href)}
+                    onSelect={() => goTo(item)}
                     className="cursor-pointer gap-3 rounded-lg px-3 py-2.5 aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
                   >
                     <ArrowRight className="h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />

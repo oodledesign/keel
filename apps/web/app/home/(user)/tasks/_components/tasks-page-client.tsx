@@ -10,6 +10,7 @@ import {
 } from 'react';
 
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import {
@@ -20,6 +21,7 @@ import {
   Check,
   ChevronDown,
   ChevronRight,
+  ClipboardCheck,
   Flame,
   KanbanSquare,
   List as ListIcon,
@@ -810,8 +812,8 @@ function updateTaskTitleInTree(
   });
 }
 
-const toolbarIconButtonClass =
-  'relative h-10 w-10 shrink-0 rounded-xl border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]';
+const toolbarLabeledButtonClass =
+  'relative h-10 shrink-0 gap-1.5 rounded-xl border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 text-sm font-medium text-[var(--workspace-shell-text-muted)] hover:bg-white/8 hover:text-[var(--workspace-shell-text)]';
 
 const dropdownContentClass =
   'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] shadow-lg';
@@ -888,11 +890,11 @@ function TasksFilterMenu(props: {
         <Button
           type="button"
           variant="outline"
-          size="icon"
           aria-label="Filter tasks"
-          className={toolbarIconButtonClass}
+          className={toolbarLabeledButtonClass}
         >
           <SlidersHorizontal className="h-4 w-4" />
+          Filter
           {hasActiveFilters ? (
             <span className="absolute top-2 right-2 h-1.5 w-1.5 rounded-full bg-[var(--ozer-accent)]" />
           ) : null}
@@ -1168,11 +1170,11 @@ function TasksViewMenu(props: {
         <Button
           type="button"
           variant="outline"
-          size="icon"
           aria-label="Change task view"
-          className={toolbarIconButtonClass}
+          className={toolbarLabeledButtonClass}
         >
           <CurrentIcon className="h-4 w-4" />
+          View
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent
@@ -1218,6 +1220,10 @@ type Props = {
   includeWorkspaceTasks?: boolean;
   /** Personal: `all`, `personal`, or a workspace slug (from URL or settings). */
   initialWorkspaceFilter?: string;
+  /** Workspace: link to meeting task review queue. */
+  reviewHref?: string | null;
+  /** Workspace: pending meeting suggestions awaiting review. */
+  pendingReviewCount?: number;
 };
 
 export function TasksPageClient({
@@ -1227,6 +1233,8 @@ export function TasksPageClient({
   workspaceAccountSlug,
   includeWorkspaceTasks = true,
   initialWorkspaceFilter = 'all',
+  reviewHref = null,
+  pendingReviewCount = 0,
 }: Props) {
   const [tasks, setTasks] = useState<TasksPageTask[]>(initialTasks);
   const [view, setView] = useState<TaskViewMode>('list');
@@ -1544,6 +1552,32 @@ export function TasksPageClient({
           />
 
           <TasksViewMenu view={view} onViewChange={setView} />
+
+          {reviewHref ? (
+            <Button
+              type="button"
+              variant="outline"
+              asChild
+              className={toolbarLabeledButtonClass}
+            >
+              <Link
+                href={reviewHref}
+                aria-label={
+                  pendingReviewCount > 0
+                    ? `Review ${pendingReviewCount} suggested tasks`
+                    : 'Review suggested tasks'
+                }
+              >
+                <ClipboardCheck className="h-4 w-4" />
+                Review
+                {pendingReviewCount > 0 ? (
+                  <span className="inline-flex min-w-5 items-center justify-center rounded-full bg-[var(--ozer-accent)] px-1.5 py-0.5 text-[10px] font-semibold text-[#09111F] tabular-nums">
+                    {pendingReviewCount > 99 ? '99+' : pendingReviewCount}
+                  </span>
+                ) : null}
+              </Link>
+            </Button>
+          ) : null}
 
           <div className="flex shrink-0 items-center gap-2">
             {variant === 'personal' ? (

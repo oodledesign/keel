@@ -8,6 +8,11 @@ import {
   isSupportedInvoiceCurrency,
   normalizeInvoiceCurrency,
 } from '../invoice-currency';
+import {
+  CARD_FEE_LINE_ITEM_NAME,
+  estimateStripeCardFeePence,
+  normalizeStripeCardFeeMode,
+} from '../invoice-stripe-fee';
 import { sendInvoicePaidNotifications } from './invoice-notifications';
 import { loadPaymentSettingsForPortal } from './invoice-payment-settings.service';
 import {
@@ -49,7 +54,7 @@ async function applyPaidCheckoutSession(
   const { data: invoice, error: invoiceError } = await admin
     .from('invoices')
     .select(
-      'id, account_id, status, public_token, total_pence, amount_paid_pence',
+      'id, account_id, status, public_token, total_pence, amount_paid_pence, deposit_type, deposit_value',
     )
     .eq('id', invoiceId)
     .maybeSingle();
@@ -64,12 +69,22 @@ async function applyPaidCheckoutSession(
 
   if (invoice.status !== 'paid') {
     const paymentIntentId = getPaymentIntentId(session);
-    const amount =
-      session.amount_total ??
-      Math.max(
-        0,
-        (invoice.total_pence ?? 0) - (invoice.amount_paid_pence ?? 0),
-      );
+    const payDepositOnly = session.metadata?.pay_deposit_only === '1';
+    // Always record the invoice portion only — never include passed-through card fees.
+    const amount = getCheckoutAmountPence(
+      {
+        total_pence: invoice.total_pence ?? 0,
+        amount_paid_pence: invoice.amount_paid_pence,
+        deposit_type: (invoice as { deposit_type?: string | null }).deposit_type,
+        deposit_value: (invoice as { deposit_value?: number | null })
+          .deposit_value,
+      },
+      payDepositOnly,
+    );
+
+    if (amount <= 0) {
+      return { paid: false, reason: 'nothing_to_pay' as const };
+    }
 
     await recordInvoicePayment({
       accountId: invoice.account_id,
@@ -159,6 +174,15 @@ export async function createInvoiceCheckoutSessionByToken(
     );
   }
   const currency = normalizeInvoiceCurrency(invoice.currency);
+  const feeMode = normalizeStripeCardFeeMode(
+    paymentSettings.stripe_card_fee_mode,
+  );
+  const feePence = estimateStripeCardFeePence(amount, currency);
+  // application_fee must be less than the charge amount
+  const applicationFeeAmount = Math.min(
+    feePence,
+    Math.max(0, amount + (feeMode === 'pass_to_client' ? feePence : 0) - 1),
+  );
 
   const baseUrl =
     process.env.NEXT_PUBLIC_SITE_URL ??
@@ -168,26 +192,41 @@ export async function createInvoiceCheckoutSessionByToken(
   const successUrl = `${baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`}${portalPath}?paid=1&session_id={CHECKOUT_SESSION_ID}`;
   const cancelUrl = `${baseUrl.startsWith('http') ? baseUrl : `https://${baseUrl}`}${portalPath}?cancelled=1`;
 
+  const lineItems: Stripe.Checkout.SessionCreateParams.LineItem[] = [
+    {
+      price_data: {
+        currency,
+        unit_amount: amount,
+        product_data: {
+          name: `Invoice ${invoice.invoice_number}`,
+          description: options?.payDepositOnly
+            ? 'Deposit payment'
+            : 'Invoice payment',
+        },
+      },
+      quantity: 1,
+    },
+  ];
+
+  if (feeMode === 'pass_to_client' && feePence > 0) {
+    lineItems.push({
+      price_data: {
+        currency,
+        unit_amount: feePence,
+        product_data: {
+          name: CARD_FEE_LINE_ITEM_NAME,
+          description: 'Estimated card processing fee',
+        },
+      },
+      quantity: 1,
+    });
+  }
+
   let session: Stripe.Checkout.Session;
   try {
     session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      payment_method_types: ['card'],
-      line_items: [
-        {
-          price_data: {
-            currency,
-            unit_amount: amount,
-            product_data: {
-              name: `Invoice ${invoice.invoice_number}`,
-              description: options?.payDepositOnly
-                ? 'Deposit payment'
-                : 'Invoice payment',
-            },
-          },
-          quantity: 1,
-        },
-      ],
+      line_items: lineItems,
       success_url: successUrl,
       cancel_url: cancelUrl,
       client_reference_id: invoice.id,
@@ -195,10 +234,20 @@ export async function createInvoiceCheckoutSessionByToken(
         invoice_id: invoice.id,
         account_id: invoice.account_id,
         pay_deposit_only: options?.payDepositOnly ? '1' : '0',
+        stripe_card_fee_mode: feeMode,
+        card_fee_pence: String(feePence),
       },
       payment_intent_data: {
         transfer_data: {
           destination: paymentSettings.stripe_account_id,
+        },
+        ...(applicationFeeAmount > 0
+          ? { application_fee_amount: applicationFeeAmount }
+          : {}),
+        metadata: {
+          invoice_id: invoice.id,
+          account_id: invoice.account_id,
+          stripe_card_fee_mode: feeMode,
         },
       },
     });

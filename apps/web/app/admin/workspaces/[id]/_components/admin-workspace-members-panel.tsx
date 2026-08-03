@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
+import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import {
   Form,
@@ -47,10 +48,13 @@ export type AdminWorkspaceMember = {
 };
 
 export type AdminWorkspaceInvitation = {
-  id: number;
+  id: string;
   email: string;
   role: string;
+  kind: 'member' | 'project_guest';
+  status: 'pending';
   createdAt: string;
+  projectName: string | null;
 };
 
 export function AdminWorkspaceMembersPanel(props: {
@@ -272,11 +276,23 @@ export function AdminWorkspaceMembersPanel(props: {
                 key={invite.id}
                 className="flex items-center justify-between gap-3 px-4 py-3"
               >
-                <div>
-                  <p className="text-sm font-medium">{invite.email}</p>
+                <div className="min-w-0">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="truncate text-sm font-medium">
+                      {invite.email}
+                    </p>
+                    <Badge variant="outline">Pending</Badge>
+                    {invite.kind === 'project_guest' ? (
+                      <Badge variant="secondary">Project guest</Badge>
+                    ) : null}
+                  </div>
                   <p className="text-muted-foreground text-xs">
-                    Invited as {invite.role} ·{' '}
-                    {new Date(invite.createdAt).toLocaleDateString('en-GB')}
+                    {invite.kind === 'project_guest'
+                      ? invite.projectName
+                        ? `Guest invite · ${invite.projectName}`
+                        : 'Guest invite'
+                      : `Invited as ${invite.role}`}{' '}
+                    · {new Date(invite.createdAt).toLocaleDateString('en-GB')}
                   </p>
                 </div>
               </li>

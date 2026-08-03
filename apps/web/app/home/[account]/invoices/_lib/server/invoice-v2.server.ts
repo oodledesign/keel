@@ -70,17 +70,44 @@ export async function recomputeInvoiceTotals(invoiceId: string) {
 
 export async function getInvoiceSummary(
   accountId: string,
-  period: 'month_to_date' | 'last_30_days' | 'last_90_days' = 'month_to_date',
+  options:
+    | 'month_to_date'
+    | 'last_30_days'
+    | 'last_90_days'
+    | {
+        period?: 'month_to_date' | 'last_30_days' | 'last_90_days';
+        dateFrom?: string;
+        dateTo?: string;
+      } = 'month_to_date',
 ) {
   const client = db();
   const now = new Date();
-  let from = new Date(now.getFullYear(), now.getMonth(), 1);
-  if (period === 'last_30_days') {
-    from = new Date(now);
-    from.setDate(from.getDate() - 30);
-  } else if (period === 'last_90_days') {
-    from = new Date(now);
-    from.setDate(from.getDate() - 90);
+  const opts =
+    typeof options === 'string' ? { period: options } : (options ?? {});
+
+  let from: Date;
+  let to: Date = new Date(now);
+  to.setHours(23, 59, 59, 999);
+
+  if (opts.dateFrom) {
+    const [fy, fm, fd] = opts.dateFrom.split('-').map(Number);
+    from = new Date(fy!, fm! - 1, fd, 0, 0, 0, 0);
+    if (opts.dateTo) {
+      const [ty, tm, td] = opts.dateTo.split('-').map(Number);
+      to = new Date(ty!, tm! - 1, td, 23, 59, 59, 999);
+    }
+  } else {
+    const period = opts.period ?? 'month_to_date';
+    from = new Date(now.getFullYear(), now.getMonth(), 1);
+    if (period === 'last_30_days') {
+      from = new Date(now);
+      from.setDate(from.getDate() - 30);
+      from.setHours(0, 0, 0, 0);
+    } else if (period === 'last_90_days') {
+      from = new Date(now);
+      from.setDate(from.getDate() - 90);
+      from.setHours(0, 0, 0, 0);
+    }
   }
 
   const [
@@ -95,7 +122,8 @@ export async function getInvoiceSummary(
       )
       .eq('account_id', accountId)
       .is('archived_at', null)
-      .gte('issued_at', from.toISOString()),
+      .gte('issued_at', from.toISOString())
+      .lte('issued_at', to.toISOString()),
     client
       .from('invoices')
       .select('total_pence, currency')

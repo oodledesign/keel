@@ -330,8 +330,7 @@ export async function buildInvoicePdf(
 
   const paymentFeeNote =
     showFooter && showPaymentLink && invoice.payment_url
-      ? invoice.footer_message?.trim() ||
-        'Paying online by card (Stripe payment link) may incur a small processing fee.'
+      ? invoice.footer_message?.trim() || null
       : null;
 
   const thankYouMessage = showFooter ? 'Thank you for your business.' : null;

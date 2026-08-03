@@ -193,7 +193,10 @@ export function PortalInvoiceView({
     paymentSettings?.bank_transfer_enabled &&
     (paymentSettings.bank_account_number || paymentSettings.bank_iban),
   );
-  const showCardFeeWarning = isPayable && cardEnabled;
+  const showCardFeeWarning =
+    isPayable &&
+    cardEnabled &&
+    paymentSettings?.stripe_card_fee_mode === 'pass_to_client';
   const portalFooterMessage = data.footer_message?.trim() || null;
   const isDefaultFeeFooter =
     portalFooterMessage === DEFAULT_INVOICE_FOOTER_MESSAGE.trim();
@@ -303,7 +306,7 @@ export function PortalInvoiceView({
               </>
             ) : null}
           </div>
-          {isPayable && cardEnabled ? (
+          {showCardFeeWarning ? (
             <p className="text-xs text-[var(--workspace-shell-text-muted)] sm:text-right">
               Paying by card may incur a small processing fee.
             </p>

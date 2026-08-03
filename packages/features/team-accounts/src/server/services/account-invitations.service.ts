@@ -188,7 +188,7 @@ class AccountInvitationsService {
     }
 
     const response = await this.client.rpc('add_invitations_to_account', {
-      invitations,
+      invitations: invitations.map(({ email, role }) => ({ email, role })),
       account_slug: accountSlug,
       invited_by: invitedBy,
     });
@@ -209,6 +209,11 @@ class AccountInvitationsService {
       ? response.data
       : [response.data];
 
+    await this.attachInvitationProjects({
+      accountSlug,
+      invitations,
+    });
+
     logger.info(
       {
         ...ctx,
@@ -218,6 +223,48 @@ class AccountInvitationsService {
     );
 
     await this.dispatchInvitationEmails(ctx, responseInvitations);
+  }
+
+  /**
+   * Attach optional project_id values after invitations are created.
+   * The add_invitations_to_account RPC only accepts (email, role).
+   */
+  private async attachInvitationProjects({
+    accountSlug,
+    invitations,
+  }: {
+    accountSlug: string;
+    invitations: z.infer<typeof InviteMembersSchema>['invitations'];
+  }) {
+    const logger = await getLogger();
+    const links = invitations
+      .filter((invitation) => invitation.projectId && invitation.email)
+      .map((invitation) => ({
+        email: invitation.email,
+        project_id: invitation.projectId,
+      }));
+
+    if (!links.length) {
+      return;
+    }
+
+    // RPC added in 20260905120000_invitation_project_assignment (pending typegen)
+    const { error } = await (
+      this.client.rpc as unknown as (
+        fn: string,
+        args: { account_slug: string; links: typeof links },
+      ) => Promise<{ error: Error | null }>
+    )('attach_invitation_projects', {
+      account_slug: accountSlug,
+      links,
+    });
+
+    if (error) {
+      logger.error(
+        { accountSlug, error },
+        'Failed to attach projects to invitations',
+      );
+    }
   }
 
   /**

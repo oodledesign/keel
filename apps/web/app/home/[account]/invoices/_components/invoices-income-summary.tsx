@@ -1,5 +1,10 @@
 'use client';
 
+import {
+  AnalyticsDateRangePicker,
+  type DateRangeSelection,
+} from '~/components/date-range/analytics-date-range-picker';
+
 import { formatInvoiceMoney } from '../_lib/invoice-currency';
 
 type Summary = {
@@ -15,13 +20,19 @@ type Summary = {
 
 export function InvoicesIncomeSummary({
   summary,
-  period,
-  onPeriodChange,
+  dateFrom,
+  dateTo,
+  isLoading = false,
+  onDateRangeApply,
 }: {
   summary: Summary | null;
-  period: 'month_to_date' | 'last_30_days' | 'last_90_days';
-  onPeriodChange: (
-    period: 'month_to_date' | 'last_30_days' | 'last_90_days',
+  dateFrom: string;
+  dateTo: string;
+  isLoading?: boolean;
+  onDateRangeApply: (
+    fromIso: string,
+    toIso: string,
+    selection: DateRangeSelection,
   ) => void;
 }) {
   const currency = summary?.currency ?? 'gbp';
@@ -34,22 +45,13 @@ export function InvoicesIncomeSummary({
         <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Income summary
         </h2>
-        <select
-          value={period}
-          onChange={(e) =>
-            onPeriodChange(
-              e.target.value as
-                | 'month_to_date'
-                | 'last_30_days'
-                | 'last_90_days',
-            )
-          }
-          className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1.5 text-xs text-[var(--workspace-shell-text)]"
-        >
-          <option value="month_to_date">Month to date</option>
-          <option value="last_30_days">Last 30 days</option>
-          <option value="last_90_days">Last 90 days</option>
-        </select>
+        <AnalyticsDateRangePicker
+          fromIso={dateFrom}
+          toIso={dateTo}
+          isLoading={isLoading}
+          showMonthStepper
+          onApply={onDateRangeApply}
+        />
       </div>
 
       {summary.mixed_currencies ? (

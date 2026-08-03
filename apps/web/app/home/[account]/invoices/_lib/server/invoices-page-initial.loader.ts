@@ -2,6 +2,10 @@ import 'server-only';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  currentMonthToDateSelection,
+  resolveAnalyticsDateRange,
+} from '~/lib/date-range/analytics-date-range';
 import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
 
 import { getInvoiceSummary, getInvoiceTabCounts } from './invoice-v2.server';
@@ -22,6 +26,8 @@ export async function loadInvoicesPageInitialData(
   const invoicesService = createInvoicesService(client);
   const clientsService = createClientsService(client);
 
+  const monthToDate = resolveAnalyticsDateRange(currentMonthToDateSelection());
+
   const [invoicesResult, counts, summary, clientsResult] = await Promise.all([
     invoicesService.listInvoices({
       accountId,
@@ -30,7 +36,10 @@ export async function loadInvoicesPageInitialData(
       status: 'unpaid',
     }),
     getInvoiceTabCounts(accountId),
-    getInvoiceSummary(accountId, 'month_to_date'),
+    getInvoiceSummary(accountId, {
+      dateFrom: monthToDate.fromIso,
+      dateTo: monthToDate.toIso,
+    }),
     clientsService.listClients({ accountId, page: 1, pageSize: 100 }),
   ]);
 

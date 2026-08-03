@@ -102,6 +102,32 @@ html[data-enhanced-focus='true'] *:focus-visible {
   outline-offset: 2px;
 }
 
+/* Notes editor: no accent/focus chrome around title or body */
+.note-editor-title:focus,
+.note-editor-title:focus-visible,
+.note-body-editor.ProseMirror:focus,
+.note-body-editor.ProseMirror-focused,
+.note-body-editor.ProseMirror:focus-visible,
+html[data-enhanced-focus='true'] .note-editor-title:focus-visible,
+html[data-enhanced-focus='true'] .note-body-editor.ProseMirror:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+
+/* Workspace ⌘K search: no focus ring on the text input */
+.workspace-search-input:focus,
+.workspace-search-input:focus-visible,
+html[data-enhanced-focus='true'] .workspace-search-input:focus-visible {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  --tw-ring-shadow: 0 0 #0000 !important;
+  --tw-ring-offset-shadow: 0 0 #0000 !important;
+}
+
 /*
  * Dev only: hide Next.js error overlay for the known metadata-boundary hydration mismatch.
  * Server renders div with hidden={true}, client (or a browser extension) has hidden={null} + id="contentOverview".

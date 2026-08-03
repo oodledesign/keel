@@ -17,6 +17,10 @@ import {
   type InvoiceCurrency,
   normalizeInvoiceCurrency,
 } from '../invoice-currency';
+import {
+  type StripeCardFeeMode,
+  normalizeStripeCardFeeMode,
+} from '../invoice-stripe-fee';
 
 export type AccountPaymentSettings = {
   account_id: string;
@@ -30,6 +34,7 @@ export type AccountPaymentSettings = {
   stripe_account_id: string | null;
   stripe_connect_enabled: boolean;
   stripe_pay_now_enabled: boolean;
+  stripe_card_fee_mode: StripeCardFeeMode;
   invoice_starting_number: number;
   default_invoice_currency: InvoiceCurrency;
   invoice_quantity_label: InvoiceQuantityLabel;
@@ -48,6 +53,7 @@ const DEFAULT_SETTINGS: Omit<AccountPaymentSettings, 'account_id'> = {
   stripe_account_id: null,
   stripe_connect_enabled: false,
   stripe_pay_now_enabled: true,
+  stripe_card_fee_mode: 'absorb_in_payout',
   invoice_starting_number: 1,
   default_invoice_currency: 'gbp',
   invoice_quantity_label: 'quantity',
@@ -111,6 +117,7 @@ class InvoicePaymentSettingsService {
       invoice_quantity_label?: string | null;
       default_hourly_rate_pence?: number | null;
       default_invoice_due_days?: number | null;
+      stripe_card_fee_mode?: string | null;
     } | null;
 
     return {
@@ -132,6 +139,9 @@ class InvoicePaymentSettingsService {
       default_invoice_due_days: clampDueDays(
         row?.default_invoice_due_days,
         DEFAULT_SETTINGS.default_invoice_due_days,
+      ),
+      stripe_card_fee_mode: normalizeStripeCardFeeMode(
+        row?.stripe_card_fee_mode,
       ),
     };
   }
@@ -163,6 +173,7 @@ class InvoicePaymentSettingsService {
     bank_transfer_enabled?: boolean;
     bank_transfer_instructions?: string | null;
     stripe_pay_now_enabled?: boolean;
+    stripe_card_fee_mode?: StripeCardFeeMode;
     invoice_starting_number?: number;
     default_invoice_currency?: InvoiceCurrency;
     invoice_quantity_label?: InvoiceQuantityLabel;
@@ -192,6 +203,13 @@ class InvoicePaymentSettingsService {
         : {}),
       ...(input.stripe_pay_now_enabled !== undefined
         ? { stripe_pay_now_enabled: input.stripe_pay_now_enabled }
+        : {}),
+      ...(input.stripe_card_fee_mode !== undefined
+        ? {
+            stripe_card_fee_mode: normalizeStripeCardFeeMode(
+              input.stripe_card_fee_mode,
+            ),
+          }
         : {}),
       ...(input.invoice_starting_number !== undefined
         ? { invoice_starting_number: input.invoice_starting_number }
@@ -339,6 +357,7 @@ export async function loadPaymentSettingsForPortal(
   const row = data as {
     default_invoice_currency?: string | null;
     invoice_starting_number?: number;
+    stripe_card_fee_mode?: string | null;
   } & Record<string, unknown>;
   return {
     ...DEFAULT_SETTINGS,
@@ -357,6 +376,7 @@ export async function loadPaymentSettingsForPortal(
       (row as { default_invoice_due_days?: unknown }).default_invoice_due_days,
       DEFAULT_SETTINGS.default_invoice_due_days,
     ),
+    stripe_card_fee_mode: normalizeStripeCardFeeMode(row.stripe_card_fee_mode),
   } as AccountPaymentSettings;
 }
 

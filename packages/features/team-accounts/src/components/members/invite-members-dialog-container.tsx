@@ -31,6 +31,13 @@ import {
   InputGroupAddon,
   InputGroupInput,
 } from '@kit/ui/input-group';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Spinner } from '@kit/ui/spinner';
 import {
@@ -50,20 +57,29 @@ type InviteModel = ReturnType<typeof createEmptyInviteModel>;
 
 type Role = string;
 
+export type InviteProjectOption = {
+  id: string;
+  name: string;
+};
+
 /**
  * The maximum number of invites that can be sent at once.
  * Useful to avoid spamming the server with too large payloads
  */
 const MAX_INVITES = 5;
 
+const NO_PROJECT_VALUE = '__none__';
+
 export function InviteMembersDialogContainer({
   accountSlug,
   userRoleHierarchy,
+  projects = [],
   children,
   defaultOpen = false,
 }: React.PropsWithChildren<{
   accountSlug: string;
   userRoleHierarchy: number;
+  projects?: InviteProjectOption[];
   defaultOpen?: boolean;
 }>) {
   const [pending, startTransition] = useTransition();
@@ -125,11 +141,15 @@ export function InviteMembersDialogContainer({
         </If>
 
         <If condition={policiesResult?.allowed}>
-          <RolesDataProvider maxRoleHierarchy={userRoleHierarchy}>
+          <RolesDataProvider
+            maxRoleHierarchy={userRoleHierarchy}
+            excludeRoles={['owner']}
+          >
             {(roles) => (
               <InviteMembersForm
                 pending={pending}
                 roles={roles}
+                projects={projects}
                 onSubmit={(data) => {
                   startTransition(async () => {
                     const toastId = toast.loading(t('invitingMembers'));
@@ -164,20 +184,31 @@ export function InviteMembersDialogContainer({
 function InviteMembersForm({
   onSubmit,
   roles,
+  projects,
   pending,
 }: {
-  onSubmit: (data: { invitations: InviteModel[] }) => void;
+  onSubmit: (data: {
+    invitations: {
+      email: string;
+      role: string;
+      projectId?: string | null;
+    }[];
+  }) => void;
   pending: boolean;
   roles: string[];
+  projects: InviteProjectOption[];
 }) {
   const { t } = useTranslation('teams');
+  const defaultRole = roles.includes('staff')
+    ? 'staff'
+    : (roles[0] ?? 'staff');
 
   const form = useForm({
     resolver: zodResolver(InviteMembersSchema),
     shouldUseNativeValidation: true,
     reValidateMode: 'onSubmit',
     defaultValues: {
-      invitations: [createEmptyInviteModel()],
+      invitations: [createEmptyInviteModel(defaultRole)],
     },
   });
 
@@ -197,6 +228,7 @@ function InviteMembersForm({
           {fieldArray.fields.map((field, index) => {
             const emailInputName = `invitations.${index}.email` as const;
             const roleInputName = `invitations.${index}.role` as const;
+            const projectInputName = `invitations.${index}.projectId` as const;
 
             return (
               <div data-test={'invite-member-form-item'} key={field.id}>
@@ -279,6 +311,55 @@ function InviteMembersForm({
                     </TooltipProvider>
                   </div>
                 </div>
+
+                <If condition={projects.length > 0}>
+                  <FormField
+                    name={projectInputName}
+                    render={({ field }) => {
+                      return (
+                        <FormItem className="mt-2">
+                          <FormControl>
+                            <Select
+                              value={field.value ?? NO_PROJECT_VALUE}
+                              onValueChange={(value) => {
+                                form.setValue(
+                                  projectInputName,
+                                  value === NO_PROJECT_VALUE ? null : value,
+                                );
+                              }}
+                            >
+                              <SelectTrigger
+                                className="bg-background w-full"
+                                data-test="invite-project-selector"
+                              >
+                                <SelectValue
+                                  placeholder={t('inviteProjectPlaceholder')}
+                                />
+                              </SelectTrigger>
+
+                              <SelectContent>
+                                <SelectItem value={NO_PROJECT_VALUE}>
+                                  <Trans i18nKey="teams:inviteProjectNone" />
+                                </SelectItem>
+
+                                {projects.map((project) => (
+                                  <SelectItem
+                                    key={project.id}
+                                    value={project.id}
+                                  >
+                                    {project.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+
+                          <FormMessage />
+                        </FormItem>
+                      );
+                    }}
+                  />
+                </If>
               </div>
             );
           })}
@@ -292,7 +373,7 @@ function InviteMembersForm({
                 size={'sm'}
                 disabled={pending}
                 onClick={() => {
-                  fieldArray.append(createEmptyInviteModel());
+                  fieldArray.append(createEmptyInviteModel(defaultRole));
                 }}
               >
                 <Plus className={'mr-1 h-3'} />
@@ -319,8 +400,8 @@ function InviteMembersForm({
   );
 }
 
-function createEmptyInviteModel() {
-  return { email: '', role: 'staff' as Role };
+function createEmptyInviteModel(role: Role = 'staff') {
+  return { email: '', role, projectId: null as string | null };
 }
 
 function useFetchInvitationsPolicies({

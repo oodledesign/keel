@@ -88,11 +88,11 @@ export function NoteBodyEditor({
   }, [editor, onEditorReady]);
 
   return (
-    <div className={cn('flex flex-col', className)}>
+    <div className={cn('note-editor-body flex flex-col', className)}>
       <NoteMarkdownToolbar editor={editor} className={toolbarClassName} />
       <EditorContent
         editor={editor}
-        className="[&_.ProseMirror]:border-0 [&_.ProseMirror]:shadow-none [&_.ProseMirror]:ring-0 [&_.ProseMirror]:outline-none [&_.ProseMirror-focused]:border-0 [&_.ProseMirror-focused]:shadow-none [&_.ProseMirror-focused]:ring-0 [&_.ProseMirror-focused]:outline-none"
+        className="note-editor-body__content [&_.ProseMirror]:border-0 [&_.ProseMirror]:shadow-none [&_.ProseMirror]:ring-0 [&_.ProseMirror]:outline-none [&_.ProseMirror]:focus:border-0 [&_.ProseMirror]:focus:shadow-none [&_.ProseMirror]:focus:ring-0 [&_.ProseMirror]:focus:outline-none [&_.ProseMirror-focused]:border-0 [&_.ProseMirror-focused]:shadow-none [&_.ProseMirror-focused]:ring-0 [&_.ProseMirror-focused]:outline-none"
       />
     </div>
   );

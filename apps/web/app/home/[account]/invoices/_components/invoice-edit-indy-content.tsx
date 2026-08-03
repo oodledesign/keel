@@ -76,6 +76,11 @@ import {
   resolveInvoiceEmailField,
 } from '../_lib/invoice-smart-fields';
 import {
+  PASS_TO_CLIENT_FEE_NOTE_LONG,
+  type StripeCardFeeMode,
+  normalizeStripeCardFeeMode,
+} from '../_lib/invoice-stripe-fee';
+import {
   type DepositType,
   type DiscountType,
   type LateFeeType,
@@ -247,6 +252,7 @@ export function InvoiceEditIndyContent({
   sender = null,
   defaultHourlyRatePence = null,
   defaultInvoiceDueDays = 7,
+  stripeCardFeeMode = 'absorb_in_payout',
 }: {
   accountSlug: string;
   accountId: string;
@@ -262,9 +268,15 @@ export function InvoiceEditIndyContent({
   } | null;
   defaultHourlyRatePence?: number | null;
   defaultInvoiceDueDays?: number;
+  stripeCardFeeMode?: StripeCardFeeMode;
 }) {
   const router = useRouter();
   const invoice = initialInvoice as unknown as InvoiceData;
+  const feeMode = normalizeStripeCardFeeMode(stripeCardFeeMode);
+  const defaultFooterMessage =
+    feeMode === 'pass_to_client'
+      ? PASS_TO_CLIENT_FEE_NOTE_LONG
+      : DEFAULT_INVOICE_FOOTER_MESSAGE;
   const invoicesPath = pathsConfig.app.accountInvoices.replace(
     '[account]',
     accountSlug,
@@ -314,7 +326,7 @@ export function InvoiceEditIndyContent({
   const [clientId, setClientId] = useState(invoice.client_id ?? '');
   const [notes, setNotes] = useState(invoice.notes ?? '');
   const [footerMessage, setFooterMessage] = useState(
-    invoice.footer_message ?? DEFAULT_INVOICE_FOOTER_MESSAGE,
+    invoice.footer_message ?? defaultFooterMessage,
   );
   const [privateNote, setPrivateNote] = useState(invoice.private_note ?? '');
 
@@ -1223,6 +1235,7 @@ export function InvoiceEditIndyContent({
             }}
             onMarkedSent={() => router.refresh()}
             onClose={() => setShowSendPanel(false)}
+            passCardFeeToClient={feeMode === 'pass_to_client'}
           />
           <aside className="space-y-4">
             <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">

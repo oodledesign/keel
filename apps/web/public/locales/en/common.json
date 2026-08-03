@@ -87,7 +87,7 @@
   "roles": {
     "owner": { "label": "Owner" },
     "admin": { "label": "Admin" },
-    "staff": { "label": "Staff" },
+    "staff": { "label": "Team" },
     "contractor": { "label": "Contractor" },
     "client": { "label": "Client" },
     "member": { "label": "Member" }

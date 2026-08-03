@@ -159,6 +159,7 @@ create policy invitations_delete on public.invitations for delete to authenticat
 
 -- Functions "public.accept_invitation"
 -- Function to accept an invitation to an account
+-- Note: product override in migrations adds company_role + optional project assignment
 create
 or replace function accept_invitation (token text, user_id uuid) returns uuid
 set

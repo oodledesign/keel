@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 
-import { ChevronDown, ChevronLeft, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import type { DateRange } from 'react-day-picker';
 
 import { Button } from '@kit/ui/button';
@@ -27,7 +27,9 @@ import {
   type LastUnit,
   type PeriodSubPreset,
   formatDateRangeLabel,
+  formatNavigatorDateLabel,
   resolveAnalyticsDateRange,
+  shiftDateRangeByMonth,
 } from '~/lib/date-range/analytics-date-range';
 
 type SidebarView = 'main' | 'last' | 'period';
@@ -73,6 +75,7 @@ export function AnalyticsDateRangePicker({
   toIso,
   onApply,
   isLoading = false,
+  showMonthStepper = false,
   className,
 }: {
   fromIso: string;
@@ -83,6 +86,8 @@ export function AnalyticsDateRangePicker({
     selection: DateRangeSelection,
   ) => void;
   isLoading?: boolean;
+  /** Prev/next buttons to step whole months without opening the popover. */
+  showMonthStepper?: boolean;
   className?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -100,9 +105,17 @@ export function AnalyticsDateRangePicker({
   );
 
   const appliedLabel = useMemo(
-    () => formatDateRangeLabel(selectionFromIso(fromIso, toIso)),
-    [fromIso, toIso],
+    () =>
+      showMonthStepper
+        ? formatNavigatorDateLabel(fromIso, toIso)
+        : formatDateRangeLabel(selectionFromIso(fromIso, toIso)),
+    [fromIso, toIso, showMonthStepper],
   );
+
+  const canStepForward = useMemo(() => {
+    const next = shiftDateRangeByMonth(fromIso, toIso, 1);
+    return next !== null;
+  }, [fromIso, toIso]);
 
   const draftResolved = useMemo(
     () => resolveAnalyticsDateRange(draft),
@@ -154,6 +167,13 @@ export function AnalyticsDateRangePicker({
     setOpen(false);
   };
 
+  const stepMonth = (delta: number) => {
+    const next = shiftDateRangeByMonth(fromIso, toIso, delta);
+    if (!next) return;
+    setIsApplying(true);
+    onApply(next.fromIso, next.toIso, next.selection);
+  };
+
   const pickerBusy = isLoading || isApplying;
 
   useEffect(() => {
@@ -181,38 +201,53 @@ export function AnalyticsDateRangePicker({
   };
 
   return (
-    <Popover
-      open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setIsApplying(false);
-      }}
-    >
-      <PopoverTrigger asChild>
+    <div className={cn('flex items-center gap-1', className)}>
+      {showMonthStepper ? (
         <Button
           type="button"
           variant="outline"
+          size="icon"
           disabled={pickerBusy}
-          className={cn(
-            'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]',
-            pickerBusy && 'opacity-90',
-            className,
-          )}
-          onClick={openPicker}
+          aria-label="Previous month"
+          className="h-9 w-9 shrink-0 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+          onClick={() => stepMonth(-1)}
         >
-          {pickerBusy ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin text-[var(--ozer-accent-muted)]" />
-          ) : null}
-          {appliedLabel}
-          {!pickerBusy ? (
-            <ChevronDown className="ml-2 h-4 w-4 opacity-60" />
-          ) : null}
+          <ChevronLeft className="h-4 w-4" />
         </Button>
-      </PopoverTrigger>
-      <PopoverContent
-        align="start"
-        className="w-auto max-w-[calc(100vw-2rem)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-xl"
+      ) : null}
+
+      <Popover
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setIsApplying(false);
+        }}
       >
+        <PopoverTrigger asChild>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={pickerBusy}
+            className={cn(
+              'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]',
+              pickerBusy && 'opacity-90',
+              showMonthStepper && 'min-w-[10.5rem]',
+            )}
+            onClick={openPicker}
+          >
+            {pickerBusy ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin text-[var(--ozer-accent-muted)]" />
+            ) : null}
+            {appliedLabel}
+            {!pickerBusy ? (
+              <ChevronDown className="ml-2 h-4 w-4 opacity-60" />
+            ) : null}
+          </Button>
+        </PopoverTrigger>
+        <PopoverContent
+          align="start"
+          className="w-auto max-w-[calc(100vw-2rem)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-xl"
+        >
         <div className="flex flex-col md:flex-row">
           <aside className="w-full border-b border-[color:var(--workspace-shell-border)] md:w-52 md:border-r md:border-b-0">
             {view !== 'main' ? (
@@ -468,7 +503,22 @@ export function AnalyticsDateRangePicker({
           </div>
         </div>
       </PopoverContent>
-    </Popover>
+      </Popover>
+
+      {showMonthStepper ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          disabled={pickerBusy || !canStepForward}
+          aria-label="Next month"
+          className="h-9 w-9 shrink-0 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)] disabled:opacity-40"
+          onClick={() => stepMonth(1)}
+        >
+          <ChevronRight className="h-4 w-4" />
+        </Button>
+      ) : null}
+    </div>
   );
 }
 
