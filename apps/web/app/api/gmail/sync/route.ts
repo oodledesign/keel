@@ -19,7 +19,7 @@ export const runtime = 'nodejs';
 export const maxDuration = 120;
 export const dynamic = 'force-dynamic';
 
-const DEFAULT_GMAIL_SYNC_BATCH_SIZE = 8;
+const DEFAULT_GMAIL_SYNC_BATCH_SIZE = 4;
 
 type SyncResultRow = {
   userId: string;
@@ -129,9 +129,9 @@ async function syncAllConnectedUsers() {
     const mailboxKind = parseMailboxKind(row.mailbox_kind);
 
     try {
-      const syncResult = await syncMailbox(userId, mailboxKind);
-      // Cron stays mail-only so each batch finishes within maxDuration.
-      // Assistant triage/drafts run on the Email page POST sync path.
+      // Mail sync + assistant (classify / drafts / suggested tasks) so cron
+      // generates email tasks without requiring a manual Sync click.
+      const syncResult = await syncUserMailbox(userId, mailboxKind);
 
       results.push({
         userId,
@@ -140,7 +140,7 @@ async function syncAllConnectedUsers() {
         ok: true,
         mode: syncResult.mode,
         messagesProcessed: syncResult.messagesProcessed,
-        assistant: undefined,
+        assistant: syncResult.assistant,
       });
     } catch (syncError) {
       results.push({

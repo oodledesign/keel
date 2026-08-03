@@ -13,7 +13,7 @@ import { cn } from '@kit/ui/utils';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
 
-import { emailApiFetch } from '../_lib/email-api';
+import { emailApiFetch, formatEmailApiError } from '../_lib/email-api';
 import type {
   EmailInboxFilter,
   EmailPageInitialData,
@@ -140,6 +140,7 @@ export function EmailPageClient({ initialData }: Props) {
       let draftsCreated = 0;
       let classified = 0;
       let linked = 0;
+      let extracted = 0;
 
       do {
         const result = await emailApiFetch<{
@@ -152,6 +153,7 @@ export function EmailPageClient({ initialData }: Props) {
             linked?: number;
             draftsCreated: number;
             draftsSavedToGmail: number;
+            extracted?: number;
             errors?: string[];
           } | null;
         }>(syncUrl, { method: 'POST' });
@@ -160,6 +162,7 @@ export function EmailPageClient({ initialData }: Props) {
         draftsCreated += result.assistant?.draftsCreated ?? 0;
         classified += result.assistant?.classified ?? 0;
         linked += result.assistant?.linked ?? 0;
+        extracted += result.assistant?.extracted ?? 0;
         complete = mailOnly || result.backfillComplete !== false;
         guard += 1;
       } while (!complete && guard < maxBatches);
@@ -171,7 +174,11 @@ export function EmailPageClient({ initialData }: Props) {
         return;
       }
 
-      if (draftsCreated > 0) {
+      if (extracted > 0) {
+        toast.success(
+          `Suggested ${extracted} email task${extracted === 1 ? '' : 's'} to review`,
+        );
+      } else if (draftsCreated > 0) {
         toast.success(
           `Drafted ${draftsCreated} repl${draftsCreated === 1 ? 'y' : 'ies'}`,
         );
@@ -228,9 +235,7 @@ export function EmailPageClient({ initialData }: Props) {
         try {
           await runSync();
         } catch (syncError) {
-          toast.error(
-            syncError instanceof Error ? syncError.message : 'Sync failed',
-          );
+          toast.error(formatEmailApiError(syncError));
         }
       });
       return;
@@ -259,27 +264,33 @@ export function EmailPageClient({ initialData }: Props) {
 
     startSyncTransition(async () => {
       try {
-        const mailResult = await emailApiFetch<{
-          messagesProcessed: number;
-        }>(`/api/gmail/sync?mode=mail&mailbox=${mailboxKind}`, {
+        // Always run full sync (mail + assistant) when the mailbox is stale so
+        // triage / drafts / suggested tasks catch up even if Gmail had no new
+        // messages since the last mail-only cron pass.
+        const syncParams = new URLSearchParams({ mailbox: mailboxKind });
+        if (initialData.preferredAccountId) {
+          syncParams.set('preferredAccountId', initialData.preferredAccountId);
+        }
+
+        await emailApiFetch(`/api/gmail/sync?${syncParams.toString()}`, {
           method: 'POST',
         });
-
-        if (mailResult.messagesProcessed > 0) {
-          await emailApiFetch(`/api/gmail/sync?mailbox=${mailboxKind}`, {
-            method: 'POST',
-          });
-        }
 
         await reloadThreads();
         router.refresh();
       } catch (syncError) {
-        console.error('Background email sync failed', syncError);
+        console.error(
+          'Background email sync failed',
+          formatEmailApiError(syncError),
+          syncError,
+        );
       }
     });
   }, [
     initialData.connection,
     initialData.settings.lastSyncedAt,
+    initialData.preferredAccountId,
+    mailboxKind,
     reloadThreads,
     router,
   ]);
@@ -325,7 +336,7 @@ export function EmailPageClient({ initialData }: Props) {
           return;
         }
 
-        toast.error(error instanceof Error ? error.message : 'Search failed');
+        toast.error(error instanceof Error ? formatEmailApiError(error) : 'Search failed');
       })
       .finally(() => {
         if (requestId === searchRequestId.current) {
@@ -360,7 +371,7 @@ export function EmailPageClient({ initialData }: Props) {
       try {
         await runSync();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Sync failed');
+        toast.error(formatEmailApiError(error));
       }
     });
   };
@@ -387,7 +398,9 @@ export function EmailPageClient({ initialData }: Props) {
       setHasMore(Boolean(data.nextCursor));
     } catch (error) {
       toast.error(
-        error instanceof Error ? error.message : 'Could not load more',
+        error instanceof Error
+          ? formatEmailApiError(error)
+          : 'Could not load more',
       );
     } finally {
       setLoadingMore(false);

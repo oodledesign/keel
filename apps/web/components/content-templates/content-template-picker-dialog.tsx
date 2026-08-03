@@ -2,6 +2,9 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
+import Link from 'next/link';
+import { useParams } from 'next/navigation';
+
 import { FileText, Loader2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -13,6 +16,7 @@ import {
 } from '@kit/ui/dialog';
 import { toast } from '@kit/ui/sonner';
 
+import pathsConfig from '~/config/paths.config';
 import { listTemplatesPickerAction } from '~/lib/content-templates/account.actions';
 import type {
   ContentTemplateKind,
@@ -24,6 +28,7 @@ type Props = {
   onOpenChange: (open: boolean) => void;
   kind: ContentTemplateKind;
   accountId?: string | null;
+  accountSlug?: string | null;
   title?: string;
   onSelect: (template: PickerTemplate) => void;
 };
@@ -33,9 +38,21 @@ export function ContentTemplatePickerDialog({
   onOpenChange,
   kind,
   accountId,
+  accountSlug: accountSlugProp,
   title = 'Choose template',
   onSelect,
 }: Props) {
+  const params = useParams();
+  const accountSlugFromRoute =
+    typeof params?.account === 'string' ? params.account : null;
+  const accountSlug = accountSlugProp ?? accountSlugFromRoute;
+  const manageHref = accountSlug
+    ? pathsConfig.app.accountContentTemplatesSettings.replace(
+        '[account]',
+        accountSlug,
+      )
+    : null;
+
   const [pending, startTransition] = useTransition();
   const [items, setItems] = useState<PickerTemplate[]>([]);
 
@@ -77,7 +94,7 @@ export function ContentTemplatePickerDialog({
                 <Button
                   type="button"
                   variant="outline"
-                  className="h-auto w-full justify-start gap-2 py-3 text-left"
+                  className="group h-auto w-full justify-start gap-2 py-3 text-left"
                   onClick={() => {
                     onSelect(item);
                     onOpenChange(false);
@@ -89,7 +106,7 @@ export function ContentTemplatePickerDialog({
                       {item.name}
                       {item.isDefault ? ' · default' : ''}
                     </span>
-                    <span className="text-muted-foreground block text-xs">
+                    <span className="block text-xs opacity-70 group-hover:opacity-90 group-hover:text-inherit">
                       {item.source}
                       {item.description ? ` · ${item.description}` : ''}
                     </span>
@@ -99,6 +116,17 @@ export function ContentTemplatePickerDialog({
             ))}
           </ul>
         )}
+        {manageHref ? (
+          <p className="text-muted-foreground pt-1 text-xs">
+            <Link
+              href={manageHref}
+              className="text-[var(--ozer-accent-muted)] underline-offset-2 hover:underline"
+              onClick={() => onOpenChange(false)}
+            >
+              Manage templates
+            </Link>
+          </p>
+        ) : null}
       </DialogContent>
     </Dialog>
   );

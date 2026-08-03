@@ -13,6 +13,27 @@ export class EmailApiError extends Error {
   }
 }
 
+/** Safari often surfaces aborted/long fetches as a bare "Load failed". */
+export function formatEmailApiError(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : 'Request failed';
+
+  if (
+    /^load failed$/i.test(message.trim()) ||
+    /failed to fetch|networkerror|network request failed|aborted|the operation was aborted/i.test(
+      message,
+    )
+  ) {
+    return 'Connection interrupted while syncing. Tap Sync again — large inboxes can take a minute.';
+  }
+
+  return message;
+}
+
 export async function emailApiFetch<T>(
   url: string,
   init?: RequestInit,
@@ -30,6 +51,13 @@ export async function emailApiFetch<T>(
   try {
     payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
   } catch {
+    if (response.status === 504 || response.status === 408) {
+      throw new EmailApiError(
+        'TIMEOUT',
+        'Sync timed out. Tap Sync again — large inboxes can take a minute.',
+      );
+    }
+
     throw new EmailApiError(
       'INVALID_RESPONSE',
       response.ok

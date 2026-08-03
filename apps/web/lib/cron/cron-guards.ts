@@ -5,7 +5,7 @@ import { jsonOk } from '~/lib/rankly/api-response';
  * - DISABLE_ALL_CRONS=true — pauses every guarded cron route
  * - DISABLE_RANKLY_CRONS=true — rankly rank-check + site-crawl workers and hourly enqueue
  * - DISABLE_PLANNER_REMINDERS_CRON=true
- * - DISABLE_GMAIL_SYNC_CRON=true
+ * - DISABLE_GMAIL_SYNC_CRON=true — pauses Gmail mail + assistant sync cron
  */
 export const CRON_KILL_SWITCH = {
   ALL: 'DISABLE_ALL_CRONS',

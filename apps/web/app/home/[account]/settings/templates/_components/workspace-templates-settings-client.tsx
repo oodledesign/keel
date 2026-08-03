@@ -50,6 +50,7 @@ export function WorkspaceTemplatesSettingsClient({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [kind, setKind] = useState<AccountTemplateKind>('proposal_html');
+  const [formOpen, setFormOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -85,6 +86,16 @@ export function WorkspaceTemplatesSettingsClient({
     setIsDefault(false);
   }
 
+  function closeForm() {
+    resetForm();
+    setFormOpen(false);
+  }
+
+  function openNewForm() {
+    resetForm();
+    setFormOpen(true);
+  }
+
   function loadCustom(template: AccountContentTemplate) {
     setEditingId(template.id);
     setKind(template.kind);
@@ -95,6 +106,7 @@ export function WorkspaceTemplatesSettingsClient({
     setBodyText(template.bodyText);
     setSignature(template.signature ?? '');
     setIsDefault(template.isDefault);
+    setFormOpen(true);
   }
 
   function run(label: string, fn: () => Promise<unknown>) {
@@ -102,7 +114,7 @@ export function WorkspaceTemplatesSettingsClient({
       try {
         await fn();
         toast.success(label);
-        resetForm();
+        closeForm();
         router.refresh();
       } catch (error) {
         toast.error(
@@ -121,7 +133,7 @@ export function WorkspaceTemplatesSettingsClient({
             type="button"
             onClick={() => {
               setKind(k);
-              resetForm();
+              closeForm();
             }}
             className={`rounded-full px-3 py-1.5 font-medium ${
               kind === k
@@ -198,15 +210,15 @@ export function WorkspaceTemplatesSettingsClient({
               Your custom presets. Mark one as default for new proposals.
             </p>
           </div>
-          {canEdit ? (
+          {canEdit && !formOpen ? (
             <Button
               type="button"
               size="sm"
-              variant="outline"
-              onClick={resetForm}
+              className="bg-[var(--ozer-accent)] text-[#09111F]"
+              onClick={openNewForm}
             >
               <Plus className="mr-1 h-3.5 w-3.5" />
-              New
+              Add template
             </Button>
           ) : null}
         </div>
@@ -281,11 +293,21 @@ export function WorkspaceTemplatesSettingsClient({
           )}
         </ul>
 
-        {canEdit ? (
+        {canEdit && formOpen ? (
           <div className="mt-4 space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
-            <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              {editingId ? 'Edit template' : 'New template'}
-            </h3>
+            <div className="flex items-center justify-between gap-2">
+              <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                {editingId ? 'Edit template' : 'New template'}
+              </h3>
+              <Button
+                type="button"
+                size="sm"
+                variant="ghost"
+                onClick={closeForm}
+              >
+                Cancel
+              </Button>
+            </div>
             <div>
               <Label>Name</Label>
               <Input
