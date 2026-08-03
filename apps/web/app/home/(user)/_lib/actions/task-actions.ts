@@ -8,6 +8,7 @@ import { createTaskForUser } from '@kit/tasks/create-task';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
+  loadPersonalLifeAssignmentOptions as loadPersonalLifeAssignmentOptionsCached,
   loadTaskAssignmentOptions as loadTaskAssignmentOptionsCached,
   loadTaskAssignmentOptionsForWorkspace as loadTaskAssignmentOptionsForWorkspaceCached,
 } from '../server/task-assignment-options.loader';
@@ -89,9 +90,55 @@ export type CreateTaskInput = {
   notes?: string | null;
   /** Team workspace when creating from a business context without project/client. */
   accountId?: string;
+  /** When set, creates a recurring series (and usually the first task). */
+  recurrence?: {
+    frequency: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
+    firstCreateDate: string;
+    dayOfMonth?: number | null;
+    dueDays?: number;
+    endAt?: string | null;
+    maxOccurrences?: number | null;
+  };
 };
 
 export async function createTask(input: CreateTaskInput) {
+  if (input.recurrence) {
+    try {
+      const { createTaskRecurringSeries } =
+        await import('../server/task-recurring.server');
+      const result = await createTaskRecurringSeries({
+        title: input.title,
+        priority: normalizeTaskPriorityForDb(input.priority),
+        notes: input.notes,
+        projectId: input.projectId,
+        areaId: input.areaId,
+        clientId: input.clientId,
+        accountId: input.accountId,
+        frequency: input.recurrence.frequency,
+        firstCreateDate: input.recurrence.firstCreateDate,
+        dayOfMonth: input.recurrence.dayOfMonth,
+        dueDays: input.recurrence.dueDays,
+        endAt: input.recurrence.endAt,
+        maxOccurrences: input.recurrence.maxOccurrences,
+        createFirstNow: true,
+      });
+
+      revalidatePath('/home', 'layout');
+      revalidatePath('/home/tasks');
+      revalidatePath('/app/tasks');
+      return { success: true, error: null, id: result.taskId };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error
+            ? error.message
+            : 'Failed to create recurring task',
+        id: null,
+      };
+    }
+  }
+
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
@@ -120,6 +167,19 @@ export async function createTask(input: CreateTaskInput) {
   revalidatePath('/home/tasks');
   revalidatePath('/app/tasks');
   return { success: true, error: null, id: result.id };
+}
+
+export async function updateTaskRecurringSeriesStatusAction(input: {
+  seriesId: string;
+  status: 'active' | 'paused' | 'ended';
+}) {
+  const { updateTaskRecurringSeriesStatus } =
+    await import('../server/task-recurring.server');
+  await updateTaskRecurringSeriesStatus(input);
+  revalidatePath('/home', 'layout');
+  revalidatePath('/home/tasks');
+  revalidatePath('/app/tasks');
+  return { success: true as const };
 }
 
 function uiStatusToDb(
@@ -268,6 +328,13 @@ export async function loadTaskAssignmentOptionsForWorkspace(
   accountId: string,
 ): Promise<TaskAssignmentOption[]> {
   return loadTaskAssignmentOptionsForWorkspaceCached(accountId);
+}
+
+/** Life areas only — Personal create-task flow. */
+export async function loadPersonalLifeAssignmentOptions(): Promise<
+  TaskAssignmentOption[]
+> {
+  return loadPersonalLifeAssignmentOptionsCached();
 }
 
 export async function loadTaskAssignmentOptions(): Promise<

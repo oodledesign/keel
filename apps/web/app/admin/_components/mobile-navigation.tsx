@@ -44,6 +44,7 @@ export function AdminMobileNavigation() {
 
         <DropdownMenuItem>
           <Link href={'/admin/finances'}>Finances</Link>
+          <Link href={'/admin/templates'}>Templates</Link>
         </DropdownMenuItem>
 
         <DropdownMenuItem>

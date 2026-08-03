@@ -5,10 +5,7 @@ export function formatEmailDeliveryError(error: unknown): string {
   const message = extractErrorMessage(error);
   const haystack = `${message}\n${safeJson(error)}`;
 
-  if (
-    /AccessDenied/i.test(message) &&
-    /ses:Send(Raw)?Email/i.test(message)
-  ) {
+  if (/AccessDenied/i.test(message) && /ses:Send(Raw)?Email/i.test(message)) {
     const identityMatch = message.match(/identity\/([^'"\s]+)/i);
     const identity = identityMatch?.[1] ?? 'an address in this send';
 
@@ -125,9 +122,19 @@ export function extractErrorMessage(error: unknown): string {
       }
     }
 
-    for (const key of ['message', 'error', 'detail', 'details', 'code'] as const) {
+    for (const key of [
+      'message',
+      'error',
+      'detail',
+      'details',
+      'code',
+    ] as const) {
       const value = record[key];
-      if (typeof value === 'string' && value.trim() && value !== '[object Object]') {
+      if (
+        typeof value === 'string' &&
+        value.trim() &&
+        value !== '[object Object]'
+      ) {
         return value;
       }
       if (typeof value === 'object' && value !== null) {

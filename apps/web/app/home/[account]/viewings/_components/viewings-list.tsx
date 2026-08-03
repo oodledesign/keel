@@ -373,9 +373,7 @@ export function ViewingsList({
               <Label>Outcome</Label>
               <Select
                 value={outcomeSelectValue}
-                onValueChange={(v) =>
-                  setOutcome(v === NONE_OUTCOME ? '' : v)
-                }
+                onValueChange={(v) => setOutcome(v === NONE_OUTCOME ? '' : v)}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select feedback sentiment" />

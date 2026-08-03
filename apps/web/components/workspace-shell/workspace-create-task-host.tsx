@@ -4,14 +4,22 @@ import { useCallback, useEffect, useState } from 'react';
 
 import { usePathname, useRouter } from 'next/navigation';
 
-import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
+import {
+  AddTaskDialog,
+  type CreateTaskWorkspaceChoice,
+} from '~/home/(user)/_components/dashboard/add-task-dialog';
 
 export const CREATE_TASK_EVENT = 'ozer:create-task';
 const LEGACY_CREATE_TASK_EVENT = 'keel:create-task';
 
 type WorkspaceCreateTaskHostProps = {
-  accountId: string;
-  accountSlug: string;
+  /** Team workspace — omit (or set lifeOnly) for Personal. */
+  accountId?: string;
+  accountSlug?: string;
+  /** Personal shell: life areas only. */
+  lifeOnly?: boolean;
+  /** Team shell: other workspaces the user can assign into. */
+  workspaceChoices?: CreateTaskWorkspaceChoice[];
 };
 
 function readCreateTaskQuery(): boolean {
@@ -25,6 +33,8 @@ function readCreateTaskQuery(): boolean {
 export function WorkspaceCreateTaskHost({
   accountId,
   accountSlug,
+  lifeOnly = false,
+  workspaceChoices,
 }: WorkspaceCreateTaskHostProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -68,12 +78,14 @@ export function WorkspaceCreateTaskHost({
 
   return (
     <AddTaskDialog
-      workspaceAccountId={accountId}
-      workspaceAccountSlug={accountSlug}
+      workspaceAccountId={lifeOnly ? undefined : accountId}
+      workspaceAccountSlug={lifeOnly ? undefined : accountSlug}
+      lifeOnly={lifeOnly}
+      workspaceChoices={lifeOnly ? undefined : workspaceChoices}
       open={open}
       onOpenChange={setOpen}
       hideTrigger
-      allowInlineClientCreate
+      allowInlineClientCreate={!lifeOnly}
     />
   );
 }

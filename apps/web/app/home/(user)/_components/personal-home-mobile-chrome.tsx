@@ -7,6 +7,7 @@ import {
   WorkspaceAccountsSelector,
   buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
+import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-create-task-host';
 import {
   type MobileNavLink,
   WorkspaceMobileBottomNav,
@@ -105,6 +106,8 @@ export function PersonalHomeMobileChrome({
         settingsLabel="Personal settings"
         newMenu={<WorkspaceMobileNewMenu variant="personal" />}
       />
+
+      <WorkspaceCreateTaskHost lifeOnly />
     </>
   );
 }

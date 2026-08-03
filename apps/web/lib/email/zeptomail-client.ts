@@ -135,31 +135,33 @@ export async function sendTransactionalEmail({
     mimeHeaders['List-Unsubscribe'] = `<${listUnsubscribeUrl}>`;
   }
 
-  await client.sendMail({
-    from: resolveFrom(from),
-    to: [{ email_address: { address: to, name: toName ?? to } }],
-    subject,
-    htmlbody: htmlBody,
-    ...(textBody ? { textbody: textBody } : {}),
-    ...(replyTo ? { reply_to: [{ address: replyTo }] } : {}),
-    ...(clientReference ? { client_reference: clientReference } : {}),
-    ...(Object.keys(mimeHeaders).length > 0
-      ? { mime_headers: mimeHeaders }
-      : {}),
-    ...(attachments && attachments.length > 0
-      ? {
-          attachments: attachments.map((file) => ({
-            name: file.name,
-            content: file.content,
-            mime_type: file.mimeType,
-          })),
-        }
-      : {}),
-  } as Parameters<typeof client.sendMail>[0]).catch((error: unknown) => {
-    // ZeptoMail sometimes rejects with a plain object / ApiError whose
-    // .message is unusable — normalize before bubbling up.
-    throw new Error(formatEmailDeliveryError(error));
-  });
+  await client
+    .sendMail({
+      from: resolveFrom(from),
+      to: [{ email_address: { address: to, name: toName ?? to } }],
+      subject,
+      htmlbody: htmlBody,
+      ...(textBody ? { textbody: textBody } : {}),
+      ...(replyTo ? { reply_to: [{ address: replyTo }] } : {}),
+      ...(clientReference ? { client_reference: clientReference } : {}),
+      ...(Object.keys(mimeHeaders).length > 0
+        ? { mime_headers: mimeHeaders }
+        : {}),
+      ...(attachments && attachments.length > 0
+        ? {
+            attachments: attachments.map((file) => ({
+              name: file.name,
+              content: file.content,
+              mime_type: file.mimeType,
+            })),
+          }
+        : {}),
+    } as Parameters<typeof client.sendMail>[0])
+    .catch((error: unknown) => {
+      // ZeptoMail sometimes rejects with a plain object / ApiError whose
+      // .message is unusable — normalize before bubbling up.
+      throw new Error(formatEmailDeliveryError(error));
+    });
 
   return { sent: true };
 }

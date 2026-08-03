@@ -30,6 +30,7 @@ export type CreateTaskInput = {
   accountId?: string;
   groupId?: string;
   source?: string;
+  recurringSeriesId?: string;
   /** When set, inherits project/client/area from parent if those are omitted. */
   parentTaskContext?: {
     projectId?: string | null;
@@ -204,12 +205,16 @@ export async function createTaskForUser(
     ...(input.phaseId ? { phase_id: input.phaseId } : {}),
     ...(input.groupId ? { group_id: input.groupId } : {}),
     ...(input.source ? { source: input.source } : {}),
+    ...(input.recurringSeriesId
+      ? { recurring_series_id: input.recurringSeriesId }
+      : {}),
     ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
   };
 
   const { data, error } = await client
     .from('tasks')
-    .insert(insertRow)
+    // recurring_series_id added in task_recurring_series migration; cast until typegen.
+    .insert(insertRow as never)
     .select('id')
     .single();
 

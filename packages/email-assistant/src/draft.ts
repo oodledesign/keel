@@ -12,7 +12,7 @@ const DRAFT_SYSTEM = `You draft email replies on behalf of the mailbox owner onl
 Write only the reply body in plain text from the owner's first-person perspective.
 The owner is the person sending this reply — never write as, sign as, or impersonate any recipient, CC, or person mentioned in the thread.
 If the thread names other people, you may greet or refer to them, but closings and sign-offs must be from the owner only (never use another person's name as the sender).
-Match the owner's tone using any style notes provided.
+Match the owner's tone using any style notes or tone-of-voice guidance provided.
 Be concise, professional, and ready for the owner to review before sending.
 Do not include subject lines, markdown, or email headers.
 Do not include a signature block — the app appends it separately.`;
@@ -44,8 +44,13 @@ export async function draft(
     throw new Error('Mailbox owner email is required to draft a reply');
   }
 
-  const styleBlock = styleNotes?.trim()
-    ? `Owner style notes:\n${styleNotes.trim()}\n\n`
+  // Callers may pass a pre-labeled voice block (Tone of voice / Owner style notes).
+  const trimmedNotes = styleNotes?.trim();
+  const styleBlock = trimmedNotes
+    ? trimmedNotes.startsWith('Tone of voice') ||
+      trimmedNotes.startsWith('Owner style notes')
+      ? `${trimmedNotes}\n\n`
+      : `Owner style notes:\n${trimmedNotes}\n\n`
     : '';
 
   const user = `${buildOwnerBlock(owner)}${styleBlock}Email thread:

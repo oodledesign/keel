@@ -719,7 +719,9 @@ function BreakdownTable({
       </CardHeader>
       <CardContent>
         {rows.length === 0 ? (
-          <p className="text-sm text-[var(--workspace-shell-text)]/45">{empty}</p>
+          <p className="text-sm text-[var(--workspace-shell-text)]/45">
+            {empty}
+          </p>
         ) : (
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
@@ -1174,16 +1176,16 @@ function SourceInsightsPanel({
                       <td className="px-2 py-2.5 text-[var(--workspace-shell-text)]">
                         {row.label}
                       </td>
-                      <td className="px-2 py-2.5 tabular-nums text-[var(--workspace-shell-text)]">
+                      <td className="px-2 py-2.5 text-[var(--workspace-shell-text)] tabular-nums">
                         {row.leadCount}
                       </td>
-                      <td className="px-2 py-2.5 tabular-nums text-[var(--workspace-shell-text)]">
+                      <td className="px-2 py-2.5 text-[var(--workspace-shell-text)] tabular-nums">
                         {row.previousLeadCount}
                       </td>
-                      <td className="px-2 py-2.5 tabular-nums text-[var(--workspace-shell-text)]">
+                      <td className="px-2 py-2.5 text-[var(--workspace-shell-text)] tabular-nums">
                         {row.volumeSqft.toLocaleString('en-GB')}
                       </td>
-                      <td className="px-2 py-2.5 tabular-nums text-[var(--workspace-shell-text)]">
+                      <td className="px-2 py-2.5 text-[var(--workspace-shell-text)] tabular-nums">
                         {row.previousVolumeSqft.toLocaleString('en-GB')}
                       </td>
                     </tr>

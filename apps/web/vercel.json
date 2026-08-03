@@ -67,6 +67,14 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/invoices-recurring",
+      "schedule": "15 8 * * *"
+    },
+    {
+      "path": "/api/cron/tasks-recurring",
+      "schedule": "20 8 * * *"
+    },
+    {
       "path": "/api/cron/brain-reindex-active",
       "schedule": "0 3 * * *"
     },

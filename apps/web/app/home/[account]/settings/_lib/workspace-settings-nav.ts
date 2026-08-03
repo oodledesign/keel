@@ -94,6 +94,24 @@ export function buildWorkspaceSettingsNav(input: {
         href: settingsPath(pathsConfig.app.accountBrandSettings, accountSlug),
       });
 
+      items.push({
+        id: 'brand-voice',
+        label: 'Brand voice',
+        href: settingsPath(
+          pathsConfig.app.accountBrandVoiceSettings,
+          accountSlug,
+        ),
+      });
+
+      items.push({
+        id: 'templates',
+        label: 'Templates',
+        href: settingsPath(
+          pathsConfig.app.accountContentTemplatesSettings,
+          accountSlug,
+        ),
+      });
+
       if (
         spaceType === 'work' &&
         isWorkModuleEnabled(moduleSettings, 'tasks')

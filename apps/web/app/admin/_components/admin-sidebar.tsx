@@ -102,6 +102,16 @@ export function AdminSidebar() {
               </SidebarMenuButton>
 
               <SidebarMenuButton
+                isActive={path.includes('/admin/templates')}
+                asChild
+              >
+                <Link className={'flex gap-2.5'} href={'/admin/templates'}>
+                  <FileText className={'h-4'} />
+                  <span>Templates</span>
+                </Link>
+              </SidebarMenuButton>
+
+              <SidebarMenuButton
                 isActive={path.includes('/admin/billing/at-risk')}
                 asChild
               >

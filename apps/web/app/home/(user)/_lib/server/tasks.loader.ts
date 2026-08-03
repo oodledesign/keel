@@ -19,6 +19,9 @@ export const TASK_LIST_LIMIT = 300;
 const TASK_SELECT =
   'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status';
 
+/** Includes series link when the migration is present; omitted from list selects for resilience. */
+const TASK_SELECT_WITH_SERIES = `${TASK_SELECT}, recurring_series_id`;
+
 type TaskQueryRow = {
   id: string;
   title?: string | null;
@@ -32,6 +35,7 @@ type TaskQueryRow = {
   parent_task_id?: string | null;
   notes?: string | null;
   calendar_schedule_status?: string | null;
+  recurring_series_id?: string | null;
 };
 
 type BusinessEnrichment = {
@@ -113,6 +117,8 @@ export type TasksPageTask = {
   parentTaskId: string | null;
   notes: string | null;
   calendarScheduleStatus: 'scheduled' | 'failed' | null;
+  /** Present when this task was spawned from a recurring series. */
+  recurringSeriesId: string | null;
   /** Populated for root tasks only (see `nestTaskTree`). */
   subtasks?: TasksPageTask[];
 };
@@ -356,6 +362,7 @@ function taskRowToPageTask(
       row.calendar_schedule_status === 'failed'
         ? row.calendar_schedule_status
         : null,
+    recurringSeriesId: row.recurring_series_id ?? null,
   };
 }
 
@@ -496,16 +503,31 @@ export async function loadTaskById(
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
-  const { data, error } = await client
+  let data: TaskQueryRow | null = null;
+
+  const withSeries = await client
     .from('tasks')
-    .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
-    )
+    .select(TASK_SELECT_WITH_SERIES)
     .eq('id', taskId)
     .maybeSingle();
 
-  if (error || !data) {
+  if (
+    withSeries.error?.message?.includes('recurring_series_id') ||
+    withSeries.error?.code === '42703'
+  ) {
+    const fallback = await client
+      .from('tasks')
+      .select(TASK_SELECT)
+      .eq('id', taskId)
+      .maybeSingle();
+    if (fallback.error || !fallback.data) {
+      return null;
+    }
+    data = fallback.data as TaskQueryRow;
+  } else if (withSeries.error || !withSeries.data) {
     return null;
+  } else {
+    data = withSeries.data as TaskQueryRow;
   }
 
   let enrichmentClient: SupabaseClient | undefined;
@@ -524,7 +546,7 @@ export async function loadTaskById(
 
   const tasks = await enrichTaskRows(
     client,
-    [data as TaskQueryRow],
+    [data],
     options?.workspaceAccountId ? 'work' : undefined,
     enrichmentClient,
     false,
@@ -538,9 +560,7 @@ export async function loadTaskById(
 
   const { data: childRows, error: childError } = await client
     .from('tasks')
-    .select(
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status',
-    )
+    .select(TASK_SELECT)
     .eq('user_id', user.id)
     .eq('parent_task_id', taskId)
     .order('due_date', { ascending: true, nullsLast: true });

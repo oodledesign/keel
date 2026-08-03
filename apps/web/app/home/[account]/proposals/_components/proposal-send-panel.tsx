@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { Copy, Download, Link2, Loader2, Send } from 'lucide-react';
+import { Copy, Download, FileText, Link2, Loader2, Send } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -23,6 +23,7 @@ import {
   getProposalPortalLink,
   sendProposal,
 } from '../_lib/server/server-actions';
+import { ContentTemplatePickerDialog } from './content-template-picker-dialog';
 
 const SMART_FIELDS = [
   '{{client.firstName}}',
@@ -70,6 +71,7 @@ export function ProposalSendPanel({
   );
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<'send' | 'test' | 'link' | null>(null);
+  const [templateOpen, setTemplateOpen] = useState(false);
 
   const loadPortalLink = async () => {
     if (portalUrl) return portalUrl;
@@ -148,6 +150,17 @@ export function ProposalSendPanel({
         </TabsList>
 
         <TabsContent value="email" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setTemplateOpen(true)}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Use email template
+            </Button>
+          </div>
           <div>
             <Label>To</Label>
             <Input
@@ -273,6 +286,20 @@ export function ProposalSendPanel({
           </Button>
         </TabsContent>
       </Tabs>
+
+      <ContentTemplatePickerDialog
+        open={templateOpen}
+        onOpenChange={setTemplateOpen}
+        kind="proposal_email"
+        accountId={accountId}
+        title="Use proposal email template"
+        onSelect={(template) => {
+          if (template.subject) setSubject(template.subject);
+          if (template.bodyText) setBody(template.bodyText);
+          if (template.signature) setSignature(template.signature);
+          toast.success('Email template applied');
+        }}
+      />
     </div>
   );
 }

@@ -3,6 +3,7 @@ import { notFound } from 'next/navigation';
 import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { PageBody } from '@kit/ui/page';
 
+import { loadPipelineDataForAccount } from '~/home/(user)/_lib/server/pipeline.loader';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
@@ -17,12 +18,7 @@ interface ProposalEditPageProps {
   params: Promise<{ account: string; id: string }>;
 }
 
-export const generateMetadata = async ({
-  params,
-}: {
-  params: Promise<{ account: string; id: string }>;
-}) => {
-  const { id } = await params;
+export const generateMetadata = async () => {
   return { title: `Edit proposal` };
 };
 
@@ -39,6 +35,7 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
     canViewProposals,
     canEditProposals,
     canManageProposalStatus,
+    user,
   } = await loadProposalsPageData(accountSlug);
 
   if (!id) notFound();
@@ -52,9 +49,21 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
   }
   if (!proposal) notFound();
 
-  const brand = await loadAccountBrandResolved(accountId);
+  const [brand, pipeline] = await Promise.all([
+    loadAccountBrandResolved(accountId),
+    loadPipelineDataForAccount(accountId),
+  ]);
   const title =
     (proposal as { title?: string | null }).title?.trim() || 'Proposal';
+  const accountName =
+    (workspace.account as { name?: string | null }).name?.trim() || accountSlug;
+  const senderName =
+    [user.user_metadata?.first_name, user.user_metadata?.last_name]
+      .filter(Boolean)
+      .join(' ')
+      .trim() ||
+    user.email ||
+    'Team member';
 
   return (
     <>
@@ -68,10 +77,18 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
         <ProposalEditContent
           accountSlug={accountSlug}
           accountId={accountId}
+          accountName={accountName}
+          senderName={senderName}
           proposal={proposal as Record<string, unknown>}
           brandLogoUrl={brand.logo_url}
           canEditProposals={canEditProposals}
           canManageProposalStatus={canManageProposalStatus}
+          deals={pipeline.deals.map((d) => ({
+            id: d.id,
+            contactName: d.contactName,
+            companyName: d.companyName,
+            value: d.value,
+          }))}
         />
       </PageBody>
     </>

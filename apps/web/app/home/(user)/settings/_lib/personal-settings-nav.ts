@@ -32,6 +32,11 @@ export function buildPersonalSettingsNav(): PersonalSettingsNavItem[] {
       href: pathsConfig.app.personalAccountPreferencesSettings,
     },
     {
+      id: 'tone',
+      label: 'Tone of voice',
+      href: pathsConfig.app.personalAccountToneSettings,
+    },
+    {
       id: 'shortcuts',
       label: 'Shortcuts',
       href: pathsConfig.app.personalAccountShortcutsSettings,

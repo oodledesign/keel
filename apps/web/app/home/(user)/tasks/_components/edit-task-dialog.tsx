@@ -48,6 +48,7 @@ import {
   loadTaskAssignmentOptionsForWorkspace,
   loadTaskForEdit,
   updateTask,
+  updateTaskRecurringSeriesStatusAction,
 } from '../../_lib/actions/task-actions';
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 
@@ -460,6 +461,62 @@ export function EditTaskDialog({
           </DialogHeader>
 
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+            {task.recurringSeriesId ? (
+              <div className="flex flex-col gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-[var(--workspace-shell-text)]">
+                  This task is part of a recurring series.
+                </p>
+                <div className="flex shrink-0 gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-[color:var(--workspace-shell-border)]"
+                    disabled={isPending}
+                    onClick={() => {
+                      startTransition(async () => {
+                        try {
+                          await updateTaskRecurringSeriesStatusAction({
+                            seriesId: task.recurringSeriesId!,
+                            status: 'paused',
+                          });
+                          onSaved?.();
+                          router.refresh();
+                        } catch {
+                          setError('Could not pause series');
+                        }
+                      });
+                    }}
+                  >
+                    Pause series
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="border-[color:var(--workspace-shell-border)]"
+                    disabled={isPending}
+                    onClick={() => {
+                      startTransition(async () => {
+                        try {
+                          await updateTaskRecurringSeriesStatusAction({
+                            seriesId: task.recurringSeriesId!,
+                            status: 'ended',
+                          });
+                          onSaved?.();
+                          router.refresh();
+                        } catch {
+                          setError('Could not stop series');
+                        }
+                      });
+                    }}
+                  >
+                    Stop series
+                  </Button>
+                </div>
+              </div>
+            ) : null}
+
             <div className="space-y-2">
               <Label
                 htmlFor="edit-title"

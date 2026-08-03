@@ -10,6 +10,7 @@ import StarterKit from '@tiptap/starter-kit';
 
 import { cn } from '@kit/ui/utils';
 
+import { BulletFromDot } from './note-bullet-from-dot';
 import { NoteMarkdownToolbar } from './note-markdown-toolbar';
 
 type NoteBodyEditorProps = {
@@ -48,13 +49,19 @@ export function NoteBodyEditor({
       Underline,
       Placeholder.configure({ placeholder }),
       Markdown,
+      BulletFromDot,
     ],
     content: initialMarkdown,
     contentType: 'markdown',
     editorProps: {
       attributes: {
         class: cn(
-          'note-body-editor min-h-[50vh] w-full px-4 pt-1 pb-4 text-base leading-relaxed text-[var(--workspace-shell-text)] outline-none sm:px-6 lg:px-10 lg:text-[15px] xl:px-14',
+          'note-body-editor min-h-[50vh] w-full border-0 px-4 pt-1 text-base leading-relaxed text-[var(--workspace-shell-text)] shadow-none ring-0 outline-none',
+          'focus:border-0 focus:shadow-none focus:ring-0 focus:outline-none',
+          'focus-visible:border-0 focus-visible:shadow-none focus-visible:ring-0 focus-visible:outline-none',
+          // Extra mobile bottom space so the last lines can scroll above the shortcut bar
+          'pb-[calc(6.5rem+max(1.5rem,env(safe-area-inset-bottom)))] lg:pb-10',
+          'sm:px-6 lg:px-10 lg:text-[15px] xl:px-14',
           '[&_h1]:font-heading [&_h1]:mb-3 [&_h1]:text-[1.75rem] [&_h1]:leading-tight [&_h1]:font-bold [&_h1]:tracking-tight lg:[&_h1]:text-3xl',
           '[&_h2]:font-heading [&_h2]:mb-2 [&_h2]:text-xl [&_h2]:font-semibold lg:[&_h2]:text-2xl',
           '[&_p]:mb-3 [&_p:last-child]:mb-0',
@@ -83,7 +90,10 @@ export function NoteBodyEditor({
   return (
     <div className={cn('flex flex-col', className)}>
       <NoteMarkdownToolbar editor={editor} className={toolbarClassName} />
-      <EditorContent editor={editor} />
+      <EditorContent
+        editor={editor}
+        className="[&_.ProseMirror]:border-0 [&_.ProseMirror]:shadow-none [&_.ProseMirror]:ring-0 [&_.ProseMirror]:outline-none [&_.ProseMirror-focused]:border-0 [&_.ProseMirror-focused]:shadow-none [&_.ProseMirror-focused]:ring-0 [&_.ProseMirror-focused]:outline-none"
+      />
     </div>
   );
 }

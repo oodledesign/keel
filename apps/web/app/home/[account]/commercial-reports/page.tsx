@@ -103,16 +103,23 @@ async function CommercialReportsPage({
   const txnKind = parseTxnKind(query.txn);
   const service = createCommercialReportsService(getSupabaseServerClient());
 
-  const [overview, disposals, viewings, inbound, requirements, sources, transactions] =
-    await Promise.all([
-      service.getMetrics(accountId),
-      service.getDisposalInsights({ accountId, period, disposalType }),
-      service.getViewingInsights({ accountId, period }),
-      service.getInboundInsights({ accountId, period }),
-      service.getRequirementInsights({ accountId, period }),
-      service.getSourceInsights({ accountId, period }),
-      service.getTransactionInsights({ accountId, period, kind: txnKind }),
-    ]);
+  const [
+    overview,
+    disposals,
+    viewings,
+    inbound,
+    requirements,
+    sources,
+    transactions,
+  ] = await Promise.all([
+    service.getMetrics(accountId),
+    service.getDisposalInsights({ accountId, period, disposalType }),
+    service.getViewingInsights({ accountId, period }),
+    service.getInboundInsights({ accountId, period }),
+    service.getRequirementInsights({ accountId, period }),
+    service.getSourceInsights({ accountId, period }),
+    service.getTransactionInsights({ accountId, period, kind: txnKind }),
+  ]);
 
   return (
     <>

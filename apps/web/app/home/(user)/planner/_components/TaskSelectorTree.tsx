@@ -26,6 +26,7 @@ import {
   CollapsibleTrigger,
 } from '@kit/ui/collapsible';
 import { Input } from '@kit/ui/input';
+import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { AddTaskDialog } from '~/home/(user)/_components/dashboard/add-task-dialog';
@@ -104,6 +105,7 @@ export function TaskSelectorTree({
   settingsHref,
   scope,
 }: Props) {
+  const router = useRouter();
   const [addTaskOpen, setAddTaskOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -111,6 +113,14 @@ export function TaskSelectorTree({
     () => filterPlannerTaskTree(taskTree, searchQuery),
     [taskTree, searchQuery],
   );
+
+  function handleTaskCreated(taskId: string | null) {
+    toast.success('Task added');
+    if (taskId) {
+      onSelectedTaskIdsChange(new Set([...selectedTaskIds, taskId]));
+    }
+    router.refresh();
+  }
 
   function toggle(ids: string[], checked: boolean) {
     const next = new Set(selectedTaskIds);
@@ -185,12 +195,15 @@ export function TaskSelectorTree({
           onOpenChange={setAddTaskOpen}
           hideTrigger
           allowInlineClientCreate
+          onCreated={handleTaskCreated}
         />
       ) : (
         <AddTaskDialog
+          lifeOnly
           open={addTaskOpen}
           onOpenChange={setAddTaskOpen}
           hideTrigger
+          onCreated={handleTaskCreated}
         />
       )}
 

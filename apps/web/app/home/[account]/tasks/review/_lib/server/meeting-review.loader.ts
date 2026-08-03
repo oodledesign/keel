@@ -25,6 +25,9 @@ export type MeetingReviewItem = {
   meetingTranscriptId: string;
   meetingTitle: string;
   meetingDate: string | null;
+  clientId: string | null;
+  clientName: string | null;
+  clientPictureUrl: string | null;
 };
 
 export const loadMeetingTaskReviewPageData = cache(
@@ -52,7 +55,14 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
         meeting_transcript_id,
         meeting_transcripts:meeting_transcript_id (
           title,
-          meeting_date
+          meeting_date,
+          client_id,
+          clients:client_id (
+            id,
+            display_name,
+            company_name,
+            picture_url
+          )
         )
       `,
       )
@@ -106,14 +116,59 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
       created_at: string;
       meeting_transcript_id: string;
       meeting_transcripts:
-        | { title?: string | null; meeting_date?: string | null }
-        | Array<{ title?: string | null; meeting_date?: string | null }>
+        | {
+            title?: string | null;
+            meeting_date?: string | null;
+            client_id?: string | null;
+            clients?:
+              | {
+                  id?: string;
+                  display_name?: string | null;
+                  company_name?: string | null;
+                  picture_url?: string | null;
+                }
+              | Array<{
+                  id?: string;
+                  display_name?: string | null;
+                  company_name?: string | null;
+                  picture_url?: string | null;
+                }>
+              | null;
+          }
+        | Array<{
+            title?: string | null;
+            meeting_date?: string | null;
+            client_id?: string | null;
+            clients?:
+              | {
+                  id?: string;
+                  display_name?: string | null;
+                  company_name?: string | null;
+                  picture_url?: string | null;
+                }
+              | Array<{
+                  id?: string;
+                  display_name?: string | null;
+                  company_name?: string | null;
+                  picture_url?: string | null;
+                }>
+              | null;
+          }>
         | null;
     };
 
     const transcript = Array.isArray(item.meeting_transcripts)
       ? item.meeting_transcripts[0]
       : item.meeting_transcripts;
+
+    const clientRow = Array.isArray(transcript?.clients)
+      ? transcript?.clients[0]
+      : transcript?.clients;
+
+    const clientName =
+      clientRow?.display_name?.trim() ||
+      clientRow?.company_name?.trim() ||
+      null;
 
     return {
       id: item.id,
@@ -127,6 +182,9 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
       meetingTranscriptId: item.meeting_transcript_id,
       meetingTitle: transcript?.title?.trim() || 'Meeting transcript',
       meetingDate: transcript?.meeting_date ?? null,
+      clientId: transcript?.client_id ?? clientRow?.id ?? null,
+      clientName,
+      clientPictureUrl: clientRow?.picture_url ?? null,
     };
   });
 

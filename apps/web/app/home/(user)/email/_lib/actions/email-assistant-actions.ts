@@ -175,6 +175,31 @@ export async function saveEmailAssistantSettings(input: {
     return { success: false as const, error: error.message };
   }
 
+  // Keep personal voice guidance in sync while style_notes remains an alias.
+  const notes = input.styleNotes.trim() || null;
+  if (notes) {
+    try {
+      const { data: voiceProfile } = await client
+        .from('voice_profiles')
+        .select('id')
+        .eq('kind', 'personal')
+        .eq('owner_user_id', user.id)
+        .maybeSingle();
+
+      if (voiceProfile) {
+        await client
+          .from('voice_profiles')
+          .update({
+            guidance_text: notes,
+            status: 'ready',
+          })
+          .eq('id', (voiceProfile as { id: string }).id);
+      }
+    } catch {
+      // Voice tables may not be migrated yet; style_notes still saved.
+    }
+  }
+
   revalidateEmailPage();
   return { success: true as const, error: null };
 }

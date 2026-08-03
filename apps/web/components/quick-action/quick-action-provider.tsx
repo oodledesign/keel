@@ -11,6 +11,8 @@ import {
 
 import { usePathname } from 'next/navigation';
 
+import { isReservedWorkspaceUrlSegment } from '@kit/shared/workspace-url';
+
 import { QuickActionDialog } from './quick-action-dialog';
 
 type QuickActionContextValue = {
@@ -34,9 +36,15 @@ function parsePageContext(pathname: string | null): {
 } {
   if (!pathname) return {};
 
-  const teamMatch = pathname.match(/^\/app\/work\/([^/]+)/);
-  if (teamMatch?.[1]) {
-    return { accountSlug: teamMatch[1] };
+  const legacyWork = pathname.match(/^\/(?:app|home)\/work\/([^/]+)/);
+  if (legacyWork?.[1]) {
+    return { accountSlug: legacyWork[1] };
+  }
+
+  const accountMatch = pathname.match(/^\/(?:app|home)\/([^/]+)/);
+  const slug = accountMatch?.[1];
+  if (slug && !isReservedWorkspaceUrlSegment(slug)) {
+    return { accountSlug: slug };
   }
 
   return {};

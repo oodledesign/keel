@@ -8625,6 +8625,101 @@ export type Database = {
           },
         ];
       };
+      task_recurring_series: {
+        Row: {
+          account_id: string | null;
+          area_id: string | null;
+          client_id: string | null;
+          created_at: string;
+          day_of_month: number | null;
+          due_days: number;
+          end_at: string | null;
+          frequency: string;
+          id: string;
+          max_occurrences: number | null;
+          next_create_at: string;
+          notes: string | null;
+          occurrences_created: number;
+          priority: string;
+          project_id: string | null;
+          status: string;
+          title: string;
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          account_id?: string | null;
+          area_id?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          day_of_month?: number | null;
+          due_days?: number;
+          end_at?: string | null;
+          frequency: string;
+          id?: string;
+          max_occurrences?: number | null;
+          next_create_at: string;
+          notes?: string | null;
+          occurrences_created?: number;
+          priority?: string;
+          project_id?: string | null;
+          status?: string;
+          title: string;
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          account_id?: string | null;
+          area_id?: string | null;
+          client_id?: string | null;
+          created_at?: string;
+          day_of_month?: number | null;
+          due_days?: number;
+          end_at?: string | null;
+          frequency?: string;
+          id?: string;
+          max_occurrences?: number | null;
+          next_create_at?: string;
+          notes?: string | null;
+          occurrences_created?: number;
+          priority?: string;
+          project_id?: string | null;
+          status?: string;
+          title?: string;
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'task_recurring_series_account_id_fkey',
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_recurring_series_area_id_fkey',
+            columns: ['area_id'];
+            isOneToOne: false;
+            referencedRelation: 'areas';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_recurring_series_client_id_fkey',
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'task_recurring_series_project_id_fkey',
+            columns: ['project_id'];
+            isOneToOne: false;
+            referencedRelation: 'projects';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       tasks: {
         Row: {
           account_id: string | null;
@@ -8643,6 +8738,7 @@ export type Database = {
           phase_id: string | null;
           priority: string | null;
           project_id: string | null;
+          recurring_series_id: string | null;
           sort_order: number | null;
           source: string | null;
           status: string | null;
@@ -8667,6 +8763,7 @@ export type Database = {
           phase_id?: string | null;
           priority?: string | null;
           project_id?: string | null;
+          recurring_series_id?: string | null;
           sort_order?: number | null;
           source?: string | null;
           status?: string | null;
@@ -8691,6 +8788,7 @@ export type Database = {
           phase_id?: string | null;
           priority?: string | null;
           project_id?: string | null;
+          recurring_series_id?: string | null;
           sort_order?: number | null;
           source?: string | null;
           status?: string | null;
@@ -8762,6 +8860,14 @@ export type Database = {
             referencedRelation: 'projects';
             referencedColumns: ['id'];
           },
+          {
+            foreignKeyName: 'tasks_recurring_series_id_fkey',
+            columns: ['recurring_series_id'];
+            isOneToOne: false;
+            referencedRelation: 'task_recurring_series';
+            referencedColumns: ['id'];
+          },
+
         ];
       };
       ticket_messages: {

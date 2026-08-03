@@ -510,7 +510,7 @@ function getPersonalItems(): NewMenuItem[] {
       key: 'task',
       label: 'New Task',
       icon: CheckSquare,
-      href: `${pathsConfig.app.home}/tasks?create=task`,
+      action: 'create-task',
     },
     {
       key: 'note',

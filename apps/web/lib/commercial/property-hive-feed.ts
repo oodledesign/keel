@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { createHash, randomBytes, timingSafeEqual } from 'crypto';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
@@ -163,7 +163,10 @@ function sqlTimestamp(value: string | null): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   // Kato style: 2023-10-02 12:17:23
-  return d.toISOString().replace('T', ' ').replace(/\.\d{3}Z$/, '');
+  return d
+    .toISOString()
+    .replace('T', ' ')
+    .replace(/\.\d{3}Z$/, '');
 }
 
 async function resolveMediaUrl(
@@ -384,10 +387,7 @@ async function renderPropertyXml(
     keyPointsXml,
     el('size_from', sizeFrom != null ? Math.round(Number(sizeFrom)) : ''),
     el('size_to', sizeTo != null ? Math.round(Number(sizeTo)) : ''),
-    el(
-      'total_property_size',
-      sizeTo != null ? Math.round(Number(sizeTo)) : '',
-    ),
+    el('total_property_size', sizeTo != null ? Math.round(Number(sizeTo)) : ''),
     el('total_property_size_metric', 'sqft'),
     el('area_size_unit', 'sq ft'),
     el('area_size_type', listing.measurement_standard ?? 'gia'),
@@ -412,8 +412,7 @@ async function renderPropertyXml(
     listing.epc_band
       ? elRaw(
           'current_energy_ratings',
-          el('band', listing.epc_band) +
-            el('value', listing.epc_rating ?? ''),
+          el('band', listing.epc_band) + el('value', listing.epc_rating ?? ''),
         )
       : '<current_energy_ratings/>',
     '</property>',
@@ -490,11 +489,13 @@ export async function ensurePropertyHiveFeedToken(
       .eq('id', row.id as string);
     if (error) throw new Error(error.message);
   } else {
-    const { error } = await client.from('commercial_portal_credentials').insert({
-      account_id: accountId,
-      portal: 'property_hive',
-      metadata,
-    });
+    const { error } = await client
+      .from('commercial_portal_credentials')
+      .insert({
+        account_id: accountId,
+        portal: 'property_hive',
+        metadata,
+      });
     if (error) throw new Error(error.message);
   }
 
@@ -526,20 +527,20 @@ export async function rotatePropertyHiveFeedToken(
       .eq('id', row.id as string);
     if (error) throw new Error(error.message);
   } else {
-    const { error } = await client.from('commercial_portal_credentials').insert({
-      account_id: accountId,
-      portal: 'property_hive',
-      metadata,
-    });
+    const { error } = await client
+      .from('commercial_portal_credentials')
+      .insert({
+        account_id: accountId,
+        portal: 'property_hive',
+        metadata,
+      });
     if (error) throw new Error(error.message);
   }
 
   return { token, feedUrl: buildPropertyHiveFeedUrl(token) };
 }
 
-async function findAccountIdByFeedToken(
-  token: string,
-): Promise<string | null> {
+async function findAccountIdByFeedToken(token: string): Promise<string | null> {
   const { data, error } = await adminDb()
     .from('commercial_portal_credentials')
     .select('account_id, metadata')

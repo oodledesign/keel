@@ -2,6 +2,8 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
+import Link from 'next/link';
+
 import { Loader2, Mail, Unplug } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -24,6 +26,7 @@ import {
   EmailSignatureField,
   type EmailSignatureFormat,
 } from './email-signature-field';
+import { EmailReplyPresetsSection } from './email-reply-presets-section';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-5';
@@ -287,18 +290,30 @@ export function EmailSettingsCard({
 
       <div className="mt-5 space-y-4">
         <div className="space-y-2">
-          <Label
-            htmlFor="email-style-notes"
-            className="text-[var(--workspace-shell-text-muted)]"
-          >
-            Writing style notes
-          </Label>
+          <div className="flex flex-wrap items-baseline justify-between gap-2">
+            <Label
+              htmlFor="email-style-notes"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
+              Writing style notes
+            </Label>
+            <Link
+              href={pathsConfig.app.personalAccountToneSettings}
+              className="text-xs font-medium text-[var(--ozer-accent)] hover:underline"
+            >
+              Tone of voice settings
+            </Link>
+          </div>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Prefer themes and samples in Tone of voice. This field stays in sync
+            as a quick alias.
+          </p>
           <Textarea
             id="email-style-notes"
             value={styleNotes}
             onChange={(event) => setStyleNotes(event.target.value)}
             placeholder="Warm and concise. Use first names. Always write and sign off as me, never as a recipient."
-            rows={4}
+            rows={3}
             className="border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
           />
         </div>
@@ -310,6 +325,8 @@ export function EmailSettingsCard({
           onFormatChange={setSignatureFormat}
           disabled={pending}
         />
+
+        <EmailReplyPresetsSection />
 
         <Button
           type="button"

@@ -23,6 +23,17 @@ export type ProposalGenerateParams = {
   referenceProposalHtml?: string | null;
   /** Total deal value in pounds (GBP), if known. */
   dealValue?: number | null;
+  /** Distilled brand/personal voice block for prompt injection. */
+  voicePromptBlock?: string | null;
+};
+
+export type ProposalEditParams = {
+  contentHtml: string;
+  instruction: string;
+  recipientName?: string | null;
+  accountName?: string | null;
+  senderName?: string | null;
+  voicePromptBlock?: string | null;
 };
 
 const PROPOSAL_SYSTEM_PROMPT = `You write UK freelance proposals for creative and professional services.
@@ -85,6 +96,15 @@ function getAnthropicConfig() {
   return { apiKey, model };
 }
 
+function buildProposalSystemPrompt(voicePromptBlock?: string | null) {
+  const voice = voicePromptBlock?.trim();
+  if (!voice) return PROPOSAL_SYSTEM_PROMPT;
+  return `${PROPOSAL_SYSTEM_PROMPT}
+
+Match this brand / author voice when writing (keep UK freelance structure above):
+${voice.slice(0, 2400)}`;
+}
+
 export async function streamProposalHtml(params: ProposalGenerateParams) {
   const { apiKey, model } = getAnthropicConfig();
   const payload = buildProposalUserPayload(params);
@@ -100,7 +120,7 @@ export async function streamProposalHtml(params: ProposalGenerateParams) {
       model,
       max_tokens: 8192,
       stream: true,
-      system: PROPOSAL_SYSTEM_PROMPT,
+      system: buildProposalSystemPrompt(params.voicePromptBlock),
       messages: [
         {
           role: 'user',
@@ -136,11 +156,138 @@ export async function generateProposalHtml(
     body: JSON.stringify({
       model,
       max_tokens: 8192,
-      system: PROPOSAL_SYSTEM_PROMPT,
+      system: buildProposalSystemPrompt(params.voicePromptBlock),
       messages: [
         {
           role: 'user',
           content: JSON.stringify(payload),
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(
+      `Anthropic API error (${res.status}): ${errText.slice(0, 400)}`,
+    );
+  }
+
+  const body = (await res.json()) as {
+    content?: Array<{ type: string; text?: string }>;
+  };
+  const text = body.content?.find((c) => c.type === 'text')?.text?.trim();
+  if (!text) {
+    throw new Error('Empty proposal HTML from Anthropic');
+  }
+
+  return stripMarkdownFences(text);
+}
+
+const PROPOSAL_EDIT_SYSTEM_PROMPT = `You edit UK freelance proposal HTML for creative and professional services.
+
+Output ONLY the revised proposal body as simple HTML fragments — no <!DOCTYPE>, <html>, <head>, or <body> wrapper.
+
+Rules:
+- Apply the user's edit instructions carefully while preserving accurate facts, pricing, and structure unless they ask to change those.
+- Prefer the same section headings (h2) when they already exist; you may restructure if the instruction requires it.
+- Use only h2, p, ul, li, strong, em — no tables, images, or inline styles.
+- British English spelling and tone unless the voice guidance or instruction says otherwise.
+- Do not invent new commercial facts not present in the draft or instruction.
+- Do not wrap output in markdown fences.`;
+
+function buildProposalEditSystemPrompt(voicePromptBlock?: string | null) {
+  const voice = voicePromptBlock?.trim();
+  if (!voice) return PROPOSAL_EDIT_SYSTEM_PROMPT;
+  return `${PROPOSAL_EDIT_SYSTEM_PROMPT}
+
+Match this brand / author voice when rewriting:
+${voice.slice(0, 2400)}`;
+}
+
+export async function streamProposalEditHtml(params: ProposalEditParams) {
+  const { apiKey, model } = getAnthropicConfig();
+  const instruction = params.instruction.trim();
+  const contentHtml = params.contentHtml.trim();
+
+  if (!instruction) {
+    throw new Error('Edit instructions are required');
+  }
+  if (!contentHtml) {
+    throw new Error('Proposal content is empty — generate a draft first');
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 8192,
+      stream: true,
+      system: buildProposalEditSystemPrompt(params.voicePromptBlock),
+      messages: [
+        {
+          role: 'user',
+          content: JSON.stringify({
+            edit_instructions: instruction.slice(0, 4000),
+            recipient_name: params.recipientName?.trim() || null,
+            workspace_name: params.accountName?.trim() || null,
+            sender_name: params.senderName?.trim() || null,
+            current_proposal_html: contentHtml.slice(0, 120_000),
+          }),
+        },
+      ],
+    }),
+  });
+
+  if (!res.ok || !res.body) {
+    throw new Error(
+      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
+    );
+  }
+
+  return anthropicSseToTextStream(res.body);
+}
+
+export async function editProposalHtml(
+  params: ProposalEditParams,
+): Promise<string> {
+  const { apiKey, model } = getAnthropicConfig();
+  const instruction = params.instruction.trim();
+  const contentHtml = params.contentHtml.trim();
+
+  if (!instruction) {
+    throw new Error('Edit instructions are required');
+  }
+  if (!contentHtml) {
+    throw new Error('Proposal content is empty — generate a draft first');
+  }
+
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      'x-api-key': apiKey,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model,
+      max_tokens: 8192,
+      system: buildProposalEditSystemPrompt(params.voicePromptBlock),
+      messages: [
+        {
+          role: 'user',
+          content: JSON.stringify({
+            edit_instructions: instruction.slice(0, 4000),
+            recipient_name: params.recipientName?.trim() || null,
+            workspace_name: params.accountName?.trim() || null,
+            sender_name: params.senderName?.trim() || null,
+            current_proposal_html: contentHtml.slice(0, 120_000),
+          }),
         },
       ],
     }),

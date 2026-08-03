@@ -95,6 +95,26 @@ export const loadTaskAssignmentOptionsForWorkspace = cache(
   },
 );
 
+/** Life areas only — used when creating tasks from Personal. */
+export const loadPersonalLifeAssignmentOptions = cache(
+  async (): Promise<TaskAssignmentOption[]> => {
+    const client = getSupabaseServerClient();
+    const user = await requireUserInServerComponent();
+
+    const { data } = await client
+      .from('areas')
+      .select('id, name, colour')
+      .eq('user_id', user.id);
+
+    return (data ?? []).map((row: AreaAssignmentRow) => ({
+      id: row.id,
+      name: row.name ?? 'Untitled area',
+      type: 'area' as const,
+      color: row.colour ?? null,
+    }));
+  },
+);
+
 export const loadTaskAssignmentOptions = cache(
   async (): Promise<TaskAssignmentOption[]> => {
     const client = getSupabaseServerClient();

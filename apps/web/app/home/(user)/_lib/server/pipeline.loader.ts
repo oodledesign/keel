@@ -128,8 +128,7 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
     clientId: row.client_id ?? null,
     clientName,
     commercialListingId: row.commercial_listing_id ?? null,
-    hotsRentPsf:
-      row.hots_rent_psf != null ? Number(row.hots_rent_psf) : null,
+    hotsRentPsf: row.hots_rent_psf != null ? Number(row.hots_rent_psf) : null,
     hotsSizeSqft:
       row.hots_size_sqft != null ? Number(row.hots_size_sqft) : null,
     hotsLeaseYears:

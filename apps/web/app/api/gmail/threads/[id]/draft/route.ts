@@ -5,6 +5,7 @@ import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-emai
 import { resolveEmailAssistantSignature } from '~/lib/email-assistant/resolve-signature';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
+import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -138,13 +139,20 @@ export async function POST(_request: Request, context: RouteContext) {
     ),
   );
 
+  const voiceBlock = await loadVoicePromptBlock(auth.client, {
+    userId: auth.user.id,
+    purpose: 'email',
+    fallbackStyleNotes:
+      (settings as { style_notes?: string | null } | null)?.style_notes ?? null,
+  });
+
   let bodyText: string;
 
   try {
     bodyText = await draft(
       threadText,
       { email: ownerEmail, displayName: ownerName },
-      (settings as { style_notes?: string | null } | null)?.style_notes ?? null,
+      voiceBlock,
       signature.plain,
     );
   } catch (error) {

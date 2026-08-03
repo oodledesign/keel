@@ -208,7 +208,9 @@ export function CommercialPublishingSettings({
         const result = await rotatePropertyHiveFeedAction({ accountId });
         setSettings(result.settings);
         setFeedUrl(result.feedUrl);
-        toast.success('Feed token rotated — update Property Hive with the new URL');
+        toast.success(
+          'Feed token rotated — update Property Hive with the new URL',
+        );
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not rotate feed',

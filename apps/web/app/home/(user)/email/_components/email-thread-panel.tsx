@@ -7,17 +7,26 @@ import {
   Check,
   ChevronDown,
   ChevronUp,
+  FileText,
   Loader2,
   Sparkles,
   X,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { listTemplatesPickerAction } from '~/lib/content-templates/account.actions';
+import type { PickerTemplate } from '~/lib/content-templates/types';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 import {
   previewEmailBody,
@@ -31,7 +40,6 @@ import type {
   EmailDraftRow,
   EmailMessageRow,
   EmailThreadDetail,
-  EmailThreadSummary,
   EmailWorkspaceOption,
 } from '../_lib/types';
 import { AcceptActionItemDialog } from './accept-action-item-dialog';
@@ -71,6 +79,8 @@ export function EmailThreadPanel({
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
   const [draftBody, setDraftBody] = useState('');
+  const [replyPresets, setReplyPresets] = useState<PickerTemplate[]>([]);
+  const [presetsLoaded, setPresetsLoaded] = useState(false);
   const [acceptItem, setAcceptItem] = useState<EmailActionItemRow | null>(null);
   const [acceptOpen, setAcceptOpen] = useState(false);
   const [extractInstructions, setExtractInstructions] = useState('');
@@ -489,21 +499,83 @@ export function EmailThreadPanel({
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Draft reply
               </h3>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                onClick={runGenerateDraft}
-                disabled={pending || !connected}
-              >
-                {pending ? (
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                ) : (
-                  <Sparkles className="mr-2 h-4 w-4" />
-                )}
-                Generate
-              </Button>
+              <div className="flex items-center gap-2">
+                <DropdownMenu
+                  onOpenChange={(open) => {
+                    if (!open || presetsLoaded) return;
+                    void listTemplatesPickerAction({ kind: 'email_reply' })
+                      .then((rows) => {
+                        setReplyPresets(rows);
+                        setPresetsLoaded(true);
+                      })
+                      .catch(() => {
+                        setReplyPresets([]);
+                        setPresetsLoaded(true);
+                      });
+                  }}
+                >
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)]"
+                      disabled={!connected}
+                    >
+                      <FileText className="mr-2 h-4 w-4" />
+                      Insert preset
+                      <ChevronDown className="ml-1 h-3.5 w-3.5 opacity-70" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="max-w-xs">
+                    {!presetsLoaded ? (
+                      <DropdownMenuItem disabled>Loading…</DropdownMenuItem>
+                    ) : replyPresets.length === 0 ? (
+                      <DropdownMenuItem disabled>
+                        No presets yet — add some in Email settings
+                      </DropdownMenuItem>
+                    ) : (
+                      replyPresets.map((preset) => (
+                        <DropdownMenuItem
+                          key={`${preset.source}:${preset.id}`}
+                          onSelect={() => {
+                            const text = preset.bodyText.trim();
+                            if (!text) return;
+                            setDraftBody((prev) =>
+                              prev.trim() ? `${prev.trim()}\n\n${text}` : text,
+                            );
+                            toast.success(`Inserted “${preset.name}”`);
+                          }}
+                        >
+                          <span className="min-w-0">
+                            <span className="block truncate font-medium">
+                              {preset.name}
+                            </span>
+                            <span className="text-muted-foreground block truncate text-xs">
+                              {preset.source}
+                            </span>
+                          </span>
+                        </DropdownMenuItem>
+                      ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  onClick={runGenerateDraft}
+                  disabled={pending || !connected}
+                >
+                  {pending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Sparkles className="mr-2 h-4 w-4" />
+                  )}
+                  Generate
+                </Button>
+              </div>
             </div>
 
             <Textarea

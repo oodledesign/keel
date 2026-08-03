@@ -28,5 +28,6 @@ export function plannerTaskToPageTask(task: PlannerTask): TasksPageTask {
     parentTaskId: task.parentTaskId,
     notes: task.notes,
     calendarScheduleStatus: task.calendarScheduleStatus,
+    recurringSeriesId: null,
   };
 }

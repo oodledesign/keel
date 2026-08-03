@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { streamProposalHtml } from '~/lib/ai/proposal-generate';
+import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 export const dynamic = 'force-dynamic';
 
@@ -87,6 +88,12 @@ export async function POST(request: NextRequest) {
   try {
     await assertInvoicesEditPermission(parsed.data.accountId, user.id);
 
+    const voicePromptBlock = await loadVoicePromptBlock(client, {
+      userId: user.id,
+      accountId: parsed.data.accountId,
+      purpose: 'proposal',
+    });
+
     const stream = await streamProposalHtml({
       recipientName: parsed.data.recipientName.trim(),
       recipientCompany: parsed.data.recipientCompany?.trim() || null,
@@ -103,6 +110,7 @@ export async function POST(request: NextRequest) {
       })),
       referenceProposalHtml: parsed.data.referenceProposalHtml?.trim() || null,
       dealValue: parsed.data.dealValue ?? null,
+      voicePromptBlock,
     });
 
     return new Response(stream, {

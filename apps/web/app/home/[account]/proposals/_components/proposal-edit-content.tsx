@@ -24,6 +24,7 @@ import {
 
 import { getErrorMessage } from '../_lib/error-message';
 import { updateProposal } from '../_lib/server/server-actions';
+import { ProposalEditAiAssist } from './proposal-edit-ai-assist';
 import { ProposalRowMenu } from './proposal-row-menu';
 import { ProposalSendPanel } from './proposal-send-panel';
 
@@ -104,20 +105,33 @@ function poundsInputToPence(value: string): number | null {
   return Math.round(v * 100);
 }
 
+type DealOption = {
+  id: string;
+  contactName: string;
+  companyName: string;
+  value: number;
+};
+
 export function ProposalEditContent({
   accountSlug,
   accountId,
+  accountName,
+  senderName,
   proposal: initialProposal,
   brandLogoUrl,
   canEditProposals,
   canManageProposalStatus,
+  deals,
 }: {
   accountSlug: string;
   accountId: string;
+  accountName: string;
+  senderName: string;
   proposal: Record<string, unknown>;
   brandLogoUrl?: string | null;
   canEditProposals: boolean;
   canManageProposalStatus: boolean;
+  deals: DealOption[];
 }) {
   const router = useRouter();
   const proposal = initialProposal as unknown as ProposalData;
@@ -292,6 +306,33 @@ export function ProposalEditContent({
 
             {canEditProposals ? (
               <>
+                {canModify ? (
+                  <ProposalEditAiAssist
+                    accountSlug={accountSlug}
+                    accountId={accountId}
+                    accountName={accountName}
+                    senderName={senderName}
+                    recipientName={recipientName}
+                    recipientCompany={
+                      proposal.client?.company_name ??
+                      proposal.deal?.company_name ??
+                      null
+                    }
+                    clientId={proposal.client_id}
+                    dealId={proposal.deal_id}
+                    dealValue={
+                      proposal.deal?.value ??
+                      (proposal.total_pence != null
+                        ? proposal.total_pence / 100
+                        : null)
+                    }
+                    contentHtml={contentHtml}
+                    deals={deals}
+                    disabled={saving}
+                    onContentApplied={setContentHtml}
+                  />
+                ) : null}
+
                 <Button
                   size="sm"
                   onClick={() => void handleSave()}

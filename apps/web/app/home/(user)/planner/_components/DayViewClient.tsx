@@ -480,6 +480,7 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
         title,
         priority: 'medium',
         dueDate: dateYmd,
+        accountId: workspaceAccountId,
       });
 
       if (!result.success || !result.id) {
@@ -493,8 +494,14 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           id: result.id as string,
           title,
           project: 'No project',
-          workspace: 'Personal',
-          workspaceSlug: null,
+          workspace:
+            initialData.scope.kind === 'workspace'
+              ? initialData.scope.accountName
+              : 'Personal',
+          workspaceSlug:
+            initialData.scope.kind === 'workspace'
+              ? initialData.scope.accountSlug
+              : null,
           priority: 'medium',
           status: 'pending',
           estimated_duration_minutes: null,
@@ -502,18 +509,21 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           dueDateLabel: isViewingToday ? 'Today' : dateYmd,
           notes: null,
           overdue: false,
-          context: 'life',
+          context: workspaceAccountId ? 'work' : 'life',
           clientId: null,
           projectId: null,
           areaId: null,
           parentTaskId: null,
           calendarScheduleStatus: null,
           clientName: null,
+          clientPictureUrl: null,
           accentColor: null,
           workspaceColor: null,
         },
       ]);
       setNewTaskTitle('');
+      toast.success('Task added');
+      router.refresh();
     } finally {
       setIsAddingTask(false);
     }
@@ -689,81 +699,51 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
           ) : null}
         </section>
 
-        <section className="min-w-0 space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
-              {isViewingToday ? 'Due today' : 'Due this day'}
-            </h2>
-            <span className="text-xs text-[var(--workspace-shell-text)]/40">
-              {openTasks.length} open
-              {doneTasks.length > 0 ? ` · ${doneTasks.length} done` : ''}
-            </span>
-          </div>
-
-          <form onSubmit={addTask} className="flex items-center gap-2">
-            <input
-              value={newTaskTitle}
-              onChange={(event) => setNewTaskTitle(event.target.value)}
-              placeholder={
-                isViewingToday
-                  ? 'Add a task for today…'
-                  : 'Add a task for this day…'
-              }
-              className="h-9 min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30 focus:border-[var(--ozer-accent)]/60 focus:outline-none"
-            />
-            <Button
-              type="submit"
-              size="sm"
-              disabled={!newTaskTitle.trim() || isAddingTask}
-              className="h-9 shrink-0 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
-            >
-              <Plus className="h-4 w-4" />
-              Add
-            </Button>
-          </form>
-
-          {tasks.length === 0 ? (
-            <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-center text-sm text-[var(--workspace-shell-text)]/45">
-              {isViewingToday ? 'Nothing due today.' : 'Nothing due this day.'}
-            </p>
-          ) : (
-            <ul className="min-w-0 space-y-2">
-              {[...openTasks, ...doneTasks].map((task) => (
-                <TaskRow
-                  key={task.id}
-                  task={task}
-                  onToggle={toggleTask}
-                  workspaceAccountId={workspaceAccountId}
-                  onTaskUpdated={() => router.refresh()}
-                />
-              ))}
-            </ul>
-          )}
-        </section>
-
-        {hasPlan ? (
+        <div className="min-w-0 space-y-6">
           <section className="min-w-0 space-y-3">
             <div className="flex items-center justify-between gap-3">
               <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
-                {isViewingToday ? "On today's plan" : 'On this day’s plan'}
+                {isViewingToday ? 'Due today' : 'Due this day'}
               </h2>
               <span className="text-xs text-[var(--workspace-shell-text)]/40">
-                {plannedTasksToShow.length} open
+                {openTasks.length} open
+                {doneTasks.length > 0 ? ` · ${doneTasks.length} done` : ''}
               </span>
             </div>
-            {plannedTasksToShow.length === 0 ? (
-              <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/60 px-4 py-5 text-center text-sm text-[var(--workspace-shell-text)]/45">
-                {tasks.length > 0
-                  ? 'All planned tasks are already listed above, or nothing left open.'
-                  : 'No matching open tasks from the plan.'}
+
+            <form onSubmit={addTask} className="flex items-center gap-2">
+              <input
+                value={newTaskTitle}
+                onChange={(event) => setNewTaskTitle(event.target.value)}
+                placeholder={
+                  isViewingToday
+                    ? 'Add a task for today…'
+                    : 'Add a task for this day…'
+                }
+                className="h-9 min-w-0 flex-1 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text)]/30 focus:border-[var(--ozer-accent)]/60 focus:outline-none"
+              />
+              <Button
+                type="submit"
+                size="sm"
+                disabled={!newTaskTitle.trim() || isAddingTask}
+                className="h-9 shrink-0 bg-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-hover)]"
+              >
+                <Plus className="h-4 w-4" />
+                Add
+              </Button>
+            </form>
+
+            {tasks.length === 0 ? (
+              <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-center text-sm text-[var(--workspace-shell-text)]/45">
+                {isViewingToday ? 'Nothing due today.' : 'Nothing due this day.'}
               </p>
             ) : (
               <ul className="min-w-0 space-y-2">
-                {plannedTasksToShow.map((task) => (
+                {[...openTasks, ...doneTasks].map((task) => (
                   <TaskRow
-                    key={`planned-${task.id}`}
+                    key={task.id}
                     task={task}
-                    onToggle={togglePlannedTask}
+                    onToggle={toggleTask}
                     workspaceAccountId={workspaceAccountId}
                     onTaskUpdated={() => router.refresh()}
                   />
@@ -771,7 +751,39 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
               </ul>
             )}
           </section>
-        ) : null}
+
+          {hasPlan ? (
+            <section className="min-w-0 space-y-3">
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]/80">
+                  {isViewingToday ? "On today's plan" : 'On this day’s plan'}
+                </h2>
+                <span className="text-xs text-[var(--workspace-shell-text)]/40">
+                  {plannedTasksToShow.length} open
+                </span>
+              </div>
+              {plannedTasksToShow.length === 0 ? (
+                <p className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/60 px-4 py-5 text-center text-sm text-[var(--workspace-shell-text)]/45">
+                  {tasks.length > 0
+                    ? 'All planned tasks are already listed above, or nothing left open.'
+                    : 'No matching open tasks from the plan.'}
+                </p>
+              ) : (
+                <ul className="min-w-0 space-y-2">
+                  {plannedTasksToShow.map((task) => (
+                    <TaskRow
+                      key={`planned-${task.id}`}
+                      task={task}
+                      onToggle={togglePlannedTask}
+                      workspaceAccountId={workspaceAccountId}
+                      onTaskUpdated={() => router.refresh()}
+                    />
+                  ))}
+                </ul>
+              )}
+            </section>
+          ) : null}
+        </div>
       </div>
 
       {initialData.pipeline ? (

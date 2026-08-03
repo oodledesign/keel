@@ -14,8 +14,8 @@ import { Switch } from '@kit/ui/switch';
 
 import pathsConfig from '~/config/paths.config';
 import {
-  ENQUIRY_SOURCE_LABELS,
   ENQUIRY_SOURCES,
+  ENQUIRY_SOURCE_LABELS,
   type EnquirySource,
   type EnquiryStatus,
 } from '~/lib/commercial/commercial-constants';

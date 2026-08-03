@@ -538,7 +538,7 @@ export function NoteEditor({
         placeholder="Untitled"
         rows={1}
         aria-label="Note title"
-        className="font-heading w-full touch-pan-y resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pt-4 pb-2 text-[1.75rem] leading-tight font-bold tracking-tight text-[var(--workspace-shell-text)] shadow-none focus-visible:ring-0 sm:px-6 lg:px-10 lg:text-3xl xl:px-14"
+        className="font-heading w-full touch-pan-y resize-none overflow-hidden rounded-none border-0 bg-transparent px-4 pt-4 pb-2 text-[2.25rem] leading-tight font-bold tracking-tight text-[var(--workspace-shell-text)] shadow-none outline-none focus-visible:border-0 focus-visible:border-transparent focus-visible:ring-0 focus-visible:outline-none sm:px-6 lg:px-10 lg:text-4xl xl:px-14"
         spellCheck
       />
 

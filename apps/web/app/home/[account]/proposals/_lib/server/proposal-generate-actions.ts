@@ -3,13 +3,15 @@
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
-import { createTeamAccountsApi } from '@kit/team-accounts/api';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import {
-  generateProposalHtml,
   type ProposalTranscript,
+  editProposalHtml,
+  generateProposalHtml,
 } from '~/lib/ai/proposal-generate';
+import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 const transcriptSchema = z.object({
   title: z.string().min(1).max(500),
@@ -80,6 +82,13 @@ export const generateProposalHtmlAction = enhanceAction(
       content: t.content.trim(),
     }));
 
+    const client = getSupabaseServerClient();
+    const voicePromptBlock = await loadVoicePromptBlock(client, {
+      userId: user.id,
+      accountId: input.accountId,
+      purpose: 'proposal',
+    });
+
     const contentHtml = await generateProposalHtml({
       recipientName: input.recipientName.trim(),
       recipientCompany: input.recipientCompany?.trim() || null,
@@ -93,9 +102,44 @@ export const generateProposalHtmlAction = enhanceAction(
       })),
       referenceProposalHtml: input.referenceProposalHtml?.trim() || null,
       dealValue: input.dealValue ?? null,
+      voicePromptBlock,
     });
 
     return { contentHtml };
   },
   { schema: generateProposalSchema },
+);
+
+const editProposalSchema = z.object({
+  accountId: z.string().uuid(),
+  contentHtml: z.string().min(1).max(200_000),
+  instruction: z.string().min(1).max(4000),
+  recipientName: z.string().max(500).nullable().optional(),
+  accountName: z.string().max(500).nullable().optional(),
+  senderName: z.string().max(500).nullable().optional(),
+});
+
+export const editProposalHtmlAction = enhanceAction(
+  async (input, user) => {
+    await assertInvoicesEditPermission(input.accountId, user.id);
+
+    const client = getSupabaseServerClient();
+    const voicePromptBlock = await loadVoicePromptBlock(client, {
+      userId: user.id,
+      accountId: input.accountId,
+      purpose: 'proposal',
+    });
+
+    const contentHtml = await editProposalHtml({
+      contentHtml: input.contentHtml,
+      instruction: input.instruction.trim(),
+      recipientName: input.recipientName?.trim() || null,
+      accountName: input.accountName?.trim() || null,
+      senderName: input.senderName?.trim() || null,
+      voicePromptBlock,
+    });
+
+    return { contentHtml };
+  },
+  { schema: editProposalSchema },
 );

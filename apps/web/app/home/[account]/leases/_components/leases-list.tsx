@@ -407,11 +407,7 @@ export function LeasesList({
                 disabled={isPending}
                 className={workspaceBtnPrimaryMd}
               >
-                {isPending
-                  ? 'Saving…'
-                  : editing
-                    ? 'Save changes'
-                    : 'Add lease'}
+                {isPending ? 'Saving…' : editing ? 'Save changes' : 'Add lease'}
               </Button>
             </DialogFooter>
           </form>

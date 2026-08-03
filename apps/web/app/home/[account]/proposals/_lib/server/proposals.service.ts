@@ -10,6 +10,7 @@ import {
   queueBrainIndexSource,
 } from '~/lib/brain/sync';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
+import { resolveDefaultTemplate } from '~/lib/content-templates/resolve-template';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { normalizeWorkspaceCurrency } from '~/lib/currency/workspace-currency';
 import { Database } from '~/lib/database.types';
@@ -233,6 +234,17 @@ class ProposalsService {
       ? normalizeWorkspaceCurrency(input.currency)
       : await getWorkspaceCurrencyWithClient(this.db, input.accountId);
 
+    const [htmlDefault, emailDefault] = await Promise.all([
+      resolveDefaultTemplate(this.db, {
+        kind: 'proposal_html',
+        accountId: input.accountId,
+      }),
+      resolveDefaultTemplate(this.db, {
+        kind: 'proposal_email',
+        accountId: input.accountId,
+      }),
+    ]);
+
     const { data: proposal, error } = await this.db
       .from('proposals')
       .insert({
@@ -240,7 +252,8 @@ class ProposalsService {
         client_id: input.client_id ?? null,
         deal_id: input.deal_id ?? null,
         title: input.title ?? 'Proposal',
-        content_html: input.content_html ?? '',
+        content_html:
+          input.content_html ?? htmlDefault?.bodyHtml ?? '',
         status: 'draft',
         recipient_name: input.recipient_name ?? null,
         recipient_email: input.recipient_email ?? null,
@@ -249,9 +262,11 @@ class ProposalsService {
         expires_at: input.expires_at ?? null,
         private_note: input.private_note ?? null,
         context_refs: input.context_refs ?? [],
-        email_subject: DEFAULT_PROPOSAL_EMAIL_SUBJECT,
-        email_body: DEFAULT_PROPOSAL_EMAIL_BODY,
-        email_signature: DEFAULT_PROPOSAL_EMAIL_SIGNATURE,
+        email_subject:
+          emailDefault?.subject ?? DEFAULT_PROPOSAL_EMAIL_SUBJECT,
+        email_body: emailDefault?.bodyText ?? DEFAULT_PROPOSAL_EMAIL_BODY,
+        email_signature:
+          emailDefault?.signature ?? DEFAULT_PROPOSAL_EMAIL_SIGNATURE,
         created_by: user.id,
       })
       .select()

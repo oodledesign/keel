@@ -57,9 +57,7 @@ async function AcceptProjectGuestPage(props: PageProps) {
 
   // Refresh after auto-link may have flipped pending → accepted.
   const latest =
-    guest.status === 'pending'
-      ? await getProjectGuestByToken(token)
-      : guest;
+    guest.status === 'pending' ? await getProjectGuestByToken(token) : guest;
   const current = latest ?? guest;
 
   const projectLabel = current.projectName ?? 'a project';

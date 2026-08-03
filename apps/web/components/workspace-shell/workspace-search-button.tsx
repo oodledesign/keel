@@ -1,14 +1,51 @@
 'use client';
 
-import { Sparkles } from 'lucide-react';
+import { Search } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
 import { useQuickAction } from '~/components/quick-action/quick-action-provider';
 
-export function WorkspaceSearchButton(props: { className?: string }) {
+export function WorkspaceSearchButton(props: {
+  className?: string;
+  /** Icon-only control for the dense top bar. */
+  iconOnly?: boolean;
+}) {
   const { setOpen } = useQuickAction();
+  const isMac =
+    typeof navigator !== 'undefined' &&
+    /Mac|iPhone|iPad|iPod/i.test(navigator.platform);
+  const shortcutLabel = isMac ? '⌘K' : 'Ctrl+K';
+
+  if (props.iconOnly) {
+    return (
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            aria-label={`Search (${shortcutLabel})`}
+            className={cn(
+              'h-8 w-8 rounded-md text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+              props.className,
+            )}
+            onClick={() => setOpen(true)}
+          >
+            <Search className="h-4 w-4" />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent side="bottom">
+          Search
+          <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]">
+            {shortcutLabel}
+          </span>
+        </TooltipContent>
+      </Tooltip>
+    );
+  }
 
   return (
     <Button
@@ -20,10 +57,10 @@ export function WorkspaceSearchButton(props: { className?: string }) {
       )}
       onClick={() => setOpen(true)}
     >
-      <Sparkles className="h-3.5 w-3.5 text-[var(--ozer-accent)]" />
-      <span>Quick action</span>
+      <Search className="h-3.5 w-3.5 text-[var(--ozer-accent)]" />
+      <span>Search</span>
       <kbd className="pointer-events-none hidden rounded border border-[color:var(--ozer-accent)]/20 bg-[var(--workspace-shell-panel)] px-1 py-0.5 text-[9px] font-medium text-[var(--workspace-shell-text)]/55 lg:inline">
-        ⌘K
+        {shortcutLabel}
       </kbd>
     </Button>
   );

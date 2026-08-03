@@ -22,6 +22,7 @@ import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 
 import { WorkspaceNewMenu } from './workspace-new-menu';
+import { WorkspaceSearchButton } from './workspace-search-button';
 
 type WorkspaceTopBarBaseProps = {
   userId: string;
@@ -83,14 +84,17 @@ export function WorkspaceMobileTopActions(
   );
 
   return (
-    <div className="flex shrink-0 items-center gap-1">
-      {featureFlagsConfig.enableNotifications ? (
-        <NotificationsPopover
-          accountIds={notificationAccountIds}
-          realtime={featureFlagsConfig.realtimeNotifications}
-        />
-      ) : null}
-    </div>
+    <TooltipProvider delayDuration={200}>
+      <div className="flex shrink-0 items-center gap-1">
+        <WorkspaceSearchButton iconOnly />
+        {featureFlagsConfig.enableNotifications ? (
+          <NotificationsPopover
+            accountIds={notificationAccountIds}
+            realtime={featureFlagsConfig.realtimeNotifications}
+          />
+        ) : null}
+      </div>
+    </TooltipProvider>
   );
 }
 
@@ -134,6 +138,8 @@ export function WorkspaceDesktopTopBar(
     <header className="sticky top-0 z-30 hidden h-14 shrink-0 items-center justify-end gap-2 border-0 bg-transparent px-4 lg:flex lg:px-6">
       <TooltipProvider delayDuration={200}>
         <div className="flex items-center gap-1.5">
+          <WorkspaceSearchButton iconOnly />
+
           {featureFlagsConfig.enableNotifications ? (
             <NotificationsPopover
               accountIds={notificationAccountIds}

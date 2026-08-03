@@ -3,6 +3,8 @@ import 'server-only';
 import { DEFAULT_ANTHROPIC_MODEL, draft } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
+
 import { resolveDraftOwnerContext } from './draft-owner';
 import { resolveEmailAssistantSignature } from './resolve-signature';
 import { saveDraftToGmail } from './save-draft-to-gmail';
@@ -130,12 +132,14 @@ export async function createThreadDraft(input: {
     ),
   );
 
-  const bodyText = await draft(
-    threadText,
-    owner,
-    (settings as { style_notes?: string | null } | null)?.style_notes ?? null,
-    signature.plain,
-  );
+  const voiceBlock = await loadVoicePromptBlock(admin, {
+    userId: input.userId,
+    purpose: 'email',
+    fallbackStyleNotes:
+      (settings as { style_notes?: string | null } | null)?.style_notes ?? null,
+  });
+
+  const bodyText = await draft(threadText, owner, voiceBlock, signature.plain);
 
   const model = process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
 

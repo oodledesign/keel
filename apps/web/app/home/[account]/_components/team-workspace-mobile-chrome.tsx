@@ -24,6 +24,7 @@ import {
 import { WorkspaceMobileNewMenu } from '~/components/workspace-shell/workspace-new-menu';
 import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspace-top-bar-actions';
 import pathsConfig from '~/config/paths.config';
+import type { CreateTaskWorkspaceChoice } from '~/home/(user)/_components/dashboard/add-task-dialog';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
@@ -68,6 +69,13 @@ export function TeamWorkspaceMobileChrome({
   const settingsHref = pathsConfig.app.accountSettings.replace(
     '[account]',
     account,
+  );
+  const workspaceChoices: CreateTaskWorkspaceChoice[] = rawAccounts.map(
+    (row) => ({
+      id: row.id,
+      name: row.label,
+      slug: row.slug,
+    }),
   );
 
   return (
@@ -141,7 +149,11 @@ export function TeamWorkspaceMobileChrome({
         }
       />
 
-      <WorkspaceCreateTaskHost accountId={accountId} accountSlug={account} />
+      <WorkspaceCreateTaskHost
+        accountId={accountId}
+        accountSlug={account}
+        workspaceChoices={workspaceChoices}
+      />
       {/* Desktop-only floating help; mobile support lives in the hamburger menu. */}
       <WorkspaceHelpButton defaultAccountId={accountId} />
     </>

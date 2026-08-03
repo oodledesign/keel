@@ -201,7 +201,7 @@ export function EmailInboxList({
                         >
                           {participantLabel(thread)}
                         </span>
-                        <span className="shrink-0 text-xs tabular-nums text-[var(--workspace-shell-text-muted)]">
+                        <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
                           {formatEmailDateTime(thread.last_message_at)}
                         </span>
                       </span>
