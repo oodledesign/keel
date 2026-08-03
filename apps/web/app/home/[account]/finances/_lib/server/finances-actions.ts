@@ -477,7 +477,7 @@ export const setFinanceTransactionLinksAction = enhanceAction(
 
     if (error) throw error;
 
-    revalidateFinances(input.accountSlug, links.project_id);
+    // Skip revalidatePath — finances UI patches locally so pagination/edit state stays put.
     return { ok: true, ...links };
   },
   {
@@ -519,7 +519,7 @@ export const setFinanceTransactionPropertyAction = enhanceAction(
 
     if (error) throw error;
 
-    revalidateFinances(input.accountSlug);
+    // Skip revalidatePath — finances UI patches locally so pagination/edit state stays put.
     return { ok: true };
   },
   {
@@ -544,7 +544,7 @@ export const setFinanceTransactionNotesAction = enhanceAction(
 
     if (error) throw error;
 
-    revalidateFinances(input.accountSlug);
+    // Skip revalidatePath — finances UI patches locally so pagination/edit state stays put.
     return { ok: true };
   },
   {
@@ -577,7 +577,7 @@ export const setFinanceTransferAction = enhanceAction(
 
     if (error) throw error;
 
-    revalidateFinances(input.accountSlug);
+    // Skip revalidatePath — finances UI patches locally so pagination/edit state stays put.
     return { ok: true };
   },
   {
@@ -613,7 +613,7 @@ export const categorizeFinanceTransactionAction = enhanceAction(
       );
     }
 
-    revalidateFinances(input.accountSlug);
+    // Skip revalidatePath — finances UI patches locally so pagination/edit state stays put.
     return { ok: true };
   },
   {

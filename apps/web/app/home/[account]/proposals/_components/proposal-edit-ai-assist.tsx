@@ -33,7 +33,7 @@ import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_li
 
 import { getErrorMessage } from '../_lib/error-message';
 import { getProposal, listProposals } from '../_lib/server/server-actions';
-import { ContentTemplatePickerDialog } from './content-template-picker-dialog';
+import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
 
 type DealOption = {
   id: string;

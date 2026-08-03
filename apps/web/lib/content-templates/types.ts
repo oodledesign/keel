@@ -2,6 +2,7 @@ export const CONTENT_TEMPLATE_KINDS = [
   'proposal_html',
   'proposal_email',
   'contract_email',
+  'invoice_email',
   'email_reply',
 ] as const;
 
@@ -11,6 +12,7 @@ export const ACCOUNT_TEMPLATE_KINDS = [
   'proposal_html',
   'proposal_email',
   'contract_email',
+  'invoice_email',
 ] as const;
 
 export type AccountTemplateKind = (typeof ACCOUNT_TEMPLATE_KINDS)[number];

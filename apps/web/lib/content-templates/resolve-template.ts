@@ -3,6 +3,11 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
+  DEFAULT_INVOICE_EMAIL_BODY,
+  DEFAULT_INVOICE_EMAIL_SIGNATURE,
+  DEFAULT_INVOICE_EMAIL_SUBJECT,
+} from '~/home/[account]/invoices/_lib/invoice-smart-fields';
+import {
   DEFAULT_CONTRACT_EMAIL_BODY,
   DEFAULT_CONTRACT_EMAIL_SIGNATURE,
   DEFAULT_CONTRACT_EMAIL_SUBJECT,
@@ -46,6 +51,17 @@ function codeFallback(kind: ContentTemplateKind): ResolvedTemplate | null {
       signature: DEFAULT_CONTRACT_EMAIL_SIGNATURE,
     };
   }
+  if (kind === 'invoice_email') {
+    return {
+      source: 'code',
+      id: null,
+      name: 'Default invoice email',
+      subject: DEFAULT_INVOICE_EMAIL_SUBJECT,
+      bodyHtml: '',
+      bodyText: DEFAULT_INVOICE_EMAIL_BODY,
+      signature: DEFAULT_INVOICE_EMAIL_SIGNATURE,
+    };
+  }
   if (kind === 'proposal_html') {
     return {
       source: 'code',
@@ -76,7 +92,8 @@ export async function resolveDefaultTemplate(
     input.accountId &&
     (input.kind === 'proposal_html' ||
       input.kind === 'proposal_email' ||
-      input.kind === 'contract_email')
+      input.kind === 'contract_email' ||
+      input.kind === 'invoice_email')
   ) {
     const { data } = await client
       .from('account_content_templates')
@@ -248,7 +265,8 @@ export async function listTemplatesForPicker(
     input.accountId &&
     (input.kind === 'proposal_html' ||
       input.kind === 'proposal_email' ||
-      input.kind === 'contract_email')
+      input.kind === 'contract_email' ||
+      input.kind === 'invoice_email')
   ) {
     const { data: accountRows } = await client
       .from('account_content_templates')

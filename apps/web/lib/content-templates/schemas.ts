@@ -28,7 +28,12 @@ export const UpsertAccountTemplateSchema = z.object({
   id: z.string().uuid().optional(),
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1).optional(),
-  kind: z.enum(['proposal_html', 'proposal_email', 'contract_email']),
+  kind: z.enum([
+    'proposal_html',
+    'proposal_email',
+    'contract_email',
+    'invoice_email',
+  ]),
   name: z.string().min(1).max(120),
   description: z.string().max(500).optional().nullable(),
   subject: z.string().max(500).optional().nullable(),

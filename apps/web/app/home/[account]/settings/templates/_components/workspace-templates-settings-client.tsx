@@ -29,6 +29,7 @@ const KIND_LABELS: Record<AccountTemplateKind, string> = {
   proposal_html: 'Proposal content',
   proposal_email: 'Proposal email',
   contract_email: 'Contract email',
+  invoice_email: 'Invoice email',
 };
 
 type Props = {
@@ -68,7 +69,10 @@ export function WorkspaceTemplatesSettingsClient({
   );
 
   const isHtml = kind === 'proposal_html';
-  const isEmail = kind === 'proposal_email' || kind === 'contract_email';
+  const isEmail =
+    kind === 'proposal_email' ||
+    kind === 'contract_email' ||
+    kind === 'invoice_email';
 
   function resetForm() {
     setEditingId(null);

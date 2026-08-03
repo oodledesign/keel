@@ -19,8 +19,6 @@ import type {
   PickerTemplate,
 } from '~/lib/content-templates/types';
 
-import { getErrorMessage } from '../_lib/error-message';
-
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -51,7 +49,9 @@ export function ContentTemplatePickerDialog({
         });
         setItems(rows);
       } catch (error) {
-        toast.error(getErrorMessage(error));
+        toast.error(
+          error instanceof Error ? error.message : 'Could not load templates',
+        );
         setItems([]);
       }
     });

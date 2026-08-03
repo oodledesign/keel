@@ -59,7 +59,12 @@ export default async function WorkspaceTemplatesSettingsPage(props: PageProps) {
     client
       .from('content_templates')
       .select('*')
-      .in('kind', ['proposal_html', 'proposal_email', 'contract_email'])
+      .in('kind', [
+        'proposal_html',
+        'proposal_email',
+        'contract_email',
+        'invoice_email',
+      ])
       .eq('is_active', true)
       .order('sort_order', { ascending: true }),
     client

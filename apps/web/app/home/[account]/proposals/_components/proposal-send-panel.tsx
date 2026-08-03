@@ -23,7 +23,7 @@ import {
   getProposalPortalLink,
   sendProposal,
 } from '../_lib/server/server-actions';
-import { ContentTemplatePickerDialog } from './content-template-picker-dialog';
+import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
 
 const SMART_FIELDS = [
   '{{client.firstName}}',

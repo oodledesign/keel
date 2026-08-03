@@ -58,7 +58,12 @@ export const listAccountTemplatesAction = enhanceAction(
     auth: true,
     schema: z.object({
       accountId: z.string().uuid(),
-      kind: z.enum(['proposal_html', 'proposal_email', 'contract_email']),
+      kind: z.enum([
+        'proposal_html',
+        'proposal_email',
+        'contract_email',
+        'invoice_email',
+      ]),
     }),
   },
 );
@@ -85,6 +90,7 @@ export const listSystemTemplatesForKindAction = enhanceAction(
         'proposal_html',
         'proposal_email',
         'contract_email',
+        'invoice_email',
         'email_reply',
       ]),
     }),
@@ -127,6 +133,7 @@ export const resolveDefaultTemplateAction = enhanceAction(
         'proposal_html',
         'proposal_email',
         'contract_email',
+        'invoice_email',
         'email_reply',
       ]),
       accountId: z.string().uuid().optional().nullable(),
@@ -261,7 +268,8 @@ export const duplicateSystemToAccountAction = enhanceAction(
     if (
       mapped.kind !== 'proposal_html' &&
       mapped.kind !== 'proposal_email' &&
-      mapped.kind !== 'contract_email'
+      mapped.kind !== 'contract_email' &&
+      mapped.kind !== 'invoice_email'
     ) {
       throw new Error('This template cannot be duplicated to a workspace');
     }

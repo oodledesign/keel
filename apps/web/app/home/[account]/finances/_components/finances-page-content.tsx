@@ -315,12 +315,50 @@ export function FinancesPageContent({
     return parts.length ? parts.join(', ') : 'No changes';
   };
 
+  const patchTransaction = useCallback(
+    (
+      transactionId: string,
+      patch: Record<string, unknown>,
+      options?: { adjustUncategorized?: boolean },
+    ) => {
+      setData((prev) => {
+        if (!prev) return prev;
+
+        const before = prev.transactions.find((tx) => tx.id === transactionId);
+        const transactions = prev.transactions.map((tx) =>
+          tx.id === transactionId ? { ...tx, ...patch } : tx,
+        );
+
+        let uncategorizedCount = prev.uncategorizedCount;
+        if (options?.adjustUncategorized && before) {
+          const after = { ...before, ...patch } as typeof before;
+          const wasUncat = !before.is_transfer && !before.category_id;
+          const isUncat = !after.is_transfer && !after.category_id;
+          if (wasUncat && !isUncat) {
+            uncategorizedCount = Math.max(0, uncategorizedCount - 1);
+          } else if (!wasUncat && isUncat) {
+            uncategorizedCount += 1;
+          }
+        }
+
+        return { ...prev, transactions, uncategorizedCount };
+      });
+    },
+    [],
+  );
+
   const onSetLinks = (
     transactionId: string,
     clientId: string | null,
     projectId: string | null,
   ) => {
-    startTransition(async () => {
+    const previous = data?.transactions.find((tx) => tx.id === transactionId);
+    patchTransaction(transactionId, {
+      client_id: clientId,
+      project_id: projectId,
+    });
+
+    void (async () => {
       try {
         await setFinanceTransactionLinksAction({
           accountId,
@@ -329,18 +367,26 @@ export function FinancesPageContent({
           clientId,
           projectId,
         });
-        await refresh({ background: true });
         toast.success('Client / project updated');
       } catch (err) {
+        if (previous) {
+          patchTransaction(transactionId, {
+            client_id: previous.client_id ?? null,
+            project_id: previous.project_id ?? null,
+          });
+        }
         toast.error(
           err instanceof Error ? err.message : 'Could not update links',
         );
       }
-    });
+    })();
   };
 
   const onSetProperty = (transactionId: string, propertyId: string | null) => {
-    startTransition(async () => {
+    const previous = data?.transactions.find((tx) => tx.id === transactionId);
+    patchTransaction(transactionId, { property_id: propertyId });
+
+    void (async () => {
       try {
         await setFinanceTransactionPropertyAction({
           accountId,
@@ -348,18 +394,25 @@ export function FinancesPageContent({
           transactionId,
           propertyId,
         });
-        await refresh({ background: true });
         toast.success('Property updated');
       } catch (err) {
+        if (previous) {
+          patchTransaction(transactionId, {
+            property_id: previous.property_id ?? null,
+          });
+        }
         toast.error(
           err instanceof Error ? err.message : 'Could not update property',
         );
       }
-    });
+    })();
   };
 
   const onSetNotes = (transactionId: string, notes: string | null) => {
-    startTransition(async () => {
+    const previous = data?.transactions.find((tx) => tx.id === transactionId);
+    patchTransaction(transactionId, { notes });
+
+    void (async () => {
       try {
         await setFinanceTransactionNotesAction({
           accountId,
@@ -367,15 +420,29 @@ export function FinancesPageContent({
           transactionId,
           notes,
         });
-        await refresh({ background: true });
       } catch {
+        if (previous) {
+          patchTransaction(transactionId, {
+            notes: (previous.notes as string | null) ?? null,
+          });
+        }
         toast.error('Could not save note');
       }
-    });
+    })();
   };
 
   const onSetTransfer = (transactionId: string, isTransfer: boolean) => {
-    startTransition(async () => {
+    const previous = data?.transactions.find((tx) => tx.id === transactionId);
+    patchTransaction(
+      transactionId,
+      {
+        is_transfer: isTransfer,
+        ...(isTransfer ? { category_id: null, sync_status: 'local' } : {}),
+      },
+      { adjustUncategorized: true },
+    );
+
+    void (async () => {
       try {
         await setFinanceTransferAction({
           accountId,
@@ -383,38 +450,68 @@ export function FinancesPageContent({
           transactionId,
           isTransfer,
         });
-        await refresh({ background: true });
         toast.success(
           isTransfer
             ? 'Marked as transfer — excluded from income and expenses'
             : 'Transfer removed — included in totals again',
         );
       } catch {
+        if (previous) {
+          patchTransaction(
+            transactionId,
+            {
+              is_transfer: previous.is_transfer,
+              category_id: previous.category_id,
+              sync_status: previous.sync_status,
+            },
+            { adjustUncategorized: true },
+          );
+        }
         toast.error('Could not update transaction');
       }
-    });
+    })();
   };
 
   const onCategorize = (transactionId: string, categoryId: string | null) => {
-    startTransition(async () => {
+    const previous = data?.transactions.find((tx) => tx.id === transactionId);
+    const pushToFreeAgent = Boolean(data?.connection);
+    patchTransaction(
+      transactionId,
+      {
+        category_id: categoryId,
+        sync_status: pushToFreeAgent ? 'pending_push' : 'local',
+      },
+      { adjustUncategorized: true },
+    );
+
+    void (async () => {
       try {
         await categorizeFinanceTransactionAction({
           accountId,
           accountSlug,
           transactionId,
           categoryId,
-          pushToFreeAgent: Boolean(data?.connection),
+          pushToFreeAgent,
         });
-        await refresh({ background: true });
         toast.success(
-          data?.connection
+          pushToFreeAgent
             ? 'Category updated and queued for FreeAgent sync'
             : 'Category updated',
         );
       } catch {
+        if (previous) {
+          patchTransaction(
+            transactionId,
+            {
+              category_id: previous.category_id,
+              sync_status: previous.sync_status,
+            },
+            { adjustUncategorized: true },
+          );
+        }
         toast.error('Could not update category');
       }
-    });
+    })();
   };
 
   const onSyncFreeAgent = (options?: { history?: boolean }) => {
@@ -1098,7 +1195,6 @@ function TransactionsPanel({
                         onValueChange={(v) =>
                           onSetTransfer(tx.id as string, v === 'transfer')
                         }
-                        disabled={pending}
                       >
                         <SelectTrigger className="mt-1 h-8 w-32 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                           <SelectValue />
@@ -1117,7 +1213,7 @@ function TransactionsPanel({
                         onValueChange={(v) =>
                           onCategorize(tx.id as string, v === 'none' ? null : v)
                         }
-                        disabled={pending || isTransfer}
+                        disabled={isTransfer}
                       >
                         <SelectTrigger className="h-8 w-44 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                           <SelectValue placeholder="Category" />
@@ -1148,7 +1244,6 @@ function TransactionsPanel({
                               v === 'none' ? null : v,
                             )
                           }
-                          disabled={pending}
                         >
                           <SelectTrigger className="h-8 w-40 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                             <SelectValue placeholder="Property" />
@@ -1186,7 +1281,6 @@ function TransactionsPanel({
                                 nextProjectId,
                               );
                             }}
-                            disabled={pending}
                           >
                             <SelectTrigger className="h-8 w-36 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                               <SelectValue placeholder="Client" />
@@ -1223,7 +1317,6 @@ function TransactionsPanel({
                                 v,
                               );
                             }}
-                            disabled={pending}
                           >
                             <SelectTrigger className="h-8 w-40 border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]">
                               <SelectValue placeholder="Project" />
@@ -1245,7 +1338,6 @@ function TransactionsPanel({
                         key={`${tx.id as string}:${txNotes}`}
                         defaultValue={txNotes}
                         placeholder="Add a note…"
-                        disabled={pending}
                         className="h-8 min-w-[160px] border-[color:var(--workspace-shell-border)] bg-transparent text-xs text-[var(--workspace-shell-text)]"
                         onBlur={(event) => {
                           const next = event.target.value.trim();
@@ -1299,7 +1391,7 @@ function TransactionsPanel({
               variant="outline"
               size="sm"
               className="border-[color:var(--workspace-shell-border)]"
-              disabled={pending || loading || page <= 1}
+              disabled={loading || page <= 1}
               onClick={() => onPageChange(page - 1)}
             >
               Previous
@@ -1312,7 +1404,7 @@ function TransactionsPanel({
               variant="outline"
               size="sm"
               className="border-[color:var(--workspace-shell-border)]"
-              disabled={pending || loading || page >= totalPages}
+              disabled={loading || page >= totalPages}
               onClick={() => onPageChange(page + 1)}
             >
               Next

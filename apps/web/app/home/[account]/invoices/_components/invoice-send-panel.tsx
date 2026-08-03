@@ -7,6 +7,7 @@ import {
   Copy,
   Download,
   Eye,
+  FileText,
   Link2,
   Loader2,
   Plus,
@@ -36,6 +37,7 @@ import {
 } from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
+import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
 import { listContacts } from '~/home/[account]/clients/_lib/server/server-actions';
 import { formatContactRoleLabel } from '~/lib/clients/contact-roles';
 
@@ -238,6 +240,7 @@ export function InvoiceSendPanel({
   const [contacts, setContacts] = useState<ClientContactOption[]>([]);
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [templateOpen, setTemplateOpen] = useState(false);
 
   const pdfHref = useMemo(() => {
     const base = `/api/invoices/pdf?invoiceId=${encodeURIComponent(invoiceId)}`;
@@ -483,6 +486,18 @@ export function InvoiceSendPanel({
         </TabsList>
 
         <TabsContent value="email" className="mt-4 space-y-4">
+          <div className="flex justify-end">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
+              onClick={() => setTemplateOpen(true)}
+            >
+              <FileText className="mr-2 h-4 w-4" />
+              Use email template
+            </Button>
+          </div>
           <div className="space-y-2">
             <Label>To</Label>
             <div className="flex min-h-10 flex-wrap items-center gap-2 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2 py-1.5">
@@ -833,6 +848,20 @@ export function InvoiceSendPanel({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ContentTemplatePickerDialog
+        open={templateOpen}
+        onOpenChange={setTemplateOpen}
+        kind="invoice_email"
+        accountId={accountId}
+        title="Use invoice email template"
+        onSelect={(template) => {
+          if (template.subject) setSubject(template.subject);
+          if (template.bodyText) setBody(template.bodyText);
+          if (template.signature) setSignature(template.signature);
+          toast.success('Email template applied');
+        }}
+      />
     </div>
   );
 }

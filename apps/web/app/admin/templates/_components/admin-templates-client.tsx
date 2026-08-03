@@ -27,6 +27,7 @@ const KIND_LABELS: Record<ContentTemplateKind, string> = {
   proposal_html: 'Proposal HTML',
   proposal_email: 'Proposal email',
   contract_email: 'Contract email',
+  invoice_email: 'Invoice email',
   email_reply: 'Email reply',
 };
 
@@ -66,9 +67,13 @@ export function AdminTemplatesClient({ initialTemplates }: Props) {
   const isEmailKind =
     kind === 'proposal_email' ||
     kind === 'contract_email' ||
+    kind === 'invoice_email' ||
     kind === 'email_reply';
   const isHtmlKind = kind === 'proposal_html';
-  const hasSignature = kind === 'proposal_email' || kind === 'contract_email';
+  const hasSignature =
+    kind === 'proposal_email' ||
+    kind === 'contract_email' ||
+    kind === 'invoice_email';
 
   function resetForm(nextKind = kind) {
     setEditingId(null);
