@@ -46,9 +46,14 @@ const config = {
   // Playwright is optional (Figma PNG capture). Keep it out of the webpack graph —
   // Vercel builds fail when webpack tries to resolve chromium-bidi / electron.
   serverExternalPackages: ['playwright', 'playwright-core'],
-  // needed for supporting dynamic imports for local content
+  // Source maps during prerender/collection are a large spike on 8 GB builders.
+  productionBrowserSourceMaps: false,
+  enablePrerenderSourceMaps: false,
+  // Scope content tracing to content routes only (avoid whole-app include).
   outputFileTracingIncludes: {
-    '/*': ['./content/**/*'],
+    '/(marketing)/**': ['./content/**/*'],
+    '/docs/**': ['./content/**/*'],
+    '/blog/**': ['./content/**/*'],
   },
   redirects: getRedirects,
   rewrites: getRewrites,
@@ -86,6 +91,12 @@ const config = {
     // Parent + worker nearly doubles peak RSS; disable on the standard 8 GB machine.
     webpackBuildWorker: false,
     cpus: 1,
+    serverSourceMaps: false,
+    parallelServerCompiles: false,
+    parallelServerBuildTraces: false,
+    // Page-data collection was OOM'ing after webpack; serialize prerender work.
+    staticGenerationMaxConcurrency: 1,
+    staticGenerationMinPagesPerWorker: 1,
     /** Signature staff photos are sent as compressed data URLs. */
     serverActions: {
       bodySizeLimit: '4mb',
