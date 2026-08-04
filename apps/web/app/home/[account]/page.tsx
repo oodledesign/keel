@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+
 import { redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -8,6 +10,7 @@ import { isBusinessLiteWorkspace } from '~/lib/billing/is-business-lite-workspac
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { BusinessDashboardSkeleton } from './_components/business-dashboard-skeleton';
 import { BusinessLiteDashboard } from './_components/business-lite-dashboard';
 import { CommercialAgencyDashboard } from './_components/commercial-agency-dashboard';
 import { DashboardPageContent } from './_components/dashboard-page-content';
@@ -41,6 +44,85 @@ export const generateMetadata = async () => {
   };
 };
 
+async function PropertyDashboardContent({
+  account,
+  moduleSettings,
+}: {
+  account: string;
+  moduleSettings: Parameters<typeof isPropertyNavModuleEnabled>[0];
+}) {
+  const propertyData = await loadPropertyDashboardData(account);
+  const financesEnabled = isPropertyNavModuleEnabled(
+    moduleSettings,
+    'finances',
+  );
+
+  return (
+    <PropertyBusinessDashboard
+      accountSlug={account}
+      propertyCounts={propertyData.propertyCounts}
+      openMaintenanceJobs={propertyData.openMaintenanceJobs}
+      openTasksCount={propertyData.openTasksCount}
+      members={propertyData.members}
+      recentTasks={propertyData.recentTasks}
+      financesEnabled={financesEnabled}
+      financeSummary={propertyData.financeSummary}
+    />
+  );
+}
+
+async function CommercialDashboardContent({ account }: { account: string }) {
+  const commercialData = await loadCommercialDashboardData(account);
+
+  return (
+    <CommercialAgencyDashboard
+      accountSlug={commercialData.accountSlug}
+      metrics={commercialData.metrics}
+      recentListings={commercialData.recentListings}
+    />
+  );
+}
+
+async function FamilyDashboardContent({ account }: { account: string }) {
+  const familyData = await loadFamilyDashboardData(account);
+
+  return (
+    <FamilyDashboard
+      accountSlug={familyData.accountSlug}
+      openTasksCount={familyData.openTasksCount}
+      upcomingPlansCount={familyData.upcomingPlansCount}
+      familyMembersCount={familyData.familyMembersCount}
+      overdueCount={familyData.overdueCount}
+      upcomingTasks={familyData.upcomingTasks}
+      weekMealPlan={familyData.weekMealPlan}
+      upcomingEvents={familyData.upcomingEvents}
+    />
+  );
+}
+
+async function CommunityDashboardContent({ account }: { account: string }) {
+  const communityData = await loadCommunityDashboardData(account);
+
+  return <HomegroupDashboard {...communityData} />;
+}
+
+async function WorkDashboardContent({ account }: { account: string }) {
+  const data = await loadDashboardPageData(account);
+
+  return (
+    <DashboardPageContent
+      accountSlug={data.accountSlug}
+      accountId={data.accountId}
+      metrics={data.metrics}
+      financeTrend={data.financeTrend}
+      upcomingTasks={data.upcomingTasks}
+      needsReply={data.needsReply}
+      suggestedEmailTasks={data.suggestedEmailTasks}
+      recentNotes={data.recentNotes}
+    />
+  );
+}
+
 async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   const { account } = await params;
   const workspace = await loadTeamWorkspace(account);
@@ -70,12 +152,15 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
       workspace.businessType,
     ));
 
+  const userRecord = workspace.user as {
+    user_metadata?: { first_name?: string };
+  };
+  const userFirstName =
+    typeof userRecord?.user_metadata?.first_name === 'string'
+      ? userRecord.user_metadata.first_name.trim()
+      : null;
+
   if (spaceType === 'property') {
-    const propertyData = await loadPropertyDashboardData(account);
-    const financesEnabled = isPropertyNavModuleEnabled(
-      workspace.moduleSettings,
-      'finances',
-    );
     return (
       <>
         <TeamAccountLayoutPageHeader
@@ -84,23 +169,18 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your property business."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <PropertyBusinessDashboard
-            accountSlug={account}
-            propertyCounts={propertyData.propertyCounts}
-            openMaintenanceJobs={propertyData.openMaintenanceJobs}
-            openTasksCount={propertyData.openTasksCount}
-            members={propertyData.members}
-            recentTasks={propertyData.recentTasks}
-            financesEnabled={financesEnabled}
-            financeSummary={propertyData.financeSummary}
-          />
+          <Suspense fallback={<BusinessDashboardSkeleton />}>
+            <PropertyDashboardContent
+              account={account}
+              moduleSettings={workspace.moduleSettings}
+            />
+          </Suspense>
         </PageBody>
       </>
     );
   }
 
   if (spaceType === 'commercial-property') {
-    const commercialData = await loadCommercialDashboardData(account);
     return (
       <>
         <TeamAccountLayoutPageHeader
@@ -109,18 +189,15 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Commercial agency overview."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <CommercialAgencyDashboard
-            accountSlug={commercialData.accountSlug}
-            metrics={commercialData.metrics}
-            recentListings={commercialData.recentListings}
-          />
+          <Suspense fallback={<BusinessDashboardSkeleton />}>
+            <CommercialDashboardContent account={account} />
+          </Suspense>
         </PageBody>
       </>
     );
   }
 
   if (spaceType === 'family') {
-    const familyData = await loadFamilyDashboardData(account);
     return (
       <>
         <TeamAccountLayoutPageHeader
@@ -129,23 +206,15 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your family workspace."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <FamilyDashboard
-            accountSlug={familyData.accountSlug}
-            openTasksCount={familyData.openTasksCount}
-            upcomingPlansCount={familyData.upcomingPlansCount}
-            familyMembersCount={familyData.familyMembersCount}
-            overdueCount={familyData.overdueCount}
-            upcomingTasks={familyData.upcomingTasks}
-            weekMealPlan={familyData.weekMealPlan}
-            upcomingEvents={familyData.upcomingEvents}
-          />
+          <Suspense fallback={<BusinessDashboardSkeleton />}>
+            <FamilyDashboardContent account={account} />
+          </Suspense>
         </PageBody>
       </>
     );
   }
 
   if (spaceType === 'community') {
-    const communityData = await loadCommunityDashboardData(account);
     return (
       <>
         <TeamAccountLayoutPageHeader
@@ -154,20 +223,15 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your group workspace."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <HomegroupDashboard {...communityData} />
+          <Suspense fallback={<BusinessDashboardSkeleton />}>
+            <CommunityDashboardContent account={account} />
+          </Suspense>
         </PageBody>
       </>
     );
   }
 
   if (isLiteWorkspace) {
-    const userRecord = workspace.user as {
-      user_metadata?: { first_name?: string };
-    };
-    const userFirstName =
-      typeof userRecord?.user_metadata?.first_name === 'string'
-        ? userRecord.user_metadata.first_name.trim()
-        : null;
     const installedApps = buildWorkAppLinks(account, workspace.moduleSettings);
 
     return (
@@ -192,31 +256,18 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
     );
   }
 
-  const data = await loadDashboardPageData(account);
-
   return (
     <>
       <TeamAccountLayoutPageHeader
-        account={data.accountSlug}
-        title={
-          data.userFirstName
-            ? `Welcome back, ${data.userFirstName}`
-            : data.accountSlug
-        }
+        account={account}
+        title={userFirstName ? `Welcome back, ${userFirstName}` : accountLabel}
         description="Your business overview for this month."
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
-        <DashboardPageContent
-          accountSlug={data.accountSlug}
-          accountId={data.accountId}
-          metrics={data.metrics}
-          financeTrend={data.financeTrend}
-          upcomingTasks={data.upcomingTasks}
-          needsReply={data.needsReply}
-          suggestedEmailTasks={data.suggestedEmailTasks}
-          recentNotes={data.recentNotes}
-        />
+        <Suspense fallback={<BusinessDashboardSkeleton />}>
+          <WorkDashboardContent account={account} />
+        </Suspense>
       </PageBody>
     </>
   );
