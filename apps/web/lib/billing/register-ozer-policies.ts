@@ -8,7 +8,7 @@ import { assertMemberInviteAllowed } from './entitlements';
 
 const seatLimitInvitationPolicy = definePolicy<FeaturePolicyInvitationContext>({
   id: 'ozer-seat-limit',
-  stages: ['submission'],
+  stages: ['preliminary', 'submission'],
   evaluate: async (context) => {
     const { getSupabaseServerClient } =
       await import('@kit/supabase/server-client');
@@ -17,7 +17,6 @@ const seatLimitInvitationPolicy = definePolicy<FeaturePolicyInvitationContext>({
     const result = await assertMemberInviteAllowed(
       client,
       context.accountId,
-      context.currentMemberCount,
       context.invitations.length,
     );
 

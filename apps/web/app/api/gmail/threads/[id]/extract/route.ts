@@ -9,6 +9,10 @@ import {
 } from '~/lib/email-assistant/account-members';
 import { linkFieldsFromThread } from '~/lib/email-assistant/action-item-links';
 import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
+import {
+  isSenderIgnored,
+  normalizeIgnoredSenders,
+} from '~/lib/email-assistant/ignored-senders';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
@@ -106,6 +110,29 @@ export async function POST(request: Request, context: RouteContext) {
 
   if (messagesError) {
     return jsonErr('LOAD_FAILED', messagesError.message, 500);
+  }
+
+  if (connectionId) {
+    const { data: settingsRow } = await auth.client
+      .from('email_assistant_settings')
+      .select('ignored_senders')
+      .eq('connection_id', connectionId)
+      .maybeSingle();
+
+    const ignoredSenders = normalizeIgnoredSenders(
+      ((settingsRow as { ignored_senders?: string[] | null } | null)
+        ?.ignored_senders ?? []) as string[],
+    );
+    const latestFrom = (messages?.at(-1) as { from_address?: string | null })
+      ?.from_address;
+
+    if (isSenderIgnored(latestFrom, ignoredSenders)) {
+      return jsonErr(
+        'SENDER_IGNORED',
+        'This sender is on your ignore list. Remove them in Email settings to extract tasks again.',
+        400,
+      );
+    }
   }
 
   const threadText = buildThreadText(messages ?? []);

@@ -122,6 +122,7 @@ export type DashboardSuggestedEmailTask = {
   suggestedDueDate: string | null;
   threadId: string;
   threadSubject: string;
+  emailSentAt: string | null;
 };
 
 export type DashboardSuggestedEmailTasksSummary = {
@@ -538,6 +539,7 @@ async function loadDashboardPageDataImpl(
       suggestedDueDate: item.suggestedDueDate,
       threadId: item.threadId,
       threadSubject: item.threadSubject,
+      emailSentAt: item.emailSentAt,
     })),
     totalCount: suggestedEmailLoaded.totalCount,
   };

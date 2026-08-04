@@ -9,12 +9,26 @@ import {
   createInvitationsPolicyEvaluator,
 } from '@kit/team-accounts/policies';
 
+import { getMemberSeatUsage } from '~/lib/billing/entitlements';
+
 export const GET = enhanceRouteHandler(
   async function ({ params, user }) {
     const client = getSupabaseServerClient();
     const { account } = z.object({ account: z.string() }).parse(params);
 
     try {
+      const contextBuilder = createInvitationContextBuilder(client);
+
+      const context = await contextBuilder.buildContext(
+        {
+          invitations: [],
+          accountSlug: account,
+        },
+        user,
+      );
+
+      const seatUsage = await getMemberSeatUsage(client, context.accountId);
+
       // Evaluate with standard evaluator
       const evaluator = createInvitationsPolicyEvaluator();
       const hasPolicies = await evaluator.hasPoliciesForStage('preliminary');
@@ -27,25 +41,21 @@ export const GET = enhanceRouteHandler(
             policiesEvaluated: 0,
             timestamp: new Date().toISOString(),
             noPoliciesConfigured: true,
+            seatUsage,
           },
         });
       }
 
-      // Build context for policy evaluation (empty invitations for testing)
-      const contextBuilder = createInvitationContextBuilder(client);
-
-      const context = await contextBuilder.buildContext(
-        {
-          invitations: [],
-          accountSlug: account,
-        },
-        user,
-      );
-
       // validate against policies
       const result = await evaluator.canInvite(context, 'preliminary');
 
-      return NextResponse.json(result);
+      return NextResponse.json({
+        ...result,
+        metadata: {
+          ...result.metadata,
+          seatUsage,
+        },
+      });
     } catch (error) {
       return NextResponse.json(
         {

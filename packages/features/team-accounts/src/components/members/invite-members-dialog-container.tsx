@@ -70,6 +70,13 @@ const MAX_INVITES = 5;
 
 const NO_PROJECT_VALUE = '__none__';
 
+type SeatUsage = {
+  used: number;
+  maxMembers: number | null;
+  remaining: number | null;
+  unlimited: boolean;
+};
+
 export function InviteMembersDialogContainer({
   accountSlug,
   userRoleHierarchy,
@@ -92,6 +99,10 @@ export function InviteMembersDialogContainer({
     isLoading: isLoadingPolicies,
     error: policiesError,
   } = useFetchInvitationsPolicies({ accountSlug, isOpen });
+
+  const seatUsage = policiesResult?.metadata?.seatUsage as
+    | SeatUsage
+    | undefined;
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen} modal>
@@ -129,7 +140,42 @@ export function InviteMembersDialogContainer({
           </Alert>
         </If>
 
-        <If condition={policiesResult && !policiesResult.allowed}>
+        <If
+          condition={
+            !isLoadingPolicies &&
+            seatUsage &&
+            !seatUsage.unlimited &&
+            seatUsage.maxMembers != null
+          }
+        >
+          <p
+            className="text-muted-foreground text-sm"
+            data-test="invite-seat-usage"
+          >
+            <Trans
+              i18nKey={
+                (seatUsage?.remaining ?? 0) > 0
+                  ? 'teams:seatUsageHint'
+                  : 'teams:seatUsageAtLimit'
+              }
+              values={{
+                used: seatUsage?.used,
+                max: seatUsage?.maxMembers,
+                remaining: seatUsage?.remaining,
+              }}
+            />
+          </p>
+        </If>
+
+        <If
+          condition={
+            policiesResult &&
+            !policiesResult.allowed &&
+            (seatUsage?.unlimited ||
+              seatUsage == null ||
+              (seatUsage.remaining ?? 1) > 0)
+          }
+        >
           <Alert variant="destructive">
             <AlertDescription>
               <Trans
@@ -150,6 +196,7 @@ export function InviteMembersDialogContainer({
                 pending={pending}
                 roles={roles}
                 projects={projects}
+                maxInvites={getMaxInvitesForForm(seatUsage)}
                 onSubmit={(data) => {
                   startTransition(async () => {
                     const toastId = toast.loading(t('invitingMembers'));
@@ -181,11 +228,20 @@ export function InviteMembersDialogContainer({
   );
 }
 
+function getMaxInvitesForForm(seatUsage: SeatUsage | undefined) {
+  if (!seatUsage || seatUsage.unlimited || seatUsage.remaining == null) {
+    return MAX_INVITES;
+  }
+
+  return Math.min(MAX_INVITES, Math.max(0, seatUsage.remaining));
+}
+
 function InviteMembersForm({
   onSubmit,
   roles,
   projects,
   pending,
+  maxInvites,
 }: {
   onSubmit: (data: {
     invitations: {
@@ -197,6 +253,7 @@ function InviteMembersForm({
   pending: boolean;
   roles: string[];
   projects: InviteProjectOption[];
+  maxInvites: number;
 }) {
   const { t } = useTranslation('teams');
   const defaultRole = roles.includes('staff')
@@ -364,7 +421,7 @@ function InviteMembersForm({
             );
           })}
 
-          <If condition={fieldArray.fields.length < MAX_INVITES}>
+          <If condition={fieldArray.fields.length < maxInvites}>
             <div>
               <Button
                 data-test={'add-new-invite-button'}
@@ -414,7 +471,7 @@ function useFetchInvitationsPolicies({
   return useQuery({
     queryKey: ['invitation-policies', accountSlug],
     queryFn: async () => {
-      const response = await fetch(`./members/policies`);
+      const response = await fetch(`/home/${accountSlug}/members/policies`);
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -423,7 +480,7 @@ function useFetchInvitationsPolicies({
       return response.json();
     },
     enabled: isOpen,
-    staleTime: 5 * 60 * 1000,
+    staleTime: 60 * 1000,
     refetchOnWindowFocus: false,
   });
 }

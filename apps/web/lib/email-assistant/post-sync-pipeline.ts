@@ -5,11 +5,15 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
-import { isFromOwner } from './address-utils';
+import { extractEmailAddress, isFromOwner } from './address-utils';
 import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
+import {
+  isSenderIgnored,
+  normalizeIgnoredSenders,
+} from './ignored-senders';
 import type { MailboxKind } from './mailbox-kind';
 import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
 import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
@@ -51,6 +55,7 @@ type AssistantSettings = {
   auto_triage_enabled: boolean;
   auto_draft_enabled: boolean;
   auto_save_gmail_drafts: boolean;
+  ignored_senders: string[];
 };
 
 export async function runEmailAssistantPipeline(
@@ -84,7 +89,9 @@ export async function runEmailAssistantPipeline(
 
   const { data: settingsRow, error: settingsError } = await admin
     .from('email_assistant_settings')
-    .select('auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts')
+    .select(
+      'auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders',
+    )
     .eq('connection_id', owner.connectionId)
     .maybeSingle();
 
@@ -93,10 +100,19 @@ export async function runEmailAssistantPipeline(
     return result;
   }
 
-  const settings = (settingsRow as AssistantSettings | null) ?? {
-    auto_triage_enabled: true,
-    auto_draft_enabled: true,
-    auto_save_gmail_drafts: false,
+  const settingsRowTyped = settingsRow as
+    | (Omit<AssistantSettings, 'ignored_senders'> & {
+        ignored_senders?: string[] | null;
+      })
+    | null;
+
+  const settings: AssistantSettings = {
+    auto_triage_enabled: settingsRowTyped?.auto_triage_enabled ?? true,
+    auto_draft_enabled: settingsRowTyped?.auto_draft_enabled ?? true,
+    auto_save_gmail_drafts: settingsRowTyped?.auto_save_gmail_drafts ?? false,
+    ignored_senders: normalizeIgnoredSenders(
+      settingsRowTyped?.ignored_senders ?? [],
+    ),
   };
 
   if (!settings.auto_triage_enabled && !settings.auto_draft_enabled) {
@@ -168,6 +184,28 @@ export async function runEmailAssistantPipeline(
     }
 
     const latest = latestMessage as MessageRow;
+
+    if (isSenderIgnored(latest.from_address, settings.ignored_senders)) {
+      const { error: ignoreUpdateError } = await admin
+        .from('email_threads')
+        .update({
+          assistant_category: 'no_reply',
+          assistant_category_reason: `Sender ignored (${extractEmailAddress(latest.from_address) ?? 'unknown'})`,
+          assistant_processed_message_id: latest.id,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', thread.id)
+        .eq('user_id', userId);
+
+      if (ignoreUpdateError) {
+        result.errors.push(ignoreUpdateError.message);
+      } else {
+        result.classified += 1;
+      }
+
+      result.skipped += 1;
+      continue;
+    }
 
     if (thread.assistant_processed_message_id === latest.id) {
       // Already handled this message tip — do not reclassify every sync.

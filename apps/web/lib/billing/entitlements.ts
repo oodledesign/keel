@@ -270,28 +270,89 @@ export async function canUseEmailAssistant(
   return entitled || Boolean(connection.data);
 }
 
+export type MemberSeatUsage = {
+  memberCount: number;
+  pendingInviteCount: number;
+  used: number;
+  maxMembers: number | null;
+  remaining: number | null;
+  unlimited: boolean;
+};
+
+/**
+ * Seat usage for workspace member limits.
+ * Pending invitations count toward used seats so leftover invites stay accurate.
+ */
+export async function getMemberSeatUsage(
+  client: SupabaseClient,
+  accountId: string,
+): Promise<MemberSeatUsage> {
+  const exempt = await isAccountBillingExempt(client, accountId);
+
+  const [membersResult, invitesResult, limits] = await Promise.all([
+    client
+      .from('accounts_memberships')
+      .select('*', { count: 'exact', head: true })
+      .eq('account_id', accountId),
+    client
+      .from('invitations')
+      .select('*', { count: 'exact', head: true })
+      .eq('account_id', accountId),
+    exempt ? Promise.resolve(null) : loadAccountPlanLimits(client, accountId),
+  ]);
+
+  if (membersResult.error) {
+    console.error(
+      '[billing] getMemberSeatUsage members:',
+      membersResult.error.message,
+    );
+  }
+
+  if (invitesResult.error) {
+    console.error(
+      '[billing] getMemberSeatUsage invites:',
+      invitesResult.error.message,
+    );
+  }
+
+  const memberCount = membersResult.count ?? 0;
+  const pendingInviteCount = invitesResult.count ?? 0;
+  const used = memberCount + pendingInviteCount;
+  const maxMembers = exempt ? null : (limits?.max_members ?? null);
+  const unlimited = maxMembers == null;
+
+  return {
+    memberCount,
+    pendingInviteCount,
+    used,
+    maxMembers,
+    remaining:
+      unlimited || maxMembers == null
+        ? null
+        : Math.max(0, maxMembers - used),
+    unlimited,
+  };
+}
+
 export async function assertMemberInviteAllowed(
   client: SupabaseClient,
   accountId: string,
-  currentMemberCount: number,
   invitationsToSend: number,
 ): Promise<{ allowed: boolean; reason?: string }> {
-  if (await isAccountBillingExempt(client, accountId)) {
+  const usage = await getMemberSeatUsage(client, accountId);
+
+  if (usage.unlimited || usage.maxMembers == null) {
     return { allowed: true };
   }
 
-  const limits = await loadAccountPlanLimits(client, accountId);
-  const maxMembers = limits?.max_members;
+  const remaining = Math.max(0, usage.maxMembers - usage.used);
+  const exceedsLimit =
+    invitationsToSend === 0 ? remaining === 0 : invitationsToSend > remaining;
 
-  if (maxMembers == null) {
-    return { allowed: true };
-  }
-
-  const projected = currentMemberCount + invitationsToSend;
-  if (projected > maxMembers) {
+  if (exceedsLimit) {
     return {
       allowed: false,
-      reason: `Your plan allows up to ${maxMembers} team members. Upgrade your plan to invite more people.`,
+      reason: `Your plan allows up to ${usage.maxMembers} team members. Upgrade your plan to invite more people.`,
     };
   }
 

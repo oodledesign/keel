@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Check, ListTodo, Mail, X } from 'lucide-react';
+import { Ban, Check, ListTodo, Mail, X } from 'lucide-react';
 
 import { toast } from '@kit/ui/sonner';
 
@@ -13,7 +13,9 @@ import pathsConfig from '~/config/paths.config';
 import {
   acceptSuggestedEmailTaskAction,
   dismissSuggestedEmailTaskAction,
+  ignoreSuggestedEmailSenderAction,
 } from '~/lib/email-assistant/email-assistant.actions';
+import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 import type { SuggestedEmailTaskItem } from '~/lib/email-assistant/suggested-email-tasks.loader';
 
 type Props = {
@@ -46,7 +48,10 @@ export function SuggestedEmailTasksClient({
     totalCount - Math.max(0, initialItems.length - items.length),
   );
 
-  function runAction(actionItemId: string, kind: 'accept' | 'dismiss') {
+  function runAction(
+    actionItemId: string,
+    kind: 'accept' | 'dismiss' | 'ignore-sender',
+  ) {
     setPendingIds((prev) => new Set(prev).add(actionItemId));
     startTransition(async () => {
       try {
@@ -57,15 +62,48 @@ export function SuggestedEmailTasksClient({
             accountSlug: accountSlug ?? undefined,
           });
           toast.success('Task added to planner');
-        } else {
+          setItems((prev) => prev.filter((item) => item.id !== actionItemId));
+        } else if (kind === 'dismiss') {
           await dismissSuggestedEmailTaskAction({
             actionItemId,
             accountId: accountId ?? undefined,
             accountSlug: accountSlug ?? undefined,
           });
           toast.success('Suggestion dismissed');
+          setItems((prev) => prev.filter((item) => item.id !== actionItemId));
+        } else {
+          const current = items.find((item) => item.id === actionItemId);
+          const result = await ignoreSuggestedEmailSenderAction({
+            actionItemId,
+            accountId: accountId ?? undefined,
+            accountSlug: accountSlug ?? undefined,
+          });
+          const sender =
+            result.sender ?? current?.fromEmail ?? current?.fromAddress;
+          toast.success(
+            sender
+              ? `Ignored ${sender} and removed their pending tasks`
+              : 'Sender ignored and pending tasks removed',
+          );
+          const ignoredEmail = (
+            result.sender ??
+            current?.fromEmail ??
+            ''
+          ).toLowerCase();
+          setItems((prev) =>
+            prev.filter((item) => {
+              if (item.id === actionItemId) {
+                return false;
+              }
+
+              if (!ignoredEmail) {
+                return true;
+              }
+
+              return (item.fromEmail ?? '').toLowerCase() !== ignoredEmail;
+            }),
+          );
         }
-        setItems((prev) => prev.filter((item) => item.id !== actionItemId));
         router.refresh();
       } catch (error) {
         toast.error(
@@ -117,6 +155,7 @@ export function SuggestedEmailTasksClient({
         <ul className="divide-y divide-[color:var(--workspace-shell-border)] overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
           {items.map((item) => {
             const busy = isPending && pendingIds.has(item.id);
+            const sentLabel = formatEmailDateTime(item.emailSentAt);
 
             return (
               <li
@@ -138,8 +177,14 @@ export function SuggestedEmailTasksClient({
                       ? ` · due ${item.suggestedDueDate}`
                       : ''}
                   </p>
+                  <p className="mt-1 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                    {item.fromEmail || item.fromAddress
+                      ? `From ${item.fromEmail ?? item.fromAddress}`
+                      : 'From unknown sender'}
+                    {sentLabel ? ` · sent ${sentLabel}` : ''}
+                  </p>
                 </div>
-                <div className="flex shrink-0 items-center gap-2">
+                <div className="flex shrink-0 flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={busy}
@@ -157,6 +202,20 @@ export function SuggestedEmailTasksClient({
                   >
                     <X className="h-3.5 w-3.5" />
                     Dismiss
+                  </button>
+                  <button
+                    type="button"
+                    disabled={busy || !item.fromEmail}
+                    title={
+                      item.fromEmail
+                        ? `Ignore all future tasks from ${item.fromEmail}`
+                        : 'Sender unavailable'
+                    }
+                    onClick={() => runAction(item.id, 'ignore-sender')}
+                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
+                  >
+                    <Ban className="h-3.5 w-3.5" />
+                    Ignore sender
                   </button>
                 </div>
               </li>

@@ -8,6 +8,10 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { ignoreEmailThreadNeedsReply } from '~/lib/email-assistant/ignore-thread-needs-reply';
+import {
+  ignoreEmailSenderAndDismissSuggestions,
+  removeIgnoredEmailSender,
+} from '~/lib/email-assistant/ignored-senders';
 
 const IgnoreEmailNeedsReplySchema = z.object({
   threadId: z.string().uuid(),
@@ -19,6 +23,11 @@ const SuggestedEmailTaskSchema = z.object({
   actionItemId: z.string().uuid(),
   accountId: z.string().uuid().optional(),
   accountSlug: z.string().min(1).optional(),
+});
+
+const RemoveIgnoredSenderSchema = z.object({
+  mailboxKind: z.enum(['business', 'personal']).default('personal'),
+  sender: z.string().email().max(320),
 });
 
 export const ignoreEmailNeedsReplyAction = enhanceAction(
@@ -142,6 +151,63 @@ export const dismissSuggestedEmailTaskAction = enhanceAction(
     return { ok: true as const };
   },
   { auth: true, schema: SuggestedEmailTaskSchema },
+);
+
+export const ignoreSuggestedEmailSenderAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    const result = await ignoreEmailSenderAndDismissSuggestions(
+      client,
+      user.id,
+      data.actionItemId,
+    );
+
+    revalidateSuggestedEmailPaths(data.accountSlug);
+    revalidatePath('/home/email');
+    revalidatePath('/app/email');
+
+    return {
+      ok: true as const,
+      sender: result.sender,
+      dismissedCount: result.dismissedCount,
+    };
+  },
+  { auth: true, schema: SuggestedEmailTaskSchema },
+);
+
+export const removeIgnoredEmailSenderAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    const { data: connection, error: connectionError } = await client
+      .from('google_connections')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('mailbox_kind', data.mailboxKind)
+      .maybeSingle();
+
+    if (connectionError) {
+      throw new Error(connectionError.message);
+    }
+
+    const connectionId = (connection as { id?: string } | null)?.id;
+
+    if (!connectionId) {
+      throw new Error('Connect Gmail before updating ignored senders');
+    }
+
+    const ignoredSenders = await removeIgnoredEmailSender(
+      client,
+      user.id,
+      connectionId,
+      data.sender,
+    );
+
+    revalidatePath('/home/email');
+    revalidatePath('/app/email');
+
+    return { ok: true as const, ignoredSenders };
+  },
+  { auth: true, schema: RemoveIgnoredSenderSchema },
 );
 
 function revalidateSuggestedEmailPaths(accountSlug?: string) {

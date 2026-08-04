@@ -97,6 +97,8 @@
   "updateTeamSubmitLabel": "Update Team",
   "inviteMembersHeading": "Invite Members to your Team",
   "inviteMembersDescription": "Invite members to your team by entering their email and role. Optionally assign them to a project.",
+  "seatUsageHint": "{{used}} of {{max}} seats used — {{remaining}} left on your plan",
+  "seatUsageAtLimit": "{{used}} of {{max}} seats used — no invites left. Upgrade your plan to invite more people.",
   "inviteProjectPlaceholder": "Add to a project (optional)",
   "inviteProjectNone": "No project",
   "emailPlaceholder": "member@email.com",

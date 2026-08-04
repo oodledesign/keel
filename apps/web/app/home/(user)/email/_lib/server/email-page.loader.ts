@@ -117,7 +117,7 @@ export const loadEmailPageData = cache(
         ? client
             .from('email_assistant_settings')
             .select(
-              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts',
+              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders',
             )
             .eq('connection_id', connectionId)
             .maybeSingle()
@@ -143,6 +143,7 @@ export const loadEmailPageData = cache(
       auto_triage_enabled?: boolean | null;
       auto_draft_enabled?: boolean | null;
       auto_save_gmail_drafts?: boolean | null;
+      ignored_senders?: string[] | null;
     } | null;
 
     const threadRows = threadsResult.data ?? [];
@@ -170,6 +171,7 @@ export const loadEmailPageData = cache(
         autoTriageEnabled: settingsRow?.auto_triage_enabled ?? true,
         autoDraftEnabled: settingsRow?.auto_draft_enabled ?? true,
         autoSaveGmailDrafts: settingsRow?.auto_save_gmail_drafts ?? false,
+        ignoredSenders: (settingsRow?.ignored_senders ?? []).filter(Boolean),
       },
       threads: await enrichEmailThreadLinks(
         client,

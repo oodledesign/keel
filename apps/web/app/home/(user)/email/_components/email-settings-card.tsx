@@ -17,16 +17,17 @@ import {
   GMAIL_DISCONNECT_CONSEQUENCES,
 } from '~/components/integrations/disconnect-integration-dialog';
 import pathsConfig from '~/config/paths.config';
+import { removeIgnoredEmailSenderAction } from '~/lib/email-assistant/email-assistant.actions';
 
 import {
   disconnectGmailConnection,
   saveEmailAssistantSettings,
 } from '../_lib/actions/email-assistant-actions';
+import { EmailReplyPresetsSection } from './email-reply-presets-section';
 import {
   EmailSignatureField,
   type EmailSignatureFormat,
 } from './email-signature-field';
-import { EmailReplyPresetsSection } from './email-reply-presets-section';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 md:p-5';
@@ -41,6 +42,7 @@ type Props = {
   initialAutoTriageEnabled: boolean;
   initialAutoDraftEnabled: boolean;
   initialAutoSaveGmailDrafts: boolean;
+  initialIgnoredSenders?: string[];
   lastSyncedAt: string | null;
 };
 
@@ -105,6 +107,7 @@ export function EmailSettingsCard({
   initialAutoTriageEnabled,
   initialAutoDraftEnabled,
   initialAutoSaveGmailDrafts,
+  initialIgnoredSenders = [],
   lastSyncedAt,
 }: Props) {
   const [styleNotes, setStyleNotes] = useState(initialStyleNotes);
@@ -121,6 +124,7 @@ export function EmailSettingsCard({
   const [autoSaveGmailDrafts, setAutoSaveGmailDrafts] = useState(
     initialAutoSaveGmailDrafts,
   );
+  const [ignoredSenders, setIgnoredSenders] = useState(initialIgnoredSenders);
   const [pending, startTransition] = useTransition();
   const [disconnecting, setDisconnecting] = useState(false);
   const [confirmDisconnectOpen, setConfirmDisconnectOpen] = useState(false);
@@ -132,6 +136,7 @@ export function EmailSettingsCard({
     setAutoTriageEnabled(initialAutoTriageEnabled);
     setAutoDraftEnabled(initialAutoDraftEnabled);
     setAutoSaveGmailDrafts(initialAutoSaveGmailDrafts);
+    setIgnoredSenders(initialIgnoredSenders);
   }, [
     initialStyleNotes,
     initialSignature,
@@ -139,6 +144,7 @@ export function EmailSettingsCard({
     initialAutoTriageEnabled,
     initialAutoDraftEnabled,
     initialAutoSaveGmailDrafts,
+    initialIgnoredSenders,
   ]);
 
   const mailboxLabel =
@@ -327,6 +333,62 @@ export function EmailSettingsCard({
         />
 
         <EmailReplyPresetsSection />
+
+        <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-4">
+          <Label className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            Ignored senders
+          </Label>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Mail from these addresses is skipped for auto-sort, drafts, and task
+            extraction. Add people from Email tasks to review with “Ignore
+            sender”.
+          </p>
+          {ignoredSenders.length === 0 ? (
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              No ignored senders yet.
+            </p>
+          ) : (
+            <ul className="space-y-2">
+              {ignoredSenders.map((sender) => (
+                <li
+                  key={sender}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2"
+                >
+                  <span className="truncate text-sm text-[var(--workspace-shell-text)]">
+                    {sender}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={pending}
+                    className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent)]"
+                    onClick={() => {
+                      startTransition(async () => {
+                        try {
+                          const result = await removeIgnoredEmailSenderAction({
+                            mailboxKind,
+                            sender,
+                          });
+                          setIgnoredSenders(result.ignoredSenders);
+                          toast.success(`Stopped ignoring ${sender}`);
+                        } catch (error) {
+                          toast.error(
+                            error instanceof Error
+                              ? error.message
+                              : 'Could not update ignored senders',
+                          );
+                        }
+                      });
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
 
         <Button
           type="button"

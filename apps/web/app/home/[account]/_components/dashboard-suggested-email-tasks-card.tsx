@@ -133,6 +133,9 @@ export function DashboardSuggestedEmailTasksCard({
                   </p>
                   <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
                     {item.threadSubject}
+                    {item.emailSentAt
+                      ? ` · sent ${new Date(item.emailSentAt).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+                      : ''}
                     {item.suggestedDueDate
                       ? ` · due ${item.suggestedDueDate}`
                       : ''}
