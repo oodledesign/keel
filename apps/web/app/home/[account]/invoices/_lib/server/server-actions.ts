@@ -23,6 +23,7 @@ import {
   ScheduleInvoiceSendSchema,
   SendInvoiceSchema,
   SetInvoiceStatusSchema,
+  SetRecurringSeriesAutoSendSchema,
   UpdateInvoiceSchema,
   UpdateRecurringSeriesStatusSchema,
   UpsertInvoiceItemsSchema,
@@ -38,6 +39,7 @@ import {
   getInvoiceTabCounts,
   listRecurringSeries,
   resendInvoice,
+  setRecurringSeriesAutoSend,
   updateRecurringSeriesStatus,
   upsertRecurringSeries,
   voidInvoice,
@@ -179,6 +181,16 @@ export const updateRecurringSeriesStatusAction = enhanceAction(
   async (input) =>
     updateRecurringSeriesStatus(input.accountId, input.seriesId, input.status),
   { schema: UpdateRecurringSeriesStatusSchema },
+);
+
+export const setRecurringSeriesAutoSendAction = enhanceAction(
+  async (input) =>
+    setRecurringSeriesAutoSend(
+      input.accountId,
+      input.seriesId,
+      input.auto_send,
+    ),
+  { schema: SetRecurringSeriesAutoSendSchema },
 );
 
 export const deleteRecurringSeriesAction = enhanceAction(

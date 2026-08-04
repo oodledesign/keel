@@ -546,10 +546,10 @@ export function RecurringSeriesEditDialog({
 
           <div className="flex items-center justify-between gap-4 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
             <div>
-              <p className="text-sm font-medium">Email when generated</p>
+              <p className="text-sm font-medium">Automatic email</p>
               <p className="text-muted-foreground text-xs">
-                On: email each invoice when it is created. Off: create as a
-                draft for manual send. Requires a recipient on the template.
+                On: email each invoice when it is created. Off: create as a draft
+                for manual send. Requires a recipient on the template.
               </p>
             </div>
             <Switch checked={autoSend} onCheckedChange={setAutoSend} />

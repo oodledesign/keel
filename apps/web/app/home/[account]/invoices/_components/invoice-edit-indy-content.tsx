@@ -159,6 +159,8 @@ type InvoiceData = {
   preferred_send_name?: string | null;
   scheduled_send_at?: string | null;
   scheduled_send_to_emails?: string[] | null;
+  recurring_series_id?: string | null;
+  recurring_series?: { id: string; auto_send: boolean } | null;
 };
 
 const STATUS_STEPS = [
@@ -1252,11 +1254,20 @@ export function InvoiceEditIndyContent({
             isDraft={isDraft}
             scheduledSendAt={invoice.scheduled_send_at ?? null}
             workspaceTimezone={workspaceTimezone}
+            recurringSeries={
+              invoice.recurring_series
+                ? {
+                    id: invoice.recurring_series.id,
+                    autoSend: invoice.recurring_series.auto_send,
+                  }
+                : null
+            }
             onSent={() => {
               setShowSendPanel(false);
               router.refresh();
             }}
             onScheduled={() => router.refresh()}
+            onRecurringAutoSendChange={() => router.refresh()}
             onMarkedSent={() => router.refresh()}
             onClose={() => setShowSendPanel(false)}
             passCardFeeToClient={feeMode === 'pass_to_client'}
@@ -2282,10 +2293,10 @@ export function InvoiceEditIndyContent({
 
             <div className="flex items-center justify-between gap-4 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
               <div>
-                <p className="text-sm font-medium">Email when generated</p>
+                <p className="text-sm font-medium">Automatic email</p>
                 <p className="text-muted-foreground text-xs">
-                  On: send each new invoice automatically. Off: leave as a draft
-                  for you to send.
+                  On: email each invoice when it is generated. Off: leave as a
+                  draft for you to send manually.
                 </p>
               </div>
               <Switch

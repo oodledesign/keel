@@ -492,6 +492,22 @@ export async function updateRecurringSeriesStatus(
   if (error) throw new Error(error.message);
 }
 
+export async function setRecurringSeriesAutoSend(
+  accountId: string,
+  seriesId: string,
+  autoSend: boolean,
+) {
+  const { data, error } = await db()
+    .from('invoice_recurring_series')
+    .update({ auto_send: autoSend })
+    .eq('account_id', accountId)
+    .eq('id', seriesId)
+    .select('id, auto_send')
+    .single();
+  if (error) throw new Error(error.message);
+  return data;
+}
+
 export async function deleteRecurringSeries(
   accountId: string,
   seriesId: string,

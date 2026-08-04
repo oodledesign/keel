@@ -351,6 +351,24 @@ class InvoicesService {
       },
     );
 
+    let recurringSeries: { id: string; auto_send: boolean } | null = null;
+    const seriesId = (invoice as { recurring_series_id?: string | null })
+      .recurring_series_id;
+    if (seriesId) {
+      const { data: series } = await this.db
+        .from('invoice_recurring_series')
+        .select('id, auto_send')
+        .eq('id', seriesId)
+        .eq('account_id', params.accountId)
+        .maybeSingle();
+      if (series) {
+        recurringSeries = {
+          id: series.id as string,
+          auto_send: Boolean(series.auto_send),
+        };
+      }
+    }
+
     return {
       ...invoice,
       items: items ?? [],
@@ -359,6 +377,7 @@ class InvoicesService {
       preferred_send_email: recipient.email,
       preferred_send_source: recipient.source,
       preferred_send_name: recipient.contactName,
+      recurring_series: recurringSeries,
     };
   }
 

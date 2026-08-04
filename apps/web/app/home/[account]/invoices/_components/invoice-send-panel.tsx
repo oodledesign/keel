@@ -59,6 +59,7 @@ import {
   markInvoiceSentManually,
   scheduleInvoiceSend,
   sendInvoice,
+  setRecurringSeriesAutoSendAction,
 } from '../_lib/server/server-actions';
 import {
   TokenTemplateField,
@@ -175,10 +176,12 @@ export function InvoiceSendPanel({
   isDraft = false,
   scheduledSendAt = null,
   workspaceTimezone = 'Europe/London',
+  recurringSeries = null,
   onEmailChange,
   onSent,
   onMarkedSent,
   onScheduled,
+  onRecurringAutoSendChange,
   onClose,
   passCardFeeToClient = false,
 }: {
@@ -204,6 +207,8 @@ export function InvoiceSendPanel({
   isDraft?: boolean;
   scheduledSendAt?: string | null;
   workspaceTimezone?: string;
+  /** When set, this invoice belongs to a recurring series — use auto/manual instead of schedule. */
+  recurringSeries?: { id: string; autoSend: boolean } | null;
   onEmailChange?: (fields: {
     subject: string;
     body: string;
@@ -212,6 +217,7 @@ export function InvoiceSendPanel({
   onSent?: () => void;
   onMarkedSent?: () => void;
   onScheduled?: () => void;
+  onRecurringAutoSendChange?: (autoSend: boolean) => void;
   onClose?: () => void;
   /** When true, show copy that card payments may add a processing fee. */
   passCardFeeToClient?: boolean;
@@ -244,8 +250,16 @@ export function InvoiceSendPanel({
   const bodyRef = useRef<TokenTemplateFieldHandle>(null);
   const signatureRef = useRef<TokenTemplateFieldHandle>(null);
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
+  const isRecurring = Boolean(recurringSeries?.id);
   const [loading, setLoading] = useState<
-    'send' | 'test' | 'link' | 'pdf' | 'schedule' | 'cancel-schedule' | null
+    | 'send'
+    | 'test'
+    | 'link'
+    | 'pdf'
+    | 'schedule'
+    | 'cancel-schedule'
+    | 'auto-send'
+    | null
   >(null);
   const [markAsSent, setMarkAsSent] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -254,8 +268,11 @@ export function InvoiceSendPanel({
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [recurringSendMode, setRecurringSendMode] = useState<
+    'automatic' | 'manual'
+  >(() => (recurringSeries?.autoSend ? 'automatic' : 'manual'));
   const [sendMode, setSendMode] = useState<'now' | 'schedule'>(() =>
-    scheduledSendAt ? 'schedule' : 'now',
+    !isRecurring && scheduledSendAt ? 'schedule' : 'now',
   );
   const [scheduleDate, setScheduleDate] = useState(() => {
     if (scheduledSendAt) {
@@ -488,6 +505,37 @@ export function InvoiceSendPanel({
       toast.success('Scheduled send cancelled');
       onScheduled?.();
     } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleRecurringSendMode = async (mode: 'automatic' | 'manual') => {
+    if (!recurringSeries?.id) return;
+    if (mode === recurringSendMode) return;
+
+    setRecurringSendMode(mode);
+    setLoading('auto-send');
+    try {
+      await setRecurringSeriesAutoSendAction({
+        accountId,
+        seriesId: recurringSeries.id,
+        auto_send: mode === 'automatic',
+      });
+      if (currentScheduledAt) {
+        await cancelScheduledInvoiceSend({ accountId, invoiceId });
+        setCurrentScheduledAt(null);
+        onScheduled?.();
+      }
+      onRecurringAutoSendChange?.(mode === 'automatic');
+      toast.success(
+        mode === 'automatic'
+          ? 'Series set to send automatically when invoices are generated'
+          : 'Series set to create drafts for you to send manually',
+      );
+    } catch (error) {
+      setRecurringSendMode(mode === 'automatic' ? 'manual' : 'automatic');
       toast.error(getErrorMessage(error));
     } finally {
       setLoading(null);
@@ -768,81 +816,131 @@ export function InvoiceSendPanel({
           </div>
 
           <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] p-3">
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                size="sm"
-                variant={sendMode === 'now' ? 'default' : 'outline'}
-                className={
-                  sendMode === 'now'
-                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
-                    : undefined
-                }
-                onClick={() => setSendMode('now')}
-              >
-                Send now
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={sendMode === 'schedule' ? 'default' : 'outline'}
-                className={
-                  sendMode === 'schedule'
-                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
-                    : undefined
-                }
-                onClick={() => setSendMode('schedule')}
-              >
-                Schedule
-              </Button>
-            </div>
-
-            {currentScheduledAt ? (
-              <p className="text-muted-foreground text-xs">
-                Currently scheduled for{' '}
-                {
-                  formatUtcInTimezone(currentScheduledAt, workspaceTimezone)
-                    .label
-                }
-                .
-              </p>
-            ) : null}
-
-            {sendMode === 'schedule' ? (
-              <div className="grid gap-3 sm:grid-cols-2">
-                <div className="space-y-1.5">
-                  <Label htmlFor="invoice-schedule-date">Date</Label>
-                  <Input
-                    id="invoice-schedule-date"
-                    type="date"
-                    value={scheduleDate}
-                    onChange={(e) => setScheduleDate(e.target.value)}
-                  />
+            {isRecurring ? (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={
+                      recurringSendMode === 'automatic' ? 'default' : 'outline'
+                    }
+                    className={
+                      recurringSendMode === 'automatic'
+                        ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                        : undefined
+                    }
+                    disabled={loading != null}
+                    onClick={() => void handleRecurringSendMode('automatic')}
+                  >
+                    Automatic
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={
+                      recurringSendMode === 'manual' ? 'default' : 'outline'
+                    }
+                    className={
+                      recurringSendMode === 'manual'
+                        ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                        : undefined
+                    }
+                    disabled={loading != null}
+                    onClick={() => void handleRecurringSendMode('manual')}
+                  >
+                    Manual
+                  </Button>
                 </div>
-                <div className="space-y-1.5">
-                  <Label htmlFor="invoice-schedule-time">
-                    Time ({workspaceTimezone})
-                  </Label>
-                  <Input
-                    id="invoice-schedule-time"
-                    type="time"
-                    value={scheduleTime}
-                    onChange={(e) => setScheduleTime(e.target.value)}
-                  />
+                <p className="text-muted-foreground text-xs">
+                  {recurringSendMode === 'automatic'
+                    ? 'Each new invoice in this series is emailed when it is generated. You can still send this draft now if needed.'
+                    : 'New invoices stay as drafts for you to send. Use Preview and send when you are ready.'}
+                </p>
+              </>
+            ) : (
+              <>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={sendMode === 'now' ? 'default' : 'outline'}
+                    className={
+                      sendMode === 'now'
+                        ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                        : undefined
+                    }
+                    onClick={() => setSendMode('now')}
+                  >
+                    Send now
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={sendMode === 'schedule' ? 'default' : 'outline'}
+                    className={
+                      sendMode === 'schedule'
+                        ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                        : undefined
+                    }
+                    onClick={() => setSendMode('schedule')}
+                  >
+                    Schedule
+                  </Button>
                 </div>
-              </div>
-            ) : null}
+
+                {currentScheduledAt ? (
+                  <p className="text-muted-foreground text-xs">
+                    Currently scheduled for{' '}
+                    {
+                      formatUtcInTimezone(
+                        currentScheduledAt,
+                        workspaceTimezone,
+                      ).label
+                    }
+                    .
+                  </p>
+                ) : null}
+
+                {sendMode === 'schedule' ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="invoice-schedule-date">Date</Label>
+                      <Input
+                        id="invoice-schedule-date"
+                        type="date"
+                        value={scheduleDate}
+                        onChange={(e) => setScheduleDate(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="invoice-schedule-time">
+                        Time ({workspaceTimezone})
+                      </Label>
+                      <Input
+                        id="invoice-schedule-time"
+                        type="time"
+                        value={scheduleTime}
+                        onChange={(e) => setScheduleTime(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+              </>
+            )}
           </div>
 
           <div className="flex flex-wrap gap-2">
-            {sendMode === 'now' ? (
+            {isRecurring || sendMode === 'now' ? (
               <Button
                 className="bg-[var(--ozer-accent)] text-[#09111F]"
                 disabled={loading != null || recipientEmails.length === 0}
                 onClick={() => setPreviewOpen(true)}
               >
                 <Eye className="mr-2 h-4 w-4" />
-                Preview and send
+                {isRecurring && recurringSendMode === 'automatic'
+                  ? 'Preview and send this invoice'
+                  : 'Preview and send'}
               </Button>
             ) : (
               <Button
@@ -863,7 +961,7 @@ export function InvoiceSendPanel({
                 Schedule send
               </Button>
             )}
-            {currentScheduledAt ? (
+            {!isRecurring && currentScheduledAt ? (
               <Button
                 variant="outline"
                 disabled={loading != null}

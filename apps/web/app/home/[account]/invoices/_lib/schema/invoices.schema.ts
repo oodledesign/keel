@@ -221,6 +221,12 @@ export const UpdateRecurringSeriesStatusSchema = z.object({
   status: z.enum(['active', 'paused', 'ended']),
 });
 
+export const SetRecurringSeriesAutoSendSchema = z.object({
+  accountId: z.string().uuid(),
+  seriesId: z.string().uuid(),
+  auto_send: z.boolean(),
+});
+
 export const DeleteRecurringSeriesSchema = z.object({
   accountId: z.string().uuid(),
   seriesId: z.string().uuid(),
