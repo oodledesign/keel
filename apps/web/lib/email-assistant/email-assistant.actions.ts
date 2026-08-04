@@ -9,8 +9,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { ignoreEmailThreadNeedsReply } from '~/lib/email-assistant/ignore-thread-needs-reply';
 import {
-  ignoreEmailSenderAndDismissSuggestions,
-  removeIgnoredEmailSender,
+  ignoreEmailRuleAndDismissSuggestions,
+  removeIgnoredEmailRule,
 } from '~/lib/email-assistant/ignored-senders';
 
 const IgnoreEmailNeedsReplySchema = z.object({
@@ -25,9 +25,14 @@ const SuggestedEmailTaskSchema = z.object({
   accountSlug: z.string().min(1).optional(),
 });
 
-const RemoveIgnoredSenderSchema = z.object({
+const IgnoreSuggestedEmailRuleSchema = SuggestedEmailTaskSchema.extend({
+  scope: z.enum(['sender', 'domain']),
+});
+
+const RemoveIgnoredEmailRuleSchema = z.object({
   mailboxKind: z.enum(['business', 'personal']).default('personal'),
-  sender: z.string().email().max(320),
+  scope: z.enum(['sender', 'domain']),
+  value: z.string().min(1).max(320),
 });
 
 export const ignoreEmailNeedsReplyAction = enhanceAction(
@@ -156,10 +161,11 @@ export const dismissSuggestedEmailTaskAction = enhanceAction(
 export const ignoreSuggestedEmailSenderAction = enhanceAction(
   async (data, user) => {
     const client = getSupabaseServerClient();
-    const result = await ignoreEmailSenderAndDismissSuggestions(
+    const result = await ignoreEmailRuleAndDismissSuggestions(
       client,
       user.id,
       data.actionItemId,
+      data.scope,
     );
 
     revalidateSuggestedEmailPaths(data.accountSlug);
@@ -168,11 +174,14 @@ export const ignoreSuggestedEmailSenderAction = enhanceAction(
 
     return {
       ok: true as const,
-      sender: result.sender,
+      scope: result.scope,
+      value: result.value,
+      sender: result.scope === 'sender' ? result.value : undefined,
+      domain: result.scope === 'domain' ? result.value : undefined,
       dismissedCount: result.dismissedCount,
     };
   },
-  { auth: true, schema: SuggestedEmailTaskSchema },
+  { auth: true, schema: IgnoreSuggestedEmailRuleSchema },
 );
 
 export const removeIgnoredEmailSenderAction = enhanceAction(
@@ -195,19 +204,24 @@ export const removeIgnoredEmailSenderAction = enhanceAction(
       throw new Error('Connect Gmail before updating ignored senders');
     }
 
-    const ignoredSenders = await removeIgnoredEmailSender(
+    const lists = await removeIgnoredEmailRule(
       client,
       user.id,
       connectionId,
-      data.sender,
+      data.scope,
+      data.value,
     );
 
     revalidatePath('/home/email');
     revalidatePath('/app/email');
 
-    return { ok: true as const, ignoredSenders };
+    return {
+      ok: true as const,
+      ignoredSenders: lists.senders,
+      ignoredDomains: lists.domains,
+    };
   },
-  { auth: true, schema: RemoveIgnoredSenderSchema },
+  { auth: true, schema: RemoveIgnoredEmailRuleSchema },
 );
 
 function revalidateSuggestedEmailPaths(accountSlug?: string) {

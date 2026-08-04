@@ -4,8 +4,15 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Ban, Check, ListTodo, Mail, X } from 'lucide-react';
+import { Ban, Check, ChevronDown, ListTodo, Mail, X } from 'lucide-react';
 
+import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { toast } from '@kit/ui/sonner';
 
 import { HapticLink } from '~/components/haptic-link';
@@ -50,7 +57,7 @@ export function SuggestedEmailTasksClient({
 
   function runAction(
     actionItemId: string,
-    kind: 'accept' | 'dismiss' | 'ignore-sender',
+    kind: 'accept' | 'dismiss' | 'ignore-sender' | 'ignore-domain',
   ) {
     setPendingIds((prev) => new Set(prev).add(actionItemId));
     startTransition(async () => {
@@ -73,36 +80,67 @@ export function SuggestedEmailTasksClient({
           setItems((prev) => prev.filter((item) => item.id !== actionItemId));
         } else {
           const current = items.find((item) => item.id === actionItemId);
+          const scope = kind === 'ignore-domain' ? 'domain' : 'sender';
           const result = await ignoreSuggestedEmailSenderAction({
             actionItemId,
             accountId: accountId ?? undefined,
             accountSlug: accountSlug ?? undefined,
+            scope,
           });
-          const sender =
-            result.sender ?? current?.fromEmail ?? current?.fromAddress;
-          toast.success(
-            sender
-              ? `Ignored ${sender} and removed their pending tasks`
-              : 'Sender ignored and pending tasks removed',
-          );
-          const ignoredEmail = (
-            result.sender ??
-            current?.fromEmail ??
-            ''
-          ).toLowerCase();
-          setItems((prev) =>
-            prev.filter((item) => {
-              if (item.id === actionItemId) {
-                return false;
-              }
 
-              if (!ignoredEmail) {
-                return true;
-              }
+          if (scope === 'domain') {
+            const domain =
+              result.domain ?? result.value ?? current?.fromDomain ?? '';
+            toast.success(
+              domain
+                ? `Ignored @${domain} and removed matching pending tasks`
+                : 'Domain ignored and pending tasks removed',
+            );
+            const ignoredDomain = domain.toLowerCase();
+            setItems((prev) =>
+              prev.filter((item) => {
+                if (item.id === actionItemId) {
+                  return false;
+                }
 
-              return (item.fromEmail ?? '').toLowerCase() !== ignoredEmail;
-            }),
-          );
+                if (!ignoredDomain) {
+                  return true;
+                }
+
+                return (item.fromDomain ?? '').toLowerCase() !== ignoredDomain;
+              }),
+            );
+          } else {
+            const sender =
+              result.sender ??
+              result.value ??
+              current?.fromEmail ??
+              current?.fromAddress;
+            toast.success(
+              sender
+                ? `Ignored ${sender} and removed their pending tasks`
+                : 'Sender ignored and pending tasks removed',
+            );
+            const ignoredEmail = (
+              result.sender ??
+              result.value ??
+              current?.fromEmail ??
+              ''
+            ).toLowerCase();
+            setItems((prev) =>
+              prev.filter((item) => {
+                if (item.id === actionItemId) {
+                  return false;
+                }
+
+                if (!ignoredEmail) {
+                  return true;
+                }
+
+                return (item.fromEmail ?? '').toLowerCase() !== ignoredEmail;
+              }),
+            );
+          }
         }
         router.refresh();
       } catch (error) {
@@ -203,20 +241,37 @@ export function SuggestedEmailTasksClient({
                     <X className="h-3.5 w-3.5" />
                     Dismiss
                   </button>
-                  <button
-                    type="button"
-                    disabled={busy || !item.fromEmail}
-                    title={
-                      item.fromEmail
-                        ? `Ignore all future tasks from ${item.fromEmail}`
-                        : 'Sender unavailable'
-                    }
-                    onClick={() => runAction(item.id, 'ignore-sender')}
-                    className="inline-flex h-9 items-center gap-1.5 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 text-xs font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
-                  >
-                    <Ban className="h-3.5 w-3.5" />
-                    Ignore sender
-                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        disabled={busy || !item.fromEmail}
+                        className="h-9 border-[color:var(--workspace-shell-border)] bg-transparent text-xs font-medium text-[var(--workspace-shell-text-muted)] hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)]"
+                      >
+                        <Ban className="mr-1.5 h-3.5 w-3.5" />
+                        Ignore
+                        <ChevronDown className="ml-1 h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-64">
+                      <DropdownMenuItem
+                        disabled={!item.fromEmail}
+                        onSelect={() => runAction(item.id, 'ignore-sender')}
+                      >
+                        Ignore sender
+                        {item.fromEmail ? ` (${item.fromEmail})` : ''}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={!item.fromDomain}
+                        onSelect={() => runAction(item.id, 'ignore-domain')}
+                      >
+                        Ignore domain
+                        {item.fromDomain ? ` (@${item.fromDomain})` : ''}
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                 </div>
               </li>
             );

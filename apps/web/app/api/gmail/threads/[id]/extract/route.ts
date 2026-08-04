@@ -10,7 +10,8 @@ import {
 import { linkFieldsFromThread } from '~/lib/email-assistant/action-item-links';
 import { resolveDraftOwnerContext } from '~/lib/email-assistant/draft-owner';
 import {
-  isSenderIgnored,
+  isAddressIgnored,
+  normalizeIgnoredDomains,
   normalizeIgnoredSenders,
 } from '~/lib/email-assistant/ignored-senders';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
@@ -115,21 +116,27 @@ export async function POST(request: Request, context: RouteContext) {
   if (connectionId) {
     const { data: settingsRow } = await auth.client
       .from('email_assistant_settings')
-      .select('ignored_senders')
+      .select('ignored_senders, ignored_domains')
       .eq('connection_id', connectionId)
       .maybeSingle();
 
-    const ignoredSenders = normalizeIgnoredSenders(
-      ((settingsRow as { ignored_senders?: string[] | null } | null)
-        ?.ignored_senders ?? []) as string[],
-    );
+    const settings = settingsRow as {
+      ignored_senders?: string[] | null;
+      ignored_domains?: string[] | null;
+    } | null;
+
     const latestFrom = (messages?.at(-1) as { from_address?: string | null })
       ?.from_address;
 
-    if (isSenderIgnored(latestFrom, ignoredSenders)) {
+    if (
+      isAddressIgnored(latestFrom, {
+        senders: normalizeIgnoredSenders(settings?.ignored_senders ?? []),
+        domains: normalizeIgnoredDomains(settings?.ignored_domains ?? []),
+      })
+    ) {
       return jsonErr(
         'SENDER_IGNORED',
-        'This sender is on your ignore list. Remove them in Email settings to extract tasks again.',
+        'This sender or domain is on your ignore list. Remove them in Email settings to extract tasks again.',
         400,
       );
     }

@@ -43,6 +43,7 @@ type Props = {
   initialAutoDraftEnabled: boolean;
   initialAutoSaveGmailDrafts: boolean;
   initialIgnoredSenders?: string[];
+  initialIgnoredDomains?: string[];
   lastSyncedAt: string | null;
 };
 
@@ -108,6 +109,7 @@ export function EmailSettingsCard({
   initialAutoDraftEnabled,
   initialAutoSaveGmailDrafts,
   initialIgnoredSenders = [],
+  initialIgnoredDomains = [],
   lastSyncedAt,
 }: Props) {
   const [styleNotes, setStyleNotes] = useState(initialStyleNotes);
@@ -125,6 +127,7 @@ export function EmailSettingsCard({
     initialAutoSaveGmailDrafts,
   );
   const [ignoredSenders, setIgnoredSenders] = useState(initialIgnoredSenders);
+  const [ignoredDomains, setIgnoredDomains] = useState(initialIgnoredDomains);
   const [pending, startTransition] = useTransition();
   const [disconnecting, setDisconnecting] = useState(false);
   const [confirmDisconnectOpen, setConfirmDisconnectOpen] = useState(false);
@@ -137,6 +140,7 @@ export function EmailSettingsCard({
     setAutoDraftEnabled(initialAutoDraftEnabled);
     setAutoSaveGmailDrafts(initialAutoSaveGmailDrafts);
     setIgnoredSenders(initialIgnoredSenders);
+    setIgnoredDomains(initialIgnoredDomains);
   }, [
     initialStyleNotes,
     initialSignature,
@@ -145,6 +149,7 @@ export function EmailSettingsCard({
     initialAutoDraftEnabled,
     initialAutoSaveGmailDrafts,
     initialIgnoredSenders,
+    initialIgnoredDomains,
   ]);
 
   const mailboxLabel =
@@ -336,25 +341,28 @@ export function EmailSettingsCard({
 
         <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-4">
           <Label className="text-sm font-medium text-[var(--workspace-shell-text)]">
-            Ignored senders
+            Ignored senders & domains
           </Label>
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Mail from these addresses is skipped for auto-sort, drafts, and task
-            extraction. Add people from Email tasks to review with “Ignore
-            sender”.
+            Mail matching these addresses or domains is skipped for auto-sort,
+            drafts, and task extraction. Add them from Email tasks to review
+            with Ignore → sender or domain.
           </p>
-          {ignoredSenders.length === 0 ? (
+          {ignoredSenders.length === 0 && ignoredDomains.length === 0 ? (
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              No ignored senders yet.
+              No ignored senders or domains yet.
             </p>
           ) : (
             <ul className="space-y-2">
               {ignoredSenders.map((sender) => (
                 <li
-                  key={sender}
+                  key={`sender:${sender}`}
                   className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2"
                 >
-                  <span className="truncate text-sm text-[var(--workspace-shell-text)]">
+                  <span className="min-w-0 truncate text-sm text-[var(--workspace-shell-text)]">
+                    <span className="text-[var(--workspace-shell-text-muted)]">
+                      Sender ·{' '}
+                    </span>
                     {sender}
                   </span>
                   <Button
@@ -368,15 +376,59 @@ export function EmailSettingsCard({
                         try {
                           const result = await removeIgnoredEmailSenderAction({
                             mailboxKind,
-                            sender,
+                            scope: 'sender',
+                            value: sender,
                           });
                           setIgnoredSenders(result.ignoredSenders);
+                          setIgnoredDomains(result.ignoredDomains);
                           toast.success(`Stopped ignoring ${sender}`);
                         } catch (error) {
                           toast.error(
                             error instanceof Error
                               ? error.message
-                              : 'Could not update ignored senders',
+                              : 'Could not update ignore list',
+                          );
+                        }
+                      });
+                    }}
+                  >
+                    Remove
+                  </Button>
+                </li>
+              ))}
+              {ignoredDomains.map((domain) => (
+                <li
+                  key={`domain:${domain}`}
+                  className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2"
+                >
+                  <span className="min-w-0 truncate text-sm text-[var(--workspace-shell-text)]">
+                    <span className="text-[var(--workspace-shell-text-muted)]">
+                      Domain ·{' '}
+                    </span>
+                    @{domain}
+                  </span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    disabled={pending}
+                    className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent)]"
+                    onClick={() => {
+                      startTransition(async () => {
+                        try {
+                          const result = await removeIgnoredEmailSenderAction({
+                            mailboxKind,
+                            scope: 'domain',
+                            value: domain,
+                          });
+                          setIgnoredSenders(result.ignoredSenders);
+                          setIgnoredDomains(result.ignoredDomains);
+                          toast.success(`Stopped ignoring @${domain}`);
+                        } catch (error) {
+                          toast.error(
+                            error instanceof Error
+                              ? error.message
+                              : 'Could not update ignore list',
                           );
                         }
                       });

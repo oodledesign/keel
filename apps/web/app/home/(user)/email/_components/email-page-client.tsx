@@ -475,6 +475,7 @@ export function EmailPageClient({ initialData }: Props) {
               initialData.settings.autoSaveGmailDrafts
             }
             initialIgnoredSenders={initialData.settings.ignoredSenders}
+            initialIgnoredDomains={initialData.settings.ignoredDomains}
             lastSyncedAt={initialData.settings.lastSyncedAt}
           />
         </div>

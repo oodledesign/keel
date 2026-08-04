@@ -11,7 +11,9 @@ import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
 import {
-  isSenderIgnored,
+  extractEmailDomain,
+  isAddressIgnored,
+  normalizeIgnoredDomains,
   normalizeIgnoredSenders,
 } from './ignored-senders';
 import type { MailboxKind } from './mailbox-kind';
@@ -56,6 +58,7 @@ type AssistantSettings = {
   auto_draft_enabled: boolean;
   auto_save_gmail_drafts: boolean;
   ignored_senders: string[];
+  ignored_domains: string[];
 };
 
 export async function runEmailAssistantPipeline(
@@ -90,7 +93,7 @@ export async function runEmailAssistantPipeline(
   const { data: settingsRow, error: settingsError } = await admin
     .from('email_assistant_settings')
     .select(
-      'auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders',
+      'auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders, ignored_domains',
     )
     .eq('connection_id', owner.connectionId)
     .maybeSingle();
@@ -101,8 +104,9 @@ export async function runEmailAssistantPipeline(
   }
 
   const settingsRowTyped = settingsRow as
-    | (Omit<AssistantSettings, 'ignored_senders'> & {
+    | (Omit<AssistantSettings, 'ignored_senders' | 'ignored_domains'> & {
         ignored_senders?: string[] | null;
+        ignored_domains?: string[] | null;
       })
     | null;
 
@@ -112,6 +116,9 @@ export async function runEmailAssistantPipeline(
     auto_save_gmail_drafts: settingsRowTyped?.auto_save_gmail_drafts ?? false,
     ignored_senders: normalizeIgnoredSenders(
       settingsRowTyped?.ignored_senders ?? [],
+    ),
+    ignored_domains: normalizeIgnoredDomains(
+      settingsRowTyped?.ignored_domains ?? [],
     ),
   };
 
@@ -185,12 +192,21 @@ export async function runEmailAssistantPipeline(
 
     const latest = latestMessage as MessageRow;
 
-    if (isSenderIgnored(latest.from_address, settings.ignored_senders)) {
+    if (
+      isAddressIgnored(latest.from_address, {
+        senders: settings.ignored_senders,
+        domains: settings.ignored_domains,
+      })
+    ) {
+      const ignoredLabel =
+        extractEmailAddress(latest.from_address) ??
+        extractEmailDomain(latest.from_address) ??
+        'unknown';
       const { error: ignoreUpdateError } = await admin
         .from('email_threads')
         .update({
           assistant_category: 'no_reply',
-          assistant_category_reason: `Sender ignored (${extractEmailAddress(latest.from_address) ?? 'unknown'})`,
+          assistant_category_reason: `Sender or domain ignored (${ignoredLabel})`,
           assistant_processed_message_id: latest.id,
           updated_at: new Date().toISOString(),
         })

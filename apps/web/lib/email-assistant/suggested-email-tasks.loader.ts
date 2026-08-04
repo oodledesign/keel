@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { extractEmailAddress } from './address-utils';
+import { extractEmailDomain } from './ignored-senders';
 
 export type SuggestedEmailTaskItem = {
   id: string;
@@ -15,6 +16,7 @@ export type SuggestedEmailTaskItem = {
   emailSentAt: string | null;
   fromAddress: string | null;
   fromEmail: string | null;
+  fromDomain: string | null;
 };
 
 export async function loadSuggestedEmailActionItems(
@@ -130,6 +132,7 @@ export async function loadSuggestedEmailActionItems(
       emailSentAt,
       fromAddress,
       fromEmail: extractEmailAddress(fromAddress),
+      fromDomain: extractEmailDomain(fromAddress),
     };
   });
 

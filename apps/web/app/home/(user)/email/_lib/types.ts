@@ -84,6 +84,7 @@ export type EmailPageInitialData = {
     autoDraftEnabled: boolean;
     autoSaveGmailDrafts: boolean;
     ignoredSenders: string[];
+    ignoredDomains: string[];
   };
   threads: EmailThreadSummary[];
   hasMoreThreads: boolean;
