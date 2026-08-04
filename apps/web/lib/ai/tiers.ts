@@ -94,12 +94,13 @@ export async function getAccountCreditsLimit(
 export async function syncAccountCreditLimit(
   accountId: string,
   supabase: SupabaseClient,
+  options?: { refillRemaining?: boolean },
 ): Promise<{ previous: number; current: number; changed: boolean }> {
   const nextLimit = await getAccountCreditsLimit(accountId, supabase);
 
   const { data: balance } = await supabase
     .from('ai_credit_balances')
-    .select('credits_monthly_limit')
+    .select('credits_monthly_limit, credits_remaining, credits_purchased')
     .eq('account_id', accountId)
     .maybeSingle();
 
@@ -107,21 +108,58 @@ export async function syncAccountCreditLimit(
     (balance as { credits_monthly_limit?: number } | null)
       ?.credits_monthly_limit ?? DEFAULT_CREDITS;
 
-  if (previous === nextLimit) {
+  const refill = Boolean(options?.refillRemaining);
+  const alreadySynced = previous === nextLimit && !refill;
+
+  if (alreadySynced && balance) {
     return { previous, current: nextLimit, changed: false };
   }
 
-  const { error } = await supabase
-    .from('ai_credit_balances')
-    .update({
-      credits_monthly_limit: nextLimit,
-      updated_at: new Date().toISOString(),
-    })
-    .eq('account_id', accountId);
+  const now = new Date();
+  const periodStart = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1),
+  );
+  const periodEnd = new Date(
+    Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1),
+  );
 
-  if (error) {
-    throw new Error(error.message);
+  if (balance) {
+    const patch: Record<string, unknown> = {
+      credits_monthly_limit: nextLimit,
+      updated_at: now.toISOString(),
+    };
+    if (refill) {
+      patch.credits_remaining = nextLimit;
+      patch.period_start = periodStart.toISOString();
+      patch.period_end = periodEnd.toISOString();
+    }
+
+    const { error } = await supabase
+      .from('ai_credit_balances')
+      .update(patch)
+      .eq('account_id', accountId);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  } else {
+    const { error } = await supabase.from('ai_credit_balances').insert({
+      account_id: accountId,
+      credits_monthly_limit: nextLimit,
+      credits_remaining: nextLimit,
+      credits_purchased: 0,
+      period_start: periodStart.toISOString(),
+      period_end: periodEnd.toISOString(),
+    });
+
+    if (error) {
+      throw new Error(error.message);
+    }
   }
 
-  return { previous, current: nextLimit, changed: true };
+  return {
+    previous,
+    current: nextLimit,
+    changed: previous !== nextLimit || refill,
+  };
 }

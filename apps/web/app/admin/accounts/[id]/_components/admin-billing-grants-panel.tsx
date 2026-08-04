@@ -167,12 +167,23 @@ export function AdminBillingGrantsPanel(props: {
   const applyPlan = (productId: string, planId: string) => {
     startTransition(async () => {
       try {
-        await adminApplyPlanLimitsAction({
+        const result = (await adminApplyPlanLimitsAction({
           accountId: props.accountId,
           productId,
           planId,
-        });
-        toast.success('Plan limits applied');
+        })) as {
+          success?: boolean;
+          aiCreditsGranted?: number | null;
+          mediaUnitsGranted?: number | null;
+        };
+        const parts = ['Plan limits applied'];
+        if (result.aiCreditsGranted) {
+          parts.push(`${result.aiCreditsGranted.toLocaleString()} AI credits`);
+        }
+        if (result.mediaUnitsGranted) {
+          parts.push(`${result.mediaUnitsGranted.toLocaleString()} media units`);
+        }
+        toast.success(parts.join(' · '));
       } catch (e) {
         toast.error(e instanceof Error ? e.message : 'Apply failed');
       }
@@ -201,10 +212,12 @@ export function AdminBillingGrantsPanel(props: {
       <CardContent className="space-y-6">
         <p className="text-muted-foreground text-sm">
           Presets set <strong>Business Solo / Team / Scale</strong> seat limits
-          on this workspace. Workspace access grants are different product types
-          (Community / Lite / Property / Commercial Property) — do not stack
-          them to “upgrade” a Business plan. Granting Commercial Property also
-          switches this workspace’s type and modules.
+          and refill the matching AI credit pool (Scale = 12,000). Media
+          Generate Starter/Studio/Agency presets also grant monthly media units.
+          Add-on <strong>Grant</strong> only unlocks the app — use a quick
+          preset when you need usage tokens. Workspace type grants
+          (Community / Lite / Property / Commercial Property) are different
+          products — do not stack them to “upgrade” a Business plan.
         </p>
         <div>
           <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">

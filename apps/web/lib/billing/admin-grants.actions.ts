@@ -11,6 +11,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { logAdminAction } from '~/lib/admin/log-admin-action';
 
+import { applyAdminPlanUsageGrants } from './apply-admin-plan-usage-grants';
 import { findPlanByProductAndPlanId } from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import {
@@ -210,6 +211,12 @@ export const adminApplyPlanLimitsAction = enhanceAction(
 
     await syncWorkspaceStateAfterAdminPlan(admin, input.accountId, plan);
 
+    const usage = await applyAdminPlanUsageGrants(
+      admin,
+      input.accountId,
+      plan,
+    );
+
     await logAdminAction(admin, {
       actorUserId: user.id,
       action: 'apply_plan_limits',
@@ -218,6 +225,8 @@ export const adminApplyPlanLimitsAction = enhanceAction(
         productId: input.productId,
         planId: input.planId,
         entitlementKey: plan.entitlementKey,
+        aiCreditsGranted: usage.aiCredits,
+        mediaUnitsGranted: usage.mediaUnits,
       },
     });
 
@@ -225,7 +234,11 @@ export const adminApplyPlanLimitsAction = enhanceAction(
     revalidatePath(`/admin/workspaces/${input.accountId}`);
     revalidatePath('/admin/workspaces');
     revalidatePath('/admin/audit');
-    return { success: true };
+    return {
+      success: true,
+      aiCreditsGranted: usage.aiCredits,
+      mediaUnitsGranted: usage.mediaUnits,
+    };
   },
   {
     schema: z.object({
