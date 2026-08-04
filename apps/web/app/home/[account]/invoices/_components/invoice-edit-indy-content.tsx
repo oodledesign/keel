@@ -9,7 +9,6 @@ import {
   ArrowLeft,
   Download,
   ExternalLink,
-  Eye,
   Loader2,
   PlusCircle,
   Repeat,
@@ -293,7 +292,6 @@ export function InvoiceEditIndyContent({
   const canModifyInvoice = canEditInvoices && isDraft;
   const currentStep = statusStepIndex(invoice.status);
 
-  const [previewMode, setPreviewMode] = useState(false);
   const [showSendPanel, setShowSendPanel] = useState(false);
   const [aiGenerateOpen, setAiGenerateOpen] = useState(false);
   const [displaySettingsOpen, setDisplaySettingsOpen] = useState(false);
@@ -460,7 +458,7 @@ export function InvoiceEditIndyContent({
   const [jobsLoading, setJobsLoading] = useState(false);
   const [projectId, setProjectId] = useState(invoice.project_id ?? '');
 
-  const readOnly = previewMode || !canModifyInvoice;
+  const readOnly = !canModifyInvoice;
 
   const dirtyFingerprint = useMemo(
     () => ({
@@ -683,8 +681,6 @@ export function InvoiceEditIndyContent({
       cancelled = true;
     };
   }, [accountId, invoice.id, invoice.status]);
-
-  const resolvedReference = referenceNumber.trim() || invoice.invoice_number;
 
   const pdfQuery = useMemo(() => {
     const params = new URLSearchParams({
@@ -976,6 +972,7 @@ export function InvoiceEditIndyContent({
 
       await upsertRecurringSeriesAction({
         accountId,
+        invoiceId: invoice.id,
         client_id: clientId,
         title: title.trim() || `Invoice ${invoice.invoice_number}`,
         currency,
@@ -1021,6 +1018,7 @@ export function InvoiceEditIndyContent({
           : 'Recurring series created',
       );
       setRecurringDialogOpen(false);
+      router.refresh();
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -1032,6 +1030,9 @@ export function InvoiceEditIndyContent({
     canModifyInvoice,
     clientId,
     handleSave,
+    invoice.id,
+    invoice.invoice_number,
+    router,
     recurringStartDate,
     recurringFrequency,
     recurringDurationMode,
@@ -1044,7 +1045,6 @@ export function InvoiceEditIndyContent({
     emailSubject,
     footerMessage,
     invoice.client,
-    invoice.invoice_number,
     invoice.preferred_send_email,
     invoice.sent_to_email,
     items,
@@ -1111,21 +1111,6 @@ export function InvoiceEditIndyContent({
           </Button>
 
           <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-1.5">
-              <Eye className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
-              <Label
-                htmlFor="preview-mode"
-                className="text-sm text-[var(--workspace-shell-text-muted)]"
-              >
-                Preview
-              </Label>
-              <Switch
-                id="preview-mode"
-                checked={previewMode}
-                onCheckedChange={setPreviewMode}
-              />
-            </div>
-
             {canEditInvoices ? (
               <>
                 <Button
@@ -1141,17 +1126,29 @@ export function InvoiceEditIndyContent({
                 </Button>
 
                 {isDraft && canEditInvoices ? (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => {
-                      setRecurringDueDays(String(defaultInvoiceDueDays ?? 7));
-                      setRecurringDialogOpen(true);
-                    }}
-                  >
-                    <Repeat className="mr-2 h-4 w-4" />
-                    Make recurring
-                  </Button>
+                  invoice.recurring_series ? (
+                    <Button
+                      size="sm"
+                      variant="secondary"
+                      disabled
+                      title="This invoice belongs to a recurring series"
+                    >
+                      <Repeat className="mr-2 h-4 w-4" />
+                      Recurring
+                    </Button>
+                  ) : (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => {
+                        setRecurringDueDays(String(defaultInvoiceDueDays ?? 7));
+                        setRecurringDialogOpen(true);
+                      }}
+                    >
+                      <Repeat className="mr-2 h-4 w-4" />
+                      Make recurring
+                    </Button>
+                  )
                 ) : null}
               </>
             ) : null}
@@ -1313,11 +1310,6 @@ export function InvoiceEditIndyContent({
             <div className="space-y-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0 flex-1">
-                  {brandName && previewMode ? (
-                    <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text-muted)]">
-                      {brandName}
-                    </p>
-                  ) : null}
                   {readOnly ? (
                     <h2 className="text-2xl font-bold text-[var(--ozer-text-on-light)]">
                       {title.trim() || `Invoice ${invoice.invoice_number}`}
@@ -1346,7 +1338,7 @@ export function InvoiceEditIndyContent({
                     alt=""
                     className="h-12 w-auto max-w-[140px] object-contain object-right"
                   />
-                ) : showLogoField && brandName && !previewMode ? (
+                ) : showLogoField && brandName ? (
                   <p className="max-w-[140px] text-right text-sm font-semibold text-[var(--ozer-text-on-light)]">
                     {brandName}
                   </p>
@@ -1359,24 +1351,16 @@ export function InvoiceEditIndyContent({
                     <Label className="text-[var(--workspace-shell-text-muted)]">
                       Reference
                     </Label>
-                    {previewMode ? (
-                      <p className="mt-1 text-sm font-medium text-[var(--ozer-text-on-light)]">
-                        {resolvedReference}
-                      </p>
-                    ) : (
-                      <Input
-                        value={referenceNumber}
-                        onChange={(e) => setReferenceNumber(e.target.value)}
-                        disabled={readOnly}
-                        placeholder={invoice.invoice_number}
-                        className={`mt-1 ${inputClassName}`}
-                      />
-                    )}
-                    {!previewMode ? (
-                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                        Defaults to the invoice number. Used for bank payments.
-                      </p>
-                    ) : null}
+                    <Input
+                      value={referenceNumber}
+                      onChange={(e) => setReferenceNumber(e.target.value)}
+                      disabled={readOnly}
+                      placeholder={invoice.invoice_number}
+                      className={`mt-1 ${inputClassName}`}
+                    />
+                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                      Defaults to the invoice number. Used for bank payments.
+                    </p>
                   </div>
                 ) : null}
 
@@ -1388,24 +1372,18 @@ export function InvoiceEditIndyContent({
                       <Label className="text-[var(--workspace-shell-text-muted)]">
                         Issued
                       </Label>
-                      {previewMode ? (
-                        <p className="mt-1 text-sm text-[var(--ozer-text-on-light)]">
-                          {issuedAt || '—'}
-                        </p>
-                      ) : (
-                        <Input
-                          type="date"
-                          value={
-                            isLocked
-                              ? toDateInputValue(invoice.issued_at)
-                              : issuedAt
-                          }
-                          onChange={(e) => setIssuedAt(e.target.value)}
-                          disabled={readOnly || isLocked}
-                          className={`mt-1 ${inputClassName}`}
-                        />
-                      )}
-                      {!isLocked && !previewMode ? (
+                      <Input
+                        type="date"
+                        value={
+                          isLocked
+                            ? toDateInputValue(invoice.issued_at)
+                            : issuedAt
+                        }
+                        onChange={(e) => setIssuedAt(e.target.value)}
+                        disabled={readOnly || isLocked}
+                        className={`mt-1 ${inputClassName}`}
+                      />
+                      {!isLocked ? (
                         <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
                           Final issue date is set when you send.
                         </p>
@@ -1417,19 +1395,13 @@ export function InvoiceEditIndyContent({
                       <Label className="text-[var(--workspace-shell-text-muted)]">
                         Due
                       </Label>
-                      {previewMode ? (
-                        <p className="mt-1 text-sm font-medium text-[var(--ozer-text-on-light)]">
-                          {dueAt || '—'}
-                        </p>
-                      ) : (
-                        <Input
-                          type="date"
-                          value={dueAt}
-                          onChange={(e) => setDueAt(e.target.value)}
-                          disabled={readOnly}
-                          className={`mt-1 ${inputClassName}`}
-                        />
-                      )}
+                      <Input
+                        type="date"
+                        value={dueAt}
+                        onChange={(e) => setDueAt(e.target.value)}
+                        disabled={readOnly}
+                        className={`mt-1 ${inputClassName}`}
+                      />
                     </div>
                   ) : null}
                 </div>
@@ -1491,7 +1463,7 @@ export function InvoiceEditIndyContent({
                   >
                     Currency
                   </Label>
-                  {previewMode || readOnly ? (
+                  {readOnly ? (
                     <p className="mt-1 text-sm font-medium text-[var(--ozer-text-on-light)]">
                       {INVOICE_CURRENCY_OPTIONS.find(
                         (o) => o.value === currency,
@@ -1519,7 +1491,7 @@ export function InvoiceEditIndyContent({
                   <Label className="text-[var(--workspace-shell-text-muted)]">
                     Project
                   </Label>
-                  {previewMode || readOnly ? (
+                  {readOnly ? (
                     <p className="mt-1 text-sm font-medium text-[var(--ozer-text-on-light)]">
                       {jobs.find((job) => job.id === projectId)?.title ??
                         invoice.project?.title ??
@@ -2001,26 +1973,14 @@ export function InvoiceEditIndyContent({
                     <Label className="text-[var(--workspace-shell-text-muted)]">
                       Notes
                     </Label>
-                    {previewMode ? (
-                      notes.trim() ? (
-                        <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--ozer-text-on-light)]">
-                          {notes}
-                        </p>
-                      ) : (
-                        <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
-                          —
-                        </p>
-                      )
-                    ) : (
-                      <Textarea
-                        value={notes}
-                        onChange={(e) => setNotes(e.target.value)}
-                        disabled={readOnly}
-                        rows={3}
-                        placeholder="Notes visible to your client"
-                        className={`mt-1 ${inputClassName}`}
-                      />
-                    )}
+                    <Textarea
+                      value={notes}
+                      onChange={(e) => setNotes(e.target.value)}
+                      disabled={readOnly}
+                      rows={3}
+                      placeholder="Notes visible to your client"
+                      className={`mt-1 ${inputClassName}`}
+                    />
                   </div>
                 ) : null}
                 {showFooterField ? (
@@ -2028,22 +1988,14 @@ export function InvoiceEditIndyContent({
                     <Label className="text-[var(--workspace-shell-text-muted)]">
                       Footer message
                     </Label>
-                    {previewMode ? (
-                      footerMessage.trim() ? (
-                        <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--ozer-text-on-light)]">
-                          {footerMessage}
-                        </p>
-                      ) : null
-                    ) : (
-                      <Textarea
-                        value={footerMessage}
-                        onChange={(e) => setFooterMessage(e.target.value)}
-                        disabled={readOnly}
-                        rows={2}
-                        placeholder="Thank you for your business"
-                        className={`mt-1 ${inputClassName}`}
-                      />
-                    )}
+                    <Textarea
+                      value={footerMessage}
+                      onChange={(e) => setFooterMessage(e.target.value)}
+                      disabled={readOnly}
+                      rows={2}
+                      placeholder="Thank you for your business"
+                      className={`mt-1 ${inputClassName}`}
+                    />
                   </div>
                 ) : null}
                 {showPaymentLinkField ? (
@@ -2359,7 +2311,6 @@ export function InvoiceEditIndyContent({
                 <Switch
                   checked={checked}
                   onCheckedChange={setter}
-                  disabled={previewMode}
                 />
               </div>
             ))}

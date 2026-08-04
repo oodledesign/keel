@@ -432,6 +432,7 @@ export async function listRecurringSeries(accountId: string) {
 export async function upsertRecurringSeries(input: {
   accountId: string;
   seriesId?: string;
+  invoiceId?: string;
   client_id: string;
   title: string;
   currency: string;
@@ -476,6 +477,16 @@ export async function upsertRecurringSeries(input: {
     .select('*')
     .single();
   if (error) throw new Error(error.message);
+
+  if (input.invoiceId && data?.id) {
+    const { error: linkError } = await db()
+      .from('invoices')
+      .update({ recurring_series_id: data.id })
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId);
+    if (linkError) throw new Error(linkError.message);
+  }
+
   return data;
 }
 

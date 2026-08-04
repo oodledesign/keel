@@ -20,10 +20,9 @@ async function ListingManagementPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const [publications, members, teams, assignment] = await Promise.all([
+  const [publications, members, assignment] = await Promise.all([
     service.listPublicationsForListing(listingId),
     service.listAccountMembers(slug),
-    service.listWorkspaceTeams(accountId),
     service.getListingAssignment(listingId, accountId, slug),
   ]);
 
@@ -33,7 +32,6 @@ async function ListingManagementPage({ params }: PageProps) {
         accountId={accountId}
         accountSlug={slug}
         members={members}
-        teams={teams}
         assignment={assignment}
       />
       <ListingManagementSection

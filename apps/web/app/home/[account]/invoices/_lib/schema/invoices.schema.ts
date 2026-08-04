@@ -197,6 +197,8 @@ export const ListRecurringSeriesSchema = z.object({
 export const UpsertRecurringSeriesSchema = z.object({
   accountId: z.string().uuid(),
   seriesId: z.string().uuid().optional(),
+  /** When creating from an invoice, link that invoice to the new series. */
+  invoiceId: z.string().uuid().optional(),
   client_id: z.string().uuid(),
   title: z.string().min(1),
   currency: InvoiceCurrencySchema.default('gbp'),
