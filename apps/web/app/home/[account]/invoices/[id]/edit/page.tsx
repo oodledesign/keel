@@ -4,6 +4,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
+import { resolveWorkspaceTimezoneForAccount } from '~/lib/invoices/resolve-workspace-timezone';
 
 import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
@@ -56,23 +57,25 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
   const authUser = await supabase.auth.getUser();
   const auth = authUser.data.user;
 
-  const [brand, accountResult, userSettings, paymentSettings] =
-    await Promise.all([
-      loadAccountBrandResolved(accountId).catch(() => null),
-      supabase
-        .from('accounts')
-        .select('name')
-        .eq('id', accountId)
-        .maybeSingle(),
-      auth?.id
-        ? supabase
-            .from('user_settings')
-            .select('first_name, last_name')
-            .eq('user_id', auth.id)
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-      createInvoicePaymentSettingsService(supabase).getSettings(accountId),
-    ]);
+  const [
+    brand,
+    accountResult,
+    userSettings,
+    paymentSettings,
+    workspaceTimezone,
+  ] = await Promise.all([
+    loadAccountBrandResolved(accountId).catch(() => null),
+    supabase.from('accounts').select('name').eq('id', accountId).maybeSingle(),
+    auth?.id
+      ? supabase
+          .from('user_settings')
+          .select('first_name, last_name')
+          .eq('user_id', auth.id)
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    createInvoicePaymentSettingsService(supabase).getSettings(accountId),
+    resolveWorkspaceTimezoneForAccount(supabase, accountId, auth?.id ?? null),
+  ]);
 
   const meta = (auth?.user_metadata ?? {}) as {
     first_name?: string | null;
@@ -118,6 +121,7 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
         defaultHourlyRatePence={paymentSettings.default_hourly_rate_pence}
         defaultInvoiceDueDays={paymentSettings.default_invoice_due_days}
         stripeCardFeeMode={paymentSettings.stripe_card_fee_mode}
+        workspaceTimezone={workspaceTimezone}
       />
     </PageBody>
   );

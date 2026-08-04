@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
   ArchiveInvoiceSchema,
+  CancelScheduledInvoiceSendSchema,
   CreateInvoiceCheckoutSessionByTokenSchema,
   CreateInvoiceSchema,
   DeleteInvoiceSchema,
@@ -19,6 +20,7 @@ import {
   MarkInvoiceSentManuallySchema,
   ResendInvoiceSchema,
   SavePaymentSettingsSchema,
+  ScheduleInvoiceSendSchema,
   SendInvoiceSchema,
   SetInvoiceStatusSchema,
   UpdateInvoiceSchema,
@@ -88,6 +90,16 @@ export const setInvoiceStatus = enhanceAction(
 export const sendInvoice = enhanceAction(
   async (input) => getService().sendInvoice(input),
   { schema: SendInvoiceSchema },
+);
+
+export const scheduleInvoiceSend = enhanceAction(
+  async (input) => getService().scheduleInvoiceSend(input),
+  { schema: ScheduleInvoiceSendSchema },
+);
+
+export const cancelScheduledInvoiceSend = enhanceAction(
+  async (input) => getService().cancelScheduledInvoiceSend(input),
+  { schema: CancelScheduledInvoiceSendSchema },
 );
 
 export const markInvoiceSentManually = enhanceAction(

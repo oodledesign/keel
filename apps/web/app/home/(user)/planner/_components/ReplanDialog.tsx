@@ -80,6 +80,7 @@ function buildReplanNotes(input: {
 
 type Props = {
   scope: PlannerScope;
+  accountId: string;
   planMarkdown: string;
   openTasks: PlannerTask[];
   calendarEvents: PlannerCalendarEvent[];
@@ -89,6 +90,7 @@ type Props = {
 
 export function ReplanDialog({
   scope,
+  accountId,
   planMarkdown,
   openTasks,
   calendarEvents,
@@ -130,6 +132,7 @@ export function ReplanDialog({
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({
+          accountId,
           planning_mode: 'day',
           date: now.toISOString(),
           working_hours: preferences.workingHours,

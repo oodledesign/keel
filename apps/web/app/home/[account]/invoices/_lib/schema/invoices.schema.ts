@@ -226,6 +226,23 @@ export const DeleteRecurringSeriesSchema = z.object({
   seriesId: z.string().uuid(),
 });
 
+export const ScheduleInvoiceSendSchema = z.object({
+  accountId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+  localDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  localTime: z.string().regex(/^\d{1,2}:\d{2}$/),
+  timezone: z.string().min(1).optional(),
+  sent_to_emails: z.array(z.string().email()).min(1),
+  email_subject: optionalNullableString,
+  email_body: optionalNullableString,
+  email_signature: optionalNullableString,
+});
+
+export const CancelScheduledInvoiceSendSchema = z.object({
+  accountId: z.string().uuid(),
+  invoiceId: z.string().uuid(),
+});
+
 export const SavePaymentSettingsSchema = z.object({
   accountId: z.string().uuid(),
   bank_account_name: optionalNullableString,
@@ -236,7 +253,9 @@ export const SavePaymentSettingsSchema = z.object({
   bank_transfer_enabled: z.boolean().optional(),
   bank_transfer_instructions: optionalNullableString,
   stripe_pay_now_enabled: z.boolean().optional(),
-  stripe_card_fee_mode: z.enum(['pass_to_client', 'absorb_in_payout']).optional(),
+  stripe_card_fee_mode: z
+    .enum(['pass_to_client', 'absorb_in_payout'])
+    .optional(),
   invoice_starting_number: z.number().int().min(1).max(999999).optional(),
   default_invoice_currency: InvoiceCurrencySchema.optional(),
   invoice_quantity_label: z.enum(['quantity', 'hours']).optional(),
@@ -264,4 +283,10 @@ export type CreateInvoiceCheckoutSessionByTokenInput = z.infer<
 >;
 export type GetInvoicePortalLinkInput = z.infer<
   typeof GetInvoicePortalLinkSchema
+>;
+export type ScheduleInvoiceSendInput = z.infer<
+  typeof ScheduleInvoiceSendSchema
+>;
+export type CancelScheduledInvoiceSendInput = z.infer<
+  typeof CancelScheduledInvoiceSendSchema
 >;

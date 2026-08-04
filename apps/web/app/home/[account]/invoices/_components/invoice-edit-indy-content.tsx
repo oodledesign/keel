@@ -157,6 +157,8 @@ type InvoiceData = {
   preferred_send_email?: string | null;
   preferred_send_source?: string | null;
   preferred_send_name?: string | null;
+  scheduled_send_at?: string | null;
+  scheduled_send_to_emails?: string[] | null;
 };
 
 const STATUS_STEPS = [
@@ -253,6 +255,7 @@ export function InvoiceEditIndyContent({
   defaultHourlyRatePence = null,
   defaultInvoiceDueDays = 7,
   stripeCardFeeMode = 'absorb_in_payout',
+  workspaceTimezone = 'Europe/London',
 }: {
   accountSlug: string;
   accountId: string;
@@ -269,6 +272,7 @@ export function InvoiceEditIndyContent({
   defaultHourlyRatePence?: number | null;
   defaultInvoiceDueDays?: number;
   stripeCardFeeMode?: StripeCardFeeMode;
+  workspaceTimezone?: string;
 }) {
   const router = useRouter();
   const invoice = initialInvoice as unknown as InvoiceData;
@@ -306,6 +310,7 @@ export function InvoiceEditIndyContent({
   const [recurringDueDays, setRecurringDueDays] = useState(
     String(defaultInvoiceDueDays ?? 7),
   );
+  const [recurringAutoSend, setRecurringAutoSend] = useState(true);
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [saving, setSaving] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
@@ -961,6 +966,12 @@ export function InvoiceEditIndyContent({
 
     setCreatingRecurring(true);
     try {
+      const recipientEmail =
+        invoice.sent_to_email?.trim() ||
+        invoice.preferred_send_email?.trim() ||
+        (invoice.client as ClientInfo | null)?.email?.trim() ||
+        null;
+
       await upsertRecurringSeriesAction({
         accountId,
         client_id: clientId,
@@ -970,7 +981,7 @@ export function InvoiceEditIndyContent({
         next_issue_at: startDate.toISOString(),
         end_at: endAt,
         max_occurrences: null,
-        auto_send: false,
+        auto_send: recurringAutoSend,
         due_days: dueDays,
         template: {
           project_id: projectId || null,
@@ -988,6 +999,8 @@ export function InvoiceEditIndyContent({
           email_subject: emailSubject,
           email_body: emailBody,
           email_signature: emailSignature,
+          sent_to_email: recipientEmail,
+          sent_to_emails: recipientEmail ? [recipientEmail] : [],
           items: items.map((row, i) => ({
             job_id: row.job_id ?? null,
             sort_order: i,
@@ -1000,7 +1013,11 @@ export function InvoiceEditIndyContent({
           })),
         },
       });
-      toast.success('Recurring series created');
+      toast.success(
+        recurringAutoSend && !recipientEmail
+          ? 'Recurring series created — add a client email so auto-send can email invoices'
+          : 'Recurring series created',
+      );
       setRecurringDialogOpen(false);
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -1018,12 +1035,16 @@ export function InvoiceEditIndyContent({
     recurringDurationMode,
     recurringMonths,
     recurringDueDays,
+    recurringAutoSend,
     currency,
     emailBody,
     emailSignature,
     emailSubject,
     footerMessage,
+    invoice.client,
     invoice.invoice_number,
+    invoice.preferred_send_email,
+    invoice.sent_to_email,
     items,
     notes,
     parsedDepositValue,
@@ -1229,10 +1250,13 @@ export function InvoiceEditIndyContent({
             onEmailChange={handleEmailDraftChange}
             pdfQuery={pdfQuery}
             isDraft={isDraft}
+            scheduledSendAt={invoice.scheduled_send_at ?? null}
+            workspaceTimezone={workspaceTimezone}
             onSent={() => {
               setShowSendPanel(false);
               router.refresh();
             }}
+            onScheduled={() => router.refresh()}
             onMarkedSent={() => router.refresh()}
             onClose={() => setShowSendPanel(false)}
             passCardFeeToClient={feeMode === 'pass_to_client'}
@@ -1297,7 +1321,11 @@ export function InvoiceEditIndyContent({
                   )}
                   <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
                     Invoice #{invoice.invoice_number}
-                    {invoice.status === 'draft' ? ' · Draft' : ''}
+                    {invoice.status === 'draft' && invoice.scheduled_send_at
+                      ? ' · Scheduled'
+                      : invoice.status === 'draft'
+                        ? ' · Draft'
+                        : ''}
                   </p>
                 </div>
                 {showLogoField && brandLogoUrl ? (
@@ -2251,6 +2279,20 @@ export function InvoiceEditIndyContent({
                 />
               </div>
             ) : null}
+
+            <div className="flex items-center justify-between gap-4 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
+              <div>
+                <p className="text-sm font-medium">Email when generated</p>
+                <p className="text-muted-foreground text-xs">
+                  On: send each new invoice automatically. Off: leave as a draft
+                  for you to send.
+                </p>
+              </div>
+              <Switch
+                checked={recurringAutoSend}
+                onCheckedChange={setRecurringAutoSend}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button

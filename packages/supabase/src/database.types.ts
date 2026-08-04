@@ -5710,6 +5710,9 @@ export type Database = {
           recurring_series_id: string | null;
           reference_number: string | null;
           sent_at: string | null;
+          scheduled_send_at: string | null;
+          scheduled_send_processing_at: string | null;
+          scheduled_send_to_emails: string[] | null;
           sent_to_email: string | null;
           status: string;
           stripe_checkout_session_id: string | null;
@@ -5750,6 +5753,9 @@ export type Database = {
           recurring_series_id?: string | null;
           reference_number?: string | null;
           sent_at?: string | null;
+          scheduled_send_at?: string | null;
+          scheduled_send_processing_at?: string | null;
+          scheduled_send_to_emails?: string[] | null;
           sent_to_email?: string | null;
           status?: string;
           stripe_checkout_session_id?: string | null;
@@ -5790,6 +5796,9 @@ export type Database = {
           recurring_series_id?: string | null;
           reference_number?: string | null;
           sent_at?: string | null;
+          scheduled_send_at?: string | null;
+          scheduled_send_processing_at?: string | null;
+          scheduled_send_to_emails?: string[] | null;
           sent_to_email?: string | null;
           status?: string;
           stripe_checkout_session_id?: string | null;
@@ -6306,6 +6315,296 @@ export type Database = {
           },
         ];
       };
+      media_credit_batches: {
+        Row: {
+          account_id: string
+          created_at: string
+          expires_at: string
+          granted_at: string
+          id: string
+          source_type: string
+          stripe_event_id: string | null
+          swept_at: string | null
+          units_granted: number
+          units_remaining: number
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          expires_at: string
+          granted_at?: string
+          id?: string
+          source_type: string
+          stripe_event_id?: string | null
+          swept_at?: string | null
+          units_granted: number
+          units_remaining: number
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          expires_at?: string
+          granted_at?: string
+          id?: string
+          source_type?: string
+          stripe_event_id?: string | null
+          swept_at?: string | null
+          units_granted?: number
+          units_remaining?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_credit_batches_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_credit_batches_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_credit_batches_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_credit_pools: {
+        Row: {
+          account_id: string
+          balance: number
+          cycle_end: string | null
+          cycle_start: string | null
+          monthly_allowance: number
+          plan_tier: string
+          updated_at: string
+        }
+        Insert: {
+          account_id: string
+          balance?: number
+          cycle_end?: string | null
+          cycle_start?: string | null
+          monthly_allowance?: number
+          plan_tier?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string
+          balance?: number
+          cycle_end?: string | null
+          cycle_start?: string | null
+          monthly_allowance?: number
+          plan_tier?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_credit_pools_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_credit_pools_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_credit_pools_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: true
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_credit_transactions: {
+        Row: {
+          account_id: string
+          amount: number
+          batch_id: string | null
+          created_at: string
+          id: string
+          reason: string | null
+          related_job_id: string | null
+          stripe_event_id: string | null
+          type: string
+        }
+        Insert: {
+          account_id: string
+          amount: number
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          related_job_id?: string | null
+          stripe_event_id?: string | null
+          type: string
+        }
+        Update: {
+          account_id?: string
+          amount?: number
+          batch_id?: string | null
+          created_at?: string
+          id?: string
+          reason?: string | null
+          related_job_id?: string | null
+          stripe_event_id?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "fk_media_credit_transactions_related_job"
+            columns: ["related_job_id"]
+            isOneToOne: false
+            referencedRelation: "media_generation_jobs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_credit_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_credit_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_credit_transactions_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_credit_transactions_batch_id_fkey"
+            columns: ["batch_id"]
+            isOneToOne: false
+            referencedRelation: "media_credit_batches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      media_generation_jobs: {
+        Row: {
+          account_id: string
+          client_id: string | null
+          completed_at: string | null
+          created_at: string
+          created_by: string
+          error_message: string | null
+          external_job_id: string | null
+          file_url: string | null
+          id: string
+          media_credits_charged: number | null
+          model_id: string
+          params: Json
+          project_id: string | null
+          prompt: string | null
+          provider: string
+          provider_cost_usd: number | null
+          refs: Json
+          status: string
+          thumbnail_url: string | null
+          type: string
+        }
+        Insert: {
+          account_id: string
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by: string
+          error_message?: string | null
+          external_job_id?: string | null
+          file_url?: string | null
+          id?: string
+          media_credits_charged?: number | null
+          model_id: string
+          params?: Json
+          project_id?: string | null
+          prompt?: string | null
+          provider: string
+          provider_cost_usd?: number | null
+          refs?: Json
+          status?: string
+          thumbnail_url?: string | null
+          type: string
+        }
+        Update: {
+          account_id?: string
+          client_id?: string | null
+          completed_at?: string | null
+          created_at?: string
+          created_by?: string
+          error_message?: string | null
+          external_job_id?: string | null
+          file_url?: string | null
+          id?: string
+          media_credits_charged?: number | null
+          model_id?: string
+          params?: Json
+          project_id?: string | null
+          prompt?: string | null
+          provider?: string
+          provider_cost_usd?: number | null
+          refs?: Json
+          status?: string
+          thumbnail_url?: string | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "media_generation_jobs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_generation_jobs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_account_workspace"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_generation_jobs_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "user_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_generation_jobs_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "media_generation_jobs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       meeting_transcripts: {
         Row: {
           account_id: string;
@@ -9569,6 +9868,12 @@ export type Database = {
         Args: { p_account_id: string };
         Returns: string;
       };
+      claim_due_scheduled_invoice_sends: {
+        Args: {
+          p_limit?: number;
+        };
+        Returns: Database["public"]["Tables"]["invoices"]["Row"][];
+      };
       can_action_account_member: {
         Args: { target_team_account_id: string; target_user_id: string };
         Returns: boolean;
@@ -9870,6 +10175,70 @@ export type Database = {
           updated_at: string | null;
         };
       };
+      debit_media_credits: {
+        Args: { p_account_id: string; p_amount: number; p_job_id: string }
+        Returns: Json
+      }
+
+      ensure_media_credit_pool: {
+        Args: { p_account_id: string }
+        Returns: {
+          account_id: string
+          balance: number
+          cycle_end: string | null
+          cycle_start: string | null
+          monthly_allowance: number
+          plan_tier: string
+          updated_at: string
+        }
+        SetofOptions: {
+          from: "*"
+          to: "media_credit_pools"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+
+      expire_stale_media_credit_batches: { Args: never; Returns: number }
+
+      forfeit_media_credits_on_closure: {
+        Args: { p_account_id: string }
+        Returns: number
+      }
+
+      grant_media_credits: {
+        Args: {
+          p_account_id: string
+          p_amount: number
+          p_expires_at: string
+          p_source_type: string
+          p_stripe_event_id?: string
+        }
+        Returns: {
+          account_id: string
+          created_at: string
+          expires_at: string
+          granted_at: string
+          id: string
+          source_type: string
+          stripe_event_id: string | null
+          swept_at: string | null
+          units_granted: number
+          units_remaining: number
+        }
+        SetofOptions: {
+          from: "*"
+          to: "media_credit_batches"
+          isOneToOne: true
+          isSetofReturn: false
+        }
+      }
+
+      refund_media_credits: {
+        Args: { p_job_id: string; p_reason?: string }
+        Returns: Json
+      }
+
       reset_ai_credits_if_expired: {
         Args: { p_account_id: string };
         Returns: {

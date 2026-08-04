@@ -61,7 +61,7 @@ export function InvoicesIncomeSummary({
         </p>
       ) : null}
 
-      <div className="mt-3 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+      <div className="-mx-4 mt-3 flex snap-x snap-mandatory gap-3 overflow-x-auto px-4 pb-1 [-ms-overflow-style:none] [scrollbar-width:none] md:mx-0 md:grid md:grid-cols-3 md:gap-3 md:overflow-visible md:px-0 md:pb-0 lg:grid-cols-5 [&::-webkit-scrollbar]:hidden">
         {[
           {
             label: 'Issued',
@@ -91,10 +91,12 @@ export function InvoicesIncomeSummary({
         ].map((item) => (
           <div
             key={item.label}
-            className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-3 shadow-sm"
+            className="w-[25vw] min-w-[25vw] shrink-0 snap-start rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-3 shadow-sm md:w-auto md:min-w-0 md:px-4"
           >
             <p className="text-muted-foreground text-xs">{item.label}</p>
-            <p className={`mt-1 text-lg font-semibold ${item.color}`}>
+            <p
+              className={`mt-1 text-base font-semibold md:text-lg ${item.color}`}
+            >
               {formatInvoiceMoney(item.value, currency)}
             </p>
             {item.label === 'Drafts' ? (

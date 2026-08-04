@@ -160,6 +160,7 @@ export function RecurringSeriesEditDialog({
   const [nextIssueDate, setNextIssueDate] = useState('');
   const [dueDays, setDueDays] = useState('7');
   const [autoSend, setAutoSend] = useState(false);
+  const [recipientEmail, setRecipientEmail] = useState('');
   const [hasEndDate, setHasEndDate] = useState(false);
   const [endDate, setEndDate] = useState('');
   const [notes, setNotes] = useState('');
@@ -175,10 +176,17 @@ export function RecurringSeriesEditDialog({
     setNextIssueDate(toDateInput(series.next_issue_at));
     setDueDays(String(series.due_days ?? 7));
     setAutoSend(Boolean(series.auto_send));
+    const template = (series.template ?? {}) as Record<string, unknown>;
+    const existingRecipient =
+      (typeof template.sent_to_email === 'string' && template.sent_to_email) ||
+      (Array.isArray(template.sent_to_emails) &&
+      typeof template.sent_to_emails[0] === 'string'
+        ? template.sent_to_emails[0]
+        : '');
+    setRecipientEmail(existingRecipient);
     const end = toDateInput(series.end_at);
     setHasEndDate(Boolean(end));
     setEndDate(end);
-    const template = (series.template ?? {}) as Record<string, unknown>;
     setNotes(typeof template.notes === 'string' ? template.notes : '');
     setItems(mapTemplateItems(template));
   }, [series, open]);
@@ -263,6 +271,12 @@ export function RecurringSeriesEditDialog({
       return;
     }
 
+    const cleanedRecipient = recipientEmail.trim().toLowerCase();
+    if (autoSend && !cleanedRecipient) {
+      toast.error('Add a recipient email when email-when-generated is on');
+      return;
+    }
+
     const existingTemplate =
       (series.template as Record<string, unknown> | null | undefined) ?? {};
 
@@ -285,6 +299,8 @@ export function RecurringSeriesEditDialog({
             title: title.trim(),
             notes: notes.trim() || null,
             items: cleanedItems,
+            sent_to_email: cleanedRecipient || null,
+            sent_to_emails: cleanedRecipient ? [cleanedRecipient] : [],
           },
         });
         toast.success('Recurring series updated');
@@ -530,13 +546,24 @@ export function RecurringSeriesEditDialog({
 
           <div className="flex items-center justify-between gap-4 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
             <div>
-              <p className="text-sm font-medium">Auto-send</p>
+              <p className="text-sm font-medium">Email when generated</p>
               <p className="text-muted-foreground text-xs">
-                Email each invoice when it is issued (requires a saved recipient
-                on the template)
+                On: email each invoice when it is created. Off: create as a
+                draft for manual send. Requires a recipient on the template.
               </p>
             </div>
             <Switch checked={autoSend} onCheckedChange={setAutoSend} />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="recurring-edit-recipient">Recipient email</Label>
+            <Input
+              id="recurring-edit-recipient"
+              type="email"
+              value={recipientEmail}
+              onChange={(e) => setRecipientEmail(e.target.value)}
+              placeholder="billing@client.com"
+            />
           </div>
         </div>
 

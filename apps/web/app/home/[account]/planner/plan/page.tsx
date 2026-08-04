@@ -10,8 +10,6 @@ import {
   loadWorkspacePlannerPageData,
 } from '~/lib/planner/load-planner-data';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
-
 interface WorkspacePlannerPlanPageProps {
   params: Promise<{ account: string }>;
 }
@@ -33,16 +31,9 @@ async function WorkspacePlannerPlanPage({
   const data = await loadWorkspacePlannerPageData(accountSlug);
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        title="Planner"
-        description="Build a day or week plan from this workspace’s tasks — or everything across Ozer."
-        account={accountSlug}
-      />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 text-[var(--workspace-shell-text)] lg:px-6">
-        <PlannerPageClient initialData={data} />
-      </PageBody>
-    </>
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-3 text-[var(--workspace-shell-text)] lg:px-6 lg:py-4">
+      <PlannerPageClient initialData={data} />
+    </PageBody>
   );
 }
 

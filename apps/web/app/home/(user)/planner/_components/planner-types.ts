@@ -26,6 +26,7 @@ export type PlannerPayloadTask = {
 };
 
 export type PlannerGeneratePayload = {
+  accountId: string;
   planning_mode: PlanningMode;
   date: string;
   working_hours: PlannerPreferences['workingHours'];

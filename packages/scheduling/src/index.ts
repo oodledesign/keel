@@ -4,6 +4,13 @@ export type { ComputeAvailableSlotsInput } from './slots/compute-available-slots
 export type { CalendarProvider, CalendarProviderId } from './calendar-provider';
 
 export {
+  formatYmdInTimeZone,
+  parseTimeParts,
+  parseYmd,
+  zonedDateTimeToUtc,
+} from './timezone';
+
+export {
   GoogleCalendarNotConnectedError,
   GoogleCalendarReconnectRequiredError,
   isGoogleCalendarReconnectRequiredError,

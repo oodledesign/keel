@@ -646,6 +646,11 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
                   />
                   <ReplanDialog
                     scope={initialData.scope}
+                    accountId={
+                      initialData.scope.kind === 'workspace'
+                        ? initialData.scope.accountId
+                        : initialData.userId
+                    }
                     planMarkdown={planMarkdown}
                     openTasks={replanOpenTasks}
                     calendarEvents={calendarEvents}

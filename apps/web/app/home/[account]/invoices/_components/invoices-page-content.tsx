@@ -28,14 +28,14 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
-import pathsConfig from '~/config/paths.config';
 import type { DateRangeSelection } from '~/components/date-range/analytics-date-range-picker';
+import pathsConfig from '~/config/paths.config';
+import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 import {
   currentMonthToDateSelection,
   resolveAnalyticsDateRange,
 } from '~/lib/date-range/analytics-date-range';
-import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
-import { ClientCombobox } from '~/home/[account]/jobs/_components/client-combobox';
 
 import { getErrorMessage } from '../_lib/error-message';
 import { formatInvoiceMoney } from '../_lib/invoice-currency';
@@ -67,6 +67,7 @@ type InvoiceRow = {
   total_pence: number;
   amount_paid_pence?: number;
   recurring_series_id?: string | null;
+  scheduled_send_at?: string | null;
   updated_at: string;
   clients: { display_name: string | null } | null;
 };
@@ -383,16 +384,18 @@ export function InvoicesPageContent({
   }
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-4 px-4 md:px-6">
-      <InvoicesIncomeSummary
-        summary={summary}
-        dateFrom={summaryDateFrom}
-        dateTo={summaryDateTo}
-        isLoading={summaryLoading}
-        onDateRangeApply={onSummaryDateRangeApply}
-      />
+    <div className="flex min-h-0 flex-1 flex-col gap-4">
+      <div className="px-4 md:px-0">
+        <InvoicesIncomeSummary
+          summary={summary}
+          dateFrom={summaryDateFrom}
+          dateTo={summaryDateTo}
+          isLoading={summaryLoading}
+          onDateRangeApply={onSummaryDateRangeApply}
+        />
+      </div>
 
-      <div className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-sm">
+      <div className="rounded-none border-y border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-sm md:rounded-2xl md:border">
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] p-4">
           <div className="inline-flex flex-wrap gap-1 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/80 p-1 text-xs">
             {tabs.map((item) => (
@@ -707,6 +710,7 @@ export function InvoicesPageContent({
                         due_at={inv.due_at}
                         amount_paid_pence={inv.amount_paid_pence}
                         total_pence={inv.total_pence}
+                        scheduled_send_at={inv.scheduled_send_at}
                       />
                     </td>
                     <td className="py-3">

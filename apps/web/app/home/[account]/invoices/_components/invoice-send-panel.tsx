@@ -40,6 +40,7 @@ import { cn } from '@kit/ui/utils';
 import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
 import { listContacts } from '~/home/[account]/clients/_lib/server/server-actions';
 import { formatContactRoleLabel } from '~/lib/clients/contact-roles';
+import { formatUtcInTimezone } from '~/lib/invoices/zoned-local-datetime';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -53,8 +54,10 @@ import {
 import { PASS_TO_CLIENT_FEE_NOTE } from '../_lib/invoice-stripe-fee';
 import { formatPence } from '../_lib/invoice-totals';
 import {
+  cancelScheduledInvoiceSend,
   getInvoicePortalLink,
   markInvoiceSentManually,
+  scheduleInvoiceSend,
   sendInvoice,
 } from '../_lib/server/server-actions';
 import {
@@ -170,9 +173,12 @@ export function InvoiceSendPanel({
   initialSignature,
   pdfQuery,
   isDraft = false,
+  scheduledSendAt = null,
+  workspaceTimezone = 'Europe/London',
   onEmailChange,
   onSent,
   onMarkedSent,
+  onScheduled,
   onClose,
   passCardFeeToClient = false,
 }: {
@@ -196,6 +202,8 @@ export function InvoiceSendPanel({
   initialSignature?: string | null;
   pdfQuery?: string;
   isDraft?: boolean;
+  scheduledSendAt?: string | null;
+  workspaceTimezone?: string;
   onEmailChange?: (fields: {
     subject: string;
     body: string;
@@ -203,6 +211,7 @@ export function InvoiceSendPanel({
   }) => void;
   onSent?: () => void;
   onMarkedSent?: () => void;
+  onScheduled?: () => void;
   onClose?: () => void;
   /** When true, show copy that card payments may add a processing fee. */
   passCardFeeToClient?: boolean;
@@ -236,7 +245,7 @@ export function InvoiceSendPanel({
   const signatureRef = useRef<TokenTemplateFieldHandle>(null);
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<
-    'send' | 'test' | 'link' | 'pdf' | null
+    'send' | 'test' | 'link' | 'pdf' | 'schedule' | 'cancel-schedule' | null
   >(null);
   const [markAsSent, setMarkAsSent] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
@@ -245,6 +254,26 @@ export function InvoiceSendPanel({
   const [loadingContacts, setLoadingContacts] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [sendMode, setSendMode] = useState<'now' | 'schedule'>(() =>
+    scheduledSendAt ? 'schedule' : 'now',
+  );
+  const [scheduleDate, setScheduleDate] = useState(() => {
+    if (scheduledSendAt) {
+      return formatUtcInTimezone(scheduledSendAt, workspaceTimezone).date;
+    }
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    return d.toISOString().slice(0, 10);
+  });
+  const [scheduleTime, setScheduleTime] = useState(() => {
+    if (scheduledSendAt) {
+      return formatUtcInTimezone(scheduledSendAt, workspaceTimezone).time;
+    }
+    return '09:00';
+  });
+  const [currentScheduledAt, setCurrentScheduledAt] = useState<string | null>(
+    scheduledSendAt,
+  );
 
   const pdfHref = useMemo(() => {
     const base = `/api/invoices/pdf?invoiceId=${encodeURIComponent(invoiceId)}`;
@@ -411,8 +440,53 @@ export function InvoiceSendPanel({
       toast.success(testOnly ? 'Test email sent' : 'Invoice sent');
       if (!testOnly) {
         setPreviewOpen(false);
-        onSent();
+        setCurrentScheduledAt(null);
+        onSent?.();
       }
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleSchedule = async () => {
+    if (recipientEmails.length === 0) {
+      toast.error('Add at least one recipient');
+      return;
+    }
+    setLoading('schedule');
+    try {
+      const result = await scheduleInvoiceSend({
+        accountId,
+        invoiceId,
+        localDate: scheduleDate,
+        localTime: scheduleTime,
+        timezone: workspaceTimezone,
+        sent_to_emails: recipientEmails,
+        email_subject: subject,
+        email_body: body,
+        email_signature: signature,
+      });
+      setCurrentScheduledAt(result.scheduled_send_at);
+      toast.success('Invoice send scheduled');
+      setPreviewOpen(false);
+      onScheduled?.();
+    } catch (error) {
+      toast.error(getErrorMessage(error));
+    } finally {
+      setLoading(null);
+    }
+  };
+
+  const handleCancelSchedule = async () => {
+    setLoading('cancel-schedule');
+    try {
+      await cancelScheduledInvoiceSend({ accountId, invoiceId });
+      setCurrentScheduledAt(null);
+      setSendMode('now');
+      toast.success('Scheduled send cancelled');
+      onScheduled?.();
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -693,15 +767,114 @@ export function InvoiceSendPanel({
             </div>
           </div>
 
+          <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] p-3">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={sendMode === 'now' ? 'default' : 'outline'}
+                className={
+                  sendMode === 'now'
+                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                    : undefined
+                }
+                onClick={() => setSendMode('now')}
+              >
+                Send now
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={sendMode === 'schedule' ? 'default' : 'outline'}
+                className={
+                  sendMode === 'schedule'
+                    ? 'bg-[var(--ozer-accent)] text-[#09111F]'
+                    : undefined
+                }
+                onClick={() => setSendMode('schedule')}
+              >
+                Schedule
+              </Button>
+            </div>
+
+            {currentScheduledAt ? (
+              <p className="text-muted-foreground text-xs">
+                Currently scheduled for{' '}
+                {
+                  formatUtcInTimezone(currentScheduledAt, workspaceTimezone)
+                    .label
+                }
+                .
+              </p>
+            ) : null}
+
+            {sendMode === 'schedule' ? (
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="invoice-schedule-date">Date</Label>
+                  <Input
+                    id="invoice-schedule-date"
+                    type="date"
+                    value={scheduleDate}
+                    onChange={(e) => setScheduleDate(e.target.value)}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <Label htmlFor="invoice-schedule-time">
+                    Time ({workspaceTimezone})
+                  </Label>
+                  <Input
+                    id="invoice-schedule-time"
+                    type="time"
+                    value={scheduleTime}
+                    onChange={(e) => setScheduleTime(e.target.value)}
+                  />
+                </div>
+              </div>
+            ) : null}
+          </div>
+
           <div className="flex flex-wrap gap-2">
-            <Button
-              className="bg-[var(--ozer-accent)] text-[#09111F]"
-              disabled={loading != null || recipientEmails.length === 0}
-              onClick={() => setPreviewOpen(true)}
-            >
-              <Eye className="mr-2 h-4 w-4" />
-              Preview and send
-            </Button>
+            {sendMode === 'now' ? (
+              <Button
+                className="bg-[var(--ozer-accent)] text-[#09111F]"
+                disabled={loading != null || recipientEmails.length === 0}
+                onClick={() => setPreviewOpen(true)}
+              >
+                <Eye className="mr-2 h-4 w-4" />
+                Preview and send
+              </Button>
+            ) : (
+              <Button
+                className="bg-[var(--ozer-accent)] text-[#09111F]"
+                disabled={
+                  loading != null ||
+                  recipientEmails.length === 0 ||
+                  !scheduleDate ||
+                  !scheduleTime
+                }
+                onClick={() => void handleSchedule()}
+              >
+                {loading === 'schedule' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Schedule send
+              </Button>
+            )}
+            {currentScheduledAt ? (
+              <Button
+                variant="outline"
+                disabled={loading != null}
+                onClick={() => void handleCancelSchedule()}
+              >
+                {loading === 'cancel-schedule' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : null}
+                Cancel schedule
+              </Button>
+            ) : null}
             <Button
               variant="outline"
               disabled={loading != null}

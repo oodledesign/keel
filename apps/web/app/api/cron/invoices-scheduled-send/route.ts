@@ -1,6 +1,4 @@
-import { NextResponse } from 'next/server';
-
-import { processDueRecurringSeries } from '~/home/[account]/invoices/_lib/server/invoice-v2.server';
+import { processDueScheduledInvoiceSends } from '~/lib/invoices/run-scheduled-invoice-sends';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const runtime = 'nodejs';
@@ -19,13 +17,15 @@ export async function GET(request: Request) {
   }
 
   try {
-    const result = await processDueRecurringSeries();
-    return jsonOk({ created: result.created, failed: result.failed });
+    const result = await processDueScheduledInvoiceSends();
+    return jsonOk(result);
   } catch (error) {
-    console.error('[invoices] recurring cron', error);
+    console.error('[invoices] scheduled send cron', error);
     return jsonErr(
       'CRON_FAILED',
-      error instanceof Error ? error.message : 'Recurring invoice cron failed',
+      error instanceof Error
+        ? error.message
+        : 'Scheduled invoice send cron failed',
       500,
     );
   }

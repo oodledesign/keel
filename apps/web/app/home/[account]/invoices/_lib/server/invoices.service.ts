@@ -15,6 +15,8 @@ import {
   normalizePence,
   resolveInvoiceLineUnitPricePence,
 } from '~/lib/invoices/invoice-quantity';
+import { resolveWorkspaceTimezoneForAccount } from '~/lib/invoices/resolve-workspace-timezone';
+import { localDateTimeInTimezoneToUtcIso } from '~/lib/invoices/zoned-local-datetime';
 
 import { normalizeInvoiceCurrency } from '../invoice-currency';
 import {
@@ -360,11 +362,51 @@ class InvoicesService {
     };
   }
 
-  async createInvoice(input: CreateInvoiceInput) {
-    const user = await this.ensureUserAndPermission(
-      input.accountId,
-      'invoices.edit',
-    );
+  private async resolveSystemActor(accountId: string): Promise<{
+    actorId: string | null;
+    first_name: string | null;
+    last_name: string | null;
+    email: string | null;
+  }> {
+    const { data: account } = await this.db
+      .from('accounts')
+      .select('primary_owner_user_id, email, name')
+      .eq('id', accountId)
+      .maybeSingle();
+
+    const actorId =
+      (account?.primary_owner_user_id as string | null | undefined) ?? null;
+    let first_name: string | null = null;
+    let last_name: string | null = null;
+    const email =
+      (account?.email as string | null | undefined)?.trim().toLowerCase() ||
+      null;
+
+    if (actorId) {
+      try {
+        const { data: settings } = await this.db
+          .from('user_settings')
+          .select('first_name, last_name')
+          .eq('user_id', actorId)
+          .maybeSingle();
+        first_name = (settings?.first_name as string | null)?.trim() || null;
+        last_name = (settings?.last_name as string | null)?.trim() || null;
+      } catch {
+        // optional
+      }
+    }
+
+    if (!first_name && typeof account?.name === 'string') {
+      first_name = account.name.trim() || null;
+    }
+
+    return { actorId, first_name, last_name, email };
+  }
+
+  private async insertDraftInvoice(
+    input: CreateInvoiceInput,
+    createdBy: string | null,
+  ) {
     const invoice_number = await this.allocateInvoiceNumber(input.accountId);
 
     let currency = normalizeInvoiceCurrency(input.currency);
@@ -412,7 +454,7 @@ class InvoicesService {
         email_body: DEFAULT_INVOICE_EMAIL_BODY,
         email_signature: DEFAULT_INVOICE_EMAIL_SIGNATURE,
         footer_message: DEFAULT_INVOICE_FOOTER_MESSAGE,
-        created_by: user.id,
+        created_by: createdBy,
       })
       .select()
       .single();
@@ -426,9 +468,23 @@ class InvoicesService {
         client_id: input.client_id,
         project_id: input.project_id ?? null,
       },
-      actorId: user.id,
+      actorId: createdBy,
     });
     return invoice;
+  }
+
+  async createInvoice(input: CreateInvoiceInput) {
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
+    return this.insertDraftInvoice(input, user.id);
+  }
+
+  /** Cron / admin-only create — no session required. */
+  async createInvoiceAsSystem(input: CreateInvoiceInput) {
+    const actor = await this.resolveSystemActor(input.accountId);
+    return this.insertDraftInvoice(input, actor.actorId);
   }
 
   async updateInvoice(input: UpdateInvoiceInput) {
@@ -534,7 +590,15 @@ class InvoicesService {
 
   async upsertInvoiceItems(input: UpsertInvoiceItemsInput) {
     await this.ensureUserAndPermission(input.accountId, 'invoices.edit');
+    return this.replaceInvoiceItems(input);
+  }
 
+  /** Cron / admin-only item upsert — no session required. */
+  async upsertInvoiceItemsAsSystem(input: UpsertInvoiceItemsInput) {
+    return this.replaceInvoiceItems(input);
+  }
+
+  private async replaceInvoiceItems(input: UpsertInvoiceItemsInput) {
     const invoiceId = input.invoiceId;
     const accountId = input.accountId;
 
@@ -551,7 +615,6 @@ class InvoicesService {
       );
     }
 
-    // Delete existing items and re-insert to keep order (simple approach for V1)
     const { error: delError } = await this.db
       .from('invoice_items')
       .delete()
@@ -729,38 +792,16 @@ class InvoicesService {
     return data;
   }
 
-  /** Send invoice: set public_token (if missing), status sent, issued_at, sent_at, sent_to_email; log event; email client (stub). */
+  /** Send invoice: set public_token (if missing), status sent, issued_at, sent_at, sent_to_email; log event; email client. */
   async sendInvoice(input: SendInvoiceInput) {
     const user = await this.ensureUserAndPermission(
       input.accountId,
       'invoices.edit',
     );
 
-    const { data: invoice, error: fetchError } = await this.db
-      .from('invoices')
-      .select('id, status, public_token')
-      .eq('id', input.invoiceId)
-      .eq('account_id', input.accountId)
-      .single();
-    if (fetchError || !invoice) this.throwErr(fetchError, 'Invoice not found');
-
-    const emailPatch: Record<string, unknown> = {};
-    if (input.email_subject) emailPatch.email_subject = input.email_subject;
-    if (input.email_body) emailPatch.email_body = input.email_body;
-    if (input.email_signature)
-      emailPatch.email_signature = input.email_signature;
-
-    if (Object.keys(emailPatch).length > 0) {
-      await this.db
-        .from('invoices')
-        .update(emailPatch)
-        .eq('id', input.invoiceId)
-        .eq('account_id', input.accountId);
-    }
-
     const senderInfo = {
-      first_name: user.user_metadata?.first_name ?? null,
-      last_name: user.user_metadata?.last_name ?? null,
+      first_name: (user.user_metadata?.first_name as string | null) ?? null,
+      last_name: (user.user_metadata?.last_name as string | null) ?? null,
       email: user.email ?? null,
     };
 
@@ -781,8 +822,76 @@ class InvoicesService {
       // Fall back to auth metadata only.
     }
 
+    return this.deliverInvoiceSend(input, {
+      actorId: user.id,
+      sender: senderInfo,
+      allowTestToSelf: true,
+      testEmail: user.email ?? null,
+    });
+  }
+
+  /** Cron / admin-only send — no session required. */
+  async sendInvoiceAsSystem(
+    input: Omit<SendInvoiceInput, 'send_test_to_self'>,
+  ) {
+    const actor = await this.resolveSystemActor(input.accountId);
+    return this.deliverInvoiceSend(
+      { ...input, send_test_to_self: false },
+      {
+        actorId: actor.actorId,
+        sender: {
+          first_name: actor.first_name,
+          last_name: actor.last_name,
+          email: actor.email,
+        },
+        allowTestToSelf: false,
+        testEmail: null,
+      },
+    );
+  }
+
+  private async deliverInvoiceSend(
+    input: SendInvoiceInput,
+    ctx: {
+      actorId: string | null;
+      sender: {
+        first_name: string | null;
+        last_name: string | null;
+        email: string | null;
+      };
+      allowTestToSelf: boolean;
+      testEmail: string | null;
+    },
+  ) {
+    const { data: invoice, error: fetchError } = await this.db
+      .from('invoices')
+      .select(
+        'id, status, public_token, scheduled_send_at, scheduled_send_to_emails',
+      )
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId)
+      .single();
+    if (fetchError || !invoice) this.throwErr(fetchError, 'Invoice not found');
+
+    const emailPatch: Record<string, unknown> = {};
+    if (input.email_subject) emailPatch.email_subject = input.email_subject;
+    if (input.email_body) emailPatch.email_body = input.email_body;
+    if (input.email_signature)
+      emailPatch.email_signature = input.email_signature;
+
+    if (Object.keys(emailPatch).length > 0) {
+      await this.db
+        .from('invoices')
+        .update(emailPatch)
+        .eq('id', input.invoiceId)
+        .eq('account_id', input.accountId);
+    }
+
     if (input.send_test_to_self) {
-      const testEmail = user.email;
+      if (!ctx.allowTestToSelf) {
+        throw new Error('Test send is not available for system sends');
+      }
+      const testEmail = ctx.testEmail;
       if (!testEmail) throw new Error('No email on your account for test send');
 
       let testToken = invoice.public_token;
@@ -801,7 +910,7 @@ class InvoicesService {
         invoiceId: input.invoiceId,
         recipientEmail: testEmail,
         testOnly: true,
-        sender: senderInfo,
+        sender: ctx.sender,
       });
       return { test_sent: true };
     }
@@ -839,6 +948,9 @@ class InvoicesService {
         issued_at: now,
         sent_at: now,
         sent_to_email: primaryEmail,
+        scheduled_send_at: null,
+        scheduled_send_to_emails: null,
+        scheduled_send_processing_at: null,
       })
       .eq('id', input.invoiceId)
       .eq('account_id', input.accountId)
@@ -854,7 +966,7 @@ class InvoicesService {
         sent_to_email: primaryEmail,
         sent_to_emails: recipientEmails,
       },
-      actorId: user.id,
+      actorId: ctx.actorId,
     });
 
     try {
@@ -863,7 +975,7 @@ class InvoicesService {
           accountId: input.accountId,
           invoiceId: input.invoiceId,
           recipientEmail,
-          sender: senderInfo,
+          sender: ctx.sender,
         });
       }
     } catch {
@@ -923,6 +1035,9 @@ class InvoicesService {
         issued_at: now,
         sent_at: now,
         sent_to_email,
+        scheduled_send_at: null,
+        scheduled_send_to_emails: null,
+        scheduled_send_processing_at: null,
       })
       .eq('id', input.invoiceId)
       .eq('account_id', input.accountId)
@@ -1020,5 +1135,148 @@ class InvoicesService {
     }
 
     return { token: public_token };
+  }
+
+  async scheduleInvoiceSend(input: {
+    accountId: string;
+    invoiceId: string;
+    localDate: string;
+    localTime: string;
+    timezone?: string;
+    sent_to_emails: string[];
+    email_subject?: string | null;
+    email_body?: string | null;
+    email_signature?: string | null;
+  }) {
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
+
+    const recipients = Array.from(
+      new Set(
+        input.sent_to_emails
+          .map((email) => email.trim().toLowerCase())
+          .filter(Boolean),
+      ),
+    );
+    if (recipients.length === 0) {
+      throw new Error('At least one recipient email is required');
+    }
+
+    const { data: invoice, error } = await this.db
+      .from('invoices')
+      .select('id, status')
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId)
+      .single();
+    if (error || !invoice) this.throwErr(error, 'Invoice not found');
+    if (invoice.status !== 'draft') {
+      throw new Error('Only draft invoices can be scheduled');
+    }
+
+    const timezone =
+      input.timezone?.trim() ||
+      (await resolveWorkspaceTimezoneForAccount(
+        this.db,
+        input.accountId,
+        user.id,
+      ));
+
+    const scheduledSendAt = localDateTimeInTimezoneToUtcIso(
+      input.localDate,
+      input.localTime,
+      timezone,
+    );
+
+    if (new Date(scheduledSendAt).getTime() <= Date.now() - 60_000) {
+      throw new Error('Choose a send time in the future');
+    }
+
+    const patch: Record<string, unknown> = {
+      scheduled_send_at: scheduledSendAt,
+      scheduled_send_to_emails: recipients,
+      scheduled_send_processing_at: null,
+      sent_to_email: recipients[0],
+    };
+    if (input.email_subject !== undefined)
+      patch.email_subject = input.email_subject;
+    if (input.email_body !== undefined) patch.email_body = input.email_body;
+    if (input.email_signature !== undefined)
+      patch.email_signature = input.email_signature;
+
+    const { data: updated, error: updateError } = await this.db
+      .from('invoices')
+      .update(patch)
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId)
+      .select('*')
+      .single();
+    if (updateError) this.throwErr(updateError);
+
+    await this.logEvent({
+      accountId: input.accountId,
+      invoiceId: input.invoiceId,
+      eventType: 'send_scheduled',
+      payload: {
+        scheduled_send_at: scheduledSendAt,
+        timezone,
+        sent_to_emails: recipients,
+      },
+      actorId: user.id,
+    });
+
+    return {
+      invoice: updated,
+      timezone,
+      scheduled_send_at: scheduledSendAt,
+    };
+  }
+
+  async cancelScheduledInvoiceSend(input: {
+    accountId: string;
+    invoiceId: string;
+  }) {
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'invoices.edit',
+    );
+
+    const { data: invoice, error } = await this.db
+      .from('invoices')
+      .select('id, status, scheduled_send_at')
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId)
+      .single();
+    if (error || !invoice) this.throwErr(error, 'Invoice not found');
+    if (invoice.status !== 'draft') {
+      throw new Error('Only draft invoices can cancel a scheduled send');
+    }
+    if (!invoice.scheduled_send_at) {
+      throw new Error('This invoice is not scheduled');
+    }
+
+    const { data: updated, error: updateError } = await this.db
+      .from('invoices')
+      .update({
+        scheduled_send_at: null,
+        scheduled_send_to_emails: null,
+        scheduled_send_processing_at: null,
+      })
+      .eq('id', input.invoiceId)
+      .eq('account_id', input.accountId)
+      .select('*')
+      .single();
+    if (updateError) this.throwErr(updateError);
+
+    await this.logEvent({
+      accountId: input.accountId,
+      invoiceId: input.invoiceId,
+      eventType: 'send_schedule_cancelled',
+      payload: {},
+      actorId: user.id,
+    });
+
+    return updated;
   }
 }

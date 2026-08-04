@@ -538,111 +538,164 @@ export async function processDueRecurringSeries() {
 
   const service = createInvoicesService(admin);
   let created = 0;
+  let failed = 0;
 
   for (const series of seriesList ?? []) {
-    const template = (series.template ?? {}) as Record<string, any>;
-    let invoiceProjectId =
-      typeof template.project_id === 'string' ? template.project_id : null;
+    try {
+      const template = (series.template ?? {}) as Record<string, unknown>;
+      let invoiceProjectId =
+        typeof template.project_id === 'string' ? template.project_id : null;
 
-    if (invoiceProjectId) {
-      const { data: project } = await admin
-        .from('projects')
-        .select('id, client_id')
-        .eq('id', invoiceProjectId)
-        .eq('account_id', series.account_id)
-        .eq('project_type', 'delivery')
-        .maybeSingle();
+      if (invoiceProjectId) {
+        const { data: project } = await admin
+          .from('projects')
+          .select('id, client_id')
+          .eq('id', invoiceProjectId)
+          .eq('account_id', series.account_id)
+          .eq('project_type', 'delivery')
+          .maybeSingle();
 
-      if (!project || project.client_id !== series.client_id) {
-        invoiceProjectId = null;
+        if (!project || project.client_id !== series.client_id) {
+          invoiceProjectId = null;
+        }
       }
-    }
 
-    const dueDays = clampDueDays(
-      (series as { due_days?: unknown }).due_days,
-      7,
-    );
-    const issueAt = series.next_issue_at
-      ? new Date(series.next_issue_at)
-      : new Date();
-    const dueAt = addDaysIso(
-      Number.isNaN(issueAt.getTime()) ? new Date() : issueAt,
-      dueDays,
-    );
+      const dueDays = clampDueDays(
+        (series as { due_days?: unknown }).due_days,
+        7,
+      );
+      const issueAt = series.next_issue_at
+        ? new Date(series.next_issue_at)
+        : new Date();
+      const dueAt = addDaysIso(
+        Number.isNaN(issueAt.getTime()) ? new Date() : issueAt,
+        dueDays,
+      );
 
-    const invoice = await service.createInvoice({
-      accountId: series.account_id,
-      client_id: series.client_id,
-      project_id: invoiceProjectId,
-      currency: normalizeInvoiceCurrency(series.currency),
-      due_at: dueAt,
-      notes: template.notes ?? null,
-      title: template.title ?? series.title,
-      reference_number: template.reference_number ?? null,
-    });
+      const asString = (value: unknown) =>
+        typeof value === 'string' ? value : null;
+      const asNumber = (value: unknown, fallback = 0) =>
+        typeof value === 'number' && Number.isFinite(value) ? value : fallback;
 
-    await admin
-      .from('invoices')
-      .update({
-        recurring_series_id: series.id,
-        discount_type: template.discount_type ?? null,
-        discount_value: template.discount_value ?? 0,
-        tax_rate_bp: template.tax_rate_bp ?? 0,
-        deposit_type: template.deposit_type ?? null,
-        deposit_value: template.deposit_value ?? 0,
-        late_fee_type: template.late_fee_type ?? null,
-        late_fee_value: template.late_fee_value ?? 0,
-        footer_message:
-          template.footer_message ?? DEFAULT_INVOICE_FOOTER_MESSAGE,
-        email_subject: template.email_subject ?? DEFAULT_INVOICE_EMAIL_SUBJECT,
-        email_body: template.email_body ?? DEFAULT_INVOICE_EMAIL_BODY,
-        email_signature:
-          template.email_signature ?? DEFAULT_INVOICE_EMAIL_SIGNATURE,
-      })
-      .eq('id', invoice.id);
-
-    if (Array.isArray(template.items) && template.items.length) {
-      await service.upsertInvoiceItems({
+      const invoice = await service.createInvoiceAsSystem({
         accountId: series.account_id,
-        invoiceId: invoice.id,
-        items: template.items,
+        client_id: series.client_id,
+        project_id: invoiceProjectId,
+        currency: normalizeInvoiceCurrency(series.currency),
+        due_at: dueAt,
+        notes: asString(template.notes),
+        title: asString(template.title) ?? series.title,
+        reference_number: asString(template.reference_number),
       });
-    }
 
-    if (series.auto_send && template.sent_to_email) {
-      await service.sendInvoice({
-        accountId: series.account_id,
-        invoiceId: invoice.id,
-        sent_to_email: template.sent_to_email,
-        email_subject: template.email_subject,
-        email_body: template.email_body,
-        email_signature: template.email_signature,
+      await admin
+        .from('invoices')
+        .update({
+          recurring_series_id: series.id,
+          discount_type: asString(template.discount_type),
+          discount_value: asNumber(template.discount_value),
+          tax_rate_bp: asNumber(template.tax_rate_bp),
+          deposit_type: asString(template.deposit_type),
+          deposit_value: asNumber(template.deposit_value),
+          late_fee_type: asString(template.late_fee_type),
+          late_fee_value: asNumber(template.late_fee_value),
+          footer_message:
+            asString(template.footer_message) ?? DEFAULT_INVOICE_FOOTER_MESSAGE,
+          email_subject:
+            asString(template.email_subject) ?? DEFAULT_INVOICE_EMAIL_SUBJECT,
+          email_body:
+            asString(template.email_body) ?? DEFAULT_INVOICE_EMAIL_BODY,
+          email_signature:
+            asString(template.email_signature) ??
+            DEFAULT_INVOICE_EMAIL_SIGNATURE,
+        })
+        .eq('id', invoice.id);
+
+      if (Array.isArray(template.items) && template.items.length) {
+        await service.upsertInvoiceItemsAsSystem({
+          accountId: series.account_id,
+          invoiceId: invoice.id,
+          items: template.items as Parameters<
+            typeof service.upsertInvoiceItemsAsSystem
+          >[0]['items'],
+        });
+      }
+
+      const recipientEmails = Array.from(
+        new Set(
+          [
+            ...(Array.isArray(template.sent_to_emails)
+              ? (template.sent_to_emails as string[])
+              : []),
+            typeof template.sent_to_email === 'string'
+              ? template.sent_to_email
+              : '',
+          ]
+            .map((email) => email.trim().toLowerCase())
+            .filter(Boolean),
+        ),
+      );
+
+      if (series.auto_send) {
+        if (recipientEmails.length > 0) {
+          await service.sendInvoiceAsSystem({
+            accountId: series.account_id,
+            invoiceId: invoice.id,
+            sent_to_email: recipientEmails[0],
+            sent_to_emails: recipientEmails,
+            email_subject: asString(template.email_subject),
+            email_body: asString(template.email_body),
+            email_signature: asString(template.email_signature),
+          });
+        } else {
+          await service.logEvent({
+            accountId: series.account_id,
+            invoiceId: invoice.id,
+            eventType: 'auto_send_skipped',
+            payload: {
+              reason: 'missing_recipient',
+              series_id: series.id,
+            },
+            actorId: null,
+          });
+          console.warn(
+            '[invoices] recurring auto_send skipped — no recipient',
+            { seriesId: series.id, invoiceId: invoice.id },
+          );
+        }
+      }
+
+      const nextIssue = addFrequency(
+        new Date(series.next_issue_at),
+        series.frequency,
+      );
+      const occurrences = (series.occurrences_issued ?? 0) + 1;
+      const ended =
+        (series.max_occurrences != null &&
+          occurrences >= series.max_occurrences) ||
+        (series.end_at && nextIssue.toISOString() > series.end_at);
+
+      await admin
+        .from('invoice_recurring_series')
+        .update({
+          next_issue_at: nextIssue.toISOString(),
+          occurrences_issued: occurrences,
+          status: ended ? 'ended' : series.status,
+        })
+        .eq('id', series.id);
+
+      created += 1;
+    } catch (err) {
+      failed += 1;
+      console.error('[invoices] recurring series failed', {
+        seriesId: series.id,
+        error: err instanceof Error ? err.message : err,
       });
+      // Do not advance next_issue_at so the series retries on the next cron.
     }
-
-    const nextIssue = addFrequency(
-      new Date(series.next_issue_at),
-      series.frequency,
-    );
-    const occurrences = (series.occurrences_issued ?? 0) + 1;
-    const ended =
-      (series.max_occurrences != null &&
-        occurrences >= series.max_occurrences) ||
-      (series.end_at && nextIssue.toISOString() > series.end_at);
-
-    await admin
-      .from('invoice_recurring_series')
-      .update({
-        next_issue_at: nextIssue.toISOString(),
-        occurrences_issued: occurrences,
-        status: ended ? 'ended' : series.status,
-      })
-      .eq('id', series.id);
-
-    created += 1;
   }
 
-  return { created };
+  return { created, failed };
 }
 
 export function getCheckoutAmountPence(

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
@@ -261,7 +262,13 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
   );
 
   function buildPayload(): PlannerGeneratePayload {
+    const accountId =
+      initialData.scope.kind === 'workspace'
+        ? initialData.scope.accountId
+        : initialData.userId;
+
     return {
+      accountId,
       planning_mode: mode,
       date,
       working_hours: preferences.workingHours,
@@ -346,16 +353,8 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
   }
 
   return (
-    <div className={workspacePageMainClassName}>
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Planner</h1>
-          <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/55">
-            {initialData.scope.kind === 'workspace'
-              ? `Plan ${initialData.scope.accountName} tasks — or everything across Ozer when unified view is on.`
-              : 'Turn your open tasks and calendar into a practical day or week plan.'}
-          </p>
-        </div>
+    <div className={cn(workspacePageMainClassName, 'gap-4 pt-0 md:pt-2')}>
+      <div className="flex justify-end">
         <PlannerViewTabs
           dayHref={initialData.dayViewHref}
           planHref={initialData.planViewHref}

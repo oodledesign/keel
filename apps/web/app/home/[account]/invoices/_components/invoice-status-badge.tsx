@@ -20,12 +20,24 @@ export function InvoiceStatusBadge({
   due_at,
   amount_paid_pence,
   total_pence,
+  scheduled_send_at,
 }: {
   status: string;
   due_at?: string | null;
   amount_paid_pence?: number;
   total_pence?: number;
+  scheduled_send_at?: string | null;
 }) {
+  if (status === 'draft' && scheduled_send_at) {
+    return (
+      <span
+        className={`inline-flex rounded-full border border-[#2A8F94]/45 bg-[#39AEB3]/15 px-2.5 py-1 text-[10px] font-semibold tracking-[0.12em] text-[#14575B]`}
+      >
+        SCHEDULED
+      </span>
+    );
+  }
+
   const display = displayInvoiceStatus({
     status,
     due_at,

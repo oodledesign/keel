@@ -72,6 +72,18 @@
       "schedule": "15 8 * * *"
     },
     {
+      "path": "/api/cron/invoices-scheduled-send",
+      "schedule": "*/5 * * * *"
+    },
+    {
+      "path": "/api/cron/media-credits-expire",
+      "schedule": "30 3 * * *"
+    },
+    {
+      "path": "/api/cron/media-video-poll",
+      "schedule": "*/2 * * * *"
+    },
+    {
       "path": "/api/cron/tasks-recurring",
       "schedule": "20 8 * * *"
     },
