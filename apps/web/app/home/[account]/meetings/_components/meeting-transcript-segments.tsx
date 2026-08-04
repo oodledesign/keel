@@ -7,6 +7,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
+import { Trash2 } from 'lucide-react';
 
 import {
   type SpeakerBinding,
@@ -247,18 +248,43 @@ export function MeetingTranscriptSegments({
               </p>
             )}
             {editing && onDraftChange ? (
-              <Textarea
-                value={segment.text}
-                onChange={(event) => {
-                  const next = visibleSegments.map((row, rowIndex) =>
-                    rowIndex === index
-                      ? { ...row, text: event.target.value }
-                      : row,
-                  );
-                  onDraftChange(next);
-                }}
-                className="mt-1 min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm text-[var(--workspace-shell-text)]"
-              />
+              <div className="mt-1 flex gap-2">
+                <Textarea
+                  value={segment.text}
+                  onChange={(event) => {
+                    const next = visibleSegments.map((row, rowIndex) =>
+                      rowIndex === index
+                        ? { ...row, text: event.target.value }
+                        : row,
+                    );
+                    onDraftChange(next);
+                  }}
+                  className="min-h-[72px] flex-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm text-[var(--workspace-shell-text)]"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  disabled={visibleSegments.length <= 1}
+                  title={
+                    visibleSegments.length <= 1
+                      ? 'Keep at least one line'
+                      : 'Remove this line'
+                  }
+                  aria-label="Remove transcript line"
+                  className="mt-0.5 h-9 w-9 shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent)]"
+                  onClick={() => {
+                    if (visibleSegments.length <= 1) {
+                      return;
+                    }
+                    onDraftChange(
+                      visibleSegments.filter((_, rowIndex) => rowIndex !== index),
+                    );
+                  }}
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             ) : (
               <p className="mt-1 text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
                 {segment.text}

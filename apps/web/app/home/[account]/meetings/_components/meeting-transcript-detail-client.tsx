@@ -10,12 +10,14 @@ import {
   CheckSquare,
   ChevronLeft,
   Copy,
+  FileUp,
   Link2,
   Loader2,
   Mic,
   Pencil,
   Sparkles,
   Trash2,
+  Upload,
   X,
 } from 'lucide-react';
 
@@ -51,6 +53,7 @@ import { buildPublicMeetingShareUrl } from '~/lib/recorder/public-meeting-share'
 import {
   type SpeakerMappings,
   type TranscriptSegment,
+  parseTranscriptContent,
   serializeResolvedTranscriptSegments,
 } from '~/lib/recorder/transcript-speakers';
 
@@ -158,6 +161,8 @@ export function MeetingTranscriptDetailClient({
   );
   const [extractOpen, setExtractOpen] = useState(false);
   const [editingTranscript, setEditingTranscript] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
+  const [importText, setImportText] = useState('');
   const [draftSegments, setDraftSegments] = useState<TranscriptSegment[]>(
     transcript.speakerSegments,
   );
@@ -167,6 +172,9 @@ export function MeetingTranscriptDetailClient({
     userId: member.userId,
     name: member.name,
   }));
+  const showSegmentEditor = editingTranscript
+    ? draftSegments.length > 0
+    : transcript.speakerSegments.length > 0;
 
   useEffect(() => {
     setShareEnabled(Boolean(transcript.publicShareEnabled));
@@ -210,7 +218,7 @@ export function MeetingTranscriptDetailClient({
     transcript.clientName || resolvedClient?.name || null;
   const resolvedClientPictureUrl = resolvedClient?.pictureUrl ?? null;
   const displayContent =
-    transcript.speakerSegments.length > 0
+    (editingTranscript ? draftSegments : transcript.speakerSegments).length > 0
       ? serializeResolvedTranscriptSegments(
           editingTranscript ? draftSegments : transcript.speakerSegments,
           mappings,
@@ -310,7 +318,42 @@ export function MeetingTranscriptDetailClient({
   const cancelEditingTranscript = () => {
     setDraftSegments(transcript.speakerSegments);
     setDraftContent(transcript.content);
+    setImportOpen(false);
+    setImportText('');
     setEditingTranscript(false);
+  };
+
+  const applyImportedTranscript = (raw: string) => {
+    const trimmed = raw.trim();
+
+    if (!trimmed) {
+      toast.error('Paste or upload a transcript first');
+      return;
+    }
+
+    const parsed = parseTranscriptContent(trimmed);
+
+    if (parsed.hasSpeakerLabels && parsed.segments.length > 0) {
+      setDraftSegments(parsed.segments);
+      setDraftContent(trimmed);
+    } else {
+      setDraftSegments([]);
+      setDraftContent(trimmed);
+    }
+
+    setImportOpen(false);
+    setImportText('');
+    toast.success('Transcript replaced — save to keep the changes');
+  };
+
+  const handleImportFile = async (file: File) => {
+    try {
+      const text = await file.text();
+      setImportText(text);
+      toast.success(`Loaded ${file.name}`);
+    } catch {
+      toast.error('Could not read that file');
+    }
   };
 
   const saveTranscript = () => {
@@ -318,7 +361,7 @@ export function MeetingTranscriptDetailClient({
 
     startTransition(async () => {
       try {
-        if (transcript.speakerSegments.length > 0) {
+        if (draftSegments.length > 0) {
           await updateMeetingTranscriptContent({
             accountId,
             accountSlug,
@@ -326,18 +369,27 @@ export function MeetingTranscriptDetailClient({
             speakerSegments: draftSegments,
           });
         } else {
+          const trimmed = draftContent.trim();
+
+          if (!trimmed) {
+            toast.error('Transcript cannot be empty');
+            return;
+          }
+
           await updateMeetingTranscriptContent({
             accountId,
             accountSlug,
             transcriptId: transcript.id,
-            content: draftContent,
+            content: trimmed,
           });
         }
         toast.success('Transcript updated');
         setEditingTranscript(false);
         router.refresh();
       } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Update failed');
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save transcript',
+        );
       }
     });
   };
@@ -610,6 +662,20 @@ export function MeetingTranscriptDetailClient({
                   <>
                     <Button
                       type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={pending}
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                      onClick={() => {
+                        setImportText('');
+                        setImportOpen(true);
+                      }}
+                    >
+                      <FileUp className="mr-2 h-4 w-4" />
+                      Replace transcript
+                    </Button>
+                    <Button
+                      type="button"
                       size="sm"
                       disabled={pending}
                       className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
@@ -652,7 +718,7 @@ export function MeetingTranscriptDetailClient({
               </div>
             </div>
             <div className="max-h-[min(70vh,720px)] overflow-auto rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4 text-sm leading-relaxed text-[var(--workspace-shell-text)]">
-              {transcript.speakerSegments.length > 0 ? (
+              {showSegmentEditor ? (
                 <MeetingTranscriptSegments
                   accountId={accountId}
                   accountSlug={accountSlug}
@@ -930,6 +996,82 @@ export function MeetingTranscriptDetailClient({
           />
         </aside>
       </div>
+
+      <Dialog
+        open={importOpen}
+        onOpenChange={(open) => {
+          setImportOpen(open);
+          if (!open) {
+            setImportText('');
+          }
+        }}
+      >
+        <DialogContent className="max-w-xl border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <DialogHeader>
+            <DialogTitle>Replace transcript</DialogTitle>
+            <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
+              Paste a new transcript or upload a .txt / .md / .vtt file. This
+              replaces the current draft — save afterwards to keep it.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-3">
+            <div>
+              <Label
+                htmlFor="reimport-transcript"
+                className="text-xs text-[var(--workspace-shell-text-muted)]"
+              >
+                Transcript text
+              </Label>
+              <Textarea
+                id="reimport-transcript"
+                value={importText}
+                onChange={(event) => setImportText(event.target.value)}
+                placeholder={`Speaker 1: Hello everyone\n\nSpeaker 2: Thanks for joining`}
+                className="mt-1 min-h-[220px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] font-mono text-sm text-[var(--workspace-shell-text)]"
+              />
+            </div>
+
+            <label className="inline-flex cursor-pointer items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--ozer-accent)]">
+              <Upload className="h-4 w-4" />
+              Upload file
+              <input
+                type="file"
+                accept=".txt,.md,.vtt,text/plain"
+                className="sr-only"
+                onChange={(event) => {
+                  const file = event.target.files?.[0];
+                  if (file) {
+                    void handleImportFile(file);
+                  }
+                  event.target.value = '';
+                }}
+              />
+            </label>
+
+            <div className="flex justify-end gap-2 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[color:var(--workspace-shell-border)]"
+                onClick={() => {
+                  setImportOpen(false);
+                  setImportText('');
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                onClick={() => applyImportedTranscript(importText)}
+              >
+                Replace draft
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={extractOpen} onOpenChange={setExtractOpen}>
         <DialogContent className="max-h-[min(90vh,900px)] max-w-6xl gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
