@@ -68,12 +68,17 @@ async function MediaGalleryPage({ params, searchParams }: MediaGalleryPageProps)
             Generated images and video for this workspace.
           </p>
         </div>
-        <Link
-          href={`/home/${accountSlug}/settings/billing`}
-          className="text-sm underline"
-        >
-          Media units
-        </Link>
+        <div className="flex flex-wrap items-center gap-3 text-sm">
+          <Link href={`/home/${accountSlug}/generate`} className="underline">
+            Generate
+          </Link>
+          <Link
+            href={`/home/${accountSlug}/settings/billing`}
+            className="underline"
+          >
+            Media units
+          </Link>
+        </div>
       </div>
       <MediaGalleryClient
         accountSlug={accountSlug}

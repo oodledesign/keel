@@ -80,6 +80,13 @@ export function MediaGenerateAppToggle(props: MediaGenerateAppToggleProps) {
           </Link>
           {' · '}
           <Link
+            href={`/home/${props.accountSlug}/generate`}
+            className="underline"
+          >
+            Generate
+          </Link>
+          {' · '}
+          <Link
             href={`/home/${props.accountSlug}/media`}
             className="underline"
           >

@@ -10,9 +10,9 @@ import {
   FileSignature,
   FileText,
   Globe,
+  Image,
   Kanban,
   LayoutDashboard,
-  LayoutGrid,
   LifeBuoy,
   ListChecks,
   Mail,
@@ -40,6 +40,7 @@ import {
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import {
   isFeedflowModuleEnabled,
+  isMediaGenerateModuleEnabled,
   isRanklyModuleEnabled,
   isSignaturesModuleEnabled,
   isVideosModuleEnabled,
@@ -78,10 +79,11 @@ function createPath(path: string, account: string) {
   return path.replace('[account]', account);
 }
 
-function buildWorkAppsGroup(
+/** Flat app links for the Apps sidebar section (and /apps marketplace). */
+export function buildWorkAppLinks(
   account: string,
   moduleSettings?: Record<string, boolean>,
-): NavCollapsible[] {
+): NavChild[] {
   const ms = moduleSettings;
   const children: NavChild[] = [];
 
@@ -125,27 +127,33 @@ function buildWorkAppsGroup(
     );
   }
 
-  if (children.length === 0 || !isWorkNavModuleEnabled(ms, 'apps')) {
-    return [];
+  if (isVideosModuleEnabled(ms)) {
+    children.push({
+      label: 'Videos',
+      path: createPath(pathsConfig.app.accountVideos, account),
+      Icon: <Video className={iconClasses} />,
+      description: 'Host and embed client videos.',
+    });
   }
 
-  return [
-    {
-      label: 'Apps',
-      path: createPath(pathsConfig.app.accountApps, account),
-      Icon: <LayoutGrid className={iconClasses} />,
-      collapsible: true,
-      collapsed: false,
-      children,
-    },
-  ];
-}
+  if (isMediaGenerateModuleEnabled(ms)) {
+    children.push(
+      {
+        label: 'Generate',
+        path: createPath(pathsConfig.app.accountGenerate, account),
+        Icon: <Sparkles className={iconClasses} />,
+        description: 'Create images and video with media units.',
+      },
+      {
+        label: 'Media',
+        path: createPath(pathsConfig.app.accountMedia, account),
+        Icon: <Image className={iconClasses} />,
+        description: 'Browse generated images and video.',
+      },
+    );
+  }
 
-export function buildWorkAppLinks(
-  account: string,
-  moduleSettings?: Record<string, boolean>,
-): NavChild[] {
-  return buildWorkAppsGroup(account, moduleSettings)[0]?.children ?? [];
+  return children;
 }
 
 function buildWorkNavItemsForKeys(
@@ -355,10 +363,7 @@ function buildWorkNavItemsForKeys(
             Icon: <Video className={iconClasses} />,
           }
         : null,
-    apps: () => {
-      const apps = buildWorkAppsGroup(account, ms);
-      return apps[0] ?? null;
-    },
+    apps: () => null,
     settings: () => null,
   };
 
@@ -366,6 +371,10 @@ function buildWorkNavItemsForKeys(
 
   for (const key of keys) {
     if (key === 'settings') continue;
+    if (key === 'apps') {
+      items.push(...buildWorkAppLinks(account, ms));
+      continue;
+    }
     const factory = registry[key];
     if (!factory) continue;
     const item = factory();

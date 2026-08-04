@@ -42,4 +42,21 @@ export async function setMediaGenerateEnabled(params: {
   if (error) {
     throw new Error(error.message);
   }
+
+  // Keep Apps nav section available while Media Generate is on.
+  if (params.enabled) {
+    const { error: appsError } = await admin
+      .from('account_module_settings')
+      .upsert(
+        {
+          account_id: params.accountId,
+          module_key: 'apps',
+          enabled: true,
+        },
+        { onConflict: 'account_id,module_key' },
+      );
+    if (appsError) {
+      throw new Error(appsError.message);
+    }
+  }
 }

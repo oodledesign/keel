@@ -151,5 +151,13 @@ export async function syncAddonModulesFromEntitlements(
       },
       { onConflict: 'account_id,module_key' },
     );
+    await admin.from('account_module_settings').upsert(
+      {
+        account_id: accountId,
+        module_key: 'apps',
+        enabled: true,
+      },
+      { onConflict: 'account_id,module_key' },
+    );
   }
 }

@@ -100,7 +100,11 @@ export const WORK_BUSINESS_NAV_SECTIONS = [
   },
   {
     label: 'Team & tools',
-    keys: ['team', 'notes', 'brain', 'sops', 'messages', 'videos', 'apps'],
+    keys: ['team', 'notes', 'brain', 'sops', 'messages'],
+  },
+  {
+    label: 'Apps',
+    keys: ['apps'],
   },
 ] as const;
 
