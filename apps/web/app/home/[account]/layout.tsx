@@ -29,12 +29,23 @@ import { BillingAccessBannerHost } from './_components/billing-access-banner-hos
 import { TeamAccountLayoutSidebar } from './_components/team-account-layout-sidebar';
 import { TeamAccountNavigationMenu } from './_components/team-account-navigation-menu';
 import { TeamWorkspaceMobileChrome } from './_components/team-workspace-mobile-chrome';
+import { TeamWorkspaceShellAdornmentsSuspense } from './_components/team-workspace-shell-adornments-suspense';
 import { flattenTeamNavSections } from './_lib/flatten-team-nav-links';
 import { getTeamAccountAccess } from './_lib/role-access';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
-import { loadTeamWorkspaceShellAdornments } from './_lib/server/team-workspace-shell-adornments.loader';
+import {
+  loadTeamWorkspaceShellAdornments,
+  type TeamWorkspaceShellAdornments,
+} from './_lib/server/team-workspace-shell-adornments.loader';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
+
+const EMPTY_SHELL_ADORNMENTS: TeamWorkspaceShellAdornments = {
+  navCounts: {},
+  mobileNavShortcuts: [],
+  focusSettingsByAccountId: {},
+  emailAssistantAvailable: false,
+};
 
 type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
   params: Promise<{ account: string }>;
@@ -116,41 +127,56 @@ async function SidebarLayout({
 
   const access = getTeamAccountAccess(accountAccess);
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
-  const adornments = await loadTeamWorkspaceShellAdornments({
-    client,
-    userId: user.id,
+
+  const shellProps = {
+    account,
     accountId,
-    accountSlug: account,
+    user: data.user,
+    accounts,
     moduleSettings: data.moduleSettings,
-    focusAccountIds,
-  });
+    workspaceProfile,
+    accountAccess,
+    layoutState,
+    showNewMenu: access.canUseQuickCreate,
+    homePath,
+  };
 
   return (
     <TeamAccountWorkspaceContextProvider value={data}>
-      <TeamWorkspaceSidebarShell
-        account={account}
+      <TeamWorkspaceShellAdornmentsSuspense
+        client={client}
+        userId={user.id}
         accountId={accountId}
-        user={data.user}
-        accounts={accounts}
+        accountSlug={account}
         moduleSettings={data.moduleSettings}
-        workspaceProfile={workspaceProfile}
-        accountAccess={accountAccess}
-        navCounts={adornments.navCounts}
-        emailAssistantAvailable={adornments.emailAssistantAvailable}
-        mobileNavShortcuts={adornments.mobileNavShortcuts}
-        focusSettingsByAccountId={adornments.focusSettingsByAccountId}
-        layoutState={layoutState}
-        showNewMenu={access.canUseQuickCreate}
-        homePath={homePath}
+        focusAccountIds={focusAccountIds}
+        fallback={
+          <TeamWorkspaceSidebarShell
+            {...shellProps}
+            {...EMPTY_SHELL_ADORNMENTS}
+          >
+            <TeamWorkspaceTopBarClient accountSlug={account} />
+            <BillingAccessBannerHost
+              accountId={accountId}
+              accountSlug={account}
+              canManageBilling={access.canManageBilling}
+            />
+            {children}
+          </TeamWorkspaceSidebarShell>
+        }
       >
-        <TeamWorkspaceTopBarClient accountSlug={account} />
-        <BillingAccessBannerHost
-          accountId={accountId}
-          accountSlug={account}
-          canManageBilling={access.canManageBilling}
-        />
-        {children}
-      </TeamWorkspaceSidebarShell>
+        {(adornments) => (
+          <TeamWorkspaceSidebarShell {...shellProps} {...adornments}>
+            <TeamWorkspaceTopBarClient accountSlug={account} />
+            <BillingAccessBannerHost
+              accountId={accountId}
+              accountSlug={account}
+              canManageBilling={access.canManageBilling}
+            />
+            {children}
+          </TeamWorkspaceSidebarShell>
+        )}
+      </TeamWorkspaceShellAdornmentsSuspense>
     </TeamAccountWorkspaceContextProvider>
   );
 }
@@ -280,7 +306,6 @@ async function HeaderLayout({
   }
 
   const accountId = data.account.id;
-  const workspaceProfile = data.workspaceProfile;
   const accounts = switcherAccounts;
   const focusAccountIds = [
     ...new Set([accountId, ...accounts.map((row) => row.id)]),
@@ -295,21 +320,81 @@ async function HeaderLayout({
   const access = getTeamAccountAccess(accountAccess);
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
 
-  const adornments = await loadTeamWorkspaceShellAdornments({
-    client,
-    userId: user.id,
-    accountId,
-    accountSlug: account,
-    moduleSettings: data.moduleSettings,
-    focusAccountIds,
-  });
+  return (
+    <TeamAccountWorkspaceContextProvider value={data}>
+      <TeamWorkspaceShellAdornmentsSuspense
+        client={client}
+        userId={user.id}
+        accountId={accountId}
+        accountSlug={account}
+        moduleSettings={data.moduleSettings}
+        focusAccountIds={focusAccountIds}
+        fallback={
+          <HeaderLayoutShell
+            account={account}
+            accountId={accountId}
+            data={data}
+            accounts={accounts}
+            accountAccess={accountAccess}
+            access={access}
+            homePath={homePath}
+            adornments={EMPTY_SHELL_ADORNMENTS}
+          >
+            {children}
+          </HeaderLayoutShell>
+        }
+      >
+        {(adornments) => (
+          <HeaderLayoutShell
+            account={account}
+            accountId={accountId}
+            data={data}
+            accounts={accounts}
+            accountAccess={accountAccess}
+            access={access}
+            homePath={homePath}
+            adornments={adornments}
+          >
+            {children}
+          </HeaderLayoutShell>
+        )}
+      </TeamWorkspaceShellAdornmentsSuspense>
+    </TeamAccountWorkspaceContextProvider>
+  );
+}
 
+function HeaderLayoutShell({
+  account,
+  accountId,
+  data,
+  accounts,
+  accountAccess,
+  access,
+  homePath,
+  adornments,
+  children,
+}: React.PropsWithChildren<{
+  account: string;
+  accountId: string;
+  data: NonNullable<Awaited<ReturnType<typeof loadTeamWorkspace>>>;
+  accounts: React.ComponentProps<
+    typeof TeamWorkspaceMobileChrome
+  >['accounts'];
+  accountAccess: {
+    permissions?: string[] | null;
+    role?: string | null;
+    company_role?: string | null;
+  };
+  access: ReturnType<typeof getTeamAccountAccess>;
+  homePath: string;
+  adornments: TeamWorkspaceShellAdornments;
+}>) {
   const mobileNavSections = flattenTeamNavSections(
     getTeamAccountSidebarConfig(
       account,
       accountAccess,
       data.moduleSettings,
-      workspaceProfile,
+      data.workspaceProfile,
       adornments.navCounts,
       { emailAssistantAvailable: adornments.emailAssistantAvailable },
     ),
@@ -321,40 +406,38 @@ async function HeaderLayout({
   });
 
   return (
-    <TeamAccountWorkspaceContextProvider value={data}>
-      <WorkspaceFocusProviderShell
-        settingsByAccountId={adornments.focusSettingsByAccountId}
-      >
-        <Page style={'header'}>
-          <PageNavigation>
-            <TeamAccountNavigationMenu
-              workspace={data}
-              emailAssistantAvailable={adornments.emailAssistantAvailable}
-            />
-          </PageNavigation>
+    <WorkspaceFocusProviderShell
+      settingsByAccountId={adornments.focusSettingsByAccountId}
+    >
+      <Page style={'header'}>
+        <PageNavigation>
+          <TeamAccountNavigationMenu
+            workspace={data}
+            emailAssistantAvailable={adornments.emailAssistantAvailable}
+          />
+        </PageNavigation>
 
-          <PageMobileNavigation className="hidden lg:px-0" />
+        <PageMobileNavigation className="hidden lg:px-0" />
 
-          <TeamWorkspaceMobileChrome
-            account={account}
+        <TeamWorkspaceMobileChrome
+          account={account}
+          accountId={accountId}
+          user={data.user}
+          accounts={accounts}
+          navSections={mobileNavSections}
+          bottomNavTabs={bottomNavTabs}
+          spaceType={spaceTypeFromProfile(data.workspaceProfile)}
+          showNewMenu={access.canUseQuickCreate}
+        >
+          <BillingAccessBannerHost
             accountId={accountId}
-            user={data.user}
-            accounts={accounts}
-            navSections={mobileNavSections}
-            bottomNavTabs={bottomNavTabs}
-            spaceType={spaceTypeFromProfile(workspaceProfile)}
-            showNewMenu={access.canUseQuickCreate}
-          >
-            <BillingAccessBannerHost
-              accountId={accountId}
-              accountSlug={account}
-              canManageBilling={access.canManageBilling}
-            />
-            {children}
-          </TeamWorkspaceMobileChrome>
-        </Page>
-      </WorkspaceFocusProviderShell>
-    </TeamAccountWorkspaceContextProvider>
+            accountSlug={account}
+            canManageBilling={access.canManageBilling}
+          />
+          {children}
+        </TeamWorkspaceMobileChrome>
+      </Page>
+    </WorkspaceFocusProviderShell>
   );
 }
 

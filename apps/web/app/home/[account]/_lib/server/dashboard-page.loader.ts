@@ -10,7 +10,6 @@ import pathsConfig from '~/config/paths.config';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
 import { loadSuggestedEmailActionItems } from '~/lib/email-assistant/suggested-email-tasks.loader';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
-import { PROJECT_PRIMARY_CLIENT_EMBED } from '~/lib/projects/delivery-project-db';
 
 import { toIsoDateString } from '../../../_lib/due-date-ymd';
 import {
@@ -207,20 +206,6 @@ async function loadDashboardPageDataImpl(
   // the Gmail API can take 10–20s+ and blocks first paint. Cron + email inbox
   // keep categories fresh; dashboard only reads what is already synced.
 
-  let businessConnectionId: string | null = null;
-  if (userId) {
-    const { data: businessConnection } = await client
-      .from('google_connections')
-      .select('id')
-      .eq('user_id', userId)
-      .eq('mailbox_kind', 'business')
-      .maybeSingle();
-    businessConnectionId =
-      (businessConnection as { id?: string } | null)?.id ?? null;
-  }
-
-  const todayIso = new Date().toISOString().slice(0, 10);
-
   const monthStart = new Date();
   monthStart.setDate(1);
   monthStart.setHours(0, 0, 0, 0);
@@ -240,54 +225,27 @@ async function loadDashboardPageDataImpl(
   const weekStartIso = weekStart.toISOString();
 
   const [
-    activeJobsResult,
-    projectStatusResult,
+    activeProjectsCountResult,
     clientsCountResult,
-    teamMembersResult,
-    recentInvoicesResult,
     paidInvoicesMonthResult,
     hoursJobsResult,
     financeMonthResult,
     financeTrendResult,
     notesResult,
-    clientIdsForTasksResult,
-    projectIdsForTasksResult,
-    needsReplyResult,
+    businessConnectionResult,
+    upcomingTasksResult,
+    suggestedEmailLoaded,
   ] = await Promise.all([
     client
       .from('projects')
-      .select(
-        `id, title, status, priority, due_date, ${PROJECT_PRIMARY_CLIENT_EMBED}`,
-        {
-          count: 'exact',
-        },
-      )
+      .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId)
       .eq('project_type', 'delivery')
-      .in('status', ['pending', 'in_progress'])
-      .order('due_date', { ascending: true, nullsFirst: false })
-      .order('created_at', { ascending: false })
-      .range(0, 4),
-    client
-      .from('projects')
-      .select('status, due_date')
-      .eq('account_id', accountId)
-      .eq('project_type', 'delivery'),
+      .in('status', ['pending', 'in_progress']),
     client
       .from('clients')
       .select('id', { count: 'exact', head: true })
       .eq('account_id', accountId),
-    client.rpc('get_account_members', {
-      account_slug: account.slug ?? accountSlug,
-    }),
-    client
-      .from('invoices')
-      .select(
-        'id, invoice_number, total_pence, due_at, status, clients(display_name)',
-      )
-      .eq('account_id', accountId)
-      .order('created_at', { ascending: false })
-      .limit(5),
     client
       .from('invoices')
       .select('total_pence')
@@ -320,107 +278,89 @@ async function loadDashboardPageDataImpl(
       .eq('account_id', accountId)
       .order('updated_at', { ascending: false })
       .limit(8),
-    // Task scope — many tasks are linked via client/project without account_id
-    client.from('clients').select('id').eq('account_id', accountId),
-    client.from('projects').select('id').eq('account_id', accountId),
-    businessConnectionId
+    userId
       ? client
-          .from('email_threads')
-          .select(
-            'id, subject, snippet, participants, last_message_at, client_id',
-            {
-              count: 'exact',
-            },
-          )
-          .eq('user_id', userId ?? '')
-          .eq('connection_id', businessConnectionId)
-          .eq('assistant_category', 'needs_reply')
-          .order('last_message_at', { ascending: false, nullsFirst: false })
-          .limit(8)
-      : Promise.resolve({ data: [], count: 0, error: null }),
+          .from('google_connections')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('mailbox_kind', 'business')
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
+    client
+      .from('tasks')
+      .select(
+        'id, title, status, due_date, project_id, client_id, projects(name, title)',
+      )
+      .eq('account_id', accountId)
+      .is('parent_task_id', null)
+      .not('status', 'in', '("done","cancelled")')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .limit(4),
+    userId
+      ? loadSuggestedEmailActionItems(client, userId, {
+          accountId,
+          limit: 5,
+        })
+      : Promise.resolve({ items: [], totalCount: 0 }),
   ]);
 
-  const projectIdsForTasks = (projectIdsForTasksResult.data ?? []).map(
-    (row) => row.id as string,
-  );
-  const clientIdsForTasks = (clientIdsForTasksResult.data ?? []).map(
-    (row) => row.id as string,
-  );
-  const upcomingTaskFilters = [`account_id.eq.${accountId}`];
-  if (projectIdsForTasks.length > 0) {
-    upcomingTaskFilters.push(`project_id.in.(${projectIdsForTasks.join(',')})`);
-  }
-  if (clientIdsForTasks.length > 0) {
-    upcomingTaskFilters.push(`client_id.in.(${clientIdsForTasks.join(',')})`);
-  }
+  const businessConnectionId =
+    (businessConnectionResult.data as { id?: string } | null)?.id ?? null;
 
-  const upcomingTasksResult = await client
-    .from('tasks')
-    .select(
-      'id, title, status, due_date, project_id, client_id, projects(name, title)',
-    )
-    .or(upcomingTaskFilters.join(','))
-    .is('parent_task_id', null)
-    .not('status', 'in', '("done","cancelled")')
-    .order('due_date', { ascending: true, nullsFirst: false })
-    .limit(4);
+  const needsReplyResult = businessConnectionId
+    ? await client
+        .from('email_threads')
+        .select(
+          'id, subject, snippet, participants, last_message_at, client_id',
+          {
+            count: 'exact',
+          },
+        )
+        .eq('user_id', userId ?? '')
+        .eq('connection_id', businessConnectionId)
+        .eq('assistant_category', 'needs_reply')
+        .order('last_message_at', { ascending: false, nullsFirst: false })
+        .limit(8)
+    : { data: [], count: 0, error: null };
 
-  const jobsUnavailable = isTableMissingFromApi(activeJobsResult.error);
-  const invoicesUnavailable = isTableMissingFromApi(recentInvoicesResult.error);
+  const jobsUnavailable = isTableMissingFromApi(
+    activeProjectsCountResult.error,
+  );
+  const invoicesUnavailable = isTableMissingFromApi(
+    paidInvoicesMonthResult.error,
+  );
   const financeUnavailable = isTableMissingFromApi(financeMonthResult.error);
 
-  if (activeJobsResult.error && !jobsUnavailable) {
-    throw activeJobsResult.error;
+  if (activeProjectsCountResult.error && !jobsUnavailable) {
+    throw activeProjectsCountResult.error;
   }
-  if (recentInvoicesResult.error && !invoicesUnavailable) {
-    throw recentInvoicesResult.error;
+  if (paidInvoicesMonthResult.error && !invoicesUnavailable) {
+    throw paidInvoicesMonthResult.error;
   }
 
   if (process.env.NODE_ENV === 'development' && jobsUnavailable) {
     console.warn(
-      '[loadDashboardPageData] jobs table unavailable in PostgREST; showing empty job metrics. Run migrations (e.g. 20260216000005_jobs_v1_tables.sql chain) or supabase db push.',
+      '[loadDashboardPageData] projects table unavailable in PostgREST; showing empty job metrics. Run migrations or supabase db push.',
     );
   }
   if (process.env.NODE_ENV === 'development' && invoicesUnavailable) {
     console.warn(
-      '[loadDashboardPageData] invoices table unavailable in PostgREST; showing empty invoices. Run migrations (e.g. 20260228120000_invoices_v1_tables.sql chain) or supabase db push.',
+      '[loadDashboardPageData] invoices table unavailable in PostgREST; showing empty invoices. Run migrations or supabase db push.',
     );
   }
 
-  const projectStatusSummary = jobsUnavailable
-    ? {
-        completed: 0,
-        inProgress: 0,
-        pending: 0,
-        overdue: 0,
-        activeProjects: 0,
-      }
-    : summarizeProjectStatuses(
-        (projectStatusResult.data ?? []) as Array<{
-          status: string;
-          due_date: string | null;
-        }>,
-        todayIso,
-      );
-
-  const activeProjectsCount = projectStatusSummary.activeProjects;
-  const activeJobsList: DashboardJobSummary[] = (
-    jobsUnavailable ? [] : (activeJobsResult.data ?? [])
-  ).map((row: any) => ({
-    id: row.id as string,
-    title: (row.title as string) ?? 'Untitled job',
-    clientName: row.clients?.display_name ?? null,
-    status: (row.status as string) ?? 'pending',
-    priority: (row.priority as string) ?? 'medium',
-    dueDate: (row.due_date as string | null) ?? null,
-  }));
+  const activeProjectsCount = jobsUnavailable
+    ? 0
+    : (activeProjectsCountResult.count ?? 0);
 
   const statusSummary: DashboardStatusSummary = {
-    completed: projectStatusSummary.completed,
-    inProgress: projectStatusSummary.inProgress,
-    pending: projectStatusSummary.pending,
-    overdue: projectStatusSummary.overdue,
+    completed: 0,
+    inProgress: 0,
+    pending: 0,
+    overdue: 0,
   };
+
+  const activeJobsList: DashboardJobSummary[] = [];
 
   const totalRevenuePence = invoicesUnavailable
     ? 0
@@ -483,35 +423,6 @@ async function loadDashboardPageDataImpl(
     hoursLogged,
   };
 
-  const orderedRoles: string[] = ['admin', 'owner', 'staff', 'contractor'];
-
-  const teamMembersRaw = (teamMembersResult.data ?? []) as Array<{
-    user_id: string;
-    name: string | null;
-    email: string | null;
-    role: string | null;
-  }>;
-
-  const teamMembers = [...teamMembersRaw].sort((a, b) => {
-    const aIndex = orderedRoles.indexOf((a.role ?? '').toLowerCase());
-    const bIndex = orderedRoles.indexOf((b.role ?? '').toLowerCase());
-    const aRank = aIndex === -1 ? Number.MAX_SAFE_INTEGER : aIndex;
-    const bRank = bIndex === -1 ? Number.MAX_SAFE_INTEGER : bIndex;
-    if (aRank !== bRank) return aRank - bRank;
-    return (a.name ?? '').localeCompare(b.name ?? '');
-  });
-
-  const recentInvoices: DashboardInvoiceSummary[] = (
-    invoicesUnavailable ? [] : (recentInvoicesResult.data ?? [])
-  ).map((row: any) => ({
-    id: (row.invoice_number as string) ?? (row.id as string),
-    invoiceNumber: (row.invoice_number as string) ?? (row.id as string),
-    clientName: row.clients?.display_name ?? null,
-    totalPence: (row.total_pence as number | null) ?? 0,
-    dueAt: (row.due_at as string | null) ?? null,
-    status: (row.status as string | null) ?? 'draft',
-  }));
-
   const notesUnavailable = isTableMissingFromApi(notesResult.error);
   const recentNotes: DashboardNoteSummary[] = notesUnavailable
     ? []
@@ -542,19 +453,34 @@ async function loadDashboardPageDataImpl(
     throw tasksError;
   }
 
-  const taskClientIds = [
-    ...new Set(
-      (taskRows ?? [])
+  const needsReplyUnavailable = isTableMissingFromApi(needsReplyResult.error);
+  if (!needsReplyUnavailable && needsReplyResult.error) {
+    console.error('[dashboard] needs-reply threads', needsReplyResult.error);
+  }
+
+  const needsReplyRows = needsReplyUnavailable
+    ? []
+    : needsReplyResult.error
+      ? []
+      : (needsReplyResult.data ?? []);
+
+  const lookupClientIds = [
+    ...new Set([
+      ...(taskRows ?? [])
         .map((t) => t.client_id as string | null)
         .filter((id): id is string => Boolean(id)),
-    ),
+      ...needsReplyRows
+        .map((row) => row.client_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ]),
   ];
+
   const clientNameById = new Map<string, string>();
-  if (taskClientIds.length > 0) {
+  if (lookupClientIds.length > 0) {
     const { data: clientRows } = await client
       .from('clients')
       .select('id, display_name, first_name, last_name')
-      .in('id', taskClientIds);
+      .in('id', lookupClientIds);
     for (const row of clientRows ?? []) {
       const name =
         (row.display_name as string | null)?.trim() ||
@@ -571,40 +497,6 @@ async function loadDashboardPageDataImpl(
     status: (t.status as string | null) ?? 'todo',
     projectName: resolveTaskContextName(t, clientNameById),
   }));
-
-  const needsReplyUnavailable = isTableMissingFromApi(needsReplyResult.error);
-  if (!needsReplyUnavailable && needsReplyResult.error) {
-    // Soft-fail so the dashboard still loads if email assistant isn't available.
-    console.error('[dashboard] needs-reply threads', needsReplyResult.error);
-  }
-
-  const needsReplyRows = needsReplyUnavailable
-    ? []
-    : needsReplyResult.error
-      ? []
-      : (needsReplyResult.data ?? []);
-
-  const needsReplyClientIds = [
-    ...new Set(
-      needsReplyRows
-        .map((row) => row.client_id as string | null)
-        .filter((id): id is string => Boolean(id)),
-    ),
-  ];
-  const needsReplyClientNameById = new Map<string, string>();
-  if (needsReplyClientIds.length > 0) {
-    const { data: needsReplyClients } = await client
-      .from('clients')
-      .select('id, display_name, first_name, last_name')
-      .in('id', needsReplyClientIds);
-    for (const row of needsReplyClients ?? []) {
-      const name =
-        (row.display_name as string | null)?.trim() ||
-        [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
-        'Client';
-      needsReplyClientNameById.set(row.id as string, name);
-    }
-  }
 
   const needsReplyThreads: DashboardNeedsReplyThread[] = needsReplyRows.map(
     (row) => {
@@ -626,9 +518,7 @@ async function loadDashboardPageDataImpl(
         snippet: (row.snippet as string | null)?.trim() || null,
         fromLabel,
         lastMessageAt: (row.last_message_at as string | null) ?? null,
-        clientName: clientId
-          ? (needsReplyClientNameById.get(clientId) ?? null)
-          : null,
+        clientName: clientId ? (clientNameById.get(clientId) ?? null) : null,
       };
     },
   );
@@ -640,11 +530,6 @@ async function loadDashboardPageDataImpl(
       : (needsReplyResult.count ?? needsReplyThreads.length),
   };
 
-  const suggestedEmailLoaded = await loadSuggestedEmailActionItems(
-    client,
-    workspace.user.id,
-    { accountId, limit: 5 },
-  );
   const suggestedEmailTasks: DashboardSuggestedEmailTasksSummary = {
     items: suggestedEmailLoaded.items.map((item) => ({
       id: item.id,
@@ -672,52 +557,8 @@ async function loadDashboardPageDataImpl(
     needsReply,
     suggestedEmailTasks,
     recentNotes,
-    recentInvoices,
-    teamMembers: teamMembers.map((m) => ({
-      userId: m.user_id,
-      name: m.name,
-      email: m.email,
-      role: m.role,
-    })),
-  };
-}
-
-function summarizeProjectStatuses(
-  rows: Array<{ status: string; due_date: string | null }>,
-  todayIso: string,
-): DashboardStatusSummary & { activeProjects: number } {
-  let completed = 0;
-  let inProgress = 0;
-  let pending = 0;
-  let overdue = 0;
-
-  for (const row of rows) {
-    const status = (row.status ?? 'pending').toLowerCase();
-
-    if (status === 'completed') {
-      completed += 1;
-    } else if (status === 'in_progress') {
-      inProgress += 1;
-    } else if (status === 'pending') {
-      pending += 1;
-    }
-
-    if (
-      row.due_date &&
-      row.due_date < todayIso &&
-      status !== 'completed' &&
-      status !== 'cancelled'
-    ) {
-      overdue += 1;
-    }
-  }
-
-  return {
-    completed,
-    inProgress,
-    pending,
-    overdue,
-    activeProjects: inProgress + pending,
+    recentInvoices: [],
+    teamMembers: [],
   };
 }
 

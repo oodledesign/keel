@@ -1333,10 +1333,9 @@ export function TasksPageClient({
       if (search) {
         const q = search.trim().toLowerCase();
         const inTitle = t.title.toLowerCase().includes(q);
-        const inNotes = (t.notes ?? '').toLowerCase().includes(q);
         const inWorkspace = (t.workspaceName ?? '').toLowerCase().includes(q);
         const inClient = (t.clientName ?? '').toLowerCase().includes(q);
-        if (!inTitle && !inNotes && !inWorkspace && !inClient) {
+        if (!inTitle && !inWorkspace && !inClient) {
           return false;
         }
       }

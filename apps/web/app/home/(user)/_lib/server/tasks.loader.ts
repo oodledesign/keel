@@ -16,6 +16,10 @@ import { workspaceColorForSpaceType } from '../workspace-accent';
 /** Cap task payloads for faster SSR and hydration. */
 export const TASK_LIST_LIMIT = 300;
 
+/** List rows omit notes — loaded on edit via loadTaskById. */
+const TASK_LIST_SELECT =
+  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status';
+
 const TASK_SELECT =
   'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status';
 
@@ -593,7 +597,7 @@ export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
 
   const { data, error } = await client
     .from('tasks')
-    .select(TASK_SELECT)
+    .select(TASK_LIST_SELECT)
     .eq('user_id', user.id)
     .order('due_date', { ascending: true, nullsLast: true })
     .limit(TASK_LIST_LIMIT);
@@ -614,7 +618,7 @@ export const loadTasksForClient = cache(
 
     const { data, error } = await client
       .from('tasks')
-      .select(TASK_SELECT)
+      .select(TASK_LIST_SELECT)
       .eq('user_id', user.id)
       .eq('client_id', clientId)
       .order('due_date', { ascending: true, nullsLast: true })
@@ -646,68 +650,24 @@ export const loadTasksForTeamAccount = cache(
       return [];
     }
 
-    const [
-      { data: projectsData },
-      { data: clientsData },
-      { data: accountData },
-    ] = await Promise.all([
-      scopedDb.from('projects').select('id').eq('account_id', accountId),
-      scopedDb.from('clients').select('id').eq('account_id', accountId),
-      scopedDb
-        .from('accounts')
-        .select('name, slug')
-        .eq('id', accountId)
-        .maybeSingle(),
-    ]);
+    const { data: accountData } = await scopedDb
+      .from('accounts')
+      .select('name, slug')
+      .eq('id', accountId)
+      .maybeSingle();
 
     const workspaceFallback = {
       name: accountData?.name?.trim() || 'Workspace',
       slug: accountData?.slug?.trim() || null,
     };
 
-    const projectIds = (projectsData ?? []).map((p: { id: string }) => p.id);
-    const clientIds = (clientsData ?? []).map((c: { id: string }) => c.id);
-
-    if (projectIds.length === 0 && clientIds.length === 0) {
-      const { data: accountOnlyData, error: accountOnlyError } =
-        await userClient
-          .from('tasks')
-          .select(TASK_SELECT)
-          .eq('account_id', accountId)
-          .order('due_date', { ascending: true, nullsLast: true })
-          .limit(TASK_LIST_LIMIT);
-
-      if (accountOnlyError) {
-        console.error(
-          '[tasks.loader] loadTasksForTeamAccount error:',
-          accountOnlyError.message,
-        );
-        return [];
-      }
-
-      return enrichTaskRows(
-        userClient,
-        (accountOnlyData ?? []) as TaskQueryRow[],
-        'work',
-        scopedDb,
-        true,
-        workspaceFallback,
-      );
-    }
-
-    let query = userClient.from('tasks').select(TASK_SELECT);
-
-    const filters: string[] = [`account_id.eq.${accountId}`];
-    if (projectIds.length > 0) {
-      filters.push(`project_id.in.(${projectIds.join(',')})`);
-    }
-    if (clientIds.length > 0) {
-      filters.push(`client_id.in.(${clientIds.join(',')})`);
-    }
-
-    query = query.or(filters.join(','));
-
-    const { data, error } = await query
+    // Prefer account_id scoping over OR(project_id IN …, client_id IN …) —
+    // those ID lists grow with the CRM and blow up PostgREST URL / planner cost.
+    const { data, error } = await userClient
+      .from('tasks')
+      .select(TASK_LIST_SELECT)
+      .eq('account_id', accountId)
+      .neq('status', 'cancelled')
       .order('due_date', {
         ascending: true,
         nullsLast: true,

@@ -48,7 +48,6 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
         suggested_title,
         suggested_description,
         suggested_due_date,
-        source_excerpt,
         assignee_confidence,
         suggested_assignee_id,
         created_at,
@@ -60,15 +59,16 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
           clients:client_id (
             id,
             display_name,
-            company_name,
-            picture_url
+            company_name
           )
         )
       `,
+        { count: 'exact' },
       )
       .eq('account_id', accountId)
       .eq('status', 'pending_review')
-      .order('created_at', { ascending: false }),
+      .order('created_at', { ascending: false })
+      .limit(50),
     client.rpc('get_account_members', { account_slug: accountSlug }),
     loadAccountTaskAutomationSettings(client, accountId),
   ]);
@@ -110,7 +110,6 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
       suggested_title: string;
       suggested_description: string | null;
       suggested_due_date: string | null;
-      source_excerpt: string | null;
       assignee_confidence: number | null;
       suggested_assignee_id: string | null;
       created_at: string;
@@ -125,13 +124,11 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
                   id?: string;
                   display_name?: string | null;
                   company_name?: string | null;
-                  picture_url?: string | null;
                 }
               | Array<{
                   id?: string;
                   display_name?: string | null;
                   company_name?: string | null;
-                  picture_url?: string | null;
                 }>
               | null;
           }
@@ -144,13 +141,11 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
                   id?: string;
                   display_name?: string | null;
                   company_name?: string | null;
-                  picture_url?: string | null;
                 }
               | Array<{
                   id?: string;
                   display_name?: string | null;
                   company_name?: string | null;
-                  picture_url?: string | null;
                 }>
               | null;
           }>
@@ -175,7 +170,7 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
       suggestedTitle: item.suggested_title,
       suggestedDescription: item.suggested_description,
       suggestedDueDate: item.suggested_due_date,
-      sourceExcerpt: item.source_excerpt,
+      sourceExcerpt: null,
       assigneeConfidence: item.assignee_confidence,
       suggestedAssigneeId: item.suggested_assignee_id,
       createdAt: item.created_at,
@@ -184,7 +179,7 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
       meetingDate: transcript?.meeting_date ?? null,
       clientId: transcript?.client_id ?? clientRow?.id ?? null,
       clientName,
-      clientPictureUrl: clientRow?.picture_url ?? null,
+      clientPictureUrl: null,
     };
   });
 
@@ -192,6 +187,7 @@ async function loadMeetingTaskReviewPageDataImpl(accountSlug: string) {
     accountId,
     accountSlug,
     items,
+    totalCount: itemsResult.count ?? items.length,
     members,
     automationSettings,
   };
