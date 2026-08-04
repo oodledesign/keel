@@ -97,6 +97,8 @@ export async function suggestActivityAssignmentsAction(
       windowTitle: row.window_title as string,
       durationSeconds: row.duration_seconds as number,
     })),
+    accountId: input.accountId,
+    supabase: client,
   });
 
   return { success: true, suggestions };

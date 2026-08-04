@@ -341,11 +341,12 @@ export const saveMeetupRecord = enhanceAction(
 
 export const summarizeMeetupRecord = enhanceAction(
   async (input) => {
+    const client = getSupabaseServerClient();
     const summary = await summarizeMeetupTranscript(
       input.transcript,
       input.meetupTitle,
+      { accountId: input.accountId, supabase: client },
     );
-    const client = getSupabaseServerClient();
     const now = new Date().toISOString();
 
     const { error } = await client.from('community_meetup_records').upsert(

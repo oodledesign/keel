@@ -1,3 +1,4 @@
+export type { GenerateTextFn } from './anthropic';
 export { DEFAULT_ANTHROPIC_MODEL } from './anthropic';
 export { classify, type ClassifyResult } from './classify';
 export { extract } from './extract';

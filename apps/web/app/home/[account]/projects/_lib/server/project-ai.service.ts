@@ -326,6 +326,7 @@ class ProjectAiService {
         jobTitle: ctx.jobTitle,
         clientName: ctx.clientName,
         sources,
+        meter: { accountId: input.accountId, supabase: this.db },
       });
 
       const { data: doc, error } = await this.db
@@ -360,6 +361,7 @@ class ProjectAiService {
         jobTitle: ctx.jobTitle,
         clientName: ctx.clientName,
         sources,
+        meter: { accountId: input.accountId, supabase: this.db },
       });
 
       if ('parseError' in result) {
@@ -414,6 +416,7 @@ class ProjectAiService {
       clientName: ctx.clientName,
       existingContent,
       sources,
+      meter: { accountId: input.accountId, supabase: this.db },
     });
 
     const docId = pageDoc?.id as string | undefined;

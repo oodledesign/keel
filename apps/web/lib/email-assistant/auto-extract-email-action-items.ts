@@ -12,6 +12,7 @@ import {
   shouldIncludeExtractedItem,
 } from './account-members';
 import { linkFieldsFromThread } from './action-item-links';
+import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { buildThreadText } from './thread-text';
 
 /**
@@ -93,11 +94,20 @@ export async function autoExtractEmailActionItems(params: {
 
   let items: EmailActionItem[];
   try {
-    items = await extract(threadText, todayLocalYmd(), {
-      mailboxOwnerEmail: ownerEmail,
-      mailboxOwnerName: ownerDisplayName,
-      accountMembers,
-    });
+    items = await extract(
+      threadText,
+      todayLocalYmd(),
+      {
+        mailboxOwnerEmail: ownerEmail,
+        mailboxOwnerName: ownerDisplayName,
+        accountMembers,
+      },
+      createMeteredEmailGenerateText({
+        feature: 'task_extract',
+        accountId: userId,
+        supabase: admin,
+      }),
+    );
   } catch {
     return 0;
   }

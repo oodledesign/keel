@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { callAnthropicText } from './anthropic';
+import { callAnthropicText, type GenerateTextFn } from './anthropic';
 import { parseExtractResponse } from './json';
 import type { EmailActionItem, ExtractContext } from './types';
 
@@ -64,6 +64,7 @@ export async function extract(
   threadText: string,
   currentDate: string,
   context: ExtractContext,
+  generateText: GenerateTextFn = callAnthropicText,
 ): Promise<EmailActionItem[]> {
   const trimmedThread = threadText.trim();
 
@@ -88,7 +89,7 @@ ${trimmedThread}
 
 Respond with JSON only.`;
 
-  const raw = await callAnthropicText({
+  const raw = await generateText({
     system: EXTRACT_SYSTEM,
     user,
     maxTokens: 2048,

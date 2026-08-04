@@ -6,6 +6,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { streamProposalHtml } from '~/lib/ai/proposal-generate';
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
 import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 export const dynamic = 'force-dynamic';
@@ -94,24 +98,28 @@ export async function POST(request: NextRequest) {
       purpose: 'proposal',
     });
 
-    const stream = await streamProposalHtml({
-      recipientName: parsed.data.recipientName.trim(),
-      recipientCompany: parsed.data.recipientCompany?.trim() || null,
-      accountName: parsed.data.accountName.trim(),
-      senderName: parsed.data.senderName.trim(),
-      transcripts: parsed.data.transcripts.map((t) => ({
-        title: t.title.trim(),
-        content: t.content.trim(),
-      })),
-      contextNotes: parsed.data.contextNotes?.map((n) => ({
-        title: n.title.trim(),
-        content: n.content.trim(),
-        type: n.type,
-      })),
-      referenceProposalHtml: parsed.data.referenceProposalHtml?.trim() || null,
-      dealValue: parsed.data.dealValue ?? null,
-      voicePromptBlock,
-    });
+    const stream = await streamProposalHtml(
+      {
+        recipientName: parsed.data.recipientName.trim(),
+        recipientCompany: parsed.data.recipientCompany?.trim() || null,
+        accountName: parsed.data.accountName.trim(),
+        senderName: parsed.data.senderName.trim(),
+        transcripts: parsed.data.transcripts.map((t) => ({
+          title: t.title.trim(),
+          content: t.content.trim(),
+        })),
+        contextNotes: parsed.data.contextNotes?.map((n) => ({
+          title: n.title.trim(),
+          content: n.content.trim(),
+          type: n.type,
+        })),
+        referenceProposalHtml:
+          parsed.data.referenceProposalHtml?.trim() || null,
+        dealValue: parsed.data.dealValue ?? null,
+        voicePromptBlock,
+      },
+      { accountId: parsed.data.accountId, supabase: client },
+    );
 
     return new Response(stream, {
       headers: {
@@ -120,6 +128,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
+    if (isInsufficientCreditsError(err)) {
+      return NextResponse.json(insufficientCreditsResponse(err), {
+        status: 402,
+      });
+    }
+
     return NextResponse.json(
       {
         error:

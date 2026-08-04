@@ -1,6 +1,11 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import Anthropic from '@anthropic-ai/sdk';
+
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
+import { FEATURE_CONFIG, withMeteredAI } from '~/lib/ai/router';
 
 import type { QuickActionContext } from './context';
 import {
@@ -19,22 +24,6 @@ type AnthropicMessage = {
   role: 'user' | 'assistant';
   content: string | AnthropicContentBlock[];
 };
-
-function getAnthropicConfig() {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error(
-      'ANTHROPIC_API_KEY is not set. Add it to your environment to use quick actions.',
-    );
-  }
-
-  const model =
-    process.env.ANTHROPIC_QUICK_ACTION_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-haiku-4-5';
-
-  return { apiKey, model };
-}
 
 function buildSystemPrompt(ctx: QuickActionContext): string {
   const today = todayLocalYmd();
@@ -63,42 +52,6 @@ Workflow:
 Respond briefly in plain English when proposing actions.`;
 }
 
-async function callAnthropic(
-  apiKey: string,
-  model: string,
-  system: string,
-  messages: AnthropicMessage[],
-  tools: typeof quickActionToolDefinitions,
-) {
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      system,
-      tools,
-      messages,
-    }),
-  });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(
-      `Anthropic API error (${res.status}): ${errText.slice(0, 400)}`,
-    );
-  }
-
-  return (await res.json()) as {
-    content?: AnthropicContentBlock[];
-    stop_reason?: string;
-  };
-}
-
 function extractAssistantText(
   content: AnthropicContentBlock[] | undefined,
 ): string {
@@ -112,11 +65,22 @@ function extractAssistantText(
     .trim();
 }
 
-export async function planQuickAction(
+async function runQuickActionPlanLoop(
   ctx: QuickActionContext,
   message: string,
-): Promise<QuickActionPlanResponse> {
-  const { apiKey, model } = getAnthropicConfig();
+): Promise<{
+  result: QuickActionPlanResponse;
+  inputTokens: number | null;
+  outputTokens: number | null;
+}> {
+  if (!process.env.ANTHROPIC_API_KEY?.trim()) {
+    throw new Error(
+      'ANTHROPIC_API_KEY is not set. Add it to your environment to use quick actions.',
+    );
+  }
+
+  const config = FEATURE_CONFIG.quick_action_plan;
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
   const system = buildSystemPrompt(ctx);
 
   const messages: AnthropicMessage[] = [
@@ -125,17 +89,22 @@ export async function planQuickAction(
 
   const proposedActions: ProposedQuickAction[] = [];
   let assistantMessage = '';
+  let inputTokens = 0;
+  let outputTokens = 0;
 
   for (let round = 0; round < MAX_TOOL_ROUNDS; round += 1) {
-    const response = await callAnthropic(
-      apiKey,
-      model,
+    const response = await anthropic.messages.create({
+      model: config.model,
+      max_tokens: config.maxOutputTokens,
       system,
-      messages,
-      quickActionToolDefinitions,
-    );
+      tools: quickActionToolDefinitions as Anthropic.Tool[],
+      messages: messages as Anthropic.MessageParam[],
+    });
 
-    const content = response.content ?? [];
+    inputTokens += response.usage?.input_tokens ?? 0;
+    outputTokens += response.usage?.output_tokens ?? 0;
+
+    const content = (response.content ?? []) as AnthropicContentBlock[];
     assistantMessage = extractAssistantText(content) || assistantMessage;
 
     const toolUses = content.filter(
@@ -191,7 +160,27 @@ export async function planQuickAction(
   }
 
   return {
-    assistantMessage,
-    proposedActions,
+    result: {
+      assistantMessage,
+      proposedActions,
+    },
+    inputTokens: inputTokens || null,
+    outputTokens: outputTokens || null,
   };
+}
+
+function resolveQuickActionAccountId(ctx: QuickActionContext): string {
+  return ctx.pageContext.accountId?.trim() || ctx.userId;
+}
+
+export async function planQuickAction(
+  ctx: QuickActionContext,
+  message: string,
+): Promise<QuickActionPlanResponse> {
+  return withMeteredAI({
+    feature: 'quick_action_plan',
+    accountId: resolveQuickActionAccountId(ctx),
+    supabase: ctx.client as SupabaseClient,
+    run: () => runQuickActionPlanLoop(ctx, message),
+  });
 }

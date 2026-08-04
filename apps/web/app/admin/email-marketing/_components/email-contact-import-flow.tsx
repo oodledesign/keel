@@ -249,7 +249,11 @@ export function EmailContactImportFlow({
       }
 
       if ('ok' in res && res.ok === false) {
-        toast.error(asToastText(t('clientImportAiUnavailable')));
+        toast.error(
+          'code' in res && res.code === 'credits'
+            ? 'Insufficient AI credits to map columns. Top up AI credits and try again.'
+            : asToastText(t('clientImportAiUnavailable')),
+        );
         return;
       }
 

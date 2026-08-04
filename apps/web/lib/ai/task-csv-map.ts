@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI, isInsufficientCreditsError } from '~/lib/ai/router';
 import {
   TASK_CSV_FIELDS,
   type TaskCsvMapResult,
@@ -46,42 +48,27 @@ Rules:
 export async function suggestTaskCsvColumnMapping(input: {
   headers: string[];
   sampleRows: string[][];
+  accountId: string;
+  supabase: SupabaseClient;
 }): Promise<TaskCsvMapResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) {
     return { ...heuristicTaskMapping(input.headers), aiUsed: false };
   }
 
-  const model = resolveAnthropicModel();
   const payload = {
     headers: input.headers,
     sample_rows: input.sampleRows.slice(0, 5),
   };
 
   try {
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 1024,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: JSON.stringify(payload) }],
-      }),
+    const text = await callAI({
+      feature: 'csv_map_task',
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt: JSON.stringify(payload),
+      accountId: input.accountId,
+      supabase: input.supabase,
     });
-
-    if (!res.ok) {
-      return { ...heuristicTaskMapping(input.headers), aiUsed: false };
-    }
-
-    const data = (await res.json()) as {
-      content?: Array<{ type: string; text?: string }>;
-    };
-    const text = data.content?.find((c) => c.type === 'text')?.text ?? '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return { ...heuristicTaskMapping(input.headers), aiUsed: false };
@@ -99,7 +86,8 @@ export async function suggestTaskCsvColumnMapping(input: {
       notes: parsed.notes,
       aiUsed: true,
     };
-  } catch {
+  } catch (error) {
+    if (isInsufficientCreditsError(error)) throw error;
     return { ...heuristicTaskMapping(input.headers), aiUsed: false };
   }
 }

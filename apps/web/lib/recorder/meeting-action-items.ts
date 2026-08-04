@@ -138,6 +138,8 @@ export async function extractAndPersistMeetingActionItems(
     recorderEmail: recorder.email,
     accountMembers: members,
     calendarAttendees: input.calendarAttendees,
+    accountId: input.accountId,
+    supabase: admin,
   });
 
   const filtered = extracted.filter((item) =>

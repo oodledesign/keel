@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI } from '~/lib/ai/router';
 
 const MAX_TRANSCRIPT_CHARS = 120_000;
 
@@ -34,18 +36,13 @@ function formatAttendeeList(
 
 export async function generateMeetingSummaryText(
   input: MeetingSummaryInput,
+  meter: { accountId: string; supabase: SupabaseClient },
 ): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
   const trimmedTranscript = input.transcript.trim();
   if (!trimmedTranscript) {
     throw new Error('Transcript is empty');
   }
 
-  const model = resolveAnthropicModel();
   const title = input.title.trim() || 'Meeting';
   const meetingDate = input.meetingDate?.trim() || 'Unknown date';
 
@@ -71,36 +68,15 @@ Transcript:
 ${trimmedTranscript.slice(0, MAX_TRANSCRIPT_CHARS)}
 ---`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 2048,
-      system,
-      messages: [{ role: 'user', content: userContent }],
-    }),
+  const text = await callAI({
+    feature: 'meeting_summary',
+    systemPrompt: system,
+    userPrompt: userContent,
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
 
-  if (!response.ok) {
-    throw new Error(
-      `Anthropic API error (${response.status}): ${(await response.text()).slice(0, 400)}`,
-    );
-  }
-
-  const body = (await response.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-
-  const text = body.content
-    ?.find((block) => block.type === 'text')
-    ?.text?.trim();
-
-  if (!text) {
+  if (!text?.trim()) {
     throw new Error('Empty summary from Anthropic');
   }
 

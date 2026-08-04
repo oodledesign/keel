@@ -6,6 +6,10 @@ import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
 import { planQuickAction } from '~/lib/quick-action/agent';
 import { createQuickActionContext } from '~/lib/quick-action/context';
 import { rateLimitApiRequest } from '~/lib/rate-limit/api-rate-limit';
@@ -59,6 +63,12 @@ export async function POST(request: NextRequest) {
     const result = await planQuickAction(ctx, parsed.data.message);
     return NextResponse.json(result);
   } catch (error) {
+    if (isInsufficientCreditsError(error)) {
+      return NextResponse.json(insufficientCreditsResponse(error), {
+        status: 402,
+      });
+    }
+
     console.error('[quick-action] plan', error);
     const message =
       error instanceof Error ? error.message : 'Failed to plan quick action';

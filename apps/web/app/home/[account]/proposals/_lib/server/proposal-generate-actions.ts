@@ -89,21 +89,24 @@ export const generateProposalHtmlAction = enhanceAction(
       purpose: 'proposal',
     });
 
-    const contentHtml = await generateProposalHtml({
-      recipientName: input.recipientName.trim(),
-      recipientCompany: input.recipientCompany?.trim() || null,
-      accountName: input.accountName.trim(),
-      senderName: input.senderName.trim(),
-      transcripts,
-      contextNotes: input.contextNotes?.map((n) => ({
-        title: n.title.trim(),
-        content: n.content.trim(),
-        type: n.type,
-      })),
-      referenceProposalHtml: input.referenceProposalHtml?.trim() || null,
-      dealValue: input.dealValue ?? null,
-      voicePromptBlock,
-    });
+    const contentHtml = await generateProposalHtml(
+      {
+        recipientName: input.recipientName.trim(),
+        recipientCompany: input.recipientCompany?.trim() || null,
+        accountName: input.accountName.trim(),
+        senderName: input.senderName.trim(),
+        transcripts,
+        contextNotes: input.contextNotes?.map((n) => ({
+          title: n.title.trim(),
+          content: n.content.trim(),
+          type: n.type,
+        })),
+        referenceProposalHtml: input.referenceProposalHtml?.trim() || null,
+        dealValue: input.dealValue ?? null,
+        voicePromptBlock,
+      },
+      { accountId: input.accountId, supabase: client },
+    );
 
     return { contentHtml };
   },
@@ -130,14 +133,17 @@ export const editProposalHtmlAction = enhanceAction(
       purpose: 'proposal',
     });
 
-    const contentHtml = await editProposalHtml({
-      contentHtml: input.contentHtml,
-      instruction: input.instruction.trim(),
-      recipientName: input.recipientName?.trim() || null,
-      accountName: input.accountName?.trim() || null,
-      senderName: input.senderName?.trim() || null,
-      voicePromptBlock,
-    });
+    const contentHtml = await editProposalHtml(
+      {
+        contentHtml: input.contentHtml,
+        instruction: input.instruction.trim(),
+        recipientName: input.recipientName?.trim() || null,
+        accountName: input.accountName?.trim() || null,
+        senderName: input.senderName?.trim() || null,
+        voicePromptBlock,
+      },
+      { accountId: input.accountId, supabase: client },
+    );
 
     return { contentHtml };
   },

@@ -1,7 +1,9 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { parseUkDate } from '~/lib/csv/parse-date';
+import { callAI, isInsufficientCreditsError } from '~/lib/ai/router';
 
 export { parseUkDate };
 
@@ -52,57 +54,35 @@ Rules:
 export async function suggestCsvColumnMapping(input: {
   headers: string[];
   sampleRows: string[][];
+  accountId: string;
+  supabase: SupabaseClient;
 }): Promise<FinanceCsvMapResult> {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
   if (!apiKey) {
     return heuristicMapping(input.headers);
   }
 
-  const model = resolveAnthropicModel();
-
   const payload = {
     headers: input.headers,
     sample_rows: input.sampleRows.slice(0, 5),
   };
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 1024,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify(payload),
-        },
-      ],
-    }),
-  });
-
-  if (!res.ok) {
-    return heuristicMapping(input.headers);
-  }
-
-  const data = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text = data.content?.find((c) => c.type === 'text')?.text ?? '';
-  const jsonMatch = text.match(/\{[\s\S]*\}/);
-  if (!jsonMatch) return heuristicMapping(input.headers);
-
   try {
+    const text = await callAI({
+      feature: 'csv_map_finance',
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt: JSON.stringify(payload),
+      accountId: input.accountId,
+      supabase: input.supabase,
+    });
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (!jsonMatch) return heuristicMapping(input.headers);
     return JSON.parse(jsonMatch[0]) as FinanceCsvMapResult;
-  } catch {
+  } catch (error) {
+    if (isInsufficientCreditsError(error)) throw error;
     return heuristicMapping(input.headers);
   }
 }
-
 function heuristicMapping(headers: string[]): FinanceCsvMapResult {
   const lower = headers.map((h) => h.toLowerCase());
   const pick = (...candidates: string[]) => {

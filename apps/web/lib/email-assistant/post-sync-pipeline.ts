@@ -10,6 +10,7 @@ import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
+import { createMeteredEmailGenerateText } from './metered-generate-text';
 import {
   extractEmailDomain,
   isAddressIgnored,
@@ -367,7 +368,15 @@ export async function runEmailAssistantPipeline(
       const threadText = buildThreadText((messages ?? []) as MessageRow[]);
 
       try {
-        const classified = await classify(threadText, owner);
+        const classified = await classify(
+          threadText,
+          owner,
+          createMeteredEmailGenerateText({
+            feature: 'email_triage',
+            accountId: userId,
+            supabase: admin,
+          }),
+        );
         category = classified.category;
         reason = classified.reason;
       } catch (error) {

@@ -29,12 +29,15 @@ export async function generateAndPersistMeetingSummary(
     input.calendarAttendees ?? [],
   );
 
-  const summaryText = await generateMeetingSummaryText({
-    title: input.title,
-    transcript: input.content,
-    meetingDate: input.meetingDate,
-    attendees: input.calendarAttendees,
-  });
+  const summaryText = await generateMeetingSummaryText(
+    {
+      title: input.title,
+      transcript: input.content,
+      meetingDate: input.meetingDate,
+      attendees: input.calendarAttendees,
+    },
+    { accountId: input.accountId, supabase: admin },
+  );
 
   const { error } = await admin.from('meeting_summaries').upsert(
     {

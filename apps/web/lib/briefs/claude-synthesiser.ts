@@ -1,6 +1,11 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import {
+  invokeAIProvider,
+  withMeteredAI,
+} from '~/lib/ai/router';
 
 import type { BriefOutput, BriefSynthesisInput } from './types';
 
@@ -137,45 +142,22 @@ Rules:
 `;
 }
 
-async function callClaude(prompt: string, retry = false): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model =
-    process.env.ANTHROPIC_BRIEF_MODEL?.trim() || resolveAnthropicModel();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4000,
-      system: retry
-        ? 'Output only valid JSON. No markdown. No preamble. Start with {'
-        : `You are an expert SEO content strategist producing writer-ready content briefs.
+async function callClaude(
+  prompt: string,
+  meter: { accountId: string; supabase: SupabaseClient },
+  retry = false,
+): Promise<string> {
+  // Used only inside withMeteredAI so credits are charged once per brief.
+  const result = await invokeAIProvider({
+    feature: 'rankly_brief_synthesise',
+    systemPrompt: retry
+      ? 'Output only valid JSON. No markdown. No preamble. Start with {'
+      : `You are an expert SEO content strategist producing writer-ready content briefs.
 Base every recommendation strictly on the data provided. Do not add generic SEO advice.
 Output only valid JSON — no markdown fences, no preamble.`,
-      messages: [{ role: 'user', content: prompt }],
-    }),
+    userPrompt: prompt,
   });
-
-  if (!res.ok) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  const data = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-
-  return data.content?.find((block) => block.type === 'text')?.text ?? '';
+  return result.text;
 }
 
 function parseBriefJson(text: string): BriefOutput {
@@ -188,14 +170,22 @@ function parseBriefJson(text: string): BriefOutput {
 
 export async function synthesiseBrief(
   input: BriefSynthesisInput,
+  meter: { accountId: string; supabase: SupabaseClient },
 ): Promise<BriefOutput> {
   const prompt = buildPrompt(input);
 
-  try {
-    const text = await callClaude(prompt);
-    return parseBriefJson(text);
-  } catch {
-    const retryText = await callClaude(prompt, true);
-    return parseBriefJson(retryText);
-  }
+  return withMeteredAI({
+    feature: 'rankly_brief_synthesise',
+    accountId: meter.accountId,
+    supabase: meter.supabase,
+    run: async () => {
+      try {
+        const text = await callClaude(prompt, meter);
+        return { result: parseBriefJson(text) };
+      } catch {
+        const retryText = await callClaude(prompt, meter, true);
+        return { result: parseBriefJson(retryText) };
+      }
+    },
+  });
 }

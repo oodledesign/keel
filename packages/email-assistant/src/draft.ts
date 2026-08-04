@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { callAnthropicText } from './anthropic';
+import { callAnthropicText, type GenerateTextFn } from './anthropic';
 import { appendSignature } from './signature';
 
 export type DraftOwnerContext = {
@@ -33,6 +33,7 @@ export async function draft(
   owner: DraftOwnerContext,
   styleNotes: string | null | undefined,
   signature: string | null | undefined,
+  generateText: GenerateTextFn = callAnthropicText,
 ): Promise<string> {
   const trimmedThread = threadText.trim();
 
@@ -44,7 +45,6 @@ export async function draft(
     throw new Error('Mailbox owner email is required to draft a reply');
   }
 
-  // Callers may pass a pre-labeled voice block (Tone of voice / Owner style notes).
   const trimmedNotes = styleNotes?.trim();
   const styleBlock = trimmedNotes
     ? trimmedNotes.startsWith('Tone of voice') ||
@@ -60,7 +60,7 @@ ${trimmedThread}
 
 Write the reply body only, as the mailbox owner.`;
 
-  const body = await callAnthropicText({
+  const body = await generateText({
     system: DRAFT_SYSTEM,
     user,
     maxTokens: 2048,
@@ -70,3 +70,4 @@ Write the reply body only, as the mailbox owner.`;
 }
 
 export { appendSignature } from './signature';
+export type { GenerateTextFn } from './anthropic';

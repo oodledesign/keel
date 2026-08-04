@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import { ahrefsDrInteger, getDomainRating } from '~/lib/ahrefs/client';
 import { countryToLocationCode } from '~/lib/clusters/utils';
 import {
@@ -8,6 +10,7 @@ import {
   isCommonCrawlBacklinksEnabled,
 } from '~/lib/commoncrawl/athena';
 import { getPageRank } from '~/lib/openpagerank/client';
+import { resolveRanklyProjectAccountId } from '~/lib/page-optimize/claude-analyser';
 
 import { checkAiCitations, deriveBrandQueries } from './ai-citations';
 import { scoreAndRecommend } from './claude-scorer';
@@ -238,14 +241,20 @@ export async function runAuditJob(
     await heartbeatAuditJob(jobId);
 
     try {
-      const result = await scoreAndRecommend({
-        domain,
-        robotsResult: crawl.robotsTxt,
-        llmsTxt: crawl.llmsTxt,
-        sitemap: crawl.sitemap,
-        pages: crawl.pages,
-        aiCitations: citationBundle.aiCitations,
-      });
+      const result = await scoreAndRecommend(
+        {
+          domain,
+          robotsResult: crawl.robotsTxt,
+          llmsTxt: crawl.llmsTxt,
+          sitemap: crawl.sitemap,
+          pages: crawl.pages,
+          aiCitations: citationBundle.aiCitations,
+        },
+        {
+          accountId: await resolveRanklyProjectAccountId(job.project_id),
+          supabase: getSupabaseServerAdminClient(),
+        },
+      );
 
       await saveAuditReport(jobId, job.project_id, domain, result, crawl, {
         domainCitedInAny: citationBundle.aiCitations.domainCitedInAny,

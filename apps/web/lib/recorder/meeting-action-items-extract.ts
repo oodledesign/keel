@@ -1,12 +1,14 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
 import type { ExtractAccountMember } from '@kit/email-assistant';
 import { parseExtractResponse, stripJsonFences } from '@kit/email-assistant';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import { callAI } from '~/lib/ai/router';
 
 const MAX_TRANSCRIPT_CHARS = 80_000;
 const MIN_TASK_CONFIDENCE = 0.45;
@@ -46,6 +48,8 @@ export type MeetingActionItemExtractInput = {
   recorderEmail: string;
   accountMembers: ExtractAccountMember[];
   calendarAttendees?: Array<{ name: string; email: string }>;
+  accountId: string;
+  supabase: SupabaseClient;
 };
 
 const EXTRACT_SYSTEM = `You extract explicit action items from a meeting transcript for a human review queue.
@@ -223,12 +227,6 @@ export async function extractMeetingActionItems(
     return [];
   }
 
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model = resolveAnthropicModel();
   const currentDate = todayLocalYmd();
   const recorderLabel = input.recorderName?.trim()
     ? `${input.recorderName.trim()} <${input.recorderEmail}>`
@@ -257,35 +255,14 @@ ${transcript.slice(0, MAX_TRANSCRIPT_CHARS)}
 
 Respond with JSON only.`;
 
-  const response = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      system: EXTRACT_SYSTEM,
-      messages: [{ role: 'user', content: userContent }],
-    }),
+  const raw = await callAI({
+    feature: 'meeting_action_items',
+    systemPrompt: EXTRACT_SYSTEM,
+    userPrompt: userContent,
+    accountId: input.accountId,
+    supabase: input.supabase,
   });
-
-  if (!response.ok) {
-    throw new Error(
-      `Anthropic API error (${response.status}): ${(await response.text()).slice(0, 400)}`,
-    );
-  }
-
-  const body = (await response.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-
-  const raw = body.content
-    ?.find((block) => block.type === 'text')
-    ?.text?.trim();
-  if (!raw) {
+  if (!raw?.trim()) {
     throw new Error('Empty extraction response from Anthropic');
   }
 

@@ -58,7 +58,11 @@ async function assertTeamMember(accountSlug: string, userId: string) {
 
 export const importSopFromTextAction = enhanceAction(
   async (data) => {
-    const draft = await extractSopPlaybookFromText(data.rawText);
+    const client = getSupabaseServerClient();
+    const draft = await extractSopPlaybookFromText(data.rawText, {
+      accountId: data.accountId,
+      supabase: client,
+    });
     return { draft };
   },
   {

@@ -92,6 +92,8 @@ export const suggestTaskImportMappingAction = enhanceAction(
     return suggestTaskCsvColumnMapping({
       headers: input.headers,
       sampleRows: input.sampleRows,
+      accountId: input.accountId,
+      supabase: getSupabaseServerClient(),
     });
   },
   { schema: suggestSchema },

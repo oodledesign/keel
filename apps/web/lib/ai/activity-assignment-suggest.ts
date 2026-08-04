@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI, isInsufficientCreditsError } from '~/lib/ai/router';
 
 export type ActivityClientOption = {
   id: string;
@@ -56,18 +58,18 @@ export async function suggestActivityAssignments(input: {
   clients: ActivityClientOption[];
   projects: ActivityProjectOption[];
   blocks: ActivityBlockForSuggest[];
+  accountId: string;
+  supabase: SupabaseClient;
 }): Promise<ActivityAssignmentSuggestion[]> {
   if (!input.blocks.length) {
     return [];
   }
 
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) {
+    if (!process.env.ANTHROPIC_API_KEY?.trim()) {
       return heuristicActivitySuggestions(input);
     }
 
-    const model = resolveAnthropicModel();
     const payload = {
       clients: input.clients,
       projects: input.projects,
@@ -81,35 +83,13 @@ export async function suggestActivityAssignments(input: {
       })),
     };
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: JSON.stringify(payload) }],
-      }),
-      signal: AbortSignal.timeout(30_000),
+    const text = await callAI({
+      feature: 'activity_assignment_suggest',
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt: JSON.stringify(payload),
+      accountId: input.accountId,
+      supabase: input.supabase,
     });
-
-    if (!res.ok) {
-      console.warn(
-        '[activity-assignment-suggest] Anthropic request failed:',
-        res.status,
-        (await res.text()).slice(0, 200),
-      );
-      return heuristicActivitySuggestions(input);
-    }
-
-    const data = (await res.json()) as {
-      content?: Array<{ type: string; text?: string }>;
-    };
-    const text = data.content?.find((c) => c.type === 'text')?.text ?? '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) {
       return heuristicActivitySuggestions(input);
@@ -134,6 +114,7 @@ export async function suggestActivityAssignments(input: {
       }))
       .filter((s) => s.clientId || s.projectId);
   } catch (err) {
+    if (isInsufficientCreditsError(err)) throw err;
     console.warn(
       '[activity-assignment-suggest] Falling back to heuristics:',
       err,

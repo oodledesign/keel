@@ -1,8 +1,11 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
+import { callAI } from '~/lib/ai/router';
 
 const SopStepSchema = z.object({
   title: z.string().min(1),
@@ -21,19 +24,8 @@ export type SopImportDraft = z.infer<typeof SopImportSchema>;
 
 export async function extractSopPlaybookFromText(
   rawText: string,
+  meter: { accountId: string; supabase: SupabaseClient },
 ): Promise<SopImportDraft> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error(
-      'ANTHROPIC_API_KEY is not set. Add it to your environment to import SOPs with AI.',
-    );
-  }
-
-  const model =
-    process.env.ANTHROPIC_SOP_IMPORT_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-haiku-4-5';
-
   const system = `You convert messy process documentation into a structured Standard Operating Procedure (SOP) playbook.
 Return ONLY valid JSON (no markdown fences) matching:
 {
@@ -52,39 +44,15 @@ Rules:
 - Preserve important details (tools, URLs, client names placeholders) in body_md.
 - Do not invent steps not implied by the source text.`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      system,
-      messages: [
-        {
-          role: 'user',
-          content: `Convert this into an SOP playbook JSON:\n\n---\n${rawText}\n---`,
-        },
-      ],
-    }),
+  const text = await callAI({
+    feature: 'sop_import',
+    systemPrompt: system,
+    userPrompt: `Convert this into an SOP playbook JSON:\n\n---\n${rawText}\n---`,
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(
-      `Anthropic API error (${res.status}): ${errText.slice(0, 400)}`,
-    );
-  }
-
-  const payload = (await res.json()) as {
-    content?: Array<{ type?: string; text?: string }>;
-  };
-
-  const textBlock = payload.content?.find((c) => c.type === 'text');
-  const rawJson = extractJsonObject(textBlock?.text ?? '{}');
+  const rawJson = extractJsonObject(text || '{}');
   const parsed = JSON.parse(rawJson) as unknown;
   const result = SopImportSchema.safeParse(parsed);
 

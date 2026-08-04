@@ -1,6 +1,12 @@
+import { NextResponse } from 'next/server';
+
 import { enhanceRouteHandler } from '@kit/next/routes';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
 import {
   type BrainContextRef,
   parseSseAssistantText,
@@ -64,7 +70,21 @@ export const POST = enhanceRouteHandler(
       scope: body.scope,
     });
 
-    const anthropicStream = await streamBrainChatReply(prepared.userPrompt);
+    let anthropicStream: ReadableStream<Uint8Array>;
+    try {
+      anthropicStream = await streamBrainChatReply(prepared.userPrompt, {
+        accountId: body.accountId,
+        supabase: client,
+      });
+    } catch (error) {
+      if (isInsufficientCreditsError(error)) {
+        return NextResponse.json(insufficientCreditsResponse(error), {
+          status: 402,
+        });
+      }
+      throw error;
+    }
+
     const parser = parseSseAssistantText(anthropicStream);
     const encoder = new TextEncoder();
 
@@ -92,7 +112,10 @@ export const POST = enhanceRouteHandler(
             .eq('id', body.threadId);
 
           if (!thread.title || thread.title === 'New chat') {
-            void summarizeThreadTitle(message).then(async (title) => {
+            void summarizeThreadTitle(message, {
+              accountId: body.accountId,
+              supabase: client,
+            }).then(async (title) => {
               if (!title) return;
               await client
                 .from('brain_chat_threads')

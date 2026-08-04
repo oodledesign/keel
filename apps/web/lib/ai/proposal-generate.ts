@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI, streamAI } from '~/lib/ai/router';
 
 export type ProposalTranscript = {
   title: string;
@@ -11,6 +13,11 @@ export type ProposalContextNote = {
   title: string;
   content: string;
   type: 'note' | 'file';
+};
+
+export type ProposalAiMeter = {
+  accountId: string;
+  supabase: SupabaseClient;
 };
 
 export type ProposalGenerateParams = {
@@ -85,17 +92,6 @@ function buildProposalUserPayload(params: ProposalGenerateParams) {
   };
 }
 
-function getAnthropicConfig() {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model = resolveAnthropicModel();
-
-  return { apiKey, model };
-}
-
 function buildProposalSystemPrompt(voicePromptBlock?: string | null) {
   const voice = voicePromptBlock?.trim();
   if (!voice) return PROPOSAL_SYSTEM_PROMPT;
@@ -105,82 +101,36 @@ Match this brand / author voice when writing (keep UK freelance structure above)
 ${voice.slice(0, 2400)}`;
 }
 
-export async function streamProposalHtml(params: ProposalGenerateParams) {
-  const { apiKey, model } = getAnthropicConfig();
+export async function streamProposalHtml(
+  params: ProposalGenerateParams,
+  meter: ProposalAiMeter,
+) {
   const payload = buildProposalUserPayload(params);
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      stream: true,
-      system: buildProposalSystemPrompt(params.voicePromptBlock),
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify(payload),
-        },
-      ],
-    }),
+  return streamAI({
+    feature: 'proposal_generate',
+    systemPrompt: buildProposalSystemPrompt(params.voicePromptBlock),
+    userPrompt: JSON.stringify(payload),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok || !res.body) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  return anthropicSseToTextStream(res.body);
 }
 
 /** Non-streaming variant for server actions and one-shot generation. */
 export async function generateProposalHtml(
   params: ProposalGenerateParams,
+  meter: ProposalAiMeter,
 ): Promise<string> {
-  const { apiKey, model } = getAnthropicConfig();
   const payload = buildProposalUserPayload(params);
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      system: buildProposalSystemPrompt(params.voicePromptBlock),
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify(payload),
-        },
-      ],
-    }),
+  const text = await callAI({
+    feature: 'proposal_generate',
+    systemPrompt: buildProposalSystemPrompt(params.voicePromptBlock),
+    userPrompt: JSON.stringify(payload),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(
-      `Anthropic API error (${res.status}): ${errText.slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text = body.content?.find((c) => c.type === 'text')?.text?.trim();
-  if (!text) {
+  if (!text?.trim()) {
     throw new Error('Empty proposal HTML from Anthropic');
   }
-
   return stripMarkdownFences(text);
 }
 
@@ -205,8 +155,7 @@ Match this brand / author voice when rewriting:
 ${voice.slice(0, 2400)}`;
 }
 
-export async function streamProposalEditHtml(params: ProposalEditParams) {
-  const { apiKey, model } = getAnthropicConfig();
+function buildProposalEditUserPrompt(params: ProposalEditParams) {
   const instruction = params.instruction.trim();
   const contentHtml = params.contentHtml.trim();
 
@@ -217,97 +166,42 @@ export async function streamProposalEditHtml(params: ProposalEditParams) {
     throw new Error('Proposal content is empty — generate a draft first');
   }
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      stream: true,
-      system: buildProposalEditSystemPrompt(params.voicePromptBlock),
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify({
-            edit_instructions: instruction.slice(0, 4000),
-            recipient_name: params.recipientName?.trim() || null,
-            workspace_name: params.accountName?.trim() || null,
-            sender_name: params.senderName?.trim() || null,
-            current_proposal_html: contentHtml.slice(0, 120_000),
-          }),
-        },
-      ],
-    }),
+  return JSON.stringify({
+    edit_instructions: instruction.slice(0, 4000),
+    recipient_name: params.recipientName?.trim() || null,
+    workspace_name: params.accountName?.trim() || null,
+    sender_name: params.senderName?.trim() || null,
+    current_proposal_html: contentHtml.slice(0, 120_000),
   });
+}
 
-  if (!res.ok || !res.body) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  return anthropicSseToTextStream(res.body);
+export async function streamProposalEditHtml(
+  params: ProposalEditParams,
+  meter: ProposalAiMeter,
+) {
+  return streamAI({
+    feature: 'proposal_edit',
+    systemPrompt: buildProposalEditSystemPrompt(params.voicePromptBlock),
+    userPrompt: buildProposalEditUserPrompt(params),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
+  });
 }
 
 export async function editProposalHtml(
   params: ProposalEditParams,
+  meter: ProposalAiMeter,
 ): Promise<string> {
-  const { apiKey, model } = getAnthropicConfig();
-  const instruction = params.instruction.trim();
-  const contentHtml = params.contentHtml.trim();
-
-  if (!instruction) {
-    throw new Error('Edit instructions are required');
-  }
-  if (!contentHtml) {
-    throw new Error('Proposal content is empty — generate a draft first');
-  }
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      system: buildProposalEditSystemPrompt(params.voicePromptBlock),
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify({
-            edit_instructions: instruction.slice(0, 4000),
-            recipient_name: params.recipientName?.trim() || null,
-            workspace_name: params.accountName?.trim() || null,
-            sender_name: params.senderName?.trim() || null,
-            current_proposal_html: contentHtml.slice(0, 120_000),
-          }),
-        },
-      ],
-    }),
+  const text = await callAI({
+    feature: 'proposal_edit',
+    systemPrompt: buildProposalEditSystemPrompt(params.voicePromptBlock),
+    userPrompt: buildProposalEditUserPrompt(params),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(
-      `Anthropic API error (${res.status}): ${errText.slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text = body.content?.find((c) => c.type === 'text')?.text?.trim();
-  if (!text) {
+  if (!text?.trim()) {
     throw new Error('Empty proposal HTML from Anthropic');
   }
-
   return stripMarkdownFences(text);
 }
 
@@ -320,65 +214,4 @@ function stripMarkdownFences(text: string) {
       .trim();
   }
   return trimmed;
-}
-
-function anthropicSseToTextStream(body: ReadableStream<Uint8Array>) {
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buffer = '';
-
-  return body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        buffer += decoder.decode(chunk, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-
-        for (const part of parts) {
-          const dataLine = part
-            .split('\n')
-            .find((line) => line.startsWith('data: '));
-          if (!dataLine) continue;
-
-          const raw = dataLine.slice(6).trim();
-          if (!raw || raw === '[DONE]') continue;
-
-          try {
-            const evt = JSON.parse(raw) as {
-              type?: string;
-              delta?: { type?: string; text?: string };
-            };
-            if (
-              evt.type === 'content_block_delta' &&
-              evt.delta?.type === 'text_delta' &&
-              evt.delta.text
-            ) {
-              controller.enqueue(encoder.encode(evt.delta.text));
-            }
-          } catch {
-            // Ignore non-JSON stream bookkeeping.
-          }
-        }
-      },
-      flush(controller) {
-        const remaining = buffer.trim();
-        if (!remaining) return;
-        const dataLine = remaining
-          .split('\n')
-          .find((line) => line.startsWith('data: '));
-        if (!dataLine) return;
-
-        try {
-          const evt = JSON.parse(dataLine.slice(6)) as {
-            delta?: { text?: string };
-          };
-          if (evt.delta?.text) {
-            controller.enqueue(encoder.encode(evt.delta.text));
-          }
-        } catch {
-          // no-op
-        }
-      },
-    }),
-  );
 }

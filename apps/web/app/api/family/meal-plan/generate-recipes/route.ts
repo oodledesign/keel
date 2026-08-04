@@ -11,6 +11,10 @@ import {
 } from '~/home/(user)/life/family/_lib/schema/family-meal.schema';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { generateMealRecipes } from '~/lib/ai/meal-recipes-generate';
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
 
 export const dynamic = 'force-dynamic';
 
@@ -85,23 +89,35 @@ export async function POST(request: NextRequest) {
     : [];
 
   try {
-    const generated = await generateMealRecipes({
-      count: parsed.data.count,
-      meal_type: parsed.data.mealType,
-      dietary_requirements: preferences?.dietary_requirements ?? [],
-      priorities: preferences?.priorities ?? [],
-      disliked_ingredients: preferences?.disliked_ingredients ?? [],
-      household_size: preferences?.household_size ?? 2,
-      preference_notes: preferences?.notes ?? '',
-      favorite_recipes: favoriteRecipes,
-      favorite_dishes: parsed.data.favoriteDishes,
-      inspiration: parsed.data.inspiration,
-      use_saved_favorites: parsed.data.useSavedFavorites,
-      existing_recipe_names: recipes.map((r) => r.name),
-    });
+    const generated = await generateMealRecipes(
+      {
+        count: parsed.data.count,
+        meal_type: parsed.data.mealType,
+        dietary_requirements: preferences?.dietary_requirements ?? [],
+        priorities: preferences?.priorities ?? [],
+        disliked_ingredients: preferences?.disliked_ingredients ?? [],
+        household_size: preferences?.household_size ?? 2,
+        preference_notes: preferences?.notes ?? '',
+        favorite_recipes: favoriteRecipes,
+        favorite_dishes: parsed.data.favoriteDishes,
+        inspiration: parsed.data.inspiration,
+        use_saved_favorites: parsed.data.useSavedFavorites,
+        existing_recipe_names: recipes.map((r) => r.name),
+      },
+      {
+        accountId: scope.kind === 'workspace' ? scope.accountId : user.id,
+        supabase: client,
+      },
+    );
 
     return NextResponse.json({ recipes: generated });
   } catch (err) {
+    if (isInsufficientCreditsError(err)) {
+      return NextResponse.json(insufficientCreditsResponse(err), {
+        status: 402,
+      });
+    }
+
     return NextResponse.json(
       {
         error:

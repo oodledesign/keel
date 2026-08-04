@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { callAnthropicText } from './anthropic';
+import { callAnthropicText, type GenerateTextFn } from './anthropic';
 import type { DraftOwnerContext } from './draft';
 import { parseClassifyResponse } from './json';
 import type { EmailThreadCategory } from './types';
@@ -38,6 +38,7 @@ function buildOwnerBlock(owner: DraftOwnerContext): string {
 export async function classify(
   threadText: string,
   owner: DraftOwnerContext,
+  generateText: GenerateTextFn = callAnthropicText,
 ): Promise<ClassifyResult> {
   const trimmedThread = threadText.trim();
 
@@ -52,7 +53,7 @@ ${trimmedThread}
 
 Respond with JSON only.`;
 
-  const raw = await callAnthropicText({
+  const raw = await generateText({
     system: CLASSIFY_SYSTEM,
     user,
     maxTokens: 256,

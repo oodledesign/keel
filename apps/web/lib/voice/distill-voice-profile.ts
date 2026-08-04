@@ -4,7 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { z } from 'zod';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import { callAI } from '~/lib/ai/router';
 import {
   VOICE_MAX_DISTILL_CHARS,
   VOICE_MAX_DISTILL_PER_DAY,
@@ -46,7 +46,7 @@ export async function distillVoiceProfile(
   const { data: profile, error: profileError } = await client
     .from('voice_profiles')
     .select(
-      'id, status, distill_count, distill_count_day, learn_from_sent_email',
+      'id, account_id, user_id, status, distill_count, distill_count_day, learn_from_sent_email',
     )
     .eq('id', profileId)
     .maybeSingle();
@@ -111,48 +111,23 @@ export async function distillVoiceProfile(
       throw new Error('Add writing samples before rebuilding your voice');
     }
 
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) {
-      throw new Error('ANTHROPIC_API_KEY is not configured');
+    const accountId =
+      options?.accountId ||
+      (profile as { account_id?: string | null }).account_id ||
+      (profile as { user_id?: string | null }).user_id;
+    if (!accountId) {
+      throw new Error('Voice profile is missing account context for AI metering');
     }
 
-    const model = resolveAnthropicModel();
-    const response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 2500,
-        system: DISTILL_SYSTEM,
-        messages: [
-          {
-            role: 'user',
-            content: `Writing samples:\n\n${chunks.join('\n\n')}`,
-          },
-        ],
-      }),
+    const raw = await callAI({
+      feature: 'voice_profile_distill',
+      systemPrompt: DISTILL_SYSTEM,
+      userPrompt: `Writing samples:\n\n${chunks.join('\n\n')}`,
+      accountId,
+      supabase: client,
     });
 
-    if (!response.ok) {
-      throw new Error(
-        `Voice distill failed (${response.status}): ${(await response.text()).slice(0, 300)}`,
-      );
-    }
-
-    const payload = (await response.json()) as {
-      content?: Array<{ type?: string; text?: string }>;
-    };
-    const raw = payload.content
-      ?.filter((part) => part.type === 'text' && part.text)
-      .map((part) => part.text)
-      .join('\n')
-      ?.trim();
-
-    if (!raw) {
+    if (!raw?.trim()) {
       throw new Error('Voice distill returned empty content');
     }
 

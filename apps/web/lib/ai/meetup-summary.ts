@@ -1,18 +1,14 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI } from '~/lib/ai/router';
 
 export async function summarizeMeetupTranscript(
   transcript: string,
   meetupTitle: string,
+  meter: { accountId: string; supabase: SupabaseClient },
 ): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model = resolveAnthropicModel();
-
   const system = `You summarize home group / community meetup notes for leaders.
 Write a clear, warm summary in markdown with sections: Highlights, Discussion, Prayer & pastoral care, Action items, Next time.
 Keep it concise (under 400 words). Do not invent facts not present in the transcript.`;
@@ -24,33 +20,14 @@ Transcript / raw notes:
 ${transcript.slice(0, 80_000)}
 ---`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 2048,
-      system,
-      messages: [{ role: 'user', content: userContent }],
-    }),
+  const text = await callAI({
+    feature: 'meetup_summary',
+    systemPrompt: system,
+    userPrompt: userContent,
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(
-      `Anthropic API error (${res.status}): ${errText.slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text = body.content?.find((c) => c.type === 'text')?.text?.trim();
-  if (!text) {
+  if (!text?.trim()) {
     throw new Error('Empty summary from Anthropic');
   }
   return text;

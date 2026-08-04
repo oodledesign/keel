@@ -32,6 +32,31 @@ export const OzerAIFeature = {
   website_style_suggest: 'website_style_suggest',
   website_seo_generate: 'website_seo_generate',
   website_seo_answer_blocks: 'website_seo_answer_blocks',
+  planner_generate: 'planner_generate',
+  proposal_generate: 'proposal_generate',
+  proposal_edit: 'proposal_edit',
+  invoice_generate: 'invoice_generate',
+  contract_generate: 'contract_generate',
+  project_content_generate: 'project_content_generate',
+  meal_plan_generate: 'meal_plan_generate',
+  meal_recipes_generate: 'meal_recipes_generate',
+  sop_import: 'sop_import',
+  workspace_task_extract: 'workspace_task_extract',
+  csv_map_finance: 'csv_map_finance',
+  csv_map_client: 'csv_map_client',
+  csv_map_task: 'csv_map_task',
+  finance_category_suggest: 'finance_category_suggest',
+  activity_assignment_suggest: 'activity_assignment_suggest',
+  meetup_summary: 'meetup_summary',
+  quick_action_plan: 'quick_action_plan',
+  voice_profile_distill: 'voice_profile_distill',
+  meeting_summary: 'meeting_summary',
+  meeting_action_items: 'meeting_action_items',
+  rankly_page_analyse: 'rankly_page_analyse',
+  rankly_brief_synthesise: 'rankly_brief_synthesise',
+  ai_audit_score: 'ai_audit_score',
+  ai_audit_suggest: 'ai_audit_suggest',
+  admin_email_marketing: 'admin_email_marketing',
 } as const;
 
 export type OzerAIFeatureKey =
@@ -50,19 +75,19 @@ type FeatureConfig = {
 
 export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
   email_triage: {
-    provider: 'google',
-    model: GEMINI_FLASH_LITE_MODEL,
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
     credits: 1,
-    batchable: true,
+    batchable: false,
     maxOutputTokens: 512,
     structuredOutput: true,
   },
   task_extract: {
-    provider: 'google',
-    model: GEMINI_FLASH_LITE_MODEL,
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
     credits: 1,
-    batchable: true,
-    maxOutputTokens: 512,
+    batchable: false,
+    maxOutputTokens: 2048,
     structuredOutput: true,
   },
   meeting_recap: {
@@ -92,9 +117,9 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
   second_brain_query: {
     provider: 'anthropic',
     model: HAIKU_MODEL,
-    credits: 2,
+    credits: 5,
     batchable: false,
-    maxOutputTokens: 1024,
+    maxOutputTokens: 4096,
     structuredOutput: false,
   },
   ooo_generate: {
@@ -110,7 +135,7 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     model: HAIKU_MODEL,
     credits: 5,
     batchable: false,
-    maxOutputTokens: 1024,
+    maxOutputTokens: 2048,
     structuredOutput: false,
   },
   meeting_intelligence_structured: {
@@ -201,6 +226,206 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     maxOutputTokens: 2048,
     structuredOutput: true,
   },
+  planner_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 12,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: false,
+  },
+  proposal_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 12,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: false,
+  },
+  proposal_edit: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: false,
+  },
+  invoice_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  contract_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 10,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: false,
+  },
+  project_content_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: false,
+  },
+  meal_plan_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  meal_recipes_generate: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: true,
+  },
+  sop_import: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: true,
+  },
+  workspace_task_extract: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 5,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: true,
+  },
+  csv_map_finance: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  csv_map_client: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  csv_map_task: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  finance_category_suggest: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 2,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  activity_assignment_suggest: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 2,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  meetup_summary: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: false,
+  },
+  quick_action_plan: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  voice_profile_distill: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: false,
+  },
+  meeting_summary: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: false,
+  },
+  meeting_action_items: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 5,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  rankly_page_analyse: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 10,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: true,
+  },
+  rankly_brief_synthesise: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 12,
+    batchable: false,
+    maxOutputTokens: 8192,
+    structuredOutput: false,
+  },
+  ai_audit_score: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 10,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  ai_audit_suggest: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 10,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: true,
+  },
+  admin_email_marketing: {
+    provider: 'anthropic',
+    model: SONNET_MODEL,
+    credits: 8,
+    batchable: false,
+    maxOutputTokens: 4096,
+    structuredOutput: false,
+  },
 };
 
 export type AiCreditBalanceRow = {
@@ -235,6 +460,12 @@ export class OzerInsufficientCreditsError extends Error {
     this.creditsRemaining = payload.creditsRemaining;
     this.creditsRequired = payload.creditsRequired;
   }
+}
+
+export function isInsufficientCreditsError(
+  error: unknown,
+): error is OzerInsufficientCreditsError {
+  return error instanceof OzerInsufficientCreditsError;
 }
 
 const getAnthropicClient = () =>
@@ -507,16 +738,38 @@ export async function callAI({
     responseSchema,
   });
 
+  await logCreditTransaction({
+    accountId,
+    feature,
+    provider: result.provider,
+    model: result.model,
+    credits: result.credits,
+    inputTokens: result.inputTokens,
+    outputTokens: result.outputTokens,
+  });
+
+  return result.text;
+}
+
+async function logCreditTransaction(input: {
+  accountId: string;
+  feature: string;
+  provider: FeatureProvider;
+  model: string;
+  credits: number;
+  inputTokens: number | null;
+  outputTokens: number | null;
+}) {
   const { error: txError } = await aiCreditsDb()
     .from('ai_credit_transactions')
     .insert({
-      account_id: accountId,
-      feature,
-      provider: result.provider,
-      model_used: result.model,
-      credits_used: result.credits,
-      input_tokens: result.inputTokens,
-      output_tokens: result.outputTokens,
+      account_id: input.accountId,
+      feature: input.feature,
+      provider: input.provider,
+      model_used: input.model,
+      credits_used: input.credits,
+      input_tokens: input.inputTokens,
+      output_tokens: input.outputTokens,
       was_batched: false,
     });
 
@@ -526,6 +779,133 @@ export async function callAI({
       txError.message,
     );
   }
+}
 
-  return result.text;
+/**
+ * Deduct credits, stream Anthropic text deltas as a UTF-8 byte stream, then
+ * log the credit transaction (with usage when the stream reports it).
+ */
+export async function streamAI({
+  feature,
+  systemPrompt,
+  userPrompt,
+  accountId,
+  supabase,
+  usePromptCaching = false,
+}: OzerAICallParams): Promise<ReadableStream<Uint8Array>> {
+  const config = FEATURE_CONFIG[feature];
+  if (config.provider !== 'anthropic') {
+    throw new Error(`streamAI only supports Anthropic features (got ${feature})`);
+  }
+
+  await checkAndDeductCredits(accountId, config.credits, supabase);
+
+  const anthropic = getAnthropicClient();
+  const system = usePromptCaching
+    ? [
+        {
+          type: 'text' as const,
+          text: systemPrompt,
+          cache_control: { type: 'ephemeral' as const },
+        },
+      ]
+    : systemPrompt;
+
+  const anthropicStream = anthropic.messages.stream({
+    model: config.model,
+    max_tokens: config.maxOutputTokens,
+    system,
+    messages: [{ role: 'user', content: userPrompt }],
+  });
+
+  const encoder = new TextEncoder();
+  let inputTokens: number | null = null;
+  let outputTokens: number | null = null;
+  let logged = false;
+
+  const logOnce = async () => {
+    if (logged) return;
+    logged = true;
+    await logCreditTransaction({
+      accountId,
+      feature,
+      provider: 'anthropic',
+      model: config.model,
+      credits: config.credits,
+      inputTokens,
+      outputTokens,
+    });
+  };
+
+  return new ReadableStream<Uint8Array>({
+    async start(controller) {
+      try {
+        anthropicStream.on('text', (text) => {
+          controller.enqueue(encoder.encode(text));
+        });
+
+        const finalMessage = await anthropicStream.finalMessage();
+        inputTokens = finalMessage.usage?.input_tokens ?? null;
+        outputTokens = finalMessage.usage?.output_tokens ?? null;
+        await logOnce();
+        controller.close();
+      } catch (error) {
+        await logOnce();
+        controller.error(error);
+      }
+    },
+    async cancel() {
+      await logOnce();
+      try {
+        anthropicStream.abort();
+      } catch {
+        // ignore abort errors
+      }
+    },
+  });
+}
+
+export function insufficientCreditsResponse(error: OzerInsufficientCreditsError) {
+  return {
+    error: error.message,
+    creditsRemaining: error.creditsRemaining,
+    creditsRequired: error.creditsRequired,
+  };
+}
+
+/**
+ * Deduct feature credits, run a custom provider call, then log the transaction.
+ * Use when callAI/streamAI cannot express the request (multi-turn tools, etc.).
+ */
+export async function withMeteredAI<T>({
+  feature,
+  accountId,
+  supabase,
+  run,
+}: {
+  feature: OzerAIFeatureKey;
+  accountId: string;
+  supabase: SupabaseClient;
+  run: () => Promise<{
+    result: T;
+    inputTokens?: number | null;
+    outputTokens?: number | null;
+  }>;
+}): Promise<T> {
+  const config = FEATURE_CONFIG[feature];
+  await checkAndDeductCredits(accountId, config.credits, supabase);
+
+  const { result, inputTokens = null, outputTokens = null } = await run();
+
+  await logCreditTransaction({
+    accountId,
+    feature,
+    provider: config.provider,
+    model: config.model,
+    credits: config.credits,
+    inputTokens,
+    outputTokens,
+  });
+
+  return result;
 }

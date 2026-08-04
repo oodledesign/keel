@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { requireSuperAdmin } from '~/admin/_lib/server/require-super-admin';
 import {
@@ -15,8 +16,8 @@ import {
   parseCustomListId,
   parseManualEmails,
 } from '~/lib/admin-email/campaigns';
-import { DEFAULT_ANTHROPIC_MODEL } from '~/lib/ai/default-anthropic-model';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
+import { callAI, isInsufficientCreditsError } from '~/lib/ai/router';
 
 import {
   EMAIL_CONTACT_SOURCES,
@@ -320,8 +321,6 @@ export async function setContactSubscribed(id: string, subscribed: boolean) {
   refreshEmailMarketing();
 }
 
-const ANTHROPIC_MODEL = DEFAULT_ANTHROPIC_MODEL;
-
 const AiContactMappingRecordSchema = z.record(
   z.string(),
   z.union([z.enum(EMAIL_CONTACT_IMPORT_FIELD_KEYS), z.null()]),
@@ -344,15 +343,14 @@ export type ImportEmailContactsResult = {
 export async function suggestContactImportMappings(
   input: z.infer<typeof SuggestEmailContactImportMappingsSchema>,
 ) {
-  await requireSuperAdmin();
+  const adminUserId = await requireSuperAdmin();
 
   const parsed = SuggestEmailContactImportMappingsSchema.safeParse(input);
   if (!parsed.success) {
     return { ok: false as const, code: 'invalid' as const };
   }
 
-  const anthropicKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!anthropicKey) {
+  if (!process.env.ANTHROPIC_API_KEY?.trim()) {
     return { ok: false as const, code: 'unconfigured' as const };
   }
 
@@ -369,36 +367,23 @@ Never invent field names. Never guess — use null when unsure.`;
     rows: parsed.data.sampleRows,
   });
 
-  let response: Response;
+  let textBlock: string;
   try {
-    response = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': anthropicKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: ANTHROPIC_MODEL,
-        max_tokens: 1024,
-        system,
-        messages: [{ role: 'user', content: userContent }],
-      }),
+    textBlock = await callAI({
+      feature: 'admin_email_marketing',
+      systemPrompt: system,
+      userPrompt: userContent,
+      accountId: adminUserId,
+      supabase: getSupabaseServerClient(),
     });
-  } catch {
+  } catch (error) {
+    if (isInsufficientCreditsError(error)) {
+      return { ok: false as const, code: 'credits' as const };
+    }
     return { ok: false as const, code: 'api' as const };
   }
 
-  if (!response.ok) {
-    return { ok: false as const, code: 'api' as const };
-  }
-
-  const body = (await response.json()) as {
-    content?: { type: string; text?: string }[];
-  };
-  const textBlock =
-    body.content?.find((chunk) => chunk.type === 'text')?.text ?? '';
-  if (!textBlock) {
+  if (!textBlock.trim()) {
     return { ok: false as const, code: 'parse' as const };
   }
 

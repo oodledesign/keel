@@ -1,8 +1,10 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import { callAI } from '~/lib/ai/router';
 
 const PaymentPlanItemSchema = z.object({
   label: z.string(),
@@ -27,6 +29,8 @@ export type ContractGenerateParams = {
   proposalHtml: string;
   /** Total deal value in pounds (GBP), if known. */
   dealValue?: number | null;
+  accountId: string;
+  supabase: SupabaseClient;
 };
 
 const CONTRACT_SYSTEM_PROMPT = `You draft UK services agreements for freelance and agency engagements.
@@ -58,17 +62,6 @@ function buildContractUserPayload(params: ContractGenerateParams) {
     deal_value_gbp: params.dealValue ?? null,
     proposal_html: params.proposalHtml.slice(0, 80_000),
   };
-}
-
-function getAnthropicConfig() {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model = resolveAnthropicModel();
-
-  return { apiKey, model };
 }
 
 function parseJsonFromModelText(raw: string): unknown {
@@ -112,42 +105,17 @@ function normalizePaymentPlan(
 export async function generateContractDraft(
   params: ContractGenerateParams,
 ): Promise<ContractDraft> {
-  const { apiKey, model } = getAnthropicConfig();
   const payload = buildContractUserPayload(params);
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      system: CONTRACT_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify(payload),
-        },
-      ],
-    }),
+  const raw = await callAI({
+    feature: 'contract_generate',
+    systemPrompt: CONTRACT_SYSTEM_PROMPT,
+    userPrompt: JSON.stringify(payload),
+    accountId: params.accountId,
+    supabase: params.supabase,
   });
 
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(
-      `Anthropic API error (${res.status}): ${errText.slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const textBlock = body.content?.find((c) => c.type === 'text');
-  const raw = textBlock?.text?.trim();
-  if (!raw) {
+  if (!raw?.trim()) {
     throw new Error('Empty response from Anthropic');
   }
 

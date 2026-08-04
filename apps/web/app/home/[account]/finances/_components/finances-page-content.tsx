@@ -1485,6 +1485,7 @@ function CsvImportSheet({
         return;
       }
       const suggestion = await suggestCsvMappingAction({
+        accountId,
         headers,
         sampleRows: rows.slice(0, 5),
       });

@@ -1,6 +1,13 @@
+import { NextResponse } from 'next/server';
+
 import { draft } from '@kit/email-assistant';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
+import { createMeteredEmailGenerateText } from '~/lib/email-assistant/metered-generate-text';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { resolveEmailAssistantSignature } from '~/lib/email-assistant/resolve-signature';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
@@ -154,8 +161,19 @@ export async function POST(_request: Request, context: RouteContext) {
       { email: ownerEmail, displayName: ownerName },
       voiceBlock,
       signature.plain,
+      createMeteredEmailGenerateText({
+        feature: 'email_draft',
+        accountId: auth.user.id,
+        supabase: auth.client,
+      }),
     );
   } catch (error) {
+    if (isInsufficientCreditsError(error)) {
+      return NextResponse.json(insufficientCreditsResponse(error), {
+        status: 402,
+      });
+    }
+
     return jsonErr(
       'DRAFT_FAILED',
       error instanceof Error ? error.message : 'Draft generation failed',

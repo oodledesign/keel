@@ -1,6 +1,10 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import Anthropic from '@anthropic-ai/sdk';
+
+import { callAI, withMeteredAI } from '~/lib/ai/router';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
 
 import type { ScorerInput, ScorerOutput } from './types';
@@ -173,43 +177,27 @@ async function callClaudeMessages(
   messages: Array<{ role: 'user' | 'assistant'; content: string }>,
   system: string,
 ): Promise<ClaudeCallResult> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
+  if (!process.env.ANTHROPIC_API_KEY?.trim()) {
     throw new Error('ANTHROPIC_API_KEY is not configured');
   }
 
-  const model =
-    process.env.ANTHROPIC_AUDIT_MODEL?.trim() || resolveAnthropicModel();
+  const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+  const { FEATURE_CONFIG } = await import('~/lib/ai/router');
+  const model = FEATURE_CONFIG.ai_audit_score.model;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: SCORER_MAX_TOKENS,
-      system,
-      messages,
-    }),
+  const response = await anthropic.messages.create({
+    model,
+    max_tokens: SCORER_MAX_TOKENS,
+    system,
+    messages,
   });
 
-  if (!res.ok) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  const data = (await res.json()) as {
-    stop_reason?: string | null;
-    content?: Array<{ type: string; text?: string }>;
-  };
+  const textBlock = response.content.find((block) => block.type === 'text');
+  const text = textBlock && textBlock.type === 'text' ? textBlock.text : '';
 
   return {
-    text: data.content?.find((block) => block.type === 'text')?.text ?? '',
-    stopReason: data.stop_reason ?? null,
+    text,
+    stopReason: response.stop_reason ?? null,
   };
 }
 
@@ -290,62 +278,58 @@ Output only valid JSON. No markdown fences. No preamble. Start with {`;
 
 export async function scoreAndRecommend(
   input: ScorerInput,
+  meter: { accountId: string; supabase: SupabaseClient },
 ): Promise<ScorerOutput> {
   const prompt = buildScorerPrompt(input);
 
-  try {
-    return await generateScorerJson(prompt);
-  } catch (firstError) {
-    console.warn(
-      '[rankly] ai-audit scorer first pass failed; retrying',
-      firstError instanceof Error ? firstError.message : firstError,
-    );
-    try {
-      return await generateScorerJson(
-        `${prompt}\n\nIMPORTANT: Output compact valid JSON only. Keep recommendation strings to one sentence each.`,
-      );
-    } catch (secondError) {
-      const detail =
-        secondError instanceof Error
-          ? secondError.message
-          : 'Recommendation generation failed';
-      throw new Error(
-        `Could not finish generating recommendations (${detail}). Crawl and citation data were saved — retry the audit to resume scoring.`,
-      );
-    }
-  }
+  return withMeteredAI({
+    feature: 'ai_audit_score',
+    accountId: meter.accountId,
+    supabase: meter.supabase,
+    run: async () => {
+      try {
+        return { result: await generateScorerJson(prompt) };
+      } catch (firstError) {
+        console.warn(
+          '[rankly] ai-audit scorer first pass failed; retrying',
+          firstError instanceof Error ? firstError.message : firstError,
+        );
+        try {
+          return {
+            result: await generateScorerJson(
+              `${prompt}
+
+IMPORTANT: Output compact valid JSON only. Keep recommendation strings to one sentence each.`,
+            ),
+          };
+        } catch (secondError) {
+          const detail =
+            secondError instanceof Error
+              ? secondError.message
+              : 'Recommendation generation failed';
+          throw new Error(
+            `Could not finish generating recommendations (${detail}). Crawl and citation data were saved — retry the audit to resume scoring.`,
+          );
+        }
+      }
+    },
+  });
 }
 
-export async function generateFixSnippet(input: {
-  title: string;
-  description: string;
-  exampleUrl: string;
-  dimension: string;
-}): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model =
-    process.env.ANTHROPIC_AUDIT_MODEL?.trim() || resolveAnthropicModel();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 1000,
-      system:
-        'You produce specific, copy-paste-ready fixes for AI search optimisation issues. Output the fix only — no explanation, no preamble.',
-      messages: [
-        {
-          role: 'user',
-          content: `Produce a specific, copy-paste-ready fix for this recommendation:
+export async function generateFixSnippet(
+  input: {
+    title: string;
+    description: string;
+    exampleUrl: string;
+    dimension: string;
+  },
+  meter: { accountId: string; supabase: SupabaseClient },
+): Promise<string> {
+  return callAI({
+    feature: 'ai_audit_suggest',
+    systemPrompt:
+      'You produce specific, copy-paste-ready fixes for AI search optimisation issues. Output the fix only — no explanation, no preamble.',
+    userPrompt: `Produce a specific, copy-paste-ready fix for this recommendation:
 
 Title: ${input.title}
 Description: ${input.description}
@@ -357,18 +341,7 @@ If it's a title tag fix, output the corrected <title> tag.
 If it's a content addition, output the HTML to add.
 If it's a robots.txt fix, output the specific lines to add/remove.
 Keep it minimal and precise.`,
-        },
-      ],
-    }),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok) {
-    throw new Error(`Anthropic API error (${res.status})`);
-  }
-
-  const data = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-
-  return data.content?.find((block) => block.type === 'text')?.text ?? '';
 }

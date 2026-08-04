@@ -11,6 +11,10 @@ import type {
 import { chunkDates } from '~/home/(user)/life/family/_lib/server/family-meal.dates';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { generateMealPlan } from '~/lib/ai/meal-plan-generate';
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
 
 export const dynamic = 'force-dynamic';
 
@@ -141,10 +145,16 @@ export async function POST(request: NextRequest) {
 
     const meals = [];
     for (const chunk of chunkDates(parsed.data.dates, 7)) {
-      const chunkMeals = await generateMealPlan({
-        ...basePayload,
-        dates: chunk,
-      });
+      const chunkMeals = await generateMealPlan(
+        {
+          ...basePayload,
+          dates: chunk,
+        },
+        {
+          accountId: scope.kind === 'workspace' ? scope.accountId : user.id,
+          supabase: client,
+        },
+      );
       meals.push(...chunkMeals);
     }
 
@@ -164,6 +174,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ meals: suggestions });
   } catch (err) {
+    if (isInsufficientCreditsError(err)) {
+      return NextResponse.json(insufficientCreditsResponse(err), {
+        status: 402,
+      });
+    }
+
     return NextResponse.json(
       {
         error:

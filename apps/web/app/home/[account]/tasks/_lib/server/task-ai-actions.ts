@@ -115,6 +115,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       input.rawText,
       context,
       input.instructions,
+      { accountId: input.accountId, supabase: getSupabaseServerClient() },
     );
 
     const rows: ExtractedTaskReviewRow[] = drafts.map((d) => {

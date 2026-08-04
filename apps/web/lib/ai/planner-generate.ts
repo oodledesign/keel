@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { streamAI } from '~/lib/ai/router';
 
 const PLANNER_SYSTEM_PROMPT = `You are a personal productivity planner integrated into Ozer, a personal and business operating system. Your role is to help the user plan their day or week intelligently, using proven productivity principles.
 
@@ -73,101 +75,15 @@ If the payload contains a "replan" object, the user is partway through their day
 - If a block is in progress at current_time, end it at current_time and reschedule its remainder.
 - Keep the same markdown format as a normal day plan, still ending at the user's working-hours end.`;
 
-export async function streamPlannerMarkdown(payload: unknown) {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model = resolveAnthropicModel();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      stream: true,
-      system: PLANNER_SYSTEM_PROMPT,
-      messages: [
-        {
-          role: 'user',
-          content: JSON.stringify(payload),
-        },
-      ],
-    }),
+export async function streamPlannerMarkdown(
+  payload: unknown,
+  meter: { accountId: string; supabase: SupabaseClient },
+) {
+  return streamAI({
+    feature: 'planner_generate',
+    systemPrompt: PLANNER_SYSTEM_PROMPT,
+    userPrompt: JSON.stringify(payload),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok || !res.body) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  return anthropicSseToTextStream(res.body);
-}
-
-function anthropicSseToTextStream(body: ReadableStream<Uint8Array>) {
-  const decoder = new TextDecoder();
-  const encoder = new TextEncoder();
-  let buffer = '';
-
-  return body.pipeThrough(
-    new TransformStream<Uint8Array, Uint8Array>({
-      transform(chunk, controller) {
-        buffer += decoder.decode(chunk, { stream: true });
-        const parts = buffer.split('\n\n');
-        buffer = parts.pop() ?? '';
-
-        for (const part of parts) {
-          const dataLine = part
-            .split('\n')
-            .find((line) => line.startsWith('data: '));
-          if (!dataLine) continue;
-
-          const raw = dataLine.slice(6).trim();
-          if (!raw || raw === '[DONE]') continue;
-
-          try {
-            const evt = JSON.parse(raw) as {
-              type?: string;
-              delta?: { type?: string; text?: string };
-            };
-            if (
-              evt.type === 'content_block_delta' &&
-              evt.delta?.type === 'text_delta' &&
-              evt.delta.text
-            ) {
-              controller.enqueue(encoder.encode(evt.delta.text));
-            }
-          } catch {
-            // Ignore non-JSON stream bookkeeping.
-          }
-        }
-      },
-      flush(controller) {
-        const remaining = buffer.trim();
-        if (!remaining) return;
-        const dataLine = remaining
-          .split('\n')
-          .find((line) => line.startsWith('data: '));
-        if (!dataLine) return;
-
-        try {
-          const evt = JSON.parse(dataLine.slice(6)) as {
-            delta?: { text?: string };
-          };
-          if (evt.delta?.text) {
-            controller.enqueue(encoder.encode(evt.delta.text));
-          }
-        } catch {
-          // no-op
-        }
-      },
-    }),
-  );
 }

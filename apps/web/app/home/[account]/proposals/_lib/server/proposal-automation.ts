@@ -77,6 +77,8 @@ export async function createDraftContractForProposal(proposalId: string) {
       recipientCompany,
       proposalHtml: proposal.content_html ?? '',
       dealValue,
+      accountId: proposal.account_id,
+      supabase: admin,
     });
   } catch (error) {
     console.error('[proposals] contract draft generation failed', error);

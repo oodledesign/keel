@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI } from '~/lib/ai/router';
 
 const MEAL_PLAN_SYSTEM_PROMPT = `You are a family meal-planning assistant inside Ozer, a personal operating system. Your job is to plan dinners for a household for specific dates.
 
@@ -59,41 +61,16 @@ function extractJson(text: string): string {
 
 export async function generateMealPlan(
   payload: MealPlanGeneratePayload,
+  meter: { accountId: string; supabase: SupabaseClient },
 ): Promise<GeneratedMeal[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model = resolveAnthropicModel();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 2_048,
-      system: MEAL_PLAN_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: JSON.stringify(payload) }],
-    }),
+  const text = await callAI({
+    feature: 'meal_plan_generate',
+    systemPrompt: MEAL_PLAN_SYSTEM_PROMPT,
+    userPrompt: JSON.stringify(payload),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text =
-    body.content?.find((part) => part.type === 'text')?.text?.trim() ?? '';
-  if (!text) {
+  if (!text?.trim()) {
     throw new Error('Empty response from meal planner');
   }
 

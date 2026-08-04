@@ -7,6 +7,7 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import { synthesiseBrief } from './claude-synthesiser';
 import { scrapeTopCompetitors } from './competitor-scrape';
 import { getBriefJob, saveBrief, updateBriefJobStatus } from './db';
+import { resolveRanklyProjectAccountId } from '~/lib/page-optimize/claude-analyser';
 import {
   enrichCompetitors,
   fetchCompetitors,
@@ -150,7 +151,9 @@ export async function runBriefJob(jobId: string): Promise<void> {
     const brandSettings = await loadProjectBriefSettings(job.project_id);
 
     await updateBriefJobStatus(jobId, 'synthesising');
-    const briefOutput = await synthesiseBrief({
+    const accountId = await resolveRanklyProjectAccountId(job.project_id);
+    const briefOutput = await synthesiseBrief(
+      {
       targetDomain: job.target_domain,
       targetKeyword,
       country: job.country,
@@ -178,7 +181,12 @@ export async function runBriefJob(jobId: string): Promise<void> {
       competitorAvgWc,
       primaryVolume,
       traffic: estimateTraffic(primaryVolume),
-    });
+      },
+      {
+        accountId,
+        supabase: getSupabaseServerAdminClient(),
+      },
+    );
 
     await saveBrief(jobId, job.project_id, targetKeyword, briefOutput, {
       serp_snapshot: serpData.organic,

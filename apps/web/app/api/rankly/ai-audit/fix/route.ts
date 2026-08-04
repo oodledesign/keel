@@ -1,4 +1,4 @@
-import { type NextRequest } from 'next/server';
+import { type NextRequest, NextResponse } from 'next/server';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
@@ -11,6 +11,11 @@ import {
   getRecommendationForUser,
   updateRecommendationSnippet,
 } from '~/lib/ai-audit/db';
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
+import { resolveRanklyProjectAccountId } from '~/lib/page-optimize/claude-analyser';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 import { denyUnlessRanklyAddonForProject } from '~/lib/rankly/require-rankly-api-access';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
@@ -77,17 +82,29 @@ export async function POST(request: NextRequest) {
       return jsonOk({ snippet: rec.fix_snippet });
     }
 
-    const snippet = await generateFixSnippet({
-      title: rec.title,
-      description: rec.description,
-      exampleUrl: rec.example_urls?.[0] ?? 'homepage',
-      dimension: rec.dimension,
-    });
+    const snippet = await generateFixSnippet(
+      {
+        title: rec.title,
+        description: rec.description,
+        exampleUrl: rec.example_urls?.[0] ?? 'homepage',
+        dimension: rec.dimension,
+      },
+      {
+        accountId: await resolveRanklyProjectAccountId(job.project_id as string),
+        supabase: client,
+      },
+    );
 
     await updateRecommendationSnippet(parsed.data.recommendationId, snippet);
 
     return jsonOk({ snippet });
   } catch (error) {
+    if (isInsufficientCreditsError(error)) {
+      return NextResponse.json(insufficientCreditsResponse(error), {
+        status: 402,
+      });
+    }
+
     return jsonErr(
       'UNKNOWN',
       error instanceof Error ? error.message : 'Error',

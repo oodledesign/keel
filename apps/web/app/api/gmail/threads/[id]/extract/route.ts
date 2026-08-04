@@ -1,7 +1,13 @@
+import { NextResponse } from 'next/server';
+
 import { type EmailActionItem, extract } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
 import {
   loadAccountMembersForExtraction,
   resolveSuggestedAssigneeId,
@@ -14,6 +20,7 @@ import {
   normalizeIgnoredDomains,
   normalizeIgnoredSenders,
 } from '~/lib/email-assistant/ignored-senders';
+import { createMeteredEmailGenerateText } from '~/lib/email-assistant/metered-generate-text';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
@@ -155,13 +162,28 @@ export async function POST(request: Request, context: RouteContext) {
   let items: EmailActionItem[];
 
   try {
-    items = await extract(threadText, todayLocalYmd(), {
-      mailboxOwnerEmail: owner.email,
-      mailboxOwnerName: owner.displayName,
-      accountMembers,
-      instructions,
-    });
+    items = await extract(
+      threadText,
+      todayLocalYmd(),
+      {
+        mailboxOwnerEmail: owner.email,
+        mailboxOwnerName: owner.displayName,
+        accountMembers,
+        instructions,
+      },
+      createMeteredEmailGenerateText({
+        feature: 'task_extract',
+        accountId: auth.user.id,
+        supabase: auth.client,
+      }),
+    );
   } catch (error) {
+    if (isInsufficientCreditsError(error)) {
+      return NextResponse.json(insufficientCreditsResponse(error), {
+        status: 402,
+      });
+    }
+
     return jsonErr(
       'EXTRACT_FAILED',
       error instanceof Error ? error.message : 'Extraction failed',

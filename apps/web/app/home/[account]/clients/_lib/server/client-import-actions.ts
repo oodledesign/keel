@@ -145,6 +145,8 @@ export const suggestClientImportMappingAction = enhanceAction(
     return suggestClientCsvColumnMapping({
       headers: input.headers,
       sampleRows: input.sampleRows,
+      accountId: input.accountId,
+      supabase: getSupabaseServerClient(),
     });
   },
   { schema: suggestSchema },

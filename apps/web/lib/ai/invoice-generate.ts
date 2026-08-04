@@ -1,10 +1,12 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
 import type { AiInvoiceDraft } from '~/lib/ai/invoice-generate-types';
+import { callAI } from '~/lib/ai/router';
 import {
   calculateInvoiceLineTotalPence,
   normalizeInvoiceLineType,
@@ -26,46 +28,6 @@ export const AiInvoiceDraftSchema = z.object({
   notes: z.string().nullable().optional(),
   items: z.array(AiInvoiceLineSchema).min(1),
 });
-
-function getAnthropicConfig() {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-  return { apiKey, model: resolveAnthropicModel() };
-}
-
-async function callAnthropic(system: string, user: string): Promise<string> {
-  const { apiKey, model } = getAnthropicConfig();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      system,
-      messages: [{ role: 'user', content: user }],
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text = body.content?.find((c) => c.type === 'text')?.text?.trim();
-  if (!text) throw new Error('Empty response from Anthropic');
-  return text;
-}
 
 function poundsToPence(value: number): number {
   return Math.max(0, Math.round(value * 100));
@@ -103,6 +65,8 @@ export async function generateInvoiceDraftFromPrompt(input: {
   currencySymbol: string;
   clientName?: string | null;
   defaultHourlyRatePence?: number | null;
+  accountId: string;
+  supabase: SupabaseClient;
 }): Promise<AiInvoiceDraft> {
   const prompt = input.prompt.trim();
   if (!prompt) {
@@ -146,7 +110,13 @@ Default hourly rate: ${hourly}
 Brief / costings:
 ${prompt.slice(0, 12_000)}`;
 
-  const text = await callAnthropic(system, user);
+  const text = await callAI({
+    feature: 'invoice_generate',
+    systemPrompt: system,
+    userPrompt: user,
+    accountId: input.accountId,
+    supabase: input.supabase,
+  });
   let parsed: unknown;
   try {
     parsed = JSON.parse(extractJsonObject(text));

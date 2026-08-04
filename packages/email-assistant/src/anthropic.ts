@@ -3,6 +3,12 @@ import 'server-only';
 /** Retired 2026-06-15 — use claude-sonnet-4-6 (override via ANTHROPIC_MODEL). */
 export const DEFAULT_ANTHROPIC_MODEL = 'claude-sonnet-4-6';
 
+export type GenerateTextFn = (input: {
+  system: string;
+  user: string;
+  maxTokens?: number;
+}) => Promise<string>;
+
 function getAnthropicConfig() {
   const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
 
@@ -17,6 +23,7 @@ function getAnthropicConfig() {
   return { apiKey, model };
 }
 
+/** Unmetered fallback used when callers do not inject a generateText function. */
 export async function callAnthropicText(input: {
   system: string;
   user: string;

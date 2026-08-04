@@ -4,6 +4,10 @@ import { z } from 'zod';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
 import { streamPlannerMarkdown } from '~/lib/ai/planner-generate';
 
 export const dynamic = 'force-dynamic';
@@ -21,6 +25,7 @@ const plannerTaskSchema = z.object({
 });
 
 const generateSchema = z.object({
+  accountId: z.string().uuid(),
   planning_mode: z.enum(['day', 'week']),
   date: z.string().min(1),
   working_hours: z.object({
@@ -67,8 +72,24 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  const taskIds = parsed.data.tasks.map((task) => task.id);
-  let tasks = parsed.data.tasks;
+  const { accountId, ...plannerPayload } = parsed.data;
+
+  // Personal account id matches auth user id; otherwise require membership.
+  if (accountId !== user.id) {
+    const { data: membership } = await client
+      .from('accounts_memberships')
+      .select('account_id')
+      .eq('account_id', accountId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!membership) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+  }
+
+  const taskIds = plannerPayload.tasks.map((task) => task.id);
+  let tasks = plannerPayload.tasks;
 
   if (taskIds.length > 0) {
     const { data: visibleTasks, error } = await client
@@ -88,7 +109,7 @@ export async function POST(request: NextRequest) {
   }
 
   // A re-plan can run on notes alone; a fresh plan needs at least one task.
-  if (tasks.length === 0 && !parsed.data.replan) {
+  if (tasks.length === 0 && !plannerPayload.replan) {
     return NextResponse.json(
       { error: 'No visible open tasks selected' },
       { status: 400 },
@@ -96,11 +117,14 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const stream = await streamPlannerMarkdown({
-      ...parsed.data,
-      user_id: user.id,
-      tasks,
-    });
+    const stream = await streamPlannerMarkdown(
+      {
+        ...plannerPayload,
+        user_id: user.id,
+        tasks,
+      },
+      { accountId, supabase: client },
+    );
 
     return new Response(stream, {
       headers: {
@@ -109,6 +133,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
+    if (isInsufficientCreditsError(err)) {
+      return NextResponse.json(insufficientCreditsResponse(err), {
+        status: 402,
+      });
+    }
+
     return NextResponse.json(
       {
         error:

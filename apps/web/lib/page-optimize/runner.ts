@@ -12,6 +12,7 @@ import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 import {
   analysePageForOptimization,
   detectPageKeyword,
+  resolveRanklyProjectAccountId,
 } from './claude-analyser';
 import {
   getPageOptimizeJob,
@@ -26,9 +27,12 @@ function ranklyAdmin() {
 
 export async function runPageOptimizeJob(jobId: string): Promise<void> {
   const db = ranklyAdmin();
+  const adminClient = getSupabaseServerAdminClient();
 
   try {
     const job = await getPageOptimizeJob(jobId);
+    const accountId = await resolveRanklyProjectAccountId(job.project_id);
+    const meter = { accountId, supabase: adminClient };
     const locationCode = countryCodeToLocation(job.country);
 
     await updatePageOptimizeJobStatus(jobId, 'scraping', {
@@ -40,7 +44,7 @@ export async function runPageOptimizeJob(jobId: string): Promise<void> {
     let targetKeyword = job.target_keyword?.trim() || null;
     if (!targetKeyword) {
       await updatePageOptimizeJobStatus(jobId, 'detecting_keyword');
-      targetKeyword = await detectPageKeyword(pageSnapshot);
+      targetKeyword = await detectPageKeyword(pageSnapshot, meter);
       await db
         .from('page_optimization_jobs')
         .update({
@@ -61,13 +65,16 @@ export async function runPageOptimizeJob(jobId: string): Promise<void> {
     const competitorPages = await scrapeTopCompetitors(top3Urls);
 
     await updatePageOptimizeJobStatus(jobId, 'analysing');
-    const analysis = await analysePageForOptimization({
-      sourceUrl: job.source_url,
-      targetKeyword,
-      page: pageSnapshot,
-      serpResults: serpData.organic,
-      competitorPages,
-    });
+    const analysis = await analysePageForOptimization(
+      {
+        sourceUrl: job.source_url,
+        targetKeyword,
+        page: pageSnapshot,
+        serpResults: serpData.organic,
+        competitorPages,
+      },
+      meter,
+    );
 
     await savePageOptimizeReport(
       jobId,

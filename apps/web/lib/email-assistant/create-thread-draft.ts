@@ -6,6 +6,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 import { resolveDraftOwnerContext } from './draft-owner';
+import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { resolveEmailAssistantSignature } from './resolve-signature';
 import { saveDraftToGmail } from './save-draft-to-gmail';
 import { buildThreadText } from './thread-text';
@@ -139,7 +140,17 @@ export async function createThreadDraft(input: {
       (settings as { style_notes?: string | null } | null)?.style_notes ?? null,
   });
 
-  const bodyText = await draft(threadText, owner, voiceBlock, signature.plain);
+  const bodyText = await draft(
+    threadText,
+    owner,
+    voiceBlock,
+    signature.plain,
+    createMeteredEmailGenerateText({
+      feature: 'email_draft',
+      accountId: input.userId,
+      supabase: admin,
+    }),
+  );
 
   const model = process.env.ANTHROPIC_MODEL?.trim() || DEFAULT_ANTHROPIC_MODEL;
 

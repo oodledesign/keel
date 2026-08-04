@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI, isInsufficientCreditsError } from '~/lib/ai/router';
 
 export type CategoryOption = {
   id: string;
@@ -44,16 +46,15 @@ Rules:
 export async function suggestTransactionCategories(input: {
   categories: CategoryOption[];
   transactions: TransactionForSuggest[];
+  accountId: string;
+  supabase: SupabaseClient;
 }): Promise<CategorySuggestion[]> {
   if (!input.transactions.length) return [];
 
   try {
-    const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-    if (!apiKey) {
+    if (!process.env.ANTHROPIC_API_KEY?.trim()) {
       return heuristicCategorySuggestions(input);
     }
-
-    const model = resolveAnthropicModel();
 
     const payload = {
       categories: input.categories.map((c) => ({
@@ -69,34 +70,13 @@ export async function suggestTransactionCategories(input: {
       })),
     };
 
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 4096,
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: JSON.stringify(payload) }],
-      }),
+    const text = await callAI({
+      feature: 'finance_category_suggest',
+      systemPrompt: SYSTEM_PROMPT,
+      userPrompt: JSON.stringify(payload),
+      accountId: input.accountId,
+      supabase: input.supabase,
     });
-
-    if (!res.ok) {
-      console.warn(
-        '[finance-category-suggest] Anthropic request failed:',
-        res.status,
-        (await res.text()).slice(0, 200),
-      );
-      return heuristicCategorySuggestions(input);
-    }
-
-    const data = (await res.json()) as {
-      content?: Array<{ type: string; text?: string }>;
-    };
-    const text = data.content?.find((c) => c.type === 'text')?.text ?? '';
     const jsonMatch = text.match(/\{[\s\S]*\}/);
     if (!jsonMatch) return heuristicCategorySuggestions(input);
 
@@ -114,6 +94,7 @@ export async function suggestTransactionCategories(input: {
         reason: s.reason,
       }));
   } catch (err) {
+    if (isInsufficientCreditsError(err)) throw err;
     console.warn('[finance-category-suggest] Falling back to heuristics:', err);
     return heuristicCategorySuggestions(input);
   }

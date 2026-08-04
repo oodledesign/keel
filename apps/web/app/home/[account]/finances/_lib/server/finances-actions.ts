@@ -754,9 +754,12 @@ export const suggestCsvMappingAction = enhanceAction(
     suggestCsvColumnMapping({
       headers: input.headers,
       sampleRows: input.sampleRows,
+      accountId: input.accountId,
+      supabase: getSupabaseServerClient(),
     }),
   {
     schema: z.object({
+      accountId: z.string().uuid(),
       headers: z.array(z.string()).min(1).max(100),
       sampleRows: z.preprocess(
         (value) => (Array.isArray(value) ? value.slice(0, 5) : value),
@@ -1089,6 +1092,8 @@ export const suggestTransactionCategoriesAction = enhanceAction(
           description: String(t.description),
           amountPence: t.amount_pence as number,
         })),
+        accountId: input.accountId,
+        supabase: client,
       });
 
       return { suggestions };

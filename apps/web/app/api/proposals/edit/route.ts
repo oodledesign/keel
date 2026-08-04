@@ -6,6 +6,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { streamProposalEditHtml } from '~/lib/ai/proposal-generate';
+import {
+  insufficientCreditsResponse,
+  isInsufficientCreditsError,
+} from '~/lib/ai/router';
 import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 export const dynamic = 'force-dynamic';
@@ -74,14 +78,17 @@ export async function POST(request: NextRequest) {
       purpose: 'proposal',
     });
 
-    const stream = await streamProposalEditHtml({
-      contentHtml: parsed.data.contentHtml,
-      instruction: parsed.data.instruction.trim(),
-      recipientName: parsed.data.recipientName?.trim() || null,
-      accountName: parsed.data.accountName?.trim() || null,
-      senderName: parsed.data.senderName?.trim() || null,
-      voicePromptBlock,
-    });
+    const stream = await streamProposalEditHtml(
+      {
+        contentHtml: parsed.data.contentHtml,
+        instruction: parsed.data.instruction.trim(),
+        recipientName: parsed.data.recipientName?.trim() || null,
+        accountName: parsed.data.accountName?.trim() || null,
+        senderName: parsed.data.senderName?.trim() || null,
+        voicePromptBlock,
+      },
+      { accountId: parsed.data.accountId, supabase: client },
+    );
 
     return new Response(stream, {
       headers: {
@@ -90,6 +97,12 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (err) {
+    if (isInsufficientCreditsError(err)) {
+      return NextResponse.json(insufficientCreditsResponse(err), {
+        status: 402,
+      });
+    }
+
     return NextResponse.json(
       {
         error:

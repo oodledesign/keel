@@ -1,9 +1,11 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
+import { callAI } from '~/lib/ai/router';
 
 export type ProjectSourceBlock = {
   type: 'transcript' | 'proposal' | 'note' | 'file';
@@ -13,6 +15,11 @@ export type ProjectSourceBlock = {
 };
 
 export type ProjectGenerateMode = 'brief' | 'phase_plan' | 'phase_page';
+
+export type ProjectAiMeter = {
+  accountId: string;
+  supabase: SupabaseClient;
+};
 
 const PhasePlanTaskSchema = z.object({
   title: z.string().min(1),
@@ -40,15 +47,6 @@ Be concrete, UK English, no invented facts. If information is missing, say so br
 
 const MAX_PER_SOURCE = 28_000;
 const MAX_TOTAL_SOURCES = 110_000;
-
-function getAnthropicConfig() {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-  const model = resolveAnthropicModel();
-  return { apiKey, model };
-}
 
 function stripHtml(html: string) {
   return html
@@ -89,42 +87,25 @@ export function buildProjectSourceCorpus(
   return blocks.join('\n\n') || '(no source content)';
 }
 
-async function callAnthropic(system: string, user: string): Promise<string> {
-  const { apiKey, model } = getAnthropicConfig();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      system,
-      messages: [{ role: 'user', content: user }],
-    }),
+async function meterCall(
+  meter: ProjectAiMeter,
+  system: string,
+  user: string,
+): Promise<string> {
+  return callAI({
+    feature: 'project_content_generate',
+    systemPrompt: system,
+    userPrompt: user,
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text = body.content?.find((c) => c.type === 'text')?.text?.trim();
-  if (!text) throw new Error('Empty response from Anthropic');
-  return text;
 }
 
 export async function generateProjectBriefMarkdown(params: {
   jobTitle: string;
   clientName?: string | null;
   sources: ProjectSourceBlock[];
+  meter: ProjectAiMeter;
 }): Promise<string> {
   const corpus = buildProjectSourceCorpus(params.sources);
   const system = `${SYSTEM_BASE}
@@ -145,13 +126,14 @@ Client: ${params.clientName?.trim() || 'Unknown'}
 Sources:
 ${corpus}`;
 
-  return callAnthropic(system, user);
+  return meterCall(params.meter, system, user);
 }
 
 export async function generatePhasePlanJson(params: {
   jobTitle: string;
   clientName?: string | null;
   sources: ProjectSourceBlock[];
+  meter: ProjectAiMeter;
 }): Promise<{ plan: PhasePlan } | { rawDraft: string; parseError: true }> {
   const corpus = buildProjectSourceCorpus(params.sources);
   const system = `${SYSTEM_BASE}
@@ -180,7 +162,7 @@ Client: ${params.clientName?.trim() || 'Unknown'}
 Sources:
 ${corpus}`;
 
-  const raw = await callAnthropic(system, user);
+  const raw = await meterCall(params.meter, system, user);
 
   try {
     const parsed = JSON.parse(extractJsonObject(raw)) as unknown;
@@ -200,6 +182,7 @@ export async function generatePhasePageMarkdown(params: {
   clientName?: string | null;
   existingContent?: string | null;
   sources: ProjectSourceBlock[];
+  meter: ProjectAiMeter;
 }): Promise<string> {
   const corpus = buildProjectSourceCorpus(params.sources);
   const system = `${SYSTEM_BASE}
@@ -217,7 +200,7 @@ ${existing ? `\nExisting page content (extend and integrate — do not repeat ve
 Sources:
 ${corpus}`;
 
-  const generated = await callAnthropic(system, user);
+  const generated = await meterCall(params.meter, system, user);
 
   if (!existing) return generated;
   return `${existing.trim()}\n\n---\n\n${generated.trim()}`;

@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { generateInvoiceDraftFromPrompt } from '~/lib/ai/invoice-generate';
+import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { normalizePence } from '~/lib/invoices/invoice-quantity';
 
 import {
@@ -66,13 +67,24 @@ export const generateInvoiceLineItemsAction = enhanceAction(
       paymentSettings?.default_hourly_rate_pence,
     );
 
-    return generateInvoiceDraftFromPrompt({
-      prompt: input.prompt,
-      currency: currency.toUpperCase(),
-      currencySymbol: invoiceCurrencySymbol(currency),
-      clientName,
-      defaultHourlyRatePence,
-    });
+    try {
+      return await generateInvoiceDraftFromPrompt({
+        prompt: input.prompt,
+        currency: currency.toUpperCase(),
+        currencySymbol: invoiceCurrencySymbol(currency),
+        clientName,
+        defaultHourlyRatePence,
+        accountId: input.accountId,
+        supabase: client,
+      });
+    } catch (error) {
+      if (isInsufficientCreditsError(error)) {
+        throw new Error(
+          `${error.message}. Purchase more AI credits to continue.`,
+        );
+      }
+      throw error;
+    }
   },
   { schema: GenerateInvoiceLineItemsSchema },
 );

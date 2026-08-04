@@ -7,6 +7,10 @@ import {
   todayLocalYmd,
 } from '~/home/_lib/due-date-ymd';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI } from '~/lib/ai/router';
+
 import { formatExtractInstructionsBlock } from './extract-instructions';
 
 const AnthropicSubtaskSchema = z.object({
@@ -76,27 +80,12 @@ function mapNameToId(
   return partial?.id ?? null;
 }
 
-/**
- * Calls Anthropic Messages API. Requires `ANTHROPIC_API_KEY`.
- * Model: `ANTHROPIC_TASK_EXTRACT_MODEL` or `ANTHROPIC_MODEL` or default `claude-haiku-4-5`.
- */
 export async function extractWorkspaceTasksWithAnthropic(
   rawText: string,
   context: WorkspaceContextForExtract,
-  instructions?: string | null,
+  instructions: string | null | undefined,
+  meter: { accountId: string; supabase: SupabaseClient },
 ): Promise<ExtractedWorkspaceTaskDraft[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error(
-      'ANTHROPIC_API_KEY is not set. Add it to your environment to use AI task extraction.',
-    );
-  }
-
-  const model =
-    process.env.ANTHROPIC_TASK_EXTRACT_MODEL?.trim() ||
-    process.env.ANTHROPIC_MODEL?.trim() ||
-    'claude-haiku-4-5';
-
   const projectLines = context.projects
     .map((p) => `- "${p.name}" (id: ${p.id})`)
     .join('\n');
@@ -140,34 +129,14 @@ Rules:
 ${meetingClientLine}${formatExtractInstructionsBlock(instructions)}
 Workspace projects (choose names that best match the text; we map to ids server-side):\n${projectLines || '(none)'}\n\nWorkspace clients:\n${clientLines || '(none)'}\n\n---\nSOURCE TEXT:\n${rawText}\n---\nRespond with JSON only.`;
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 8192,
-      system,
-      messages: [{ role: 'user', content: userContent }],
-    }),
+  const raw = await callAI({
+    feature: 'workspace_task_extract',
+    systemPrompt: system,
+    userPrompt: userContent,
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok) {
-    const errText = await res.text();
-    throw new Error(
-      `Anthropic API error (${res.status}): ${errText.slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const textBlock = body.content?.find((c) => c.type === 'text');
-  const raw = textBlock?.text?.trim();
-  if (!raw) {
+  if (!raw?.trim()) {
     throw new Error('Empty response from Anthropic');
   }
 

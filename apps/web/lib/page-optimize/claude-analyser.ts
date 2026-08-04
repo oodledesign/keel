@@ -1,7 +1,16 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
+import {
+  callAI,
+  invokeAIProvider,
+  withMeteredAI,
+} from '~/lib/ai/router';
 import type { CompetitorPage } from '~/lib/briefs/types';
+import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import type { PageOptimizeAnalysis } from './types';
 
@@ -11,6 +20,11 @@ type AnalysePageInput = {
   page: CompetitorPage;
   serpResults: Array<{ title: string; url: string }>;
   competitorPages: CompetitorPage[];
+};
+
+export type RanklyAiMeter = {
+  accountId: string;
+  supabase: SupabaseClient;
 };
 
 function buildPrompt(input: AnalysePageInput): string {
@@ -66,45 +80,6 @@ Rules:
 `;
 }
 
-async function callClaude(prompt: string, retry = false): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model =
-    process.env.ANTHROPIC_BRIEF_MODEL?.trim() || resolveAnthropicModel();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 3000,
-      system: retry
-        ? 'Output only valid JSON. No markdown. Start with {'
-        : 'You are an expert SEO analyst. Output only valid JSON.',
-      messages: [{ role: 'user', content: prompt }],
-    }),
-  });
-
-  if (!res.ok) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  const data = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-
-  return data.content?.find((block) => block.type === 'text')?.text ?? '';
-}
-
 function parseAnalysis(text: string): PageOptimizeAnalysis {
   const cleaned = text
     .trim()
@@ -113,66 +88,87 @@ function parseAnalysis(text: string): PageOptimizeAnalysis {
   return JSON.parse(cleaned) as PageOptimizeAnalysis;
 }
 
-export async function detectPageKeyword(page: CompetitorPage): Promise<string> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
+export async function resolveRanklyProjectAccountId(
+  projectId: string,
+): Promise<string> {
+  const { data, error } = await supabaseCustomSchema(
+    getSupabaseServerAdminClient(),
+    'rankly',
+  )
+    .from('projects')
+    .select('account_id')
+    .eq('id', projectId)
+    .maybeSingle();
+
+  if (error || !data?.account_id) {
+    throw new Error(error?.message ?? 'Rankly project account not found');
   }
 
-  const model =
-    process.env.ANTHROPIC_BRIEF_MODEL?.trim() || resolveAnthropicModel();
+  return data.account_id as string;
+}
 
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 80,
-      system:
-        'Return only the single best target SEO keyword phrase for this page. No punctuation or explanation.',
-      messages: [
-        {
-          role: 'user',
-          content: `URL: ${page.url}
+export async function detectPageKeyword(
+  page: CompetitorPage,
+  meter: RanklyAiMeter,
+): Promise<string> {
+  const text = await callAI({
+    feature: 'rankly_page_analyse',
+    systemPrompt:
+      'Return only the single best target SEO keyword phrase for this page. No punctuation or explanation.',
+    userPrompt: `URL: ${page.url}
 Title: ${page.title}
 H1: ${page.h1s[0] ?? ''}
 H2s: ${page.h2s.slice(0, 5).join(', ')}`,
-        },
-      ],
-    }),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
 
-  if (!res.ok) {
+  const keyword = text.trim().replace(/^["']|["']$/g, '');
+  if (!keyword) {
     throw new Error('Failed to detect keyword');
   }
-
-  const data = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-
-  const keyword =
-    data.content?.find((block) => block.type === 'text')?.text?.trim() ?? '';
-  if (!keyword) {
-    throw new Error('Could not detect a target keyword for this page');
-  }
-
-  return keyword.replace(/^["']|["']$/g, '');
+  return keyword;
 }
 
 export async function analysePageForOptimization(
   input: AnalysePageInput,
+  meter: RanklyAiMeter,
 ): Promise<PageOptimizeAnalysis> {
   const prompt = buildPrompt(input);
 
-  try {
-    const text = await callClaude(prompt);
-    return parseAnalysis(text);
-  } catch {
-    const retryText = await callClaude(prompt, true);
-    return parseAnalysis(retryText);
-  }
+  return withMeteredAI({
+    feature: 'rankly_page_analyse',
+    accountId: meter.accountId,
+    supabase: meter.supabase,
+    run: async () => {
+      let lastTokens: {
+        inputTokens: number | null;
+        outputTokens: number | null;
+      } = { inputTokens: null, outputTokens: null };
+
+      for (const retry of [false, true]) {
+        const result = await invokeAIProvider({
+          feature: 'rankly_page_analyse',
+          systemPrompt: retry
+            ? 'Output only valid JSON. No markdown. Start with {'
+            : 'You are an expert SEO analyst. Output only valid JSON.',
+          userPrompt: prompt,
+        });
+        lastTokens = {
+          inputTokens: result.inputTokens,
+          outputTokens: result.outputTokens,
+        };
+        try {
+          return {
+            result: parseAnalysis(result.text),
+            ...lastTokens,
+          };
+        } catch {
+          if (retry) throw new Error('Failed to parse page optimization analysis');
+        }
+      }
+
+      throw new Error('Failed to analyse page');
+    },
+  });
 }

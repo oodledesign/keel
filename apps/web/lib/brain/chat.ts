@@ -2,7 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import { callAI, streamAI } from '~/lib/ai/router';
 import { extractJsonObject } from '~/lib/ai/extract-json-object';
 
 import {
@@ -16,13 +16,6 @@ import { isVoyageConfigured } from './voyage';
 const SYSTEM_PROMPT = `You are Ozer's second brain assistant. Answer from the sources below only.
 If the answer is not in the sources, say so clearly. Cite sources by [1], [2], etc.
 Use UK English. Format replies as Markdown.`;
-
-function getAnthropicConfig() {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) throw new Error('ANTHROPIC_API_KEY is not configured');
-  const model = resolveAnthropicModel();
-  return { apiKey, model };
-}
 
 export type BrainChatScope = {
   jobId?: string | null;
@@ -121,61 +114,33 @@ Question: ${params.userMessage}`;
   };
 }
 
-export async function streamBrainChatReply(userPrompt: string) {
-  const { apiKey, model } = getAnthropicConfig();
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: 4096,
-      stream: true,
-      system: SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: userPrompt }],
-    }),
+export async function streamBrainChatReply(
+  userPrompt: string,
+  meter: { accountId: string; supabase: SupabaseClient },
+) {
+  return streamAI({
+    feature: 'second_brain_query',
+    systemPrompt: SYSTEM_PROMPT,
+    userPrompt,
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok || !res.body) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  return res.body;
 }
 
-export async function summarizeThreadTitle(firstMessage: string) {
+export async function summarizeThreadTitle(
+  firstMessage: string,
+  meter: { accountId: string; supabase: SupabaseClient },
+) {
   try {
-    const { apiKey, model } = getAnthropicConfig();
-    const res = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': apiKey,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model,
-        max_tokens: 32,
-        messages: [
-          {
-            role: 'user',
-            content: `Summarise this question in at most 6 words, no quotes:\n${firstMessage.slice(0, 500)}`,
-          },
-        ],
-      }),
+    const title = await callAI({
+      feature: 'note_summarise',
+      systemPrompt:
+        'Summarise the user question in at most 6 words. Reply with the title only — no quotes.',
+      userPrompt: firstMessage.slice(0, 500),
+      accountId: meter.accountId,
+      supabase: meter.supabase,
     });
-
-    if (!res.ok) return null;
-    const body = (await res.json()) as {
-      content?: Array<{ type: string; text?: string }>;
-    };
-    return body.content?.find((c) => c.type === 'text')?.text?.trim() ?? null;
+    return title.trim() || null;
   } catch {
     return null;
   }
@@ -184,7 +149,6 @@ export async function summarizeThreadTitle(firstMessage: string) {
 export function parseSseAssistantText(stream: ReadableStream<Uint8Array>) {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
-  let buffer = '';
   let fullText = '';
 
   return {
@@ -192,36 +156,9 @@ export function parseSseAssistantText(stream: ReadableStream<Uint8Array>) {
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-
-        const events = buffer.split('\n\n');
-        buffer = events.pop() ?? '';
-
-        for (const event of events) {
-          const line = event
-            .split('\n')
-            .find((entry) => entry.startsWith('data: '));
-          if (!line) continue;
-          const payload = line.slice(6).trim();
-          if (!payload || payload === '[DONE]') continue;
-
-          try {
-            const parsed = JSON.parse(payload) as {
-              type?: string;
-              delta?: { type?: string; text?: string };
-            };
-            if (
-              parsed.type === 'content_block_delta' &&
-              parsed.delta?.type === 'text_delta' &&
-              parsed.delta.text
-            ) {
-              fullText += parsed.delta.text;
-              yield parsed.delta.text;
-            }
-          } catch {
-            // ignore malformed SSE frames
-          }
-        }
+        const chunk = decoder.decode(value, { stream: true });
+        fullText += chunk;
+        yield chunk;
       }
     },
     getFullText: () => fullText,

@@ -1,6 +1,8 @@
 import 'server-only';
 
-import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { callAI } from '~/lib/ai/router';
 
 const RECIPE_GENERATE_SYSTEM_PROMPT = `You are a family recipe assistant inside Ozer. Suggest complete, cookable recipes inspired by popular home cooking — weeknight staples, trending one-pan meals, comfort food people share on Instagram and food blogs, and classic family favourites.
 
@@ -80,43 +82,16 @@ function parseOptionalInt(value: unknown): number | null {
 
 export async function generateMealRecipes(
   payload: MealRecipesGeneratePayload,
+  meter: { accountId: string; supabase: SupabaseClient },
 ): Promise<GeneratedRecipeDraft[]> {
-  const apiKey = process.env.ANTHROPIC_API_KEY?.trim();
-  if (!apiKey) {
-    throw new Error('ANTHROPIC_API_KEY is not configured');
-  }
-
-  const model = resolveAnthropicModel();
-
-  const maxTokens = payload.count > 5 ? 8_192 : 4_096;
-
-  const res = await fetch('https://api.anthropic.com/v1/messages', {
-    method: 'POST',
-    headers: {
-      'content-type': 'application/json',
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model,
-      max_tokens: maxTokens,
-      system: RECIPE_GENERATE_SYSTEM_PROMPT,
-      messages: [{ role: 'user', content: JSON.stringify(payload) }],
-    }),
+  const text = await callAI({
+    feature: 'meal_recipes_generate',
+    systemPrompt: RECIPE_GENERATE_SYSTEM_PROMPT,
+    userPrompt: JSON.stringify(payload),
+    accountId: meter.accountId,
+    supabase: meter.supabase,
   });
-
-  if (!res.ok) {
-    throw new Error(
-      `Anthropic API error (${res.status}): ${(await res.text()).slice(0, 400)}`,
-    );
-  }
-
-  const body = (await res.json()) as {
-    content?: Array<{ type: string; text?: string }>;
-  };
-  const text =
-    body.content?.find((part) => part.type === 'text')?.text?.trim() ?? '';
-  if (!text) {
+  if (!text?.trim()) {
     throw new Error('Empty response from recipe generator');
   }
 
