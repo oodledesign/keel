@@ -168,6 +168,35 @@ export const UpdateListingEnquirySchema = z.object({
     .optional(),
 });
 
+export const ListListingMembersSchema = z.object({
+  accountSlug: z.string().min(1),
+});
+
+export const ListWorkspaceTeamsSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
+export const CreateWorkspaceTeamSchema = z.object({
+  accountId: z.string().uuid(),
+  name: z.string().min(1).max(80),
+});
+
+export const GetListingAssignmentSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+});
+
+export const UpdateListingAssignmentSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  actingAgentUserIds: z.array(z.string().uuid()).optional(),
+  paUserId: z.string().uuid().nullable().optional(),
+  recordOwnerUserId: z.string().uuid().nullable().optional(),
+  teamId: z.string().uuid().nullable().optional(),
+});
+
 export type CreateListingMediaInput = z.infer<typeof CreateListingMediaSchema>;
 export type SetListingMediaCoverInput = z.infer<
   typeof SetListingMediaCoverSchema
@@ -181,4 +210,10 @@ export type CreateListingEnquiryInput = z.infer<
 >;
 export type UpdateListingEnquiryInput = z.infer<
   typeof UpdateListingEnquirySchema
+>;
+export type UpdateListingAssignmentInput = z.infer<
+  typeof UpdateListingAssignmentSchema
+>;
+export type CreateWorkspaceTeamInput = z.infer<
+  typeof CreateWorkspaceTeamSchema
 >;

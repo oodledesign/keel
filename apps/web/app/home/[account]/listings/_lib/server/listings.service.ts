@@ -1,5 +1,7 @@
 import 'server-only';
 
+import { revalidatePath } from 'next/cache';
+
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { randomBytes } from 'crypto';
@@ -29,6 +31,12 @@ import type {
 export type { MediaType };
 
 const UNPUBLISH_STATUSES: ListingStatus[] = ['withdrawn', 'let', 'sold'];
+
+/** Tables not yet in generated Database types — unwrap until typegen. */
+function fromTable(client: SupabaseClient, table: string) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (client as any).from(table);
+}
 
 async function syncPropertyHiveOnStatusChange(input: {
   accountId: string;
@@ -113,10 +121,45 @@ export type CommercialListing = {
   landlordShareEnabled: boolean;
   notes: string | null;
   externalId: string | null;
+  paUserId: string | null;
+  recordOwnerUserId: string | null;
+  teamId: string | null;
   createdAt: string;
   updatedAt: string;
   /** Signed cover/thumbnail URL when loaded with list thumbnails. */
   coverUrl?: string | null;
+};
+
+export type ListingMemberOption = {
+  userId: string;
+  name: string;
+  email: string | null;
+  pictureUrl: string | null;
+};
+
+export type WorkspaceTeam = {
+  id: string;
+  accountId: string;
+  name: string;
+  sortOrder: number;
+};
+
+export type ListingAgent = {
+  userId: string;
+  name: string;
+  email: string | null;
+  pictureUrl: string | null;
+  sortOrder: number;
+};
+
+export type ListingAssignment = {
+  listingId: string;
+  accountId: string;
+  actingAgents: ListingAgent[];
+  paUserId: string | null;
+  recordOwnerUserId: string | null;
+  teamId: string | null;
+  teamName: string | null;
 };
 
 export type CommercialListingUnit = {
@@ -273,6 +316,9 @@ function mapListing(row: ListingRow): CommercialListing {
     landlordShareEnabled: Boolean(row.landlord_share_enabled),
     notes: (row.notes as string | null) ?? null,
     externalId: (row.external_id as string | null) ?? null,
+    paUserId: (row.pa_user_id as string | null) ?? null,
+    recordOwnerUserId: (row.record_owner_user_id as string | null) ?? null,
+    teamId: (row.team_id as string | null) ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
@@ -910,7 +956,56 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to create enquiry');
       }
 
-      return mapEnquiry(data as EnquiryRow);
+      const enquiry = mapEnquiry(data as EnquiryRow);
+
+      const { data: listing } = await client
+        .from('commercial_listings')
+        .select('name')
+        .eq('id', input.listingId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      const listingName =
+        (listing as { name?: string | null } | null)?.name?.trim() ||
+        'Disposal';
+      const contactLabel =
+        enquiry.contactName?.trim() ||
+        enquiry.contactEmail?.trim() ||
+        'Enquiry';
+      const dealName = `${contactLabel} — ${listingName}`;
+
+      const noteParts = [
+        enquiry.message?.trim() || null,
+        enquiry.contactEmail ? `Email: ${enquiry.contactEmail}` : null,
+        enquiry.contactPhone ? `Phone: ${enquiry.contactPhone}` : null,
+        `Source: ${enquiry.source}`,
+      ].filter(Boolean);
+
+      const { error: dealError } = await client.from('pipeline_deals').insert({
+        account_id: input.accountId,
+        business_id: null,
+        name: dealName,
+        contact_name: contactLabel,
+        company_name: listingName,
+        notes: noteParts.length ? noteParts.join('\n') : null,
+        value: 0,
+        stage: 'enquiry',
+        commercial_listing_id: input.listingId,
+      });
+
+      if (dealError) {
+        console.error(
+          '[listings] createEnquiry deal link failed:',
+          dealError.message,
+        );
+        throw new Error(
+          `Enquiry saved, but creating the deal failed: ${dealError.message}`,
+        );
+      }
+
+      revalidatePath('/home', 'layout');
+
+      return enquiry;
     },
 
     async updateEnquiry(
@@ -952,17 +1047,22 @@ export function createListingsService(client: SupabaseClient) {
     },
 
     async getInterestSummary(listingId: string): Promise<{
-      unactioned: number;
-      onSchedule: number;
+      active: number;
       archived: number;
       total: number;
+      linkedDeals: number;
     }> {
       const enquiries = await this.listEnquiriesForListing(listingId);
+      const { count: linkedDeals } = await client
+        .from('pipeline_deals')
+        .select('id', { count: 'exact', head: true })
+        .eq('commercial_listing_id', listingId);
+
       return {
-        unactioned: enquiries.filter((e) => e.status === 'unactioned').length,
-        onSchedule: enquiries.filter((e) => e.status === 'on_schedule').length,
+        active: enquiries.filter((e) => e.status !== 'archived').length,
         archived: enquiries.filter((e) => e.status === 'archived').length,
         total: enquiries.length,
+        linkedDeals: linkedDeals ?? 0,
       };
     },
 
@@ -1015,6 +1115,228 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       return mapListing(data as ListingRow);
+    },
+
+    async listAccountMembers(
+      accountSlug: string,
+    ): Promise<ListingMemberOption[]> {
+      const { data, error } = await client.rpc('get_account_members', {
+        account_slug: accountSlug,
+      });
+      if (error) {
+        console.error('[listings] listAccountMembers:', error.message);
+        return [];
+      }
+
+      return (
+        (data ?? []) as Array<{
+          user_id: string;
+          name?: string | null;
+          email?: string | null;
+          picture_url?: string | null;
+        }>
+      )
+        .map((row) => ({
+          userId: row.user_id,
+          name: row.name?.trim() || row.email?.trim() || 'Team member',
+          email: row.email?.trim() || null,
+          pictureUrl: row.picture_url?.trim() || null,
+        }))
+        .filter((row) => Boolean(row.userId));
+    },
+
+    async listWorkspaceTeams(accountId: string): Promise<WorkspaceTeam[]> {
+      const { data, error } = await fromTable(client, 'commercial_workspace_teams')
+        .select('id, account_id, name, sort_order')
+        .eq('account_id', accountId)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (error) {
+        console.error('[listings] listWorkspaceTeams:', error.message);
+        return [];
+      }
+
+      return ((data ?? []) as Array<Record<string, unknown>>).map((row) => ({
+        id: row.id as string,
+        accountId: row.account_id as string,
+        name: (row.name as string) ?? '',
+        sortOrder: Number(row.sort_order ?? 0),
+      }));
+    },
+
+    async createWorkspaceTeam(input: {
+      accountId: string;
+      name: string;
+    }): Promise<WorkspaceTeam> {
+      const name = input.name.trim();
+      if (!name) throw new Error('Team name is required');
+
+      const { data: existing } = await fromTable(client, 'commercial_workspace_teams')
+        .select('id, account_id, name, sort_order')
+        .eq('account_id', input.accountId)
+        .ilike('name', name)
+        .maybeSingle();
+
+      if (existing) {
+        return {
+          id: existing.id as string,
+          accountId: existing.account_id as string,
+          name: existing.name as string,
+          sortOrder: Number(existing.sort_order ?? 0),
+        };
+      }
+
+      const { count } = await fromTable(client, 'commercial_workspace_teams')
+        .select('id', { count: 'exact', head: true })
+        .eq('account_id', input.accountId);
+
+      const { data, error } = await fromTable(client, 'commercial_workspace_teams')
+        .insert({
+          account_id: input.accountId,
+          name,
+          sort_order: count ?? 0,
+        })
+        .select('id, account_id, name, sort_order')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to create team');
+      }
+
+      return {
+        id: data.id as string,
+        accountId: data.account_id as string,
+        name: data.name as string,
+        sortOrder: Number(data.sort_order ?? 0),
+      };
+    },
+
+    async getListingAssignment(
+      listingId: string,
+      accountId: string,
+      accountSlug: string,
+    ): Promise<ListingAssignment> {
+      const listing = await this.getListing(listingId, accountId);
+      if (!listing) throw new Error('Listing not found');
+
+      const members = await this.listAccountMembers(accountSlug);
+      const byUser = new Map(members.map((m) => [m.userId, m]));
+
+      const { data: agentRows, error: agentError } = await fromTable(client, 'commercial_listing_agents')
+        .select('user_id, sort_order')
+        .eq('listing_id', listingId)
+        .eq('account_id', accountId)
+        .order('sort_order', { ascending: true });
+
+      if (agentError) {
+        console.error(
+          '[listings] getListingAssignment agents:',
+          agentError.message,
+        );
+      }
+
+      const actingAgents: ListingAgent[] = (
+        (agentRows ?? []) as Array<{ user_id: string; sort_order: number }>
+      ).map((row, index) => {
+        const member = byUser.get(row.user_id);
+        return {
+          userId: row.user_id,
+          name: member?.name ?? 'Team member',
+          email: member?.email ?? null,
+          pictureUrl: member?.pictureUrl ?? null,
+          sortOrder: row.sort_order ?? index,
+        };
+      });
+
+      let teamName: string | null = null;
+      if (listing.teamId) {
+        const { data: team } = await fromTable(client, 'commercial_workspace_teams')
+          .select('name')
+          .eq('id', listing.teamId)
+          .eq('account_id', accountId)
+          .maybeSingle();
+        teamName = (team?.name as string | null | undefined)?.trim() || null;
+      }
+
+      return {
+        listingId,
+        accountId,
+        actingAgents,
+        paUserId: listing.paUserId,
+        recordOwnerUserId: listing.recordOwnerUserId ?? listing.assignedTo,
+        teamId: listing.teamId,
+        teamName,
+      };
+    },
+
+    async updateListingAssignment(input: {
+      listingId: string;
+      accountId: string;
+      accountSlug: string;
+      actingAgentUserIds?: string[];
+      paUserId?: string | null;
+      recordOwnerUserId?: string | null;
+      teamId?: string | null;
+    }): Promise<ListingAssignment> {
+      const listing = await this.getListing(input.listingId, input.accountId);
+      if (!listing) throw new Error('Listing not found');
+
+      const patch: Record<string, unknown> = {
+        updated_at: new Date().toISOString(),
+      };
+
+      if (input.paUserId !== undefined) {
+        patch.pa_user_id = input.paUserId;
+      }
+      if (input.recordOwnerUserId !== undefined) {
+        patch.record_owner_user_id = input.recordOwnerUserId;
+        // Keep legacy assigned_to in sync with record owner
+        patch.assigned_to = input.recordOwnerUserId;
+      }
+      if (input.teamId !== undefined) {
+        patch.team_id = input.teamId;
+      }
+
+      if (Object.keys(patch).length > 1) {
+        const { error } = await client
+          .from('commercial_listings')
+          .update(patch)
+          .eq('id', input.listingId)
+          .eq('account_id', input.accountId);
+        if (error) throw new Error(error.message);
+      }
+
+      if (input.actingAgentUserIds !== undefined) {
+        const uniqueIds = Array.from(
+          new Set(input.actingAgentUserIds.filter(Boolean)),
+        );
+
+        const { error: deleteError } = await fromTable(client, 'commercial_listing_agents')
+          .delete()
+          .eq('listing_id', input.listingId)
+          .eq('account_id', input.accountId);
+        if (deleteError) throw new Error(deleteError.message);
+
+        if (uniqueIds.length > 0) {
+          const { error: insertError } = await fromTable(client, 'commercial_listing_agents')
+            .insert(
+              uniqueIds.map((userId, index) => ({
+                listing_id: input.listingId,
+                account_id: input.accountId,
+                user_id: userId,
+                sort_order: index,
+              })),
+            );
+          if (insertError) throw new Error(insertError.message);
+        }
+      }
+
+      return this.getListingAssignment(
+        input.listingId,
+        input.accountId,
+        input.accountSlug,
+      );
     },
   };
 }

@@ -131,10 +131,10 @@ export function ListingOverviewSection({
   listing: CommercialListing;
   accountId: string;
   interestSummary?: {
-    unactioned: number;
-    onSchedule: number;
+    active: number;
     archived: number;
     total: number;
+    linkedDeals: number;
     upcomingViewings?: number;
     awaitingFeedback?: number;
   };
@@ -143,10 +143,10 @@ export function ListingOverviewSection({
     useListingState(initial);
   const dom = daysOnMarket(listing.onMarketAt);
   const summary = interestSummary ?? {
-    unactioned: 0,
-    onSchedule: 0,
+    active: 0,
     archived: 0,
     total: 0,
+    linkedDeals: 0,
     upcomingViewings: 0,
     awaitingFeedback: 0,
   };
@@ -196,10 +196,10 @@ export function ListingOverviewSection({
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
             {(
               [
-                { label: 'Unactioned', value: summary.unactioned },
-                { label: 'On schedule', value: summary.onSchedule },
+                { label: 'Enquiries', value: summary.total },
+                { label: 'Active', value: summary.active },
+                { label: 'Linked deals', value: summary.linkedDeals },
                 { label: 'Archived', value: summary.archived },
-                { label: 'Total enquiries', value: summary.total },
                 {
                   label: 'Upcoming viewings',
                   value: summary.upcomingViewings ?? 0,
@@ -476,8 +476,7 @@ export function ListingInterestSection({
     });
   };
 
-  const unactioned = enquiries.filter((e) => e.status === 'unactioned');
-  const onSchedule = enquiries.filter((e) => e.status === 'on_schedule');
+  const active = enquiries.filter((e) => e.status !== 'archived');
   const archived = enquiries.filter((e) => e.status === 'archived');
 
   return (
@@ -486,10 +485,11 @@ export function ListingInterestSection({
         <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
           <div>
             <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-              Interest schedule
+              Interest
             </CardTitle>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-              Enquiries from portals, website, and manual adds.
+              Enquiries on this disposal. Adding one also creates a linked deal
+              on the Deals board.
             </p>
           </div>
           <Button
@@ -511,30 +511,21 @@ export function ListingInterestSection({
           {enquiries.length === 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text)]/50">
               No enquiries yet. Inbound interest from portals and your website
-              will appear here — or add one manually.
+              will appear here — or add one manually to start a deal.
             </p>
           ) : (
             <>
               <InterestGroup
-                title={`Unactioned (${unactioned.length})`}
-                items={unactioned}
+                title={`Active (${active.length})`}
+                items={active}
                 pending={pending}
-                onMoveToSchedule={(id) => setStatus(id, 'on_schedule')}
-                onArchive={(id) => setStatus(id, 'archived')}
-              />
-              <InterestGroup
-                title={`On schedule (${onSchedule.length})`}
-                items={onSchedule}
-                pending={pending}
-                onUnaction={(id) => setStatus(id, 'unactioned')}
                 onArchive={(id) => setStatus(id, 'archived')}
               />
               <InterestGroup
                 title={`Archived (${archived.length})`}
                 items={archived}
                 pending={pending}
-                onUnaction={(id) => setStatus(id, 'unactioned')}
-                onMoveToSchedule={(id) => setStatus(id, 'on_schedule')}
+                onRestore={(id) => setStatus(id, 'unactioned')}
               />
             </>
           )}
@@ -622,16 +613,14 @@ function InterestGroup({
   title,
   items,
   pending,
-  onMoveToSchedule,
   onArchive,
-  onUnaction,
+  onRestore,
 }: {
   title: string;
   items: CommercialEnquiry[];
   pending: boolean;
-  onMoveToSchedule?: (id: string) => void;
   onArchive?: (id: string) => void;
-  onUnaction?: (id: string) => void;
+  onRestore?: (id: string) => void;
 }) {
   if (items.length === 0) return null;
 
@@ -680,28 +669,6 @@ function InterestGroup({
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex flex-wrap gap-1.5">
-                    {onMoveToSchedule ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="secondary"
-                        disabled={pending}
-                        onClick={() => onMoveToSchedule(enquiry.id)}
-                      >
-                        Move to schedule
-                      </Button>
-                    ) : null}
-                    {onUnaction ? (
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={pending}
-                        onClick={() => onUnaction(enquiry.id)}
-                      >
-                        Unactioned
-                      </Button>
-                    ) : null}
                     {onArchive ? (
                       <Button
                         type="button"
@@ -711,6 +678,17 @@ function InterestGroup({
                         onClick={() => onArchive(enquiry.id)}
                       >
                         Archive
+                      </Button>
+                    ) : null}
+                    {onRestore ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => onRestore(enquiry.id)}
+                      >
+                        Restore
                       </Button>
                     ) : null}
                   </div>

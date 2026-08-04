@@ -22,6 +22,16 @@ import {
   Upload,
 } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
 import {
@@ -104,7 +114,10 @@ export function ListingsList({
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialListing | null>(null);
-  const [, startTransition] = useTransition();
+  const [deleteTarget, setDeleteTarget] = useState<CommercialListing | null>(
+    null,
+  );
+  const [isDeleting, startDeleteTransition] = useTransition();
 
   useEffect(() => {
     setListings(initialListings);
@@ -141,21 +154,20 @@ export function ListingsList({
     [router],
   );
 
-  const handleDelete = useCallback(
-    (listingId: string) => {
-      if (!confirm('Delete this listing? This cannot be undone.')) return;
-      startTransition(async () => {
-        try {
-          await deleteListing({ listingId, accountId });
-          setListings((prev) => prev.filter((l) => l.id !== listingId));
-          router.refresh();
-        } catch (err) {
-          console.error(err);
-        }
-      });
-    },
-    [accountId, router],
-  );
+  const confirmDelete = useCallback(() => {
+    if (!deleteTarget) return;
+    const listingId = deleteTarget.id;
+    startDeleteTransition(async () => {
+      try {
+        await deleteListing({ listingId, accountId });
+        setListings((prev) => prev.filter((l) => l.id !== listingId));
+        setDeleteTarget(null);
+        router.refresh();
+      } catch (err) {
+        console.error(err);
+      }
+    });
+  }, [accountId, deleteTarget, router]);
 
   return (
     <div className="space-y-6">
@@ -256,7 +268,7 @@ export function ListingsList({
               listing={listing}
               accountSlug={accountSlug}
               onEdit={() => openEdit(listing)}
-              onDelete={() => handleDelete(listing.id)}
+              onDelete={() => setDeleteTarget(listing)}
             />
           ))}
         </div>
@@ -339,7 +351,7 @@ export function ListingsList({
                     <td className="px-4 py-3 text-right">
                       <ListingActions
                         onEdit={() => openEdit(listing)}
-                        onDelete={() => handleDelete(listing.id)}
+                        onDelete={() => setDeleteTarget(listing)}
                       />
                     </td>
                   </tr>
@@ -357,6 +369,43 @@ export function ListingsList({
         listing={editing}
         onSaved={handleSaved}
       />
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => {
+          if (!open && !isDeleting) setDeleteTarget(null);
+        }}
+      >
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete {deleteTarget?.name ?? 'this disposal'}?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              This cannot be undone. Units, media and related interest on this
+              disposal will be removed.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel
+              disabled={isDeleting}
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+            >
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={isDeleting}
+              className="bg-[#C4455C] text-white hover:bg-[#C4455C]/90"
+              onClick={(event) => {
+                event.preventDefault();
+                confirmDelete();
+              }}
+            >
+              {isDeleting ? 'Deleting…' : 'Delete disposal'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

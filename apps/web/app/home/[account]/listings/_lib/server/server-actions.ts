@@ -8,13 +8,18 @@ import {
   CreateListingMediaSchema,
   CreateListingSchema,
   CreateListingUnitSchema,
+  CreateWorkspaceTeamSchema,
   DeleteListingMediaSchema,
   DeleteListingSchema,
   DeleteListingUnitSchema,
+  GetListingAssignmentSchema,
   GetListingSchema,
+  ListListingMembersSchema,
   ListListingsSchema,
+  ListWorkspaceTeamsSchema,
   SetLandlordShareSchema,
   SetListingMediaCoverSchema,
+  UpdateListingAssignmentSchema,
   UpdateListingEnquirySchema,
   UpdateListingSchema,
   UpdateListingUnitSchema,
@@ -138,4 +143,34 @@ export const updateListingEnquiry = enhanceAction(
     return getService().updateEnquiry(enquiryId, accountId, rest);
   },
   { schema: UpdateListingEnquirySchema },
+);
+
+export const listListingMembers = enhanceAction(
+  async (input) => getService().listAccountMembers(input.accountSlug),
+  { schema: ListListingMembersSchema },
+);
+
+export const listWorkspaceTeams = enhanceAction(
+  async (input) => getService().listWorkspaceTeams(input.accountId),
+  { schema: ListWorkspaceTeamsSchema },
+);
+
+export const createWorkspaceTeam = enhanceAction(
+  async (input) => getService().createWorkspaceTeam(input),
+  { schema: CreateWorkspaceTeamSchema },
+);
+
+export const getListingAssignment = enhanceAction(
+  async (input) =>
+    getService().getListingAssignment(
+      input.listingId,
+      input.accountId,
+      input.accountSlug,
+    ),
+  { schema: GetListingAssignmentSchema },
+);
+
+export const updateListingAssignment = enhanceAction(
+  async (input) => getService().updateListingAssignment(input),
+  { schema: UpdateListingAssignmentSchema },
 );
