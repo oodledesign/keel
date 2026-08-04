@@ -36,6 +36,7 @@ const ADDON_ENTITLEMENTS = [
   { key: 'addon_rankly', label: 'Rankly' },
   { key: 'addon_feedflow', label: 'Feedflow' },
   { key: 'addon_videos', label: 'Videos' },
+  { key: 'addon_media_generate', label: 'Media Generate' },
 ];
 
 const QUICK_PLANS = [
@@ -93,6 +94,21 @@ const QUICK_PLANS = [
     label: 'Rankly add-on',
     productId: 'ozer-addon-rankly',
     planId: 'rankly-monthly',
+  },
+  {
+    label: 'Media Generate Starter',
+    productId: 'ozer-addon-media-starter',
+    planId: 'media-starter-monthly',
+  },
+  {
+    label: 'Media Generate Studio',
+    productId: 'ozer-addon-media-studio',
+    planId: 'media-studio-monthly',
+  },
+  {
+    label: 'Media Generate Agency',
+    productId: 'ozer-addon-media-agency',
+    planId: 'media-agency-monthly',
   },
 ];
 
