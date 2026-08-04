@@ -43,9 +43,23 @@ const config = {
       fullUrl: true,
     },
   },
-  // Playwright is optional (Figma PNG capture). Keep it out of the webpack graph —
-  // Vercel builds fail when webpack tries to resolve chromium-bidi / electron.
-  serverExternalPackages: ['playwright', 'playwright-core'],
+  // Keep heavy/native server deps out of the webpack graph (cuts peak build RAM).
+  // Playwright is optional (Figma PNG capture); also avoid chromium-bidi / electron resolve.
+  serverExternalPackages: [
+    'playwright',
+    'playwright-core',
+    '@aws-sdk/client-athena',
+    '@anthropic-ai/sdk',
+    '@google/genai',
+    'pdf-lib',
+    'cheerio',
+    'posthog-node',
+    'web-push',
+    'juice',
+    'zeptomail',
+    'fflate',
+    'sharp',
+  ],
   // Source maps during prerender/collection are a large spike on 8 GB builders.
   productionBrowserSourceMaps: false,
   enablePrerenderSourceMaps: false,
@@ -112,6 +126,20 @@ const config = {
       '@radix-ui/react-avatar',
       '@radix-ui/react-select',
       'date-fns',
+      'framer-motion',
+      '@fullcalendar/core',
+      '@fullcalendar/react',
+      '@fullcalendar/daygrid',
+      '@fullcalendar/timegrid',
+      '@fullcalendar/list',
+      '@fullcalendar/interaction',
+      '@tiptap/react',
+      '@tiptap/starter-kit',
+      '@tiptap/pm',
+      '@xyflow/react',
+      '@dnd-kit/core',
+      '@dnd-kit/sortable',
+      '@puckeditor/core',
       ...INTERNAL_PACKAGES,
     ],
   },
@@ -119,6 +147,14 @@ const config = {
     lodash: {
       transform: 'lodash/{{member}}',
     },
+  },
+  webpack: (webpackConfig, { dev }) => {
+    if (!dev) {
+      // Serialize module builds — peak RSS matters more than wall clock on 8 GB.
+      webpackConfig.parallelism = 1;
+    }
+
+    return webpackConfig;
   },
   /** We already do linting and typechecking as separate tasks in CI */
   typescript: { ignoreBuildErrors: true },
