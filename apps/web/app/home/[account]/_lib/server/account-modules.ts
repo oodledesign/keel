@@ -29,6 +29,7 @@ export type AccountModuleKey =
   | 'signatures'
   | 'videos'
   | 'site_studio'
+  | 'media_generate'
   | 'properties'
   | 'calendar'
   | 'shopping'
@@ -186,4 +187,11 @@ export function isSiteStudioModuleEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,
 ) {
   return isWorkModuleEnabled(moduleSettings, 'site_studio');
+}
+
+/** Media generation add-on (`account_module_settings.module_key = 'media_generate'`). */
+export function isMediaGenerateModuleEnabled(
+  moduleSettings: Record<string, boolean> | null | undefined,
+) {
+  return isWorkModuleEnabled(moduleSettings, 'media_generate');
 }

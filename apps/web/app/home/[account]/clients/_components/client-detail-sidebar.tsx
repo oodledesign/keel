@@ -58,6 +58,7 @@ import { formatWorkspaceMoney } from '~/lib/currency/workspace-currency';
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
+import { ClientMediaRollup } from './client-media-rollup';
 import type {
   RanklyClientImportOption,
   RanklyProjectRow,
@@ -1015,6 +1016,11 @@ export function ClientDetailSidebar({
               variant="list"
             />
           </div>
+          <ClientMediaRollup
+            accountId={accountId}
+            accountSlug={accountSlug}
+            clientId={client.id}
+          />
         </div>
       );
     }

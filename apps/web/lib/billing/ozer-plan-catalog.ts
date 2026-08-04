@@ -14,7 +14,8 @@ export type OzerPlanFamily =
   | 'addon_signatures'
   | 'addon_site_studio'
   | 'addon_email_assistant'
-  | 'addon_portal_publishing';
+  | 'addon_portal_publishing'
+  | 'addon_media_generate';
 
 export type OzerPlanLimits = {
   maxMembers: number | null;
@@ -351,6 +352,30 @@ const ADDONS: OzerPlanDefinition[] = [
     entitlementKey: 'addon_portal_publishing',
     limits: { maxMembers: null, maxProperties: null, maxVideos: null },
   },
+  {
+    productId: 'ozer-addon-media-starter',
+    planId: 'media-starter-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.media_starter_monthly,
+    family: 'addon_media_generate',
+    entitlementKey: 'addon_media_generate',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+  },
+  {
+    productId: 'ozer-addon-media-studio',
+    planId: 'media-studio-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.media_studio_monthly,
+    family: 'addon_media_generate',
+    entitlementKey: 'addon_media_generate',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+  },
+  {
+    productId: 'ozer-addon-media-agency',
+    planId: 'media-agency-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.media_agency_monthly,
+    family: 'addon_media_generate',
+    entitlementKey: 'addon_media_generate',
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
+  },
 ];
 
 export const OZER_PLAN_CATALOG: OzerPlanDefinition[] = [
@@ -439,7 +464,8 @@ export type OzerAddonKey =
   | 'addon_feedflow'
   | 'addon_videos'
   | 'addon_site_studio'
-  | 'addon_portal_publishing';
+  | 'addon_portal_publishing'
+  | 'addon_media_generate';
 
 /** Personal-account add-ons (entitlement on the user's personal account id). */
 export type OzerPersonalAddonKey = 'addon_email_assistant';
@@ -520,6 +546,14 @@ export const OZER_ADDON_CATALOG: Array<{
       'Publish commercial listings to Rightmove, EACH, and Property Hive from Ozer.',
     fromPriceGbp: 79,
   },
+  {
+    key: 'addon_media_generate',
+    productId: 'ozer-addon-media-starter',
+    name: 'Media Generate',
+    description:
+      'AI image and video generation billed in media units — separate from Ozer AI text credits.',
+    fromPriceGbp: 5,
+  },
 ];
 
 /**
@@ -528,6 +562,7 @@ export const OZER_ADDON_CATALOG: Array<{
 export const LAUNCHED_WORKSPACE_ADDON_KEYS: OzerAddonKey[] = [
   'addon_signatures',
   'addon_site_studio',
+  'addon_media_generate',
 ];
 
 export function launchedWorkspaceAddons() {

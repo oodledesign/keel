@@ -61,6 +61,9 @@ function addonKeyFromHighlight(
   if (value === 'rankly') return 'addon_rankly';
   if (value === 'feedflow') return 'addon_feedflow';
   if (value === 'videos') return 'addon_videos';
+  if (value === 'media' || value === 'media-generate' || value === 'media_generate') {
+    return 'addon_media_generate';
+  }
   return null;
 }
 

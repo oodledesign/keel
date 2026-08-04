@@ -10,6 +10,7 @@ import {
   Calendar,
   ClipboardList,
   FileText,
+  ImageIcon,
   LayoutGrid,
   MessageSquare,
   Mic,
@@ -56,6 +57,7 @@ import {
 import { JobProjectWorkspace } from './job-project/job-project-workspace';
 import { JobScheduleTabContent } from './job-schedule-tab';
 import { ProjectFinancePanel } from './project-finance-panel';
+import { ProjectGeneratePanel } from './project-generate-panel';
 import { ProjectGuestsPanel } from './project-guests-panel';
 
 type Job = {
@@ -544,6 +546,13 @@ export function JobDetailContent({
               <Mic className="h-3.5 w-3.5" />
               Meetings
             </TabsTrigger>
+            <TabsTrigger
+              value="generate"
+              className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+            >
+              <ImageIcon className="h-3.5 w-3.5" />
+              Generate
+            </TabsTrigger>
             {!isContractorView && (
               <TabsTrigger
                 value="finance"
@@ -875,6 +884,18 @@ export function JobDetailContent({
             jobId={jobId}
             canEdit={canEditJobs}
             variant="list"
+          />
+        </TabsContent>
+
+        <TabsContent
+          value="generate"
+          className="mt-0 flex-1 overflow-auto p-4 md:p-5"
+        >
+          <ProjectGeneratePanel
+            accountId={accountId}
+            accountSlug={accountSlug}
+            projectId={jobId}
+            clientId={client?.id ?? job.client_id}
           />
         </TabsContent>
 

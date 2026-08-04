@@ -160,6 +160,26 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_AI_CREDITS_AGENCY_MONTHLY',
     'price_ozer_ai_credits_agency_monthly',
   ),
+  media_starter_monthly: price(
+    'STRIPE_PRICE_MEDIA_STARTER_MONTHLY',
+    'price_ozer_media_starter_monthly',
+  ),
+  media_studio_monthly: price(
+    'STRIPE_PRICE_MEDIA_STUDIO_MONTHLY',
+    'price_ozer_media_studio_monthly',
+  ),
+  media_agency_monthly: price(
+    'STRIPE_PRICE_MEDIA_AGENCY_MONTHLY',
+    'price_ozer_media_agency_monthly',
+  ),
+  media_topup_small: price(
+    'STRIPE_PRICE_MEDIA_TOPUP_SMALL',
+    'price_ozer_media_topup_small',
+  ),
+  media_topup_large: price(
+    'STRIPE_PRICE_MEDIA_TOPUP_LARGE',
+    'price_ozer_media_topup_large',
+  ),
 } as const;
 
 export const OZER_BILLING_CURRENCY =

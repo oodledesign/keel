@@ -16,6 +16,9 @@ const ADDON_ENTITLEMENT_MODULES: Record<OzerAddonKey, string[]> = {
   addon_site_studio: ['site_studio'],
   // Portal publishing is commercial-workspace capability — no separate nav module yet.
   addon_portal_publishing: [],
+  // Media generate module is user-toggled (supports PAYG top-ups without a sub).
+  // Do not sync-disable via entitlement — that would wipe PAYG enablement.
+  addon_media_generate: [],
 };
 
 function isEntitlementActive(row: {

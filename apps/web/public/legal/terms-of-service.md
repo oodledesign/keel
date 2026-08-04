@@ -50,6 +50,10 @@ Paid plans renew automatically via Stripe until cancelled. Prices include VAT wh
 
 AI outputs are provided "as is" for assistance only. You must review AI-generated content before relying on it or sending it to clients, regulators, or third parties — including drafts, summaries, proposals, and email replies. You must not rely on AI outputs alone for legal, financial, medical, or compliance decisions. You grant us a limited licence to process inputs to provide the service.
 
+### Media Generate units
+
+Media Generate tokens (media units) are billed separately from Ozer AI text credits. One-off top-up tokens expire 6 months from purchase and are non-refundable. Unused media tokens are forfeited in full if you close your account. Disabling Media Generate or downgrading a plan does not delete files or generation history already created.
+
 ## Termination and deletion
 
 You may cancel your subscription via the billing portal or by contacting us. After termination we will cease providing the service.

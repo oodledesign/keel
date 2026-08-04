@@ -23,6 +23,10 @@ import {
   fulfillAiCreditPackOrder,
 } from '~/lib/billing/fulfill-ai-credit-pack';
 import {
+  fulfillMediaSubscriptionGrant,
+  fulfillMediaTopupOrder,
+} from '~/lib/billing/fulfill-media-credits';
+import {
   handleBillingLifecycleStripeEvent,
   isBillingLifecycleStripeEvent,
 } from '~/lib/billing/handle-billing-lifecycle-event';
@@ -97,7 +101,9 @@ export const POST = enhanceRouteHandler(
         onCheckoutSessionCompleted: async (payload) => {
           if ('target_order_id' in payload) {
             const admin = getSupabaseServerAdminClient();
-            await fulfillAiCreditPackOrder(admin, payload as UpsertOrderParams);
+            const order = payload as UpsertOrderParams;
+            await fulfillAiCreditPackOrder(admin, order);
+            await fulfillMediaTopupOrder(admin, order);
             return;
           }
           const subscription = payload as UpsertSubscriptionParams;
@@ -106,6 +112,8 @@ export const POST = enhanceRouteHandler(
             subscription,
             'checkout.completed',
           );
+          const admin = getSupabaseServerAdminClient();
+          await fulfillMediaSubscriptionGrant(admin, subscription);
         },
         onPaymentSucceeded: async (sessionId) => {
           const admin = getSupabaseServerAdminClient();
@@ -151,12 +159,30 @@ export const POST = enhanceRouteHandler(
               quantity: item.quantity,
             })),
           });
+
+          await fulfillMediaTopupOrder(admin, {
+            target_account_id: row.account_id,
+            target_customer_id: row.billing_customer?.customer_id ?? '',
+            target_order_id: row.id,
+            billing_provider: 'stripe',
+            status: 'succeeded',
+            currency: row.currency,
+            total_amount: row.total_amount,
+            line_items: (row.items ?? []).map((item) => ({
+              id: item.id,
+              product_id: item.product_id,
+              variant_id: item.variant_id,
+              price_amount: item.price_amount,
+              quantity: item.quantity,
+            })),
+          });
         },
         onInvoicePaid: async (payload) => {
           await syncPlan(payload);
           await syncLifecycleFromSubscription(payload, 'invoice.paid');
           const admin = getSupabaseServerAdminClient();
           await fulfillAiCreditPackFromSubscription(admin, payload);
+          await fulfillMediaSubscriptionGrant(admin, payload);
         },
         onEvent: async (rawEvent) => {
           const event = rawEvent as Stripe.Event;

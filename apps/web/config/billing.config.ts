@@ -916,5 +916,140 @@ export default createBillingSchema({
         'Purchased credits roll over when your monthly pool resets',
       ],
     },
+    {
+      id: 'ozer-addon-media-starter',
+      name: 'Media Generate — Starter',
+      description: '220 media units / month for AI image & video generation',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'media-starter-monthly',
+          name: 'Starter (monthly)',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.media_starter_monthly,
+              name: '220 media units / month',
+              cost: 5,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '220 media units each billing cycle',
+        'Unused monthly units do not roll over',
+      ],
+    },
+    {
+      id: 'ozer-addon-media-studio',
+      name: 'Media Generate — Studio',
+      description: '600 media units / month for AI image & video generation',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'media-studio-monthly',
+          name: 'Studio (monthly)',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.media_studio_monthly,
+              name: '600 media units / month',
+              cost: 14,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '600 media units each billing cycle',
+        'Unused monthly units do not roll over',
+      ],
+    },
+    {
+      id: 'ozer-addon-media-agency',
+      name: 'Media Generate — Agency',
+      description: '1,500 media units / month for AI image & video generation',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'media-agency-monthly',
+          name: 'Agency (monthly)',
+          paymentType: 'recurring',
+          interval: 'month',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.media_agency_monthly,
+              name: '1,500 media units / month',
+              cost: 35,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '1,500 media units each billing cycle',
+        'Unused monthly units do not roll over',
+      ],
+    },
+    {
+      id: 'ozer-media-topup-small',
+      name: 'Media top-up — Small',
+      description: '200 media units (expire 6 months from purchase)',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'media-topup-small',
+          name: 'Small top-up',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.media_topup_small,
+              name: '200 media units',
+              cost: 7.5,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '200 media units',
+        'Expires 6 months from purchase',
+        'Works without a monthly media plan',
+      ],
+    },
+    {
+      id: 'ozer-media-topup-large',
+      name: 'Media top-up — Large',
+      description: '500 media units (expire 6 months from purchase)',
+      currency: OZER_BILLING_CURRENCY,
+      enableDiscountField: false,
+      plans: [
+        {
+          id: 'media-topup-large',
+          name: 'Large top-up',
+          paymentType: 'one-time',
+          lineItems: [
+            {
+              id: OZER_STRIPE_PRICES.media_topup_large,
+              name: '500 media units',
+              cost: 20,
+              type: 'flat',
+            },
+          ],
+        },
+      ],
+      features: [
+        '500 media units',
+        'Expires 6 months from purchase',
+        'Works without a monthly media plan',
+      ],
+    },
   ],
 });

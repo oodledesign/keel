@@ -26,6 +26,8 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { PaymentRecoveryCard } from '../../_components/payment-recovery-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
 import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
+import { MediaGenerateAppToggle } from './media-generate-app-toggle';
+import { WorkspaceMediaUnitsBillingCard } from './workspace-media-units-billing-card';
 import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
 
 type WorkspaceBillingPanelProps = {
@@ -176,6 +178,20 @@ export async function WorkspaceBillingPanel({
         </If>
 
         <WorkspaceAiCreditsBillingCard
+          accountId={accountId}
+          accountSlug={accountSlug}
+          canManageBilling={canManageBilling}
+        />
+
+        {canManageBilling ? (
+          <MediaGenerateAppToggle
+            accountId={accountId}
+            accountSlug={accountSlug}
+            billingHref={`/home/${accountSlug}/settings/billing`}
+          />
+        ) : null}
+
+        <WorkspaceMediaUnitsBillingCard
           accountId={accountId}
           accountSlug={accountSlug}
           canManageBilling={canManageBilling}
