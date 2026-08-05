@@ -4,7 +4,7 @@
   "installCommand": "cd ../.. && pnpm install",
   "build": {
     "env": {
-      "NODE_OPTIONS": "--max-old-space-size=7168",
+      "NODE_OPTIONS": "--max-old-space-size=5120",
       "NEXT_WEBPACK_PARALLELISM": "1",
       "UV_THREADPOOL_SIZE": "2",
       "ENABLE_STRICT_CSP": "true"

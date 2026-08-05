@@ -94,7 +94,7 @@ export function RequirementsBoard({
     for (const item of items) {
       const stage = BOARD_STAGES.includes(item.stage)
         ? item.stage
-        : 'unactioned';
+        : 'new';
       map.get(stage)!.push(item);
     }
     return map;

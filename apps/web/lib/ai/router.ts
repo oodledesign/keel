@@ -57,6 +57,8 @@ export const OzerAIFeature = {
   ai_audit_score: 'ai_audit_score',
   ai_audit_suggest: 'ai_audit_suggest',
   admin_email_marketing: 'admin_email_marketing',
+  commercial_requirement_draft: 'commercial_requirement_draft',
+  commercial_listing_marketing_copy: 'commercial_listing_marketing_copy',
 } as const;
 
 export type OzerAIFeatureKey =
@@ -426,6 +428,22 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     maxOutputTokens: 4096,
     structuredOutput: false,
   },
+  commercial_requirement_draft: {
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 2,
+    batchable: false,
+    maxOutputTokens: 1024,
+    structuredOutput: true,
+  },
+  commercial_listing_marketing_copy: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
 };
 
 export type AiCreditBalanceRow = {
@@ -539,11 +557,13 @@ export async function checkAndDeductCredits(
     throw new Error(resetError.message);
   }
 
-  let { data: balance, error: balanceError } = await supabase
+  const balanceQuery = await supabase
     .from('ai_credit_balances')
     .select('*')
     .eq('account_id', accountId)
     .maybeSingle();
+  let balance = balanceQuery.data;
+  const balanceError = balanceQuery.error;
 
   if (balanceError) {
     throw new Error(balanceError.message);

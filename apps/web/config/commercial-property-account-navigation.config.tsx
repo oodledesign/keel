@@ -87,7 +87,7 @@ export function buildCommercialPropertySpaceNavChildren(
       access.canViewDashboard && isEnabled(ms, 'requirements')
         ? {
             label: 'Requirements',
-            path: createPath(pathsConfig.app.accountRequirements, account),
+            path: `${createPath(pathsConfig.app.accountPipeline, account)}?view=requirements`,
             Icon: <ClipboardList className={iconClasses} />,
           }
         : null,

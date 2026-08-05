@@ -1003,6 +1003,25 @@ export function createListingsService(client: SupabaseClient) {
       return ((data ?? []) as EnquiryRow[]).map(mapEnquiry);
     },
 
+    async getEnquiry(
+      enquiryId: string,
+      accountId: string,
+    ): Promise<CommercialEnquiry | null> {
+      const { data, error } = await client
+        .from('commercial_enquiries')
+        .select('*')
+        .eq('id', enquiryId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (error) {
+        console.error('[listings] getEnquiry error:', error.message);
+        return null;
+      }
+      if (!data) return null;
+      return mapEnquiry(data as EnquiryRow);
+    },
+
     async createEnquiry(
       input: CreateListingEnquiryInput,
     ): Promise<CommercialEnquiry> {
@@ -1056,6 +1075,9 @@ export function createListingsService(client: SupabaseClient) {
       }
       if (input.message !== undefined) {
         patch.message = input.message?.trim() || null;
+      }
+      if (input.requirementId !== undefined) {
+        patch.requirement_id = input.requirementId || null;
       }
 
       const { data, error } = await client

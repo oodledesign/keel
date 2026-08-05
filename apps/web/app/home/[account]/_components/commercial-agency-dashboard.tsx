@@ -98,10 +98,10 @@ export function CommercialAgencyDashboard({
     accountSlug,
     pathsConfig.app.accountListings,
   );
-  const requirementsHref = accountPath(
+  const requirementsHref = `${accountPath(
     accountSlug,
-    pathsConfig.app.accountRequirements,
-  );
+    pathsConfig.app.accountPipeline,
+  )}?view=requirements`;
   const viewingsHref = accountPath(
     accountSlug,
     pathsConfig.app.accountViewings,

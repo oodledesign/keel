@@ -4,13 +4,14 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Copy, Edit2, Link2, Plus, Trash2 } from 'lucide-react';
+import { Copy, Edit2, Link2, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Switch } from '@kit/ui/switch';
+import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -21,6 +22,10 @@ import {
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
+import { RequirementFormModal } from '../../requirements/_components/requirement-form-modal';
+import type { RequirementDraftPrefill } from '../../requirements/_lib/schema/requirements.schema';
+import { draftRequirementFromEnquiry } from '../../requirements/_lib/server/requirement-draft-actions';
+import { generateListingMarketingCopyAction } from '../_lib/server/listing-marketing-ai-actions';
 import type {
   CommercialEnquiry,
   CommercialListing,
@@ -34,6 +39,7 @@ import {
   setLandlordShare,
   updateListingEnquiry,
 } from '../_lib/server/server-actions';
+import { CommercialInterestPanel } from './commercial-interest-panel';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
@@ -316,12 +322,55 @@ export function ListingMarketingSection({
 }) {
   const { listing, modalOpen, setModalOpen, onSaved } =
     useListingState(initial);
+  const [generating, startGenerate] = useTransition();
+  const [marketingOverrides, setMarketingOverrides] = useState<{
+    summary: string;
+    description: string;
+    locationCopy: string;
+    keyPoints: string[];
+  } | null>(null);
+
+  const generateCopy = () => {
+    startGenerate(async () => {
+      try {
+        const copy = await generateListingMarketingCopyAction({
+          accountId,
+          listingId: listing.id,
+        });
+        setMarketingOverrides(copy);
+        setModalOpen(true);
+        toast.success('Draft marketing copy ready — review and save');
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not generate marketing copy',
+        );
+      }
+    });
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
+      <div className="flex flex-wrap justify-end gap-2">
         <Button
-          onClick={() => setModalOpen(true)}
+          type="button"
+          variant="outline"
+          disabled={generating}
+          onClick={generateCopy}
+        >
+          {generating ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Sparkles className="h-4 w-4" />
+          )}
+          {generating ? 'Generating…' : 'Generate with AI'}
+        </Button>
+        <Button
+          onClick={() => {
+            setMarketingOverrides(null);
+            setModalOpen(true);
+          }}
           className={workspaceBtnPrimaryMd}
         >
           <Edit2 className="h-4 w-4" />
@@ -365,8 +414,8 @@ export function ListingMarketingSection({
             </>
           ) : (
             <p className="text-sm text-[var(--workspace-shell-text)]/50">
-              No marketing copy yet. Use Edit to add summary, description,
-              location and key points.
+              No marketing copy yet. Generate with AI or use Edit to add
+              summary, description, location and key points.
             </p>
           )}
         </CardContent>
@@ -374,10 +423,17 @@ export function ListingMarketingSection({
 
       <ListingFormModal
         open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        onClose={() => {
+          setModalOpen(false);
+          setMarketingOverrides(null);
+        }}
         accountId={accountId}
         listing={listing}
-        onSaved={onSaved}
+        marketingOverrides={marketingOverrides}
+        onSaved={(next) => {
+          onSaved(next);
+          setMarketingOverrides(null);
+        }}
       />
     </div>
   );
@@ -420,6 +476,11 @@ export function ListingInterestSection({
   const [message, setMessage] = useState('');
   const [source, setSource] = useState<EnquirySource>('manual');
   const [error, setError] = useState<string | null>(null);
+  const [reqModalOpen, setReqModalOpen] = useState(false);
+  const [reqDraft, setReqDraft] = useState<RequirementDraftPrefill | null>(
+    null,
+  );
+  const [sourceEnquiryId, setSourceEnquiryId] = useState<string | null>(null);
 
   useEffect(() => {
     setEnquiries(initial);
@@ -439,6 +500,26 @@ export function ListingInterestSection({
         router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Update failed');
+      }
+    });
+  };
+
+  const draftFromEnquiry = (enquiryId: string) => {
+    setError(null);
+    startTransition(async () => {
+      try {
+        const draft = await draftRequirementFromEnquiry({
+          accountId,
+          enquiryId,
+        });
+        setReqDraft(draft);
+        setSourceEnquiryId(enquiryId);
+        setReqModalOpen(true);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Could not draft requirement';
+        setError(message);
+        toast.error(message);
       }
     });
   };
@@ -481,16 +562,20 @@ export function ListingInterestSection({
 
   return (
     <div className="space-y-6">
+      <CommercialInterestPanel
+        accountId={accountId}
+        mode={{ kind: 'listing', listingId }}
+      />
+
       <Card className={workspacePanelCard}>
         <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
           <div>
             <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-              Interest
+              Enquiries
             </CardTitle>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-              Enquiries on this disposal. Use Requirements / Interest Schedule
-              to track occupier interest — the WIP board is for landlord
-              Instructions.
+              Inbound enquiries on this disposal. Link requirements above for
+              the Interest Schedule.
             </p>
           </div>
           <Button
@@ -521,6 +606,7 @@ export function ListingInterestSection({
                 items={active}
                 pending={pending}
                 onArchive={(id) => setStatus(id, 'archived')}
+                onDraftRequirement={draftFromEnquiry}
               />
               <InterestGroup
                 title={`Archived (${archived.length})`}
@@ -532,6 +618,24 @@ export function ListingInterestSection({
           )}
         </CardContent>
       </Card>
+
+      <RequirementFormModal
+        open={reqModalOpen}
+        onClose={() => {
+          setReqModalOpen(false);
+          setReqDraft(null);
+          setSourceEnquiryId(null);
+        }}
+        accountId={accountId}
+        initialDraft={reqDraft}
+        sourceEnquiryId={sourceEnquiryId}
+        onSaved={() => {
+          setReqModalOpen(false);
+          setReqDraft(null);
+          setSourceEnquiryId(null);
+          router.refresh();
+        }}
+      />
 
       {addOpen ? (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
@@ -616,12 +720,14 @@ function InterestGroup({
   pending,
   onArchive,
   onRestore,
+  onDraftRequirement,
 }: {
   title: string;
   items: CommercialEnquiry[];
   pending: boolean;
   onArchive?: (id: string) => void;
   onRestore?: (id: string) => void;
+  onDraftRequirement?: (id: string) => void;
 }) {
   if (items.length === 0) return null;
 
@@ -660,6 +766,11 @@ function InterestGroup({
                       {enquiry.message}
                     </div>
                   ) : null}
+                  {enquiry.requirementId ? (
+                    <div className="mt-1 text-[11px] text-emerald-700 dark:text-emerald-400">
+                      Linked to requirement
+                    </div>
+                  ) : null}
                 </td>
                 <td className="px-3 py-2.5 text-[var(--workspace-shell-text)]/70">
                   {ENQUIRY_SOURCE_LABELS[enquiry.source as EnquirySource] ??
@@ -670,6 +781,18 @@ function InterestGroup({
                 </td>
                 <td className="px-3 py-2.5">
                   <div className="flex flex-wrap gap-1.5">
+                    {onDraftRequirement && !enquiry.requirementId ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={pending}
+                        onClick={() => onDraftRequirement(enquiry.id)}
+                      >
+                        <Sparkles className="h-3.5 w-3.5" />
+                        Draft requirement
+                      </Button>
+                    ) : null}
                     {onArchive ? (
                       <Button
                         type="button"

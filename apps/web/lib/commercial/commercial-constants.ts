@@ -212,32 +212,86 @@ export const ENQUIRY_SOURCE_LABELS: Record<EnquirySource, string> = {
 
 /** Requirement pipeline stages (commercial_requirements.stage). */
 export const REQUIREMENT_STATUSES = [
-  'unactioned',
-  'prospect',
-  'search',
-  'viewing',
-  'negotiating',
-  'under_offer',
-  'success',
-  'ongoing',
-  'on_hold',
-  'unsuccessful',
+  'new',
+  'actively_searching',
+  'under_offer_negotiating',
+  'fulfilled',
+  'withdrawn',
 ] as const;
 
 export type RequirementStatus = (typeof REQUIREMENT_STATUSES)[number];
 
 export const REQUIREMENT_STATUS_LABELS: Record<RequirementStatus, string> = {
-  unactioned: 'Unactioned',
-  prospect: 'Prospect',
-  search: 'Search',
-  viewing: 'Viewing',
+  new: 'New',
+  actively_searching: 'Actively Searching',
+  under_offer_negotiating: 'Under Offer / Negotiating',
+  fulfilled: 'Fulfilled',
+  withdrawn: 'Withdrawn',
+};
+
+/** Map legacy Kato requirement stages into the WIP set. */
+export const REQUIREMENT_LEGACY_STAGE_MAP: Record<string, RequirementStatus> = {
+  unactioned: 'new',
+  prospect: 'new',
+  search: 'actively_searching',
+  viewing: 'actively_searching',
+  ongoing: 'actively_searching',
+  on_hold: 'actively_searching',
+  negotiating: 'under_offer_negotiating',
+  under_offer: 'under_offer_negotiating',
+  success: 'fulfilled',
+  unsuccessful: 'withdrawn',
+};
+
+export function normalizeRequirementStage(stage: string): RequirementStatus {
+  if ((REQUIREMENT_STATUSES as readonly string[]).includes(stage)) {
+    return stage as RequirementStatus;
+  }
+  return REQUIREMENT_LEGACY_STAGE_MAP[stage] ?? 'new';
+}
+
+/** Interest Schedule statuses on commercial_matches.status. */
+export const INTEREST_STATUSES = [
+  'new',
+  'viewing_arranged',
+  'viewed',
+  'offer_made',
+  'negotiating',
+  'under_offer',
+  'agreed',
+  'withdrawn',
+  'lost',
+] as const;
+
+export type InterestStatus = (typeof INTEREST_STATUSES)[number];
+
+export const INTEREST_STATUS_LABELS: Record<InterestStatus, string> = {
+  new: 'New',
+  viewing_arranged: 'Viewing arranged',
+  viewed: 'Viewed',
+  offer_made: 'Offer made',
   negotiating: 'Negotiating',
   under_offer: 'Under offer',
-  success: 'Success',
-  ongoing: 'Ongoing',
-  on_hold: 'On hold',
-  unsuccessful: 'Unsuccessful',
+  agreed: 'Agreed',
+  withdrawn: 'Withdrawn',
+  lost: 'Lost',
 };
+
+export const INTEREST_LEGACY_STATUS_MAP: Record<string, InterestStatus> = {
+  shortlisted: 'new',
+  enquiry: 'new',
+  idle: 'new',
+  viewing: 'viewing_arranged',
+  signed: 'agreed',
+  discounted: 'lost',
+};
+
+export function normalizeInterestStatus(status: string): InterestStatus {
+  if ((INTEREST_STATUSES as readonly string[]).includes(status)) {
+    return status as InterestStatus;
+  }
+  return INTEREST_LEGACY_STATUS_MAP[status] ?? 'new';
+}
 
 export const VIEWING_STATUSES = [
   'upcoming',

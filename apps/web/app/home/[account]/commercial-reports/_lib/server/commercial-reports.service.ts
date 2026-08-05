@@ -73,21 +73,16 @@ const ENQUIRY_STALE_DAYS = 7;
 const REQUIREMENT_STALE_DAYS = 30;
 
 const REQUIREMENT_FUNNEL: Array<{ key: RequirementStatus; label: string }> = [
-  { key: 'search', label: 'Search' },
-  { key: 'viewing', label: 'Viewing' },
-  { key: 'negotiating', label: 'Negs' },
-  { key: 'under_offer', label: 'Under offer' },
-  { key: 'success', label: 'Deal' },
+  { key: 'new', label: 'New' },
+  { key: 'actively_searching', label: 'Searching' },
+  { key: 'under_offer_negotiating', label: 'Under offer' },
+  { key: 'fulfilled', label: 'Fulfilled' },
 ];
 
 const ACTIVE_REQUIREMENT_STAGES: RequirementStatus[] = [
-  'unactioned',
-  'prospect',
-  'search',
-  'viewing',
-  'negotiating',
-  'under_offer',
-  'ongoing',
+  'new',
+  'actively_searching',
+  'under_offer_negotiating',
 ];
 
 type EnquiryInsightRow = {
@@ -931,8 +926,8 @@ export function createCommercialReportsService(client: SupabaseClient) {
         ACTIVE_REQUIREMENT_STAGES.includes(row.stage as RequirementStatus),
       );
       const onHold = rows.filter((row) => row.stage === 'on_hold');
-      const archived = rows.filter((row) => row.stage === 'unsuccessful');
-      const signed = rows.filter((row) => row.stage === 'success');
+      const archived = rows.filter((row) => row.stage === 'withdrawn');
+      const signed = rows.filter((row) => row.stage === 'fulfilled');
       const createdCurrent = rows.filter((row) =>
         inRange(row.created_at, start, end),
       );
@@ -958,23 +953,22 @@ export function createCommercialReportsService(client: SupabaseClient) {
 
       const qualification: DisposalInsightsStatusSlice[] = [
         {
-          key: 'unactioned',
-          label: 'Unactioned',
-          count: rows.filter((row) => row.stage === 'unactioned').length,
+          key: 'new',
+          label: 'New',
+          count: rows.filter((row) => row.stage === 'new').length,
         },
         {
           key: 'qualified',
-          label: 'Qualified',
+          label: 'Active',
           count: rows.filter(
             (row) =>
-              row.stage !== 'unactioned' &&
-              row.stage !== 'unsuccessful' &&
-              row.stage !== 'success',
+              row.stage === 'actively_searching' ||
+              row.stage === 'under_offer_negotiating',
           ).length,
         },
         {
           key: 'disqualified',
-          label: 'Disqualified',
+          label: 'Closed',
           count: archived.length,
         },
       ];

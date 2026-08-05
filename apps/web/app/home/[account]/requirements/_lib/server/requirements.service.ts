@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { RequirementStatus } from '~/lib/commercial/commercial-constants';
+import { normalizeRequirementStage } from '~/lib/commercial/commercial-constants';
 
 import type {
   CreateRequirementInput,
@@ -63,7 +64,9 @@ function mapRequirement(row: Row): CommercialRequirement {
     sizeMaxSqft: num(row.size_max_sqft),
     budgetMinPence: num(row.budget_min_pence),
     budgetMaxPence: num(row.budget_max_pence),
-    stage: (row.stage as RequirementStatus) ?? 'unactioned',
+    stage: normalizeRequirementStage(
+      (row.stage as string | null) ?? 'new',
+    ),
     assignedTo: (row.assigned_to as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     source: (row.source as string | null) ?? null,
@@ -114,7 +117,7 @@ export function createRequirementsService(client: SupabaseClient) {
           size_max_sqft: input.sizeMaxSqft ?? null,
           budget_min_pence: input.budgetMinPence ?? null,
           budget_max_pence: input.budgetMaxPence ?? null,
-          stage: input.stage ?? 'unactioned',
+          stage: input.stage ?? 'new',
           notes: input.notes ?? null,
           source: input.source ?? null,
           created_by: input.createdBy ?? null,

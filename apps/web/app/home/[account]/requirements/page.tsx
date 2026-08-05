@@ -1,24 +1,25 @@
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
-import { PageBody } from '@kit/ui/page';
+import { redirect } from 'next/navigation';
 
+import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import {
   COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../_lib/server/workspace-route-guard';
-import { RequirementsBoard } from './_components/requirements-board';
-import { createRequirementsService } from './_lib/server/requirements.service';
 
 interface RequirementsPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
 }
 
 export const generateMetadata = async () => ({ title: 'Requirements' });
 
-async function RequirementsPage({ params }: RequirementsPageProps) {
+async function RequirementsPage({
+  params,
+  searchParams,
+}: RequirementsPageProps) {
   const { account: slug } = await params;
   const workspace = await loadTeamWorkspace(slug);
   redirectIfSpaceNotIn(
@@ -27,26 +28,20 @@ async function RequirementsPage({ params }: RequirementsPageProps) {
     COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES,
   );
 
-  const accountId = workspace.account.id as string;
-  const requirements = await createRequirementsService(
-    getSupabaseServerClient(),
-  ).listRequirements(accountId);
+  const query = await searchParams;
+  const create = query.create;
+  const createFlag = Array.isArray(create) ? create[0] : create;
 
-  return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={slug}
-        title="Requirements"
-        description="Applicant briefs and acquisition criteria."
-      />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
-        <RequirementsBoard
-          accountId={accountId}
-          initialRequirements={requirements}
-        />
-      </PageBody>
-    </>
+  const pipelinePath = pathsConfig.app.accountPipeline.replace(
+    '[account]',
+    slug,
   );
+  const paramsOut = new URLSearchParams({ view: 'requirements' });
+  if (createFlag === '1' || createFlag === 'lead') {
+    paramsOut.set('create', '1');
+  }
+
+  redirect(`${pipelinePath}?${paramsOut.toString()}`);
 }
 
 export default withI18n(RequirementsPage);

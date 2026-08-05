@@ -2,6 +2,8 @@
 
 import { useState, useTransition } from 'react';
 
+import { Loader2, Sparkles } from 'lucide-react';
+
 import { Button } from '@kit/ui/button';
 import {
   Dialog,
@@ -20,6 +22,7 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { Textarea } from '@kit/ui/textarea';
+import { toast } from '@kit/ui/sonner';
 
 import {
   REQUIREMENT_STATUSES,
@@ -33,7 +36,11 @@ import {
   type ClientContactPickerValue,
   emptyClientContactPickerValue,
 } from '../../clients/_components/client-contact-picker';
+import { CommercialInterestPanel } from '../../listings/_components/commercial-interest-panel';
+import { WipAttachmentsStrip } from '../../pipeline/_components/wip-attachments-strip';
+import type { RequirementDraftPrefill } from '../_lib/schema/requirements.schema';
 import type { CommercialRequirement } from '../_lib/server/requirements.service';
+import { draftRequirementFromPaste } from '../_lib/server/requirement-draft-actions';
 import {
   createRequirement,
   updateRequirement,
@@ -43,7 +50,12 @@ interface RequirementFormModalProps {
   open: boolean;
   onClose: () => void;
   accountId: string;
+  accountSlug?: string | null;
   requirement?: CommercialRequirement | null;
+  initialDraft?: RequirementDraftPrefill | null;
+  sourceEnquiryId?: string | null;
+  /** Open the paste-to-draft panel immediately (WIP "Draft from email"). */
+  openPastePanel?: boolean;
   onSaved: () => void;
 }
 
@@ -57,7 +69,22 @@ type BriefForm = {
   budgetMax: string;
   stage: RequirementStatus;
   notes: string;
+  source: string;
 };
+
+function partyFromDraft(
+  draft?: RequirementDraftPrefill | null,
+): ClientContactPickerValue {
+  if (!draft) return emptyClientContactPickerValue();
+  return {
+    clientId: '',
+    contactId: '',
+    companyName: draft.companyName ?? '',
+    contactName: draft.contactName ?? '',
+    contactEmail: draft.contactEmail ?? '',
+    contactPhone: draft.contactPhone ?? '',
+  };
+}
 
 function partyFromRequirement(
   requirement?: CommercialRequirement | null,
@@ -73,10 +100,8 @@ function partyFromRequirement(
   };
 }
 
-function briefFromRequirement(
-  requirement?: CommercialRequirement | null,
-): BriefForm {
-  if (!requirement) {
+function briefFromDraft(draft?: RequirementDraftPrefill | null): BriefForm {
+  if (!draft) {
     return {
       locationText: '',
       sector: '',
@@ -85,9 +110,33 @@ function briefFromRequirement(
       sizeMaxSqft: '',
       budgetMin: '',
       budgetMax: '',
-      stage: 'unactioned',
+      stage: 'new',
       notes: '',
+      source: '',
     };
+  }
+
+  return {
+    locationText: draft.locationText ?? '',
+    sector: draft.sector ?? '',
+    tenure: draft.tenure ?? '',
+    sizeMinSqft: draft.sizeMinSqft != null ? String(draft.sizeMinSqft) : '',
+    sizeMaxSqft: draft.sizeMaxSqft != null ? String(draft.sizeMaxSqft) : '',
+    budgetMin:
+      draft.budgetMinPence != null ? String(draft.budgetMinPence / 100) : '',
+    budgetMax:
+      draft.budgetMaxPence != null ? String(draft.budgetMaxPence / 100) : '',
+    stage: 'new',
+    notes: draft.notes ?? '',
+    source: draft.source ?? '',
+  };
+}
+
+function briefFromRequirement(
+  requirement?: CommercialRequirement | null,
+): BriefForm {
+  if (!requirement) {
+    return briefFromDraft(null);
   }
 
   return {
@@ -108,28 +157,77 @@ function briefFromRequirement(
         : '',
     stage: requirement.stage,
     notes: requirement.notes ?? '',
+    source: requirement.source ?? '',
   };
 }
 
 function RequirementFormFields({
   accountId,
   requirement,
+  initialDraft,
+  sourceEnquiryId,
+  openPastePanel = false,
   onClose,
   onSaved,
 }: {
   accountId: string;
   requirement?: CommercialRequirement | null;
+  initialDraft?: RequirementDraftPrefill | null;
+  sourceEnquiryId?: string | null;
+  openPastePanel?: boolean;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const isEdit = Boolean(requirement);
   const [isPending, startTransition] = useTransition();
+  const [draftPending, startDraft] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [party, setParty] = useState(() => partyFromRequirement(requirement));
-  const [form, setForm] = useState(() => briefFromRequirement(requirement));
+  const [pasteOpen, setPasteOpen] = useState(openPastePanel && !requirement);
+  const [pasteText, setPasteText] = useState('');
+  const [party, setParty] = useState(() =>
+    requirement
+      ? partyFromRequirement(requirement)
+      : partyFromDraft(initialDraft),
+  );
+  const [form, setForm] = useState(() =>
+    requirement
+      ? briefFromRequirement(requirement)
+      : briefFromDraft(initialDraft),
+  );
+  const [linkedEnquiryId] = useState(sourceEnquiryId ?? null);
 
   const field = (key: keyof BriefForm, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
+
+  const applyDraft = (draft: RequirementDraftPrefill) => {
+    setParty(partyFromDraft(draft));
+    setForm(briefFromDraft(draft));
+    setPasteOpen(false);
+    setPasteText('');
+    toast.success('Draft applied — link a client and save to confirm');
+  };
+
+  const runPasteDraft = () => {
+    if (!pasteText.trim()) {
+      setError('Paste an enquiry email or message first');
+      return;
+    }
+    setError(null);
+    startDraft(async () => {
+      try {
+        const draft = await draftRequirementFromPaste({
+          accountId,
+          text: pasteText,
+        });
+        applyDraft(draft);
+      } catch (err) {
+        const message =
+          err instanceof Error ? err.message : 'Could not draft requirement';
+        setError(message);
+        toast.error(message);
+      }
+    });
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -162,6 +260,7 @@ function RequirementFormFields({
             : null,
           stage: form.stage,
           notes: form.notes.trim() || null,
+          source: form.source.trim() || null,
         };
 
         if (isEdit && requirement) {
@@ -171,7 +270,11 @@ function RequirementFormFields({
             ...shared,
           });
         } else {
-          await createRequirement({ accountId, ...shared });
+          await createRequirement({
+            accountId,
+            ...shared,
+            sourceEnquiryId: linkedEnquiryId,
+          });
         }
         onSaved();
         onClose();
@@ -186,6 +289,62 @@ function RequirementFormFields({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4 pt-2">
+      {!isEdit ? (
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/20 p-3">
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-xs text-[var(--workspace-shell-text)]/55">
+              Draft from an enquiry email, then confirm before saving.
+            </p>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setPasteOpen((v) => !v)}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Draft from email
+            </Button>
+          </div>
+          {pasteOpen ? (
+            <div className="mt-3 space-y-2">
+              <Textarea
+                value={pasteText}
+                onChange={(e) => setPasteText(e.target.value)}
+                rows={5}
+                placeholder="Paste enquiry email or message…"
+                className={inputClass}
+              />
+              <div className="flex justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  onClick={() => setPasteOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  disabled={draftPending}
+                  className={workspaceBtnPrimaryMd}
+                  onClick={runPasteDraft}
+                >
+                  {draftPending ? (
+                    <>
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      Drafting…
+                    </>
+                  ) : (
+                    'Generate draft'
+                  )}
+                </Button>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      ) : null}
+
       <ClientContactPicker
         accountId={accountId}
         active
@@ -311,7 +470,7 @@ function RequirementFormFields({
         </Button>
         <Button
           type="submit"
-          disabled={isPending}
+          disabled={isPending || draftPending}
           className={workspaceBtnPrimaryMd}
         >
           {isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Add requirement'}
@@ -325,25 +484,59 @@ export function RequirementFormModal({
   open,
   onClose,
   accountId,
+  accountSlug,
   requirement,
+  initialDraft,
+  sourceEnquiryId,
+  openPastePanel = false,
   onSaved,
 }: RequirementFormModalProps) {
+  const draftKey = initialDraft
+    ? JSON.stringify(initialDraft).slice(0, 80)
+    : 'blank';
+
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
         <DialogHeader>
           <DialogTitle>
-            {requirement ? 'Edit requirement' : 'Add requirement'}
+            {requirement
+              ? 'Edit requirement'
+              : initialDraft
+                ? 'Review requirement draft'
+                : openPastePanel
+                  ? 'Draft requirement from email'
+                  : 'Add requirement'}
           </DialogTitle>
         </DialogHeader>
         {open ? (
           <RequirementFormFields
-            key={requirement?.id ?? 'new'}
+            key={
+              requirement?.id ??
+              `${sourceEnquiryId ?? 'new'}-${draftKey}-${openPastePanel ? 'paste' : 'form'}`
+            }
             accountId={accountId}
             requirement={requirement}
+            initialDraft={initialDraft}
+            sourceEnquiryId={sourceEnquiryId}
+            openPastePanel={openPastePanel}
             onClose={onClose}
             onSaved={onSaved}
           />
+        ) : null}
+        {open && requirement?.id ? (
+          <>
+            <WipAttachmentsStrip
+              accountId={accountId}
+              accountSlug={accountSlug}
+              commercialRequirementId={requirement.id}
+            />
+            <CommercialInterestPanel
+              accountId={accountId}
+              mode={{ kind: 'requirement', requirementId: requirement.id }}
+              compact
+            />
+          </>
         ) : null}
       </DialogContent>
     </Dialog>

@@ -5,9 +5,9 @@ import { PageBody } from '@kit/ui/page';
 
 import { loadPipelineDataForAccount } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
-import {
-  DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
-} from '~/lib/commercial/commercial-constants';
+import { createRequirementsService } from '~/home/[account]/requirements/_lib/server/requirements.service';
+import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
+import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import { isCommercialTerminalStage } from '~/lib/commercial/pipeline-stage-config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -53,27 +53,32 @@ async function TeamAccountPipelinePage({
   let listings: PipelineListingOption[] = [];
   let stageConfig = undefined;
   let boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME;
+  let requirements: CommercialRequirement[] = [];
 
   if (isCommercial) {
     const client = getSupabaseServerClient();
     // commercial_* tables may lag generated Database types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = client as any;
-    const [listingResult, boardSettings, agentResult] = await Promise.all([
-      db
-        .from('commercial_listings')
-        .select(
-          'id, name, disposal_type, asking_rent_pence, asking_price_pence',
-        )
-        .eq('account_id', accountId)
-        .order('name', { ascending: true }),
-      loadPipelineBoardSettings(accountId),
-      db
-        .from('commercial_listing_agents')
-        .select('listing_id, user_id, sort_order')
-        .eq('account_id', accountId)
-        .order('sort_order', { ascending: true }),
-    ]);
+    const [listingResult, boardSettings, agentResult, requirementsList] =
+      await Promise.all([
+        db
+          .from('commercial_listings')
+          .select(
+            'id, name, disposal_type, asking_rent_pence, asking_price_pence',
+          )
+          .eq('account_id', accountId)
+          .order('name', { ascending: true }),
+        loadPipelineBoardSettings(accountId),
+        db
+          .from('commercial_listing_agents')
+          .select('listing_id, user_id, sort_order')
+          .eq('account_id', accountId)
+          .order('sort_order', { ascending: true }),
+        createRequirementsService(client).listRequirements(accountId),
+      ]);
+
+    requirements = requirementsList;
 
     const agentRows = (agentResult.data ?? []) as Array<{
       listing_id: string;
@@ -146,7 +151,7 @@ async function TeamAccountPipelinePage({
   const instructionWord =
     activeDeals.length === 1 ? 'instruction' : 'instructions';
   const headerDescription = isCommercial
-    ? `${activeDeals.length} active ${instructionWord} · ${formatCurrency(totalValue)} total value`
+    ? `${activeDeals.length} active ${instructionWord} · ${requirements.length} requirements · ${formatCurrency(totalValue)} total value`
     : `${activeDeals.length} active leads · ${formatCurrency(totalValue)} total value`;
 
   return (
@@ -165,6 +170,7 @@ async function TeamAccountPipelinePage({
           listings={listings}
           stageConfig={stageConfig}
           boardName={boardName}
+          initialRequirements={requirements}
         />
       </PageBody>
     </>

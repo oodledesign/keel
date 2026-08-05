@@ -30,6 +30,7 @@ import {
 } from '~/home/(user)/_lib/pipeline-constants';
 import { MeetingTranscriptsBlock } from '~/home/[account]/_components/meeting-transcripts-block';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { WipAttachmentsStrip } from '~/home/[account]/pipeline/_components/wip-attachments-strip';
 import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -712,6 +713,14 @@ export function EditDealDialog({
             </div>
           </DialogFooter>
         </form>
+
+        {accountId && deal && commercial ? (
+          <WipAttachmentsStrip
+            accountId={accountId}
+            accountSlug={accountSlug}
+            pipelineDealId={deal.id}
+          />
+        ) : null}
 
         {accountId && deal && !commercial ? (
           <div className="mt-4 border-t border-[color:var(--workspace-shell-border)] pt-4">

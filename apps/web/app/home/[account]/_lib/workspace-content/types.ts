@@ -45,7 +45,14 @@ export function getNoteCategoryLabel(
 }
 
 export type NoteContextLink = {
-  type: 'project' | 'client' | 'property' | 'task' | 'job';
+  type:
+    | 'project'
+    | 'client'
+    | 'property'
+    | 'task'
+    | 'job'
+    | 'instruction'
+    | 'requirement';
   id: string;
   label: string;
 };
@@ -107,7 +114,14 @@ export type DocListItem = {
 };
 
 export type LinkOption = {
-  type: 'project' | 'client' | 'property' | 'task' | 'job';
+  type:
+    | 'project'
+    | 'client'
+    | 'property'
+    | 'task'
+    | 'job'
+    | 'instruction'
+    | 'requirement';
   id: string;
   label: string;
 };

@@ -17,7 +17,15 @@ import { workAccountPath } from '../work-account-path';
 
 const LinkSchema = z
   .object({
-    type: z.enum(['project', 'job', 'client', 'property', 'task']),
+    type: z.enum([
+      'project',
+      'job',
+      'client',
+      'property',
+      'task',
+      'instruction',
+      'requirement',
+    ]),
     id: z.string().uuid(),
   })
   .nullable()
@@ -50,6 +58,8 @@ function linkToColumns(link: z.infer<typeof LinkSchema>) {
     client_org_id: null as string | null,
     property_id: null as string | null,
     task_id: null as string | null,
+    pipeline_deal_id: null as string | null,
+    commercial_requirement_id: null as string | null,
   };
   if (!link) return cols;
   switch (link.type) {
@@ -67,6 +77,12 @@ function linkToColumns(link: z.infer<typeof LinkSchema>) {
       break;
     case 'task':
       cols.task_id = link.id;
+      break;
+    case 'instruction':
+      cols.pipeline_deal_id = link.id;
+      break;
+    case 'requirement':
+      cols.commercial_requirement_id = link.id;
       break;
   }
   return cols;

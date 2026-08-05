@@ -77,6 +77,13 @@ interface ListingFormModalProps {
   /** Prefill for create-from-instruction flows. */
   defaults?: Partial<typeof emptyForm>;
   instructingClientId?: string | null;
+  /** When opening for edit after AI generate, override marketing copy fields. */
+  marketingOverrides?: {
+    summary?: string;
+    description?: string;
+    locationCopy?: string;
+    keyPoints?: string[];
+  } | null;
 }
 
 
@@ -89,6 +96,7 @@ export function ListingFormModal({
   onSaved,
   defaults,
   instructingClientId,
+  marketingOverrides,
 }: ListingFormModalProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -99,13 +107,14 @@ export function ListingFormModal({
           </DialogTitle>
         </DialogHeader>
         <ListingFormFields
-          key={`${listing?.id ?? 'new'}-${open ? 'open' : 'closed'}`}
+          key={`${listing?.id ?? 'new'}-${open ? 'open' : 'closed'}-${marketingOverrides ? 'ai' : 'base'}`}
           accountId={accountId}
           listing={listing}
           onClose={onClose}
           onSaved={onSaved}
           defaults={defaults}
           instructingClientId={instructingClientId}
+          marketingOverrides={marketingOverrides}
         />
       </DialogContent>
     </Dialog>
@@ -119,6 +128,7 @@ function ListingFormFields({
   onSaved,
   defaults,
   instructingClientId,
+  marketingOverrides,
 }: {
   accountId: string;
   listing?: CommercialListing | null;
@@ -126,12 +136,18 @@ function ListingFormFields({
   onSaved: (listing: CommercialListing) => void;
   defaults?: Partial<typeof emptyForm>;
   instructingClientId?: string | null;
+  marketingOverrides?: {
+    summary?: string;
+    description?: string;
+    locationCopy?: string;
+    keyPoints?: string[];
+  } | null;
 }) {
   const isEdit = Boolean(listing);
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
-  const [form, setForm] = useState(() =>
-    listing
+  const [form, setForm] = useState(() => {
+    const base = listing
       ? {
           name: listing.name,
           addressLine1: listing.addressLine1 ?? '',
@@ -173,8 +189,19 @@ function ListingFormFields({
           notes: listing.notes ?? '',
           externalId: listing.externalId ?? '',
         }
-      : { ...emptyForm, ...defaults },
-  );
+      : { ...emptyForm, ...defaults };
+
+    if (!marketingOverrides) return base;
+    return {
+      ...base,
+      summary: marketingOverrides.summary ?? base.summary,
+      description: marketingOverrides.description ?? base.description,
+      locationCopy: marketingOverrides.locationCopy ?? base.locationCopy,
+      keyPoints: marketingOverrides.keyPoints
+        ? marketingOverrides.keyPoints.join('\n')
+        : base.keyPoints,
+    };
+  });
 
   const previousStatus = listing?.status ?? null;
 

@@ -26,10 +26,31 @@ export const createRequirement = enhanceAction(
     const {
       data: { user },
     } = await client.auth.getUser();
-    return createRequirementsService(client).createRequirement({
-      ...input,
+    const { sourceEnquiryId, ...rest } = input;
+    const created = await createRequirementsService(client).createRequirement({
+      ...rest,
       createdBy: user?.id ?? null,
     });
+
+    if (sourceEnquiryId) {
+      try {
+        const { createListingsService } = await import(
+          '../../../listings/_lib/server/listings.service'
+        );
+        await createListingsService(client).updateEnquiry(
+          sourceEnquiryId,
+          input.accountId,
+          { requirementId: created.id },
+        );
+      } catch (err) {
+        console.error(
+          '[createRequirement] failed to link enquiry to requirement:',
+          err,
+        );
+      }
+    }
+
+    return created;
   },
   { schema: CreateRequirementSchema },
 );

@@ -166,6 +166,7 @@ export const UpdateListingEnquirySchema = z.object({
   source: z
     .enum(['manual', 'website', 'rightmove', 'each', 'other'])
     .optional(),
+  requirementId: z.string().uuid().optional().nullable(),
 });
 
 export const ListListingMembersSchema = z.object({

@@ -470,7 +470,7 @@ function getTeamItems(
         key: 'requirement',
         label: 'New requirement',
         icon: FileText,
-        href: `${accountPath(account, pathsConfig.app.accountRequirements)}?create=1`,
+        href: `${accountPath(account, pathsConfig.app.accountPipeline)}?view=requirements&create=1`,
       },
       {
         key: 'contact',

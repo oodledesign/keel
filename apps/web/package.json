@@ -9,8 +9,8 @@
   "type": "module",
   "scripts": {
     "analyze": "ANALYZE=true pnpm run build",
-    "build": "NODE_OPTIONS='--max-old-space-size=7168' next build --webpack",
-    "build:test": "NODE_ENV=test NODE_OPTIONS='--max-old-space-size=7168' next build --webpack",
+    "build": "NODE_OPTIONS='--max-old-space-size=5120' next build --webpack",
+    "build:test": "NODE_ENV=test NODE_OPTIONS='--max-old-space-size=5120' next build --webpack",
     "clean": "git clean -xdf .next .turbo node_modules",
     "dev": "pnpm exec next dev --webpack",
     "dev:staging": "cp .env.staging .env.development.local && pnpm exec next dev --webpack",

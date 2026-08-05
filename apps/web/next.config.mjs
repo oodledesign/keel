@@ -59,6 +59,11 @@ const config = {
     'zeptomail',
     'fflate',
     'sharp',
+    // Keep OT/Sentry Node instrumentation out of the webpack server graph —
+    // they inflate RSS during "Collecting page data" on 8 GB builders.
+    '@opentelemetry/sdk-node',
+    '@opentelemetry/instrumentation',
+    '@sentry/node',
   ],
   // Source maps during prerender/collection are a large spike on 8 GB builders.
   productionBrowserSourceMaps: false,
@@ -152,6 +157,9 @@ const config = {
     if (!dev) {
       // Serialize module builds — peak RSS matters more than wall clock on 8 GB.
       webpackConfig.parallelism = 1;
+      // Drop webpack's in-memory module cache so page-data collection has headroom.
+      // See https://nextjs.org/docs/app/guides/memory-usage
+      webpackConfig.cache = false;
     }
 
     return webpackConfig;

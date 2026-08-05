@@ -22,9 +22,13 @@ import type {
   PipelineDeal,
 } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
-import { convertWonDealToProject, updateDeal } from '~/home/(user)/pipeline/actions';
+import {
+  convertWonDealToProject,
+  updateDeal,
+} from '~/home/(user)/pipeline/actions';
 import { ListingFormModal } from '~/home/[account]/listings/_components/listing-form-modal';
 import type { CommercialListing } from '~/home/[account]/listings/_lib/server/listings.service';
+import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import type { PipelineStageConfigItem } from '~/lib/commercial/pipeline-stage-config';
 
@@ -36,6 +40,12 @@ const PipelineBoard = dynamic(
   { ssr: false },
 );
 
+const CommercialWipBoard = dynamic(
+  () =>
+    import('./commercial-wip-board').then((mod) => mod.CommercialWipBoard),
+  { ssr: false },
+);
+
 type Props = {
   initialData: PipelineData;
   accountSlug: string;
@@ -44,6 +54,7 @@ type Props = {
   listings?: PipelineListingOption[];
   stageConfig?: PipelineStageConfigItem[];
   boardName?: string;
+  initialRequirements?: CommercialRequirement[];
 };
 
 function instructionTitle(deal: PipelineDeal) {
@@ -63,6 +74,7 @@ export function WorkspacePipelineBoardWrapper({
   listings = [],
   stageConfig,
   boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
+  initialRequirements = [],
 }: Props) {
   const router = useRouter();
   const [promptDeal, setPromptDeal] = useState<PipelineDeal | null>(null);
@@ -81,7 +93,6 @@ export function WorkspacePipelineBoardWrapper({
       return;
     }
 
-    // Opportunity for an existing client → spin up a delivery project.
     if (deal.clientId) {
       const result = await convertWonDealToProject(deal.id);
       if (result.kind === 'project') {
@@ -90,12 +101,10 @@ export function WorkspacePipelineBoardWrapper({
         return;
       }
       if (result.kind === 'error') {
-        // Leave the card as Won; nothing else to do automatically.
         return;
       }
     }
 
-    // New lead → create a client prefilled from the deal.
     const params = new URLSearchParams({
       create: 'client',
       first_name: deal.contactName || '',
@@ -108,7 +117,7 @@ export function WorkspacePipelineBoardWrapper({
   const handleDisposalSaved = async (
     listing: CommercialListing,
     deal: PipelineDeal,
-  ) => {
+  ): Promise<void> => {
     await updateDeal(deal.id, {
       commercialListingId: listing.id,
       accountSlug,
@@ -119,19 +128,27 @@ export function WorkspacePipelineBoardWrapper({
 
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
-      <PipelineBoard
-        initialData={initialData}
-        onDealWon={handleDealWon}
-        onRequestCreateDisposal={
-          variant === 'commercial' ? openDisposalForm : undefined
-        }
-        workspaceAccountSlug={accountSlug}
-        workspaceAccountId={accountId}
-        variant={variant}
-        listings={listings}
-        stageConfig={stageConfig}
-        boardName={boardName}
-      />
+      {variant === 'commercial' ? (
+        <CommercialWipBoard
+          initialData={initialData}
+          initialRequirements={initialRequirements}
+          accountSlug={accountSlug}
+          accountId={accountId}
+          listings={listings}
+          stageConfig={stageConfig}
+          boardName={boardName}
+          onDealWon={handleDealWon}
+          onRequestCreateDisposal={openDisposalForm}
+        />
+      ) : (
+        <PipelineBoard
+          initialData={initialData}
+          onDealWon={handleDealWon}
+          workspaceAccountSlug={accountSlug}
+          workspaceAccountId={accountId}
+          variant="work"
+        />
+      )}
 
       <AlertDialog
         open={Boolean(promptDeal)}

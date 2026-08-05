@@ -31,6 +31,10 @@ export type CreateTaskInput = {
   groupId?: string;
   source?: string;
   recurringSeriesId?: string;
+  /** WIP Instruction (commercial/work pipeline_deals). */
+  pipelineDealId?: string;
+  /** Commercial requirement brief. */
+  commercialRequirementId?: string;
   /** When set, inherits project/client/area from parent if those are omitted. */
   parentTaskContext?: {
     projectId?: string | null;
@@ -209,6 +213,12 @@ export async function createTaskForUser(
       ? { recurring_series_id: input.recurringSeriesId }
       : {}),
     ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
+    ...(input.pipelineDealId
+      ? { pipeline_deal_id: input.pipelineDealId }
+      : {}),
+    ...(input.commercialRequirementId
+      ? { commercial_requirement_id: input.commercialRequirementId }
+      : {}),
   };
 
   const { data, error } = await client
