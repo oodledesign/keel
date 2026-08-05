@@ -1,10 +1,11 @@
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
+import { Button } from '@kit/ui/button';
 import {
   Dialog,
   DialogContent,
@@ -18,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Spinner } from '@kit/ui/spinner';
+import { toast } from '@kit/ui/sonner';
 
 import {
   MediaJobsGrid,
@@ -25,6 +28,7 @@ import {
 } from '~/components/media/media-jobs-grid';
 
 type MediaGalleryClientProps = {
+  accountId: string;
   accountSlug: string;
   initialJobs: Array<Record<string, unknown>>;
   projects: Array<{ id: string; title?: string | null; name?: string | null }>;
@@ -40,6 +44,7 @@ type MediaGalleryClientProps = {
 };
 
 function toTile(row: Record<string, unknown>): MediaJobTile {
+  const params = row.params as MediaJobTile['params'];
   return {
     id: String(row.id),
     status: String(row.status),
@@ -53,6 +58,9 @@ function toTile(row: Record<string, unknown>): MediaJobTile {
     created_at: String(row.created_at),
     project_id: (row.project_id as string | null) ?? null,
     client_id: (row.client_id as string | null) ?? null,
+    params: params ?? null,
+    promoted_from_job_id:
+      (row.promoted_from_job_id as string | null) ?? null,
   };
 }
 
@@ -62,9 +70,12 @@ export function MediaGalleryClient(props: MediaGalleryClientProps) {
   const [clientId, setClientId] = useState(props.initialClientId ?? 'all');
   const [type, setType] = useState(props.initialType ?? 'all');
   const [selectedId, setSelectedId] = useState(props.initialJobId);
+  const [jobsState, setJobsState] = useState(props.initialJobs);
+  const [promotingId, setPromotingId] = useState<string | null>(null);
+  const [pending, startTransition] = useTransition();
 
   const jobs = useMemo(() => {
-    return props.initialJobs
+    return jobsState
       .map(toTile)
       .filter((job) => {
         if (projectId !== 'all' && job.project_id !== projectId) return false;
@@ -72,9 +83,10 @@ export function MediaGalleryClient(props: MediaGalleryClientProps) {
         if (type !== 'all' && job.type !== type) return false;
         return true;
       });
-  }, [props.initialJobs, projectId, clientId, type]);
+  }, [jobsState, projectId, clientId, type]);
 
-  const selected = props.initialJobs.find((j) => String(j.id) === selectedId);
+  const selected = jobsState.find((j) => String(j.id) === selectedId);
+  const selectedTile = selected ? toTile(selected) : null;
 
   const pushFilters = (next: {
     project?: string;
@@ -91,6 +103,45 @@ export function MediaGalleryClient(props: MediaGalleryClientProps) {
     router.replace(
       `/home/${props.accountSlug}/media${params.size ? `?${params}` : ''}`,
     );
+  };
+
+  const promote = (job: MediaJobTile) => {
+    setPromotingId(job.id);
+    startTransition(async () => {
+      try {
+        const res = await fetch('/api/media/generate/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accountId: props.accountId,
+            projectId: job.project_id,
+            clientId: job.client_id,
+            prompt: job.prompt ?? 'Promote to quality',
+            quality: 'quality',
+            variations: 1,
+            promoteFromJobId: job.id,
+          }),
+        });
+        const json = (await res.json()) as {
+          completed?: Array<Record<string, unknown>>;
+          jobs?: Array<Record<string, unknown>>;
+          error?: string;
+        };
+        if (!res.ok) {
+          toast.error(json.error ?? 'Promote failed');
+          return;
+        }
+        const added = json.completed ?? json.jobs ?? [];
+        if (added.length) {
+          setJobsState((prev) => [...added, ...prev]);
+          toast.success('Quality version created');
+        }
+      } catch {
+        toast.error('Promote failed');
+      } finally {
+        setPromotingId(null);
+      }
+    });
   };
 
   return (
@@ -158,6 +209,8 @@ export function MediaGalleryClient(props: MediaGalleryClientProps) {
         jobs={jobs}
         accountSlug={props.accountSlug}
         onSelect={(job) => setSelectedId(job.id)}
+        onPromoteDraft={(job) => promote(job)}
+        promotingJobId={promotingId}
         emptyLabel="No completed generations yet."
       />
 
@@ -195,7 +248,26 @@ export function MediaGalleryClient(props: MediaGalleryClientProps) {
                 {selected.media_credits_charged != null
                   ? `${String(selected.media_credits_charged)} units`
                   : 'units n/a'}
+                {(selected.params as { quality?: string } | null)?.quality
+                  ? ` · ${(selected.params as { quality?: string }).quality}`
+                  : ''}
               </p>
+              {selectedTile &&
+              selectedTile.type === 'image' &&
+              selectedTile.params?.quality !== 'quality' &&
+              !selectedTile.promoted_from_job_id ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={pending || promotingId === selectedTile.id}
+                  onClick={() => promote(selectedTile)}
+                >
+                  {promotingId === selectedTile.id ? (
+                    <Spinner className="mr-2 h-4 w-4" />
+                  ) : null}
+                  Promote to quality
+                </Button>
+              ) : null}
               {selected.project_id ? (
                 <Link
                   className="text-sm underline"

@@ -31,7 +31,7 @@ async function MediaGalleryPage({ params, searchParams }: MediaGalleryPageProps)
   let jobsQuery = client
     .from('media_generation_jobs')
     .select(
-      'id, status, type, file_url, thumbnail_url, prompt, error_message, media_credits_charged, created_at, project_id, client_id, model_id, params',
+      'id, status, type, file_url, thumbnail_url, prompt, error_message, media_credits_charged, created_at, project_id, client_id, model_id, params, promoted_from_job_id',
     )
     .eq('account_id', accountId)
     .eq('status', 'complete')
@@ -81,6 +81,7 @@ async function MediaGalleryPage({ params, searchParams }: MediaGalleryPageProps)
         </div>
       </div>
       <MediaGalleryClient
+        accountId={accountId}
         accountSlug={accountSlug}
         initialJobs={(jobs ?? []) as Array<Record<string, unknown>>}
         projects={(projects ?? []) as Array<{ id: string; title?: string | null; name?: string | null }>}

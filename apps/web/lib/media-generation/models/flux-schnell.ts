@@ -4,10 +4,10 @@ export const FLUX_SCHNELL_MODEL_ID = 'fal-ai/flux/schnell' as const;
 
 export type FluxSchnellInput = {
   prompt: string;
-  image_url?: string;
   image_size?: string;
   num_inference_steps?: number;
   num_images?: number;
+  seed?: number;
 };
 
 export type FluxSchnellResponse = {
@@ -15,6 +15,10 @@ export type FluxSchnellResponse = {
   seed?: number;
 };
 
+/**
+ * Cheapest text-to-image path. Do NOT pass reference images — schnell ignores
+ * likeness; identity refs route to Nano Banana edit recipes instead.
+ */
 export const fluxSchnellRecipe = {
   modelId: FLUX_SCHNELL_MODEL_ID,
   type: 'image' as const,
@@ -22,22 +26,23 @@ export const fluxSchnellRecipe = {
   /** fal list pricing ~$0.003/MP; charged as 2 media units in our pool. */
   unitsPerGeneration: () => estimateJobCost(FLUX_SCHNELL_MODEL_ID),
   providerCostUsdEstimate: 0.003,
+  supportsSeed: true as const,
   buildInput(params: {
     prompt: string;
-    refImageUrl?: string | null;
+    seed?: number | null;
   }): FluxSchnellInput {
-    const input: FluxSchnellInput = {
+    return {
       prompt: params.prompt,
       num_inference_steps: 4,
       num_images: 1,
       image_size: 'landscape_4_3',
+      ...(typeof params.seed === 'number' ? { seed: params.seed } : {}),
     };
-    if (params.refImageUrl) {
-      input.image_url = params.refImageUrl;
-    }
-    return input;
   },
   extractOutputUrl(response: FluxSchnellResponse): string | null {
     return response.images?.[0]?.url ?? null;
+  },
+  extractSeed(response: FluxSchnellResponse): number | null {
+    return typeof response.seed === 'number' ? response.seed : null;
   },
 };

@@ -9,21 +9,21 @@ import { Label } from '@kit/ui/label';
 import { Spinner } from '@kit/ui/spinner';
 import { Textarea } from '@kit/ui/textarea';
 
-import { MediaJobsGrid } from '~/components/media/media-jobs-grid';
-import { estimateJobCost } from '~/lib/billing/media-unit-pricing';
-import { FLUX_SCHNELL_MODEL_ID } from '~/lib/media-generation/models/flux-schnell';
+import { MediaJobsGrid, type MediaJobTile } from '~/components/media/media-jobs-grid';
+import {
+  estimateImageBatchCost,
+  estimateJobCost,
+  resolveImageModelId,
+  type ImageQualityTier,
+} from '~/lib/billing/media-unit-pricing';
 import { MINIMAX_VIDEO_MODEL_ID } from '~/lib/media-generation/models/minimax-video';
 
-type JobRow = {
-  id: string;
-  status: string;
-  type: string;
-  file_url: string | null;
-  thumbnail_url: string | null;
-  prompt: string | null;
-  error_message: string | null;
-  media_credits_charged: number | null;
-  created_at: string;
+type JobRow = MediaJobTile & {
+  params?: {
+    quality?: ImageQualityTier;
+    seed?: number;
+  } | null;
+  promoted_from_job_id?: string | null;
 };
 
 export type MediaGeneratePanelProps = {
@@ -36,6 +36,8 @@ export type MediaGeneratePanelProps = {
 export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
   const [prompt, setPrompt] = useState('');
   const [mode, setMode] = useState<'image' | 'video'>('image');
+  const [quality, setQuality] = useState<ImageQualityTier>('draft');
+  const [variations, setVariations] = useState(1);
   const [durationSeconds, setDurationSeconds] = useState(5);
   const [jobs, setJobs] = useState<JobRow[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -44,27 +46,37 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
     required: number;
   } | null>(null);
   const [pending, startTransition] = useTransition();
+  const [promotingId, setPromotingId] = useState<string | null>(null);
   const [videoConfirm, setVideoConfirm] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
   const [refBase64, setRefBase64] = useState<string | null>(null);
   const [refContentType, setRefContentType] = useState<string | null>(null);
 
-  useEffect(() => {
-    void (async () => {
-      const params = new URLSearchParams({ accountId: props.accountId });
-      if (props.projectId) params.set('projectId', props.projectId);
-      const res = await fetch(`/api/media/jobs?${params.toString()}`);
-      if (!res.ok) return;
-      const json = (await res.json()) as { jobs: JobRow[] };
-      setJobs(json.jobs ?? []);
-    })();
+  const refreshJobs = useCallback(async () => {
+    const params = new URLSearchParams({ accountId: props.accountId });
+    if (props.projectId) params.set('projectId', props.projectId);
+    const res = await fetch(`/api/media/jobs?${params.toString()}`);
+    if (!res.ok) return;
+    const json = (await res.json()) as { jobs: JobRow[] };
+    setJobs(json.jobs ?? []);
   }, [props.accountId, props.projectId]);
 
-  const imageCost = estimateJobCost(FLUX_SCHNELL_MODEL_ID);
+  useEffect(() => {
+    void refreshJobs();
+  }, [refreshJobs]);
+
+  const hasRefs = Boolean(refBase64);
+  const imageModelId = resolveImageModelId(hasRefs, quality);
+  const imageUnitCost = estimateJobCost(imageModelId);
+  const imageBatchCost = estimateImageBatchCost({
+    hasRefs,
+    quality,
+    variations,
+  });
   const videoCost = estimateJobCost(MINIMAX_VIDEO_MODEL_ID, {
     durationSeconds,
   });
-  const cost = mode === 'image' ? imageCost : videoCost;
+  const cost = mode === 'image' ? imageBatchCost : videoCost;
   const topUpHref = `/home/${props.accountSlug}/settings/billing`;
 
   const pollJob = useCallback(
@@ -108,6 +120,16 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
     });
   };
 
+  const mergeJobs = (next: JobRow[]) => {
+    setJobs((prev) => {
+      const byId = new Map(prev.map((job) => [job.id, job]));
+      for (const job of next) byId.set(job.id, job);
+      return Array.from(byId.values()).sort((a, b) =>
+        String(b.created_at).localeCompare(String(a.created_at)),
+      );
+    });
+  };
+
   const generate = () => {
     if (mode === 'video' && !videoConfirm) {
       setError('Confirm the video quote before submitting.');
@@ -118,40 +140,72 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
       setError(null);
       setShortfall(null);
       try {
-        const endpoint =
-          mode === 'image'
-            ? '/api/media/generate/image'
-            : '/api/media/generate/video';
-        const body =
-          mode === 'image'
-            ? {
-                accountId: props.accountId,
-                projectId: props.projectId ?? null,
-                clientId: props.clientId ?? null,
-                prompt,
-                refImageBase64: refBase64,
-                refImageContentType: refContentType,
-              }
-            : {
-                accountId: props.accountId,
-                projectId: props.projectId ?? null,
-                clientId: props.clientId ?? null,
-                prompt,
-                durationSeconds,
-                confirmed: true as const,
-              };
+        if (mode === 'video') {
+          const res = await fetch('/api/media/generate/video', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              accountId: props.accountId,
+              projectId: props.projectId ?? null,
+              clientId: props.clientId ?? null,
+              prompt,
+              durationSeconds,
+              confirmed: true as const,
+            }),
+          });
+          const json = (await res.json()) as {
+            job?: JobRow;
+            error?: string;
+            code?: string;
+            balance?: number;
+            required?: number;
+          };
 
-        const res = await fetch(endpoint, {
+          if (res.status === 402 || json.code === 'INSUFFICIENT_MEDIA_CREDITS') {
+            setShortfall({
+              balance: json.balance ?? 0,
+              required: json.required ?? cost,
+            });
+            setError(json.error ?? 'Insufficient media credits');
+            return;
+          }
+
+          if (!res.ok || !json.job) {
+            setError(json.error ?? 'Generation failed');
+            return;
+          }
+
+          mergeJobs([json.job]);
+          setVideoConfirm(false);
+          if (json.job.status === 'processing') {
+            void pollJob(json.job.id);
+          }
+          return;
+        }
+
+        const res = await fetch('/api/media/generate/image', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(body),
+          body: JSON.stringify({
+            accountId: props.accountId,
+            projectId: props.projectId ?? null,
+            clientId: props.clientId ?? null,
+            prompt,
+            quality,
+            variations,
+            refImageBase64: refBase64,
+            refImageContentType: refContentType,
+          }),
         });
         const json = (await res.json()) as {
-          job?: JobRow;
+          jobs?: JobRow[];
+          completed?: JobRow[];
+          failed?: JobRow[];
           error?: string;
           code?: string;
           balance?: number;
           required?: number;
+          chargedTotal?: number;
         };
 
         if (res.status === 402 || json.code === 'INSUFFICIENT_MEDIA_CREDITS') {
@@ -163,21 +217,72 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
           return;
         }
 
-        if (!res.ok || !json.job) {
+        const returned = json.jobs ?? json.completed ?? [];
+        if (!res.ok && returned.length === 0) {
           setError(json.error ?? 'Generation failed');
           return;
         }
 
-        setJobs((prev) => [
-          json.job!,
-          ...prev.filter((j) => j.id !== json.job!.id),
-        ]);
-        setVideoConfirm(false);
-        if (json.job.status === 'processing') {
-          void pollJob(json.job.id);
+        if (returned.length) mergeJobs(returned);
+
+        if (json.failed?.length) {
+          setError(
+            `${json.completed?.length ?? 0} of ${variations} succeeded · ${json.failed.length} failed · charged ${json.chargedTotal ?? 0} units`,
+          );
         }
       } catch {
         setError('Generation request failed');
+      }
+    });
+  };
+
+  const promote = (job: JobRow) => {
+    setPromotingId(job.id);
+    startTransition(async () => {
+      setError(null);
+      setShortfall(null);
+      try {
+        const res = await fetch('/api/media/generate/image', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            accountId: props.accountId,
+            projectId: props.projectId ?? job.project_id ?? null,
+            clientId: props.clientId ?? job.client_id ?? null,
+            prompt: job.prompt ?? prompt,
+            quality: 'quality',
+            variations: 1,
+            promoteFromJobId: job.id,
+          }),
+        });
+        const json = (await res.json()) as {
+          jobs?: JobRow[];
+          completed?: JobRow[];
+          error?: string;
+          code?: string;
+          balance?: number;
+          required?: number;
+        };
+
+        if (res.status === 402 || json.code === 'INSUFFICIENT_MEDIA_CREDITS') {
+          setShortfall({
+            balance: json.balance ?? 0,
+            required: json.required ?? estimateJobCost(resolveImageModelId(true, 'quality')),
+          });
+          setError(json.error ?? 'Insufficient media credits');
+          return;
+        }
+
+        const returned = json.jobs ?? json.completed ?? [];
+        if (!res.ok || !returned.length) {
+          setError(json.error ?? 'Promote failed');
+          return;
+        }
+        mergeJobs(returned);
+      } catch {
+        setError('Promote request failed');
+      } finally {
+        setPromotingId(null);
       }
     });
   };
@@ -214,16 +319,68 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
           />
         </div>
         {mode === 'image' ? (
-          <div className="space-y-2">
-            <Label htmlFor="media-ref">Reference image (optional)</Label>
-            <input
-              id="media-ref"
-              ref={fileRef}
-              type="file"
-              accept="image/*"
-              onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
-            />
-          </div>
+          <>
+            <div className="space-y-2">
+              <Label htmlFor="media-ref">Reference image (optional)</Label>
+              <input
+                id="media-ref"
+                ref={fileRef}
+                type="file"
+                accept="image/*"
+                onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
+              />
+              <p className="text-muted-foreground text-xs">
+                With a reference photo we use Nano Banana (identity-preserving).
+                Without one we use Flux for cheap text-to-image.
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-4">
+              <div className="space-y-2">
+                <Label>Quality</Label>
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={quality === 'draft' ? 'default' : 'outline'}
+                    onClick={() => setQuality('draft')}
+                  >
+                    Draft · {estimateJobCost(resolveImageModelId(hasRefs, 'draft'))}{' '}
+                    u
+                  </Button>
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={quality === 'quality' ? 'default' : 'outline'}
+                    onClick={() => setQuality('quality')}
+                  >
+                    Quality ·{' '}
+                    {estimateJobCost(resolveImageModelId(hasRefs, 'quality'))} u
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="media-variations">Variations</Label>
+                <select
+                  id="media-variations"
+                  className="border-input bg-background h-9 rounded-md border px-2 text-sm"
+                  value={variations}
+                  onChange={(e) => setVariations(Number(e.target.value) || 1)}
+                >
+                  {[1, 2, 3, 4].map((n) => (
+                    <option key={n} value={n}>
+                      {n}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-muted-foreground text-xs">
+                  Each variation is a separate image and debit — not a collage.
+                </p>
+              </div>
+            </div>
+            <p className="text-muted-foreground text-sm">
+              Total · {imageBatchCost} units ({variations} × {imageUnitCost})
+            </p>
+          </>
         ) : (
           <div className="space-y-2">
             <Label htmlFor="media-duration">Duration (seconds)</Label>
@@ -252,10 +409,12 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
             disabled={pending || !prompt.trim()}
             onClick={generate}
           >
-            {pending ? <Spinner className="mr-2 h-4 w-4" /> : null}
+            {pending && !promotingId ? (
+              <Spinner className="mr-2 h-4 w-4" />
+            ) : null}
             Generate · {cost} units
           </Button>
-          {pending ? (
+          {pending && !promotingId ? (
             <span className="text-muted-foreground text-sm">Generating…</span>
           ) : null}
         </div>
@@ -283,6 +442,8 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
             ? 'No generations for this project yet.'
             : 'No generations yet. Create your first image or video above.'
         }
+        onPromoteDraft={(job) => promote(job as JobRow)}
+        promotingJobId={promotingId}
       />
     </div>
   );

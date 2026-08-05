@@ -67,8 +67,20 @@ export function assertTopupWorseThanStarter(): boolean {
 
 /** Model unit costs — draft cheap sync image, quality image, video per second. */
 export const MEDIA_MODEL_UNIT_COSTS = {
+  /** Text-only draft (flux schnell). */
   'fal-ai/flux/schnell': { kind: 'image' as const, units: 2 },
+  /** Text-only quality (flux.dev). */
   'fal-ai/flux/dev': { kind: 'image' as const, units: 10 },
+  /**
+   * Reference draft — Nano Banana /edit (~$0.039).
+   * Adjusted from the original 2-unit draft assumption to match real provider cost.
+   */
+  'fal-ai/nano-banana/edit': { kind: 'image' as const, units: 4 },
+  /**
+   * Reference quality — Nano Banana Pro /edit (~$0.15).
+   * Adjusted from the original 10-unit quality assumption.
+   */
+  'fal-ai/nano-banana-pro/edit': { kind: 'image' as const, units: 15 },
   'fal-ai/minimax/video-01': {
     kind: 'video_per_second' as const,
     unitsPerSecond: 25,
@@ -76,6 +88,30 @@ export const MEDIA_MODEL_UNIT_COSTS = {
 } as const;
 
 export type MediaModelId = keyof typeof MEDIA_MODEL_UNIT_COSTS;
+
+export type ImageQualityTier = 'draft' | 'quality';
+
+export const IMAGE_MODEL_ROUTE = {
+  textDraft: 'fal-ai/flux/schnell',
+  textQuality: 'fal-ai/flux/dev',
+  refDraft: 'fal-ai/nano-banana/edit',
+  refQuality: 'fal-ai/nano-banana-pro/edit',
+} as const satisfies Record<string, MediaModelId>;
+
+/** Shared model selection for UI cost preview and server debit. */
+export function resolveImageModelId(
+  hasRefs: boolean,
+  quality: ImageQualityTier,
+): MediaModelId {
+  if (hasRefs) {
+    return quality === 'quality'
+      ? IMAGE_MODEL_ROUTE.refQuality
+      : IMAGE_MODEL_ROUTE.refDraft;
+  }
+  return quality === 'quality'
+    ? IMAGE_MODEL_ROUTE.textQuality
+    : IMAGE_MODEL_ROUTE.textDraft;
+}
 
 export function estimateJobCost(
   modelId: string,
@@ -91,6 +127,17 @@ export function estimateJobCost(
 
   const seconds = Math.max(1, Math.ceil(params.durationSeconds ?? 5));
   return recipe.unitsPerSecond * seconds;
+}
+
+/** Total units for an image batch — UI and debit must both call this. */
+export function estimateImageBatchCost(params: {
+  hasRefs: boolean;
+  quality: ImageQualityTier;
+  variations: number;
+}): number {
+  const variations = Math.max(1, Math.min(4, Math.floor(params.variations)));
+  const modelId = resolveImageModelId(params.hasRefs, params.quality);
+  return estimateJobCost(modelId) * variations;
 }
 
 export function findMediaSubscriptionTier(id: string) {

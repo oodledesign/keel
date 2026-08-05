@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 
+import { Button } from '@kit/ui/button';
+import { Spinner } from '@kit/ui/spinner';
 import { cn } from '@kit/ui/utils';
 
 export type MediaJobTile = {
@@ -16,6 +18,11 @@ export type MediaJobTile = {
   created_at: string;
   project_id?: string | null;
   client_id?: string | null;
+  params?: {
+    quality?: 'draft' | 'quality';
+    seed?: number;
+  } | null;
+  promoted_from_job_id?: string | null;
 };
 
 type MediaJobsGridProps = {
@@ -23,6 +30,8 @@ type MediaJobsGridProps = {
   accountSlug: string;
   emptyLabel?: string;
   onSelect?: (job: MediaJobTile) => void;
+  onPromoteDraft?: (job: MediaJobTile) => void;
+  promotingJobId?: string | null;
 };
 
 export function MediaJobsGrid(props: MediaJobsGridProps) {
@@ -38,6 +47,12 @@ export function MediaJobsGrid(props: MediaJobsGridProps) {
     <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
       {props.jobs.map((job) => {
         const thumb = job.thumbnail_url ?? job.file_url;
+        const isDraftImage =
+          job.type === 'image' &&
+          job.status === 'complete' &&
+          job.params?.quality !== 'quality' &&
+          !job.promoted_from_job_id;
+
         const content = (
           <div
             className={cn(
@@ -70,26 +85,37 @@ export function MediaJobsGrid(props: MediaJobsGridProps) {
           </div>
         );
 
-        if (props.onSelect) {
-          return (
-            <button
-              key={job.id}
-              type="button"
-              className="text-left"
-              onClick={() => props.onSelect?.(job)}
-            >
-              {content}
-            </button>
-          );
-        }
-
         return (
-          <Link
-            key={job.id}
-            href={`/home/${props.accountSlug}/media?job=${job.id}`}
-          >
-            {content}
-          </Link>
+          <div key={job.id} className="space-y-2">
+            {props.onSelect ? (
+              <button
+                type="button"
+                className="w-full text-left"
+                onClick={() => props.onSelect?.(job)}
+              >
+                {content}
+              </button>
+            ) : (
+              <Link href={`/home/${props.accountSlug}/media?job=${job.id}`}>
+                {content}
+              </Link>
+            )}
+            {isDraftImage && props.onPromoteDraft ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                className="w-full"
+                disabled={props.promotingJobId === job.id}
+                onClick={() => props.onPromoteDraft?.(job)}
+              >
+                {props.promotingJobId === job.id ? (
+                  <Spinner className="mr-2 h-3 w-3" />
+                ) : null}
+                Promote to quality
+              </Button>
+            ) : null}
+          </div>
         );
       })}
     </div>
