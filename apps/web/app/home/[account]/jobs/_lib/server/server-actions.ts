@@ -56,6 +56,7 @@ import {
   MoveTaskSchema,
   ReorderPhasesSchema,
   SavePhasePageDocSchema,
+  SaveProjectAsPhaseTemplateSchema,
   UpdatePhaseSchema,
   UpdateJobTaskSchema,
   UpdatePhaseNoteSchema,
@@ -458,4 +459,12 @@ export const applyPhaseTemplate = enhanceAction(
     return result;
   },
   { schema: ApplyPhaseTemplateSchema },
+);
+
+export const saveProjectAsPhaseTemplate = enhanceAction(
+  async (input) => {
+    const service = getProjectPhasesService();
+    return service.saveProjectAsPhaseTemplate(input);
+  },
+  { schema: SaveProjectAsPhaseTemplateSchema },
 );

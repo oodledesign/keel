@@ -4,6 +4,7 @@ import Link from 'next/link';
 
 import { LayoutGrid } from 'lucide-react';
 
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -22,6 +23,7 @@ export type ProjectsKanbanItem = {
   status: string;
   title: string;
   clientName?: string | null;
+  clientPictureUrl?: string | null;
   dueDate?: string | null;
 };
 
@@ -90,9 +92,16 @@ export function ProjectsKanbanView({
                       {item.title}
                     </p>
                     {item.clientName ? (
-                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                        {item.clientName}
-                      </p>
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <ProfileAvatar
+                          displayName={item.clientName}
+                          pictureUrl={item.clientPictureUrl}
+                          className="h-4 w-4 shrink-0"
+                        />
+                        <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                          {item.clientName}
+                        </p>
+                      </div>
                     ) : null}
                     {item.dueDate ? (
                       <p className="mt-2 text-[11px] text-[var(--workspace-shell-text-muted)]">
@@ -114,7 +123,7 @@ export function mapDeliveryRowToKanbanItem(
   row: Record<string, unknown>,
 ): ProjectsKanbanItem {
   const clients = row.clients as
-    | { display_name?: string | null }
+    | { display_name?: string | null; picture_url?: string | null }
     | null
     | undefined;
   return {
@@ -125,6 +134,7 @@ export function mapDeliveryRowToKanbanItem(
       row as { title?: string | null; name?: string | null },
     ),
     clientName: clients?.display_name ?? null,
+    clientPictureUrl: clients?.picture_url ?? null,
     dueDate: (row.due_date as string | null) ?? null,
   };
 }

@@ -54,7 +54,10 @@ export type JobsPmRow = {
   value_pence: number | null;
   assignment_count: number;
   assignees: { user_id: string; role_on_job: string | null }[];
-  clients?: { display_name: string | null } | null;
+  clients?: {
+    display_name: string | null;
+    picture_url?: string | null;
+  } | null;
 };
 
 type MemberPreview = {
@@ -279,11 +282,18 @@ export function JobsPmMainTable({
                               </span>
                               {job.title}
                             </Link>
-                            {job.clients?.display_name && (
-                              <p className="mt-0.5 pl-7 text-xs text-[var(--workspace-shell-text-muted)]">
-                                {job.clients.display_name}
-                              </p>
-                            )}
+                            {job.clients?.display_name ? (
+                              <div className="mt-0.5 flex items-center gap-1.5 pl-7">
+                                <ProfileAvatar
+                                  displayName={job.clients.display_name}
+                                  pictureUrl={job.clients.picture_url}
+                                  className="h-4 w-4 shrink-0"
+                                />
+                                <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                                  {job.clients.display_name}
+                                </p>
+                              </div>
+                            ) : null}
                           </td>
                           <td className="px-2 py-1.5">
                             {member ? (

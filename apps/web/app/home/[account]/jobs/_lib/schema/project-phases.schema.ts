@@ -145,7 +145,11 @@ export const UpdatePhaseNoteSchema = z.object({
   isPinned: z.boolean().optional(),
 });
 
-const PhaseTemplatePhaseSchema = z.object({
+const PhaseTemplateTaskSchema = z.object({
+  title: z.string().min(1).max(500),
+});
+
+export const PhaseTemplatePhaseSchema = z.object({
   name: z.string().min(1).max(200),
   colour: z.string().nullable().optional(),
   description: z.string().max(5000).nullable().optional(),
@@ -166,6 +170,7 @@ const PhaseTemplatePhaseSchema = z.object({
     ])
     .nullable()
     .optional(),
+  tasks: z.array(PhaseTemplateTaskSchema).max(50).optional(),
 });
 
 export const ListPhaseTemplatesSchema = z.object({
@@ -177,7 +182,14 @@ export const ApplyPhaseTemplateSchema = z.object({
   templateId: z.string().uuid(),
 });
 
+export const SaveProjectAsPhaseTemplateSchema = z.object({
+  ...accountJobSlugFields,
+  name: z.string().trim().min(1).max(120),
+  description: z.string().trim().max(500).optional(),
+});
+
 export type PhaseTemplatePhase = z.infer<typeof PhaseTemplatePhaseSchema>;
+export type PhaseTemplateTask = z.infer<typeof PhaseTemplateTaskSchema>;
 
 export type CreatePhaseInput = z.infer<typeof CreatePhaseSchema>;
 export type UpdatePhaseInput = z.infer<typeof UpdatePhaseSchema>;
@@ -195,12 +207,18 @@ export type AddPhaseNoteInput = z.infer<typeof AddPhaseNoteSchema>;
 export type UpdatePhaseNoteInput = z.infer<typeof UpdatePhaseNoteSchema>;
 export type ListPhaseTemplatesInput = z.infer<typeof ListPhaseTemplatesSchema>;
 export type ApplyPhaseTemplateInput = z.infer<typeof ApplyPhaseTemplateSchema>;
+export type SaveProjectAsPhaseTemplateInput = z.infer<
+  typeof SaveProjectAsPhaseTemplateSchema
+>;
 
 export type PhaseTemplateListItem = {
   id: string;
   name: string;
   description: string | null;
   phaseCount: number;
+  taskCount: number;
+  phaseNames: string[];
+  isBuiltin: boolean;
 };
 
 export type TaskStatusCount = {

@@ -14,6 +14,8 @@ import {
   notifyJobTaskAssigned,
   notifyPhaseCompleted,
 } from '~/lib/jobs/project-notifications';
+import { isBuiltinPhaseTemplateName } from '~/lib/projects/phase-template-builtins';
+import { PROJECT_BOARD_TEMPLATE } from '~/lib/projects/project-board-phase-template';
 import { WEBSITE_DESIGN_TEMPLATE } from '~/lib/websites/website-design-template';
 
 import {
@@ -21,55 +23,34 @@ import {
   isMissingRelationError,
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
-import type {
-  AddPhaseNoteInput,
-  ApplyPhaseTemplateInput,
-  CreateJobTaskInput,
-  CreatePhaseInput,
-  DeletePhaseInput,
-  EnsurePhasePageInput,
-  GetPhaseDetailInput,
-  JobBoardAssignee,
-  JobBoardResult,
-  JobBoardTask,
-  ListJobBoardInput,
-  ListPhaseTemplatesInput,
-  ListPhasesForJobInput,
-  MoveTaskInput,
-  PhaseListItem,
-  PhaseStatus,
-  PhaseTemplateListItem,
-  PhaseTemplatePhase,
-  ReorderPhasesInput,
-  SavePhasePageDocInput,
-  TaskStatusCount,
-  UpdateJobTaskInput,
-  UpdatePhaseInput,
-  UpdatePhaseNoteInput,
+import {
+  PhaseTemplatePhaseSchema,
+  type AddPhaseNoteInput,
+  type ApplyPhaseTemplateInput,
+  type CreateJobTaskInput,
+  type CreatePhaseInput,
+  type DeletePhaseInput,
+  type EnsurePhasePageInput,
+  type GetPhaseDetailInput,
+  type JobBoardAssignee,
+  type JobBoardResult,
+  type JobBoardTask,
+  type ListJobBoardInput,
+  type ListPhaseTemplatesInput,
+  type ListPhasesForJobInput,
+  type MoveTaskInput,
+  type PhaseListItem,
+  type PhaseStatus,
+  type PhaseTemplateListItem,
+  type PhaseTemplatePhase,
+  type ReorderPhasesInput,
+  type SavePhasePageDocInput,
+  type SaveProjectAsPhaseTemplateInput,
+  type TaskStatusCount,
+  type UpdateJobTaskInput,
+  type UpdatePhaseInput,
+  type UpdatePhaseNoteInput,
 } from '../schema/project-phases.schema';
-
-const PhaseTemplatePhaseSchema = z.object({
-  name: z.string().min(1).max(200),
-  colour: z.string().nullable().optional(),
-  description: z.string().max(5000).nullable().optional(),
-  is_milestone: z.boolean().optional(),
-  page_content: z.string().max(100000).nullable().optional(),
-  planning_tab: z
-    .enum([
-      'overview',
-      'brief',
-      'sitemap',
-      'wireframe',
-      'design',
-      'seo',
-      'site',
-      'export',
-      'build',
-      'content',
-    ])
-    .nullable()
-    .optional(),
-});
 
 const STANDARD_DELIVERY_TEMPLATE = {
   name: 'Standard delivery',
@@ -552,7 +533,7 @@ class ProjectPhasesService {
     const clientPromise = job.client_id
       ? this.db
           .from('clients')
-          .select('id, display_name, email, phone, company_name')
+          .select('id, display_name, email, phone, company_name, picture_url')
           .eq('id', job.client_id as string)
           .eq('account_id', input.accountId)
           .maybeSingle()
@@ -1188,6 +1169,57 @@ class ProjectPhasesService {
     if (error) this.throwErr(error);
   }
 
+  private async ensureProjectBoardPhaseTemplate(
+    accountId: string,
+    userId: string,
+  ) {
+    const { data: existing, error: existingErr } = await this.db
+      .from('project_phase_templates')
+      .select('id, phases')
+      .eq('account_id', accountId)
+      .eq('name', PROJECT_BOARD_TEMPLATE.name)
+      .maybeSingle();
+
+    if (existingErr) this.throwErr(existingErr);
+
+    if (existing?.id) {
+      const parsed = z
+        .array(PhaseTemplatePhaseSchema)
+        .safeParse(existing.phases);
+      const phaseNamesMatch =
+        parsed.success &&
+        parsed.data.length === PROJECT_BOARD_TEMPLATE.phases.length &&
+        parsed.data.every(
+          (phase, index) =>
+            phase.name === PROJECT_BOARD_TEMPLATE.phases[index]?.name,
+        );
+
+      if (!phaseNamesMatch) {
+        const { error: updateErr } = await this.db
+          .from('project_phase_templates')
+          .update({
+            description: PROJECT_BOARD_TEMPLATE.description,
+            phases: PROJECT_BOARD_TEMPLATE.phases,
+          })
+          .eq('id', existing.id);
+
+        if (updateErr) this.throwErr(updateErr);
+      }
+
+      return;
+    }
+
+    const { error } = await this.db.from('project_phase_templates').insert({
+      account_id: accountId,
+      name: PROJECT_BOARD_TEMPLATE.name,
+      description: PROJECT_BOARD_TEMPLATE.description,
+      phases: PROJECT_BOARD_TEMPLATE.phases,
+      created_by: userId,
+    });
+
+    if (error) this.throwErr(error);
+  }
+
   private async ensureDefaultPhaseTemplate(accountId: string, userId: string) {
     const { data: existing, error: existingErr } = await this.db
       .from('project_phase_templates')
@@ -1215,6 +1247,7 @@ class ProjectPhasesService {
     const user = await this.ensureUser();
     await this.ensureDefaultPhaseTemplate(input.accountId, user.id);
     await this.ensureWebsiteDesignPhaseTemplate(input.accountId, user.id);
+    await this.ensureProjectBoardPhaseTemplate(input.accountId, user.id);
 
     const { data, error } = await this.db
       .from('project_phase_templates')
@@ -1226,11 +1259,20 @@ class ProjectPhasesService {
 
     return (data ?? []).map((row: Record<string, unknown>) => {
       const parsed = z.array(PhaseTemplatePhaseSchema).safeParse(row.phases);
+      const phases = parsed.success ? parsed.data : [];
+      const taskCount = phases.reduce(
+        (sum, phase) => sum + (phase.tasks?.length ?? 0),
+        0,
+      );
+      const name = row.name as string;
       return {
         id: row.id as string,
-        name: row.name as string,
+        name,
         description: (row.description as string | null) ?? null,
-        phaseCount: parsed.success ? parsed.data.length : 0,
+        phaseCount: phases.length,
+        taskCount,
+        phaseNames: phases.map((phase) => phase.name),
+        isBuiltin: isBuiltinPhaseTemplateName(name),
       };
     });
   }
@@ -1240,7 +1282,7 @@ class ProjectPhasesService {
       input.accountId,
       'jobs.edit',
     );
-    await this.verifyJob(input.accountId, input.jobId);
+    const job = await this.verifyJob(input.accountId, input.jobId);
 
     const { data: template, error: templateErr } = await this.db
       .from('project_phase_templates')
@@ -1267,6 +1309,7 @@ class ProjectPhasesService {
       .maybeSingle();
 
     let sortOrder = ((maxRow?.sort_order as number | undefined) ?? -1) + 1;
+    let taskCount = 0;
 
     for (const phaseInput of parsed.data) {
       const { data: inserted, error: phaseErr } = await this.db
@@ -1300,12 +1343,156 @@ class ProjectPhasesService {
           pageContent,
         );
       }
+
+      const taskTitles = (phaseInput.tasks ?? [])
+        .map((task) => task.title.trim())
+        .filter(Boolean)
+        .slice(0, 50);
+
+      if (inserted?.id && taskTitles.length > 0) {
+        const rows = taskTitles.map((title, index) => ({
+          title,
+          status: 'todo' as const,
+          priority: 'medium' as const,
+          due_date: null,
+          user_id: user.id,
+          project_id: input.jobId,
+          phase_id: inserted.id,
+          account_id: input.accountId,
+          client_id: (job.client_id as string | null) ?? null,
+          sort_order: index,
+        }));
+
+        const { error: tasksErr } = await this.db.from('tasks').insert(rows);
+        if (tasksErr) this.throwErr(tasksErr);
+        taskCount += rows.length;
+      }
     }
 
     return {
       ok: true as const,
       templateName: template.name as string,
       phaseCount: parsed.data.length,
+      taskCount,
+    };
+  }
+
+  async saveProjectAsPhaseTemplate(input: SaveProjectAsPhaseTemplateInput) {
+    const user = await this.ensureUserAndPermission(
+      input.accountId,
+      'jobs.edit',
+    );
+    const job = await this.verifyJob(input.accountId, input.jobId);
+    const name = input.name.trim();
+
+    if (isBuiltinPhaseTemplateName(name)) {
+      throw new Error(
+        'That name is reserved for a built-in template. Choose a different name.',
+      );
+    }
+
+    const { data: existing, error: existingErr } = await this.db
+      .from('project_phase_templates')
+      .select('id')
+      .eq('account_id', input.accountId)
+      .ilike('name', name)
+      .maybeSingle();
+
+    if (existingErr) this.throwErr(existingErr);
+    if (existing?.id) {
+      throw new Error(
+        'A workspace template with this name already exists. Choose a different name.',
+      );
+    }
+
+    const { data: phaseRows, error: phaseErr } = await this.db
+      .from('project_phases')
+      .select('id, name, description, colour, is_milestone, sort_order')
+      .eq('account_id', input.accountId)
+      .eq('project_id', input.jobId)
+      .order('sort_order', { ascending: true });
+
+    if (phaseErr) this.throwErr(phaseErr);
+
+    const phasesRaw = (phaseRows ?? []) as Array<{
+      id: string;
+      name: string;
+      description: string | null;
+      colour: string | null;
+      is_milestone: boolean | null;
+      sort_order: number | null;
+    }>;
+
+    if (phasesRaw.length === 0) {
+      throw new Error('Add at least one phase before saving a template');
+    }
+
+    const phaseIds = phasesRaw.map((phase) => phase.id);
+    const { data: taskRows, error: tasksErr } = await this.db
+      .from('tasks')
+      .select('title, phase_id, sort_order, status')
+      .eq('project_id', input.jobId)
+      .in('phase_id', phaseIds)
+      .order('sort_order', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: true });
+
+    if (tasksErr) this.throwErr(tasksErr);
+
+    const tasksByPhase = new Map<string, string[]>();
+    for (const row of taskRows ?? []) {
+      const phaseId = row.phase_id as string | null;
+      const title = ((row.title as string | null) ?? '').trim();
+      const status = (row.status as string | null) ?? 'todo';
+      if (!phaseId || !title || status === 'cancelled') continue;
+      const list = tasksByPhase.get(phaseId) ?? [];
+      if (list.length >= 50) continue;
+      list.push(title);
+      tasksByPhase.set(phaseId, list);
+    }
+
+    const phases: PhaseTemplatePhase[] = phasesRaw.map((phase) => ({
+      name: phase.name,
+      description: phase.description,
+      colour: phase.colour,
+      is_milestone: Boolean(phase.is_milestone),
+      tasks: (tasksByPhase.get(phase.id) ?? []).map((title) => ({ title })),
+    }));
+
+    const parsed = z.array(PhaseTemplatePhaseSchema).safeParse(phases);
+    if (!parsed.success) {
+      throw new Error('Could not build a valid template from this project');
+    }
+
+    const taskCount = parsed.data.reduce(
+      (sum, phase) => sum + (phase.tasks?.length ?? 0),
+      0,
+    );
+
+    const fallbackDescription = `From “${
+      ((job.title as string | null) ?? (job.name as string | null) ?? 'project')
+        .toString()
+        .trim() || 'project'
+    }”`;
+
+    const { data: inserted, error: insertErr } = await this.db
+      .from('project_phase_templates')
+      .insert({
+        account_id: input.accountId,
+        name,
+        description: input.description?.trim() || fallbackDescription,
+        phases: parsed.data,
+        created_by: user.id,
+      })
+      .select('id, name')
+      .single();
+
+    if (insertErr) this.throwErr(insertErr);
+
+    return {
+      id: inserted.id as string,
+      name: inserted.name as string,
+      phaseCount: parsed.data.length,
+      taskCount,
     };
   }
 }

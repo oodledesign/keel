@@ -17,4 +17,4 @@ export const PROJECT_EVENT_ASSIGNMENTS_TABLE = 'project_event_assignments';
  * is ambiguous (PGRST201) between projects.client_id and clients.project_id.
  */
 export const PROJECT_PRIMARY_CLIENT_EMBED =
-  'clients!projects_client_id_fkey(display_name)' as const;
+  'clients!projects_client_id_fkey(display_name, picture_url)' as const;

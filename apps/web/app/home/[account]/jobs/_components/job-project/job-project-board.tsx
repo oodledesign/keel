@@ -390,8 +390,7 @@ export function JobProjectBoard({
   canEditJobs,
   members,
   onBoardChange,
-  onSeedDefaultPhases,
-  onApplyTemplate,
+  onOpenTemplatePicker,
   phaseTemplates,
   seedingPhases,
 }: {
@@ -407,8 +406,7 @@ export function JobProjectBoard({
     picture_url?: string | null;
   }[];
   onBoardChange: (board: JobBoardResult) => void;
-  onSeedDefaultPhases: () => void;
-  onApplyTemplate: (templateId: string) => void;
+  onOpenTemplatePicker: () => void;
   phaseTemplates: PhaseTemplateListItem[];
   seedingPhases: boolean;
 }) {
@@ -633,17 +631,10 @@ export function JobProjectBoard({
   );
 
   if (phases.length === 0) {
-    const primaryTemplate =
-      phaseTemplates.find((item) => item.name === 'Standard delivery') ??
-      phaseTemplates[0];
-    const otherTemplates = phaseTemplates.filter(
-      (item) => item.id !== primaryTemplate?.id,
-    );
-
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/30 px-6 py-16 text-center">
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          No delivery phases yet. Apply a template or add phases one at a time.
+          No delivery phases yet. Choose a template or add phases one at a time.
         </p>
         {canEditJobs && (
           <div className="mt-4 flex flex-wrap justify-center gap-2">
@@ -651,26 +642,11 @@ export function JobProjectBoard({
               type="button"
               size="sm"
               className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-              disabled={seedingPhases || !primaryTemplate}
-              onClick={onSeedDefaultPhases}
+              disabled={seedingPhases || phaseTemplates.length === 0}
+              onClick={onOpenTemplatePicker}
             >
-              {primaryTemplate
-                ? `Apply “${primaryTemplate.name}”`
-                : 'Apply template'}
+              {seedingPhases ? 'Applying…' : 'Choose template'}
             </Button>
-            {otherTemplates.map((template) => (
-              <Button
-                key={template.id}
-                type="button"
-                size="sm"
-                variant="outline"
-                className="border-[color:var(--workspace-shell-border)]"
-                disabled={seedingPhases}
-                onClick={() => onApplyTemplate(template.id)}
-              >
-                {template.name}
-              </Button>
-            ))}
           </div>
         )}
       </div>

@@ -7,6 +7,7 @@ import Link from 'next/link';
 import {
   Columns3,
   GanttChart,
+  LayoutTemplate,
   List,
   MessageSquare,
   MoreHorizontal,
@@ -15,6 +16,8 @@ import {
   UserPlus,
 } from 'lucide-react';
 
+import { PhaseTemplatePickerDialog } from '~/components/projects/phase-template-picker-dialog';
+import { SaveProjectAsTemplateDialog } from '~/components/projects/save-project-as-template-dialog';
 import { Button } from '@kit/ui/button';
 import {
   Dialog,
@@ -52,6 +55,7 @@ import {
   createPhase,
   listJobBoard,
   listPhaseTemplates,
+  saveProjectAsPhaseTemplate,
 } from '../../_lib/server/server-actions';
 import { JobProjectBoard } from './job-project-board';
 import { JobProjectHeader } from './job-project-header';
@@ -113,6 +117,11 @@ export function JobProjectWorkspace({
   const [assigning, setAssigning] = useState(false);
   const [assignDialogOpen, setAssignDialogOpen] = useState(false);
   const [aiOpen, setAiOpen] = useState(false);
+  const [templatePickerOpen, setTemplatePickerOpen] = useState(false);
+  const [saveTemplateOpen, setSaveTemplateOpen] = useState(false);
+  const [applyingTemplateId, setApplyingTemplateId] = useState<string | null>(
+    null,
+  );
   const [phaseTemplates, setPhaseTemplates] = useState<PhaseTemplateListItem[]>(
     [],
   );
@@ -183,39 +192,58 @@ export function JobProjectWorkspace({
   }, [accountId, accountSlug, jobId, loadBoard, startTransition]);
 
   const handleApplyTemplate = useCallback(
-    (templateId?: string) => {
-      const template =
-        phaseTemplates.find((item) => item.id === templateId) ??
-        phaseTemplates[0];
+    (templateId: string) => {
+      const template = phaseTemplates.find((item) => item.id === templateId);
       if (!template) {
         toast.error('No phase templates available');
         return;
       }
 
       setSeedingPhases(true);
+      setApplyingTemplateId(template.id);
       startTransition(async () => {
         try {
-          await applyPhaseTemplate({
+          const result = await applyPhaseTemplate({
             accountId,
             accountSlug,
             jobId,
             templateId: template.id,
           });
           await loadBoard();
-          toast.success(`Applied “${template.name}” template`);
+          setTemplatePickerOpen(false);
+          toast.success(
+            `Applied “${result.templateName}”${
+              result.taskCount > 0
+                ? ` (${result.phaseCount} phases, ${result.taskCount} tasks)`
+                : ''
+            }`,
+          );
         } catch (err) {
           toast.error(getErrorMessage(err));
         } finally {
           setSeedingPhases(false);
+          setApplyingTemplateId(null);
         }
       });
     },
     [accountId, accountSlug, jobId, loadBoard, phaseTemplates, startTransition],
   );
 
-  const handleSeedDefaultPhases = useCallback(() => {
-    handleApplyTemplate();
-  }, [handleApplyTemplate]);
+  const handleOpenTemplatePicker = useCallback(() => {
+    setTemplatePickerOpen(true);
+    if (phaseTemplates.length === 0) {
+      void listPhaseTemplates({ accountId })
+        .then((rows) => setPhaseTemplates(rows as PhaseTemplateListItem[]))
+        .catch(() => setPhaseTemplates([]));
+    }
+  }, [accountId, phaseTemplates.length]);
+
+  const boardTaskCount = board
+    ? Object.values(board.tasksByPhase).reduce(
+        (sum, tasks) => sum + tasks.length,
+        0,
+      )
+    : 0;
 
   const assignedIds = new Set((board?.assignees ?? []).map((a) => a.user_id));
   const membersNotAssigned = members.filter((m) => !assignedIds.has(m.user_id));
@@ -335,6 +363,15 @@ export function JobProjectWorkspace({
                   Assign team member
                 </DropdownMenuItem>
               ) : null}
+              {canEditJobs && (board?.phases.length ?? 0) > 0 ? (
+                <DropdownMenuItem
+                  className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                  onClick={() => setSaveTemplateOpen(true)}
+                >
+                  <LayoutTemplate className="mr-2 h-4 w-4" />
+                  Save as template
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
 
@@ -370,8 +407,7 @@ export function JobProjectWorkspace({
                 canEditJobs={canEditJobs}
                 members={members}
                 onBoardChange={setBoard}
-                onSeedDefaultPhases={handleSeedDefaultPhases}
-                onApplyTemplate={handleApplyTemplate}
+                onOpenTemplatePicker={handleOpenTemplatePicker}
                 phaseTemplates={phaseTemplates}
                 seedingPhases={seedingPhases}
               />
@@ -473,6 +509,35 @@ export function JobProjectWorkspace({
               )}
             </DialogContent>
           </Dialog>
+
+          <PhaseTemplatePickerDialog
+            open={templatePickerOpen}
+            onOpenChange={setTemplatePickerOpen}
+            templates={phaseTemplates}
+            applyingId={applyingTemplateId}
+            onApply={handleApplyTemplate}
+          />
+
+          <SaveProjectAsTemplateDialog
+            open={saveTemplateOpen}
+            onOpenChange={setSaveTemplateOpen}
+            defaultName={`${job.title.trim() || 'Project'} template`}
+            phaseCount={board?.phases.length ?? 0}
+            taskCount={boardTaskCount}
+            onSave={async ({ name, description }) => {
+              try {
+                return await saveProjectAsPhaseTemplate({
+                  accountId,
+                  accountSlug,
+                  jobId,
+                  name,
+                  description,
+                });
+              } catch (err) {
+                throw new Error(getErrorMessage(err));
+              }
+            }}
+          />
         </>
       ) : null}
     </div>

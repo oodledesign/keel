@@ -2,6 +2,8 @@
 
 import Link from 'next/link';
 
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
+
 import type { JobsPmRow } from './jobs-pm-main-table';
 import {
   PHASE_CELL,
@@ -49,9 +51,22 @@ export function JobsPmTimelineView({
                 <p className="font-medium text-[var(--workspace-shell-text)]">
                   {job.title}
                 </p>
-                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                  {job.clients?.display_name ?? 'No client'}
-                </p>
+                {job.clients?.display_name ? (
+                  <div className="mt-0.5 flex items-center gap-1.5">
+                    <ProfileAvatar
+                      displayName={job.clients.display_name}
+                      pictureUrl={job.clients.picture_url}
+                      className="h-4 w-4 shrink-0"
+                    />
+                    <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                      {job.clients.display_name}
+                    </p>
+                  </div>
+                ) : (
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    No client
+                  </p>
+                )}
               </div>
               <span
                 className="rounded px-2 py-1 text-xs font-medium"
