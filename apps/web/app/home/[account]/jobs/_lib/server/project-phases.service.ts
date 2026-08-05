@@ -98,7 +98,7 @@ const TASK_STATUSES = [
 ] as const;
 
 const JOB_BOARD_TASK_SELECT =
-  'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, notes, links' as const;
+  'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, notes, links, note_refs' as const;
 
 function normalizeTaskLinks(
   value: unknown,
@@ -117,6 +117,22 @@ function normalizeTaskLinks(
   return links;
 }
 
+function normalizeTaskNoteRefs(
+  value: unknown,
+): Array<{ id: string; title: string }> {
+  if (!Array.isArray(value)) return [];
+  const refs: Array<{ id: string; title: string }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as { id?: unknown; title?: unknown };
+    const id = typeof row.id === 'string' ? row.id.trim() : '';
+    const title = typeof row.title === 'string' ? row.title.trim() : '';
+    if (!id || !title) continue;
+    refs.push({ id, title });
+  }
+  return refs;
+}
+
 function mapJobBoardTask(row: Record<string, unknown>): JobBoardTask {
   return {
     id: String(row.id),
@@ -130,6 +146,7 @@ function mapJobBoardTask(row: Record<string, unknown>): JobBoardTask {
     user_id: (row.user_id as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     links: normalizeTaskLinks(row.links),
+    note_refs: normalizeTaskNoteRefs(row.note_refs),
   };
 }
 
@@ -613,7 +630,7 @@ class ProjectPhasesService {
     if (
       tasksErr &&
       isMissingColumnError(tasksErr) &&
-      `${tasksErr.message ?? ''}`.toLowerCase().includes('links')
+      /links|note_refs/.test(`${tasksErr.message ?? ''}`.toLowerCase())
     ) {
       const fallback = await this.db
         .from('tasks')
@@ -1042,12 +1059,47 @@ class ProjectPhasesService {
         ...(link.label?.trim() ? { label: link.label.trim() } : {}),
       }));
     }
+    if (input.noteRefs !== undefined) {
+      const uniqueIds = [...new Set(input.noteRefs.map((ref) => ref.id))];
+      if (uniqueIds.length > 0) {
+        const { data: noteRows, error: notesErr } = await this.db
+          .from('notes')
+          .select('id, title, content')
+          .eq('account_id', input.accountId)
+          .in('id', uniqueIds);
+
+        if (notesErr) this.throwErr(notesErr);
+
+        const found = new Map(
+          (noteRows ?? []).map((row) => [
+            row.id as string,
+            {
+              id: row.id as string,
+              title:
+                ((row.title as string | null)?.trim() ||
+                  ((row.content as string | null) ?? '')
+                    .trim()
+                    .slice(0, 80) ||
+                  'Untitled note') as string,
+            },
+          ]),
+        );
+
+        if (found.size !== uniqueIds.length) {
+          throw new Error('One or more notes could not be attached');
+        }
+
+        payload.note_refs = uniqueIds.map((id) => found.get(id)!);
+      } else {
+        payload.note_refs = [];
+      }
+    }
 
     if (Object.keys(payload).length === 0) {
       throw new Error('No updates provided');
     }
 
-    // links may lag generated Database types until typegen
+    // links/note_refs may lag generated Database types until typegen
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (this.db.from('tasks') as any)
       .update(payload)

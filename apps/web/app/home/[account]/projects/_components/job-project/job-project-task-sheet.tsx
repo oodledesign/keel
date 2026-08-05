@@ -1,8 +1,16 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import { ExternalLink, Link2, Plus, Trash2 } from 'lucide-react';
+import Link from 'next/link';
+
+import {
+  ExternalLink,
+  Link2,
+  Plus,
+  StickyNote,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -24,11 +32,16 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 
+import pathsConfig from '~/config/paths.config';
+import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
+
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
 import { updateJobTask } from '../../_lib/server/server-actions';
 
 type TaskLinkDraft = { url: string; label: string };
+type NoteRefDraft = { id: string; title: string };
+type PickerNote = { id: string; title: string; preview: string };
 
 function normalizeUrl(raw: string): string {
   const trimmed = raw.trim();
@@ -62,6 +75,11 @@ export function JobProjectTaskSheet({
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
   const [links, setLinks] = useState<TaskLinkDraft[]>([]);
+  const [noteRefs, setNoteRefs] = useState<NoteRefDraft[]>([]);
+  const [pickerNotes, setPickerNotes] = useState<PickerNote[]>([]);
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerLoading, setPickerLoading] = useState(false);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -77,9 +95,68 @@ export function JobProjectTaskSheet({
         label: link.label ?? '',
       })),
     );
+    setNoteRefs(
+      (task.note_refs ?? []).map((ref) => ({
+        id: ref.id,
+        title: ref.title,
+      })),
+    );
+    setPickerQuery('');
+    setPickerOpen(false);
   }, [open, task]);
 
+  useEffect(() => {
+    if (!open || !pickerOpen || !accountId) return;
+    let cancelled = false;
+    setPickerLoading(true);
+    void listNotesAndFilesForContextAction({ accountId })
+      .then((result) => {
+        if (cancelled) return;
+        const notesOnly = (result.items ?? [])
+          .filter((item) => item.type === 'note')
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            preview: item.preview,
+          }));
+        setPickerNotes(notesOnly);
+      })
+      .catch(() => {
+        if (!cancelled) setPickerNotes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPickerLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, open, pickerOpen]);
+
+  const attachedIds = useMemo(
+    () => new Set(noteRefs.map((ref) => ref.id)),
+    [noteRefs],
+  );
+
+  const filteredPickerNotes = useMemo(() => {
+    const q = pickerQuery.trim().toLowerCase();
+    return pickerNotes
+      .filter((note) => !attachedIds.has(note.id))
+      .filter((note) => {
+        if (!q) return true;
+        return (
+          note.title.toLowerCase().includes(q) ||
+          note.preview.toLowerCase().includes(q)
+        );
+      })
+      .slice(0, 20);
+  }, [attachedIds, pickerNotes, pickerQuery]);
+
   if (!task) return null;
+
+  const noteDetailPath = (noteId: string) =>
+    pathsConfig.app.accountNoteDetail
+      .replace('[account]', accountSlug)
+      .replace('[noteId]', noteId);
 
   const handleSave = () => {
     if (!canEditJobs) return;
@@ -114,6 +191,7 @@ export function JobProjectTaskSheet({
           dueDate: dueDate ? new Date(dueDate) : null,
           notes: notes.trim() || null,
           links: nextLinks,
+          noteRefs,
         });
         onUpdated(updated as JobBoardTask);
         toast.success('Task updated');
@@ -135,7 +213,8 @@ export function JobProjectTaskSheet({
             Task
           </SheetTitle>
           <SheetDescription className="text-[var(--workspace-shell-text-muted)]">
-            Notes and links stay with this task on the project board.
+            Attach workspace notes and links, or keep a short scratch note on
+            the task itself.
           </SheetDescription>
         </SheetHeader>
 
@@ -209,16 +288,131 @@ export function JobProjectTaskSheet({
             />
           </div>
 
+          <div className="space-y-2">
+            <div className="flex items-center justify-between gap-2">
+              <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Attached notes
+              </Label>
+              {canEditJobs ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 px-2 text-[var(--workspace-shell-text-muted)]"
+                  disabled={pending || noteRefs.length >= 30}
+                  onClick={() => setPickerOpen((openState) => !openState)}
+                >
+                  <Plus className="mr-1 h-3.5 w-3.5" />
+                  Attach note
+                </Button>
+              ) : null}
+            </div>
+
+            {pickerOpen ? (
+              <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/40 p-2.5">
+                <Input
+                  value={pickerQuery}
+                  onChange={(e) => setPickerQuery(e.target.value)}
+                  placeholder="Search workspace notes…"
+                  className="mb-2 h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm"
+                  autoFocus
+                />
+                {pickerLoading ? (
+                  <p className="px-1 py-3 text-xs text-[var(--workspace-shell-text-muted)]">
+                    Loading notes…
+                  </p>
+                ) : filteredPickerNotes.length === 0 ? (
+                  <p className="px-1 py-3 text-xs text-[var(--workspace-shell-text-muted)]">
+                    No matching notes.
+                  </p>
+                ) : (
+                  <div className="max-h-48 space-y-1 overflow-y-auto">
+                    {filteredPickerNotes.map((note) => (
+                      <button
+                        key={note.id}
+                        type="button"
+                        className="flex w-full flex-col rounded-md px-2 py-1.5 text-left hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                        onClick={() => {
+                          setNoteRefs((prev) => [
+                            ...prev,
+                            { id: note.id, title: note.title },
+                          ]);
+                          setPickerOpen(false);
+                          setPickerQuery('');
+                        }}
+                      >
+                        <span className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                          {note.title}
+                        </span>
+                        {note.preview ? (
+                          <span className="line-clamp-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                            {note.preview}
+                          </span>
+                        ) : null}
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+            ) : null}
+
+            {noteRefs.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-4 text-center text-xs text-[var(--workspace-shell-text-muted)]">
+                Attach project, client, or any other workspace notes without
+                moving them out of the notes library.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {noteRefs.map((ref) => (
+                  <div
+                    key={ref.id}
+                    className="flex items-start gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 p-2.5"
+                  >
+                    <StickyNote className="mt-0.5 h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={noteDetailPath(ref.id)}
+                        className="block truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)] hover:underline"
+                      >
+                        {ref.title}
+                      </Link>
+                      <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                        Workspace note
+                      </p>
+                    </div>
+                    {canEditJobs ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        className="h-8 w-8 shrink-0 p-0 text-[var(--workspace-shell-text-muted)]"
+                        disabled={pending}
+                        onClick={() =>
+                          setNoteRefs((prev) =>
+                            prev.filter((item) => item.id !== ref.id),
+                          )
+                        }
+                        aria-label="Detach note"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </Button>
+                    ) : null}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
           <div>
             <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Notes
+              Scratch notes
             </Label>
             <Textarea
               value={notes}
               onChange={(e) => setNotes(e.target.value)}
               disabled={!canEditJobs || pending}
-              placeholder="Context, checklist items, meeting notes…"
-              className="mt-1 min-h-[140px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
+              placeholder="Quick notes that live only on this task…"
+              className="mt-1 min-h-[110px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
             />
           </div>
 

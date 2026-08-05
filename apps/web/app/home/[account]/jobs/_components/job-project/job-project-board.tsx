@@ -92,7 +92,17 @@ function TaskCard({
   const assignee = task.user_id ? memberLookup.get(task.user_id) : null;
   const priorityKey = task.priority || 'none';
   const linkCount = task.links?.length ?? 0;
+  const attachedNoteCount = task.note_refs?.length ?? 0;
   const hasNotes = Boolean(task.notes?.trim());
+  const metaBits = [
+    attachedNoteCount > 0
+      ? `${attachedNoteCount} note${attachedNoteCount === 1 ? '' : 's'}`
+      : null,
+    hasNotes ? 'Scratch' : null,
+    linkCount > 0
+      ? `${linkCount} link${linkCount === 1 ? '' : 's'}`
+      : null,
+  ].filter(Boolean);
 
   return (
     <div
@@ -137,13 +147,9 @@ function TaskCard({
                 {assignee.name ?? assignee.email ?? 'Assigned'}
               </span>
             )}
-            {(hasNotes || linkCount > 0) && (
+            {metaBits.length > 0 && (
               <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                {hasNotes ? 'Notes' : ''}
-                {hasNotes && linkCount > 0 ? ' · ' : ''}
-                {linkCount > 0
-                  ? `${linkCount} link${linkCount === 1 ? '' : 's'}`
-                  : ''}
+                {metaBits.join(' · ')}
               </span>
             )}
           </div>
