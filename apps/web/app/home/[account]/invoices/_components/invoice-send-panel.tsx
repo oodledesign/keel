@@ -854,7 +854,7 @@ export function InvoiceSendPanel({
                 </div>
                 <p className="text-muted-foreground text-xs">
                   {recurringSendMode === 'automatic'
-                    ? 'Each new invoice in this series is emailed when it is generated. You can still send this draft now if needed.'
+                    ? 'Each new invoice in this series is emailed when it is generated. Preview the email here — sending happens on the schedule, not now.'
                     : 'New invoices stay as drafts for you to send. Use Preview and send when you are ready.'}
                 </p>
               </>
@@ -939,7 +939,7 @@ export function InvoiceSendPanel({
               >
                 <Eye className="mr-2 h-4 w-4" />
                 {isRecurring && recurringSendMode === 'automatic'
-                  ? 'Preview and send this invoice'
+                  ? 'Preview email'
                   : 'Preview and send'}
               </Button>
             ) : (
@@ -1109,21 +1109,29 @@ export function InvoiceSendPanel({
               variant="outline"
               onClick={() => setPreviewOpen(false)}
             >
-              Back to edit
+              {isRecurring && recurringSendMode === 'automatic'
+                ? 'Close'
+                : 'Back to edit'}
             </Button>
-            <Button
-              type="button"
-              className={cn('bg-[var(--ozer-accent)] text-[#09111F]')}
-              disabled={loading != null || recipientEmails.length === 0}
-              onClick={() => void handleSend(false)}
-            >
-              {loading === 'send' ? (
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-              ) : (
-                <Send className="mr-2 h-4 w-4" />
-              )}
-              Send invoice
-            </Button>
+            {isRecurring && recurringSendMode === 'automatic' ? (
+              <p className="text-muted-foreground max-w-xs text-right text-xs sm:order-first">
+                This series sends automatically when each invoice is generated.
+              </p>
+            ) : (
+              <Button
+                type="button"
+                className={cn('bg-[var(--ozer-accent)] text-[#09111F]')}
+                disabled={loading != null || recipientEmails.length === 0}
+                onClick={() => void handleSend(false)}
+              >
+                {loading === 'send' ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Send className="mr-2 h-4 w-4" />
+                )}
+                Send invoice
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>
