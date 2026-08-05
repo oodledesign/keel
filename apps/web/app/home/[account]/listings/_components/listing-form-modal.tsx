@@ -34,14 +34,6 @@ import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { createListing, updateListing } from '../_lib/server/server-actions';
 
-interface ListingFormModalProps {
-  open: boolean;
-  onClose: () => void;
-  accountId: string;
-  listing?: CommercialListing | null;
-  onSaved: (listing: CommercialListing) => void;
-}
-
 const emptyForm = {
   name: '',
   addressLine1: '',
@@ -76,12 +68,27 @@ const emptyForm = {
   externalId: '',
 };
 
+interface ListingFormModalProps {
+  open: boolean;
+  onClose: () => void;
+  accountId: string;
+  listing?: CommercialListing | null;
+  onSaved: (listing: CommercialListing) => void;
+  /** Prefill for create-from-instruction flows. */
+  defaults?: Partial<typeof emptyForm>;
+  instructingClientId?: string | null;
+}
+
+
+
 export function ListingFormModal({
   open,
   onClose,
   accountId,
   listing,
   onSaved,
+  defaults,
+  instructingClientId,
 }: ListingFormModalProps) {
   return (
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
@@ -97,6 +104,8 @@ export function ListingFormModal({
           listing={listing}
           onClose={onClose}
           onSaved={onSaved}
+          defaults={defaults}
+          instructingClientId={instructingClientId}
         />
       </DialogContent>
     </Dialog>
@@ -108,11 +117,15 @@ function ListingFormFields({
   listing,
   onClose,
   onSaved,
+  defaults,
+  instructingClientId,
 }: {
   accountId: string;
   listing?: CommercialListing | null;
   onClose: () => void;
   onSaved: (listing: CommercialListing) => void;
+  defaults?: Partial<typeof emptyForm>;
+  instructingClientId?: string | null;
 }) {
   const isEdit = Boolean(listing);
   const [isPending, startTransition] = useTransition();
@@ -160,8 +173,10 @@ function ListingFormFields({
           notes: listing.notes ?? '',
           externalId: listing.externalId ?? '',
         }
-      : emptyForm,
+      : { ...emptyForm, ...defaults },
   );
+
+  const previousStatus = listing?.status ?? null;
 
   const field = (key: keyof typeof form, value: string) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -220,9 +235,24 @@ function ListingFormFields({
                 accountId,
                 ...shared,
               })
-            : await createListing({ accountId, ...shared });
+            : await createListing({
+                accountId,
+                ...shared,
+                instructingClientId: instructingClientId ?? undefined,
+              });
 
         onSaved(saved);
+
+        if (form.status === 'marketing' && previousStatus !== 'marketing') {
+          const { maybeNudgeMoveInstructionToCurrent } = await import(
+            '../_lib/client/marketing-instruction-nudge'
+          );
+          await maybeNudgeMoveInstructionToCurrent({
+            accountId,
+            listingId: saved.id,
+          });
+        }
+
         onClose();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'An error occurred');

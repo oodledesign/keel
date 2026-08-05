@@ -240,7 +240,7 @@ export function CommercialAgencyDashboard({
                   label: 'Requirements',
                   icon: ClipboardList,
                 },
-                { href: pipelineHref, label: 'Deals', icon: Tag },
+                { href: pipelineHref, label: 'WIP', icon: Tag },
                 { href: viewingsHref, label: 'Viewings', icon: CalendarDays },
                 { href: reportsHref, label: 'Insights', icon: Building2 },
               ].map((item) => (

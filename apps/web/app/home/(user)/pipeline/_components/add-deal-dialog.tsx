@@ -255,13 +255,13 @@ export function AddDealDialog({
       <DialogTrigger asChild>
         <button type="button" className={workspaceBtnPrimaryMd}>
           <Plus className="h-4 w-4" />
-          {commercial ? 'Add deal' : 'Add to pipeline'}
+          {commercial ? 'Add instruction' : 'Add to pipeline'}
         </button>
       </DialogTrigger>
       <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>
-            {commercial ? 'Add deal' : 'Add to pipeline'}
+            {commercial ? 'Add instruction' : 'Add to pipeline'}
           </DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {commercial

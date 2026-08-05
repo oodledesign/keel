@@ -198,7 +198,7 @@ export function ListingOverviewSection({
               [
                 { label: 'Enquiries', value: summary.total },
                 { label: 'Active', value: summary.active },
-                { label: 'Linked deals', value: summary.linkedDeals },
+                { label: 'Linked instructions', value: summary.linkedDeals },
                 { label: 'Archived', value: summary.archived },
                 {
                   label: 'Upcoming viewings',
@@ -488,8 +488,9 @@ export function ListingInterestSection({
               Interest
             </CardTitle>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-              Enquiries on this disposal. Adding one also creates a linked deal
-              on the Deals board.
+              Enquiries on this disposal. Use Requirements / Interest Schedule
+              to track occupier interest — the WIP board is for landlord
+              Instructions.
             </p>
           </div>
           <Button
@@ -511,7 +512,7 @@ export function ListingInterestSection({
           {enquiries.length === 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text)]/50">
               No enquiries yet. Inbound interest from portals and your website
-              will appear here — or add one manually to start a deal.
+              will appear here — or add one manually.
             </p>
           ) : (
             <>

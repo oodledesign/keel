@@ -16,8 +16,10 @@ import {
   DialogTitle,
 } from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 
+import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import {
   type PipelineStageConfigItem,
   defaultCommercialPipelineStageConfig,
@@ -29,6 +31,7 @@ type Props = {
   accountId: string;
   accountSlug: string;
   initialStages: PipelineStageConfigItem[];
+  initialBoardName?: string;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
   /** When false, only the dialog is rendered (controlled via open/onOpenChange). */
@@ -39,6 +42,7 @@ export function CustomizePipelinePhasesDialog({
   accountId,
   accountSlug,
   initialStages,
+  initialBoardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
   open: controlledOpen,
   onOpenChange,
   showTrigger = true,
@@ -52,6 +56,7 @@ export function CustomizePipelinePhasesDialog({
       ? initialStages
       : defaultCommercialPipelineStageConfig(),
   );
+  const [boardName, setBoardName] = useState(initialBoardName);
   const [pending, startTransition] = useTransition();
 
   useEffect(() => {
@@ -61,6 +66,10 @@ export function CustomizePipelinePhasesDialog({
         : defaultCommercialPipelineStageConfig(),
     );
   }, [initialStages]);
+
+  useEffect(() => {
+    setBoardName(initialBoardName);
+  }, [initialBoardName]);
 
   const updateLabel = (key: string, label: string) => {
     setStages((prev) =>
@@ -78,6 +87,7 @@ export function CustomizePipelinePhasesDialog({
 
   const resetDefaults = () => {
     setStages(defaultCommercialPipelineStageConfig());
+    setBoardName(DEFAULT_COMMERCIAL_WIP_BOARD_NAME);
   };
 
   const save = () => {
@@ -85,6 +95,8 @@ export function CustomizePipelinePhasesDialog({
       ...stage,
       label: stage.label.trim() || stage.key,
     }));
+    const trimmedBoardName =
+      boardName.trim() || DEFAULT_COMMERCIAL_WIP_BOARD_NAME;
 
     if (trimmed.every((stage) => stage.hidden)) {
       toast.error('Keep at least one phase visible');
@@ -97,13 +109,14 @@ export function CustomizePipelinePhasesDialog({
           accountId,
           accountSlug,
           stages: trimmed,
+          boardName: trimmedBoardName,
         });
-        toast.success('Deal phases updated');
+        toast.success('Board settings updated');
         setOpen(false);
         router.refresh();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not save phases',
+          error instanceof Error ? error.message : 'Could not save settings',
         );
       }
     });
@@ -120,22 +133,42 @@ export function CustomizePipelinePhasesDialog({
           onClick={() => setOpen(true)}
         >
           <Settings2 className="mr-1.5 h-3.5 w-3.5" />
-          Customize phases
+          Customize board
         </Button>
       ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
-            <DialogTitle>Customize deal phases</DialogTitle>
+            <DialogTitle>Customize board</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-              Rename or hide phases on the deals board. Defaults match Kato
-              interest-schedule stages. Hidden phases still appear if deals are
-              already in them.
+              Rename the board and its phases. Hidden phases still appear if
+              instructions are already in them.
             </DialogDescription>
           </DialogHeader>
 
-          <div className="max-h-[min(60vh,28rem)] space-y-2 overflow-y-auto py-2">
+          <div className="space-y-2 border-b border-[color:var(--workspace-shell-border)] pb-4">
+            <Label
+              htmlFor="wip-board-name"
+              className="text-[var(--workspace-shell-text-muted)]"
+            >
+              Board name
+            </Label>
+            <Input
+              id="wip-board-name"
+              value={boardName}
+              onChange={(event) => setBoardName(event.target.value)}
+              maxLength={40}
+              placeholder={DEFAULT_COMMERCIAL_WIP_BOARD_NAME}
+              className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+            />
+            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              Shown in navigation and the page title. Default is{' '}
+              {DEFAULT_COMMERCIAL_WIP_BOARD_NAME}.
+            </p>
+          </div>
+
+          <div className="max-h-[min(50vh,24rem)] space-y-2 overflow-y-auto py-2">
             {stages.map((stage) => (
               <div
                 key={stage.key}
@@ -179,7 +212,7 @@ export function CustomizePipelinePhasesDialog({
               disabled={pending}
             >
               <RotateCcw className="mr-1.5 h-3.5 w-3.5" />
-              Reset to Kato defaults
+              Reset to defaults
             </Button>
             <div className="flex gap-2">
               <Button

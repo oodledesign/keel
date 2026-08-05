@@ -109,10 +109,28 @@ const WORK_STAGES = [
 ] as const;
 
 function commercialStageIcon(key: string) {
-  if (key === COMMERCIAL_PIPELINE_WON_STAGE || key === 'signed') return Trophy;
-  if (key === COMMERCIAL_PIPELINE_LOST_STAGE || key === 'discounted') return X;
-  if (key === 'viewing') return Phone;
-  if (key === 'under_offer' || key === 'negotiating') return Send;
+  if (
+    key === COMMERCIAL_PIPELINE_WON_STAGE ||
+    key === 'signed' ||
+    key === 'completed_exchanged'
+  ) {
+    return Trophy;
+  }
+  if (
+    key === COMMERCIAL_PIPELINE_LOST_STAGE ||
+    key === 'discounted' ||
+    key === 'fallen_through'
+  ) {
+    return X;
+  }
+  if (key === 'current' || key === 'viewing') return Phone;
+  if (
+    key === 'under_offer_negotiating' ||
+    key === 'under_offer' ||
+    key === 'negotiating'
+  ) {
+    return Send;
+  }
   return ArrowRight;
 }
 
@@ -177,6 +195,31 @@ const STAGE_COLORS: Record<string, { dot: string; bar: string; tint: string }> =
       bar: '#64748B',
       tint: 'rgba(100,116,139,0.10)',
     },
+    potential: {
+      dot: '#64748B',
+      bar: '#64748B',
+      tint: 'rgba(100,116,139,0.08)',
+    },
+    current: {
+      dot: '#3B82F6',
+      bar: '#3B82F6',
+      tint: 'rgba(59,130,246,0.08)',
+    },
+    under_offer_negotiating: {
+      dot: '#EAB308',
+      bar: '#EAB308',
+      tint: 'rgba(234,179,8,0.08)',
+    },
+    completed_exchanged: {
+      dot: '#FF5C34',
+      bar: '#FF5C34',
+      tint: 'rgba(255, 92, 52, 0.16)',
+    },
+    fallen_through: {
+      dot: '#64748B',
+      bar: '#64748B',
+      tint: 'rgba(100,116,139,0.10)',
+    },
   };
 
 const panelClass =
@@ -203,6 +246,8 @@ type Props = {
   /** Commercial stage overrides (rename/hide). */
   stageConfig?: PipelineStageConfigItem[];
   customizePhasesSlot?: ReactNode;
+  boardName?: string;
+  onRequestCreateDisposal?: (deal: PipelineDeal) => void;
 };
 
 export function PipelineBoard({
@@ -214,6 +259,8 @@ export function PipelineBoard({
   listings = [],
   stageConfig,
   customizePhasesSlot,
+  boardName = 'WIP',
+  onRequestCreateDisposal,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -385,10 +432,10 @@ export function PipelineBoard({
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'deals.csv';
+    a.download = isCommercial ? 'wip.csv' : 'deals.csv';
     a.click();
     URL.revokeObjectURL(url);
-  }, [filteredDeals, listingById, STAGES]);
+  }, [filteredDeals, listingById, STAGES, isCommercial]);
 
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
@@ -440,13 +487,15 @@ export function PipelineBoard({
         } else if (
           newStage === 'won' ||
           newStage === COMMERCIAL_PIPELINE_WON_STAGE ||
-          newStage === 'completed'
+          newStage === 'completed' ||
+          newStage === 'completed_exchanged' ||
+          newStage === 'signed'
         ) {
           onDealWon?.(updatedDeal);
         }
       });
     },
-    [deals, startTransition, onDealWon],
+    [deals, startTransition, onDealWon, workspaceAccountSlug],
   );
 
   return (
@@ -529,7 +578,7 @@ export function PipelineBoard({
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
                 <DropdownMenuItem onSelect={() => setCustomizeOpen(true)}>
-                  Customize phases
+                  Customize board
                 </DropdownMenuItem>
                 <DropdownMenuItem onSelect={() => exportDealsCsv()}>
                   <Download className="mr-2 h-3.5 w-3.5" />
@@ -572,6 +621,7 @@ export function PipelineBoard({
           accountId={workspaceAccountId}
           accountSlug={workspaceAccountSlug}
           initialStages={stageConfig ?? []}
+          initialBoardName={boardName}
           open={customizeOpen}
           onOpenChange={setCustomizeOpen}
           showTrigger={false}
@@ -592,6 +642,15 @@ export function PipelineBoard({
         stages={selectableStages}
         listings={listings}
         commercial={isCommercial}
+        onRequestCreateDisposal={
+          onRequestCreateDisposal
+            ? (deal) => {
+                setEditOpen(false);
+                setDealToEdit(null);
+                onRequestCreateDisposal(deal);
+              }
+            : undefined
+        }
       />
 
       {/* Kanban */}
@@ -698,7 +757,7 @@ function StageColumn({
         <div className="flex flex-1 flex-col gap-2">
           {deals.length === 0 ? (
             <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
-              Drag {commercial ? 'deals' : 'leads'} here
+              Drag {commercial ? 'instructions' : 'leads'} here
             </div>
           ) : (
             deals.map((deal) => (

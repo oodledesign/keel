@@ -45,6 +45,7 @@ const EMPTY_SHELL_ADORNMENTS: TeamWorkspaceShellAdornments = {
   mobileNavShortcuts: [],
   focusSettingsByAccountId: {},
   emailAssistantAvailable: false,
+  pipelineBoardName: undefined,
 };
 
 type TeamWorkspaceLayoutProps = React.PropsWithChildren<{
@@ -150,6 +151,7 @@ async function SidebarLayout({
         accountSlug={account}
         moduleSettings={data.moduleSettings}
         focusAccountIds={focusAccountIds}
+        loadPipelineBoardName={workspaceProfile === 'commercial_property'}
         fallback={
           <TeamWorkspaceSidebarShell
             {...shellProps}
@@ -191,6 +193,7 @@ function TeamWorkspaceSidebarShell({
   accountAccess,
   navCounts,
   emailAssistantAvailable,
+  pipelineBoardName,
   mobileNavShortcuts,
   focusSettingsByAccountId,
   layoutState,
@@ -213,6 +216,7 @@ function TeamWorkspaceSidebarShell({
   };
   navCounts: WorkNavCounts;
   emailAssistantAvailable: boolean;
+  pipelineBoardName?: string;
   mobileNavShortcuts: Awaited<
     ReturnType<typeof loadTeamWorkspaceShellAdornments>
   >['mobileNavShortcuts'];
@@ -229,7 +233,7 @@ function TeamWorkspaceSidebarShell({
       moduleSettings,
       workspaceProfile,
       navCounts,
-      { emailAssistantAvailable },
+      { emailAssistantAvailable, pipelineBoardName },
     ),
   );
 
@@ -255,6 +259,7 @@ function TeamWorkspaceSidebarShell({
               workspaceProfile={workspaceProfile}
               navCounts={navCounts}
               emailAssistantAvailable={emailAssistantAvailable}
+              pipelineBoardName={pipelineBoardName}
               accountAccess={accountAccess}
             />
           </PageNavigation>
@@ -329,6 +334,7 @@ async function HeaderLayout({
         accountSlug={account}
         moduleSettings={data.moduleSettings}
         focusAccountIds={focusAccountIds}
+        loadPipelineBoardName={data.workspaceProfile === 'commercial_property'}
         fallback={
           <HeaderLayoutShell
             account={account}
@@ -396,7 +402,10 @@ function HeaderLayoutShell({
       data.moduleSettings,
       data.workspaceProfile,
       adornments.navCounts,
-      { emailAssistantAvailable: adornments.emailAssistantAvailable },
+      {
+        emailAssistantAvailable: adornments.emailAssistantAvailable,
+        pipelineBoardName: adornments.pipelineBoardName,
+      },
     ),
   );
 
@@ -414,6 +423,7 @@ function HeaderLayoutShell({
           <TeamAccountNavigationMenu
             workspace={data}
             emailAssistantAvailable={adornments.emailAssistantAvailable}
+            pipelineBoardName={adornments.pipelineBoardName}
           />
         </PageNavigation>
 

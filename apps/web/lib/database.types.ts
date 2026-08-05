@@ -8917,6 +8917,7 @@ export type Database = {
           group_id: string | null
           id: string
           job_id: string | null
+          links: Json
           notes: string | null
           parent_task_id: string | null
           phase_id: string | null
@@ -8941,6 +8942,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           job_id?: string | null
+          links?: Json
           notes?: string | null
           parent_task_id?: string | null
           phase_id?: string | null
@@ -8965,6 +8967,7 @@ export type Database = {
           group_id?: string | null
           id?: string
           job_id?: string | null
+          links?: Json
           notes?: string | null
           parent_task_id?: string | null
           phase_id?: string | null

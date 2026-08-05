@@ -105,6 +105,11 @@ export const CreateJobTaskSchema = z.object({
   sortOrder: z.number().int().min(0).optional(),
 });
 
+export const TaskLinkSchema = z.object({
+  url: z.string().trim().min(1).max(2000),
+  label: z.string().trim().max(200).nullable().optional(),
+});
+
 export const UpdateJobTaskSchema = z.object({
   accountId: z.string().uuid(),
   accountSlug: z.string().min(1),
@@ -115,6 +120,8 @@ export const UpdateJobTaskSchema = z.object({
   priority: taskPriority.optional(),
   assigneeUserId: z.string().uuid().nullable().optional(),
   dueDate: optionalNullableDate,
+  notes: z.string().max(20000).nullable().optional(),
+  links: z.array(TaskLinkSchema).max(20).optional(),
 });
 
 export const SavePhasePageDocSchema = z.object({
@@ -260,6 +267,8 @@ export type JobBoardTask = {
   phase_id: string | null;
   job_id: string | null;
   user_id: string | null;
+  notes: string | null;
+  links: Array<{ url: string; label?: string | null }>;
 };
 
 export type JobBoardAssignee = {

@@ -1122,7 +1122,7 @@ export function createCommercialReportsService(client: SupabaseClient) {
             'id, stage, value, created_at, updated_at, completed_at, commercial_listing_id, commercial_requirement_id, commercial_listings(size_min_sqft, size_max_sqft, disposal_type, on_market_at, created_at), commercial_requirements(created_at, source, size_min_sqft, size_max_sqft)',
           )
           .eq('account_id', input.accountId)
-          .eq('stage', 'signed'),
+          .eq('stage', 'completed_exchanged'),
         client
           .from('commercial_leases')
           .select(

@@ -398,8 +398,8 @@ export function JobDetailContent({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
-      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3 md:px-5">
+    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-1 py-3 md:px-1">
         <div className="min-w-0 flex-1">
           <Link
             href={jobsPath}
@@ -503,7 +503,7 @@ export function JobDetailContent({
         className="flex min-h-0 flex-1 flex-col"
       >
         <div className="shrink-0 overflow-x-auto border-b border-[color:var(--workspace-shell-border)]">
-          <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-0 rounded-none border-0 bg-transparent px-2 md:px-3">
+          <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-0 rounded-none border-0 bg-transparent px-0 md:px-0">
             <TabsTrigger
               value="project"
               className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
@@ -576,7 +576,7 @@ export function JobDetailContent({
 
         <TabsContent
           value="project"
-          className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden p-4 md:p-5"
+          className="mt-0 flex min-h-0 flex-1 flex-col overflow-hidden p-0 pt-3"
         >
           <JobProjectWorkspace
             accountSlug={accountSlug}

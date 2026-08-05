@@ -14,6 +14,7 @@ type Props = {
   accountSlug: string;
   moduleSettings: Record<string, boolean>;
   focusAccountIds: string[];
+  loadPipelineBoardName?: boolean;
   fallback: React.ReactNode;
   children: (adornments: TeamWorkspaceShellAdornments) => React.ReactNode;
 };
@@ -25,6 +26,7 @@ async function TeamWorkspaceShellAdornmentsLoader({
   accountSlug,
   moduleSettings,
   focusAccountIds,
+  loadPipelineBoardName,
   children,
 }: Omit<Props, 'fallback'>) {
   const adornments = await loadTeamWorkspaceShellAdornments({
@@ -34,6 +36,7 @@ async function TeamWorkspaceShellAdornmentsLoader({
     accountSlug,
     moduleSettings,
     focusAccountIds,
+    loadPipelineBoardName,
   });
 
   return <>{children(adornments)}</>;

@@ -4,10 +4,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { canUseEmailAssistant } from '~/lib/billing/entitlements';
+import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import { loadWorkspaceMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
 import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 
+import { loadCommercialPipelineBoardName } from '../../pipeline/_lib/server/pipeline-stage-settings.loader';
 import { loadWorkNavCounts } from './work-nav-counts.loader';
 
 export type TeamWorkspaceShellAdornments = {
@@ -17,6 +19,7 @@ export type TeamWorkspaceShellAdornments = {
   >;
   focusSettingsByAccountId: ReturnType<typeof serializeWorkspaceFocusMap>;
   emailAssistantAvailable: boolean;
+  pipelineBoardName?: string;
 };
 
 export async function loadTeamWorkspaceShellAdornments(params: {
@@ -26,12 +29,14 @@ export async function loadTeamWorkspaceShellAdornments(params: {
   accountSlug: string;
   moduleSettings: Record<string, boolean>;
   focusAccountIds: string[];
+  loadPipelineBoardName?: boolean;
 }): Promise<TeamWorkspaceShellAdornments> {
   const [
     navCounts,
     mobileNavShortcuts,
     focusSettings,
     emailAssistantAvailable,
+    pipelineBoardName,
   ] = await Promise.all([
     loadWorkNavCounts(
       params.client,
@@ -56,6 +61,17 @@ export async function loadTeamWorkspaceShellAdornments(params: {
       console.error('[team-workspace] canUseEmailAssistant:', error);
       return false;
     }),
+    params.loadPipelineBoardName
+      ? loadCommercialPipelineBoardName(params.accountId).catch(
+          (error: unknown) => {
+            console.error(
+              '[team-workspace] loadCommercialPipelineBoardName:',
+              error,
+            );
+            return DEFAULT_COMMERCIAL_WIP_BOARD_NAME;
+          },
+        )
+      : Promise.resolve(undefined),
   ]);
 
   return {
@@ -63,5 +79,6 @@ export async function loadTeamWorkspaceShellAdornments(params: {
     mobileNavShortcuts,
     focusSettingsByAccountId: serializeWorkspaceFocusMap(focusSettings),
     emailAssistantAvailable,
+    pipelineBoardName,
   };
 }

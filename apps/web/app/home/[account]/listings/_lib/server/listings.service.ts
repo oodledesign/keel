@@ -1028,51 +1028,8 @@ export function createListingsService(client: SupabaseClient) {
 
       const enquiry = mapEnquiry(data as EnquiryRow);
 
-      const { data: listing } = await client
-        .from('commercial_listings')
-        .select('name')
-        .eq('id', input.listingId)
-        .eq('account_id', input.accountId)
-        .maybeSingle();
-
-      const listingName =
-        (listing as { name?: string | null } | null)?.name?.trim() ||
-        'Disposal';
-      const contactLabel =
-        enquiry.contactName?.trim() ||
-        enquiry.contactEmail?.trim() ||
-        'Enquiry';
-      const dealName = `${contactLabel} — ${listingName}`;
-
-      const noteParts = [
-        enquiry.message?.trim() || null,
-        enquiry.contactEmail ? `Email: ${enquiry.contactEmail}` : null,
-        enquiry.contactPhone ? `Phone: ${enquiry.contactPhone}` : null,
-        `Source: ${enquiry.source}`,
-      ].filter(Boolean);
-
-      const { error: dealError } = await client.from('pipeline_deals').insert({
-        account_id: input.accountId,
-        business_id: null,
-        name: dealName,
-        contact_name: contactLabel,
-        company_name: null,
-        notes: noteParts.length ? noteParts.join('\n') : null,
-        value: 0,
-        stage: 'enquiry',
-        commercial_listing_id: input.listingId,
-      });
-
-      if (dealError) {
-        console.error(
-          '[listings] createEnquiry deal link failed:',
-          dealError.message,
-        );
-        throw new Error(
-          `Enquiry saved, but creating the deal failed: ${dealError.message}`,
-        );
-      }
-
+      // Enquiries stay on Interest; WIP Instructions are landlord mandates —
+      // do not dual-write a pipeline_deals row from enquiry intake.
       revalidatePath('/home', 'layout');
 
       return enquiry;

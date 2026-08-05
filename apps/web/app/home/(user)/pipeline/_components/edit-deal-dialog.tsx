@@ -61,6 +61,7 @@ type Props = {
   stages?: ReadonlyArray<{ key: string; label: string }>;
   listings?: Array<{ id: string; name: string }>;
   commercial?: boolean;
+  onRequestCreateDisposal?: (deal: PipelineDeal) => void;
 };
 
 const NONE_LISTING = '__none__';
@@ -76,6 +77,7 @@ export function EditDealDialog({
   stages = WORK_STAGES,
   listings = [],
   commercial = false,
+  onRequestCreateDisposal,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [isPending, startTransition] = useTransition();
@@ -278,9 +280,13 @@ export function EditDealDialog({
               hotsTargetExchangeDate,
               hotsNotes,
               completedAt:
-                stage === 'completed' || stage === 'signed'
+                stage === 'completed' ||
+                stage === 'signed' ||
+                stage === 'completed_exchanged'
                   ? (deal.completedAt ?? new Date().toISOString())
-                  : stage === 'fell_through' || stage === 'discounted'
+                  : stage === 'fell_through' ||
+                      stage === 'discounted' ||
+                      stage === 'fallen_through'
                     ? null
                     : deal.completedAt,
             }
@@ -298,11 +304,11 @@ export function EditDealDialog({
       <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {commercial ? 'Edit deal' : 'Edit pipeline item'}
+            {commercial ? 'Edit instruction' : 'Edit pipeline item'}
           </DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {commercial
-              ? 'Update the contact, disposal link, value, stage, and next action.'
+              ? 'Update the landlord/contact, disposal link, value, stage, and next action.'
               : 'Update the client or contact, value, stage, and next action.'}
           </DialogDescription>
         </DialogHeader>
@@ -667,7 +673,21 @@ export function EditDealDialog({
 
           {error && <p className="text-sm text-rose-400">{error}</p>}
 
-          <DialogFooter>
+          <DialogFooter className="gap-2 sm:justify-between">
+            {commercial && onRequestCreateDisposal && deal ? (
+              <button
+                type="button"
+                onClick={() => onRequestCreateDisposal(deal)}
+                className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              >
+                {deal.commercialListingId
+                  ? 'Create another disposal'
+                  : 'Create disposal'}
+              </button>
+            ) : (
+              <span />
+            )}
+            <div className="flex gap-2">
             <button
               type="button"
               onClick={() => onOpenChange(false)}
@@ -689,6 +709,7 @@ export function EditDealDialog({
                 'Save changes'
               )}
             </button>
+            </div>
           </DialogFooter>
         </form>
 

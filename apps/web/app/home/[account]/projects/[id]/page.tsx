@@ -157,7 +157,7 @@ async function ProjectDetailPage({
         };
 
   return (
-    <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
+    <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-2 py-2 md:px-3 md:py-3">
       <JobDetailContent
         accountSlug={accountSlug}
         accountId={accountId}

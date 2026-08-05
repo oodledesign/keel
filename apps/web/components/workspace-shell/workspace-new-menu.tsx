@@ -461,8 +461,8 @@ function getTeamItems(
         href: `${accountPath(account, pathsConfig.app.accountListings)}?create=1`,
       },
       {
-        key: 'enquiry',
-        label: 'New enquiry',
+        key: 'instruction',
+        label: 'New instruction',
         icon: Kanban,
         href: `${accountPath(account, pathsConfig.app.accountPipeline)}?create=lead`,
       },

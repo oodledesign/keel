@@ -5,6 +5,10 @@ import { PageBody } from '@kit/ui/page';
 
 import { loadPipelineDataForAccount } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
+import {
+  DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
+} from '~/lib/commercial/commercial-constants';
+import { isCommercialTerminalStage } from '~/lib/commercial/pipeline-stage-config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
@@ -13,14 +17,14 @@ import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { WorkspacePipelineBoardWrapper } from './_components/workspace-pipeline-board-wrapper';
-import { loadPipelineBoardStageSettings } from './_lib/server/pipeline-stage-settings.loader';
+import { loadPipelineBoardSettings } from './_lib/server/pipeline-stage-settings.loader';
 
 interface TeamAccountPipelinePageProps {
   params: Promise<{ account: string }>;
 }
 
 export const generateMetadata = async () => {
-  return { title: 'Deals' };
+  return { title: 'WIP' };
 };
 
 function formatCurrency(value: number) {
@@ -48,13 +52,14 @@ async function TeamAccountPipelinePage({
 
   let listings: PipelineListingOption[] = [];
   let stageConfig = undefined;
+  let boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME;
 
   if (isCommercial) {
     const client = getSupabaseServerClient();
     // commercial_* tables may lag generated Database types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = client as any;
-    const [listingResult, stages, agentResult] = await Promise.all([
+    const [listingResult, boardSettings, agentResult] = await Promise.all([
       db
         .from('commercial_listings')
         .select(
@@ -62,7 +67,7 @@ async function TeamAccountPipelinePage({
         )
         .eq('account_id', accountId)
         .order('name', { ascending: true }),
-      loadPipelineBoardStageSettings(accountId),
+      loadPipelineBoardSettings(accountId),
       db
         .from('commercial_listing_agents')
         .select('listing_id, user_id, sort_order')
@@ -126,24 +131,22 @@ async function TeamAccountPipelinePage({
       askingPricePence: row.asking_price_pence,
       actingAgents: agentsByListing.get(row.id) ?? [],
     }));
-    stageConfig = stages;
+    stageConfig = boardSettings.stages;
+    boardName = boardSettings.boardName;
   }
 
   const activeDeals = data.deals.filter((d) => {
     if (isCommercial) {
-      return (
-        d.stage !== 'signed' &&
-        d.stage !== 'discounted' &&
-        d.stage !== 'won' &&
-        d.stage !== 'lost'
-      );
+      return !isCommercialTerminalStage(d.stage);
     }
     return d.stage !== 'won' && d.stage !== 'lost';
   });
   const totalValue = activeDeals.reduce((sum, d) => sum + (d.value || 0), 0);
-  const headerTitle = isCommercial ? 'Deals' : 'Pipeline';
+  const headerTitle = isCommercial ? boardName : 'Pipeline';
+  const instructionWord =
+    activeDeals.length === 1 ? 'instruction' : 'instructions';
   const headerDescription = isCommercial
-    ? `${activeDeals.length} active ${activeDeals.length === 1 ? 'deal' : 'deals'} · ${formatCurrency(totalValue)} total value`
+    ? `${activeDeals.length} active ${instructionWord} · ${formatCurrency(totalValue)} total value`
     : `${activeDeals.length} active leads · ${formatCurrency(totalValue)} total value`;
 
   return (
@@ -161,6 +164,7 @@ async function TeamAccountPipelinePage({
           variant={isCommercial ? 'commercial' : 'work'}
           listings={listings}
           stageConfig={stageConfig}
+          boardName={boardName}
         />
       </PageBody>
     </>

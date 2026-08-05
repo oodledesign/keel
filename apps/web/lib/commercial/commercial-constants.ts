@@ -71,18 +71,15 @@ export const LISTING_STATUS_FILTER_ACTIVE_CLASS: Record<ListingStatus, string> =
   };
 
 /**
- * Commercial agency deal pipeline stages (stored on pipeline_deals.stage).
- * Defaults mirror Kato interest-schedule progress statuses.
+ * Commercial Instruction (WIP) stages — Bracketts language.
+ * Stored on pipeline_deals.stage for commercial-property workspaces.
  */
 export const COMMERCIAL_PIPELINE_STAGES = [
-  'shortlisted',
-  'enquiry',
-  'viewing',
-  'negotiating',
-  'under_offer',
-  'signed',
-  'idle',
-  'discounted',
+  'potential',
+  'current',
+  'under_offer_negotiating',
+  'completed_exchanged',
+  'fallen_through',
 ] as const;
 
 export type CommercialPipelineStage =
@@ -92,45 +89,64 @@ export const COMMERCIAL_PIPELINE_STAGE_LABELS: Record<
   CommercialPipelineStage,
   string
 > = {
-  shortlisted: 'Shortlisted',
-  enquiry: 'Enquiry',
-  viewing: 'Viewing',
-  negotiating: 'Negotiating',
-  under_offer: 'Under offer',
-  signed: 'Signed',
-  idle: 'Idle',
-  discounted: 'Discounted',
+  potential: 'Potential Instructions',
+  current: 'Current Instructions',
+  under_offer_negotiating: 'Under Offer / Negotiating',
+  completed_exchanged: 'Completed / Exchanged',
+  fallen_through: 'Fallen through',
 };
 
-/** Stages shown on the board by default (Idle hidden until unhidden). */
+/** Stages shown on the board by default. */
 export const COMMERCIAL_PIPELINE_BOARD_STAGES = [
-  { key: 'shortlisted', label: 'Shortlisted', hidden: false },
-  { key: 'enquiry', label: 'Enquiry', hidden: false },
-  { key: 'viewing', label: 'Viewing', hidden: false },
-  { key: 'negotiating', label: 'Negotiating', hidden: false },
-  { key: 'under_offer', label: 'Under offer', hidden: false },
-  { key: 'signed', label: 'Signed', hidden: false },
-  { key: 'idle', label: 'Idle', hidden: true },
-  { key: 'discounted', label: 'Discounted', hidden: false },
+  { key: 'potential', label: 'Potential Instructions', hidden: false },
+  { key: 'current', label: 'Current Instructions', hidden: false },
+  {
+    key: 'under_offer_negotiating',
+    label: 'Under Offer / Negotiating',
+    hidden: false,
+  },
+  {
+    key: 'completed_exchanged',
+    label: 'Completed / Exchanged',
+    hidden: false,
+  },
+  { key: 'fallen_through', label: 'Fallen through', hidden: false },
 ] as const;
 
-/** Terminal “won” stage for commercial deals. */
-export const COMMERCIAL_PIPELINE_WON_STAGE: CommercialPipelineStage = 'signed';
+/** Terminal “won” stage for commercial instructions. */
+export const COMMERCIAL_PIPELINE_WON_STAGE: CommercialPipelineStage =
+  'completed_exchanged';
 
-/** Terminal “lost” stage for commercial deals. */
+/** Terminal “lost” stage for commercial instructions. */
 export const COMMERCIAL_PIPELINE_LOST_STAGE: CommercialPipelineStage =
-  'discounted';
+  'fallen_through';
 
-/** Legacy stage keys remapped to Kato defaults (see migration). */
+/** Default nav / page title for the commercial instructions board. */
+export const DEFAULT_COMMERCIAL_WIP_BOARD_NAME = 'WIP';
+
+/**
+ * Legacy / Kato keys remapped into WIP Instruction stages.
+ * Kept so old rows and clients normalize cleanly.
+ */
 export const COMMERCIAL_PIPELINE_LEGACY_STAGE_MAP: Record<
   string,
   CommercialPipelineStage
 > = {
-  offer: 'negotiating',
-  hots: 'under_offer',
-  solicitors: 'under_offer',
-  completed: 'signed',
-  fell_through: 'discounted',
+  // Pre-WIP Kato interest keys
+  shortlisted: 'potential',
+  enquiry: 'potential',
+  viewing: 'current',
+  negotiating: 'under_offer_negotiating',
+  under_offer: 'under_offer_negotiating',
+  signed: 'completed_exchanged',
+  idle: 'potential',
+  discounted: 'fallen_through',
+  // Older commercial keys
+  offer: 'under_offer_negotiating',
+  hots: 'under_offer_negotiating',
+  solicitors: 'under_offer_negotiating',
+  completed: 'completed_exchanged',
+  fell_through: 'fallen_through',
 };
 
 export const DEFAULT_PIPELINE_BOARD_STAGES = [

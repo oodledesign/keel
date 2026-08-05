@@ -43,9 +43,11 @@ export function buildCommercialPropertySpaceNavChildren(
   account: string,
   access: TeamAccountAccess,
   moduleSettings?: Record<string, boolean>,
+  options?: { pipelineBoardName?: string },
 ): NavChild[] {
   const ms = moduleSettings;
   const home = createPath(pathsConfig.app.accountHome, account);
+  const pipelineBoardName = options?.pipelineBoardName?.trim() || 'WIP';
 
   const registry: Record<string, () => NavChild | null> = {
     dashboard: () =>
@@ -68,7 +70,7 @@ export function buildCommercialPropertySpaceNavChildren(
     pipeline: () =>
       access.canViewDashboard && isEnabled(ms, 'pipeline')
         ? {
-            label: 'Deals',
+            label: pipelineBoardName,
             path: createPath(pathsConfig.app.accountPipeline, account),
             Icon: <ClipboardList className={iconClasses} />,
           }

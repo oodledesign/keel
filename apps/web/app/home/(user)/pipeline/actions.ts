@@ -54,9 +54,17 @@ export async function moveDealToStage(
   const client = getSupabaseServerClient();
 
   const updates: Record<string, unknown> = { stage: newStage };
-  if (newStage === 'completed' || newStage === 'signed') {
+  if (
+    newStage === 'completed' ||
+    newStage === 'signed' ||
+    newStage === 'completed_exchanged'
+  ) {
     updates.completed_at = new Date().toISOString();
-  } else if (newStage === 'fell_through' || newStage === 'discounted') {
+  } else if (
+    newStage === 'fell_through' ||
+    newStage === 'discounted' ||
+    newStage === 'fallen_through'
+  ) {
     updates.completed_at = null;
   }
 
@@ -202,9 +210,17 @@ export async function updateDeal(dealId: string, input: UpdateDealInput) {
   if (input.hotsNotes !== undefined) {
     updates.hots_notes = input.hotsNotes?.trim() || null;
   }
-  if (input.stage === 'completed' || input.stage === 'signed') {
+  if (
+    input.stage === 'completed' ||
+    input.stage === 'signed' ||
+    input.stage === 'completed_exchanged'
+  ) {
     updates.completed_at = new Date().toISOString();
-  } else if (input.stage === 'fell_through' || input.stage === 'discounted') {
+  } else if (
+    input.stage === 'fell_through' ||
+    input.stage === 'discounted' ||
+    input.stage === 'fallen_through'
+  ) {
     updates.completed_at = null;
   }
   if (input.description !== undefined)

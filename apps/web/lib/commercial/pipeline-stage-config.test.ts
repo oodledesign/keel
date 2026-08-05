@@ -4,51 +4,60 @@ import {
   defaultCommercialPipelineStageConfig,
   resolveCommercialPipelineBoardStages,
   resolveCommercialPipelineStageConfig,
+  normalizeCommercialPipelineStage,
 } from './pipeline-stage-config';
 
 describe('pipeline-stage-config', () => {
-  it('defaults match Kato stages with idle hidden', () => {
+  it('defaults match WIP Instruction stages', () => {
     const defaults = defaultCommercialPipelineStageConfig();
     expect(defaults.map((stage) => stage.key)).toEqual([
-      'shortlisted',
-      'enquiry',
-      'viewing',
-      'negotiating',
-      'under_offer',
-      'signed',
-      'idle',
-      'discounted',
+      'potential',
+      'current',
+      'under_offer_negotiating',
+      'completed_exchanged',
+      'fallen_through',
     ]);
-    expect(defaults.find((stage) => stage.key === 'idle')?.hidden).toBe(true);
+  });
+
+  it('normalizes legacy Kato keys into WIP stages', () => {
+    expect(normalizeCommercialPipelineStage('enquiry')).toBe('potential');
+    expect(normalizeCommercialPipelineStage('viewing')).toBe('current');
+    expect(normalizeCommercialPipelineStage('signed')).toBe(
+      'completed_exchanged',
+    );
+    expect(normalizeCommercialPipelineStage('discounted')).toBe(
+      'fallen_through',
+    );
   });
 
   it('applies rename and hide overrides', () => {
     const resolved = resolveCommercialPipelineStageConfig([
-      { key: 'enquiry', label: 'Inbound', hidden: false },
-      { key: 'idle', label: 'Idle', hidden: false },
+      { key: 'potential', label: 'Pitching', hidden: false },
+      { key: 'fallen_through', label: 'Lost', hidden: true },
     ]);
 
-    expect(resolved.find((stage) => stage.key === 'enquiry')?.label).toBe(
-      'Inbound',
+    expect(resolved.find((stage) => stage.key === 'potential')?.label).toBe(
+      'Pitching',
     );
-    expect(resolved.find((stage) => stage.key === 'idle')?.hidden).toBe(false);
-    expect(resolved).toHaveLength(8);
+    expect(
+      resolved.find((stage) => stage.key === 'fallen_through')?.hidden,
+    ).toBe(true);
+    expect(resolved).toHaveLength(5);
   });
 
   it('keeps hidden columns when deals remain', () => {
     const board = resolveCommercialPipelineBoardStages({
       stored: defaultCommercialPipelineStageConfig().map((stage) =>
-        stage.key === 'idle'
-          ? stage
-          : { ...stage, hidden: stage.key === 'viewing' ? true : stage.hidden },
+        stage.key === 'fallen_through'
+          ? { ...stage, hidden: true }
+          : stage,
       ),
-      dealStages: ['viewing'],
+      dealStages: ['fallen_through'],
     });
 
-    expect(board.some((stage) => stage.key === 'viewing')).toBe(true);
-    expect(board.find((stage) => stage.key === 'viewing')?.forceVisible).toBe(
-      true,
-    );
-    expect(board.some((stage) => stage.key === 'idle')).toBe(false);
+    expect(board.some((stage) => stage.key === 'fallen_through')).toBe(true);
+    expect(
+      board.find((stage) => stage.key === 'fallen_through')?.forceVisible,
+    ).toBe(true);
   });
 });

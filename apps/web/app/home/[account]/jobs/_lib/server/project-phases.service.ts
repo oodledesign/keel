@@ -97,6 +97,42 @@ const TASK_STATUSES = [
   'cancelled',
 ] as const;
 
+const JOB_BOARD_TASK_SELECT =
+  'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, notes, links' as const;
+
+function normalizeTaskLinks(
+  value: unknown,
+): Array<{ url: string; label?: string | null }> {
+  if (!Array.isArray(value)) return [];
+  const links: Array<{ url: string; label?: string | null }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const row = item as { url?: unknown; label?: unknown };
+    const url = typeof row.url === 'string' ? row.url.trim() : '';
+    if (!url) continue;
+    const label =
+      typeof row.label === 'string' ? row.label.trim() || null : null;
+    links.push({ url, label });
+  }
+  return links;
+}
+
+function mapJobBoardTask(row: Record<string, unknown>): JobBoardTask {
+  return {
+    id: String(row.id),
+    title: String(row.title ?? ''),
+    status: String(row.status ?? 'todo'),
+    priority: String(row.priority ?? 'medium'),
+    due_date: (row.due_date as string | null) ?? null,
+    sort_order: (row.sort_order as number | null) ?? null,
+    phase_id: (row.phase_id as string | null) ?? null,
+    job_id: (row.project_id as string | null) ?? null,
+    user_id: (row.user_id as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
+    links: normalizeTaskLinks(row.links),
+  };
+}
+
 const EMPTY_TASK_COUNTS = (): TaskStatusCount => ({
   todo: 0,
   in_progress: 0,
@@ -516,13 +552,11 @@ class ProjectPhasesService {
       .from('tasks')
       .update(payload)
       .eq('id', input.taskId)
-      .select(
-        'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id',
-      )
+      .select(JOB_BOARD_TASK_SELECT)
       .single();
 
     if (error) this.throwErr(error);
-    return data as JobBoardTask;
+    return mapJobBoardTask(data as Record<string, unknown>);
   }
 
   async listJobBoard(input: ListJobBoardInput): Promise<JobBoardResult> {
@@ -563,9 +597,7 @@ class ProjectPhasesService {
         .order('sort_order', { ascending: true }),
       this.db
         .from('tasks')
-        .select(
-          'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id',
-        )
+        .select(JOB_BOARD_TASK_SELECT)
         .eq('project_id', input.jobId)
         .order('sort_order', { ascending: true, nullsFirst: false })
         .order('created_at', { ascending: true }),
@@ -574,7 +606,28 @@ class ProjectPhasesService {
     if (clientErr) this.throwErr(clientErr);
     if (membersErr) this.throwErr(membersErr);
     if (phaseErr) this.throwErr(phaseErr);
-    if (tasksErr) this.throwErr(tasksErr);
+
+    let taskRows = tasks;
+    let resolvedTasksErr = tasksErr;
+
+    if (
+      tasksErr &&
+      isMissingColumnError(tasksErr) &&
+      `${tasksErr.message ?? ''}`.toLowerCase().includes('links')
+    ) {
+      const fallback = await this.db
+        .from('tasks')
+        .select(
+          'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, notes',
+        )
+        .eq('project_id', input.jobId)
+        .order('sort_order', { ascending: true, nullsFirst: false })
+        .order('created_at', { ascending: true });
+      taskRows = fallback.data;
+      resolvedTasksErr = fallback.error;
+    }
+
+    if (resolvedTasksErr) this.throwErr(resolvedTasksErr);
 
     const client = (clientRow as Record<string, unknown> | null) ?? null;
     const phaseIds = ((phaseRows ?? []) as Array<Record<string, unknown>>).map(
@@ -616,7 +669,7 @@ class ProjectPhasesService {
 
     const phases = this.buildPhaseListItems(
       (phaseRows ?? []) as Array<Record<string, unknown>>,
-      (tasks ?? []) as Array<{ phase_id: string | null; status: string }>,
+      (taskRows ?? []) as Array<{ phase_id: string | null; status: string }>,
       pageDocByPhase,
       noteCountByPhase,
     );
@@ -645,8 +698,8 @@ class ProjectPhasesService {
     const tasksByPhase: Record<string, JobBoardTask[]> = {};
     const jobTaskCounts = EMPTY_TASK_COUNTS();
 
-    for (const row of tasks ?? []) {
-      const task = row as JobBoardTask;
+    for (const row of taskRows ?? []) {
+      const task = mapJobBoardTask(row as Record<string, unknown>);
       const key = task.phase_id ?? '__unphased__';
       if (!tasksByPhase[key]) tasksByPhase[key] = [];
       tasksByPhase[key].push(task);
@@ -827,9 +880,7 @@ class ProjectPhasesService {
       this.loadOrCreatePhasePageDoc(phase as Record<string, unknown>, user.id),
       this.db
         .from('tasks')
-        .select(
-          'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, notes',
-        )
+        .select(JOB_BOARD_TASK_SELECT)
         .eq('project_id', jobId)
         .eq('phase_id', input.phaseId)
         .order('sort_order', { ascending: true, nullsFirst: false })
@@ -928,9 +979,7 @@ class ProjectPhasesService {
         client_id: (job.client_id as string | null) ?? null,
         sort_order: sortOrder,
       })
-      .select(
-        'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id',
-      )
+      .select(JOB_BOARD_TASK_SELECT)
       .single();
 
     if (error) this.throwErr(error);
@@ -945,7 +994,7 @@ class ProjectPhasesService {
       actorUserId: user.id,
     });
 
-    return data as JobBoardTask;
+    return mapJobBoardTask(data as Record<string, unknown>);
   }
 
   async updateJobTask(input: UpdateJobTaskInput) {
@@ -984,19 +1033,27 @@ class ProjectPhasesService {
         ? input.dueDate.toISOString().slice(0, 10)
         : null;
     }
+    if (input.notes !== undefined) {
+      payload.notes = input.notes?.trim() ? input.notes.trim() : null;
+    }
+    if (input.links !== undefined) {
+      payload.links = input.links.map((link) => ({
+        url: link.url.trim(),
+        ...(link.label?.trim() ? { label: link.label.trim() } : {}),
+      }));
+    }
 
     if (Object.keys(payload).length === 0) {
       throw new Error('No updates provided');
     }
 
-    const { data, error } = await this.db
-      .from('tasks')
+    // links may lag generated Database types until typegen
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (this.db.from('tasks') as any)
       .update(payload)
       .eq('id', input.taskId)
       .eq('project_id', input.jobId)
-      .select(
-        'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id',
-      )
+      .select(JOB_BOARD_TASK_SELECT)
       .single();
 
     if (error) this.throwErr(error);
@@ -1019,7 +1076,7 @@ class ProjectPhasesService {
       });
     }
 
-    return data as JobBoardTask;
+    return mapJobBoardTask(data as Record<string, unknown>);
   }
 
   async savePhasePageDoc(input: SavePhasePageDocInput) {

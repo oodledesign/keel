@@ -64,6 +64,7 @@ import {
   UNPHASED_KEY,
   formatShortDate,
 } from './job-project.constants';
+import { JobProjectTaskSheet } from './job-project-task-sheet';
 
 type MemberLookup = Map<
   string,
@@ -81,19 +82,33 @@ function TaskCard({
   task,
   memberLookup,
   isOverlay,
+  onOpen,
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
   isOverlay?: boolean;
+  onOpen?: () => void;
 }) {
   const assignee = task.user_id ? memberLookup.get(task.user_id) : null;
   const priorityKey = task.priority || 'none';
+  const linkCount = task.links?.length ?? 0;
+  const hasNotes = Boolean(task.notes?.trim());
 
   return (
     <div
-      className={`rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80 p-3 shadow-sm ${
+      role={onOpen ? 'button' : undefined}
+      tabIndex={onOpen ? 0 : undefined}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (!onOpen) return;
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className={`rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80 p-3 shadow-sm transition-colors ${
         isOverlay ? 'ring-2 ring-[var(--ozer-accent)]/40' : ''
-      }`}
+      } ${onOpen ? 'cursor-pointer hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-panel)]' : ''}`}
     >
       <div className="flex items-start gap-2">
         <span
@@ -122,6 +137,15 @@ function TaskCard({
                 {assignee.name ?? assignee.email ?? 'Assigned'}
               </span>
             )}
+            {(hasNotes || linkCount > 0) && (
+              <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                {hasNotes ? 'Notes' : ''}
+                {hasNotes && linkCount > 0 ? ' · ' : ''}
+                {linkCount > 0
+                  ? `${linkCount} link${linkCount === 1 ? '' : 's'}`
+                  : ''}
+              </span>
+            )}
           </div>
         </div>
       </div>
@@ -133,10 +157,12 @@ function SortableTaskCard({
   task,
   memberLookup,
   disabled,
+  onOpen,
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
   disabled: boolean;
+  onOpen: () => void;
 }) {
   const {
     attributes,
@@ -165,12 +191,13 @@ function SortableTaskCard({
             {...attributes}
             {...listeners}
             aria-label="Drag task"
+            onClick={(e) => e.stopPropagation()}
           >
             <GripVertical className="h-4 w-4" />
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <TaskCard task={task} memberLookup={memberLookup} />
+          <TaskCard task={task} memberLookup={memberLookup} onOpen={onOpen} />
         </div>
       </div>
     </div>
@@ -188,6 +215,7 @@ function PhaseColumn({
   addingTask,
   onDeletePhase,
   deletingPhase,
+  onOpenTask,
 }: {
   phase: PhaseListItem | null;
   tasks: JobBoardTask[];
@@ -199,6 +227,7 @@ function PhaseColumn({
   addingTask: boolean;
   onDeletePhase?: (phaseId: string) => void;
   deletingPhase?: boolean;
+  onOpenTask: (task: JobBoardTask) => void;
 }) {
   const columnId = phase?.id ?? UNPHASED_KEY;
   const { setNodeRef, isOver } = useDroppable({
@@ -213,7 +242,7 @@ function PhaseColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border bg-[var(--workspace-shell-panel)]/80 ${
+      className={`flex h-full w-[min(100%,280px)] shrink-0 flex-col rounded-xl border bg-[var(--workspace-shell-panel)]/80 ${
         isOver
           ? 'border-[var(--ozer-accent)]/50'
           : 'border-[color:var(--workspace-shell-border)]/80'
@@ -320,13 +349,14 @@ function PhaseColumn({
         items={tasks.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex min-h-[120px] flex-1 flex-col gap-2 p-2">
+        <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
           {tasks.map((task) => (
             <SortableTaskCard
               key={task.id}
               task={task}
               memberLookup={memberLookup}
               disabled={!canEditJobs}
+              onOpen={() => onOpenTask(task)}
             />
           ))}
         </div>
@@ -378,6 +408,7 @@ function SortablePhaseColumn(props: {
   addingTask: boolean;
   onDeletePhase?: (phaseId: string) => void;
   deletingPhase?: boolean;
+  onOpenTask: (task: JobBoardTask) => void;
 }) {
   return <PhaseColumn {...props} />;
 }
@@ -411,6 +442,8 @@ export function JobProjectBoard({
   seedingPhases: boolean;
 }) {
   const [activeTask, setActiveTask] = useState<JobBoardTask | null>(null);
+  const [selectedTask, setSelectedTask] = useState<JobBoardTask | null>(null);
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const [addingTask, setAddingTask] = useState(false);
   const [deletingPhase, setDeletingPhase] = useState(false);
   const [isPending, startTransition] = useTransition();
@@ -655,10 +688,31 @@ export function JobProjectBoard({
 
   const unphasedTasks = tasksByPhase[UNPHASED_KEY] ?? [];
 
+  const openTask = useCallback((task: JobBoardTask) => {
+    setSelectedTask(task);
+    setTaskSheetOpen(true);
+  }, []);
+
+  const handleTaskUpdated = useCallback(
+    (updated: JobBoardTask) => {
+      setSelectedTask(updated);
+      const next: Record<string, JobBoardTask[]> = {};
+      for (const [key, tasks] of Object.entries(board.tasksByPhase)) {
+        next[key] = tasks.map((task) =>
+          task.id === updated.id ? { ...task, ...updated } : task,
+        );
+      }
+      onBoardChange({ ...board, tasksByPhase: next });
+    },
+    [board, onBoardChange],
+  );
+
   return (
-    <div className="space-y-2">
+    <div className="flex h-full min-h-0 flex-1 flex-col">
       {isPending && (
-        <p className="text-xs text-amber-400/90">Saving changes…</p>
+        <p className="mb-2 shrink-0 text-xs text-amber-400/90">
+          Saving changes…
+        </p>
       )}
       <DndContext
         sensors={sensors}
@@ -666,7 +720,7 @@ export function JobProjectBoard({
         onDragStart={handleDragStart}
         onDragEnd={handleDragEnd}
       >
-        <div className="flex w-max gap-3 overflow-x-auto pt-1 pb-4">
+        <div className="flex min-h-0 flex-1 gap-3 overflow-x-auto overflow-y-hidden pb-1">
           {phases.map((phase) => (
             <SortablePhaseColumn
               key={phase.id}
@@ -680,6 +734,7 @@ export function JobProjectBoard({
               addingTask={addingTask}
               onDeletePhase={handleDeletePhase}
               deletingPhase={deletingPhase}
+              onOpenTask={openTask}
             />
           ))}
           {unphasedTasks.length > 0 && (
@@ -692,6 +747,7 @@ export function JobProjectBoard({
               memberLookup={memberLookup}
               onAddTask={handleAddTask}
               addingTask={addingTask}
+              onOpenTask={openTask}
             />
           )}
         </div>
@@ -702,6 +758,17 @@ export function JobProjectBoard({
           ) : null}
         </DragOverlay>
       </DndContext>
+
+      <JobProjectTaskSheet
+        open={taskSheetOpen}
+        onOpenChange={setTaskSheetOpen}
+        task={selectedTask}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        jobId={jobId}
+        canEditJobs={canEditJobs}
+        onUpdated={handleTaskUpdated}
+      />
     </div>
   );
 }

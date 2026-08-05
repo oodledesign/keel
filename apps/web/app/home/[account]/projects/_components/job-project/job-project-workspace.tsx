@@ -390,7 +390,11 @@ export function JobProjectWorkspace({
         </div>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-auto">
+      <div
+        className={`min-h-0 flex-1 ${
+          view === 'board' ? 'flex flex-col overflow-hidden' : 'overflow-auto'
+        }`}
+      >
         {boardLoading ? (
           <div className="space-y-3">
             <div className="h-32 animate-pulse rounded-xl bg-[var(--workspace-control-surface)]/50" />

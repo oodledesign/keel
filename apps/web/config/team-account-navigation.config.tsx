@@ -56,6 +56,7 @@ const getRoutes = (
   navCounts?: WorkNavCounts,
   userFeatures?: {
     emailAssistantAvailable?: boolean;
+    pipelineBoardName?: string;
   },
 ) => {
   const access = getTeamAccountAccess(accessInput);
@@ -90,6 +91,7 @@ const getRoutes = (
         account,
         access,
         ms,
+        { pipelineBoardName: userFeatures?.pipelineBoardName },
       ) as NavRouteChild[];
     } else if (profile === 'family') {
       applicationChildren = buildFamilySpaceNavChildren(
@@ -158,6 +160,7 @@ export function getTeamAccountSidebarConfig(
   navCounts?: WorkNavCounts,
   userFeatures?: {
     emailAssistantAvailable?: boolean;
+    pipelineBoardName?: string;
   },
 ) {
   return NavigationConfigSchema.parse({
