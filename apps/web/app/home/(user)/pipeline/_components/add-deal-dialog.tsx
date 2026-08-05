@@ -58,6 +58,8 @@ type Props = {
   defaultStage?: string;
   listings?: Array<{ id: string; name: string }>;
   commercial?: boolean;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
 };
 
 const NONE_LISTING = '__none__';
@@ -71,9 +73,13 @@ export function AddDealDialog({
   defaultStage,
   listings = [],
   commercial = false,
+  open: controlledOpen,
+  onOpenChange,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const formRef = useRef<HTMLFormElement>(null);
@@ -308,38 +314,42 @@ export function AddDealDialog({
                   placeholder="Select an existing client"
                 />
               </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="projectName"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Project name
-                </Label>
-                <Input
-                  id="projectName"
-                  name="projectName"
-                  placeholder="Website redesign"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                  Optional — used when this opportunity is marked Won.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="description"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Description
-                </Label>
-                <Textarea
-                  id="description"
-                  name="description"
-                  rows={3}
-                  placeholder="Brief for the new project…"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-              </div>
+              {!commercial ? (
+                <>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="projectName"
+                      className="text-[var(--workspace-shell-text-muted)]"
+                    >
+                      Project name
+                    </Label>
+                    <Input
+                      id="projectName"
+                      name="projectName"
+                      placeholder="Website redesign"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                    />
+                    <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                      Optional — used when this opportunity is marked Won.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="description"
+                      className="text-[var(--workspace-shell-text-muted)]"
+                    >
+                      Description
+                    </Label>
+                    <Textarea
+                      id="description"
+                      name="description"
+                      rows={3}
+                      placeholder="Brief for the new project…"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                    />
+                  </div>
+                </>
+              ) : null}
             </>
           ) : (
             <div className="grid grid-cols-2 gap-4">

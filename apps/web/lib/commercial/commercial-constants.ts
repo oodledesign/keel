@@ -32,6 +32,44 @@ export const DISPOSAL_TYPE_LABELS: Record<DisposalType, string> = {
   investment: 'Investment',
 };
 
+/** Semantic badge classes for disposal type pills (bg + text). */
+export const DISPOSAL_TYPE_BADGE_CLASS: Record<DisposalType, string> = {
+  for_sale:
+    'bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-200/80 dark:bg-amber-500/15 dark:text-amber-100 dark:ring-amber-500/30',
+  to_let:
+    'bg-teal-100 text-teal-900 ring-1 ring-inset ring-teal-200/80 dark:bg-teal-500/15 dark:text-teal-100 dark:ring-teal-500/30',
+  investment:
+    'bg-violet-100 text-violet-900 ring-1 ring-inset ring-violet-200/80 dark:bg-violet-500/15 dark:text-violet-100 dark:ring-violet-500/30',
+};
+
+/** Semantic badge classes for listing status pills. */
+export const LISTING_STATUS_BADGE_CLASS: Record<ListingStatus, string> = {
+  draft:
+    'bg-slate-100 text-slate-700 ring-1 ring-inset ring-slate-200/80 dark:bg-slate-500/15 dark:text-slate-200 dark:ring-slate-500/30',
+  instructed:
+    'bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-200/80 dark:bg-sky-500/15 dark:text-sky-100 dark:ring-sky-500/30',
+  marketing:
+    'bg-[color-mix(in_srgb,var(--ozer-accent)_16%,white)] text-[var(--ozer-accent-muted)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-accent)_28%,transparent)]',
+  under_offer:
+    'bg-orange-100 text-orange-900 ring-1 ring-inset ring-orange-200/80 dark:bg-orange-500/15 dark:text-orange-100 dark:ring-orange-500/30',
+  let: 'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
+  sold: 'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
+  withdrawn:
+    'bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200/80 dark:bg-zinc-500/15 dark:text-zinc-300 dark:ring-zinc-500/30',
+};
+
+/** Filter chip classes when a status filter is active. */
+export const LISTING_STATUS_FILTER_ACTIVE_CLASS: Record<ListingStatus, string> =
+  {
+    draft: 'bg-slate-600 text-white',
+    instructed: 'bg-sky-600 text-white',
+    marketing: 'bg-[var(--ozer-accent)] text-white',
+    under_offer: 'bg-orange-600 text-white',
+    let: 'bg-emerald-600 text-white',
+    sold: 'bg-emerald-700 text-white',
+    withdrawn: 'bg-zinc-500 text-white',
+  };
+
 /**
  * Commercial agency deal pipeline stages (stored on pipeline_deals.stage).
  * Defaults mirror Kato interest-schedule progress statuses.

@@ -452,6 +452,47 @@ function getTeamItems(
     ];
   }
 
+  if (spaceType === 'commercial-property') {
+    return [
+      {
+        key: 'disposal',
+        label: 'New disposal',
+        icon: Building2,
+        href: `${accountPath(account, pathsConfig.app.accountListings)}?create=1`,
+      },
+      {
+        key: 'enquiry',
+        label: 'New enquiry',
+        icon: Kanban,
+        href: `${accountPath(account, pathsConfig.app.accountPipeline)}?create=lead`,
+      },
+      {
+        key: 'requirement',
+        label: 'New requirement',
+        icon: FileText,
+        href: `${accountPath(account, pathsConfig.app.accountRequirements)}?create=1`,
+      },
+      {
+        key: 'contact',
+        label: 'New contact',
+        icon: UserRoundPlus,
+        href: `${accountPath(account, pathsConfig.app.accountClients)}?create=client`,
+      },
+      {
+        key: 'task',
+        label: 'New Task',
+        icon: CheckSquare,
+        action: 'create-task',
+      },
+      {
+        key: 'note',
+        label: 'New Note',
+        icon: StickyNote,
+        href: `${accountPath(account, pathsConfig.app.accountNotes)}?new=1`,
+      },
+    ];
+  }
+
   return [
     {
       key: 'task',

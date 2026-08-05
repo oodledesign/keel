@@ -29,15 +29,24 @@ type Props = {
   accountId: string;
   accountSlug: string;
   initialStages: PipelineStageConfigItem[];
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  /** When false, only the dialog is rendered (controlled via open/onOpenChange). */
+  showTrigger?: boolean;
 };
 
 export function CustomizePipelinePhasesDialog({
   accountId,
   accountSlug,
   initialStages,
+  open: controlledOpen,
+  onOpenChange,
+  showTrigger = true,
 }: Props) {
   const router = useRouter();
-  const [open, setOpen] = useState(false);
+  const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
+  const open = controlledOpen ?? uncontrolledOpen;
+  const setOpen = onOpenChange ?? setUncontrolledOpen;
   const [stages, setStages] = useState<PipelineStageConfigItem[]>(
     initialStages.length > 0
       ? initialStages
@@ -102,16 +111,18 @@ export function CustomizePipelinePhasesDialog({
 
   return (
     <>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]/80 hover:bg-white/[0.08] hover:text-[var(--workspace-shell-text)]"
-        onClick={() => setOpen(true)}
-      >
-        <Settings2 className="mr-1.5 h-3.5 w-3.5" />
-        Customize phases
-      </Button>
+      {showTrigger ? (
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]/80 hover:bg-white/[0.08] hover:text-[var(--workspace-shell-text)]"
+          onClick={() => setOpen(true)}
+        >
+          <Settings2 className="mr-1.5 h-3.5 w-3.5" />
+          Customize phases
+        </Button>
+      ) : null}
 
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="max-w-lg border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">

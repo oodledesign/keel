@@ -4,7 +4,6 @@ import { PageBody } from '@kit/ui/page';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import {
   COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES,
@@ -37,20 +36,13 @@ async function ListingsPage({ params }: ListingsPageProps) {
   const listings = await service.listListings(accountId);
 
   return (
-    <>
-      <TeamAccountLayoutPageHeader
-        account={slug}
-        title="Disposals"
-        description="Disposal instructions and marketing stock."
+    <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
+      <ListingsList
+        accountId={accountId}
+        accountSlug={slug}
+        initialListings={listings}
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
-        <ListingsList
-          accountId={accountId}
-          accountSlug={slug}
-          initialListings={listings}
-        />
-      </PageBody>
-    </>
+    </PageBody>
   );
 }
 

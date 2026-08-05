@@ -351,42 +351,46 @@ export function EditDealDialog({
                   placeholder="Select an existing client"
                 />
               </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="edit-projectName"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Project name
-                </Label>
-                <Input
-                  id="edit-projectName"
-                  name="projectName"
-                  key={`projectName-${deal.id}-${deal.projectName ?? ''}`}
-                  defaultValue={deal.projectName ?? ''}
-                  placeholder="Website redesign"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-                <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
-                  Optional — used when this opportunity is marked Won.
-                </p>
-              </div>
-              <div className="space-y-2">
-                <Label
-                  htmlFor="edit-description"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Description
-                </Label>
-                <Textarea
-                  id="edit-description"
-                  name="description"
-                  key={`description-${deal.id}-${deal.description ?? ''}`}
-                  rows={3}
-                  defaultValue={deal.description ?? ''}
-                  placeholder="Brief for the new project…"
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-              </div>
+              {!commercial ? (
+                <>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="edit-projectName"
+                      className="text-[var(--workspace-shell-text-muted)]"
+                    >
+                      Project name
+                    </Label>
+                    <Input
+                      id="edit-projectName"
+                      name="projectName"
+                      key={`projectName-${deal.id}-${deal.projectName ?? ''}`}
+                      defaultValue={deal.projectName ?? ''}
+                      placeholder="Website redesign"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                    />
+                    <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                      Optional — used when this opportunity is marked Won.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="edit-description"
+                      className="text-[var(--workspace-shell-text-muted)]"
+                    >
+                      Description
+                    </Label>
+                    <Textarea
+                      id="edit-description"
+                      name="description"
+                      key={`description-${deal.id}-${deal.description ?? ''}`}
+                      rows={3}
+                      defaultValue={deal.description ?? ''}
+                      placeholder="Brief for the new project…"
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                    />
+                  </div>
+                </>
+              ) : null}
             </>
           ) : (
             <div className="grid grid-cols-2 gap-4">
@@ -688,7 +692,7 @@ export function EditDealDialog({
           </DialogFooter>
         </form>
 
-        {accountId && deal ? (
+        {accountId && deal && !commercial ? (
           <div className="mt-4 border-t border-[color:var(--workspace-shell-border)] pt-4">
             <MeetingTranscriptsBlock
               accountId={accountId}

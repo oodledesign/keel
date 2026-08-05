@@ -7,7 +7,6 @@ import {
   CalendarDays,
   ClipboardList,
   Inbox,
-  Plus,
   Tag,
 } from 'lucide-react';
 
@@ -118,32 +117,6 @@ export function CommercialAgencyDashboard({
 
   return (
     <div className="space-y-6 p-4 lg:p-6">
-      <section className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-            Agency home
-          </h2>
-          <p className={`text-sm ${workspaceTextMuted}`}>
-            Triage enquiries, keep stock moving, and jump into today&apos;s
-            work.
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Button asChild className={workspaceBtnPrimaryMd}>
-            <Link href={listingsHref}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              New disposal
-            </Link>
-          </Button>
-          <Button asChild variant="outline" className="rounded-xl">
-            <Link href={requirementsHref}>
-              <Plus className="mr-1.5 h-4 w-4" />
-              New requirement
-            </Link>
-          </Button>
-        </div>
-      </section>
-
       <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <ActionCard
           href={listingsHref}

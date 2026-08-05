@@ -2,7 +2,7 @@
 
 import { useCallback, useMemo, useState, useTransition } from 'react';
 
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   DndContext,
@@ -67,11 +67,20 @@ export function RequirementsBoard({
   initialRequirements,
 }: RequirementsBoardProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const createRequested = searchParams.get('create') === '1';
   const [items, setItems] = useState(initialRequirements);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialRequirement | null>(null);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  const clearCreateQuery = useCallback(() => {
+    if (!createRequested) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('create');
+    router.replace(url.pathname + url.search, { scroll: false });
+  }, [createRequested, router]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
@@ -216,16 +225,18 @@ export function RequirementsBoard({
       )}
 
       <RequirementFormModal
-        open={modalOpen}
+        open={modalOpen || createRequested}
         onClose={() => {
           setModalOpen(false);
           setEditing(null);
+          clearCreateQuery();
         }}
         accountId={accountId}
         requirement={editing}
         onSaved={() => {
           setModalOpen(false);
           setEditing(null);
+          clearCreateQuery();
           handleSaved();
         }}
       />

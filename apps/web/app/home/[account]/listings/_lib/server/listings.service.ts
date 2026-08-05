@@ -81,6 +81,14 @@ async function syncPropertyHiveOnStatusChange(input: {
   }
 }
 
+export type ListingAgent = {
+  userId: string;
+  name: string;
+  email: string | null;
+  pictureUrl: string | null;
+  sortOrder: number;
+};
+
 export type CommercialListing = {
   id: string;
   accountId: string;
@@ -128,6 +136,8 @@ export type CommercialListing = {
   updatedAt: string;
   /** Signed cover/thumbnail URL when loaded with list thumbnails. */
   coverUrl?: string | null;
+  /** Acting agents when loaded with list assignment data. */
+  actingAgents?: ListingAgent[];
 };
 
 export type ListingMemberOption = {
@@ -141,14 +151,6 @@ export type WorkspaceTeam = {
   id: string;
   accountId: string;
   name: string;
-  sortOrder: number;
-};
-
-export type ListingAgent = {
-  userId: string;
-  name: string;
-  email: string | null;
-  pictureUrl: string | null;
   sortOrder: number;
 };
 
@@ -523,6 +525,73 @@ async function attachCoverUrls(
   }));
 }
 
+async function attachActingAgents(
+  client: SupabaseClient,
+  accountId: string,
+  listings: CommercialListing[],
+): Promise<CommercialListing[]> {
+  if (listings.length === 0) return listings;
+
+  const listingIds = listings.map((l) => l.id);
+  const { data: agentRows, error } = await fromTable(
+    client,
+    'commercial_listing_agents',
+  )
+    .select('listing_id, user_id, sort_order')
+    .eq('account_id', accountId)
+    .in('listing_id', listingIds)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[listings] attachActingAgents:', error.message);
+    return listings.map((listing) => ({ ...listing, actingAgents: [] }));
+  }
+
+  const rows = (agentRows ?? []) as Array<{
+    listing_id: string;
+    user_id: string;
+    sort_order: number;
+  }>;
+  const userIds = [...new Set(rows.map((r) => r.user_id))];
+  const memberById = new Map<
+    string,
+    { name: string; email: string | null; pictureUrl: string | null }
+  >();
+
+  if (userIds.length > 0) {
+    const { data: accounts } = await client
+      .from('accounts')
+      .select('id, name, picture_url')
+      .in('id', userIds);
+    for (const row of accounts ?? []) {
+      memberById.set(row.id as string, {
+        name: (row.name as string)?.trim() || 'Team member',
+        email: null,
+        pictureUrl: (row.picture_url as string | null) ?? null,
+      });
+    }
+  }
+
+  const agentsByListing = new Map<string, ListingAgent[]>();
+  for (const row of rows) {
+    const member = memberById.get(row.user_id);
+    const list = agentsByListing.get(row.listing_id) ?? [];
+    list.push({
+      userId: row.user_id,
+      name: member?.name ?? 'Team member',
+      email: member?.email ?? null,
+      pictureUrl: member?.pictureUrl ?? null,
+      sortOrder: row.sort_order ?? list.length,
+    });
+    agentsByListing.set(row.listing_id, list);
+  }
+
+  return listings.map((listing) => ({
+    ...listing,
+    actingAgents: agentsByListing.get(listing.id) ?? [],
+  }));
+}
+
 export function createListingsService(client: SupabaseClient) {
   return {
     async listListings(
@@ -547,7 +616,8 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
-      return attachCoverUrls(client, listings);
+      const withCovers = await attachCoverUrls(client, listings);
+      return attachActingAgents(client, accountId, withCovers);
     },
 
     async getListing(
@@ -986,7 +1056,7 @@ export function createListingsService(client: SupabaseClient) {
         business_id: null,
         name: dealName,
         contact_name: contactLabel,
-        company_name: listingName,
+        company_name: null,
         notes: noteParts.length ? noteParts.join('\n') : null,
         value: 0,
         stage: 'enquiry',

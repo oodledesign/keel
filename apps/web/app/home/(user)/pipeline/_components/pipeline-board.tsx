@@ -11,6 +11,7 @@ import {
 } from 'react';
 
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   DndContext,
@@ -32,20 +33,39 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   ArrowRight,
   DollarSign,
+  Download,
   Linkedin,
   MoreHorizontal,
   Phone,
   Send,
+  Sparkles,
   Trophy,
   X,
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
+import { toast } from '@kit/ui/sonner';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
 
+import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
 import pathsConfig from '~/config/paths.config';
 import {
   COMMERCIAL_PIPELINE_LOST_STAGE,
   COMMERCIAL_PIPELINE_WON_STAGE,
+  DISPOSAL_TYPE_BADGE_CLASS,
+  DISPOSAL_TYPE_LABELS,
+  type DisposalType,
 } from '~/lib/commercial/commercial-constants';
 import {
   type PipelineStageConfigItem,
@@ -62,6 +82,19 @@ import type {
 import { moveDealToStage } from '../actions';
 import { AddDealDialog } from './add-deal-dialog';
 import { EditDealDialog } from './edit-deal-dialog';
+
+export type PipelineListingOption = {
+  id: string;
+  name: string;
+  disposalType?: string | null;
+  askingRentPence?: number | null;
+  askingPricePence?: number | null;
+  actingAgents?: Array<{
+    userId: string;
+    name: string;
+    pictureUrl: string | null;
+  }>;
+};
 
 // ─── Stage definitions ───────────────────────────────────────────────
 
@@ -166,7 +199,7 @@ type Props = {
   workspaceAccountSlug?: string;
   workspaceAccountId?: string;
   variant?: 'work' | 'commercial';
-  listings?: Array<{ id: string; name: string }>;
+  listings?: PipelineListingOption[];
   /** Commercial stage overrides (rename/hide). */
   stageConfig?: PipelineStageConfigItem[];
   customizePhasesSlot?: ReactNode;
@@ -182,13 +215,26 @@ export function PipelineBoard({
   stageConfig,
   customizePhasesSlot,
 }: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const createRequested = searchParams.get('create') === 'lead';
   const [deals, setDeals] = useState<PipelineDeal[]>(initialData.deals);
   const [filter, setFilter] = useState<string>('all');
   const [activeDeal, setActiveDeal] = useState<PipelineDeal | null>(null);
   const [dealToEdit, setDealToEdit] = useState<PipelineDeal | null>(null);
   const [editOpen, setEditOpen] = useState(false);
+  const [addDealOpen, setAddDealOpen] = useState(false);
+  const [customizeOpen, setCustomizeOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
+  const isCommercial = variant === 'commercial';
+
+  const clearCreateQuery = useCallback(() => {
+    if (!createRequested) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('create');
+    router.replace(url.pathname + url.search, { scroll: false });
+  }, [createRequested, router]);
 
   const terminalWonStage =
     variant === 'commercial' ? COMMERCIAL_PIPELINE_WON_STAGE : 'won';
@@ -227,10 +273,10 @@ export function PipelineBoard({
     }));
   }, [variant, stageConfig, STAGES]);
 
-  const listingNameById = useMemo(() => {
-    const map = new Map<string, string>();
+  const listingById = useMemo(() => {
+    const map = new Map<string, PipelineListingOption>();
     for (const listing of listings) {
-      map.set(listing.id, listing.name);
+      map.set(listing.id, listing);
     }
     return map;
   }, [listings]);
@@ -305,6 +351,45 @@ export function PipelineBoard({
       : d.stage !== 'won' && d.stage !== 'lost',
   ).length;
 
+  const exportDealsCsv = useCallback(() => {
+    const rows = filteredDeals.map((deal) => {
+      const listing = deal.commercialListingId
+        ? listingById.get(deal.commercialListingId)
+        : undefined;
+      const stageLabel =
+        STAGES.find((s) => s.key === deal.stage)?.label ?? deal.stage;
+      return [
+        deal.contactName || deal.clientName || '',
+        deal.companyName || '',
+        stageLabel,
+        listing?.name ?? '',
+        String(deal.value ?? 0),
+        deal.nextAction || '',
+        deal.nextActionDate || '',
+      ];
+    });
+    const header = [
+      'Contact',
+      'Company',
+      'Stage',
+      'Disposal',
+      'Value',
+      'Next action',
+      'Next action date',
+    ];
+    const escape = (value: string) => `"${value.replaceAll('"', '""')}"`;
+    const csv = [header, ...rows]
+      .map((row) => row.map((cell) => escape(String(cell))).join(','))
+      .join('\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'deals.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [filteredDeals, listingById, STAGES]);
+
   const onDragStart = useCallback(
     (event: DragStartEvent) => {
       const deal = deals.find((d) => d.id === event.active.id);
@@ -367,41 +452,51 @@ export function PipelineBoard({
   return (
     <div className="flex min-h-[calc(100svh-3.5rem)] w-full flex-col gap-6 px-4 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
-            {variant === 'commercial' ? 'Deals' : 'Pipeline'}
-          </h1>
-          <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
-            {activeCount} active {variant === 'commercial' ? 'deals' : 'leads'}{' '}
-            · {formatCurrency(totalValue)} total value
-            {isPending && (
-              <span className="ml-2 text-xs text-amber-400">Saving...</span>
-            )}
-          </p>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
-            <button
-              type="button"
-              onClick={() => setFilter('all')}
-              className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${filter === 'all' ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'}`}
-            >
-              All
-            </button>
-            {initialData.businesses.map((biz) => (
-              <button
-                key={biz.id}
-                type="button"
-                onClick={() => setFilter(biz.id)}
-                className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${filter === biz.id ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'}`}
-              >
-                {biz.name}
-              </button>
-            ))}
+      <div
+        className={`flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between ${isCommercial ? 'sm:justify-end' : ''}`}
+      >
+        {!isCommercial ? (
+          <div>
+            <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+              Pipeline
+            </h1>
+            <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
+              {activeCount} active leads · {formatCurrency(totalValue)} total
+              value
+              {isPending && (
+                <span className="ml-2 text-xs text-amber-400">Saving...</span>
+              )}
+            </p>
           </div>
-          {customizePhasesSlot}
-          {workspaceAccountSlug && variant !== 'commercial' ? (
+        ) : isPending ? (
+          <p className="text-xs text-amber-400 sm:mr-auto">Saving...</p>
+        ) : (
+          <span className="hidden sm:block sm:flex-1" />
+        )}
+        <div className="flex flex-wrap items-center gap-3">
+          {!isCommercial ? (
+            <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
+              <button
+                type="button"
+                onClick={() => setFilter('all')}
+                className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${filter === 'all' ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'}`}
+              >
+                All
+              </button>
+              {initialData.businesses.map((biz) => (
+                <button
+                  key={biz.id}
+                  type="button"
+                  onClick={() => setFilter(biz.id)}
+                  className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${filter === biz.id ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'}`}
+                >
+                  {biz.name}
+                </button>
+              ))}
+            </div>
+          ) : null}
+          {!isCommercial ? customizePhasesSlot : null}
+          {workspaceAccountSlug && !isCommercial ? (
             <Button
               asChild
               variant="outline"
@@ -419,6 +514,41 @@ export function PipelineBoard({
               </Link>
             </Button>
           ) : null}
+          {isCommercial ? (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]/80"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                  <span className="sr-only">More actions</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem onSelect={() => setCustomizeOpen(true)}>
+                  Customize phases
+                </DropdownMenuItem>
+                <DropdownMenuItem onSelect={() => exportDealsCsv()}>
+                  <Download className="mr-2 h-3.5 w-3.5" />
+                  Export CSV
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onSelect={() =>
+                    toast.message('AI summary coming soon', {
+                      description:
+                        'A board-wide deal summary will appear here in a follow-up.',
+                    })
+                  }
+                >
+                  <Sparkles className="mr-2 h-3.5 w-3.5" />
+                  AI summary
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          ) : null}
           <AddDealDialog
             businesses={initialData.businesses}
             onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
@@ -427,10 +557,26 @@ export function PipelineBoard({
             stages={selectableStages}
             defaultStage={selectableStages[0]?.key}
             listings={listings}
-            commercial={variant === 'commercial'}
+            commercial={isCommercial}
+            open={addDealOpen || createRequested}
+            onOpenChange={(open) => {
+              setAddDealOpen(open);
+              if (!open) clearCreateQuery();
+            }}
           />
         </div>
       </div>
+
+      {isCommercial && workspaceAccountId && workspaceAccountSlug ? (
+        <CustomizePipelinePhasesDialog
+          accountId={workspaceAccountId}
+          accountSlug={workspaceAccountSlug}
+          initialStages={stageConfig ?? []}
+          open={customizeOpen}
+          onOpenChange={setCustomizeOpen}
+          showTrigger={false}
+        />
+      ) : null}
 
       <EditDealDialog
         deal={dealToEdit}
@@ -445,7 +591,7 @@ export function PipelineBoard({
         accountId={workspaceAccountId}
         stages={selectableStages}
         listings={listings}
-        commercial={variant === 'commercial'}
+        commercial={isCommercial}
       />
 
       {/* Kanban */}
@@ -470,7 +616,8 @@ export function PipelineBoard({
                 deals={stageDeals}
                 value={stageValue}
                 onEditDeal={handleEditDeal}
-                listingNameById={listingNameById}
+                listingById={listingById}
+                commercial={isCommercial}
               />
             );
           })}
@@ -483,12 +630,12 @@ export function PipelineBoard({
               stageColor={STAGE_COLORS[activeDeal.stage]}
               isOverlay
               onEdit={() => {}}
-              listingName={
+              listing={
                 activeDeal.commercialListingId
-                  ? (listingNameById.get(activeDeal.commercialListingId) ??
-                    null)
+                  ? (listingById.get(activeDeal.commercialListingId) ?? null)
                   : null
               }
+              commercial={isCommercial}
             />
           )}
         </DragOverlay>
@@ -505,14 +652,16 @@ function StageColumn({
   deals,
   value,
   onEditDeal,
-  listingNameById,
+  listingById,
+  commercial,
 }: {
   stageKey: string;
   label: string;
   deals: PipelineDeal[];
   value: number;
   onEditDeal: (deal: PipelineDeal) => void;
-  listingNameById: Map<string, string>;
+  listingById: Map<string, PipelineListingOption>;
+  commercial: boolean;
 }) {
   const { setNodeRef, isOver } = useDroppable({
     id: `stage-${stageKey}`,
@@ -549,7 +698,7 @@ function StageColumn({
         <div className="flex flex-1 flex-col gap-2">
           {deals.length === 0 ? (
             <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
-              Drag leads here
+              Drag {commercial ? 'deals' : 'leads'} here
             </div>
           ) : (
             deals.map((deal) => (
@@ -558,11 +707,12 @@ function StageColumn({
                 deal={deal}
                 stageColor={STAGE_COLORS[deal.stage]}
                 onEdit={() => onEditDeal(deal)}
-                listingName={
+                listing={
                   deal.commercialListingId
-                    ? (listingNameById.get(deal.commercialListingId) ?? null)
+                    ? (listingById.get(deal.commercialListingId) ?? null)
                     : null
                 }
+                commercial={commercial}
               />
             ))
           )}
@@ -579,13 +729,15 @@ function DealCard({
   stageColor,
   isOverlay = false,
   onEdit,
-  listingName,
+  listing,
+  commercial = false,
 }: {
   deal: PipelineDeal;
   stageColor: { dot: string; bar: string; tint: string } | undefined;
   isOverlay?: boolean;
   onEdit: () => void;
-  listingName?: string | null;
+  listing?: PipelineListingOption | null;
+  commercial?: boolean;
 }) {
   const {
     attributes,
@@ -607,13 +759,31 @@ function DealCard({
     ? deal.clientName || deal.contactName
     : deal.contactName || deal.clientName;
   const clientLabel = deal.clientName || deal.contactName || '';
-  const subtitle = deal.clientId
-    ? deal.projectName && deal.projectName !== clientLabel
-      ? deal.projectName
-      : deal.companyName && deal.companyName !== clientLabel
-        ? deal.companyName
-        : null
-    : deal.companyName || null;
+  const listingName = listing?.name?.trim() || null;
+  const companySubtitle =
+    deal.companyName &&
+    deal.companyName !== clientLabel &&
+    deal.companyName !== listingName
+      ? deal.companyName
+      : null;
+  const subtitle = commercial
+    ? companySubtitle
+    : deal.clientId
+      ? deal.projectName && deal.projectName !== clientLabel
+        ? deal.projectName
+        : companySubtitle
+      : companySubtitle;
+
+  const disposalType = listing?.disposalType as DisposalType | undefined;
+  const rent =
+    listing?.askingRentPence != null
+      ? formatCurrency(listing.askingRentPence / 100)
+      : null;
+  const price =
+    listing?.askingPricePence != null
+      ? formatCurrency(listing.askingPricePence / 100)
+      : null;
+  const asking = rent ? `${rent} pa` : price;
 
   return (
     <div
@@ -629,8 +799,8 @@ function DealCard({
         />
       )}
       <div className="mb-2 flex items-start justify-between">
-        <div className="flex items-start gap-2">
-          <div>
+        <div className="flex min-w-0 items-start gap-2">
+          <div className="min-w-0">
             <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
               {title}
             </p>
@@ -640,11 +810,27 @@ function DealCard({
               </p>
             ) : null}
             {listingName ? (
-              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+              <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
                 {listingName}
               </p>
             ) : null}
-            {deal.clientId ? (
+            {commercial && (disposalType || asking) ? (
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                {disposalType && DISPOSAL_TYPE_LABELS[disposalType] ? (
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${DISPOSAL_TYPE_BADGE_CLASS[disposalType]}`}
+                  >
+                    {DISPOSAL_TYPE_LABELS[disposalType]}
+                  </span>
+                ) : null}
+                {asking ? (
+                  <span className="text-[11px] font-medium text-[var(--workspace-shell-text)]/70">
+                    {asking}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
+            {deal.clientId && !commercial ? (
               <span className="mt-1 inline-flex items-center rounded-full bg-[color:var(--ozer-accent)]/15 px-2 py-0.5 text-[10px] font-medium text-[color:var(--ozer-accent)]">
                 Existing client
               </span>
@@ -657,31 +843,43 @@ function DealCard({
             e.stopPropagation();
             onEdit();
           }}
-          className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]"
+          className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text-muted)]"
           aria-label="Edit lead"
         >
           <MoreHorizontal className="h-4 w-4" />
         </button>
       </div>
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-2">
         <span className="text-sm font-semibold text-[color:var(--ozer-accent)]">
           {formatCurrency(deal.value)}
         </span>
-        <span className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
-          {deal.businessColor && (
-            <span
-              className="inline-block h-2 w-2 rounded-full"
-              style={{ backgroundColor: deal.businessColor }}
-            />
-          )}
-          {stageColor && (
+        <div className="flex items-center gap-2">
+          {commercial && (listing?.actingAgents?.length ?? 0) > 0 ? (
+            <DealAgentStack agents={listing?.actingAgents ?? []} />
+          ) : null}
+          {!commercial ? (
+            <span className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
+              {deal.businessColor && (
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ backgroundColor: deal.businessColor }}
+                />
+              )}
+              {stageColor && (
+                <span
+                  className="inline-block h-2 w-2 rounded-full"
+                  style={{ backgroundColor: stageColor.dot }}
+                />
+              )}
+              {deal.businessName}
+            </span>
+          ) : stageColor ? (
             <span
               className="inline-block h-2 w-2 rounded-full"
               style={{ backgroundColor: stageColor.dot }}
             />
-          )}
-          {deal.businessName}
-        </span>
+          ) : null}
+        </div>
       </div>
       {deal.nextAction && (
         <div className="mt-2 border-t border-[color:var(--workspace-shell-border)] pt-2">
@@ -692,5 +890,44 @@ function DealCard({
         </div>
       )}
     </div>
+  );
+}
+
+function DealAgentStack({
+  agents,
+}: {
+  agents: Array<{ userId: string; name: string; pictureUrl: string | null }>;
+}) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="flex items-center -space-x-1.5">
+        {agents.slice(0, 3).map((agent) => (
+          <Tooltip key={agent.userId}>
+            <TooltipTrigger asChild>
+              <span className="relative inline-flex h-6 w-6 overflow-hidden rounded-full ring-2 ring-[var(--workspace-shell-panel)]">
+                {agent.pictureUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={agent.pictureUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-[var(--workspace-shell-sidebar-accent)] text-[9px] font-semibold text-[var(--workspace-shell-text)]/70">
+                    {agent.name
+                      .split(/\s+/)
+                      .map((p) => p[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </span>
+                )}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">{agent.name}</TooltipContent>
+          </Tooltip>
+        ))}
+      </div>
+    </TooltipProvider>
   );
 }

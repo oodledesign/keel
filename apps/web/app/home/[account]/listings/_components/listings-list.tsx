@@ -1,15 +1,9 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from 'react';
+import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   Building2,
@@ -41,11 +35,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
   LISTING_STATUSES,
+  LISTING_STATUS_BADGE_CLASS,
+  LISTING_STATUS_FILTER_ACTIVE_CLASS,
   LISTING_STATUS_LABELS,
   type ListingStatus,
 } from '~/lib/commercial/commercial-constants';
@@ -56,7 +59,10 @@ import {
   workspacePanelCard,
 } from '~/lib/workspace-ui';
 
-import type { CommercialListing } from '../_lib/server/listings.service';
+import type {
+  CommercialListing,
+  ListingAgent,
+} from '../_lib/server/listings.service';
 import { deleteListing } from '../_lib/server/server-actions';
 import { ListingFormModal } from './listing-form-modal';
 
@@ -107,6 +113,8 @@ export function ListingsList({
   initialListings,
 }: ListingsListProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const createRequested = searchParams.get('create') === '1';
   const [listings, setListings] = useState(initialListings);
   const [statusFilter, setStatusFilter] = useState<ListingStatus | 'all'>(
     'all',
@@ -122,6 +130,13 @@ export function ListingsList({
   useEffect(() => {
     setListings(initialListings);
   }, [initialListings]);
+
+  const clearCreateQuery = useCallback(() => {
+    if (!createRequested) return;
+    const url = new URL(window.location.href);
+    url.searchParams.delete('create');
+    router.replace(url.pathname + url.search, { scroll: false });
+  }, [createRequested, router]);
 
   const filtered = useMemo(() => {
     if (statusFilter === 'all') return listings;
@@ -237,6 +252,7 @@ export function ListingsList({
             active={statusFilter === status}
             onClick={() => setStatusFilter(status)}
             label={LISTING_STATUS_LABELS[status]}
+            activeClassName={LISTING_STATUS_FILTER_ACTIVE_CLASS[status]}
           />
         ))}
       </div>
@@ -334,11 +350,17 @@ export function ListingsList({
                         </div>
                       </div>
                     </td>
-                    <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 md:table-cell">
-                      {DISPOSAL_TYPE_LABELS[listing.disposalType]}
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${DISPOSAL_TYPE_BADGE_CLASS[listing.disposalType]}`}
+                      >
+                        {DISPOSAL_TYPE_LABELS[listing.disposalType]}
+                      </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="inline-flex rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)]">
+                      <span
+                        className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${LISTING_STATUS_BADGE_CLASS[listing.status]}`}
+                      >
                         {LISTING_STATUS_LABELS[listing.status]}
                       </span>
                     </td>
@@ -363,8 +385,12 @@ export function ListingsList({
       )}
 
       <ListingFormModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
+        open={modalOpen || createRequested}
+        onClose={() => {
+          setModalOpen(false);
+          setEditing(null);
+          clearCreateQuery();
+        }}
         accountId={accountId}
         listing={editing}
         onSaved={handleSaved}
@@ -445,10 +471,14 @@ function ListingCard({
         ) : (
           <Building2 className="h-10 w-10 text-[var(--workspace-shell-text)]/15" />
         )}
-        <span className="absolute top-3 left-3 inline-flex rounded-full bg-[var(--workspace-shell-panel)]/95 px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)] shadow-sm">
+        <span
+          className={`absolute top-3 left-3 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm ${LISTING_STATUS_BADGE_CLASS[listing.status]}`}
+        >
           {LISTING_STATUS_LABELS[listing.status]}
         </span>
-        <span className="absolute top-3 right-3 inline-flex rounded-full bg-[var(--workspace-shell-panel)]/95 px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/70 shadow-sm">
+        <span
+          className={`absolute top-3 right-3 inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium shadow-sm ${DISPOSAL_TYPE_BADGE_CLASS[listing.disposalType]}`}
+        >
           {DISPOSAL_TYPE_LABELS[listing.disposalType]}
         </span>
       </Link>
@@ -486,6 +516,10 @@ function ListingCard({
             ) : null}
           </p>
         )}
+
+        {(listing.actingAgents?.length ?? 0) > 0 ? (
+          <AgentAvatarStack agents={listing.actingAgents ?? []} />
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -531,14 +565,56 @@ function ListingActions({
   );
 }
 
+function AgentAvatarStack({ agents }: { agents: ListingAgent[] }) {
+  return (
+    <TooltipProvider delayDuration={200}>
+      <div className="flex items-center -space-x-2">
+        {agents.slice(0, 4).map((agent) => (
+          <Tooltip key={agent.userId}>
+            <TooltipTrigger asChild>
+              <span className="relative inline-flex h-7 w-7 overflow-hidden rounded-full ring-2 ring-[var(--workspace-shell-panel)]">
+                {agent.pictureUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={agent.pictureUrl}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <span className="flex h-full w-full items-center justify-center bg-[var(--workspace-shell-sidebar-accent)] text-[10px] font-semibold text-[var(--workspace-shell-text)]/70">
+                    {agent.name
+                      .split(/\s+/)
+                      .map((p) => p[0])
+                      .join('')
+                      .slice(0, 2)
+                      .toUpperCase()}
+                  </span>
+                )}
+              </span>
+            </TooltipTrigger>
+            <TooltipContent side="top">{agent.name}</TooltipContent>
+          </Tooltip>
+        ))}
+        {agents.length > 4 ? (
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[10px] font-medium text-[var(--workspace-shell-text)]/60 ring-2 ring-[var(--workspace-shell-panel)]">
+            +{agents.length - 4}
+          </span>
+        ) : null}
+      </div>
+    </TooltipProvider>
+  );
+}
+
 function FilterChip({
   active,
   onClick,
   label,
+  activeClassName,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
+  activeClassName?: string;
 }) {
   return (
     <button
@@ -546,7 +622,7 @@ function FilterChip({
       onClick={onClick}
       className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
         active
-          ? 'bg-[var(--ozer-accent)] text-white'
+          ? (activeClassName ?? 'bg-[var(--ozer-accent)] text-white')
           : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]'
       }`}
     >

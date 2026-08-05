@@ -185,8 +185,8 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
       <>
         <TeamAccountLayoutPageHeader
           account={account}
-          title={accountLabel}
-          description="Commercial agency overview."
+          title="Agency home"
+          description="Triage enquiries, keep stock moving, and jump into today's work."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
           <Suspense fallback={<BusinessDashboardSkeleton />}>
