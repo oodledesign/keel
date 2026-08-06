@@ -490,14 +490,9 @@ export function ClientDetailSidebar({
     ).map(([key, label]) => ({
       key,
       label,
-      meta:
-        key === 'projects'
-          ? String(jobsCount)
-          : key === 'invoices'
-            ? formatMoney(totalValuePence)
-            : undefined,
+      meta: key === 'projects' ? String(jobsCount) : undefined,
     }));
-  }, [client, isContractorView, jobsCount, totalValuePence, supportEnabled]);
+  }, [client, isContractorView, jobsCount, supportEnabled]);
 
   const handleArchive = async () => {
     setArchiving(true);

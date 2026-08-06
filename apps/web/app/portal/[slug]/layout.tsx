@@ -42,6 +42,7 @@ export default async function PortalSlugLayout({
       orgName={ctx.orgName}
       userEmail={ctx.userEmail}
       userAvatarUrl={ctx.userAvatarUrl}
+      hasWorkspaceAccess={ctx.hasWorkspaceAccess}
       showWebsiteNav={ctx.showWebsiteNav}
       showProjectsNav={ctx.showProjectsNav}
       showMessagesNav={ctx.showMessagesNav}

@@ -19,7 +19,13 @@ export default async function WorkspaceSetupPage({
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
   const user = await requireUserInServerComponent();
-  const needsSetup = await userRequiresWorkspaceSetup(user.id);
+  const sp = await searchParams;
+  // Explicit intent (e.g. "Create your own workspace" from the client
+  // portal) bypasses the smart-redirect below — someone who deliberately
+  // asked to see this form should see it, even if they'd otherwise be
+  // auto-routed elsewhere (portal-only contacts, accepted guests, etc.).
+  const forceShow = sp.start === '1';
+  const needsSetup = forceShow || (await userRequiresWorkspaceSetup(user.id));
 
   if (!needsSetup) {
     const admin = getSupabaseServerAdminClient();
@@ -45,7 +51,6 @@ export default async function WorkspaceSetupPage({
     );
   }
 
-  const sp = await searchParams;
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(sp)) {
     if (typeof value === 'string') params.set(key, value);

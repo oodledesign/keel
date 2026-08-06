@@ -210,6 +210,26 @@ async function ensureClientMember(input: {
   if (error) throw new Error(error.message);
 }
 
+/**
+ * Stamps contacts.user_id so the portal loader can resolve this user's own
+ * CRM contact record (first name, photo) directly. Best-effort: never
+ * overwrites an existing link, never blocks the invite-accept flow.
+ */
+async function linkContactToUser(contactId: string | null, userId: string) {
+  if (!contactId) return;
+
+  const admin = getSupabaseServerAdminClient();
+  try {
+    await admin
+      .from('contacts')
+      .update({ user_id: userId })
+      .eq('id', contactId)
+      .is('user_id', null);
+  } catch (error) {
+    console.warn('[client-portal-invites] link contact to user failed', error);
+  }
+}
+
 export async function getClientPortalInviteByToken(
   token: string,
 ): Promise<ClientPortalInvite | null> {
@@ -555,6 +575,7 @@ export async function acceptClientPortalInvite(
     userId: user.id,
     role: invite.role,
   });
+  await linkContactToUser(invite.contactId, user.id);
 
   if (invite.status === 'accepted' && invite.userId === user.id) {
     return invite;
@@ -615,6 +636,10 @@ export async function linkPendingClientPortalInvitesForUser(): Promise<number> {
         userId: user.id,
         role: (row.role as 'owner' | 'member' | 'viewer') ?? 'member',
       });
+      await linkContactToUser(
+        (row.contact_id as string | null) ?? null,
+        user.id,
+      );
 
       const { error: updateError } = await invitesTable(admin)
         .update({

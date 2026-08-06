@@ -478,6 +478,16 @@ export function JobDetailContent({
               )}
             </span>
           </div>
+          <div className="mt-2">
+            <ProjectPortalAccessToggle
+              accountId={accountId}
+              jobId={jobId}
+              hasClient={Boolean(job.client_id)}
+              initialPortalVisible={Boolean(job.portal_visible)}
+              canManage={canEditJobs && !isContractorView}
+              compact
+            />
+          </div>
         </div>
         {canEditJobs && (
           <Button
@@ -847,14 +857,7 @@ export function JobDetailContent({
                   </p>
                 )}
 
-              <div className="mt-6 space-y-3">
-                <ProjectPortalAccessToggle
-                  accountId={accountId}
-                  jobId={jobId}
-                  hasClient={Boolean(job.client_id)}
-                  initialPortalVisible={Boolean(job.portal_visible)}
-                  canManage={canEditJobs && !isContractorView}
-                />
+              <div className="mt-6">
                 <ProjectGuestsPanel
                   accountId={accountId}
                   accountSlug={accountSlug}

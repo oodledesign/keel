@@ -4,10 +4,12 @@ import { cache } from 'react';
 
 import { notFound, redirect } from 'next/navigation';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 import {
   loadClientPicturesByOrgIds,
   loadSupportBusinessBrand,
@@ -27,6 +29,8 @@ export type ClientPortalContext = {
   clientPictureUrl: string | null;
   membershipRole: string | null;
   userAvatarUrl: string | null;
+  hasContactRecord: boolean;
+  hasWorkspaceAccess: boolean;
   showWebsiteNav: boolean;
   showProjectsNav: boolean;
   showMessagesNav: boolean;
@@ -142,13 +146,90 @@ export const loadClientPortalContext = cache(
       picture_url?: string | null;
     } | null;
 
+    // The portal's identity is the client contact set by the agency in the
+    // CRM (first name + photo), not the portal user's own Ozer account.
+    // Prefer an already-linked contact; fall back to an email match within
+    // this client_org and self-heal the link for next time. Uses the admin
+    // client — a not-yet-linked contact row's user_id isn't the caller's,
+    // and portal contacts have no accounts_memberships row, so RLS on
+    // `contacts` (own row, or account-member) would hide it entirely.
+    let contact: {
+      first_name?: string | null;
+      last_name?: string | null;
+      full_name?: string | null;
+      picture_url?: string | null;
+    } | null = null;
+
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: linkedContacts } = await admin
+      .from('contacts')
+      .select('id, first_name, last_name, full_name, picture_url, client_org_id')
+      .eq('user_id', user.id)
+      .limit(5);
+
+    const linkedRows = (linkedContacts ?? []) as Array<{
+      id: string;
+      first_name?: string | null;
+      last_name?: string | null;
+      full_name?: string | null;
+      picture_url?: string | null;
+      client_org_id?: string | null;
+    }>;
+
+    contact =
+      linkedRows.find((row) => row.client_org_id === org.id) ??
+      linkedRows[0] ??
+      null;
+
+    if (!contact && user.email) {
+      const { data: orgContacts } = await admin
+        .from('contacts')
+        .select('id, first_name, last_name, full_name, picture_url, email')
+        .eq('client_org_id', org.id)
+        .is('user_id', null)
+        .limit(50);
+
+      const targetEmail = user.email.trim().toLowerCase();
+      const candidate = (
+        (orgContacts ?? []) as Array<{
+          id: string;
+          first_name?: string | null;
+          last_name?: string | null;
+          full_name?: string | null;
+          picture_url?: string | null;
+          email?: string | null;
+        }>
+      ).find((row) => row.email?.trim().toLowerCase() === targetEmail);
+
+      if (candidate) {
+        contact = candidate;
+        await admin
+          .from('contacts')
+          .update({ user_id: user.id })
+          .eq('id', candidate.id)
+          .is('user_id', null);
+      }
+    }
+
+    const contactFirstName =
+      contact?.first_name?.trim() ||
+      contact?.full_name?.trim().split(/\s+/)[0] ||
+      null;
+
     const displayName =
-      accountRow?.name?.trim() ||
-      profile?.full_name?.trim() ||
+      contactFirstName ||
+      accountRow?.name?.trim().split(/\s+/)[0] ||
+      profile?.full_name?.trim().split(/\s+/)[0] ||
       user.email?.split('@')[0] ||
       'there';
 
-    const [clientPictures, businessBrand, websiteCount, orgClients] =
+    const userAvatarUrl =
+      toSupabasePublicStorageUrl(contact?.picture_url ?? null) ??
+      accountRow?.picture_url ??
+      null;
+
+    const [clientPictures, businessBrand, websiteCount, orgClients, teamMembership] =
       await Promise.all([
         loadClientPicturesByOrgIds(client, [org.id]),
         loadSupportBusinessBrand(accountId),
@@ -157,6 +238,10 @@ export const loadClientPortalContext = cache(
           .select('id', { count: 'exact', head: true })
           .eq('client_org_id', org.id),
         client.from('clients').select('id').eq('client_org_id', org.id),
+        client
+          .from('accounts_memberships')
+          .select('account_id', { count: 'exact', head: true })
+          .eq('user_id', user.id),
       ]);
 
     const orgClientIds = ((orgClients.data ?? []) as Array<{ id: string }>).map(
@@ -195,7 +280,9 @@ export const loadClientPortalContext = cache(
       orgName,
       clientPictureUrl: clientPictures.get(org.id) ?? null,
       membershipRole: membership.role ?? null,
-      userAvatarUrl: accountRow?.picture_url ?? null,
+      userAvatarUrl,
+      hasContactRecord: contact !== null,
+      hasWorkspaceAccess: (teamMembership.count ?? 0) > 0,
       showWebsiteNav: (websiteCount.count ?? 0) > 0,
       showProjectsNav: (portalVisibleProjectCount ?? 0) > 0,
       showMessagesNav,

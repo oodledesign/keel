@@ -88,6 +88,7 @@ export function PortalShell({
   orgName,
   userEmail,
   userAvatarUrl,
+  hasWorkspaceAccess = false,
   showWebsiteNav = true,
   showProjectsNav = false,
   showMessagesNav = false,
@@ -97,6 +98,7 @@ export function PortalShell({
   orgName: string;
   userEmail: string | null;
   userAvatarUrl?: string | null;
+  hasWorkspaceAccess?: boolean;
   showWebsiteNav?: boolean;
   showProjectsNav?: boolean;
   showMessagesNav?: boolean;
@@ -138,6 +140,11 @@ export function PortalShell({
                   ) : null}
                   {userEmail}
                 </span>
+              ) : null}
+              {hasWorkspaceAccess ? (
+                <Button type="button" variant="outline" size="sm" asChild>
+                  <Link href={pathsConfig.app.home}>Back to Ozer</Link>
+                </Button>
               ) : null}
               <Button
                 type="button"

@@ -104,13 +104,13 @@ function OverduePill({
       : 'Overdue';
   return (
     <span
-      className={`inline-flex max-w-full items-center gap-1 rounded-[5px] border border-rose-400/25 bg-rose-500/12 font-medium text-rose-200 ${
+      className={`inline-flex max-w-full items-center gap-1 rounded-[5px] border border-rose-400/45 bg-rose-500/20 font-medium text-rose-300 ${
         compact
           ? 'px-1.5 py-0 text-[11px] leading-5'
           : 'px-1.5 py-0.5 text-xs leading-5'
       }`}
     >
-      <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
+      <AlertTriangle className="h-2.5 w-2.5 shrink-0 text-rose-400" />
       <span className="truncate">{label}</span>
     </span>
   );
