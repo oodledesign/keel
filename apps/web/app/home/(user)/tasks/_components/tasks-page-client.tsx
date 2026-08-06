@@ -75,10 +75,24 @@ type ScheduledSeriesItem = {
   dueDays: number;
   occurrencesCreated: number;
   accountId: string | null;
+  priority: string;
+  notes: string | null;
+  dayOfMonth: number | null;
+  projectId: string | null;
+  clientId: string | null;
+  areaId: string | null;
 };
 
 const EditTaskDialog = dynamic(
   () => import('./edit-task-dialog').then((mod) => mod.EditTaskDialog),
+  { ssr: false },
+);
+
+const EditScheduledSeriesDialog = dynamic(
+  () =>
+    import('./edit-scheduled-series-dialog').then(
+      (mod) => mod.EditScheduledSeriesDialog,
+    ),
   { ssr: false },
 );
 
@@ -1323,6 +1337,9 @@ export function TasksPageClient({
     [],
   );
   const [scheduledLoading, setScheduledLoading] = useState(false);
+  const [editingSeries, setEditingSeries] =
+    useState<ScheduledSeriesItem | null>(null);
+  const [editSeriesOpen, setEditSeriesOpen] = useState(false);
 
   const todayKey = todayISO();
 
@@ -1711,9 +1728,16 @@ export function TasksPageClient({
               {scheduledSeries.map((series) => (
                 <li
                   key={series.id}
-                  className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                  className="flex flex-col gap-2 px-4 py-3 transition-colors hover:bg-white/[0.035] sm:flex-row sm:items-center sm:justify-between"
                 >
-                  <div className="min-w-0">
+                  <button
+                    type="button"
+                    className="min-w-0 flex-1 text-left"
+                    onClick={() => {
+                      setEditingSeries(series);
+                      setEditSeriesOpen(true);
+                    }}
+                  >
                     <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                       {series.title}
                     </p>
@@ -1728,7 +1752,7 @@ export function TasksPageClient({
                       {series.occurrencesCreated} created
                       {series.status === 'paused' ? ' · paused' : null}
                     </p>
-                  </div>
+                  </button>
                   <div className="flex shrink-0 gap-2">
                     {series.status === 'active' ? (
                       <Button
@@ -1783,23 +1807,44 @@ export function TasksPageClient({
                       variant="outline"
                       className="border-[color:var(--workspace-shell-border)]"
                       onClick={() => {
-                        void updateTaskRecurringSeriesStatusAction({
-                          seriesId: series.id,
-                          status: 'ended',
-                        }).then(() => {
-                          setScheduledSeries((prev) =>
-                            prev.filter((item) => item.id !== series.id),
-                          );
-                        });
+                        setEditingSeries(series);
+                        setEditSeriesOpen(true);
                       }}
                     >
-                      Stop
+                      Edit
                     </Button>
                   </div>
                 </li>
               ))}
             </ul>
           )}
+          <EditScheduledSeriesDialog
+            series={editingSeries}
+            open={editSeriesOpen}
+            onOpenChange={(next) => {
+              setEditSeriesOpen(next);
+              if (!next) setEditingSeries(null);
+            }}
+            workspaceAccountId={workspaceAccountId}
+            onSaved={(updated) => {
+              setScheduledSeries((prev) =>
+                prev.map((item) =>
+                  item.id === updated.id
+                    ? {
+                        ...item,
+                        ...updated,
+                        nextCreateAt: updated.nextCreateAt ?? item.nextCreateAt,
+                      }
+                    : item,
+                ),
+              );
+            }}
+            onEnded={(seriesId) => {
+              setScheduledSeries((prev) =>
+                prev.filter((item) => item.id !== seriesId),
+              );
+            }}
+          />
         </div>
       ) : view === 'list' || view === 'byClient' ? (
         <>

@@ -268,6 +268,137 @@ export async function updateTaskRecurringSeriesStatus(input: {
   }
 }
 
+export type UpdateTaskRecurringSeriesInput = {
+  seriesId: string;
+  title?: string;
+  priority?: string;
+  notes?: string | null;
+  frequency?: TaskRecurrenceFrequency;
+  nextCreateDate?: string;
+  dayOfMonth?: number | null;
+  dueDays?: number;
+  status?: 'active' | 'paused' | 'ended';
+  projectId?: string | null;
+  clientId?: string | null;
+  areaId?: string | null;
+  accountId?: string | null;
+};
+
+export async function updateTaskRecurringSeries(
+  input: UpdateTaskRecurringSeriesInput,
+): Promise<TaskRecurringSeriesListItem> {
+  const client = getSupabaseServerClient();
+  const user = await requireUserInServerComponent();
+
+  const updates: Record<string, unknown> = {};
+
+  if (input.title !== undefined) {
+    const title = input.title.trim();
+    if (!title) {
+      throw new Error('Title is required');
+    }
+    updates.title = title;
+  }
+
+  if (input.priority !== undefined) {
+    updates.priority = input.priority;
+  }
+
+  if (input.notes !== undefined) {
+    updates.notes = input.notes?.trim() || null;
+  }
+
+  if (input.frequency !== undefined) {
+    updates.frequency = input.frequency;
+  }
+
+  if (input.dueDays !== undefined) {
+    updates.due_days = clampDueDays(input.dueDays, 0);
+  }
+
+  if (input.status !== undefined) {
+    updates.status = input.status;
+  }
+
+  if (input.nextCreateDate !== undefined) {
+    const ymd = toDateOnlyIso(input.nextCreateDate);
+    const next = noonUtcFromYmd(ymd);
+    const needsDayOfMonth =
+      (input.frequency ?? null) === 'monthly' ||
+      (input.frequency ?? null) === 'quarterly' ||
+      (input.frequency ?? null) === 'yearly' ||
+      input.dayOfMonth != null;
+
+    if (needsDayOfMonth && input.dayOfMonth != null) {
+      setDayOfMonthClamped(next, Math.min(31, Math.max(1, input.dayOfMonth)));
+    }
+
+    updates.next_create_at = next.toISOString();
+  }
+
+  if (input.dayOfMonth !== undefined) {
+    updates.day_of_month =
+      input.dayOfMonth == null
+        ? null
+        : Math.min(31, Math.max(1, input.dayOfMonth));
+  }
+
+  if (input.projectId !== undefined) {
+    updates.project_id = input.projectId;
+  }
+  if (input.clientId !== undefined) {
+    updates.client_id = input.clientId;
+  }
+  if (input.areaId !== undefined) {
+    updates.area_id = input.areaId;
+  }
+  if (input.accountId !== undefined) {
+    updates.account_id = input.accountId;
+  }
+
+  if (Object.keys(updates).length === 0) {
+    throw new Error('No updates provided');
+  }
+
+  const { data, error } = await seriesTable(client)
+    .update(updates)
+    .eq('id', input.seriesId)
+    .eq('user_id', user.id)
+    .select(
+      'id, title, frequency, status, next_create_at, due_days, occurrences_created, account_id, priority, notes, day_of_month, project_id, client_id, area_id',
+    )
+    .single();
+
+  if (error || !data) {
+    throw new Error(error?.message ?? 'Could not update series');
+  }
+
+  return mapSeriesListItem(data as Record<string, unknown>);
+}
+
+function mapSeriesListItem(
+  row: Record<string, unknown>,
+): TaskRecurringSeriesListItem {
+  const nextCreateAt = String(row.next_create_at);
+  return {
+    id: String(row.id),
+    title: String(row.title),
+    frequency: row.frequency as TaskRecurrenceFrequency,
+    status: row.status as 'active' | 'paused' | 'ended',
+    nextCreateAt,
+    nextCreateYmd: toDateOnlyIso(nextCreateAt),
+    dueDays: Number(row.due_days ?? 0),
+    occurrencesCreated: Number(row.occurrences_created ?? 0),
+    accountId: (row.account_id as string | null) ?? null,
+    priority: String(row.priority ?? 'medium'),
+    notes: (row.notes as string | null) ?? null,
+    dayOfMonth: row.day_of_month == null ? null : Number(row.day_of_month),
+    projectId: (row.project_id as string | null) ?? null,
+    clientId: (row.client_id as string | null) ?? null,
+    areaId: (row.area_id as string | null) ?? null,
+  };
+}
+
 export type TaskRecurringSeriesListItem = {
   id: string;
   title: string;
@@ -278,6 +409,12 @@ export type TaskRecurringSeriesListItem = {
   dueDays: number;
   occurrencesCreated: number;
   accountId: string | null;
+  priority: string;
+  notes: string | null;
+  dayOfMonth: number | null;
+  projectId: string | null;
+  clientId: string | null;
+  areaId: string | null;
 };
 
 /** Active/paused series waiting to spawn (or recently scheduled) for the signed-in user. */
@@ -289,7 +426,7 @@ export async function listTaskRecurringSeriesForUser(): Promise<
 
   const { data, error } = await seriesTable(client)
     .select(
-      'id, title, frequency, status, next_create_at, due_days, occurrences_created, account_id',
+      'id, title, frequency, status, next_create_at, due_days, occurrences_created, account_id, priority, notes, day_of_month, project_id, client_id, area_id',
     )
     .eq('user_id', user.id)
     .in('status', ['active', 'paused'])
@@ -299,20 +436,9 @@ export async function listTaskRecurringSeriesForUser(): Promise<
     throw new Error(error.message);
   }
 
-  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
-    const nextCreateAt = String(row.next_create_at);
-    return {
-      id: String(row.id),
-      title: String(row.title),
-      frequency: row.frequency as TaskRecurrenceFrequency,
-      status: row.status as 'active' | 'paused' | 'ended',
-      nextCreateAt,
-      nextCreateYmd: toDateOnlyIso(nextCreateAt),
-      dueDays: Number(row.due_days ?? 0),
-      occurrencesCreated: Number(row.occurrences_created ?? 0),
-      accountId: (row.account_id as string | null) ?? null,
-    };
-  });
+  return ((data ?? []) as Array<Record<string, unknown>>).map(
+    mapSeriesListItem,
+  );
 }
 
 /** Cron: spawn due recurring tasks (one occurrence per series per tick). */

@@ -184,6 +184,89 @@ export async function updateTaskRecurringSeriesStatusAction(input: {
   return { success: true as const };
 }
 
+export async function updateTaskRecurringSeriesAction(input: {
+  seriesId: string;
+  title: string;
+  priority: string;
+  notes?: string | null;
+  frequency: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
+  nextCreateDate: string;
+  dayOfMonth?: number | null;
+  dueDays?: number;
+  status?: 'active' | 'paused' | 'ended';
+  assignment?: TaskAssignmentUpdate;
+}) {
+  try {
+    const client = getSupabaseServerClient();
+    let projectId: string | null | undefined;
+    let clientId: string | null | undefined;
+    let areaId: string | null | undefined;
+    let accountId: string | null | undefined;
+
+    if (input.assignment) {
+      switch (input.assignment.kind) {
+        case 'none':
+          projectId = null;
+          clientId = null;
+          areaId = null;
+          accountId = null;
+          break;
+        case 'project':
+          projectId = input.assignment.id;
+          clientId = null;
+          areaId = null;
+          accountId = await resolveTaskAccountId(client, {
+            projectId: input.assignment.id,
+          });
+          break;
+        case 'client':
+          clientId = input.assignment.id;
+          projectId = null;
+          areaId = null;
+          accountId = await resolveTaskAccountId(client, {
+            clientId: input.assignment.id,
+          });
+          break;
+        case 'area':
+          areaId = input.assignment.id;
+          projectId = null;
+          clientId = null;
+          accountId = null;
+          break;
+      }
+    }
+
+    const { updateTaskRecurringSeries } =
+      await import('../server/task-recurring.server');
+    const series = await updateTaskRecurringSeries({
+      seriesId: input.seriesId,
+      title: input.title,
+      priority: normalizeTaskPriorityForDb(input.priority),
+      notes: input.notes,
+      frequency: input.frequency,
+      nextCreateDate: input.nextCreateDate,
+      dayOfMonth: input.dayOfMonth,
+      dueDays: input.dueDays,
+      status: input.status,
+      projectId,
+      clientId,
+      areaId,
+      accountId,
+    });
+
+    revalidatePath('/home', 'layout');
+    revalidatePath('/home/tasks');
+    revalidatePath('/app/tasks');
+    return { success: true as const, error: null, series };
+  } catch (error) {
+    return {
+      success: false as const,
+      error: error instanceof Error ? error.message : 'Failed to update series',
+      series: null,
+    };
+  }
+}
+
 export async function listTaskRecurringSeriesAction() {
   const { listTaskRecurringSeriesForUser } =
     await import('../server/task-recurring.server');
