@@ -53,6 +53,12 @@ import {
   updateContact,
   updateContactLink,
 } from '../_lib/server/server-actions';
+import {
+  inviteAllContactsToPortalAction,
+  inviteContactToPortalAction,
+  listContactPortalAccessAction,
+} from '~/lib/clients/client-portal-invites-actions';
+import type { ContactPortalAccessStatus } from '~/lib/clients/client-portal-invites.types';
 import { ContactImageUploader } from './contact-image-uploader';
 
 type Contact = {
@@ -760,10 +766,12 @@ function EditContactForm({
 
 export function ClientContactsBlock({
   accountId,
+  accountSlug,
   clientId,
   canEdit,
 }: {
   accountId: string;
+  accountSlug: string;
   clientId: string;
   canEdit: boolean;
 }) {
@@ -771,6 +779,13 @@ export function ClientContactsBlock({
   const [loading, setLoading] = useState(true);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingContactId, setEditingContactId] = useState<string | null>(null);
+  const [invitingContactId, setInvitingContactId] = useState<string | null>(
+    null,
+  );
+  const [invitingAll, setInvitingAll] = useState(false);
+  const [accessByContactId, setAccessByContactId] = useState<
+    Record<string, ContactPortalAccessStatus>
+  >({});
 
   const [editingCustomRoleId, setEditingCustomRoleId] = useState<string | null>(
     null,
@@ -783,9 +798,38 @@ export function ClientContactsBlock({
       const result = (await listContacts({ accountId, clientId })) as {
         data: Contact[];
       };
-      setContacts(Array.isArray(result?.data) ? result.data : []);
+      const rows = Array.isArray(result?.data) ? result.data : [];
+      setContacts(rows);
+
+      if (rows.length > 0) {
+        try {
+          const access = await listContactPortalAccessAction({
+            accountId,
+            clientId,
+            contacts: rows.map((contact) => ({
+              id: contact.id,
+              email: contact.email,
+              emails: contact.emails?.map((address) => ({
+                email: address.email,
+                is_primary: address.is_primary,
+              })),
+              is_primary: contact.is_primary,
+            })),
+          });
+          const next: Record<string, ContactPortalAccessStatus> = {};
+          for (const item of access) {
+            next[item.contactId] = item.status;
+          }
+          setAccessByContactId(next);
+        } catch {
+          setAccessByContactId({});
+        }
+      } else {
+        setAccessByContactId({});
+      }
     } catch {
       setContacts([]);
+      setAccessByContactId({});
     } finally {
       setLoading(false);
     }
@@ -831,6 +875,100 @@ export function ClientContactsBlock({
     }
   };
 
+  const resolveContactEmail = (contact: Contact) => {
+    const fromList =
+      contact.emails?.find((address) => address.is_primary)?.email ??
+      contact.emails?.[0]?.email;
+    const raw = (fromList ?? contact.email ?? '').trim().toLowerCase();
+    return raw.includes('@') ? raw : null;
+  };
+
+  const handleInviteContact = async (contact: Contact) => {
+    const email = resolveContactEmail(contact);
+    if (!email) {
+      toast.error('Add an email to this contact first');
+      return;
+    }
+
+    setInvitingContactId(contact.id);
+    try {
+      const result = await inviteContactToPortalAction({
+        accountId,
+        accountSlug,
+        clientId,
+        contactId: contact.id,
+        email,
+      });
+      if (result.emailSent) {
+        toast.success(`Portal invite sent to ${email}`);
+      } else {
+        toast.error(result.emailError ?? 'Invite created but email failed');
+      }
+      await fetchContacts();
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to send portal invite',
+      );
+    } finally {
+      setInvitingContactId(null);
+    }
+  };
+
+  const handleInviteAllContacts = async () => {
+    const withEmail = contacts.filter((contact) =>
+      Boolean(resolveContactEmail(contact)),
+    );
+    if (withEmail.length === 0) {
+      toast.error('No contacts with email addresses to invite');
+      return;
+    }
+
+    setInvitingAll(true);
+    try {
+      const result = await inviteAllContactsToPortalAction({
+        accountId,
+        accountSlug,
+        clientId,
+        contacts: withEmail.map((contact) => ({
+          id: contact.id,
+          email: contact.email,
+          emails: contact.emails?.map((address) => ({
+            email: address.email,
+            is_primary: address.is_primary,
+          })),
+        })),
+      });
+
+      if (result.invited > 0) {
+        toast.success(
+          `Sent ${result.invited} portal invite${result.invited === 1 ? '' : 's'}`,
+        );
+      }
+      if (result.failures.length > 0) {
+        toast.error(
+          `${result.failures.length} invite${result.failures.length === 1 ? '' : 's'} failed`,
+        );
+      }
+      if (result.invited === 0 && result.failures.length === 0) {
+        toast.message('Nothing to invite');
+      }
+      await fetchContacts();
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : 'Failed to invite contacts',
+      );
+    } finally {
+      setInvitingAll(false);
+    }
+  };
+
+  const portalStatusLabel = (status?: ContactPortalAccessStatus) => {
+    if (status === 'active') return 'Active';
+    if (status === 'invited') return 'Invited';
+    if (status === 'revoked') return 'Revoked';
+    return null;
+  };
+
   if (loading) {
     return (
       <p className="text-xs text-[var(--workspace-shell-text-muted)]">
@@ -848,6 +986,22 @@ export function ClientContactsBlock({
         </p>
       )}
 
+      {canEdit && contacts.some((contact) => resolveContactEmail(contact)) ? (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            disabled={invitingAll}
+            onClick={() => void handleInviteAllContacts()}
+            className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
+          >
+            <Mail className="mr-2 h-3.5 w-3.5" />
+            {invitingAll ? 'Sending invites…' : 'Invite all contacts'}
+          </Button>
+        </div>
+      ) : null}
+
       {contacts.length > 0 && (
         <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)]">
           <table className="w-full text-sm">
@@ -862,6 +1016,9 @@ export function ClientContactsBlock({
                 </th>
                 <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] md:table-cell">
                   Email
+                </th>
+                <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] lg:table-cell">
+                  Portal
                 </th>
                 <th className="hidden px-3 py-2 text-left text-xs font-medium text-[var(--workspace-shell-text-muted)] md:table-cell">
                   Phone
@@ -1031,6 +1188,17 @@ export function ClientContactsBlock({
                       </span>
                     )}
                   </td>
+                  <td className="hidden px-3 py-2.5 text-xs lg:table-cell">
+                    {portalStatusLabel(accessByContactId[contact.id]) ? (
+                      <span className="inline-flex rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
+                        {portalStatusLabel(accessByContactId[contact.id])}
+                      </span>
+                    ) : (
+                      <span className="text-[var(--workspace-shell-text-muted)]">
+                        —
+                      </span>
+                    )}
+                  </td>
                   <td className="hidden px-3 py-2.5 md:table-cell">
                     {contact.phone ? (
                       <a
@@ -1058,7 +1226,7 @@ export function ClientContactsBlock({
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuContent align="end" className="w-52">
                           <DropdownMenuItem
                             onClick={() => {
                               setShowAddForm(false);
@@ -1076,6 +1244,20 @@ export function ClientContactsBlock({
                               Make primary
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuItem
+                            disabled={
+                              invitingContactId === contact.id ||
+                              !resolveContactEmail(contact)
+                            }
+                            onClick={() => void handleInviteContact(contact)}
+                          >
+                            <Mail className="mr-2 h-4 w-4" />
+                            {invitingContactId === contact.id
+                              ? 'Sending…'
+                              : accessByContactId[contact.id] === 'active'
+                                ? 'Resend portal invite'
+                                : 'Invite to portal'}
+                          </DropdownMenuItem>
                           <DropdownMenuItem
                             className="text-red-400 focus:text-red-400"
                             onClick={() => handleDelete(contact.id)}

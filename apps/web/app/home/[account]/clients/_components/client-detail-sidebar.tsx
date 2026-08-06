@@ -26,7 +26,6 @@ import {
   Phone,
 } from 'lucide-react';
 
-import { createInvitationsAction } from '@kit/team-accounts/server-actions';
 import {
   AlertDialog,
   AlertDialogCancel,
@@ -52,6 +51,7 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import { ClientSubscriptionStatusList } from '~/home/[account]/_components/client-subscription-status-list';
 import { websiteHref } from '~/lib/clients/client-logo-domain';
+import { inviteAllContactsToPortalAction } from '~/lib/clients/client-portal-invites-actions';
 import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
 import { formatWorkspaceMoney } from '~/lib/currency/workspace-currency';
 
@@ -78,8 +78,8 @@ import { ensureClientOrgForCrmClientAction } from '../_lib/server/client-support
 import {
   deleteClient,
   getClient,
-  getClientPortalStatus,
   getJobHistory,
+  listContacts,
   listNotes,
 } from '../_lib/server/server-actions';
 import { AttachRetainerPlanButton } from './attach-retainer-plan-button';
@@ -115,14 +115,6 @@ type Client = {
   picture_url: string | null;
   created_at: string;
   updated_at: string;
-};
-
-type PortalStatus = {
-  status: 'not_invited' | 'invited' | 'expired' | 'active';
-  lastLogin: string | null;
-  latestInviteCreatedAt: string | null;
-  latestInviteExpiresAt: string | null;
-  isMember: boolean;
 };
 
 type DetailTab =
@@ -315,7 +307,6 @@ export function ClientDetailSidebar({
   const [showEditForm, setShowEditForm] = useState(false);
   const [archiveDialogOpen, setArchiveDialogOpen] = useState(false);
   const [archiving, setArchiving] = useState(false);
-  const [portalStatus, setPortalStatus] = useState<PortalStatus | null>(null);
   const [overviewClientNotes, setOverviewClientNotes] = useState<
     ClientNotePreview[]
   >(overviewSeed?.notes ?? []);
@@ -399,25 +390,10 @@ export function ClientDetailSidebar({
             inviteeName: booking.inviteeName,
           })),
         );
-
-        if (data.email) {
-          try {
-            const status = (await getClientPortalStatus({
-              accountSlug,
-              email: data.email,
-            })) as unknown as PortalStatus;
-            setPortalStatus(status);
-          } catch {
-            setPortalStatus(null);
-          }
-        } else {
-          setPortalStatus(null);
-        }
       } catch (e) {
         if (!silent) {
           toast.error(e instanceof Error ? e.message : 'Failed to load client');
           setClient(null);
-          setPortalStatus(null);
           setOverviewClientNotes([]);
           setOverviewMeetings([]);
           setOverviewBookings([]);
@@ -426,22 +402,16 @@ export function ClientDetailSidebar({
         if (!silent) setLoading(false);
       }
     },
-    [accountId, accountSlug, clientId],
+    [accountId, clientId],
   );
 
   useEffect(() => {
     if (hasServerSeed) {
-      const email = initialClient?.email;
-      if (email) {
-        void getClientPortalStatus({ accountSlug, email })
-          .then((status) => setPortalStatus(status as unknown as PortalStatus))
-          .catch(() => setPortalStatus(null));
-      }
       return;
     }
 
     void fetchClient();
-  }, [accountSlug, fetchClient, hasServerSeed, initialClient]);
+  }, [fetchClient, hasServerSeed]);
 
   const jobsCount = jobs.length;
   const activeJobsCount = jobs.filter(
@@ -565,25 +535,60 @@ export function ClientDetailSidebar({
   };
 
   const handleInviteToPortal = async () => {
-    if (!client?.email) {
-      return;
-    }
+    if (!canEditClients) return;
 
     try {
-      const result = await createInvitationsAction({
-        accountSlug,
-        invitations: [{ email: client.email, role: 'client' }],
+      const result = (await listContacts({ accountId, clientId })) as {
+        data?: Array<{
+          id: string;
+          email: string | null;
+          emails?: Array<{ email: string; is_primary: boolean }>;
+        }>;
+      };
+      const contacts = Array.isArray(result?.data) ? result.data : [];
+      const withEmail = contacts.filter((contact) => {
+        const fromList =
+          contact.emails?.find((address) => address.is_primary)?.email ??
+          contact.emails?.[0]?.email;
+        const raw = (fromList ?? contact.email ?? '').trim();
+        return raw.includes('@');
       });
 
-      if ((result as { success?: boolean }).success) {
-        toast.success('Portal invitation sent');
-        void fetchClient({ silent: true });
+      if (withEmail.length === 0) {
+        setActiveTab('contacts');
+        toast.error(
+          'Add contacts with email addresses first, then invite them to the portal.',
+        );
+        return;
+      }
+
+      const inviteResult = await inviteAllContactsToPortalAction({
+        accountId,
+        accountSlug,
+        clientId,
+        contacts: withEmail.map((contact) => ({
+          id: contact.id,
+          email: contact.email,
+          emails: contact.emails?.map((address) => ({
+            email: address.email,
+            is_primary: address.is_primary,
+          })),
+        })),
+      });
+
+      if (inviteResult.invited > 0) {
+        toast.success(
+          `Sent ${inviteResult.invited} portal invite${inviteResult.invited === 1 ? '' : 's'}`,
+        );
+        setActiveTab('contacts');
+      } else if (inviteResult.failures.length > 0) {
+        toast.error('Could not send portal invites');
       } else {
-        toast.error('Failed to send portal invitation');
+        toast.message('No contacts left to invite');
       }
     } catch (e) {
       toast.error(
-        e instanceof Error ? e.message : 'Failed to send portal invitation',
+        e instanceof Error ? e.message : 'Failed to send portal invitations',
       );
     }
   };
@@ -927,23 +932,24 @@ export function ClientDetailSidebar({
           </div>
 
           <div className="space-y-3">
-            {client.email && portalStatus ? (
+            {canEditClients ? (
               <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4 text-sm">
                 <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
                   Portal access
                 </p>
                 <p className="mt-1 text-[var(--workspace-shell-text)]">
-                  {portalStatus.status === 'active' && 'Active in portal'}
-                  {portalStatus.status === 'invited' && 'Invite sent'}
-                  {portalStatus.status === 'expired' && 'Invite expired'}
-                  {portalStatus.status === 'not_invited' && 'Not invited'}
+                  Invite contacts from the Contacts tab so each person gets
+                  their own portal login.
                 </p>
-                <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                  Last login:{' '}
-                  {portalStatus.lastLogin
-                    ? new Date(portalStatus.lastLogin).toLocaleString('en-GB')
-                    : 'Never'}
-                </p>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  className="mt-3 border-[color:var(--workspace-shell-border)] bg-transparent"
+                  onClick={() => setActiveTab('contacts')}
+                >
+                  Open contacts
+                </Button>
               </div>
             ) : null}
 
@@ -960,6 +966,7 @@ export function ClientDetailSidebar({
       return (
         <ClientContactsBlock
           accountId={accountId}
+          accountSlug={accountSlug}
           clientId={client.id}
           canEdit={canEditClients}
         />
@@ -1198,15 +1205,15 @@ export function ClientDetailSidebar({
                         <ExternalLink className="mr-2 h-4 w-4" />
                         View as client
                       </DropdownMenuItem>
-                      {client.email ? (
+                      {canEditClients ? (
                         <>
                           <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
                           <DropdownMenuItem
                             className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                            onClick={handleInviteToPortal}
+                            onClick={() => void handleInviteToPortal()}
                           >
                             <Mail className="mr-2 h-4 w-4" />
-                            Invite to portal
+                            Invite contacts to portal
                           </DropdownMenuItem>
                         </>
                       ) : null}
