@@ -2,11 +2,11 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { Database } from '@kit/supabase/database';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTaskForUser } from '@kit/tasks/create-task';
 
+import type { Database } from '~/lib/database.types';
 import { addDaysYmd, clampDueDays } from '~/lib/invoices/invoice-due-date';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -266,6 +266,53 @@ export async function updateTaskRecurringSeriesStatus(input: {
   if (error) {
     throw new Error(error.message);
   }
+}
+
+export type TaskRecurringSeriesListItem = {
+  id: string;
+  title: string;
+  frequency: TaskRecurrenceFrequency;
+  status: 'active' | 'paused' | 'ended';
+  nextCreateAt: string;
+  nextCreateYmd: string;
+  dueDays: number;
+  occurrencesCreated: number;
+  accountId: string | null;
+};
+
+/** Active/paused series waiting to spawn (or recently scheduled) for the signed-in user. */
+export async function listTaskRecurringSeriesForUser(): Promise<
+  TaskRecurringSeriesListItem[]
+> {
+  const client = getSupabaseServerClient();
+  const user = await requireUserInServerComponent();
+
+  const { data, error } = await seriesTable(client)
+    .select(
+      'id, title, frequency, status, next_create_at, due_days, occurrences_created, account_id',
+    )
+    .eq('user_id', user.id)
+    .in('status', ['active', 'paused'])
+    .order('next_create_at', { ascending: true });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+    const nextCreateAt = String(row.next_create_at);
+    return {
+      id: String(row.id),
+      title: String(row.title),
+      frequency: row.frequency as TaskRecurrenceFrequency,
+      status: row.status as 'active' | 'paused' | 'ended',
+      nextCreateAt,
+      nextCreateYmd: toDateOnlyIso(nextCreateAt),
+      dueDays: Number(row.due_days ?? 0),
+      occurrencesCreated: Number(row.occurrences_created ?? 0),
+      accountId: (row.account_id as string | null) ?? null,
+    };
+  });
 }
 
 /** Cron: spawn due recurring tasks (one occurrence per series per tick). */

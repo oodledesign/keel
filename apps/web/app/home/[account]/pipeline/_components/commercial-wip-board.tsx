@@ -7,6 +7,9 @@ import {
   useRef,
   useState,
   useTransition,
+  type CSSProperties,
+  type HTMLAttributes,
+  type Ref,
 } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -354,20 +357,33 @@ export function CommercialWipBoard({
       );
 
       startTransition(async () => {
-        const result = await moveDealToStage(dealId, nextStage, {
-          accountSlug,
-        });
-        if (!result.success) {
+        try {
+          const result = await moveDealToStage(dealId, nextStage, {
+            accountSlug,
+          });
+          if (!result.success) {
+            setDeals((prev) =>
+              prev.map((deal) =>
+                deal.id === dealId ? { ...deal, stage: previousStage } : deal,
+              ),
+            );
+            toast.error(result.error ?? 'Could not update instruction stage');
+            return;
+          }
+          if (isWonInstructionStage(nextStage)) {
+            onDealWon?.(updated);
+          }
+        } catch (error) {
           setDeals((prev) =>
             prev.map((deal) =>
               deal.id === dealId ? { ...deal, stage: previousStage } : deal,
             ),
           );
-          toast.error(result.error ?? 'Could not update instruction stage');
-          return;
-        }
-        if (isWonInstructionStage(nextStage)) {
-          onDealWon?.(updated);
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Could not update instruction stage',
+          );
         }
       });
     },
@@ -970,6 +986,33 @@ function InstructionCard({
   onEdit: () => void;
   overlay?: boolean;
 }) {
+  // DragOverlay must not call useSortable with the same id as the source card —
+  // duplicate sortable registration crashes the DndContext (error boundary).
+  if (overlay) {
+    return (
+      <InstructionCardBody
+        deal={deal}
+        listing={listing}
+        onEdit={onEdit}
+        overlay
+      />
+    );
+  }
+
+  return (
+    <SortableInstructionCard deal={deal} listing={listing} onEdit={onEdit} />
+  );
+}
+
+function SortableInstructionCard({
+  deal,
+  listing,
+  onEdit,
+}: {
+  deal: PipelineDeal;
+  listing?: PipelineListingOption | null;
+  onEdit: () => void;
+}) {
   const id = cardCompositeId('instruction', deal.id);
   const {
     attributes,
@@ -980,12 +1023,39 @@ function InstructionCard({
     isDragging,
   } = useSortable({ id });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
+  return (
+    <InstructionCardBody
+      deal={deal}
+      listing={listing}
+      onEdit={onEdit}
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+      dragHandleProps={{ ...attributes, ...listeners }}
+    />
+  );
+}
 
+const InstructionCardBody = ({
+  deal,
+  listing,
+  onEdit,
+  overlay = false,
+  ref,
+  style,
+  dragHandleProps,
+}: {
+  deal: PipelineDeal;
+  listing?: PipelineListingOption | null;
+  onEdit: () => void;
+  overlay?: boolean;
+  ref?: Ref<HTMLDivElement>;
+  style?: CSSProperties;
+  dragHandleProps?: HTMLAttributes<HTMLElement>;
+}) => {
   const title = deal.clientId
     ? deal.clientName || deal.contactName
     : deal.contactName || deal.clientName;
@@ -1011,14 +1081,14 @@ function InstructionCard({
 
   return (
     <div
-      ref={overlay ? undefined : setNodeRef}
-      style={overlay ? undefined : style}
+      ref={ref}
+      style={style}
       className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${
         overlay
           ? 'scale-105 rotate-2 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]'
           : ''
       }`}
-      {...(overlay ? {} : { ...attributes, ...listeners })}
+      {...(dragHandleProps ?? {})}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -1069,7 +1139,7 @@ function InstructionCard({
       </div>
     </div>
   );
-}
+};
 
 function RequirementCard({
   requirement,
@@ -1079,6 +1149,28 @@ function RequirementCard({
   requirement: CommercialRequirement;
   onEdit: () => void;
   overlay?: boolean;
+}) {
+  if (overlay) {
+    return (
+      <RequirementCardBody
+        requirement={requirement}
+        onEdit={onEdit}
+        overlay
+      />
+    );
+  }
+
+  return (
+    <SortableRequirementCard requirement={requirement} onEdit={onEdit} />
+  );
+}
+
+function SortableRequirementCard({
+  requirement,
+  onEdit,
+}: {
+  requirement: CommercialRequirement;
+  onEdit: () => void;
 }) {
   const id = cardCompositeId('requirement', requirement.id);
   const {
@@ -1090,26 +1182,50 @@ function RequirementCard({
     isDragging,
   } = useSortable({ id });
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
+  return (
+    <RequirementCardBody
+      requirement={requirement}
+      onEdit={onEdit}
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+      dragHandleProps={{ ...attributes, ...listeners }}
+    />
+  );
+}
 
+const RequirementCardBody = ({
+  requirement,
+  onEdit,
+  overlay = false,
+  ref,
+  style,
+  dragHandleProps,
+}: {
+  requirement: CommercialRequirement;
+  onEdit: () => void;
+  overlay?: boolean;
+  ref?: Ref<HTMLDivElement>;
+  style?: CSSProperties;
+  dragHandleProps?: HTMLAttributes<HTMLElement>;
+}) => {
   const size = sizeLabel(requirement);
   const budget = budgetLabel(requirement);
   const tenure = tenureLabel(requirement.tenure);
 
   return (
     <div
-      ref={overlay ? undefined : setNodeRef}
-      style={overlay ? undefined : style}
+      ref={ref}
+      style={style}
       className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${
         overlay
           ? 'scale-105 rotate-2 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]'
           : ''
       }`}
-      {...(overlay ? {} : { ...attributes, ...listeners })}
+      {...(dragHandleProps ?? {})}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
@@ -1144,4 +1260,4 @@ function RequirementCard({
       </div>
     </div>
   );
-}
+};

@@ -492,10 +492,27 @@ export function EmailPageClient({ initialData }: Props) {
             threads={threads}
             selectedThreadId={selectedThreadId}
             onSelectThread={selectThread}
+            onThreadCategoryChange={(threadId, category) => {
+              setThreads((prev) =>
+                prev
+                  .map((thread) =>
+                    thread.id === threadId
+                      ? { ...thread, assistant_category: category }
+                      : thread,
+                  )
+                  .filter((thread) =>
+                    inboxFilter === 'needs_reply'
+                      ? thread.assistant_category === 'needs_reply'
+                      : true,
+                  ),
+              );
+            }}
             filter={inboxFilter}
             onFilterChange={changeInboxFilter}
             searchQuery={searchQuery}
             onSearchQueryChange={handleSearchQueryChange}
+            workspaces={initialData.workspaces}
+            accountSlug={initialData.accountSlug}
             searching={searching}
             loadingMore={loadingMore}
             hasMore={hasMore}

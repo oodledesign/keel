@@ -98,6 +98,8 @@ export type CreateTaskInput = {
     dueDays?: number;
     endAt?: string | null;
     maxOccurrences?: number | null;
+    /** Default true. Set false when scheduling future occurrences from an existing task. */
+    createFirstNow?: boolean;
   };
 };
 
@@ -120,7 +122,7 @@ export async function createTask(input: CreateTaskInput) {
         dueDays: input.recurrence.dueDays,
         endAt: input.recurrence.endAt,
         maxOccurrences: input.recurrence.maxOccurrences,
-        createFirstNow: true,
+        createFirstNow: input.recurrence.createFirstNow ?? true,
       });
 
       revalidatePath('/home', 'layout');
@@ -182,6 +184,12 @@ export async function updateTaskRecurringSeriesStatusAction(input: {
   return { success: true as const };
 }
 
+export async function listTaskRecurringSeriesAction() {
+  const { listTaskRecurringSeriesForUser } =
+    await import('../server/task-recurring.server');
+  return listTaskRecurringSeriesForUser();
+}
+
 function uiStatusToDb(
   status: string,
 ): 'todo' | 'in_progress' | 'client_review' | 'done' | 'cancelled' {
@@ -216,6 +224,8 @@ export type UpdateTaskInput = {
   status?: string;
   dueDate?: string | null;
   notes?: string | null;
+  /** Attached workspace notes `[{ id, title }]`. */
+  noteRefs?: Array<{ id: string; title: string }>;
   /** When set, replaces project/client/area linking (mutually exclusive). */
   assignment?: TaskAssignmentUpdate;
 };
@@ -232,6 +242,42 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
   if (input.status !== undefined) updates.status = uiStatusToDb(input.status);
   if (input.dueDate !== undefined) updates.due_date = input.dueDate || null;
   if (input.notes !== undefined) updates.notes = input.notes?.trim() || null;
+  if (input.noteRefs !== undefined) {
+    const uniqueIds = [...new Set(input.noteRefs.map((ref) => ref.id))];
+    if (uniqueIds.length === 0) {
+      updates.note_refs = [];
+    } else {
+      const { data: noteRows, error: notesErr } = await client
+        .from('notes')
+        .select('id, title, content')
+        .in('id', uniqueIds);
+
+      if (notesErr) {
+        return { success: false, error: notesErr.message };
+      }
+
+      const found = new Map(
+        (noteRows ?? []).map((row) => [
+          row.id as string,
+          {
+            id: row.id as string,
+            title: ((row.title as string | null)?.trim() ||
+              ((row.content as string | null) ?? '').trim().slice(0, 80) ||
+              'Untitled note') as string,
+          },
+        ]),
+      );
+
+      if (found.size !== uniqueIds.length) {
+        return {
+          success: false,
+          error: 'One or more notes could not be attached',
+        };
+      }
+
+      updates.note_refs = uniqueIds.map((id) => found.get(id)!);
+    }
+  }
 
   if (input.assignment) {
     switch (input.assignment.kind) {

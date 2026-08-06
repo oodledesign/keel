@@ -25,12 +25,13 @@ import {
   Flame,
   KanbanSquare,
   List as ListIcon,
+  Repeat,
   Search,
   SlidersHorizontal,
   Users,
 } from 'lucide-react';
 
-import { Avatar, AvatarFallback } from '@kit/ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import {
@@ -48,7 +49,6 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
-import pathsConfig from '~/config/paths.config';
 
 import {
   compareYmd,
@@ -56,10 +56,26 @@ import {
   toIsoDateString,
 } from '../../../_lib/due-date-ymd';
 import { AddTaskDialog } from '../../_components/dashboard/add-task-dialog';
-import { updateTask } from '../../_lib/actions/task-actions';
+import {
+  listTaskRecurringSeriesAction,
+  updateTask,
+  updateTaskRecurringSeriesStatusAction,
+} from '../../_lib/actions/task-actions';
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { InlineAddTaskRow } from './inline-add-task-row';
 import { InlineTaskTitle } from './tasks-inline-task-title';
+
+type ScheduledSeriesItem = {
+  id: string;
+  title: string;
+  frequency: string;
+  status: 'active' | 'paused' | 'ended';
+  nextCreateAt: string;
+  nextCreateYmd: string;
+  dueDays: number;
+  occurrencesCreated: number;
+  accountId: string | null;
+};
 
 const EditTaskDialog = dynamic(
   () => import('./edit-task-dialog').then((mod) => mod.EditTaskDialog),
@@ -72,16 +88,6 @@ const TasksKanbanBoard = dynamic(
 );
 
 type TaskStatus = TasksPageTask['status'];
-
-const priorityConfig: Record<
-  TasksPageTask['priority'],
-  { label: string; className: string }
-> = {
-  low: { label: 'Low', className: 'text-[var(--workspace-shell-text-muted)]' },
-  medium: { label: 'Medium', className: 'text-blue-400' },
-  high: { label: 'High', className: 'text-amber-400' },
-  urgent: { label: 'Urgent', className: 'text-rose-400' },
-};
 
 const STATUS_COLUMNS: Array<{
   key: TaskStatus;
@@ -115,11 +121,6 @@ const STATUS_COLUMNS: Array<{
   },
 ];
 
-const STATUS_LABEL: Record<TaskStatus, string> = STATUS_COLUMNS.reduce(
-  (acc, c) => ({ ...acc, [c.key]: c.label }),
-  {} as Record<TaskStatus, string>,
-);
-
 /** List row: done · title (+ subtask expand) · due · client · priority */
 function taskListRowGridClass() {
   return cn(
@@ -134,10 +135,12 @@ function taskListRowGridClass() {
 function ClientCell({
   name,
   color,
+  pictureUrl,
   compact = false,
 }: {
   name: string | null;
   color?: string | null;
+  pictureUrl?: string | null;
   compact?: boolean;
 }) {
   if (!name?.trim()) {
@@ -162,6 +165,9 @@ function ClientCell({
   return (
     <span className="flex min-w-0 items-center gap-1.5" title={name}>
       <Avatar className="h-6 w-6 shrink-0">
+        {pictureUrl ? (
+          <AvatarImage src={pictureUrl} alt="" className="object-cover" />
+        ) : null}
         <AvatarFallback
           className="text-[10px] font-semibold text-[var(--workspace-shell-text)]"
           style={{ backgroundColor: color ?? '#64748B' }}
@@ -196,6 +202,7 @@ function TaskRowMetaColumn({
   calendarScheduleStatus,
   clientName,
   clientColor,
+  clientPictureUrl,
   onDueDateChanged,
 }: {
   taskId: string;
@@ -205,6 +212,7 @@ function TaskRowMetaColumn({
   calendarScheduleStatus?: 'scheduled' | 'failed' | null;
   clientName: string | null;
   clientColor?: string | null;
+  clientPictureUrl?: string | null;
   onDueDateChanged?: (
     taskId: string,
     dueDate: string | null,
@@ -222,7 +230,12 @@ function TaskRowMetaColumn({
         align="end"
         onDueDateChanged={onDueDateChanged}
       />
-      <ClientCell name={clientName} color={clientColor} compact />
+      <ClientCell
+        name={clientName}
+        color={clientColor}
+        pictureUrl={clientPictureUrl}
+        compact
+      />
     </div>
   );
 }
@@ -539,7 +552,7 @@ function PriorityIndicator({
   return <span className="inline-block h-3.5 w-3.5 shrink-0" aria-hidden />;
 }
 
-type TaskViewMode = 'list' | 'board' | 'byClient';
+type TaskViewMode = 'list' | 'board' | 'byClient' | 'scheduled';
 type DueDateFilter = 'all' | 'today' | 'week' | 'month';
 
 function todayISO(): string {
@@ -593,35 +606,77 @@ function isHighPriority(task: TasksPageTask): boolean {
   return task.priority === 'urgent' || task.priority === 'high';
 }
 
-function PriorityGroupHeader({ variant }: { variant: 'high' | 'rest' }) {
-  const isHigh = variant === 'high';
+function isOverdue(task: TasksPageTask, today = todayISO()): boolean {
+  if (task.status === 'completed') return false;
+  const due = parseDueDateParts(task.dueDate);
+  const t = parseDueDateParts(today);
+  if (!due || !t) return false;
+  return compareYmd(due, t) < 0;
+}
+
+function DueDateGroupHeader({
+  variant,
+}: {
+  variant: 'overdue' | 'upcoming' | 'later';
+}) {
+  const label =
+    variant === 'overdue'
+      ? 'Overdue'
+      : variant === 'upcoming'
+        ? 'Upcoming'
+        : 'Later';
+  const isOverdueGroup = variant === 'overdue';
+
   return (
     <div
       className={cn(
         'flex items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2 text-[11px] font-semibold tracking-wide uppercase',
-        isHigh
-          ? 'bg-amber-500/[0.07] text-amber-400/95'
+        isOverdueGroup
+          ? 'bg-rose-500/[0.07] text-rose-300/95'
           : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
       )}
     >
-      {isHigh ? <AlertTriangle className="h-3.5 w-3.5 shrink-0" /> : null}
+      {isOverdueGroup ? (
+        <AlertTriangle className="h-3.5 w-3.5 shrink-0" />
+      ) : null}
       <span
         className={cn(
           'h-2 w-2 shrink-0 rounded-full',
-          isHigh
-            ? 'bg-amber-400'
-            : 'bg-[var(--workspace-shell-panel-hover)]/70',
+          isOverdueGroup
+            ? 'bg-rose-400'
+            : variant === 'upcoming'
+              ? 'bg-[var(--ozer-accent)]'
+              : 'bg-[var(--workspace-shell-panel-hover)]/70',
         )}
         aria-hidden
       />
-      {isHigh ? 'High priority' : 'Everything else'}
+      {label}
     </div>
   );
+}
+
+function compareTasksByDueDate(
+  a: TasksPageTask,
+  b: TasksPageTask,
+  today: string,
+): number {
+  const ao = isOverdue(a, today) ? 0 : 1;
+  const bo = isOverdue(b, today) ? 0 : 1;
+  if (ao !== bo) return ao - bo;
+  const ad = a.dueDate ?? '9999-12-31';
+  const bd = b.dueDate ?? '9999-12-31';
+  if (ad !== bd) return ad.localeCompare(bd);
+  const priorityRank = (p: TasksPageTask['priority']) =>
+    p === 'urgent' ? 0 : p === 'high' ? 1 : p === 'medium' ? 2 : 3;
+  const pr = priorityRank(a.priority) - priorityRank(b.priority);
+  if (pr !== 0) return pr;
+  return a.title.localeCompare(b.title);
 }
 
 type TaskRowHandlers = {
   showWorkspaceTag: boolean;
   workspaceAccountId?: string;
+  workspaceAccountSlug?: string;
   today: string;
   expandedRootTaskIds: Set<string>;
   onToggleSubtasks: (taskId: string) => void;
@@ -641,6 +696,7 @@ function renderTaskRows(list: TasksPageTask[], handlers: TaskRowHandlers) {
       task={task}
       showWorkspaceTag={handlers.showWorkspaceTag}
       workspaceAccountId={handlers.workspaceAccountId}
+      workspaceAccountSlug={handlers.workspaceAccountSlug}
       today={handlers.today}
       onStatusChanged={handlers.onStatusChanged}
       onTitleChanged={handlers.onTitleChanged}
@@ -672,47 +728,63 @@ function PriorityGroupedTaskList({
   handlers: TaskRowHandlers;
   inlineClientId: string | null;
 }) {
-  const showActiveGroups = statusFilter === 'active';
+  const today = handlers.today;
+  const upcomingEnd = endOfWeekYmd(today);
+  const sorted = [...urgent, ...rest].sort((a, b) =>
+    compareTasksByDueDate(a, b, today),
+  );
+
+  if (statusFilter !== 'active') {
+    return (
+      <>
+        {renderTaskRows(sorted, handlers)}
+        <InlineAddTaskRow
+          priority="medium"
+          clientId={inlineClientId}
+          workspaceAccountId={handlers.workspaceAccountId}
+        />
+      </>
+    );
+  }
+
+  const overdue = sorted.filter((task) => isOverdue(task, today));
+  const upcoming = sorted.filter(
+    (task) =>
+      !isOverdue(task, today) &&
+      task.dueDate != null &&
+      task.dueDate <= upcomingEnd,
+  );
+  const later = sorted.filter(
+    (task) =>
+      !isOverdue(task, today) &&
+      (task.dueDate == null || task.dueDate > upcomingEnd),
+  );
 
   return (
     <>
-      {showActiveGroups && urgent.length > 0 && (
+      {overdue.length > 0 ? (
         <>
-          <PriorityGroupHeader variant="high" />
-          {renderTaskRows(urgent, handlers)}
-          <InlineAddTaskRow
-            priority="high"
-            clientId={inlineClientId}
-            workspaceAccountId={handlers.workspaceAccountId}
-          />
+          <DueDateGroupHeader variant="overdue" />
+          {renderTaskRows(overdue, handlers)}
         </>
-      )}
-      {showActiveGroups && urgent.length > 0 && rest.length > 0 && (
-        <PriorityGroupHeader variant="rest" />
-      )}
-      {showActiveGroups && urgent.length === 0 && rest.length > 0 && (
-        <PriorityGroupHeader variant="rest" />
-      )}
-      {rest.length > 0 && (
+      ) : null}
+      {upcoming.length > 0 ? (
         <>
-          {renderTaskRows(rest, handlers)}
-          <InlineAddTaskRow
-            priority="medium"
-            clientId={inlineClientId}
-            workspaceAccountId={handlers.workspaceAccountId}
-          />
+          <DueDateGroupHeader variant="upcoming" />
+          {renderTaskRows(upcoming, handlers)}
         </>
-      )}
-      {!showActiveGroups && (
+      ) : null}
+      {later.length > 0 ? (
         <>
-          {renderTaskRows([...urgent, ...rest], handlers)}
-          <InlineAddTaskRow
-            priority="medium"
-            clientId={inlineClientId}
-            workspaceAccountId={handlers.workspaceAccountId}
-          />
+          <DueDateGroupHeader variant="later" />
+          {renderTaskRows(later, handlers)}
         </>
-      )}
+      ) : null}
+      <InlineAddTaskRow
+        priority="medium"
+        clientId={inlineClientId}
+        workspaceAccountId={handlers.workspaceAccountId}
+      />
     </>
   );
 }
@@ -760,14 +832,6 @@ function TasksByClientList({
       })}
     </div>
   );
-}
-
-function isOverdue(task: TasksPageTask, today = todayISO()): boolean {
-  if (task.status === 'completed') return false;
-  const due = parseDueDateParts(task.dueDate);
-  const t = parseDueDateParts(today);
-  if (!due || !t) return false;
-  return compareYmd(due, t) < 0;
 }
 
 function updateTaskDueDateInTree(
@@ -1159,6 +1223,7 @@ function TasksViewMenu(props: {
     { value: 'list', label: 'List', icon: ListIcon },
     { value: 'board', label: 'Board', icon: KanbanSquare },
     { value: 'byClient', label: 'By client', icon: Users },
+    { value: 'scheduled', label: 'Scheduled', icon: Repeat },
   ];
 
   const current = views.find((item) => item.value === props.view) ?? views[0]!;
@@ -1254,8 +1319,36 @@ export function TasksPageClient({
   const [expandedRootTaskIds, setExpandedRootTaskIds] = useState<Set<string>>(
     () => new Set(),
   );
+  const [scheduledSeries, setScheduledSeries] = useState<ScheduledSeriesItem[]>(
+    [],
+  );
+  const [scheduledLoading, setScheduledLoading] = useState(false);
 
   const todayKey = todayISO();
+
+  useEffect(() => {
+    if (view !== 'scheduled') return;
+    let cancelled = false;
+    setScheduledLoading(true);
+    void listTaskRecurringSeriesAction()
+      .then((rows) => {
+        if (cancelled) return;
+        const filtered = (rows ?? []).filter((row) => {
+          if (!workspaceAccountId) return true;
+          return row.accountId === workspaceAccountId || row.accountId == null;
+        });
+        setScheduledSeries(filtered);
+      })
+      .catch(() => {
+        if (!cancelled) setScheduledSeries([]);
+      })
+      .finally(() => {
+        if (!cancelled) setScheduledLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [view, workspaceAccountId]);
 
   const initialTaskIdsSignature = useMemo(
     () => initialTasks.map((t) => t.id).join(','),
@@ -1460,6 +1553,7 @@ export function TasksPageClient({
     () => ({
       showWorkspaceTag,
       workspaceAccountId,
+      workspaceAccountSlug,
       today: todayKey,
       expandedRootTaskIds,
       onToggleSubtasks: toggleRootExpanded,
@@ -1470,6 +1564,7 @@ export function TasksPageClient({
     [
       showWorkspaceTag,
       workspaceAccountId,
+      workspaceAccountSlug,
       todayKey,
       expandedRootTaskIds,
       toggleRootExpanded,
@@ -1591,7 +1686,122 @@ export function TasksPageClient({
         </div>
       </div>
 
-      {view === 'list' || view === 'byClient' ? (
+      {view === 'scheduled' ? (
+        <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_0_rgba(255,255,255,0.04)_inset]">
+          <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Scheduled recurring tasks
+            </p>
+            <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+              Series that create tasks on a schedule — including ones that
+              haven&apos;t spawned an open task yet.
+            </p>
+          </div>
+          {scheduledLoading ? (
+            <p className="px-4 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
+              Loading scheduled series…
+            </p>
+          ) : scheduledSeries.length === 0 ? (
+            <p className="px-4 py-8 text-sm text-[var(--workspace-shell-text-muted)]">
+              No active or paused recurring series yet. Turn on Repeat when
+              creating or editing a task.
+            </p>
+          ) : (
+            <ul className="divide-y divide-white/[0.05]">
+              {scheduledSeries.map((series) => (
+                <li
+                  key={series.id}
+                  className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                      {series.title}
+                    </p>
+                    <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                      {series.frequency}
+                      {' · '}
+                      next{' '}
+                      {formatDueDateLabel(series.nextCreateYmd) ||
+                        series.nextCreateYmd}
+                      {series.dueDays > 0 ? ` · due +${series.dueDays}d` : null}
+                      {' · '}
+                      {series.occurrencesCreated} created
+                      {series.status === 'paused' ? ' · paused' : null}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    {series.status === 'active' ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-[color:var(--workspace-shell-border)]"
+                        onClick={() => {
+                          void updateTaskRecurringSeriesStatusAction({
+                            seriesId: series.id,
+                            status: 'paused',
+                          }).then(() => {
+                            setScheduledSeries((prev) =>
+                              prev.map((item) =>
+                                item.id === series.id
+                                  ? { ...item, status: 'paused' }
+                                  : item,
+                              ),
+                            );
+                          });
+                        }}
+                      >
+                        Pause
+                      </Button>
+                    ) : (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        className="border-[color:var(--workspace-shell-border)]"
+                        onClick={() => {
+                          void updateTaskRecurringSeriesStatusAction({
+                            seriesId: series.id,
+                            status: 'active',
+                          }).then(() => {
+                            setScheduledSeries((prev) =>
+                              prev.map((item) =>
+                                item.id === series.id
+                                  ? { ...item, status: 'active' }
+                                  : item,
+                              ),
+                            );
+                          });
+                        }}
+                      >
+                        Resume
+                      </Button>
+                    )}
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="border-[color:var(--workspace-shell-border)]"
+                      onClick={() => {
+                        void updateTaskRecurringSeriesStatusAction({
+                          seriesId: series.id,
+                          status: 'ended',
+                        }).then(() => {
+                          setScheduledSeries((prev) =>
+                            prev.filter((item) => item.id !== series.id),
+                          );
+                        });
+                      }}
+                    >
+                      Stop
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+      ) : view === 'list' || view === 'byClient' ? (
         <>
           {filteredForList.length === 0 ? (
             <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-6 py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
@@ -1639,6 +1849,7 @@ function TaskRow({
   task,
   showWorkspaceTag = false,
   workspaceAccountId,
+  workspaceAccountSlug,
   today,
   onStatusChanged,
   onTitleChanged,
@@ -1649,6 +1860,7 @@ function TaskRow({
   task: TasksPageTask;
   showWorkspaceTag?: boolean;
   workspaceAccountId?: string;
+  workspaceAccountSlug?: string;
   today: string;
   onStatusChanged?: (taskId: string, status: TaskStatus) => void;
   onTitleChanged?: (taskId: string, title: string) => void;
@@ -1783,6 +1995,7 @@ function TaskRow({
             calendarScheduleStatus={task.calendarScheduleStatus}
             clientName={task.clientName}
             clientColor={clientColor}
+            clientPictureUrl={task.clientPictureUrl}
             onDueDateChanged={onDueDateChanged}
           />
         </div>
@@ -1797,7 +2010,11 @@ function TaskRow({
           />
         </div>
         <div className="hidden sm:block">
-          <ClientCell name={task.clientName} color={clientColor} />
+          <ClientCell
+            name={task.clientName}
+            color={clientColor}
+            pictureUrl={task.clientPictureUrl}
+          />
         </div>
         <PriorityIndicator priority={task.priority} />
       </div>
@@ -1810,6 +2027,7 @@ function TaskRow({
               task={st}
               showWorkspaceTag={showWorkspaceTag}
               workspaceAccountId={workspaceAccountId}
+              workspaceAccountSlug={workspaceAccountSlug}
               today={today}
               onStatusChanged={onStatusChanged}
               onTitleChanged={onTitleChanged}
@@ -1824,77 +2042,8 @@ function TaskRow({
         open={editOpen}
         onOpenChange={setEditOpen}
         workspaceAccountId={workspaceAccountId}
+        workspaceAccountSlug={workspaceAccountSlug}
       />
     </div>
   );
-}
-
-// ─── Status / overdue pills ─────────────────────────────────────────
-
-function StatusPill({
-  status,
-  compact = false,
-}: {
-  status: TaskStatus;
-  compact?: boolean;
-}) {
-  const col = STATUS_COLUMNS.find((c) => c.key === status);
-  if (!col) return null;
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-full items-center gap-1 rounded-[5px] font-medium text-[var(--workspace-shell-text)]',
-        compact
-          ? 'px-1.5 py-0 text-[11px] leading-5'
-          : 'px-1.5 py-0.5 text-xs leading-5',
-      )}
-      style={{ backgroundColor: col.tint }}
-    >
-      <span
-        className="inline-block h-1.5 w-1.5 shrink-0 rounded-full"
-        style={{ backgroundColor: col.dot }}
-      />
-      <span className="truncate">{STATUS_LABEL[status]}</span>
-    </span>
-  );
-}
-
-function OverduePill({
-  dueDate,
-  compact = false,
-}: {
-  dueDate: string | null;
-  compact?: boolean;
-}) {
-  const label = compact
-    ? 'Overdue'
-    : dueDate
-      ? `Overdue · ${formatOverdueDate(dueDate)}`
-      : 'Overdue';
-  return (
-    <span
-      className={cn(
-        'inline-flex max-w-full items-center gap-1 rounded-[5px] border border-rose-400/25 bg-rose-500/12 font-medium text-rose-200',
-        compact
-          ? 'px-1.5 py-0 text-[11px] leading-5'
-          : 'px-1.5 py-0.5 text-xs leading-5',
-      )}
-    >
-      <AlertTriangle className="h-2.5 w-2.5 shrink-0" />
-      <span className="truncate">{label}</span>
-    </span>
-  );
-}
-
-function formatOverdueDate(iso: string): string {
-  const p = parseDueDateParts(iso);
-  if (!p) return iso;
-  const d = new Date(p.y, p.m - 1, p.d, 12, 0, 0, 0);
-  if (Number.isNaN(d.getTime())) return iso;
-  const cy = new Date().getFullYear();
-  return d.toLocaleDateString('en-GB', {
-    day: 'numeric',
-    month: 'short',
-    ...(p.y !== cy ? { year: 'numeric' as const } : {}),
-  });
 }

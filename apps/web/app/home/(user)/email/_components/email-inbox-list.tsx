@@ -1,13 +1,34 @@
 'use client';
 
-import { Loader2, Search, X } from 'lucide-react';
+import { useTransition } from 'react';
 
+import Link from 'next/link';
+
+import { Loader2, MoreHorizontal, Search, X } from 'lucide-react';
+
+import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
+import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import pathsConfig from '~/config/paths.config';
+import {
+  ignoreEmailNeedsReplyAction,
+  markEmailNeedsReplyAction,
+} from '~/lib/email-assistant/email-assistant.actions';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 
-import type { EmailInboxFilter, EmailThreadSummary } from '../_lib/types';
+import type {
+  EmailInboxFilter,
+  EmailThreadSummary,
+  EmailWorkspaceOption,
+} from '../_lib/types';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -33,14 +54,37 @@ function linkBadgeLabel(thread: EmailThreadSummary): string | null {
   return null;
 }
 
+function clientHref(
+  thread: EmailThreadSummary,
+  workspaces: EmailWorkspaceOption[],
+): string | null {
+  if (!thread.link.clientId || !thread.link.accountId) {
+    return null;
+  }
+
+  const workspace = workspaces.find((item) => item.id === thread.link.accountId);
+
+  if (!workspace?.slug) {
+    return null;
+  }
+
+  return `${pathsConfig.app.accountClients.replace('[account]', workspace.slug)}/${thread.link.clientId}`;
+}
+
 type Props = {
   threads: EmailThreadSummary[];
   selectedThreadId: string | null;
   onSelectThread: (threadId: string) => void;
+  onThreadCategoryChange?: (
+    threadId: string,
+    category: 'needs_reply' | 'no_reply',
+  ) => void;
   filter: EmailInboxFilter;
   onFilterChange: (filter: EmailInboxFilter) => void;
   searchQuery: string;
   onSearchQueryChange: (value: string) => void;
+  workspaces?: EmailWorkspaceOption[];
+  accountSlug?: string | null;
   searching?: boolean;
   loadingMore?: boolean;
   hasMore?: boolean;
@@ -51,20 +95,62 @@ export function EmailInboxList({
   threads,
   selectedThreadId,
   onSelectThread,
+  onThreadCategoryChange,
   filter,
   onFilterChange,
   searchQuery,
   onSearchQueryChange,
+  workspaces = [],
+  accountSlug = null,
   searching = false,
   loadingMore = false,
   hasMore = false,
   onLoadMore,
 }: Props) {
+  const [pending, startTransition] = useTransition();
   const trimmedSearch = searchQuery.trim();
   const needsReplyCount = threads.filter(
     (thread) => thread.assistant_category === 'needs_reply',
   ).length;
   const linkedCount = threads.filter((thread) => thread.link.linked).length;
+
+  function markNeedsReply(threadId: string) {
+    startTransition(async () => {
+      try {
+        await markEmailNeedsReplyAction({
+          threadId,
+          accountSlug: accountSlug ?? undefined,
+        });
+        onThreadCategoryChange?.(threadId, 'needs_reply');
+        toast.success('Marked as needing a reply');
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not mark as needing a reply',
+        );
+      }
+    });
+  }
+
+  function clearNeedsReply(threadId: string) {
+    startTransition(async () => {
+      try {
+        await ignoreEmailNeedsReplyAction({
+          threadId,
+          accountSlug: accountSlug ?? undefined,
+        });
+        onThreadCategoryChange?.(threadId, 'no_reply');
+        toast.success('Marked as no reply needed');
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not update this email',
+        );
+      }
+    });
+  }
 
   return (
     <section
@@ -169,16 +255,21 @@ export function EmailInboxList({
           <ul className="divide-y divide-white/5">
             {threads.map((thread) => {
               const selected = thread.id === selectedThreadId;
+              const href = clientHref(thread, workspaces);
+              const badge = linkBadgeLabel(thread);
 
               return (
-                <li key={thread.id}>
+                <li
+                  key={thread.id}
+                  className={cn(
+                    'group relative flex items-start gap-1 px-2 py-1 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
+                    selected && 'bg-[var(--workspace-shell-sidebar-accent)]',
+                  )}
+                >
                   <button
                     type="button"
                     onClick={() => onSelectThread(thread.id)}
-                    className={cn(
-                      'flex w-full min-w-0 items-start gap-3 px-4 py-3 text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
-                      selected && 'bg-[var(--workspace-shell-sidebar-accent)]',
-                    )}
+                    className="flex min-w-0 flex-1 items-start gap-3 px-2 py-2 text-left"
                   >
                     <span
                       className={cn(
@@ -225,11 +316,9 @@ export function EmailInboxList({
                             Untriaged
                           </span>
                         ) : null}
-                        {linkBadgeLabel(thread) ? (
+                        {badge && !href ? (
                           <span className="inline-flex max-w-full rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
-                            <span className="truncate">
-                              {linkBadgeLabel(thread)}
-                            </span>
+                            <span className="truncate">{badge}</span>
                           </span>
                         ) : null}
                       </span>
@@ -238,6 +327,54 @@ export function EmailInboxList({
                       </span>
                     </span>
                   </button>
+
+                  <div className="flex shrink-0 items-start gap-1 pt-1.5 pr-1">
+                    {href && badge ? (
+                      <Link
+                        href={href}
+                        className="mt-0.5 hidden max-w-[7.5rem] truncate rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-2 py-0.5 text-[10px] font-medium text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)]/35 sm:inline-flex"
+                        title={`Open ${badge}`}
+                      >
+                        {badge}
+                      </Link>
+                    ) : null}
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 hover:bg-[var(--workspace-shell-panel)] hover:text-[var(--workspace-shell-text)]"
+                          disabled={pending}
+                          aria-label="Thread actions"
+                        >
+                          <MoreHorizontal className="h-4 w-4" />
+                        </Button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        {thread.assistant_category === 'needs_reply' ? (
+                          <DropdownMenuItem
+                            disabled={pending}
+                            onSelect={() => clearNeedsReply(thread.id)}
+                          >
+                            Mark as no reply needed
+                          </DropdownMenuItem>
+                        ) : (
+                          <DropdownMenuItem
+                            disabled={pending}
+                            onSelect={() => markNeedsReply(thread.id)}
+                          >
+                            Mark as needing a reply
+                          </DropdownMenuItem>
+                        )}
+                        {href ? (
+                          <DropdownMenuItem asChild>
+                            <Link href={href}>Open client</Link>
+                          </DropdownMenuItem>
+                        ) : null}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
                 </li>
               );
             })}

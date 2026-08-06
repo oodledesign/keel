@@ -4,7 +4,14 @@ import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ChevronDown, ChevronRight, Loader2, Trash2 } from 'lucide-react';
+import {
+  ChevronDown,
+  ChevronRight,
+  Loader2,
+  Plus,
+  Trash2,
+  X,
+} from 'lucide-react';
 
 import {
   AlertDialog,
@@ -34,10 +41,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import pathsConfig from '~/config/paths.config';
 import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
+import {
+  createBlankWorkspaceNoteAction,
+  saveWorkspaceNoteAction,
+} from '~/home/[account]/_lib/workspace-content/notes-actions';
+import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
 
 import {
   type TaskAssignmentOption,
@@ -66,12 +80,24 @@ const STATUSES = [
   { key: 'completed', label: 'Completed' },
 ];
 
+const FREQUENCIES = [
+  { key: 'weekly', label: 'Weekly' },
+  { key: 'fortnightly', label: 'Fortnightly' },
+  { key: 'monthly', label: 'Monthly' },
+  { key: 'quarterly', label: 'Quarterly' },
+  { key: 'yearly', label: 'Yearly' },
+] as const;
+
+type RecurrenceFrequency = (typeof FREQUENCIES)[number]['key'];
+
 type Props = {
   task: TasksPageTask;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   /** Team workspace tasks page — assignment limited to this account’s projects/clients. */
   workspaceAccountId?: string;
+  /** Team workspace slug — needed to deep-link / create notes. */
+  workspaceAccountSlug?: string;
   /** After a successful delete (e.g. refresh a client-side list). */
   onDeleted?: () => void;
   /** After a successful save (same use case as onDeleted). */
@@ -122,17 +148,12 @@ function SubtaskEditorRow({
   onChange: (updated: TasksPageTask) => void;
   onRemove: (id: string) => void;
 }) {
-  const [title, setTitle] = useState(subtask.title);
+  const [draftTitle, setDraftTitle] = useState<string | null>(null);
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
   const isDone = subtask.status === 'completed';
-
-  useEffect(() => {
-    if (!editing) {
-      setTitle(subtask.title);
-    }
-  }, [subtask.title, editing]);
+  const title = draftTitle ?? subtask.title;
 
   useEffect(() => {
     if (!editing) return;
@@ -158,8 +179,8 @@ function SubtaskEditorRow({
   const saveTitle = useCallback(async () => {
     setEditing(false);
     const trimmed = title.trim();
+    setDraftTitle(null);
     if (!trimmed) {
-      setTitle(subtask.title);
       return;
     }
     if (trimmed === subtask.title) {
@@ -170,8 +191,6 @@ function SubtaskEditorRow({
     setBusy(false);
     if (result.success) {
       onChange({ ...subtask, title: trimmed });
-    } else {
-      setTitle(subtask.title);
     }
   }, [onChange, subtask, title]);
 
@@ -202,7 +221,7 @@ function SubtaskEditorRow({
         <input
           ref={inputRef}
           value={title}
-          onChange={(e) => setTitle(e.target.value)}
+          onChange={(e) => setDraftTitle(e.target.value)}
           onBlur={() => void saveTitle()}
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
@@ -211,7 +230,7 @@ function SubtaskEditorRow({
             }
             if (e.key === 'Escape') {
               e.preventDefault();
-              setTitle(subtask.title);
+              setDraftTitle(null);
               setEditing(false);
             }
           }}
@@ -222,7 +241,10 @@ function SubtaskEditorRow({
         <button
           type="button"
           disabled={disabled || busy}
-          onClick={() => setEditing(true)}
+          onClick={() => {
+            setDraftTitle(subtask.title);
+            setEditing(true);
+          }}
           className={cn(
             'min-w-0 flex-1 truncate text-left text-sm',
             isDone
@@ -251,6 +273,7 @@ export function EditTaskDialog({
   open,
   onOpenChange,
   workspaceAccountId,
+  workspaceAccountSlug,
   onDeleted,
   onSaved,
 }: Props) {
@@ -274,9 +297,29 @@ export function EditTaskDialog({
   );
   const [subtasksExpanded, setSubtasksExpanded] = useState(true);
   const [subtasksLoading, setSubtasksLoading] = useState(false);
+  const [repeat, setRepeat] = useState(false);
+  const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly');
+  const [firstCreateDate, setFirstCreateDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
+  const [dayOfMonth, setDayOfMonth] = useState(() =>
+    String(new Date().getUTCDate()),
+  );
+  const [dueDays, setDueDays] = useState('0');
+  const [noteRefs, setNoteRefs] = useState(task.noteRefs ?? []);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [pickerQuery, setPickerQuery] = useState('');
+  const [pickerLoading, setPickerLoading] = useState(false);
+  const [pickerNotes, setPickerNotes] = useState<
+    Array<{ id: string; title: string; preview: string }>
+  >([]);
+  const [creatingNote, setCreatingNote] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const isWorkspaceMode = Boolean(workspaceAccountId);
+  const notesAccountId = workspaceAccountId ?? task.accountId;
+  const notesAccountSlug = workspaceAccountSlug ?? task.workspaceSlug;
+  const canAttachNotes = Boolean(notesAccountId && notesAccountSlug);
   const isRootTask = !task.parentTaskId;
   const doneSubtaskCount = subtasks.filter(
     (s) => s.status === 'completed',
@@ -320,6 +363,8 @@ export function EditTaskDialog({
     setSubtasks(task.subtasks ?? []);
     setSubtasksExpanded(true);
     void refreshSubtasks();
+    // Intentionally depend on task.id (not task.subtasks): refreshSubtasks loads fresh rows.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- avoid reset loops from nested subtasks
   }, [open, isRootTask, task.id, refreshSubtasks]);
 
   useEffect(() => {
@@ -329,11 +374,21 @@ export function EditTaskDialog({
       setStatus(task.status);
       setDueDate(task.dueDate ?? '');
       setNotes(task.notes ?? '');
+      setNoteRefs(task.noteRefs ?? []);
       setAssignTo(initialAssignTo(task));
       setError(null);
       setDeleteDialogOpen(false);
       setNewSubtaskTitle('');
+      setRepeat(false);
+      setPickerOpen(false);
+      setPickerQuery('');
+      setFirstCreateDate(new Date().toISOString().slice(0, 10));
+      setDayOfMonth(String(new Date().getUTCDate()));
+      setDueDays('0');
+      setFrequency('monthly');
     }
+    // Reset from the opened task snapshot; listing every nested field would still miss props.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open + task.id gate the form reset
   }, [
     open,
     task.id,
@@ -342,10 +397,38 @@ export function EditTaskDialog({
     task.status,
     task.dueDate,
     task.notes,
+    task.noteRefs,
     task.projectId,
     task.clientId,
     task.areaId,
   ]);
+
+  useEffect(() => {
+    if (!open || !pickerOpen || !notesAccountId) return;
+    let cancelled = false;
+    setPickerLoading(true);
+    void listNotesAndFilesForContextAction({ accountId: notesAccountId })
+      .then((result) => {
+        if (cancelled) return;
+        const notesOnly = (result.items ?? [])
+          .filter((item) => item.type === 'note')
+          .map((item) => ({
+            id: item.id,
+            title: item.title,
+            preview: item.preview,
+          }));
+        setPickerNotes(notesOnly);
+      })
+      .catch(() => {
+        if (!cancelled) setPickerNotes([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPickerLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [notesAccountId, open, pickerOpen]);
 
   async function handleAddSubtask() {
     if (!isRootTask) return;
@@ -417,6 +500,11 @@ export function EditTaskDialog({
 
     const assignment = assignmentFromSelection(assignTo, options);
 
+    const showDayOfMonth =
+      frequency === 'monthly' ||
+      frequency === 'quarterly' ||
+      frequency === 'yearly';
+
     startTransition(async () => {
       const result = await updateTask(task.id, {
         title: trimmedTitle,
@@ -424,12 +512,47 @@ export function EditTaskDialog({
         status,
         dueDate: dueDate || null,
         notes: notes.trim() || null,
+        noteRefs: canAttachNotes ? noteRefs : undefined,
         assignment,
       });
 
       if (!result.success) {
         setError(result.error ?? 'Failed to update task');
         return;
+      }
+
+      if (repeat && !task.recurringSeriesId) {
+        const dueDaysNum = Number.parseInt(dueDays, 10);
+        const dayNum = Number.parseInt(dayOfMonth, 10);
+        const seriesResult = await createTask({
+          title: trimmedTitle,
+          priority,
+          notes: notes.trim() || null,
+          projectId: task.projectId ?? undefined,
+          clientId: task.clientId ?? undefined,
+          areaId: task.areaId ?? undefined,
+          accountId: notesAccountId ?? workspaceAccountId,
+          recurrence: {
+            frequency,
+            firstCreateDate,
+            dayOfMonth: showDayOfMonth
+              ? Number.isFinite(dayNum)
+                ? dayNum
+                : undefined
+              : null,
+            dueDays: Number.isFinite(dueDaysNum) ? dueDaysNum : 0,
+            createFirstNow: false,
+          },
+        });
+        if (!seriesResult.success) {
+          setError(
+            seriesResult.error ??
+              'Task saved, but could not start the recurring series',
+          );
+          onSaved?.();
+          router.refresh();
+          return;
+        }
       }
 
       onOpenChange(false);
@@ -515,22 +638,135 @@ export function EditTaskDialog({
                   </Button>
                 </div>
               </div>
-            ) : null}
+            ) : (
+              <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/50 p-3">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <Label
+                      htmlFor="edit-repeat-task"
+                      className="text-[var(--workspace-shell-text)]"
+                    >
+                      Repeat
+                    </Label>
+                    <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Schedule future copies of this task (won&apos;t duplicate
+                      this one)
+                    </p>
+                  </div>
+                  <Switch
+                    id="edit-repeat-task"
+                    checked={repeat}
+                    onCheckedChange={setRepeat}
+                  />
+                </div>
+                {repeat ? (
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label className="text-[var(--workspace-shell-text-muted)]">
+                        Frequency
+                      </Label>
+                      <Select
+                        value={frequency}
+                        onValueChange={(value) =>
+                          setFrequency(value as RecurrenceFrequency)
+                        }
+                      >
+                        <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                          {FREQUENCIES.map((item) => (
+                            <SelectItem key={item.key} value={item.key}>
+                              {item.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label
+                        htmlFor="edit-first-create"
+                        className="text-[var(--workspace-shell-text-muted)]"
+                      >
+                        Next create date
+                      </Label>
+                      <Input
+                        id="edit-first-create"
+                        type="date"
+                        value={firstCreateDate}
+                        onChange={(e) => {
+                          setFirstCreateDate(e.target.value);
+                          if (e.target.value) {
+                            const day = Number.parseInt(
+                              e.target.value.slice(8, 10),
+                              10,
+                            );
+                            if (Number.isFinite(day)) {
+                              setDayOfMonth(String(day));
+                            }
+                          }
+                        }}
+                        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                      />
+                    </div>
+                    <div className="space-y-2 sm:col-span-2">
+                      <Label
+                        htmlFor="edit-due-days"
+                        className="text-[var(--workspace-shell-text-muted)]"
+                      >
+                        Due days after create
+                      </Label>
+                      <div className="flex items-center gap-2">
+                        <Input
+                          id="edit-due-days"
+                          type="number"
+                          min={0}
+                          max={365}
+                          value={dueDays}
+                          onChange={(e) => setDueDays(e.target.value)}
+                          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                        />
+                        <span className="shrink-0 text-sm text-[var(--workspace-shell-text-muted)]">
+                          days
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            )}
 
-            <div className="space-y-2">
-              <Label
-                htmlFor="edit-title"
-                className="text-[var(--workspace-shell-text-muted)]"
-              >
-                Title *
-              </Label>
-              <Input
-                id="edit-title"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-              />
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-title"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Title *
+                </Label>
+                <Input
+                  id="edit-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+              </div>
+              <div className="space-y-2 sm:w-[11rem]">
+                <Label
+                  htmlFor="edit-due"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Due date
+                </Label>
+                <Input
+                  id="edit-due"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -548,6 +784,174 @@ export function EditTaskDialog({
                 className="min-h-[180px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
             </div>
+
+            {canAttachNotes ? (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-[var(--workspace-shell-text-muted)]">
+                    Attached notes
+                  </Label>
+                  <div className="flex items-center gap-1">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[var(--workspace-shell-text-muted)]"
+                      disabled={
+                        isPending || creatingNote || noteRefs.length >= 30
+                      }
+                      onClick={() => {
+                        if (!notesAccountId || !notesAccountSlug) return;
+                        setCreatingNote(true);
+                        void createBlankWorkspaceNoteAction({
+                          accountId: notesAccountId,
+                          accountSlug: notesAccountSlug,
+                        })
+                          .then(async (created) => {
+                            const noteId = created.noteId as string;
+                            await saveWorkspaceNoteAction({
+                              accountId: notesAccountId,
+                              accountSlug: notesAccountSlug,
+                              noteId,
+                              title: `Note for ${title.trim() || 'task'}`,
+                              content: '',
+                              link: { type: 'task', id: task.id },
+                            });
+                            setNoteRefs((prev) => [
+                              ...prev,
+                              {
+                                id: noteId,
+                                title: `Note for ${title.trim() || 'task'}`,
+                              },
+                            ]);
+                          })
+                          .catch(() => {
+                            setError('Could not create note');
+                          })
+                          .finally(() => setCreatingNote(false));
+                      }}
+                    >
+                      {creatingNote ? (
+                        <Loader2 className="mr-1 h-3.5 w-3.5 animate-spin" />
+                      ) : (
+                        <Plus className="mr-1 h-3.5 w-3.5" />
+                      )}
+                      New note
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-[var(--workspace-shell-text-muted)]"
+                      disabled={isPending || noteRefs.length >= 30}
+                      onClick={() => setPickerOpen((v) => !v)}
+                    >
+                      <Plus className="mr-1 h-3.5 w-3.5" />
+                      Attach
+                    </Button>
+                  </div>
+                </div>
+
+                {pickerOpen ? (
+                  <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 p-2.5">
+                    <Input
+                      value={pickerQuery}
+                      onChange={(e) => setPickerQuery(e.target.value)}
+                      placeholder="Search workspace notes…"
+                      className="mb-2 h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm"
+                      autoFocus
+                    />
+                    {pickerLoading ? (
+                      <p className="px-1 py-3 text-xs text-[var(--workspace-shell-text-muted)]">
+                        Loading notes…
+                      </p>
+                    ) : (
+                      <div className="max-h-48 space-y-1 overflow-y-auto">
+                        {pickerNotes
+                          .filter(
+                            (note) =>
+                              !noteRefs.some((ref) => ref.id === note.id),
+                          )
+                          .filter((note) => {
+                            const q = pickerQuery.trim().toLowerCase();
+                            if (!q) return true;
+                            return (
+                              note.title.toLowerCase().includes(q) ||
+                              note.preview.toLowerCase().includes(q)
+                            );
+                          })
+                          .slice(0, 20)
+                          .map((note) => (
+                            <button
+                              key={note.id}
+                              type="button"
+                              className="flex w-full flex-col rounded-md px-2 py-1.5 text-left hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                              onClick={() => {
+                                setNoteRefs((prev) => [
+                                  ...prev,
+                                  { id: note.id, title: note.title },
+                                ]);
+                                setPickerOpen(false);
+                                setPickerQuery('');
+                              }}
+                            >
+                              <span className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                                {note.title || 'Untitled note'}
+                              </span>
+                              {note.preview ? (
+                                <span className="line-clamp-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                                  {note.preview}
+                                </span>
+                              ) : null}
+                            </button>
+                          ))}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+
+                {noteRefs.length === 0 ? (
+                  <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                    Attach or create workspace notes for this task.
+                  </p>
+                ) : (
+                  <ul className="space-y-1">
+                    {noteRefs.map((ref) => {
+                      const href = pathsConfig.app.accountNoteDetail
+                        .replace('[account]', notesAccountSlug!)
+                        .replace('[noteId]', ref.id);
+                      return (
+                        <li
+                          key={ref.id}
+                          className="flex items-center gap-2 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-2 py-1.5"
+                        >
+                          <a
+                            href={href}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="min-w-0 flex-1 truncate text-sm text-[var(--workspace-shell-text)] underline-offset-2 hover:underline"
+                          >
+                            {ref.title}
+                          </a>
+                          <button
+                            type="button"
+                            className="rounded p-1 text-[var(--workspace-shell-text-muted)] hover:text-[#E85D75]"
+                            aria-label={`Detach ${ref.title}`}
+                            onClick={() =>
+                              setNoteRefs((prev) =>
+                                prev.filter((item) => item.id !== ref.id),
+                              )
+                            }
+                          >
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+              </div>
+            ) : null}
 
             {isRootTask ? (
               <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
@@ -740,22 +1144,6 @@ export function EditTaskDialog({
                   Create a project or client in this workspace first.
                 </p>
               ) : null}
-            </div>
-
-            <div className="space-y-2">
-              <Label
-                htmlFor="edit-due"
-                className="text-[var(--workspace-shell-text-muted)]"
-              >
-                Due date
-              </Label>
-              <Input
-                id="edit-due"
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-              />
             </div>
 
             {error && <p className="text-sm text-rose-400">{error}</p>}

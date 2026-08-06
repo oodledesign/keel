@@ -130,6 +130,20 @@ export type DashboardSuggestedEmailTasksSummary = {
   totalCount: number;
 };
 
+export type DashboardSupportTicketSummary = {
+  id: string;
+  ticketNumber: number;
+  title: string;
+  priority: string;
+  clientName: string | null;
+  lastActivityAt: string | null;
+};
+
+export type DashboardSupportTicketsSummary = {
+  tickets: DashboardSupportTicketSummary[];
+  totalCount: number;
+};
+
 export type DashboardPageData = {
   accountId: string;
   accountSlug: string;
@@ -142,6 +156,7 @@ export type DashboardPageData = {
   upcomingTasks: DashboardTaskSummary[];
   needsReply: DashboardNeedsReplySummary;
   suggestedEmailTasks: DashboardSuggestedEmailTasksSummary;
+  openSupportTickets: DashboardSupportTicketsSummary;
   recentNotes: DashboardNoteSummary[];
   recentInvoices: DashboardInvoiceSummary[];
   teamMembers: Array<{
@@ -236,6 +251,7 @@ async function loadDashboardPageDataImpl(
     businessConnectionResult,
     upcomingTasksResult,
     suggestedEmailLoaded,
+    openSupportTicketsResult,
   ] = await Promise.all([
     client
       .from('projects')
@@ -303,6 +319,16 @@ async function loadDashboardPageDataImpl(
           limit: 5,
         })
       : Promise.resolve({ items: [], totalCount: 0 }),
+    client
+      .from('support_tickets')
+      .select(
+        'id, ticket_number, title, priority, last_activity_at, client_org_id, client_orgs(name)',
+        { count: 'exact' },
+      )
+      .or(`business_id.eq.${accountId},account_id.eq.${accountId}`)
+      .eq('status', 'open')
+      .order('last_activity_at', { ascending: false, nullsFirst: false })
+      .limit(6),
   ]);
 
   const businessConnectionId =
@@ -544,6 +570,42 @@ async function loadDashboardPageDataImpl(
     totalCount: suggestedEmailLoaded.totalCount,
   };
 
+  const supportTicketsUnavailable = isTableMissingFromApi(
+    openSupportTicketsResult.error,
+  );
+  if (!supportTicketsUnavailable && openSupportTicketsResult.error) {
+    console.error(
+      '[dashboard] open support tickets',
+      openSupportTicketsResult.error,
+    );
+  }
+
+  const openSupportTicketRows = supportTicketsUnavailable
+    ? []
+    : openSupportTicketsResult.error
+      ? []
+      : (openSupportTicketsResult.data ?? []);
+
+  const openSupportTickets: DashboardSupportTicketsSummary = {
+    tickets: openSupportTicketRows.map((row) => {
+      const org = Array.isArray(row.client_orgs)
+        ? row.client_orgs[0]
+        : row.client_orgs;
+      return {
+        id: row.id as string,
+        ticketNumber: (row.ticket_number as number | null) ?? 0,
+        title: ((row.title as string | null)?.trim() ||
+          'Untitled ticket') as string,
+        priority: (row.priority as string | null) ?? 'medium',
+        clientName: (org?.name as string | null)?.trim() || null,
+        lastActivityAt: (row.last_activity_at as string | null) ?? null,
+      };
+    }),
+    totalCount: supportTicketsUnavailable
+      ? 0
+      : (openSupportTicketsResult.count ?? openSupportTicketRows.length),
+  };
+
   const accountName = account.name?.trim() || account.slug || accountSlug;
 
   return {
@@ -558,6 +620,7 @@ async function loadDashboardPageDataImpl(
     upcomingTasks,
     needsReply,
     suggestedEmailTasks,
+    openSupportTickets,
     recentNotes,
     recentInvoices: [],
     teamMembers: [],

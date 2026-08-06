@@ -50,36 +50,50 @@ export async function moveDealToStage(
   newStage: string,
   options?: { accountSlug?: string | null },
 ) {
-  await requireUserInServerComponent();
-  const client = getSupabaseServerClient();
+  try {
+    const client = getSupabaseServerClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await client.auth.getUser();
+    if (authError || !user) {
+      return { success: false as const, error: 'Not authenticated' };
+    }
 
-  const updates: Record<string, unknown> = { stage: newStage };
-  if (
-    newStage === 'completed' ||
-    newStage === 'signed' ||
-    newStage === 'completed_exchanged'
-  ) {
-    updates.completed_at = new Date().toISOString();
-  } else if (
-    newStage === 'fell_through' ||
-    newStage === 'discounted' ||
-    newStage === 'fallen_through'
-  ) {
-    updates.completed_at = null;
+    const updates: Record<string, unknown> = { stage: newStage };
+    if (
+      newStage === 'completed' ||
+      newStage === 'signed' ||
+      newStage === 'completed_exchanged'
+    ) {
+      updates.completed_at = new Date().toISOString();
+    } else if (
+      newStage === 'fell_through' ||
+      newStage === 'discounted' ||
+      newStage === 'fallen_through'
+    ) {
+      updates.completed_at = null;
+    }
+
+    const { error } = await client
+      .from('pipeline_deals')
+      .update(updates)
+      .eq('id', dealId);
+
+    if (error) {
+      return { success: false as const, error: error.message };
+    }
+
+    revalidatePipelinePaths(options?.accountSlug);
+
+    return { success: true as const };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error ? error.message : 'Could not update deal stage',
+    };
   }
-
-  const { error } = await client
-    .from('pipeline_deals')
-    .update(updates)
-    .eq('id', dealId);
-
-  if (error) {
-    return { success: false, error: error.message };
-  }
-
-  revalidatePipelinePaths(options?.accountSlug);
-
-  return { success: true };
 }
 
 export type CreateDealInput = {

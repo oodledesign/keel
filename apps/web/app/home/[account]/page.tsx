@@ -118,6 +118,7 @@ async function WorkDashboardContent({ account }: { account: string }) {
       upcomingTasks={data.upcomingTasks}
       needsReply={data.needsReply}
       suggestedEmailTasks={data.suggestedEmailTasks}
+      openSupportTickets={data.openSupportTickets}
       recentNotes={data.recentNotes}
     />
   );

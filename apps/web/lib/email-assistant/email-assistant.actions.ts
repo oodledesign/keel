@@ -12,10 +12,16 @@ import {
   ignoreEmailRuleAndDismissSuggestions,
   removeIgnoredEmailRule,
 } from '~/lib/email-assistant/ignored-senders';
+import { markEmailThreadNeedsReply } from '~/lib/email-assistant/mark-thread-needs-reply';
 
 const IgnoreEmailNeedsReplySchema = z.object({
   threadId: z.string().uuid(),
-  accountId: z.string().uuid(),
+  accountId: z.string().uuid().optional(),
+  accountSlug: z.string().min(1).optional(),
+});
+
+const MarkEmailNeedsReplySchema = z.object({
+  threadId: z.string().uuid(),
   accountSlug: z.string().min(1).optional(),
 });
 
@@ -45,14 +51,7 @@ export const ignoreEmailNeedsReplyAction = enhanceAction(
       data.accountId,
     );
 
-    revalidatePath('/home/email');
-    revalidatePath('/app/email');
-    if (data.accountSlug) {
-      revalidatePath(`/home/${data.accountSlug}`);
-      revalidatePath(`/app/${data.accountSlug}`);
-      revalidatePath(`/home/${data.accountSlug}/email`);
-      revalidatePath(`/app/${data.accountSlug}/email`);
-    }
+    revalidateNeedsReplyPaths(data.accountSlug);
 
     return { ok: true as const };
   },
@@ -61,6 +60,34 @@ export const ignoreEmailNeedsReplyAction = enhanceAction(
     schema: IgnoreEmailNeedsReplySchema,
   },
 );
+
+export const markEmailNeedsReplyAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    await markEmailThreadNeedsReply(client, user.id, data.threadId);
+
+    revalidateNeedsReplyPaths(data.accountSlug);
+
+    return { ok: true as const };
+  },
+  {
+    auth: true,
+    schema: MarkEmailNeedsReplySchema,
+  },
+);
+
+function revalidateNeedsReplyPaths(accountSlug?: string) {
+  revalidatePath('/home/email');
+  revalidatePath('/app/email');
+  revalidatePath('/home');
+  revalidatePath('/app');
+  if (accountSlug) {
+    revalidatePath(`/home/${accountSlug}`);
+    revalidatePath(`/app/${accountSlug}`);
+    revalidatePath(`/home/${accountSlug}/email`);
+    revalidatePath(`/app/${accountSlug}/email`);
+  }
+}
 
 export const acceptSuggestedEmailTaskAction = enhanceAction(
   async (data, user) => {

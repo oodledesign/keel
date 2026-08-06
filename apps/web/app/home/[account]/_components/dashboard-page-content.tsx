@@ -6,6 +6,7 @@ import type {
   DashboardNeedsReplySummary,
   DashboardNoteSummary,
   DashboardSuggestedEmailTasksSummary,
+  DashboardSupportTicketsSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
 import { BusinessDashboardMobile } from './business-dashboard-mobile';
@@ -18,6 +19,7 @@ type DashboardPageContentProps = {
   upcomingTasks: DashboardTaskSummary[];
   needsReply: DashboardNeedsReplySummary;
   suggestedEmailTasks: DashboardSuggestedEmailTasksSummary;
+  openSupportTickets: DashboardSupportTicketsSummary;
   recentNotes: DashboardNoteSummary[];
   shortcutsBar?: React.ReactNode;
 };
@@ -30,6 +32,7 @@ export function DashboardPageContent({
   upcomingTasks,
   needsReply,
   suggestedEmailTasks,
+  openSupportTickets,
   recentNotes,
   shortcutsBar,
 }: DashboardPageContentProps) {
@@ -42,6 +45,7 @@ export function DashboardPageContent({
       upcomingTasks={upcomingTasks}
       needsReply={needsReply}
       suggestedEmailTasks={suggestedEmailTasks}
+      openSupportTickets={openSupportTickets}
       recentNotes={recentNotes}
       shortcutsBar={shortcutsBar}
     />

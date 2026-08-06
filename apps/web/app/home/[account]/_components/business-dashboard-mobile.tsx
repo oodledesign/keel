@@ -18,10 +18,12 @@ import type {
   DashboardNeedsReplySummary,
   DashboardNoteSummary,
   DashboardSuggestedEmailTasksSummary,
+  DashboardSupportTicketsSummary,
   DashboardTaskSummary,
 } from '../_lib/server/dashboard-page.loader';
 import { DashboardNeedsReplyCard } from './dashboard-needs-reply-card';
 import { DashboardSuggestedEmailTasksCard } from './dashboard-suggested-email-tasks-card';
+import { DashboardSupportTicketsCard } from './dashboard-support-tickets-card';
 import { DashboardUpcomingTaskItem } from './dashboard-upcoming-task-item';
 import { NoteAssignmentLabels } from './note-assignment-labels';
 
@@ -52,6 +54,7 @@ type BusinessDashboardMobileProps = {
   upcomingTasks: DashboardTaskSummary[];
   needsReply: DashboardNeedsReplySummary;
   suggestedEmailTasks: DashboardSuggestedEmailTasksSummary;
+  openSupportTickets: DashboardSupportTicketsSummary;
   recentNotes: DashboardNoteSummary[];
   shortcutsBar: React.ReactNode;
 };
@@ -64,6 +67,7 @@ export function BusinessDashboardMobile({
   upcomingTasks,
   needsReply,
   suggestedEmailTasks,
+  openSupportTickets,
   recentNotes,
   shortcutsBar,
 }: BusinessDashboardMobileProps) {
@@ -154,6 +158,12 @@ export function BusinessDashboardMobile({
         accountId={accountId}
         threads={needsReply.threads}
         totalCount={needsReply.totalCount}
+      />
+
+      <DashboardSupportTicketsCard
+        accountSlug={accountSlug}
+        tickets={openSupportTickets.tickets}
+        totalCount={openSupportTickets.totalCount}
       />
 
       <DashboardSuggestedEmailTasksCard

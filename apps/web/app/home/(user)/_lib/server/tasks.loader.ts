@@ -15,16 +15,20 @@ import { workspaceColorForSpaceType } from '../workspace-accent';
 
 /** Cap task payloads for faster SSR and hydration. */
 export const TASK_LIST_LIMIT = 300;
+/** Completed/done rows are loaded separately so they don't crowd out later active work. */
+export const COMPLETED_TASK_LIST_LIMIT = 100;
+
+const ACTIVE_TASK_STATUSES = ['todo', 'in_progress', 'client_review'] as const;
 
 /** List rows omit notes — loaded on edit via loadTaskById. */
 const TASK_LIST_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status';
+  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status, recurring_series_id, note_refs';
 
 const TASK_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status';
+  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status, recurring_series_id, note_refs';
 
-/** Includes series link when the migration is present; omitted from list selects for resilience. */
-const TASK_SELECT_WITH_SERIES = `${TASK_SELECT}, recurring_series_id`;
+/** Same as TASK_SELECT; kept for call sites that try series first. */
+const TASK_SELECT_WITH_SERIES = TASK_SELECT;
 
 type TaskQueryRow = {
   id: string;
@@ -40,6 +44,7 @@ type TaskQueryRow = {
   notes?: string | null;
   calendar_schedule_status?: string | null;
   recurring_series_id?: string | null;
+  note_refs?: unknown;
 };
 
 type BusinessEnrichment = {
@@ -80,8 +85,6 @@ type AreaEnrichment = {
   colour?: string | null;
 };
 
-type JobEnrichment = never;
-
 function isWorkTaskRow(row: {
   project_id?: string | null;
   client_id?: string | null;
@@ -118,8 +121,11 @@ export type TasksPageTask = {
   workspaceSlug: string | null;
   /** Accent for cross-workspace list chips (business colour or space-type default). */
   workspaceColor: string | null;
+  /** Resolved team account id for work tasks (notes attach, etc.). */
+  accountId: string | null;
   parentTaskId: string | null;
   notes: string | null;
+  noteRefs: Array<{ id: string; title: string }>;
   calendarScheduleStatus: 'scheduled' | 'failed' | null;
   /** Present when this task was spawned from a recurring series. */
   recurringSeriesId: string | null;
@@ -235,6 +241,27 @@ function applyClientContext(
   }
 
   return next;
+}
+
+function normalizeTaskNoteRefs(
+  value: unknown,
+): Array<{ id: string; title: string }> {
+  if (!Array.isArray(value)) return [];
+  const out: Array<{ id: string; title: string }> = [];
+  for (const item of value) {
+    if (!item || typeof item !== 'object') continue;
+    const id = (item as { id?: unknown }).id;
+    const title = (item as { title?: unknown }).title;
+    if (typeof id !== 'string' || !id) continue;
+    out.push({
+      id,
+      title:
+        typeof title === 'string' && title.trim()
+          ? title.trim()
+          : 'Untitled note',
+    });
+  }
+  return out;
 }
 
 function taskRowToPageTask(
@@ -359,8 +386,10 @@ function taskRowToPageTask(
     workspaceName,
     workspaceSlug,
     workspaceColor,
+    accountId: resolvedAccountId,
     parentTaskId: row.parent_task_id ?? null,
     notes: row.notes?.trim() ? row.notes : null,
+    noteRefs: normalizeTaskNoteRefs(row.note_refs),
     calendarScheduleStatus:
       row.calendar_schedule_status === 'scheduled' ||
       row.calendar_schedule_status === 'failed'
@@ -591,23 +620,79 @@ export async function loadTaskById(
   return { ...task, subtasks };
 }
 
+/**
+ * Prefer active tasks up to TASK_LIST_LIMIT, then a slice of completed ones.
+ * Ordering by due_date alone previously hid later-due active work behind done rows.
+ */
+async function fetchActiveThenCompletedTaskRows(
+  client: SupabaseClient,
+  // PostgREST filter builder — keep loose to avoid coupling to generated types.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  applyFilters: (q: any) => any,
+): Promise<TaskQueryRow[]> {
+  const run = async (selectCols: string) => {
+    const activePromise = applyFilters(client.from('tasks').select(selectCols))
+      .in('status', [...ACTIVE_TASK_STATUSES])
+      .order('due_date', { ascending: true, nullsLast: true })
+      .limit(TASK_LIST_LIMIT);
+    const completedPromise = applyFilters(
+      client.from('tasks').select(selectCols),
+    )
+      .eq('status', 'done')
+      .order('due_date', { ascending: false, nullsLast: true })
+      .limit(COMPLETED_TASK_LIST_LIMIT);
+    return Promise.all([activePromise, completedPromise]);
+  };
+
+  let [
+    { data: active, error: activeError },
+    { data: completed, error: completedError },
+  ] = await run(TASK_LIST_SELECT);
+
+  if (
+    activeError &&
+    /note_refs|recurring_series_id/i.test(`${activeError.message ?? ''}`)
+  ) {
+    const fallbackSelect =
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status';
+    [
+      { data: active, error: activeError },
+      { data: completed, error: completedError },
+    ] = await run(fallbackSelect);
+  }
+
+  if (activeError) {
+    throw new Error(activeError.message);
+  }
+  if (completedError) {
+    console.error(
+      '[tasks.loader] completed slice error:',
+      completedError.message,
+    );
+  }
+
+  return [
+    ...((active ?? []) as TaskQueryRow[]),
+    ...((completed ?? []) as TaskQueryRow[]),
+  ];
+}
+
 export const loadTasksForUser = cache(async (): Promise<TasksPageTask[]> => {
   const client = getSupabaseServerClient();
   const user = await requireUserInServerComponent();
 
-  const { data, error } = await client
-    .from('tasks')
-    .select(TASK_LIST_SELECT)
-    .eq('user_id', user.id)
-    .order('due_date', { ascending: true, nullsLast: true })
-    .limit(TASK_LIST_LIMIT);
-
-  if (error) {
-    console.error('[tasks.loader] loadTasksForUser error:', error.message);
+  try {
+    const rows = await fetchActiveThenCompletedTaskRows(client, (q) =>
+      q.eq('user_id', user.id),
+    );
+    return enrichTaskRows(client, rows);
+  } catch (err) {
+    console.error(
+      '[tasks.loader] loadTasksForUser error:',
+      err instanceof Error ? err.message : err,
+    );
     return [];
   }
-
-  return enrichTaskRows(client, (data ?? []) as TaskQueryRow[]);
 });
 
 /** Tasks for a specific client (current user's tasks linked to this client). */
@@ -616,20 +701,18 @@ export const loadTasksForClient = cache(
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
-    const { data, error } = await client
-      .from('tasks')
-      .select(TASK_LIST_SELECT)
-      .eq('user_id', user.id)
-      .eq('client_id', clientId)
-      .order('due_date', { ascending: true, nullsLast: true })
-      .limit(TASK_LIST_LIMIT);
-
-    if (error) {
-      console.error('[tasks.loader] loadTasksForClient error:', error.message);
+    try {
+      const rows = await fetchActiveThenCompletedTaskRows(client, (q) =>
+        q.eq('user_id', user.id).eq('client_id', clientId),
+      );
+      return enrichTaskRows(client, rows, 'work');
+    } catch (err) {
+      console.error(
+        '[tasks.loader] loadTasksForClient error:',
+        err instanceof Error ? err.message : err,
+      );
       return [];
     }
-
-    return enrichTaskRows(client, (data ?? []) as TaskQueryRow[], 'work');
   },
 );
 
@@ -663,32 +746,24 @@ export const loadTasksForTeamAccount = cache(
 
     // Prefer account_id scoping over OR(project_id IN …, client_id IN …) —
     // those ID lists grow with the CRM and blow up PostgREST URL / planner cost.
-    const { data, error } = await userClient
-      .from('tasks')
-      .select(TASK_LIST_SELECT)
-      .eq('account_id', accountId)
-      .neq('status', 'cancelled')
-      .order('due_date', {
-        ascending: true,
-        nullsLast: true,
-      })
-      .limit(TASK_LIST_LIMIT);
-
-    if (error) {
+    try {
+      const rows = await fetchActiveThenCompletedTaskRows(userClient, (q) =>
+        q.eq('account_id', accountId),
+      );
+      return enrichTaskRows(
+        userClient,
+        rows,
+        'work',
+        scopedDb,
+        true,
+        workspaceFallback,
+      );
+    } catch (err) {
       console.error(
         '[tasks.loader] loadTasksForTeamAccount error:',
-        error.message,
+        err instanceof Error ? err.message : err,
       );
       return [];
     }
-
-    return enrichTaskRows(
-      userClient,
-      (data ?? []) as TaskQueryRow[],
-      'work',
-      scopedDb,
-      true,
-      workspaceFallback,
-    );
   },
 );
