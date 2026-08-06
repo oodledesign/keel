@@ -41,6 +41,10 @@ export default async function PortalSlugLayout({
       clientSlug={slug}
       orgName={ctx.orgName}
       userEmail={ctx.userEmail}
+      userAvatarUrl={ctx.userAvatarUrl}
+      showWebsiteNav={ctx.showWebsiteNav}
+      showProjectsNav={ctx.showProjectsNav}
+      showMessagesNav={ctx.showMessagesNav}
     >
       {children}
     </PortalShell>
@@ -76,8 +80,14 @@ export async function generateMetadata({
       .eq('slug', slug)
       .maybeSingle();
 
+    const name = data?.name?.trim();
+    const isPlaceholder = name
+      ? ['business', 'individual', 'client'].includes(name.toLowerCase())
+      : true;
+
     return {
-      title: data?.name ? `${data.name} — Client portal` : 'Client portal',
+      title:
+        !isPlaceholder && name ? `${name} — Client portal` : 'Client portal',
     };
   } catch {
     return { title: 'Client portal' };

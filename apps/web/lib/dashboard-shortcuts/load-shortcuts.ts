@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import pathsConfig from '~/config/paths.config';
+import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
 import { loadUserWorkspaceAccounts } from '~/home/_lib/server/workspace-scope';
 
 import {
@@ -155,6 +156,40 @@ export async function getUserDefaultLandingPath(
   client: SupabaseClient,
   userId: string,
 ): Promise<string> {
+  const teamMemberships = await loadUserTeamMemberships(userId, client);
+
+  if (teamMemberships.length === 0) {
+    const { data: portalMemberships } = await client
+      .from('client_members')
+      .select('client_org_id, joined_at')
+      .eq('user_id', userId)
+      .order('joined_at', { ascending: false });
+
+    const rows = (portalMemberships ?? []) as Array<{
+      client_org_id: string;
+      joined_at: string | null;
+    }>;
+
+    if (rows.length === 1) {
+      const { data: org } = await client
+        .from('client_orgs')
+        .select('slug')
+        .eq('id', rows[0]!.client_org_id)
+        .maybeSingle();
+
+      const slug = (org as { slug?: string | null } | null)?.slug;
+      if (slug) {
+        return pathsConfig.app.clientPortalHome.replace('[clientSlug]', slug);
+      }
+    }
+
+    // Zero or multiple portal memberships — fall through to the personal
+    // home page, which renders a "Client portals" picker for this case.
+    if (rows.length > 1) {
+      return pathsConfig.app.home;
+    }
+  }
+
   const pref = await loadDefaultLandingPreference(client, userId);
 
   if (pref.type !== 'workspace' || !pref.workspaceSlug) {

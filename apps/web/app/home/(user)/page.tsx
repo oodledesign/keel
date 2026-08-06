@@ -14,10 +14,12 @@ import {
 } from '~/lib/projects/project-guests.service';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import { ClientPortalsHomeSection } from './_components/client-portals-home-section';
 import { DashboardSkeleton } from './_components/dashboard/dashboard-skeleton';
 import { DashboardWorkspaceBanner } from './_components/dashboard/dashboard-workspace-banner';
 import { OzerDashboard } from './_components/dashboard/ozer-dashboard';
 import { GuestProjectsHomeSection } from './_components/guest-projects-home-section';
+import { listUserClientPortalMemberships } from './_lib/server/list-user-client-portal-memberships';
 import { loadUserWorkspace } from './_lib/server/load-user-workspace';
 import { loadOzerDashboard } from './_lib/server/ozer-dashboard.loader';
 
@@ -56,6 +58,18 @@ async function UserHomePage() {
     );
   }
 
+  const portals = await listUserClientPortalMemberships(user.id);
+  // Portal-only contacts with exactly one client org land in their portal
+  // directly, same as the single-guest-project case above.
+  if (teamCount === 0 && guests.length === 0 && portals.length === 1) {
+    redirect(
+      pathsConfig.app.clientPortalHome.replace(
+        '[clientSlug]',
+        portals[0]!.slug,
+      ),
+    );
+  }
+
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)]">
       {showWorkspaceBanner ? (
@@ -64,6 +78,9 @@ async function UserHomePage() {
         />
       ) : null}
       {guests.length > 0 ? <GuestProjectsHomeSection guests={guests} /> : null}
+      {portals.length > 0 ? (
+        <ClientPortalsHomeSection portals={portals} />
+      ) : null}
       <Suspense fallback={<DashboardSkeleton />}>
         <DashboardContent />
       </Suspense>

@@ -5,10 +5,12 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { CreatePortalManagePaymentSessionSchema } from '../schema/portal-billing.schema';
 import {
+  AddPortalTaskCommentSchema,
   AddPortalTicketMessageSchema,
   CreatePortalTicketSchema,
   GetPortalTicketSchema,
   ListPortalProjectsSchema,
+  SendPortalMessageSchema,
 } from '../schema/portal.schema';
 import { createClientPortalService } from './client-portal.service';
 import { createPortalBillingService } from './portal-billing.service';
@@ -37,6 +39,27 @@ export const listPortalProjects = enhanceAction(
   async (input) =>
     getService().listProjects(input.clientOrgId, input.accountId),
   { schema: ListPortalProjectsSchema },
+);
+
+export const addPortalTaskComment = enhanceAction(
+  async (input) =>
+    getService().addPortalTaskComment(
+      input.clientOrgId,
+      input.taskId,
+      input.projectId,
+      input.body,
+    ),
+  { schema: AddPortalTaskCommentSchema },
+);
+
+export const sendPortalMessage = enhanceAction(
+  async (input) =>
+    getService().sendPortalMessage(
+      input.clientOrgId,
+      input.threadId,
+      input.body,
+    ),
+  { schema: SendPortalMessageSchema },
 );
 
 export const createPortalManagePaymentSessionAction = enhanceAction(

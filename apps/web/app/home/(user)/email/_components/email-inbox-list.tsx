@@ -62,7 +62,9 @@ function clientHref(
     return null;
   }
 
-  const workspace = workspaces.find((item) => item.id === thread.link.accountId);
+  const workspace = workspaces.find(
+    (item) => item.id === thread.link.accountId,
+  );
 
   if (!workspace?.slug) {
     return null;
@@ -344,7 +346,7 @@ export function EmailInboxList({
                           type="button"
                           variant="ghost"
                           size="icon"
-                          className="h-8 w-8 text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 data-[state=open]:opacity-100 hover:bg-[var(--workspace-shell-panel)] hover:text-[var(--workspace-shell-text)]"
+                          className="h-8 w-8 text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--workspace-shell-panel)] hover:text-[var(--workspace-shell-text)] focus-visible:opacity-100 data-[state=open]:opacity-100"
                           disabled={pending}
                           aria-label="Thread actions"
                         >

@@ -4,7 +4,6 @@ import {
   useCallback,
   useEffect,
   useMemo,
-  useRef,
   useState,
   useTransition,
 } from 'react';
@@ -33,6 +32,7 @@ import {
 
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
+import { Calendar } from '@kit/ui/calendar';
 import { Checkbox } from '@kit/ui/checkbox';
 import {
   DropdownMenu,
@@ -46,6 +46,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
@@ -278,29 +279,21 @@ function InlineDueDate({
   readOnly?: boolean;
 }) {
   const router = useRouter();
-  const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
   const isoValue = dueDate ? (toIsoDateString(dueDate) ?? '') : '';
-
-  useEffect(() => {
-    if (!editing) return;
-    const el = inputRef.current;
-    if (!el) return;
-    el.focus();
-    try {
-      el.showPicker?.();
-    } catch {
-      // showPicker may throw if not triggered by user gesture
-    }
-  }, [editing]);
+  const selectedDate = (() => {
+    const parts = parseDueDateParts(isoValue || null);
+    if (!parts) return undefined;
+    return new Date(parts.y, parts.m - 1, parts.d, 12, 0, 0, 0);
+  })();
 
   const save = useCallback(
-    async (raw: string) => {
-      setEditing(false);
-      const normalized = raw.trim() ? toIsoDateString(raw.trim()) : null;
+    async (raw: string | null) => {
+      const normalized = raw?.trim() ? toIsoDateString(raw.trim()) : null;
       const current = dueDate ? toIsoDateString(dueDate) : null;
       if (normalized === current) {
+        setOpen(false);
         return;
       }
 
@@ -310,6 +303,7 @@ function InlineDueDate({
 
       onDueDateChanged?.(taskId, normalized, nextLabel);
       setPending(true);
+      setOpen(false);
       const result = await updateTask(taskId, { dueDate: normalized });
       setPending(false);
       if (!result.success) {
@@ -332,38 +326,10 @@ function InlineDueDate({
     );
   }
 
-  if (!dueDateLabel && !calendarScheduleStatus && !editing) {
-    return (
-      <span
-        className={cn(
-          'flex min-w-0 flex-col gap-1',
-          align === 'end' && 'items-end',
-        )}
-        data-task-row-action
-      >
-        <button
-          type="button"
-          disabled={pending}
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditing(true);
-          }}
-          className={cn(
-            'inline-flex min-h-4 items-center gap-1 rounded px-1 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)] sm:text-xs',
-            align === 'end' && 'justify-end',
-            pending && 'opacity-60',
-          )}
-          aria-label="Set due date"
-        >
-          <CalendarDays
-            className="h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4"
-            aria-hidden
-          />
-          <span>Add date</span>
-        </button>
-      </span>
-    );
-  }
+  const triggerLabel = dueDateLabel || 'Add date';
+  const triggerTitle = overdue
+    ? `Overdue · ${dueDateLabel}`
+    : dueDateLabel || 'Set due date';
 
   return (
     <span
@@ -373,92 +339,79 @@ function InlineDueDate({
       )}
       data-task-row-action
     >
-      {editing ? (
-        <input
-          ref={inputRef}
-          type="date"
-          defaultValue={isoValue}
-          disabled={pending}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger asChild>
+          <button
+            type="button"
+            disabled={pending}
+            onClick={(e) => e.stopPropagation()}
+            className={cn(
+              'flex min-w-0 items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
+              align === 'end' && 'justify-end',
+              pending && 'opacity-60',
+              !dueDateLabel &&
+                'text-[11px] text-[var(--workspace-shell-text-muted)] sm:text-xs',
+            )}
+            title={triggerTitle}
+            aria-label={
+              dueDateLabel ? `Edit due date ${dueDateLabel}` : 'Set due date'
+            }
+          >
+            <CalendarDays
+              className={cn(
+                'h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4',
+                overdue
+                  ? 'text-rose-400'
+                  : 'text-[var(--workspace-shell-text-muted)]',
+              )}
+              aria-hidden
+            />
+            <span
+              className={cn(
+                'truncate text-[11px] tabular-nums sm:text-xs',
+                overdue
+                  ? 'font-medium text-rose-400'
+                  : 'text-[var(--workspace-shell-text-muted)]',
+              )}
+            >
+              {triggerLabel}
+            </span>
+          </button>
+        </PopoverTrigger>
+        <PopoverContent
+          align={align === 'end' ? 'end' : 'start'}
+          className="w-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]"
           onClick={(e) => e.stopPropagation()}
-          onChange={(e) => {
-            void save(e.target.value);
-          }}
-          onBlur={(e) => {
-            if (e.target.value !== isoValue) {
-              void save(e.target.value);
-            } else {
-              setEditing(false);
-            }
-          }}
-          onKeyDown={(e) => {
-            e.stopPropagation();
-            if (e.key === 'Escape') {
-              e.preventDefault();
-              setEditing(false);
-            }
-          }}
-          className={cn(
-            'max-w-full rounded border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[11px] text-[var(--workspace-shell-text)] outline-none focus-visible:ring-1 focus-visible:ring-[var(--ozer-accent)]/50 sm:text-xs',
-            align === 'end' && 'text-right',
-          )}
-        />
-      ) : (
-        <button
-          type="button"
-          disabled={pending}
-          onClick={(e) => {
-            e.stopPropagation();
-            setEditing(true);
-          }}
-          className={cn(
-            'flex min-w-0 items-center gap-1 rounded px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
-            align === 'end' && 'justify-end',
-            pending && 'opacity-60',
-          )}
-          title={
-            overdue
-              ? `Overdue · ${dueDateLabel}`
-              : dueDateLabel || 'Set due date'
-          }
-          aria-label={
-            dueDateLabel ? `Edit due date ${dueDateLabel}` : 'Set due date'
-          }
+          onOpenAutoFocus={(e) => e.preventDefault()}
         >
-          {dueDateLabel ? (
-            <>
-              <CalendarDays
-                className={cn(
-                  'h-3.5 w-3.5 shrink-0 sm:h-4 sm:w-4',
-                  overdue
-                    ? 'text-rose-400'
-                    : 'text-[var(--workspace-shell-text-muted)]',
-                )}
-                aria-hidden
-              />
-              <span
-                className={cn(
-                  'truncate text-[11px] tabular-nums sm:text-xs',
-                  overdue
-                    ? 'font-medium text-rose-400'
-                    : 'text-[var(--workspace-shell-text-muted)]',
-                )}
+          <Calendar
+            mode="single"
+            selected={selectedDate}
+            defaultMonth={selectedDate}
+            onSelect={(date) => {
+              if (!date) return;
+              const y = date.getFullYear();
+              const m = String(date.getMonth() + 1).padStart(2, '0');
+              const d = String(date.getDate()).padStart(2, '0');
+              void save(`${y}-${m}-${d}`);
+            }}
+          />
+          {dueDate ? (
+            <div className="border-t border-[color:var(--workspace-shell-border)] p-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="h-8 w-full text-[var(--workspace-shell-text-muted)]"
+                disabled={pending}
+                onClick={() => void save(null)}
               >
-                {dueDateLabel}
-              </span>
-            </>
-          ) : (
-            <>
-              <CalendarDays
-                className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)] sm:h-4 sm:w-4"
-                aria-hidden
-              />
-              <span className="text-[11px] text-[var(--workspace-shell-text-muted)] sm:text-xs">
-                Add date
-              </span>
-            </>
-          )}
-        </button>
-      )}
+                Clear due date
+              </Button>
+            </div>
+          ) : null}
+        </PopoverContent>
+      </Popover>
       {calendarScheduleStatus === 'failed' ? (
         <span
           className="text-[11px] font-medium text-amber-300"

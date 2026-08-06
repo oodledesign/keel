@@ -74,6 +74,19 @@ export const ListPortalProjectsSchema = z.object({
   accountId: z.string().uuid(),
 });
 
+export const AddPortalTaskCommentSchema = z.object({
+  clientOrgId: z.string().uuid(),
+  taskId: z.string().uuid(),
+  projectId: z.string().uuid(),
+  body: z.string().min(1, 'Comment is required'),
+});
+
+export const SendPortalMessageSchema = z.object({
+  clientOrgId: z.string().uuid(),
+  threadId: z.string().uuid(),
+  body: z.string().min(1, 'Message is required'),
+});
+
 export type PortalTicketStatus = z.infer<typeof PortalTicketStatusSchema>;
 export type PortalTicketPriority = z.infer<typeof PortalTicketPrioritySchema>;
 export type CreatePortalTicketInput = z.infer<typeof CreatePortalTicketSchema>;

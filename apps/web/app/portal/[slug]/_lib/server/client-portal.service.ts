@@ -89,6 +89,39 @@ export type PortalProjectOption = {
   name: string;
 };
 
+export type PortalProjectSummary = {
+  id: string;
+  name: string;
+  status: string | null;
+  dueDate: string | null;
+};
+
+export type PortalProjectTask = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string | null;
+  dueDate: string | null;
+};
+
+export type PortalTaskComment = {
+  id: string;
+  taskId: string;
+  authorId: string;
+  authorName: string | null;
+  body: string;
+  createdAt: string;
+};
+
+export type PortalChatMessage = {
+  id: string;
+  threadId: string;
+  senderUserId: string;
+  senderName: string | null;
+  body: string;
+  createdAt: string;
+};
+
 export type PortalInvoice = {
   id: string;
   invoiceNumber: string | null;
@@ -531,6 +564,178 @@ class ClientPortalService {
     }));
   }
 
+  /**
+   * Projects the owning account has explicitly opted into the client portal
+   * (projects.portal_visible = true). Relies on the additive
+   * `projects_select_client_portal` RLS policy as the real authorization
+   * boundary — ensureMember() only confirms portal membership.
+   */
+  async listPortalProjects(
+    clientOrgId: string,
+  ): Promise<PortalProjectSummary[]> {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('projects')
+      .select('id, name, title, status, due_date')
+      .eq('portal_visible', true)
+      .order('updated_at', { ascending: false });
+
+    if (error) {
+      console.error('[client-portal] listPortalProjects:', error.message);
+      return [];
+    }
+
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        name?: string | null;
+        title?: string | null;
+        status?: string | null;
+        due_date?: string | null;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      name: row.name?.trim() || row.title?.trim() || 'Project',
+      status: row.status ?? null,
+      dueDate: row.due_date ?? null,
+    }));
+  }
+
+  async getPortalProject(
+    clientOrgId: string,
+    projectId: string,
+  ): Promise<PortalProjectSummary | null> {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('projects')
+      .select('id, name, title, status, due_date')
+      .eq('id', projectId)
+      .eq('portal_visible', true)
+      .maybeSingle();
+
+    if (error || !data) return null;
+
+    return {
+      id: data.id,
+      name: data.name?.trim() || data.title?.trim() || 'Project',
+      status: data.status ?? null,
+      dueDate: data.due_date ?? null,
+    };
+  }
+
+  async listPortalProjectTasks(
+    clientOrgId: string,
+    projectId: string,
+  ): Promise<PortalProjectTask[]> {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('tasks')
+      .select('id, title, status, priority, due_date')
+      .eq('project_id', projectId)
+      .order('sort_order', { ascending: true })
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('[client-portal] listPortalProjectTasks:', error.message);
+      return [];
+    }
+
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        title: string;
+        status: string;
+        priority: string | null;
+        due_date: string | null;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      title: row.title,
+      status: row.status ?? 'todo',
+      priority: row.priority,
+      dueDate: row.due_date,
+    }));
+  }
+
+  async listPortalTaskComments(
+    clientOrgId: string,
+    taskIds: string[],
+  ): Promise<PortalTaskComment[]> {
+    await this.ensureMember(clientOrgId);
+    if (taskIds.length === 0) return [];
+
+    // task_comments may lag generated Database types — same cast pattern
+    // used by the guest-project board client component.
+    const { data, error } = await (this.db as SupabaseClient)
+      .from('task_comments')
+      .select('id, task_id, author_id, body, created_at')
+      .in('task_id', taskIds)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('[client-portal] listPortalTaskComments:', error.message);
+      return [];
+    }
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      task_id: string;
+      author_id: string;
+      body: string;
+      created_at: string;
+    }>;
+
+    const authors = await this.loadAuthorNames(
+      rows.map((row) => row.author_id),
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      taskId: row.task_id,
+      authorId: row.author_id,
+      authorName: authors.get(row.author_id) ?? null,
+      body: row.body,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async addPortalTaskComment(
+    clientOrgId: string,
+    taskId: string,
+    projectId: string,
+    body: string,
+  ): Promise<PortalTaskComment> {
+    const user = await this.ensureMember(clientOrgId);
+
+    // task_comments may lag generated Database types.
+    const { data, error } = await (this.db as SupabaseClient)
+      .from('task_comments')
+      .insert({
+        task_id: taskId,
+        project_id: projectId,
+        author_id: user.id,
+        body,
+      })
+      .select('id, task_id, author_id, body, created_at')
+      .single();
+
+    if (error || !data) {
+      this.throwErr(error, 'Failed to add comment');
+    }
+
+    return {
+      id: data.id,
+      taskId: data.task_id,
+      authorId: data.author_id,
+      authorName: null,
+      body: data.body,
+      createdAt: data.created_at,
+    };
+  }
+
   async createTicket(
     input: CreatePortalTicketInput,
   ): Promise<PortalTicketDetail> {
@@ -877,6 +1082,99 @@ class ClientPortalService {
           publicToken: (row.public_token as string | null) ?? null,
         }),
       ),
+    };
+  }
+
+  /**
+   * Returns the single per-org client-portal chat thread id, creating it on
+   * first use. Delegates to a SECURITY DEFINER RPC because neither a bare
+   * portal contact nor a bare team member can satisfy chat_threads_insert
+   * alone — see 20260911091600_client_portal_messages_thread.sql.
+   */
+  async getOrCreateMessageThread(clientOrgId: string): Promise<string> {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db.rpc(
+      'get_or_create_client_portal_thread',
+      { p_client_org_id: clientOrgId },
+    );
+
+    if (error || !data) {
+      this.throwErr(error, 'Could not open messages');
+    }
+
+    return data as string;
+  }
+
+  async listPortalMessages(
+    clientOrgId: string,
+    threadId: string,
+  ): Promise<PortalChatMessage[]> {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('chat_messages')
+      .select('id, thread_id, sender_user_id, body, created_at')
+      .eq('thread_id', threadId)
+      .is('deleted_at', null)
+      .order('created_at', { ascending: true })
+      .limit(200);
+
+    if (error) {
+      console.error('[client-portal] listPortalMessages:', error.message);
+      return [];
+    }
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      thread_id: string;
+      sender_user_id: string;
+      body: string;
+      created_at: string;
+    }>;
+
+    const senders = await this.loadAuthorNames(
+      rows.map((row) => row.sender_user_id),
+    );
+
+    return rows.map((row) => ({
+      id: row.id,
+      threadId: row.thread_id,
+      senderUserId: row.sender_user_id,
+      senderName: senders.get(row.sender_user_id) ?? null,
+      body: row.body,
+      createdAt: row.created_at,
+    }));
+  }
+
+  async sendPortalMessage(
+    clientOrgId: string,
+    threadId: string,
+    body: string,
+  ): Promise<PortalChatMessage> {
+    const user = await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('chat_messages')
+      .insert({
+        thread_id: threadId,
+        sender_user_id: user.id,
+        body,
+      })
+      .select('id, thread_id, sender_user_id, body, created_at')
+      .single();
+
+    if (error || !data) {
+      this.throwErr(error, 'Failed to send message');
+    }
+
+    return {
+      id: data.id,
+      threadId: data.thread_id,
+      senderUserId: data.sender_user_id,
+      senderName: null,
+      body: data.body,
+      createdAt: data.created_at,
     };
   }
 }

@@ -59,6 +59,7 @@ import { JobScheduleTabContent } from './job-schedule-tab';
 import { ProjectFinancePanel } from './project-finance-panel';
 import { ProjectGeneratePanel } from './project-generate-panel';
 import { ProjectGuestsPanel } from './project-guests-panel';
+import { ProjectPortalAccessToggle } from './project-portal-access-toggle';
 
 type Job = {
   id: string;
@@ -71,6 +72,7 @@ type Job = {
   value_pence: number | null;
   cost_pence: number | null;
   client_id: string | null;
+  portal_visible?: boolean | null;
   [key: string]: unknown;
 };
 
@@ -845,7 +847,14 @@ export function JobDetailContent({
                   </p>
                 )}
 
-              <div className="mt-6">
+              <div className="mt-6 space-y-3">
+                <ProjectPortalAccessToggle
+                  accountId={accountId}
+                  jobId={jobId}
+                  hasClient={Boolean(job.client_id)}
+                  initialPortalVisible={Boolean(job.portal_visible)}
+                  canManage={canEditJobs && !isContractorView}
+                />
                 <ProjectGuestsPanel
                   accountId={accountId}
                   accountSlug={accountSlug}

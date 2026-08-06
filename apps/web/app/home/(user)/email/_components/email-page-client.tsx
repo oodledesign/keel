@@ -336,7 +336,9 @@ export function EmailPageClient({ initialData }: Props) {
           return;
         }
 
-        toast.error(error instanceof Error ? formatEmailApiError(error) : 'Search failed');
+        toast.error(
+          error instanceof Error ? formatEmailApiError(error) : 'Search failed',
+        );
       })
       .finally(() => {
         if (requestId === searchRequestId.current) {

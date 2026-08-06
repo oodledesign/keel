@@ -1,6 +1,6 @@
 import 'server-only';
 
-import { callAnthropicText, type GenerateTextFn } from './anthropic';
+import { type GenerateTextFn, callAnthropicText } from './anthropic';
 import type { DraftOwnerContext } from './draft';
 import { parseClassifyResponse } from './json';
 import type { EmailThreadCategory } from './types';

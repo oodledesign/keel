@@ -59,47 +59,37 @@ export default async function ClientPortalOverviewPage({
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-medium">Website</CardTitle>
-            <Globe className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {overview.website ? (
-              <>
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="font-medium text-[var(--ozer-text-on-light)]">
-                    {overview.website.domain ?? overview.website.name}
-                  </p>
-                  <WebsiteStatusBadge
-                    status={overview.website.status as WebsiteStatus}
-                  />
-                </div>
-                <div className="flex flex-wrap gap-2">
-                  {cmsUrl ? (
-                    <Button asChild size="sm" variant="outline">
-                      <a
-                        href={cmsUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                      >
-                        Open CMS
-                        <ExternalLink className="ml-1 h-3 w-3" />
-                      </a>
-                    </Button>
-                  ) : null}
-                  <Button asChild size="sm" variant="ghost">
-                    <Link href={websiteHref}>View details</Link>
+        {overview.website ? (
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-base font-medium">Website</CardTitle>
+              <Globe className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="flex flex-wrap items-center gap-2">
+                <p className="font-medium text-[var(--ozer-text-on-light)]">
+                  {overview.website.domain ?? overview.website.name}
+                </p>
+                <WebsiteStatusBadge
+                  status={overview.website.status as WebsiteStatus}
+                />
+              </div>
+              <div className="flex flex-wrap gap-2">
+                {cmsUrl ? (
+                  <Button asChild size="sm" variant="outline">
+                    <a href={cmsUrl} target="_blank" rel="noopener noreferrer">
+                      Open CMS
+                      <ExternalLink className="ml-1 h-3 w-3" />
+                    </a>
                   </Button>
-                </div>
-              </>
-            ) : (
-              <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-                No website linked yet.
-              </p>
-            )}
-          </CardContent>
-        </Card>
+                ) : null}
+                <Button asChild size="sm" variant="ghost">
+                  <Link href={websiteHref}>View details</Link>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        ) : null}
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -132,7 +122,7 @@ export default async function ClientPortalOverviewPage({
                 <p className="font-medium text-[var(--ozer-text-on-light)]">
                   {overview.subscription.planName}
                 </p>
-                <p className="text-sm text-slate-600">
+                <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
                   {formatMinorUnits(
                     overview.subscription.monthlyAmount ?? 0,
                     overview.subscription.currency ?? 'gbp',
@@ -174,7 +164,7 @@ export default async function ClientPortalOverviewPage({
                   </p>
                 </CardHeader>
                 <CardContent>
-                  <p className="text-sm whitespace-pre-wrap text-slate-600">
+                  <p className="text-sm whitespace-pre-wrap text-[var(--ozer-text-on-light-muted)]">
                     {notice.content}
                   </p>
                 </CardContent>

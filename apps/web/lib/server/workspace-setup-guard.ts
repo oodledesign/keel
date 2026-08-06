@@ -51,6 +51,19 @@ export const userRequiresWorkspaceSetup = cache(
       return false;
     }
 
+    // Client portal contacts only need access to their portal(s) — don't
+    // force them through workspace creation either.
+    const { data: portalRow } = await admin
+      .from('client_members')
+      .select('id')
+      .eq('user_id', userId)
+      .limit(1)
+      .maybeSingle();
+
+    if (portalRow) {
+      return false;
+    }
+
     if (teamMemberships.length === 0) {
       return true;
     }

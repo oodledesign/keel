@@ -1,15 +1,15 @@
 'use client';
 
 import {
+  type CSSProperties,
+  type HTMLAttributes,
+  type Ref,
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
   useTransition,
-  type CSSProperties,
-  type HTMLAttributes,
-  type Ref,
 } from 'react';
 
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -84,10 +84,10 @@ import {
 import {
   type InstructionClosedChoice,
   type RequirementClosedChoice,
+  WIP_SHARED_STATUSES,
   type WipBoardKind,
   type WipBoardView,
   type WipSharedStatus,
-  WIP_SHARED_STATUSES,
   cardCompositeId,
   fromSharedStatus,
   parseCardCompositeId,
@@ -464,9 +464,7 @@ export function CommercialWipBoard({
       }
       const requirement =
         requirements.find((item) => item.id === parsed.id) ?? null;
-      setActiveCard(
-        requirement ? { kind: 'requirement', requirement } : null,
-      );
+      setActiveCard(requirement ? { kind: 'requirement', requirement } : null);
     },
     [deals, requirements],
   );
@@ -508,9 +506,7 @@ export function CommercialWipBoard({
       }
 
       // both — shared columns
-      if (
-        !(WIP_SHARED_STATUSES as readonly string[]).includes(dropKey)
-      ) {
+      if (!(WIP_SHARED_STATUSES as readonly string[]).includes(dropKey)) {
         return;
       }
       const shared = dropKey as WipSharedStatus;
@@ -549,11 +545,7 @@ export function CommercialWipBoard({
       }
 
       const nextStage = fromSharedStatus('requirement', shared);
-      persistRequirementStage(
-        requirement.id,
-        nextStage,
-        requirement.stage,
-      );
+      persistRequirementStage(requirement.id, nextStage, requirement.stage);
     },
     [
       deals,
@@ -578,11 +570,7 @@ export function CommercialWipBoard({
           'closed',
           choice as InstructionClosedChoice,
         );
-        persistInstructionStage(
-          pending.id,
-          nextStage,
-          pending.previousStage,
-        );
+        persistInstructionStage(pending.id, nextStage, pending.previousStage);
         return;
       }
 
@@ -941,7 +929,10 @@ function StageColumn({
         </div>
       </div>
 
-      <SortableContext items={sortableIds} strategy={verticalListSortingStrategy}>
+      <SortableContext
+        items={sortableIds}
+        strategy={verticalListSortingStrategy}
+      >
         <div className="flex flex-1 flex-col gap-2">
           {cards.length === 0 ? (
             <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
@@ -1152,17 +1143,11 @@ function RequirementCard({
 }) {
   if (overlay) {
     return (
-      <RequirementCardBody
-        requirement={requirement}
-        onEdit={onEdit}
-        overlay
-      />
+      <RequirementCardBody requirement={requirement} onEdit={onEdit} overlay />
     );
   }
 
-  return (
-    <SortableRequirementCard requirement={requirement} onEdit={onEdit} />
-  );
+  return <SortableRequirementCard requirement={requirement} onEdit={onEdit} />;
 }
 
 function SortableRequirementCard({

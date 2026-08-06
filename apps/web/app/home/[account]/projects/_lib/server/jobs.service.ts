@@ -345,6 +345,14 @@ class JobsService {
       if (input.value_pence !== undefined)
         payload.value_pence = input.value_pence;
       if (input.cost_pence !== undefined) payload.cost_pence = input.cost_pence;
+      if (input.portal_visible !== undefined) {
+        if (!(existing as Record<string, unknown>).client_id) {
+          throw new Error(
+            'Link a client to this project before enabling portal access',
+          );
+        }
+        payload.portal_visible = input.portal_visible;
+      }
 
       const { data, error } = await this.db
         .from(PROJECTS_TABLE)
