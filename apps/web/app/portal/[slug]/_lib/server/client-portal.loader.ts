@@ -148,11 +148,26 @@ export const loadClientPortalContext = cache(
 
     // The portal's identity is the client contact set by the agency in the
     // CRM (first name + photo), not the portal user's own Ozer account.
-    // Prefer an already-linked contact; fall back to an email match within
-    // this client_org and self-heal the link for next time. Uses the admin
-    // client — a not-yet-linked contact row's user_id isn't the caller's,
-    // and portal contacts have no accounts_memberships row, so RLS on
-    // `contacts` (own row, or account-member) would hide it entirely.
+    // contacts.user_id is NOT a portal-login link — createContact() stamps
+    // it with the *staff member* who created the record, so it's the same
+    // value across every contact a given team member has ever added. The
+    // real client link is the client_contacts junction table (contacts.
+    // client_id/client_org_id are legacy fallback columns, usually null).
+    // Match purely by email within this client_org's clients. Uses the
+    // admin client — portal contacts have no accounts_memberships row, so
+    // RLS on `contacts` (own row via user_id, or account-member) would hide
+    // every row here regardless.
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: orgClientRows } = await admin
+      .from('clients')
+      .select('id')
+      .eq('client_org_id', org.id);
+
+    const orgClientIds = ((orgClientRows ?? []) as Array<{ id: string }>).map(
+      (row) => row.id,
+    );
+
     let contact: {
       first_name?: string | null;
       last_name?: string | null;
@@ -160,55 +175,38 @@ export const loadClientPortalContext = cache(
       picture_url?: string | null;
     } | null = null;
 
-    const admin = getSupabaseServerAdminClient();
+    if (user.email && orgClientIds.length > 0) {
+      const { data: links } = await admin
+        .from('client_contacts')
+        .select('contact_id')
+        .in('client_id', orgClientIds);
 
-    const { data: linkedContacts } = await admin
-      .from('contacts')
-      .select('id, first_name, last_name, full_name, picture_url, client_org_id')
-      .eq('user_id', user.id)
-      .limit(5);
+      const contactIds = [
+        ...new Set(
+          ((links ?? []) as Array<{ contact_id: string }>).map(
+            (row) => row.contact_id,
+          ),
+        ),
+      ];
 
-    const linkedRows = (linkedContacts ?? []) as Array<{
-      id: string;
-      first_name?: string | null;
-      last_name?: string | null;
-      full_name?: string | null;
-      picture_url?: string | null;
-      client_org_id?: string | null;
-    }>;
-
-    contact =
-      linkedRows.find((row) => row.client_org_id === org.id) ??
-      linkedRows[0] ??
-      null;
-
-    if (!contact && user.email) {
-      const { data: orgContacts } = await admin
-        .from('contacts')
-        .select('id, first_name, last_name, full_name, picture_url, email')
-        .eq('client_org_id', org.id)
-        .is('user_id', null)
-        .limit(50);
-
-      const targetEmail = user.email.trim().toLowerCase();
-      const candidate = (
-        (orgContacts ?? []) as Array<{
-          id: string;
-          first_name?: string | null;
-          last_name?: string | null;
-          full_name?: string | null;
-          picture_url?: string | null;
-          email?: string | null;
-        }>
-      ).find((row) => row.email?.trim().toLowerCase() === targetEmail);
-
-      if (candidate) {
-        contact = candidate;
-        await admin
+      if (contactIds.length > 0) {
+        const { data: candidates } = await admin
           .from('contacts')
-          .update({ user_id: user.id })
-          .eq('id', candidate.id)
-          .is('user_id', null);
+          .select('first_name, last_name, full_name, picture_url, email')
+          .in('id', contactIds);
+
+        const targetEmail = user.email.trim().toLowerCase();
+        contact =
+          (
+            (candidates ?? []) as Array<{
+              first_name?: string | null;
+              last_name?: string | null;
+              full_name?: string | null;
+              picture_url?: string | null;
+              email?: string | null;
+            }>
+          ).find((row) => row.email?.trim().toLowerCase() === targetEmail) ??
+          null;
       }
     }
 
@@ -229,7 +227,7 @@ export const loadClientPortalContext = cache(
       accountRow?.picture_url ??
       null;
 
-    const [clientPictures, businessBrand, websiteCount, orgClients, teamMembership] =
+    const [clientPictures, businessBrand, websiteCount, teamMembership] =
       await Promise.all([
         loadClientPicturesByOrgIds(client, [org.id]),
         loadSupportBusinessBrand(accountId),
@@ -237,16 +235,11 @@ export const loadClientPortalContext = cache(
           .from('websites')
           .select('id', { count: 'exact', head: true })
           .eq('client_org_id', org.id),
-        client.from('clients').select('id').eq('client_org_id', org.id),
         client
           .from('accounts_memberships')
           .select('account_id', { count: 'exact', head: true })
           .eq('user_id', user.id),
       ]);
-
-    const orgClientIds = ((orgClients.data ?? []) as Array<{ id: string }>).map(
-      (row) => row.id,
-    );
 
     // projects.client_org_id is a legacy/partial column (not always kept in
     // sync with client_id) — match on either to find portal-visible projects.

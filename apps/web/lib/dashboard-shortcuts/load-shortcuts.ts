@@ -159,6 +159,23 @@ export async function getUserDefaultLandingPath(
   const teamMemberships = await loadUserTeamMemberships(userId, client);
 
   if (teamMemberships.length === 0) {
+    // Explicit "continue with personal" from /setup — respect it and don't
+    // bounce them straight back to their portal.
+    const { data: settings } = await client
+      .from('user_settings')
+      .select('workspace_setup_skipped_at')
+      .eq('user_id', userId)
+      .maybeSingle();
+
+    const skippedSetup = Boolean(
+      (settings as { workspace_setup_skipped_at?: string | null } | null)
+        ?.workspace_setup_skipped_at,
+    );
+
+    if (skippedSetup) {
+      return pathsConfig.app.home;
+    }
+
     const { data: portalMemberships } = await client
       .from('client_members')
       .select('client_org_id, joined_at')

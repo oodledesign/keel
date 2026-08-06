@@ -2,6 +2,7 @@ import { Suspense } from 'react';
 
 import { redirect } from 'next/navigation';
 
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
@@ -59,9 +60,28 @@ async function UserHomePage() {
   }
 
   const portals = await listUserClientPortalMemberships(user.id);
+
+  // Explicit "continue with personal" from /setup — respect it and don't
+  // bounce them straight back to their portal.
+  const { data: settings } = await getSupabaseServerClient()
+    .from('user_settings')
+    .select('workspace_setup_skipped_at')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const skippedSetup = Boolean(
+    (settings as { workspace_setup_skipped_at?: string | null } | null)
+      ?.workspace_setup_skipped_at,
+  );
+
   // Portal-only contacts with exactly one client org land in their portal
   // directly, same as the single-guest-project case above.
-  if (teamCount === 0 && guests.length === 0 && portals.length === 1) {
+  if (
+    teamCount === 0 &&
+    guests.length === 0 &&
+    portals.length === 1 &&
+    !skippedSetup
+  ) {
     redirect(
       pathsConfig.app.clientPortalHome.replace(
         '[clientSlug]',

@@ -27,6 +27,11 @@ function contactPhotoPath(accountId: string, contactId: string) {
  * workspace account_id it belongs to. Never trusts client-supplied IDs for
  * authorization — everything is derived from the session user + their
  * client_members row for the given client_org.
+ *
+ * contacts.user_id is NOT a portal-login link — createContact() stamps it
+ * with the *staff member* who created the record, so every contact a given
+ * team member has ever added shares the same user_id. The real client link
+ * is the client_contacts junction table. Match purely by email.
  */
 async function resolvePortalContact(userId: string, clientOrgId: string) {
   const admin = getSupabaseServerAdminClient();
@@ -61,45 +66,41 @@ async function resolvePortalContact(userId: string, clientOrgId: string) {
     businessId;
   if (!accountId) return null;
 
-  // Prefer an already-linked contact for this client_org (a user could in
-  // theory be linked to contacts in more than one org).
-  const { data: linkedRows } = await admin
-    .from('contacts')
-    .select('id, account_id, picture_url, client_org_id')
-    .eq('user_id', userId)
-    .limit(5);
-
-  const linked = (
-    (linkedRows ?? []) as Array<{
-      id: string;
-      account_id: string;
-      picture_url: string | null;
-      client_org_id: string | null;
-    }>
-  ).find((row) => row.client_org_id === clientOrgId);
-
-  if (linked) {
-    return {
-      contactId: linked.id,
-      accountId: linked.account_id ?? accountId,
-      pictureUrl: linked.picture_url,
-    };
-  }
-
-  // Fall back to matching by email within this client_org, then self-heal
-  // the link so future requests hit the fast path above.
   const { data: authUser } = await admin.auth.admin.getUserById(userId);
   const email = authUser?.user?.email?.trim().toLowerCase();
   if (!email) return null;
 
-  const { data: orgContacts } = await admin
+  const { data: orgClients } = await admin
+    .from('clients')
+    .select('id')
+    .eq('client_org_id', clientOrgId);
+
+  const orgClientIds = ((orgClients ?? []) as Array<{ id: string }>).map(
+    (row) => row.id,
+  );
+  if (orgClientIds.length === 0) return null;
+
+  const { data: links } = await admin
+    .from('client_contacts')
+    .select('contact_id')
+    .in('client_id', orgClientIds);
+
+  const contactIds = [
+    ...new Set(
+      ((links ?? []) as Array<{ contact_id: string }>).map(
+        (row) => row.contact_id,
+      ),
+    ),
+  ];
+  if (contactIds.length === 0) return null;
+
+  const { data: candidates } = await admin
     .from('contacts')
     .select('id, account_id, picture_url, email')
-    .eq('client_org_id', clientOrgId)
-    .limit(50);
+    .in('id', contactIds);
 
   const candidate = (
-    (orgContacts ?? []) as Array<{
+    (candidates ?? []) as Array<{
       id: string;
       account_id: string;
       picture_url: string | null;
@@ -107,15 +108,7 @@ async function resolvePortalContact(userId: string, clientOrgId: string) {
     }>
   ).find((row) => row.email?.trim().toLowerCase() === email);
 
-  if (!candidate) {
-    return null;
-  }
-
-  await admin
-    .from('contacts')
-    .update({ user_id: userId })
-    .eq('id', candidate.id)
-    .is('user_id', null);
+  if (!candidate) return null;
 
   return {
     contactId: candidate.id,
