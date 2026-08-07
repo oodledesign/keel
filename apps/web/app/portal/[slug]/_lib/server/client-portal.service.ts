@@ -314,7 +314,7 @@ class ClientPortalService {
         .from('support_tickets')
         .select('id', { count: 'exact', head: true })
         .eq('client_org_id', clientOrgId)
-        .in('status', ['open', 'in-progress', 'waiting']),
+        .in('status', ['open', 'in-progress', 'pending_credits', 'waiting']),
       this.db
         .from('client_subscriptions')
         .select(
@@ -779,6 +779,13 @@ class ClientPortalService {
     const now = new Date().toISOString();
     const { createSupportPublicToken } =
       await import('~/lib/support/support-tokens');
+    const { resolveRequestTypeCreditSnapshot } =
+      await import('~/lib/credits/ticket-credit-lifecycle');
+
+    const creditSnapshot = await resolveRequestTypeCreditSnapshot({
+      accountId,
+      requestTypeId: input.request_type_id,
+    });
 
     const { data: profile } = await this.db
       .from('profiles')
@@ -821,6 +828,8 @@ class ClientPortalService {
         recording_url: input.recording_url || null,
         external_url: input.external_url || null,
         last_activity_at: now,
+        request_type_id: creditSnapshot.requestTypeId,
+        credit_cost_snapshot: creditSnapshot.creditCostSnapshot,
       })
       .select(
         'id, title, description, status, priority, ticket_number, created_at, public_token, assigned_to',

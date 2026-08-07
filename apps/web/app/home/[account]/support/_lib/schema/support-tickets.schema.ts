@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const TicketStatusSchema = z.enum([
   'open',
   'in-progress',
+  'pending_credits',
   'waiting',
   'resolved',
   'closed',
@@ -43,6 +44,7 @@ export const CreateTicketSchema = z.object({
   external_url: z.string().url().nullable().optional().or(z.literal('')),
   priority: TicketPrioritySchema.default('medium'),
   assigned_to: z.string().uuid().nullable().optional(),
+  request_type_id: z.string().uuid().nullable().optional(),
   attachments: z.array(TicketAttachmentSchema).max(5).optional(),
 });
 

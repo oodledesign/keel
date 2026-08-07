@@ -50,6 +50,13 @@ export const createListing = enhanceAction(
     const {
       data: { user },
     } = await client.auth.getUser();
+    const { requireCommercialBillableActor } = await import(
+      '~/lib/commercial/require-commercial-billable-actor'
+    );
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
     return createListingsService(client).createListing({
       ...input,
       createdBy: user?.id ?? null,
@@ -60,6 +67,13 @@ export const createListing = enhanceAction(
 
 export const updateListing = enhanceAction(
   async (input) => {
+    const { requireCommercialBillableActor } = await import(
+      '~/lib/commercial/require-commercial-billable-actor'
+    );
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
     const { listingId, accountId, ...rest } = input;
     return getService().updateListing(listingId, accountId, rest);
   },
@@ -68,6 +82,13 @@ export const updateListing = enhanceAction(
 
 export const deleteListing = enhanceAction(
   async (input) => {
+    const { requireCommercialBillableActor } = await import(
+      '~/lib/commercial/require-commercial-billable-actor'
+    );
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
     await getService().deleteListing(input.listingId, input.accountId);
     return { success: true };
   },

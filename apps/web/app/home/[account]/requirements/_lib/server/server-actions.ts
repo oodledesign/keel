@@ -26,6 +26,13 @@ export const createRequirement = enhanceAction(
     const {
       data: { user },
     } = await client.auth.getUser();
+    const { requireCommercialBillableActor } = await import(
+      '~/lib/commercial/require-commercial-billable-actor'
+    );
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit requirements',
+    );
     const { sourceEnquiryId, ...rest } = input;
     const created = await createRequirementsService(client).createRequirement({
       ...rest,
@@ -57,6 +64,13 @@ export const createRequirement = enhanceAction(
 
 export const updateRequirement = enhanceAction(
   async (input) => {
+    const { requireCommercialBillableActor } = await import(
+      '~/lib/commercial/require-commercial-billable-actor'
+    );
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit requirements',
+    );
     const { requirementId, accountId, ...rest } = input;
     return getService().updateRequirement(requirementId, accountId, rest);
   },

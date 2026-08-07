@@ -15,12 +15,21 @@ import {
 
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import {
+  COMMERCIAL_GRADUATED_PLAN_ID,
+  COMMERCIAL_GRADUATED_PRODUCT_ID,
+  COMMERCIAL_ILLUSTRATIVE_TIERS,
+  estimateMonthlyGbp,
+  freeSupportSeats,
+  portalPublishingAllowed,
+} from '~/lib/billing/commercial-graduated-pricing';
+import {
   MARKETING_FREE_TIER,
   MARKETING_WORKSPACE_PLANS,
   type MarketingWorkspacePlan,
 } from '~/lib/billing/pricing-marketing';
+import { formatGbp } from '~/lib/billing/billing-config-prices';
 
-export type SegmentSlug = 'personal' | 'work';
+export type SegmentSlug = 'personal' | 'work' | 'commercial-property';
 
 export type SegmentFeature = {
   icon: LucideIcon;
@@ -44,6 +53,9 @@ export type SegmentPricingCard = {
   signupProfile?: WorkspaceProfile;
   productId?: string;
   planId?: string;
+  /** Prefill checkout quantity for graduated commercial pricing. */
+  seats?: number;
+  seatRangeLabel?: string;
 };
 
 export type SegmentLandingConfig = {
@@ -117,10 +129,14 @@ const LAUNCH_SEGMENTS: SegmentSlug[] = ['personal', 'work'];
 const SEGMENT_ICONS: Record<SegmentSlug, LucideIcon> = {
   personal: Home,
   work: Briefcase,
+  'commercial-property': Building2,
 };
 
 function relatedExcept(current: SegmentSlug) {
-  const map: Record<SegmentSlug, { label: string; description: string }> = {
+  const map: Record<
+    'personal' | 'work',
+    { label: string; description: string }
+  > = {
     personal: {
       label: 'Personal & family',
       description: 'Free hub — tasks and planner across every workspace.',
@@ -134,8 +150,42 @@ function relatedExcept(current: SegmentSlug) {
   return LAUNCH_SEGMENTS.filter((slug) => slug !== current).map((slug) => ({
     slug,
     icon: SEGMENT_ICONS[slug],
-    ...map[slug],
+    ...map[slug as 'personal' | 'work'],
   }));
+}
+
+function commercialPricingCards(): SegmentPricingCard[] {
+  return COMMERCIAL_ILLUSTRATIVE_TIERS.map((tier) => {
+    const price = estimateMonthlyGbp(tier.billableSeats);
+    const support = freeSupportSeats(tier.billableSeats);
+    const portals = portalPublishingAllowed(tier.billableSeats);
+
+    return {
+      name: tier.label,
+      description: tier.description,
+      priceGbp: price,
+      priceLabel: `${formatGbp(price)}/mo`,
+      seats: tier.billableSeats,
+      seatRangeLabel: tier.seatRangeLabel,
+      highlighted: tier.highlighted,
+      badge: tier.highlighted ? 'Most teams' : undefined,
+      signupProfile: 'commercial_property',
+      productId: COMMERCIAL_GRADUATED_PRODUCT_ID,
+      planId: COMMERCIAL_GRADUATED_PLAN_ID,
+      features: [
+        tier.seatRangeLabel,
+        `Illustrative example at ${tier.billableSeats} seat${tier.billableSeats === 1 ? '' : 's'}`,
+        support > 0
+          ? `${support} free support seats`
+          : 'No free support seats on Solo',
+        portals
+          ? 'Portal publishing included'
+          : 'Portal publishing from 2 seats',
+        'WIP, disposals & requirements',
+        'Property Hive website sync',
+      ],
+    };
+  });
 }
 
 export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
@@ -382,6 +432,130 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
       relatedSegments: relatedExcept('work'),
       signupProfile: 'work_design',
     },
+
+    'commercial-property': {
+      slug: 'commercial-property',
+      seo: {
+        title: 'Commercial property CRM for UK agencies — Ozer',
+        description:
+          'Published graduated pricing for commercial agencies. Instructions, requirements, interest schedule, and Property Hive sync — without paying for a market-data network you do not use. From £89/mo.',
+        keywords: [
+          'commercial property CRM UK',
+          'commercial agency software',
+          'agency WIP board',
+          'commercial instructions software',
+          'Rightmove commercial CRM',
+          'Property Hive CRM',
+        ],
+      },
+      hero: {
+        eyebrow: 'Commercial Property workspace',
+        title: 'Agency CRM without',
+        titleAccent: 'the quote wall',
+        subtitle:
+          'Disposals, WIP instructions, requirements, and interest — done properly. Transparent graduated pricing competitors hide behind a demo. Built for UK commercial desks, not a Kato network clone.',
+      },
+      stats: [
+        { value: '£89', label: 'From seat 1 / month' },
+        { value: 'Public', label: 'Published pricing' },
+        { value: '1 Price', label: 'Graduated per seat' },
+      ],
+      features: [
+        {
+          icon: Building2,
+          title: 'Disposals and marketing',
+          description:
+            'Listings with units, media, enquiries, and landlord share links — optional Property Hive website sync.',
+        },
+        {
+          icon: ClipboardList,
+          title: 'Unified WIP board',
+          description:
+            'Instructions and requirements on one board. Drag stages, attach tasks and notes, keep fee-earners aligned.',
+        },
+        {
+          icon: Users,
+          title: 'Interest schedule',
+          description:
+            'Match interested parties between disposals and requirements with activity timestamps and status.',
+        },
+        {
+          icon: Activity,
+          title: 'AI drafts that stay reviewable',
+          description:
+            'Paste an enquiry to draft a requirement, or generate marketing copy — always confirm before anything is saved.',
+        },
+        {
+          icon: FileText,
+          title: 'Portal publishing when you grow',
+          description:
+            'Rightmove Commercial and EG Propertylink from 2+ billable seats. Solo stays lean without the integration cost.',
+        },
+        {
+          icon: Wallet,
+          title: 'Whole Workspace OS',
+          description:
+            'Invoicing, tasks, notes, meeting intelligence, and email assistant live in the same account — not a bolted-on CRM island.',
+        },
+      ],
+      steps: [
+        {
+          title: 'Pick your seats',
+          description:
+            'Use the calculator — graduated pricing is public. No “book a demo to hear the price.”',
+        },
+        {
+          title: 'Bring the pipeline across',
+          description:
+            'Instructions, requirements, and disposals in one commercial workspace.',
+        },
+        {
+          title: 'Invite fee-earners and support',
+          description:
+            'Billable seats run the desk. Free support seats handle notes, contacts, and visibility.',
+        },
+      ],
+      pricingPlans: commercialPricingCards(),
+      pricingNote:
+        'Illustrative Solo / Team / Scale labels wrap one graduated Stripe Price. Seat 1 £89 · seats 2–7 £55 · seats 8+ £39. Founding discounts are applied separately for design partners.',
+      faqs: [
+        {
+          question: 'Is this a Kato clone with market data?',
+          answer:
+            'No. Ozer is the CRM, instructions, and requirements layer — without Agents Society marketplace access. If you need that network, keep Kato; if you want published pricing and the wider Ozer workspace, start here.',
+        },
+        {
+          question: 'How does graduated pricing work?',
+          answer:
+            'One Price for every agency: £89 for seat 1, £55 for seats 2–7, £39 thereafter. Adding a seat can only raise the total. Solo / Team / Scale cards are friendly examples of that maths — not separate products.',
+        },
+        {
+          question: 'What are support seats?',
+          answer:
+            'Free seats for admin and finance: they can view records, add notes, and log activity, but cannot move instruction/requirement stages, edit disposals, or publish to portals. Team-sized desks get 2; Scale-sized get 4.',
+        },
+        {
+          question: 'When is portal publishing available?',
+          answer:
+            'From two billable seats. Solo practitioners keep Property Hive website sync and marketing tools without the portal integration burden.',
+        },
+        {
+          question: 'Why publish price when others hide it?',
+          answer:
+            'Competitor commercial CRMs are quote-only. A calculable public price is deliberate — you should know the number before a sales call.',
+        },
+      ],
+      relatedSegments: [
+        {
+          slug: 'work',
+          label: 'Business workspace',
+          description:
+            'Need design-studio CRM instead? Flat team pricing for clients, jobs, and invoices.',
+          icon: Briefcase,
+        },
+      ],
+      signupProfile: 'commercial_property',
+    },
   };
 
 export function getSegmentLandingConfig(
@@ -393,17 +567,17 @@ export function getSegmentLandingConfig(
   return null;
 }
 
-const WORKSPACE_NAV_PATHS: Record<SegmentSlug, string> = {
+const WORKSPACE_NAV_PATHS: Record<'personal' | 'work', string> = {
   personal: '/personal',
   work: '/work',
 };
 
-const WORKSPACE_NAV_LABELS: Record<SegmentSlug, string> = {
+const WORKSPACE_NAV_LABELS: Record<'personal' | 'work', string> = {
   personal: 'Personal',
   work: 'Business',
 };
 
-const WORKSPACE_NAV_DESCRIPTIONS: Record<SegmentSlug, string> = {
+const WORKSPACE_NAV_DESCRIPTIONS: Record<'personal' | 'work', string> = {
   personal: 'Free hub — tasks and planner connected across every workspace.',
   work: 'Clients, projects, invoices, and pipeline for freelancers and studios.',
 };
@@ -411,9 +585,9 @@ const WORKSPACE_NAV_DESCRIPTIONS: Record<SegmentSlug, string> = {
 export function getMarketingWorkspaceNavLinks() {
   return LAUNCH_SEGMENTS.map((slug) => ({
     slug,
-    label: WORKSPACE_NAV_LABELS[slug],
-    path: WORKSPACE_NAV_PATHS[slug],
-    description: WORKSPACE_NAV_DESCRIPTIONS[slug],
+    label: WORKSPACE_NAV_LABELS[slug as 'personal' | 'work'],
+    path: WORKSPACE_NAV_PATHS[slug as 'personal' | 'work'],
+    description: WORKSPACE_NAV_DESCRIPTIONS[slug as 'personal' | 'work'],
     icon: SEGMENT_ICONS[slug],
   }));
 }

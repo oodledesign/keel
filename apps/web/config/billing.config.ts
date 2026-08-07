@@ -319,93 +319,45 @@ export default createBillingSchema({
       ],
     },
     {
-      id: 'ozer-commercial-property-solo',
-      name: 'Commercial Property Solo',
-      description: 'Solo commercial agents managing instructions and marketing',
+      id: 'ozer-commercial-property',
+      name: 'Commercial Property',
+      description:
+        'Graduated per-seat pricing for commercial agencies — instructions, requirements, and marketing',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
+      highlighted: true,
+      badge: 'Published pricing',
       plans: [
         {
-          id: 'commercial-property-solo-monthly',
-          name: 'Solo Monthly',
+          id: 'commercial-property-monthly',
+          name: 'Commercial Property Monthly',
           paymentType: 'recurring',
           interval: 'month',
           trialDays: TRIAL_DAYS,
           lineItems: [
             {
-              id: OZER_STRIPE_PRICES.commercial_property_solo_monthly,
-              name: 'Commercial Property Solo',
-              cost: 99,
-              type: 'flat',
+              id: OZER_STRIPE_PRICES.commercial_property_monthly,
+              name: 'Billable seat',
+              cost: 89,
+              type: 'per_seat',
+              unit: 'seat',
+              description:
+                'Graduated: £89 for seat 1, £55 for seats 2–7, £39 for seats 8+',
+              tiers: [
+                { upTo: 1, cost: 89 },
+                { upTo: 7, cost: 55 },
+                { upTo: 'unlimited', cost: 39 },
+              ],
             },
           ],
         },
       ],
       features: [
-        '1 team member',
-        'Listings, pipeline & requirements',
+        'Graduated per-seat pricing (from £89/mo)',
+        'Listings, WIP pipeline & requirements',
+        'Free support seats on Team and Scale sizes',
+        'Portal publishing from 2+ billable seats',
         'Property Hive website sync',
-        'Landlord share links',
-      ],
-    },
-    {
-      id: 'ozer-commercial-property-team',
-      name: 'Commercial Property Team',
-      description: 'Agency teams with shared pipeline and portal publishing',
-      currency: OZER_BILLING_CURRENCY,
-      enableDiscountField: true,
-      plans: [
-        {
-          id: 'commercial-property-team-monthly',
-          name: 'Team Monthly',
-          paymentType: 'recurring',
-          interval: 'month',
-          trialDays: TRIAL_DAYS,
-          lineItems: [
-            {
-              id: OZER_STRIPE_PRICES.commercial_property_team_monthly,
-              name: 'Commercial Property Team',
-              cost: 199,
-              type: 'flat',
-            },
-          ],
-        },
-      ],
-      features: [
-        'Up to 5 team members',
-        'Listings, pipeline & requirements',
-        'Property Hive website sync',
-        'Portal publishing add-on ready',
-      ],
-    },
-    {
-      id: 'ozer-commercial-property-office',
-      name: 'Commercial Property Office',
-      description: 'Multi-desk offices with full commercial workflow',
-      currency: OZER_BILLING_CURRENCY,
-      enableDiscountField: true,
-      plans: [
-        {
-          id: 'commercial-property-office-monthly',
-          name: 'Office Monthly',
-          paymentType: 'recurring',
-          interval: 'month',
-          trialDays: TRIAL_DAYS,
-          lineItems: [
-            {
-              id: OZER_STRIPE_PRICES.commercial_property_office_monthly,
-              name: 'Commercial Property Office',
-              cost: 399,
-              type: 'flat',
-            },
-          ],
-        },
-      ],
-      features: [
-        'Up to 15 team members',
-        'Listings, pipeline & requirements',
-        'Property Hive website sync',
-        'Priority support',
       ],
     },
     {

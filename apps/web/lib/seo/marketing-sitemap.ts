@@ -14,8 +14,7 @@ import type { SegmentSlug } from '~/lib/marketing/segment-landing-pages';
 const SEGMENT_SLUGS: SegmentSlug[] = [
   'personal',
   'work',
-  'property',
-  'community',
+  'commercial-property',
 ];
 
 const STATIC_MARKETING_PATHS: Array<{

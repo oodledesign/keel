@@ -18,6 +18,11 @@ const seatLimitInvitationPolicy = definePolicy<FeaturePolicyInvitationContext>({
       client,
       context.accountId,
       context.invitations.length,
+      {
+        seatKinds: context.invitations.map(
+          (invite) => invite.seatKind ?? 'billable',
+        ),
+      },
     );
 
     if (!result.allowed) {

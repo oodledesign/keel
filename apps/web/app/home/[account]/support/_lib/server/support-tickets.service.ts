@@ -36,6 +36,9 @@ export type SupportTicket = {
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string | null;
+  requestTypeId: string | null;
+  creditCostSnapshot: number | null;
+  creditsDeductedAt: string | null;
   clientOrgName: string | null;
   clientPictureUrl: string | null;
   businessName: string | null;
@@ -105,6 +108,9 @@ type TicketRow = {
   recording_url?: string | null;
   external_url?: string | null;
   public_token?: string | null;
+  request_type_id?: string | null;
+  credit_cost_snapshot?: number | null;
+  credits_deducted_at?: string | null;
   client_orgs?:
     | { name?: string | null; slug?: string | null }
     | { name?: string | null; slug?: string | null }[]
@@ -222,6 +228,12 @@ function mapTicketRow(
     recordingUrl: row.recording_url ?? null,
     externalUrl: row.external_url ?? null,
     publicToken: row.public_token ?? null,
+    requestTypeId: row.request_type_id ?? null,
+    creditCostSnapshot:
+      typeof row.credit_cost_snapshot === 'number'
+        ? row.credit_cost_snapshot
+        : null,
+    creditsDeductedAt: row.credits_deducted_at ?? null,
     assignedToName: row.assigned_to
       ? (profiles.get(row.assigned_to)?.full_name?.trim() ?? null)
       : null,
@@ -740,6 +752,13 @@ class SupportTicketsService {
     const now = new Date().toISOString();
     const { createSupportPublicToken } =
       await import('~/lib/support/support-tokens');
+    const { resolveRequestTypeCreditSnapshot } =
+      await import('~/lib/credits/ticket-credit-lifecycle');
+
+    const creditSnapshot = await resolveRequestTypeCreditSnapshot({
+      accountId: input.accountId,
+      requestTypeId: input.request_type_id,
+    });
 
     const { data, error } = await this.db
       .from('support_tickets')
@@ -760,6 +779,8 @@ class SupportTicketsService {
         created_by: user.id,
         public_token: createSupportPublicToken(),
         last_activity_at: now,
+        request_type_id: creditSnapshot.requestTypeId,
+        credit_cost_snapshot: creditSnapshot.creditCostSnapshot,
       })
       .select(
         '*, client_orgs(name, slug), websites(name, domain), projects(name, title)',
@@ -841,14 +862,83 @@ class SupportTicketsService {
   }
 
   async updateTicket(input: UpdateTicketInput): Promise<SupportTicket> {
-    await this.ensureCanView(input.accountId);
+    const user = await this.ensureCanView(input.accountId);
+
+    const existing = await this.getTicket({
+      accountId: input.accountId,
+      ticketId: input.ticketId,
+    });
+    if (!existing) {
+      throw new Error('Ticket not found');
+    }
+
+    let nextStatus = input.status;
+
+    if (input.status === 'in-progress') {
+      const { tryConsumeCreditsForTicketWorkStart } =
+        await import('~/lib/credits/ticket-credit-lifecycle');
+      const consume = await tryConsumeCreditsForTicketWorkStart({
+        accountId: input.accountId,
+        ticketId: input.ticketId,
+        actorId: user.id,
+      });
+
+      if (!consume.ok) {
+        nextStatus = 'pending_credits';
+        const { data: held, error: holdError } = await this.db
+          .from('support_tickets')
+          .update({
+            status: 'pending_credits',
+            resolved_at: null,
+            last_activity_at: new Date().toISOString(),
+          })
+          .eq('id', input.ticketId)
+          .or(supportTicketAccountFilter(input.accountId))
+          .select(
+            '*, client_orgs(name, slug), websites(name, domain), projects(name, title)',
+          )
+          .single();
+
+        if (holdError || !held) {
+          this.throwErr(holdError, 'Failed to hold ticket for credits');
+        }
+
+        const heldRow = held as TicketRow;
+        const profiles = await this.loadProfiles(
+          [heldRow.assigned_to, heldRow.created_by].filter(Boolean) as string[],
+        );
+
+        const ticket = await this.enrichTicketBranding(
+          input.accountId,
+          mapTicketRow(heldRow, profiles),
+        );
+
+        throw Object.assign(
+          new Error(
+            `Insufficient credits (${consume.available} available, ${consume.requested} required). Ticket held as Pending credits.`,
+          ),
+          { code: 'insufficient_balance', ticket },
+        );
+      }
+    }
+
+    if (input.status === 'closed') {
+      const { refundCreditsIfTicketCancelled } =
+        await import('~/lib/credits/ticket-credit-lifecycle');
+      await refundCreditsIfTicketCancelled({
+        accountId: input.accountId,
+        ticketId: input.ticketId,
+        previousStatus: existing.status,
+        actorId: user.id,
+      });
+    }
 
     const updates: Record<string, unknown> = {
       ...(input.title !== undefined && { title: input.title }),
       ...(input.description !== undefined && {
         description: input.description,
       }),
-      ...(input.status !== undefined && { status: input.status }),
+      ...(nextStatus !== undefined && { status: nextStatus }),
       ...(input.priority !== undefined && { priority: input.priority }),
       ...(input.assigned_to !== undefined && {
         assigned_to: input.assigned_to,
@@ -861,9 +951,9 @@ class SupportTicketsService {
       last_activity_at: new Date().toISOString(),
     };
 
-    if (input.status === 'resolved' || input.status === 'closed') {
+    if (nextStatus === 'resolved' || nextStatus === 'closed') {
       updates.resolved_at = new Date().toISOString();
-    } else if (input.status) {
+    } else if (nextStatus) {
       updates.resolved_at = null;
     }
 

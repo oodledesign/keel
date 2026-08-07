@@ -28,6 +28,7 @@ import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison'
 import type { SegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
 
 import { InterconnectedWorkspacesSection } from './interconnected-workspaces-section';
+import { CommercialSeatCalculator } from './commercial-seat-calculator';
 import { MarketingFaqsSection } from './marketing-faqs';
 import { PricingComparisonTable } from './pricing-comparison-table';
 
@@ -37,6 +38,7 @@ type SegmentLandingPageProps = {
 
 export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
   const isPersonal = config.slug === 'personal';
+  const isCommercial = config.slug === 'commercial-property';
   const primarySignup = buildPricingSignupUrl({
     profile: config.signupProfile,
     productId:
@@ -45,8 +47,11 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
     planId:
       config.pricingPlans.find((p) => p.highlighted)?.planId ??
       config.pricingPlans.find((p) => p.priceGbp > 0)?.planId,
+    seats: config.pricingPlans.find((p) => p.highlighted)?.seats ??
+      config.pricingPlans.find((p) => p.priceGbp > 0)?.seats,
   });
   const pricingComparison = getSegmentPricingComparison(config.slug);
+  const pricingLink = isPersonal || isCommercial ? '#pricing' : '/pricing';
 
   return (
     <main className="marketing-shell relative overflow-hidden">
@@ -105,7 +110,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 size="lg"
                 className={marketingBtnOutline}
               >
-                <Link href={isPersonal ? '#pricing' : '/pricing'}>
+                <Link href={pricingLink}>
                   See pricing
                 </Link>
               </Button>
@@ -291,6 +296,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
               profile: plan.signupProfile,
               productId: plan.productId,
               planId: plan.planId,
+              seats: plan.seats,
             });
 
             return (
@@ -358,14 +364,27 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
           />
         ) : null}
 
-        <p className={`mt-8 text-center text-sm ${marketingMutedText}`}>
-          <Link
-            href="/pricing"
-            className="underline underline-offset-2 hover:text-[var(--workspace-shell-text)]"
-          >
-            View full pricing, annual billing, and add-ons
-          </Link>
-        </p>
+        {isCommercial ? (
+          <div className="mt-10">
+            <CommercialSeatCalculator />
+          </div>
+        ) : null}
+
+        {!isCommercial ? (
+          <p className={`mt-8 text-center text-sm ${marketingMutedText}`}>
+            <Link
+              href="/pricing"
+              className="underline underline-offset-2 hover:text-[var(--workspace-shell-text)]"
+            >
+              View full pricing, annual billing, and add-ons
+            </Link>
+          </p>
+        ) : (
+          <p className={`mt-8 text-center text-sm ${marketingMutedText}`}>
+            Commercial property pricing lives on this page only — it is not mixed
+            into Ozer Business plans on /pricing.
+          </p>
+        )}
       </section>
 
       <MarketingFaqsSection

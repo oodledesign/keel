@@ -36,6 +36,7 @@ export interface FeaturePolicyInvitationContext extends PolicyContext {
   invitations: Array<{
     email: string;
     role: string;
+    seatKind?: 'billable' | 'support';
   }>;
 
   /** The user performing the invitation */

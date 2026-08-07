@@ -1,6 +1,7 @@
 export type TicketStatus =
   | 'open'
   | 'in-progress'
+  | 'pending_credits'
   | 'waiting'
   | 'resolved'
   | 'closed';

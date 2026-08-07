@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import {
   Briefcase,
+  Coins,
   CreditCard,
   Globe,
   LayoutDashboard,
@@ -53,6 +54,12 @@ const navItems = [
     label: 'Support',
     pathKey: 'clientPortalSupport' as const,
     icon: <LifeBuoy className={iconClasses} />,
+  },
+  {
+    key: 'credits',
+    label: 'Credits',
+    pathKey: 'clientPortalCredits' as const,
+    icon: <Coins className={iconClasses} />,
   },
   {
     key: 'billing',

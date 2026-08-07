@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { UpsertSubscriptionParams } from '@kit/billing/types';
 
 import { markBusinessUpgradedFromLite } from './business-lite';
+import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
 import { findPlanByStripePriceId } from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import { syncFullBusinessModules } from './sync-workspace-modules-from-plan';
@@ -104,13 +105,22 @@ export async function syncKeelPlanFromSubscription(
     );
 
     if (plan.workspaceProfiles?.length) {
+      const billableQuantity =
+        plan.family === 'commercial_property'
+          ? Math.max(1, item.quantity ?? 1)
+          : null;
+      const maxMembers =
+        billableQuantity != null
+          ? maxMembersForBillableSeats(billableQuantity)
+          : plan.limits.maxMembers;
+
       await admin.from('account_plan_limits').upsert(
         {
           account_id: accountId,
           plan_product_id: plan.productId,
           plan_id: plan.planId,
           plan_family: plan.family,
-          max_members: plan.limits.maxMembers,
+          max_members: maxMembers,
           max_properties: plan.limits.maxProperties,
           max_videos: plan.limits.maxVideos,
           updated_at: new Date().toISOString(),

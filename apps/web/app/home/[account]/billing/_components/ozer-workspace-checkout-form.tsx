@@ -14,11 +14,20 @@ import {
   CardHeader,
   CardTitle,
 } from '@kit/ui/card';
+import { Input } from '@kit/ui/input';
+import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Trans } from '@kit/ui/trans';
 
 import billingConfig from '~/config/billing.config';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
+import {
+  clampBillableSeats,
+  estimateMonthlyGbp,
+  freeSupportSeats,
+  portalPublishingAllowed,
+} from '~/lib/billing/commercial-graduated-pricing';
+import { formatGbp } from '~/lib/billing/pricing-marketing';
 import { productIdsForWorkspaceProfile } from '~/lib/billing/ozer-plan-catalog';
 
 import { createTeamAccountCheckoutSession } from '../_lib/server/server-actions';
@@ -50,6 +59,18 @@ export function OzerWorkspaceCheckoutForm(params: {
   const [checkoutToken, setCheckoutToken] = useState<string | undefined>(
     undefined,
   );
+
+  const seatsFromQuery = Number(searchParams.get('seats'));
+  const [billableSeats, setBillableSeats] = useState(() =>
+    Number.isFinite(seatsFromQuery) && seatsFromQuery >= 1
+      ? clampBillableSeats(seatsFromQuery)
+      : 1,
+  );
+
+  const isCommercial = params.workspaceProfile === 'commercial_property';
+  const monthlyEstimate = estimateMonthlyGbp(billableSeats);
+  const supportSeats = freeSupportSeats(billableSeats);
+  const portalsOk = portalPublishingAllowed(billableSeats);
 
   const filteredConfig = useMemo(() => {
     const allowedProductIds = new Set(
@@ -107,14 +128,56 @@ export function OzerWorkspaceCheckoutForm(params: {
           {params.upgradeFromLite ? (
             'Business Solo includes clients, projects, invoicing, and finances. Your installed apps stay on this workspace.'
           ) : setupMode ? (
-            'Start a 14-day trial or subscribe to unlock this workspace. All prices in GBP.'
+            isCommercial ? (
+              'Graduated per-seat pricing in GBP. Seat 1 is £89, seats 2–7 are £55, seats 8+ are £39.'
+            ) : (
+              'Start a 14-day trial or subscribe to unlock this workspace. All prices in GBP.'
+            )
           ) : (
             <Trans i18nKey={'billing:manageTeamPlanDescription'} />
           )}
         </CardDescription>
       </CardHeader>
 
-      <CardContent>
+      <CardContent className="space-y-6">
+        {isCommercial ? (
+          <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 p-4">
+            <div className="space-y-2">
+              <Label htmlFor="billable-seats">Billable seats</Label>
+              <Input
+                id="billable-seats"
+                type="number"
+                min={1}
+                max={200}
+                value={billableSeats}
+                onChange={(event) =>
+                  setBillableSeats(
+                    clampBillableSeats(Number(event.target.value) || 1),
+                  )
+                }
+              />
+            </div>
+            <p className="text-sm text-[var(--workspace-shell-text)]">
+              Estimated total{' '}
+              <span className="font-semibold">
+                {formatGbp(monthlyEstimate)}/mo
+              </span>
+            </p>
+            <ul className="space-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              <li>
+                {supportSeats > 0
+                  ? `${supportSeats} free support seats included`
+                  : 'No free support seats on a single billable seat'}
+              </li>
+              <li>
+                {portalsOk
+                  ? 'Portal publishing included at this headcount'
+                  : 'Portal publishing unlocks from 2 billable seats'}
+              </li>
+            </ul>
+          </div>
+        ) : null}
+
         <PlanPicker
           pending={pending}
           config={filteredConfig as typeof billingConfig}
@@ -139,6 +202,7 @@ export function OzerWorkspaceCheckoutForm(params: {
                     productId,
                     slug,
                     accountId: params.accountId,
+                    seats: isCommercial ? billableSeats : undefined,
                   });
 
                 setCheckoutToken(token);

@@ -40,9 +40,7 @@ const PRODUCT_PROFILE: Record<string, WorkspaceProfile> = {
   'ozer-business-scale': 'work_design',
   'ozer-property-starter': 'work_property',
   'ozer-property-portfolio': 'work_property',
-  'ozer-commercial-property-solo': 'commercial_property',
-  'ozer-commercial-property-team': 'commercial_property',
-  'ozer-commercial-property-office': 'commercial_property',
+  'ozer-commercial-property': 'commercial_property',
 };
 
 export const MARKETING_FREE_TIER = {
@@ -85,7 +83,7 @@ const PRODUCT_URL_ALIASES = {
   'ozer-addon-signatures': 'signatures',
 } as const;
 
-const PRODUCT_ID_BY_URL_ALIAS = new Map(
+const PRODUCT_ID_BY_URL_ALIAS = new Map<string, string>(
   Object.entries(PRODUCT_URL_ALIASES).map(([productId, alias]) => [
     alias,
     productId,
@@ -138,6 +136,7 @@ export function buildSetupPath(params: {
   productId?: string;
   planId?: string;
   interval?: BillingInterval;
+  seats?: number;
 }) {
   const search = new URLSearchParams();
   if (params.profile) search.set('profile', params.profile);
@@ -146,6 +145,9 @@ export function buildSetupPath(params: {
   }
   if (params.planId) search.set('plan', params.planId);
   if (params.interval) search.set('interval', params.interval);
+  if (params.seats != null && params.seats >= 1) {
+    search.set('seats', String(Math.floor(params.seats)));
+  }
 
   const query = search.toString();
   return query
@@ -159,6 +161,7 @@ export function buildPricingSignupUrl(params: {
   productId?: string;
   planId?: string;
   interval?: BillingInterval;
+  seats?: number;
 }) {
   const setupPath = buildSetupPath(params);
   const next = encodeURIComponent(setupPath);
@@ -184,6 +187,7 @@ export function buildSignedInBillingUrl(params: {
   planId: string;
   interval?: BillingInterval;
   setup?: boolean;
+  seats?: number;
 }) {
   const path = pathsConfig.app.accountBilling.replace(
     '[account]',
@@ -195,6 +199,9 @@ export function buildSignedInBillingUrl(params: {
   });
   if (params.interval) search.set('interval', params.interval);
   if (params.setup) search.set('setup', '1');
+  if (params.seats != null && params.seats >= 1) {
+    search.set('seats', String(Math.floor(params.seats)));
+  }
   return `${path}?${search.toString()}`;
 }
 
@@ -203,12 +210,14 @@ export type SetupIntent = {
   productId?: string;
   planId?: string;
   interval: BillingInterval;
+  seats?: number;
 };
 
 export type WorkspaceSetupBillingIntent = {
   productId: string;
   planId: string;
   interval?: BillingInterval;
+  seats?: number;
 };
 
 export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
@@ -217,6 +226,11 @@ export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
   const planId = searchParams.get('plan')?.trim() || undefined;
   const intervalRaw = searchParams.get('interval');
   const interval: BillingInterval = intervalRaw === 'year' ? 'year' : 'month';
+  const seatsRaw = Number(searchParams.get('seats'));
+  const seats =
+    Number.isFinite(seatsRaw) && seatsRaw >= 1
+      ? Math.min(200, Math.floor(seatsRaw))
+      : undefined;
 
   return {
     profile:
@@ -230,6 +244,7 @@ export function parseSetupIntent(searchParams: URLSearchParams): SetupIntent {
     productId,
     planId,
     interval,
+    seats,
   };
 }
 

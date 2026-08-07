@@ -3,6 +3,7 @@ import { z } from 'zod';
 export const PortalTicketStatusSchema = z.enum([
   'open',
   'in-progress',
+  'pending_credits',
   'waiting',
   'resolved',
   'closed',
@@ -33,6 +34,7 @@ export const CreatePortalTicketSchema = z.object({
   description: z.string().min(1, 'Description is required'),
   priority: PortalTicketPrioritySchema.default('medium'),
   project_id: z.string().uuid().nullable().optional(),
+  request_type_id: z.string().uuid().nullable().optional(),
   recording_url: z.string().url().nullable().optional().or(z.literal('')),
   external_url: z.string().url().nullable().optional().or(z.literal('')),
   attachments: z

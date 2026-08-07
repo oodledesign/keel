@@ -57,7 +57,7 @@ function planPriceGbp(productId: string) {
 const SOLO_PRICE = planPriceGbp('ozer-business-solo');
 const TEAM_PRICE = planPriceGbp('ozer-business-team');
 const PROPERTY_PRICE = planPriceGbp('ozer-property-starter');
-const COMMERCIAL_PRICE = planPriceGbp('ozer-commercial-property-team');
+const COMMERCIAL_PRICE = planPriceGbp('ozer-commercial-property');
 const COMMUNITY_PRICE = planPriceGbp('ozer-community');
 
 function businessCardBlurb(fullBusinessMode: boolean, propertyMode: boolean) {
@@ -204,6 +204,7 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                   productId: props.intent.productId,
                   planId: props.intent.planId,
                   interval: props.intent.interval,
+                  seats: props.intent.seats,
                 }
               : undefined,
         });

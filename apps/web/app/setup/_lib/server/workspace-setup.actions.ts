@@ -91,6 +91,7 @@ export async function completeWorkspaceSetup(
       productId: string;
       planId: string;
       interval?: 'month' | 'year';
+      seats?: number;
     };
     /** Continue with personal account only — no team workspaces. */
     skipTeamWorkspaces?: boolean;
@@ -256,6 +257,12 @@ export async function completeWorkspaceSetup(
         }
         if (options?.billingIntent?.interval) {
           query.set('interval', options.billingIntent.interval);
+        }
+        if (
+          options?.billingIntent?.seats != null &&
+          options.billingIntent.seats >= 1
+        ) {
+          query.set('seats', String(Math.floor(options.billingIntent.seats)));
         }
         return `${billingPath}?${query.toString()}`;
       })()

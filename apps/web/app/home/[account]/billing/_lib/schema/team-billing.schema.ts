@@ -12,4 +12,6 @@ export const TeamCheckoutSchema = z.object({
   productId: z.string().min(1),
   planId: z.string().min(1),
   accountId: z.string().uuid(),
+  /** Billable seat quantity for graduated/per-seat commercial plans. */
+  seats: z.number().int().min(1).max(200).optional(),
 });

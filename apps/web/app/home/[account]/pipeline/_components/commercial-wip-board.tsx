@@ -696,6 +696,7 @@ export function CommercialWipBoard({
         defaultStage={selectableInstructionStages[0]?.key}
         listings={listings}
         commercial
+        showTrigger={false}
         open={addDealOpen || createInstructionRequested}
         onOpenChange={(open) => {
           setAddDealOpen(open);

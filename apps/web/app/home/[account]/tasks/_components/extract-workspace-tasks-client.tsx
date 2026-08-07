@@ -217,7 +217,7 @@ export function ExtractWorkspaceTasksClient({
     <div
       className={
         embedded
-          ? 'space-y-6'
+          ? 'flex h-full min-h-0 flex-col'
           : 'mx-auto max-w-4xl space-y-8 px-4 pt-6 pb-16 text-[var(--workspace-shell-text)] md:px-6'
       }
     >
@@ -241,217 +241,157 @@ export function ExtractWorkspaceTasksClient({
         </div>
       ) : null}
 
-      {!rows ? (
-        <div className="space-y-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6">
-          {!embedded ? (
+      <div
+        className={
+          embedded
+            ? 'min-h-0 flex-1 space-y-6 overflow-y-auto py-1'
+            : 'space-y-6'
+        }
+      >
+        {!rows ? (
+          <div
+            className={
+              embedded
+                ? 'space-y-4'
+                : 'space-y-4 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-6'
+            }
+          >
+            {!embedded ? (
+              <div className="space-y-2">
+                <Label htmlFor="raw">Email or transcript</Label>
+                <Textarea
+                  id="raw"
+                  value={rawText}
+                  onChange={(e) => setRawText(e.target.value)}
+                  placeholder="Paste the full text here…"
+                  className="min-h-[220px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  Requires{' '}
+                  <code className="text-[var(--workspace-shell-text-muted)]">
+                    ANTHROPIC_API_KEY
+                  </code>{' '}
+                  on the server. Optional:{' '}
+                  <code className="text-[var(--workspace-shell-text-muted)]">
+                    ANTHROPIC_TASK_EXTRACT_MODEL
+                  </code>
+                  .
+                </p>
+              </div>
+            ) : null}
             <div className="space-y-2">
-              <Label htmlFor="raw">Email or transcript</Label>
+              <Label htmlFor="extract-instructions">
+                Extraction instructions{' '}
+                <span className="font-normal text-[var(--workspace-shell-text-muted)]">
+                  (optional)
+                </span>
+              </Label>
               <Textarea
-                id="raw"
-                value={rawText}
-                onChange={(e) => setRawText(e.target.value)}
-                placeholder="Paste the full text here…"
-                className="min-h-[220px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                id="extract-instructions"
+                value={instructions}
+                onChange={(e) => setInstructions(e.target.value)}
+                placeholder="e.g. Put everything I need to email the client into one task, with bullet points in the notes"
+                className="min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
               />
               <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-                Requires{' '}
-                <code className="text-[var(--workspace-shell-text-muted)]">
-                  ANTHROPIC_API_KEY
-                </code>{' '}
-                on the server. Optional:{' '}
-                <code className="text-[var(--workspace-shell-text-muted)]">
-                  ANTHROPIC_TASK_EXTRACT_MODEL
-                </code>
-                .
+                Tell the AI how to group or phrase tasks before you review the
+                suggestions.
               </p>
             </div>
-          ) : (
-            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-              We&apos;ll analyse the transcript above and suggest actionable
-              tasks for this workspace.
-            </p>
-          )}
-          <div className="space-y-2">
-            <Label htmlFor="extract-instructions">
-              Extraction instructions{' '}
-              <span className="font-normal text-[var(--workspace-shell-text-muted)]">
-                (optional)
-              </span>
-            </Label>
-            <Textarea
-              id="extract-instructions"
-              value={instructions}
-              onChange={(e) => setInstructions(e.target.value)}
-              placeholder="e.g. Put everything I need to email the client into one task, with bullet points in the notes"
-              className="min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-            />
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              Tell the AI how to group or phrase tasks before you review the
-              suggestions.
-            </p>
+            <Button
+              type="button"
+              onClick={extract}
+              disabled={extracting || rawText.trim().length < 20}
+              className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+            >
+              {extracting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Extracting…
+                </>
+              ) : (
+                <>
+                  <Sparkles className="mr-2 h-4 w-4" />
+                  Extract tasks
+                </>
+              )}
+            </Button>
           </div>
-          <Button
-            type="button"
-            onClick={extract}
-            disabled={extracting || rawText.trim().length < 20}
-            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-          >
-            {extracting ? (
-              <>
-                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Extracting…
-              </>
-            ) : (
-              <>
-                <Sparkles className="mr-2 h-4 w-4" />
-                Extract tasks
-              </>
-            )}
-          </Button>
-        </div>
-      ) : (
-        <div className="space-y-6">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <p className="max-w-xl text-xs text-[var(--workspace-shell-text-muted)]">
-              {defaultClientId
-                ? 'Tasks default to the client linked to this meeting. You can still change any row before adding.'
-                : 'If only the first group got a client or project from AI, we copy that link to the other groups—you can still change any row before adding.'}
-            </p>
-            <div className="flex flex-wrap gap-2">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => setRows(null)}
-              >
-                Start over
-              </Button>
-              <Button
-                type="button"
-                onClick={commit}
-                disabled={committing}
-                className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-              >
-                {committing ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Creating…
-                  </>
-                ) : (
-                  'Add selected tasks'
-                )}
-              </Button>
-            </div>
-          </div>
-
+        ) : (
           <div className="space-y-6">
-            {rows.map((row) => (
-              <div
-                key={row.id}
-                className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5"
-              >
-                <div className="flex flex-wrap items-start gap-3 border-b border-[color:var(--workspace-shell-border)] pb-4">
-                  <Checkbox
-                    checked={row.included}
-                    onCheckedChange={(v) => {
-                      const checked = v === true;
-                      setRows(
-                        (prev) =>
-                          prev?.map((r) =>
-                            r.id === row.id ? { ...r, included: checked } : r,
-                          ) ?? null,
-                      );
-                    }}
-                    className="mt-1"
-                  />
-                  <div className="min-w-0 flex-1 space-y-3">
-                    <div>
-                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        Parent task
-                      </Label>
-                      <Input
-                        value={row.title}
-                        onChange={(e) =>
-                          setRows(
-                            (prev) =>
-                              prev?.map((r) =>
-                                r.id === row.id
-                                  ? { ...r, title: e.target.value }
-                                  : r,
-                              ) ?? null,
-                          )
-                        }
-                        className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
-                      />
-                    </div>
-                    <div>
-                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        Notes
-                      </Label>
-                      <Textarea
-                        value={row.notes ?? ''}
-                        onChange={(e) =>
-                          setRows(
-                            (prev) =>
-                              prev?.map((r) =>
-                                r.id === row.id
-                                  ? { ...r, notes: e.target.value || null }
-                                  : r,
-                              ) ?? null,
-                          )
-                        }
-                        className="mt-1 min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
-                      />
-                    </div>
-                    <div className="grid gap-3 sm:grid-cols-3">
+            {!embedded ? (
+              <div className="flex flex-wrap items-center justify-between gap-3">
+                <p className="max-w-xl text-xs text-[var(--workspace-shell-text-muted)]">
+                  {defaultClientId
+                    ? 'Tasks default to the client linked to this meeting. You can still change any row before adding.'
+                    : 'If only the first group got a client or project from AI, we copy that link to the other groups—you can still change any row before adding.'}
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setRows(null)}
+                  >
+                    Start over
+                  </Button>
+                  <Button
+                    type="button"
+                    onClick={commit}
+                    disabled={committing}
+                    className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                  >
+                    {committing ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating…
+                      </>
+                    ) : (
+                      'Add selected tasks'
+                    )}
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                {defaultClientId
+                  ? 'Tasks default to the client linked to this meeting. You can still change any row before adding.'
+                  : 'If only the first group got a client or project from AI, we copy that link to the other groups—you can still change any row before adding.'}
+              </p>
+            )}
+
+            <div className="space-y-6 pb-2">
+              {rows.map((row) => (
+                <div
+                  key={row.id}
+                  className="rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5"
+                >
+                  <div className="flex flex-wrap items-start gap-3 border-b border-[color:var(--workspace-shell-border)] pb-4">
+                    <Checkbox
+                      checked={row.included}
+                      onCheckedChange={(v) => {
+                        const checked = v === true;
+                        setRows(
+                          (prev) =>
+                            prev?.map((r) =>
+                              r.id === row.id ? { ...r, included: checked } : r,
+                            ) ?? null,
+                        );
+                      }}
+                      className="mt-1"
+                    />
+                    <div className="min-w-0 flex-1 space-y-3">
                       <div>
                         <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                          Link to
-                        </Label>
-                        <Select
-                          value={assignValue(row.projectId, row.clientId)}
-                          onValueChange={(v) => {
-                            const { projectId, clientId } = parseAssignValue(v);
-                            setRows(
-                              (prev) =>
-                                prev?.map((r) =>
-                                  r.id === row.id
-                                    ? { ...r, projectId, clientId }
-                                    : r,
-                                ) ?? null,
-                            );
-                          }}
-                        >
-                          <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
-                            <SelectValue placeholder="Project or client" />
-                          </SelectTrigger>
-                          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                            <SelectItem value="__none__">Choose…</SelectItem>
-                            {projects.map((p) => (
-                              <SelectItem key={p.id} value={`p:${p.id}`}>
-                                {p.name}
-                              </SelectItem>
-                            ))}
-                            {clients.map((c) => (
-                              <SelectItem key={c.id} value={`c:${c.id}`}>
-                                {c.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div>
-                        <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                          Due date
+                          Parent task
                         </Label>
                         <Input
-                          type="date"
-                          value={row.dueDate ?? ''}
+                          value={row.title}
                           onChange={(e) =>
                             setRows(
                               (prev) =>
                                 prev?.map((r) =>
                                   r.id === row.id
-                                    ? { ...r, dueDate: e.target.value || null }
+                                    ? { ...r, title: e.target.value }
                                     : r,
                                 ) ?? null,
                             )
@@ -461,79 +401,137 @@ export function ExtractWorkspaceTasksClient({
                       </div>
                       <div>
                         <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
-                          Priority
+                          Notes
                         </Label>
-                        <Select
-                          value={row.priority}
-                          onValueChange={(v) =>
+                        <Textarea
+                          value={row.notes ?? ''}
+                          onChange={(e) =>
                             setRows(
                               (prev) =>
                                 prev?.map((r) =>
                                   r.id === row.id
-                                    ? {
-                                        ...r,
-                                        priority:
-                                          v as ExtractedTaskReviewRow['priority'],
-                                      }
+                                    ? { ...r, notes: e.target.value || null }
                                     : r,
                                 ) ?? null,
                             )
                           }
-                        >
-                          <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                            {(['low', 'medium', 'high', 'urgent'] as const).map(
-                              (p) => (
+                          className="mt-1 min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
+                        />
+                      </div>
+                      <div className="grid gap-3 sm:grid-cols-3">
+                        <div>
+                          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                            Link to
+                          </Label>
+                          <Select
+                            value={assignValue(row.projectId, row.clientId)}
+                            onValueChange={(v) => {
+                              const { projectId, clientId } =
+                                parseAssignValue(v);
+                              setRows(
+                                (prev) =>
+                                  prev?.map((r) =>
+                                    r.id === row.id
+                                      ? { ...r, projectId, clientId }
+                                      : r,
+                                  ) ?? null,
+                              );
+                            }}
+                          >
+                            <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
+                              <SelectValue placeholder="Project or client" />
+                            </SelectTrigger>
+                            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                              <SelectItem value="__none__">Choose…</SelectItem>
+                              {projects.map((p) => (
+                                <SelectItem key={p.id} value={`p:${p.id}`}>
+                                  {p.name}
+                                </SelectItem>
+                              ))}
+                              {clients.map((c) => (
+                                <SelectItem key={c.id} value={`c:${c.id}`}>
+                                  {c.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                            Due date
+                          </Label>
+                          <Input
+                            type="date"
+                            value={row.dueDate ?? ''}
+                            onChange={(e) =>
+                              setRows(
+                                (prev) =>
+                                  prev?.map((r) =>
+                                    r.id === row.id
+                                      ? {
+                                          ...r,
+                                          dueDate: e.target.value || null,
+                                        }
+                                      : r,
+                                  ) ?? null,
+                              )
+                            }
+                            className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                            Priority
+                          </Label>
+                          <Select
+                            value={row.priority}
+                            onValueChange={(v) =>
+                              setRows(
+                                (prev) =>
+                                  prev?.map((r) =>
+                                    r.id === row.id
+                                      ? {
+                                          ...r,
+                                          priority:
+                                            v as ExtractedTaskReviewRow['priority'],
+                                        }
+                                      : r,
+                                  ) ?? null,
+                              )
+                            }
+                          >
+                            <SelectTrigger className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                              {(
+                                ['low', 'medium', 'high', 'urgent'] as const
+                              ).map((p) => (
                                 <SelectItem key={p} value={p}>
                                   {p}
                                 </SelectItem>
-                              ),
-                            )}
-                          </SelectContent>
-                        </Select>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
 
-                {row.subtasks.length > 0 ? (
-                  <div className="mt-4 space-y-3 pl-8">
-                    <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-                      Subtasks
-                    </p>
-                    {row.subtasks.map((st) => (
-                      <div
-                        key={st.id}
-                        className="flex gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/15 p-3"
-                      >
-                        <Checkbox
-                          checked={st.included}
-                          onCheckedChange={(v) => {
-                            const checked = v === true;
-                            setRows(
-                              (prev) =>
-                                prev?.map((r) =>
-                                  r.id === row.id
-                                    ? {
-                                        ...r,
-                                        subtasks: r.subtasks.map((s) =>
-                                          s.id === st.id
-                                            ? { ...s, included: checked }
-                                            : s,
-                                        ),
-                                      }
-                                    : r,
-                                ) ?? null,
-                            );
-                          }}
-                          className="mt-1"
-                        />
-                        <div className="min-w-0 flex-1 space-y-2">
-                          <Input
-                            value={st.title}
-                            onChange={(e) =>
+                  {row.subtasks.length > 0 ? (
+                    <div className="mt-4 space-y-3 pl-8">
+                      <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                        Subtasks
+                      </p>
+                      {row.subtasks.map((st) => (
+                        <div
+                          key={st.id}
+                          className="flex gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-black/15 p-3"
+                        >
+                          <Checkbox
+                            checked={st.included}
+                            onCheckedChange={(v) => {
+                              const checked = v === true;
                               setRows(
                                 (prev) =>
                                   prev?.map((r) =>
@@ -542,45 +540,19 @@ export function ExtractWorkspaceTasksClient({
                                           ...r,
                                           subtasks: r.subtasks.map((s) =>
                                             s.id === st.id
-                                              ? { ...s, title: e.target.value }
+                                              ? { ...s, included: checked }
                                               : s,
                                           ),
                                         }
                                       : r,
                                   ) ?? null,
-                              )
-                            }
-                            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
+                              );
+                            }}
+                            className="mt-1"
                           />
-                          <Textarea
-                            value={st.notes ?? ''}
-                            onChange={(e) =>
-                              setRows(
-                                (prev) =>
-                                  prev?.map((r) =>
-                                    r.id === row.id
-                                      ? {
-                                          ...r,
-                                          subtasks: r.subtasks.map((s) =>
-                                            s.id === st.id
-                                              ? {
-                                                  ...s,
-                                                  notes: e.target.value || null,
-                                                }
-                                              : s,
-                                          ),
-                                        }
-                                      : r,
-                                  ) ?? null,
-                              )
-                            }
-                            placeholder="Subtask notes"
-                            className="min-h-[56px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
-                          />
-                          <div className="flex flex-wrap gap-2">
+                          <div className="min-w-0 flex-1 space-y-2">
                             <Input
-                              type="date"
-                              value={st.dueDate ?? ''}
+                              value={st.title}
                               onChange={(e) =>
                                 setRows(
                                   (prev) =>
@@ -592,8 +564,7 @@ export function ExtractWorkspaceTasksClient({
                                               s.id === st.id
                                                 ? {
                                                     ...s,
-                                                    dueDate:
-                                                      e.target.value || null,
+                                                    title: e.target.value,
                                                   }
                                                 : s,
                                             ),
@@ -602,11 +573,11 @@ export function ExtractWorkspaceTasksClient({
                                     ) ?? null,
                                 )
                               }
-                              className="w-40 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
+                              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
                             />
-                            <Select
-                              value={st.priority}
-                              onValueChange={(v) =>
+                            <Textarea
+                              value={st.notes ?? ''}
+                              onChange={(e) =>
                                 setRows(
                                   (prev) =>
                                     prev?.map((r) =>
@@ -617,8 +588,8 @@ export function ExtractWorkspaceTasksClient({
                                               s.id === st.id
                                                 ? {
                                                     ...s,
-                                                    priority:
-                                                      v as (typeof st)['priority'],
+                                                    notes:
+                                                      e.target.value || null,
                                                   }
                                                 : s,
                                             ),
@@ -627,45 +598,127 @@ export function ExtractWorkspaceTasksClient({
                                     ) ?? null,
                                 )
                               }
-                            >
-                              <SelectTrigger className="w-32 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]">
-                                <SelectValue />
-                              </SelectTrigger>
-                              <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
-                                {(
-                                  ['low', 'medium', 'high', 'urgent'] as const
-                                ).map((p) => (
-                                  <SelectItem key={p} value={p}>
-                                    {p}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
+                              placeholder="Subtask notes"
+                              className="min-h-[56px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
+                            />
+                            <div className="flex flex-wrap gap-2">
+                              <Input
+                                type="date"
+                                value={st.dueDate ?? ''}
+                                onChange={(e) =>
+                                  setRows(
+                                    (prev) =>
+                                      prev?.map((r) =>
+                                        r.id === row.id
+                                          ? {
+                                              ...r,
+                                              subtasks: r.subtasks.map((s) =>
+                                                s.id === st.id
+                                                  ? {
+                                                      ...s,
+                                                      dueDate:
+                                                        e.target.value || null,
+                                                    }
+                                                  : s,
+                                              ),
+                                            }
+                                          : r,
+                                      ) ?? null,
+                                  )
+                                }
+                                className="w-40 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
+                              />
+                              <Select
+                                value={st.priority}
+                                onValueChange={(v) =>
+                                  setRows(
+                                    (prev) =>
+                                      prev?.map((r) =>
+                                        r.id === row.id
+                                          ? {
+                                              ...r,
+                                              subtasks: r.subtasks.map((s) =>
+                                                s.id === st.id
+                                                  ? {
+                                                      ...s,
+                                                      priority:
+                                                        v as (typeof st)['priority'],
+                                                    }
+                                                  : s,
+                                              ),
+                                            }
+                                          : r,
+                                      ) ?? null,
+                                  )
+                                }
+                              >
+                                <SelectTrigger className="w-32 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+                                  {(
+                                    ['low', 'medium', 'high', 'urgent'] as const
+                                  ).map((p) => (
+                                    <SelectItem key={p} value={p}>
+                                      {p}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-            ))}
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {!embedded ? (
-        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          Future: connect Gmail to scan new messages and surface suggested tasks
-          for review in Ozer — see{' '}
-          <code className="text-[var(--workspace-shell-text-muted)]">
-            TASK_GMAIL_INGEST_ENABLED
-          </code>{' '}
-          placeholder in{' '}
-          <code className="text-[var(--workspace-shell-text-muted)]">
-            lib/integrations/gmail-tasks-ingest.placeholder.ts
-          </code>
-          .
-        </p>
+        {!embedded ? (
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Future: connect Gmail to scan new messages and surface suggested
+            tasks for review in Ozer — see{' '}
+            <code className="text-[var(--workspace-shell-text-muted)]">
+              TASK_GMAIL_INGEST_ENABLED
+            </code>{' '}
+            placeholder in{' '}
+            <code className="text-[var(--workspace-shell-text-muted)]">
+              lib/integrations/gmail-tasks-ingest.placeholder.ts
+            </code>
+            .
+          </p>
+        ) : null}
+      </div>
+
+      {embedded && rows ? (
+        <div className="flex shrink-0 flex-wrap items-center justify-end gap-2 border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] pt-4 pb-1">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => setRows(null)}
+            disabled={committing}
+          >
+            Start over
+          </Button>
+          <Button
+            type="button"
+            onClick={commit}
+            disabled={committing}
+            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+          >
+            {committing ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Creating…
+              </>
+            ) : (
+              'Add selected tasks'
+            )}
+          </Button>
+        </div>
       ) : null}
     </div>
   );

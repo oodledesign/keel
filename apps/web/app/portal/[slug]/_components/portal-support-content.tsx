@@ -33,6 +33,7 @@ import {
   addPortalTicketMessage,
   createPortalTicket,
   listPortalProjects,
+  listPortalRequestTypes,
 } from '../_lib/server/server-actions';
 import {
   PortalTicketPriorityBadge,
@@ -79,7 +80,13 @@ export function PortalSupportDetailContent({
     clientSlug,
   );
 
+  const creditsHref = pathsConfig.app.clientPortalCredits.replace(
+    '[clientSlug]',
+    clientSlug,
+  );
+
   const isClosed = ticket.status === 'closed' || ticket.status === 'resolved';
+  const needsCredits = ticket.status === 'pending_credits';
 
   const handleReply = (event: React.FormEvent, reopen = false) => {
     event.preventDefault();
@@ -156,6 +163,15 @@ export function PortalSupportDetailContent({
           Opened {formatPortalDate(ticket.createdAt)}
         </p>
       </div>
+
+      {needsCredits ? (
+        <div className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-900">
+          This request is waiting on credits before work can start.{' '}
+          <Link href={creditsHref} className="font-medium underline">
+            Top up credits
+          </Link>
+        </div>
+      ) : null}
 
       <div className="rounded-xl border border-slate-200 bg-white">
         <div className="border-b border-slate-200 px-4 py-3">
@@ -265,21 +281,33 @@ export function PortalSupportNewForm({
   accountId,
   accountSlug,
   clientSlug,
+  initialBalance = 0,
+  initialRequestTypes = [],
 }: {
   clientOrgId: string;
   accountId: string;
   accountSlug: string;
   clientSlug: string;
+  initialBalance?: number;
+  initialRequestTypes?: Array<{
+    id: string;
+    label: string;
+    creditCost: number;
+    isBillable: boolean;
+    categoryGroup: string | null;
+  }>;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [projects, setProjects] = useState<ProjectOption[]>([]);
+  const [requestTypes, setRequestTypes] = useState(initialRequestTypes);
   const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
   const [form, setForm] = useState({
     title: '',
     description: '',
     priority: 'medium' as PortalTicketPriority,
     project_id: '',
+    request_type_id: '',
     recording_url: '',
     external_url: '',
   });
@@ -290,9 +318,24 @@ export function PortalSupportNewForm({
       .catch(() => setProjects([]));
   }, [accountId, clientOrgId]);
 
+  useEffect(() => {
+    if (initialRequestTypes.length > 0) return;
+    listPortalRequestTypes({ clientOrgId })
+      .then((rows) => setRequestTypes(rows ?? []))
+      .catch(() => setRequestTypes([]));
+  }, [clientOrgId, initialRequestTypes.length]);
+
   const listHref = pathsConfig.app.clientPortalSupport.replace(
     '[clientSlug]',
     clientSlug,
+  );
+  const creditsHref = pathsConfig.app.clientPortalCredits.replace(
+    '[clientSlug]',
+    clientSlug,
+  );
+
+  const selectedType = requestTypes.find(
+    (row) => row.id === form.request_type_id,
   );
 
   const handleSubmit = (event: React.FormEvent) => {
@@ -313,6 +356,7 @@ export function PortalSupportNewForm({
           description: form.description.trim(),
           priority: form.priority,
           project_id: form.project_id || null,
+          request_type_id: form.request_type_id || null,
           recording_url: form.recording_url.trim() || null,
           external_url: form.external_url.trim() || null,
           attachments,
@@ -334,7 +378,53 @@ export function PortalSupportNewForm({
 
   return (
     <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6">
+      <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
+        <span className="text-[var(--ozer-text-on-light-muted)]">
+          Credit balance:{' '}
+          <span className="font-semibold text-[var(--ozer-text-on-light)]">
+            {initialBalance}
+          </span>
+        </span>
+        <Link
+          href={creditsHref}
+          className="font-medium text-[var(--ozer-text-on-light)] underline"
+        >
+          View credits
+        </Link>
+      </div>
+
       <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 md:p-6">
+        {requestTypes.length > 0 ? (
+          <div className="space-y-2">
+            <Label>Request type</Label>
+            <Select
+              value={form.request_type_id || undefined}
+              onValueChange={(value) =>
+                setForm((current) => ({ ...current, request_type_id: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a request type" />
+              </SelectTrigger>
+              <SelectContent>
+                {requestTypes.map((row) => (
+                  <SelectItem key={row.id} value={row.id}>
+                    {row.label}
+                    {row.isBillable ? ` · ${row.creditCost} credits` : ' · free'}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {selectedType ? (
+              <p className="text-xs text-[var(--ozer-text-on-light-muted)]">
+                {selectedType.isBillable
+                  ? `This request costs ${selectedType.creditCost} credit${selectedType.creditCost === 1 ? '' : 's'} when work starts.`
+                  : 'This request type is not billable.'}
+              </p>
+            ) : null}
+          </div>
+        ) : null}
+
         <div className="space-y-2">
           <Label htmlFor="title">Title</Label>
           <Input

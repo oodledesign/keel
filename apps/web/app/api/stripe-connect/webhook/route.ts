@@ -361,28 +361,50 @@ async function createPaidInvoiceFromStripeInvoice(
     stripeInvoice.amount_paid ?? subscription.monthly_amount ?? 0;
   const paymentIntentId = getStripePaymentIntentId(stripeInvoice);
 
-  const { error: insertError } = await db.from('invoices').insert({
-    account_id: accountId,
-    client_id: clientId,
-    invoice_number: invoiceNumber,
-    status: 'paid',
-    subtotal_pence: totalPence,
-    total_pence: totalPence,
-    currency: (stripeInvoice.currency ?? 'gbp').toLowerCase(),
-    notes: subscription.plan_name
-      ? `Subscription payment — ${subscription.plan_name}`
-      : 'Subscription payment',
-    paid_at: stripeInvoice.status_transitions?.paid_at
-      ? new Date(stripeInvoice.status_transitions.paid_at * 1000).toISOString()
-      : new Date().toISOString(),
-    stripe_checkout_session_id: stripeInvoice.id,
-    stripe_payment_intent_id: paymentIntentId,
-  });
+  const { error: insertError, data: insertedInvoice } = await db
+    .from('invoices')
+    .insert({
+      account_id: accountId,
+      client_id: clientId,
+      invoice_number: invoiceNumber,
+      status: 'paid',
+      subtotal_pence: totalPence,
+      total_pence: totalPence,
+      currency: (stripeInvoice.currency ?? 'gbp').toLowerCase(),
+      notes: subscription.plan_name
+        ? `Subscription payment — ${subscription.plan_name}`
+        : 'Subscription payment',
+      paid_at: stripeInvoice.status_transitions?.paid_at
+        ? new Date(
+            stripeInvoice.status_transitions.paid_at * 1000,
+          ).toISOString()
+        : new Date().toISOString(),
+      stripe_checkout_session_id: stripeInvoice.id,
+      stripe_payment_intent_id: paymentIntentId,
+    })
+    .select('id')
+    .single();
 
   if (insertError) {
     throw new Error(
       `[stripe-connect webhook] invoice insert failed: ${insertError.message}`,
     );
+  }
+
+  if (insertedInvoice?.id) {
+    try {
+      const { maybeGrantCreditsOnInvoicePaid } =
+        await import('~/lib/credits/grant-on-invoice-paid');
+      await maybeGrantCreditsOnInvoicePaid({
+        accountId,
+        invoiceId: String(insertedInvoice.id),
+      });
+    } catch (grantError) {
+      console.error(
+        '[stripe-connect webhook] credit grant on subscription invoice failed',
+        grantError,
+      );
+    }
   }
 
   try {

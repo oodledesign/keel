@@ -41,6 +41,7 @@ import {
 
 const STATUSES: { key: TicketStatus; label: string }[] = [
   { key: 'open', label: 'Open' },
+  { key: 'pending_credits', label: 'Pending credits' },
   { key: 'in-progress', label: 'In progress' },
   { key: 'waiting', label: 'Waiting' },
   { key: 'resolved', label: 'Resolved' },

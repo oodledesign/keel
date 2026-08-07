@@ -4,6 +4,8 @@ const InviteSchema = z.object({
   email: z.string().email(),
   role: z.string().min(1).max(100),
   projectId: z.string().uuid().optional().nullable(),
+  /** Commercial Property: billable vs free support seat. Defaults to billable. */
+  seatKind: z.enum(['billable', 'support']).optional().default('billable'),
 });
 
 export const InviteMembersSchema = z

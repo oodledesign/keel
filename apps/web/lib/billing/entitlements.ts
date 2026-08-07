@@ -338,7 +338,58 @@ export async function assertMemberInviteAllowed(
   client: SupabaseClient,
   accountId: string,
   invitationsToSend: number,
+  options?: {
+    seatKinds?: Array<'billable' | 'support'>;
+  },
 ): Promise<{ allowed: boolean; reason?: string }> {
+  const { data: account } = await client
+    .from('accounts')
+    .select('space_type')
+    .eq('id', accountId)
+    .maybeSingle();
+
+  const spaceType = (account as { space_type?: string | null } | null)
+    ?.space_type;
+  const isCommercial = spaceType === 'commercial-property';
+
+  if (isCommercial) {
+    const { getCommercialSeatBreakdown } =
+      await import('~/lib/commercial/commercial-seat-access');
+    const breakdown = await getCommercialSeatBreakdown(client, accountId);
+    const kinds =
+      options?.seatKinds ??
+      Array.from({ length: invitationsToSend }, () => 'billable' as const);
+
+    const newBillable = kinds.filter((k) => k !== 'support').length;
+    const newSupport = kinds.filter((k) => k === 'support').length;
+
+    if (newSupport > 0) {
+      const supportRemaining = Math.max(
+        0,
+        breakdown.supportAllowance - breakdown.supportCount,
+      );
+      if (newSupport > supportRemaining) {
+        return {
+          allowed: false,
+          reason: `Your plan includes ${breakdown.supportAllowance} free support seat${breakdown.supportAllowance === 1 ? '' : 's'}. ${supportRemaining} remaining.`,
+        };
+      }
+    }
+
+    if (newBillable > 0) {
+      // Billable invites bump Stripe quantity on accept; soft-cap at 200.
+      const projectedBillable = breakdown.billableCount + newBillable;
+      if (projectedBillable > 200) {
+        return {
+          allowed: false,
+          reason: 'Billable seat limit reached for this workspace.',
+        };
+      }
+    }
+
+    return { allowed: true };
+  }
+
   const usage = await getMemberSeatUsage(client, accountId);
 
   if (usage.unlimited || usage.maxMembers == null) {

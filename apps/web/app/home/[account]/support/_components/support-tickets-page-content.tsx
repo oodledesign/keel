@@ -42,6 +42,7 @@ const statusTabs: { value: StatusFilter; label: string }[] = [
   { value: 'all', label: 'All' },
   { value: 'open', label: 'Open' },
   { value: 'in-progress', label: 'In Progress' },
+  { value: 'pending_credits', label: 'Pending credits' },
   { value: 'waiting', label: 'Waiting' },
   { value: 'resolved', label: 'Resolved' },
 ];

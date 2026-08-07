@@ -33,7 +33,9 @@ function lineCost(plan: {
   lineItems: Array<{ cost: number; type: string }>;
 }): number {
   const flat = plan.lineItems.find((item) => item.type === 'flat');
-  return flat?.cost ?? plan.lineItems[0]?.cost ?? 0;
+  if (flat) return flat.cost;
+  const perSeat = plan.lineItems.find((item) => item.type === 'per_seat');
+  return perSeat?.cost ?? plan.lineItems[0]?.cost ?? 0;
 }
 
 function parseMaxTeamMembers(features: string[]): number | null {
@@ -134,11 +136,7 @@ export function listPropertyPrices(): BillingPlanPrice[] {
 }
 
 export function listCommercialPropertyPrices(): BillingPlanPrice[] {
-  return [
-    'ozer-commercial-property-solo',
-    'ozer-commercial-property-team',
-    'ozer-commercial-property-office',
-  ]
+  return ['ozer-commercial-property']
     .map((id) => productPrices(id))
     .filter((p): p is BillingPlanPrice => Boolean(p));
 }

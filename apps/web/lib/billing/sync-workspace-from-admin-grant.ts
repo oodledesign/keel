@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER } from '~/config/workspace-module-order';
 
+import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
 import { markBusinessUpgradedFromLite } from './business-lite';
 import {
   type OzerPlanDefinition,
@@ -105,11 +106,15 @@ async function ensureCommercialPropertyPlanLimits(
   const resolved =
     plan ??
     findPlanByProductAndPlanId(
-      'ozer-commercial-property-team',
-      'commercial-property-team-monthly',
+      'ozer-commercial-property',
+      'commercial-property-monthly',
     );
 
   if (!resolved) return;
+
+  // Admin grants: default to Team-sized illustrative headcount (4 billable + 2 support)
+  const maxMembers =
+    resolved.limits.maxMembers ?? maxMembersForBillableSeats(4);
 
   await admin.from('account_plan_limits').upsert(
     {
@@ -117,7 +122,7 @@ async function ensureCommercialPropertyPlanLimits(
       plan_product_id: resolved.productId,
       plan_id: resolved.planId,
       plan_family: resolved.family,
-      max_members: resolved.limits.maxMembers,
+      max_members: maxMembers,
       max_properties: resolved.limits.maxProperties,
       max_videos: resolved.limits.maxVideos,
       updated_at: new Date().toISOString(),

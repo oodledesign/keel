@@ -25,6 +25,7 @@ function stripe() {
 }
 
 function mapTemplate(row: Record<string, unknown>): PlanTemplateRecord {
+  const policy = row.rollover_policy;
   return {
     id: String(row.id),
     accountId: String(row.account_id),
@@ -39,6 +40,14 @@ function mapTemplate(row: Record<string, unknown>): PlanTemplateRecord {
       : null,
     stripePriceId: row.stripe_price_id ? String(row.stripe_price_id) : null,
     active: Boolean(row.active ?? true),
+    creditsPerCycle:
+      typeof row.credits_per_cycle === 'number' ? row.credits_per_cycle : null,
+    rolloverPolicy:
+      policy === 'rollover' || policy === 'cap' || policy === 'expire'
+        ? policy
+        : 'expire',
+    rolloverCap:
+      typeof row.rollover_cap === 'number' ? row.rollover_cap : null,
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   };
@@ -157,8 +166,23 @@ class PlanTemplatesService {
     currency: string;
     interval: PlanBillingInterval;
     active?: boolean;
+    creditsPerCycle?: number | null;
+    rolloverPolicy?: 'expire' | 'rollover' | 'cap';
+    rolloverCap?: number | null;
   }): Promise<PlanTemplateRecord> {
     await this.ensureMember(input.accountId);
+
+    const creditFields = {
+      credits_per_cycle:
+        input.creditsPerCycle === undefined
+          ? undefined
+          : input.creditsPerCycle,
+      rollover_policy: input.rolloverPolicy ?? 'expire',
+      rollover_cap:
+        input.rolloverPolicy === 'cap'
+          ? (input.rolloverCap ?? null)
+          : null,
+    };
 
     if (input.id) {
       const existing = await this.getTemplate(input.accountId, input.id);
@@ -180,6 +204,11 @@ class PlanTemplatesService {
           currency: input.currency.toLowerCase(),
           billing_interval: input.interval,
           active: input.active ?? true,
+          ...(creditFields.credits_per_cycle !== undefined
+            ? { credits_per_cycle: creditFields.credits_per_cycle }
+            : {}),
+          rollover_policy: creditFields.rollover_policy,
+          rollover_cap: creditFields.rollover_cap,
           // Clear price pointer when commercial terms change — lazy recreate on next use
           ...(needsNewPrice ? { stripe_price_id: null } : {}),
         })
@@ -202,6 +231,9 @@ class PlanTemplatesService {
         currency: input.currency.toLowerCase(),
         billing_interval: input.interval,
         active: input.active ?? true,
+        credits_per_cycle: creditFields.credits_per_cycle ?? null,
+        rollover_policy: creditFields.rollover_policy,
+        rollover_cap: creditFields.rollover_cap,
       })
       .select('*')
       .single();

@@ -65,6 +65,7 @@ const priorityOptions: { value: TicketPriority; label: string }[] = [
 
 const statusOptions: { value: TicketStatus; label: string }[] = [
   { value: 'open', label: 'Open' },
+  { value: 'pending_credits', label: 'Pending credits' },
   { value: 'in-progress', label: 'In progress' },
   { value: 'waiting', label: 'Waiting' },
   { value: 'resolved', label: 'Resolved' },

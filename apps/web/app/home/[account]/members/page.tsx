@@ -138,6 +138,9 @@ async function TeamAccountMembersPage({
                     userRoleHierarchy={currentUserRoleHierarchy}
                     accountSlug={account.slug}
                     defaultOpen={openInvite}
+                    showSeatKind={
+                      workspace.workspaceProfile === 'commercial_property'
+                    }
                     projects={(inviteProjects ?? []).map((project) => ({
                       id: project.id,
                       name: project.name?.trim() || 'Untitled project',

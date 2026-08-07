@@ -61,6 +61,8 @@ type Props = {
   commercial?: boolean;
   open?: boolean;
   onOpenChange?: (open: boolean) => void;
+  /** When false, only the dialog is rendered (parent owns the open trigger). */
+  showTrigger?: boolean;
 };
 
 const NONE_LISTING = '__none__';
@@ -76,6 +78,7 @@ export function AddDealDialog({
   commercial = false,
   open: controlledOpen,
   onOpenChange,
+  showTrigger = true,
 }: Props) {
   const workspaceScoped = Boolean(accountSlug?.trim());
   const [uncontrolledOpen, setUncontrolledOpen] = useState(false);
@@ -277,12 +280,14 @@ export function AddDealDialog({
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        <button type="button" className={workspaceBtnPrimaryMd}>
-          <Plus className="h-4 w-4" />
-          {commercial ? 'Add instruction' : 'Add to pipeline'}
-        </button>
-      </DialogTrigger>
+      {showTrigger ? (
+        <DialogTrigger asChild>
+          <button type="button" className={workspaceBtnPrimaryMd}>
+            <Plus className="h-4 w-4" />
+            {commercial ? 'Add instruction' : 'Add to pipeline'}
+          </button>
+        </DialogTrigger>
+      ) : null}
       <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>

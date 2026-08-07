@@ -190,6 +190,15 @@ export const acceptInvitationAction = enhanceAction(
     // use admin client to accept invitation
     const adminClient = getSupabaseServerAdminClient();
 
+    // Read seat kind before accept deletes the invitation row
+    const { data: invitationRow } = await adminClient
+      .from('invitations')
+      .select('seat_kind')
+      .eq('invite_token', inviteToken)
+      .maybeSingle();
+    const seatKind =
+      (invitationRow as { seat_kind?: string } | null)?.seat_kind ?? 'billable';
+
     // Accept the invitation
     const accountId = await service.acceptInvitationToTeam(adminClient, {
       inviteToken,
@@ -202,8 +211,10 @@ export const acceptInvitationAction = enhanceAction(
       throw new Error('Failed to accept invitation');
     }
 
-    // Increase the seats for the account
-    await perSeatBillingService.increaseSeats(accountId);
+    // Support seats do not bump Stripe quantity
+    if (seatKind !== 'support') {
+      await perSeatBillingService.increaseSeats(accountId);
+    }
 
     return redirect(nextPath);
   },

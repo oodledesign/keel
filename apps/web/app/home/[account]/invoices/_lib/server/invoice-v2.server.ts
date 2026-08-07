@@ -416,6 +416,20 @@ export async function recordInvoicePayment(input: {
   }
 
   await admin.from('invoices').update(patch).eq('id', input.invoiceId);
+
+  if (fullyPaid) {
+    try {
+      const { maybeGrantCreditsOnInvoicePaid } =
+        await import('~/lib/credits/grant-on-invoice-paid');
+      await maybeGrantCreditsOnInvoicePaid({
+        accountId: input.accountId,
+        invoiceId: input.invoiceId,
+      });
+    } catch (grantError) {
+      console.error('[invoice] credit grant on paid failed', grantError);
+    }
+  }
+
   return { amountPaid, fullyPaid };
 }
 
@@ -637,6 +651,21 @@ export async function processDueRecurringSeries() {
             DEFAULT_INVOICE_EMAIL_SIGNATURE,
         })
         .eq('id', invoice.id);
+
+      try {
+        const { stampRecurringInvoiceCreditMetadata } =
+          await import('~/lib/credits/grant-on-invoice-paid');
+        await stampRecurringInvoiceCreditMetadata({
+          accountId: series.account_id,
+          invoiceId: invoice.id,
+          seriesId: series.id,
+        });
+      } catch (stampError) {
+        console.error(
+          '[invoices-recurring] stamp credit metadata failed',
+          stampError,
+        );
+      }
 
       if (Array.isArray(template.items) && template.items.length) {
         await service.upsertInvoiceItemsAsSystem({

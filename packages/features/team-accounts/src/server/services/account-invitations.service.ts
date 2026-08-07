@@ -214,6 +214,11 @@ class AccountInvitationsService {
       invitations,
     });
 
+    await this.attachInvitationSeatKinds({
+      accountSlug,
+      invitations,
+    });
+
     logger.info(
       {
         ...ctx,
@@ -263,6 +268,43 @@ class AccountInvitationsService {
       logger.error(
         { accountSlug, error },
         'Failed to attach projects to invitations',
+      );
+    }
+  }
+
+  private async attachInvitationSeatKinds({
+    accountSlug,
+    invitations,
+  }: {
+    accountSlug: string;
+    invitations: z.infer<typeof InviteMembersSchema>['invitations'];
+  }) {
+    const logger = await getLogger();
+    const links = invitations
+      .filter((invitation) => invitation.email)
+      .map((invitation) => ({
+        email: invitation.email,
+        seat_kind: invitation.seatKind ?? 'billable',
+      }));
+
+    if (!links.length) {
+      return;
+    }
+
+    const { error } = await (
+      this.client.rpc as unknown as (
+        fn: string,
+        args: { account_slug: string; links: typeof links },
+      ) => Promise<{ error: Error | null }>
+    )('attach_invitation_seat_kinds', {
+      account_slug: accountSlug,
+      links,
+    });
+
+    if (error) {
+      logger.error(
+        { accountSlug, error },
+        'Failed to attach seat kinds to invitations',
       );
     }
   }

@@ -14,7 +14,11 @@ type PageProps = {
 };
 
 export async function generateStaticParams() {
-  return [{ slug: 'personal' }, { slug: 'work' }];
+  return [
+    { slug: 'personal' },
+    { slug: 'work' },
+    { slug: 'commercial-property' },
+  ];
 }
 
 export async function generateMetadata({ params }: PageProps) {

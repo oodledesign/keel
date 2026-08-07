@@ -24,6 +24,9 @@ export const UpsertPlanTemplateSchema = z.object({
     .default('gbp'),
   interval: PlanBillingIntervalSchema.default('month'),
   active: z.boolean().default(true),
+  creditsPerCycle: z.number().int().min(0).max(1_000_000).nullable().optional(),
+  rolloverPolicy: z.enum(['expire', 'rollover', 'cap']).optional(),
+  rolloverCap: z.number().int().min(0).max(1_000_000).nullable().optional(),
 });
 
 export const ListPlanTemplatesSchema = z.object({

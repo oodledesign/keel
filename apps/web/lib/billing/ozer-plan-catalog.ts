@@ -165,30 +165,13 @@ const PROPERTY: OzerPlanDefinition[] = [
 
 const COMMERCIAL_PROPERTY: OzerPlanDefinition[] = [
   {
-    productId: 'ozer-commercial-property-solo',
-    planId: 'commercial-property-solo-monthly',
-    stripePriceId: OZER_STRIPE_PRICES.commercial_property_solo_monthly,
+    productId: 'ozer-commercial-property',
+    planId: 'commercial-property-monthly',
+    stripePriceId: OZER_STRIPE_PRICES.commercial_property_monthly,
     family: 'commercial_property',
     entitlementKey: 'workspace_commercial_property',
-    limits: { maxMembers: 1, maxProperties: null, maxVideos: null },
-    workspaceProfiles: ['commercial_property'],
-  },
-  {
-    productId: 'ozer-commercial-property-team',
-    planId: 'commercial-property-team-monthly',
-    stripePriceId: OZER_STRIPE_PRICES.commercial_property_team_monthly,
-    family: 'commercial_property',
-    entitlementKey: 'workspace_commercial_property',
-    limits: { maxMembers: 5, maxProperties: null, maxVideos: null },
-    workspaceProfiles: ['commercial_property'],
-  },
-  {
-    productId: 'ozer-commercial-property-office',
-    planId: 'commercial-property-office-monthly',
-    stripePriceId: OZER_STRIPE_PRICES.commercial_property_office_monthly,
-    family: 'commercial_property',
-    entitlementKey: 'workspace_commercial_property',
-    limits: { maxMembers: 15, maxProperties: null, maxVideos: null },
+    // Dynamic: sync derives from Stripe quantity + free support seats
+    limits: { maxMembers: null, maxProperties: null, maxVideos: null },
     workspaceProfiles: ['commercial_property'],
   },
 ];

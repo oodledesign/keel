@@ -1074,15 +1074,15 @@ export function MeetingTranscriptDetailClient({
       </Dialog>
 
       <Dialog open={extractOpen} onOpenChange={setExtractOpen}>
-        <DialogContent className="max-h-[min(90vh,900px)] max-w-6xl gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
-          <DialogHeader className="border-b border-[color:var(--workspace-shell-border)] px-6 py-4">
+        <DialogContent className="flex h-[min(90vh,900px)] max-h-[min(90vh,900px)] max-w-6xl flex-col gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
+          <DialogHeader className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-6 py-4">
             <DialogTitle>Extract tasks</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
               AI will analyse this meeting transcript and suggest actionable
               tasks. Review and edit before adding them to the workspace.
             </DialogDescription>
           </DialogHeader>
-          <div className="max-h-[calc(min(90vh,900px)-5.5rem)] overflow-y-auto px-6 py-5">
+          <div className="min-h-0 flex-1 overflow-hidden px-6 py-5">
             {extractOpen ? (
               <ExtractWorkspaceTasksClient
                 accountId={accountId}

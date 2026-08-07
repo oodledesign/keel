@@ -34,9 +34,16 @@ async function CommercialPublishingPage({
 
   const accountId = workspace.account.id as string;
   const client = getSupabaseServerClient();
-  const [settings, listings] = await Promise.all([
+  const { getCommercialBillableSeatCount } = await import(
+    '~/lib/commercial/commercial-seat-access'
+  );
+  const { portalPublishingAllowed } = await import(
+    '~/lib/billing/commercial-graduated-pricing'
+  );
+  const [settings, listings, billableSeats] = await Promise.all([
     loadCommercialPublishingSettings(accountId),
     createListingsService(client).listListings(accountId),
+    getCommercialBillableSeatCount(client, accountId),
   ]);
 
   return (
@@ -51,6 +58,7 @@ async function CommercialPublishingPage({
           accountId={accountId}
           initialSettings={settings}
           listings={listings}
+          portalPublishingUnlocked={portalPublishingAllowed(billableSeats)}
         />
       </PageBody>
     </>

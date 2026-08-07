@@ -60,17 +60,10 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_PROPERTY_PORTFOLIO_YEARLY',
     'price_ozer_property_portfolio_yearly',
   ),
-  commercial_property_solo_monthly: price(
-    'STRIPE_PRICE_COMMERCIAL_PROPERTY_SOLO_MONTHLY',
-    'price_ozer_commercial_property_solo_monthly',
-  ),
-  commercial_property_team_monthly: price(
-    'STRIPE_PRICE_COMMERCIAL_PROPERTY_TEAM_MONTHLY',
-    'price_ozer_commercial_property_team_monthly',
-  ),
-  commercial_property_office_monthly: price(
-    'STRIPE_PRICE_COMMERCIAL_PROPERTY_OFFICE_MONTHLY',
-    'price_ozer_commercial_property_office_monthly',
+  /** Graduated per-seat Price (seat 1 £89, 2–7 £55, 8+ £39). */
+  commercial_property_monthly: price(
+    'STRIPE_PRICE_COMMERCIAL_PROPERTY_MONTHLY',
+    'price_ozer_commercial_property_monthly',
   ),
   addon_portal_publishing_monthly: price(
     'STRIPE_PRICE_ADDON_PORTAL_PUBLISHING_MONTHLY',

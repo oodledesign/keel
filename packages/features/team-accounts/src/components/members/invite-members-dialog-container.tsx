@@ -83,11 +83,14 @@ export function InviteMembersDialogContainer({
   projects = [],
   children,
   defaultOpen = false,
+  showSeatKind = false,
 }: React.PropsWithChildren<{
   accountSlug: string;
   userRoleHierarchy: number;
   projects?: InviteProjectOption[];
   defaultOpen?: boolean;
+  /** Commercial Property: choose billable vs free support seat. */
+  showSeatKind?: boolean;
 }>) {
   const [pending, startTransition] = useTransition();
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -196,6 +199,7 @@ export function InviteMembersDialogContainer({
                 pending={pending}
                 roles={roles}
                 projects={projects}
+                showSeatKind={showSeatKind}
                 maxInvites={getMaxInvitesForForm(seatUsage)}
                 onSubmit={(data) => {
                   startTransition(async () => {
@@ -203,7 +207,10 @@ export function InviteMembersDialogContainer({
 
                     const result = await createInvitationsAction({
                       accountSlug,
-                      invitations: data.invitations,
+                      invitations: data.invitations.map((invite) => ({
+                        ...invite,
+                        seatKind: invite.seatKind ?? 'billable',
+                      })),
                     });
 
                     if (result.success) {
@@ -242,18 +249,21 @@ function InviteMembersForm({
   projects,
   pending,
   maxInvites,
+  showSeatKind = false,
 }: {
   onSubmit: (data: {
     invitations: {
       email: string;
       role: string;
       projectId?: string | null;
+      seatKind?: 'billable' | 'support';
     }[];
   }) => void;
   pending: boolean;
   roles: string[];
   projects: InviteProjectOption[];
   maxInvites: number;
+  showSeatKind?: boolean;
 }) {
   const { t } = useTranslation('teams');
   const defaultRole = roles.includes('staff')
@@ -286,6 +296,7 @@ function InviteMembersForm({
             const emailInputName = `invitations.${index}.email` as const;
             const roleInputName = `invitations.${index}.role` as const;
             const projectInputName = `invitations.${index}.projectId` as const;
+            const seatKindInputName = `invitations.${index}.seatKind` as const;
 
             return (
               <div data-test={'invite-member-form-item'} key={field.id}>
@@ -340,6 +351,42 @@ function InviteMembersForm({
                       );
                     }}
                   />
+
+                  <If condition={showSeatKind}>
+                    <FormField
+                      name={seatKindInputName}
+                      render={({ field }) => {
+                        return (
+                          <FormItem className="shrink-0">
+                            <FormControl>
+                              <Select
+                                value={field.value ?? 'billable'}
+                                onValueChange={(value) => {
+                                  form.setValue(
+                                    seatKindInputName,
+                                    value as 'billable' | 'support',
+                                  );
+                                }}
+                              >
+                                <SelectTrigger className="bg-background w-[8.5rem]">
+                                  <SelectValue placeholder="Seat type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="billable">
+                                    Billable
+                                  </SelectItem>
+                                  <SelectItem value="support">
+                                    Support
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  </If>
 
                   <div className={'flex shrink-0 items-center justify-end'}>
                     <TooltipProvider>
@@ -458,7 +505,12 @@ function InviteMembersForm({
 }
 
 function createEmptyInviteModel(role: Role = 'staff') {
-  return { email: '', role, projectId: null as string | null };
+  return {
+    email: '',
+    role,
+    projectId: null as string | null,
+    seatKind: 'billable' as 'billable' | 'support',
+  };
 }
 
 function useFetchInvitationsPolicies({

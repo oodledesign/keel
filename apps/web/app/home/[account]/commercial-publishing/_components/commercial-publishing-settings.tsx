@@ -38,6 +38,8 @@ interface CommercialPublishingSettingsProps {
   accountId: string;
   initialSettings: CommercialPublishingSettings;
   listings: CommercialListing[];
+  /** Rightmove / EG require 2+ billable seats. */
+  portalPublishingUnlocked?: boolean;
 }
 
 function ConfiguredBadge({ configured }: { configured: boolean }) {
@@ -61,6 +63,7 @@ export function CommercialPublishingSettings({
   accountId,
   initialSettings,
   listings,
+  portalPublishingUnlocked = true,
 }: CommercialPublishingSettingsProps) {
   const [settings, setSettings] = useState(initialSettings);
   const [phPending, startPhTransition] = useTransition();
@@ -395,6 +398,12 @@ export function CommercialPublishingSettings({
           </CardTitle>
         </CardHeader>
         <CardContent className="space-y-8">
+          {!portalPublishingUnlocked ? (
+            <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
+              Portal publishing (Rightmove / EACH) unlocks from 2 billable seats.
+              Property Hive website sync remains available on Solo.
+            </p>
+          ) : null}
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
             Store RTDF / EACH feed credentials. Live Rightmove RTDF requires an
             ADF certificate — these fields save credentials for when the feed is
@@ -470,7 +479,7 @@ export function CommercialPublishingSettings({
             <Button
               type="button"
               variant="outline"
-              disabled={rmPending}
+              disabled={rmPending || !portalPublishingUnlocked}
               onClick={saveRightmove}
             >
               {rmPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
@@ -547,7 +556,7 @@ export function CommercialPublishingSettings({
             <Button
               type="button"
               variant="outline"
-              disabled={eachPending}
+              disabled={eachPending || !portalPublishingUnlocked}
               onClick={saveEach}
             >
               {eachPending ? (
@@ -636,7 +645,10 @@ export function CommercialPublishingSettings({
           <Button
             type="button"
             variant="outline"
-            disabled={testPending}
+            disabled={
+              testPending ||
+              (testPortal !== 'property_hive' && !portalPublishingUnlocked)
+            }
             onClick={runTestPublish}
           >
             {testPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}

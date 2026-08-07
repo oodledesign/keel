@@ -18,6 +18,9 @@ export type PlanTemplateRecord = {
   stripeProductId: string | null;
   stripePriceId: string | null;
   active: boolean;
+  creditsPerCycle: number | null;
+  rolloverPolicy: 'expire' | 'rollover' | 'cap';
+  rolloverCap: number | null;
   createdAt: string;
   updatedAt: string;
 };

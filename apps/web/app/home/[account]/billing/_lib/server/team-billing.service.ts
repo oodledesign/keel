@@ -152,6 +152,7 @@ class TeamBillingService {
       const variantQuantities = await this.getVariantQuantities(
         plan.lineItems,
         accountId,
+        params.seats,
       );
 
       logger.info(
@@ -306,6 +307,7 @@ class TeamBillingService {
   private async getVariantQuantities(
     lineItems: z.infer<typeof LineItemSchema>[],
     accountId: string,
+    requestedSeats?: number,
   ) {
     const variantQuantities: Array<{
       quantity: number;
@@ -317,8 +319,13 @@ class TeamBillingService {
       const isPerSeat = lineItem.type === 'per_seat';
 
       if (isPerSeat) {
-        // get the current number of members in the account
-        const quantity = await this.getCurrentMembersCount(accountId);
+        const memberCount = await this.getCurrentMembersCount(accountId);
+        // Prefer explicit checkout seats; never floor against total members
+        // (support seats must not inflate Stripe billable quantity).
+        const quantity =
+          requestedSeats != null && requestedSeats >= 1
+            ? Math.max(1, Math.floor(requestedSeats))
+            : memberCount;
 
         const item = {
           quantity,

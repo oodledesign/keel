@@ -66,19 +66,9 @@ const QUICK_PLANS = [
     planId: 'property-starter-monthly',
   },
   {
-    label: 'Commercial Property Solo',
-    productId: 'ozer-commercial-property-solo',
-    planId: 'commercial-property-solo-monthly',
-  },
-  {
-    label: 'Commercial Property Team',
-    productId: 'ozer-commercial-property-team',
-    planId: 'commercial-property-team-monthly',
-  },
-  {
-    label: 'Commercial Property Office',
-    productId: 'ozer-commercial-property-office',
-    planId: 'commercial-property-office-monthly',
+    label: 'Commercial Property (graduated)',
+    productId: 'ozer-commercial-property',
+    planId: 'commercial-property-monthly',
   },
   {
     label: 'Signatures Starter add-on',

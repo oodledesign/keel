@@ -45,6 +45,9 @@ type Draft = {
   amountPounds: string;
   interval: 'month' | 'year';
   active: boolean;
+  creditsPerCycle: string;
+  rolloverPolicy: 'expire' | 'rollover' | 'cap';
+  rolloverCap: string;
 };
 
 const emptyDraft = (): Draft => ({
@@ -54,6 +57,9 @@ const emptyDraft = (): Draft => ({
   amountPounds: '45',
   interval: 'month',
   active: true,
+  creditsPerCycle: '',
+  rolloverPolicy: 'expire',
+  rolloverCap: '',
 });
 
 export function ServicesPlansPanel({
@@ -90,6 +96,10 @@ export function ServicesPlansPanel({
       amountPounds: (row.amount / 100).toFixed(2),
       interval: row.interval,
       active: row.active,
+      creditsPerCycle:
+        row.creditsPerCycle == null ? '' : String(row.creditsPerCycle),
+      rolloverPolicy: row.rolloverPolicy ?? 'expire',
+      rolloverCap: row.rolloverCap == null ? '' : String(row.rolloverCap),
     });
   }
 
@@ -101,6 +111,26 @@ export function ServicesPlansPanel({
       return;
     }
     const amount = Math.round(pounds * 100);
+
+    let creditsPerCycle: number | null = null;
+    if (draft.creditsPerCycle.trim() !== '') {
+      const credits = Number(draft.creditsPerCycle);
+      if (!Number.isFinite(credits) || credits < 0) {
+        toast.error('Enter a valid credits-per-cycle value');
+        return;
+      }
+      creditsPerCycle = Math.round(credits);
+    }
+
+    let rolloverCap: number | null = null;
+    if (draft.rolloverPolicy === 'cap') {
+      const cap = Number(draft.rolloverCap);
+      if (!Number.isFinite(cap) || cap < 0) {
+        toast.error('Enter a valid rollover cap');
+        return;
+      }
+      rolloverCap = Math.round(cap);
+    }
 
     startTransition(async () => {
       try {
@@ -114,6 +144,9 @@ export function ServicesPlansPanel({
           currency: 'gbp',
           interval: draft.interval,
           active: draft.active,
+          creditsPerCycle,
+          rolloverPolicy: draft.rolloverPolicy,
+          rolloverCap,
         });
         setTemplates((current) => {
           const without = current.filter((row) => row.id !== saved.id);
@@ -246,6 +279,55 @@ export function ServicesPlansPanel({
                 rows={3}
               />
             </div>
+            <div className="space-y-1.5">
+              <Label>Credits per cycle</Label>
+              <Input
+                type="number"
+                min={0}
+                step={1}
+                value={draft.creditsPerCycle}
+                onChange={(event) =>
+                  setDraft({ ...draft, creditsPerCycle: event.target.value })
+                }
+                placeholder="Optional"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Rollover policy</Label>
+              <Select
+                value={draft.rolloverPolicy}
+                onValueChange={(value) =>
+                  setDraft({
+                    ...draft,
+                    rolloverPolicy: value as Draft['rolloverPolicy'],
+                  })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expire">Expire at cycle end</SelectItem>
+                  <SelectItem value="rollover">Rollover unused</SelectItem>
+                  <SelectItem value="cap">Rollover with cap</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            {draft.rolloverPolicy === 'cap' ? (
+              <div className="space-y-1.5 sm:col-span-2">
+                <Label>Rollover cap</Label>
+                <Input
+                  type="number"
+                  min={0}
+                  step={1}
+                  value={draft.rolloverCap}
+                  onChange={(event) =>
+                    setDraft({ ...draft, rolloverCap: event.target.value })
+                  }
+                  placeholder="Max credits banked"
+                />
+              </div>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Button type="button" disabled={pending} onClick={save}>
@@ -292,6 +374,9 @@ export function ServicesPlansPanel({
                 </p>
                 <p className="text-sm text-[var(--workspace-shell-text-muted)]">
                   {formatMinorUnits(row.amount, row.currency, row.interval)}
+                  {row.creditsPerCycle != null
+                    ? ` · ${row.creditsPerCycle} credits/${row.interval}`
+                    : null}
                   {!row.active ? ' · archived' : null}
                 </p>
               </div>

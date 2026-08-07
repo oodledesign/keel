@@ -60,6 +60,37 @@ export async function moveDealToStage(
       return { success: false as const, error: 'Not authenticated' };
     }
 
+    const { data: dealRow } = await client
+      .from('pipeline_deals')
+      .select('account_id')
+      .eq('id', dealId)
+      .maybeSingle();
+    const dealAccountId = (
+      dealRow as { account_id?: string | null } | null
+    )?.account_id;
+
+    if (dealAccountId) {
+      try {
+        const { assertCommercialBillableMember } = await import(
+          '~/lib/commercial/commercial-seat-access'
+        );
+        await assertCommercialBillableMember({
+          client,
+          accountId: dealAccountId,
+          userId: user.id,
+          action: 'change instruction stages',
+        });
+      } catch (seatError) {
+        return {
+          success: false as const,
+          error:
+            seatError instanceof Error
+              ? seatError.message
+              : 'Support seats cannot change instruction stages',
+        };
+      }
+    }
+
     const updates: Record<string, unknown> = { stage: newStage };
     if (
       newStage === 'completed' ||

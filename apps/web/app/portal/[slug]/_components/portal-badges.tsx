@@ -17,6 +17,11 @@ export const portalTicketStatusStyles: Record<
     text: 'text-amber-700',
     label: 'In progress',
   },
+  pending_credits: {
+    bg: 'bg-rose-500/15',
+    text: 'text-rose-900',
+    label: 'Pending credits',
+  },
   waiting: {
     bg: 'bg-purple-500/15',
     text: 'text-purple-700',

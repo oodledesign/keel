@@ -106,6 +106,15 @@ export const savePropertyHiveCredentialsAction = enhanceAction(
 
 export const savePortalCredentialsAction = enhanceAction(
   async (input) => {
+    const client = getSupabaseServerClient();
+    const { assertCommercialPortalPublishingAllowed } = await import(
+      '~/lib/commercial/commercial-seat-access'
+    );
+    await assertCommercialPortalPublishingAllowed({
+      client,
+      accountId: input.accountId,
+    });
+
     let secret = input.secret?.trim() ?? '';
     if (!secret) {
       const existing = await getExistingPortalSecret(
@@ -132,6 +141,17 @@ export const savePortalCredentialsAction = enhanceAction(
 
 export const testPublishListingAction = enhanceAction(
   async (input) => {
+    if (input.portal !== 'property_hive') {
+      const client = getSupabaseServerClient();
+      const { assertCommercialPortalPublishingAllowed } = await import(
+        '~/lib/commercial/commercial-seat-access'
+      );
+      await assertCommercialPortalPublishingAllowed({
+        client,
+        accountId: input.accountId,
+      });
+    }
+
     if (!input.listingId) {
       if (input.portal === 'property_hive') {
         const credentials = await getPropertyHiveCredentials(input.accountId);

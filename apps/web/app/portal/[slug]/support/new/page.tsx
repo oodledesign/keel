@@ -1,7 +1,10 @@
+import { getSupabaseServerClient } from '@kit/supabase/server-client';
+
 import { SupportDualPartyIdentity } from '~/components/support/support-party-identity';
 
 import { PortalSupportNewForm } from '../../_components/portal-support-content';
 import { loadClientPortalContext } from '../../_lib/server/client-portal.loader';
+import { createPortalCreditsService } from '../../_lib/server/portal-credits.service';
 
 interface PortalSupportNewPageProps {
   params: Promise<{ slug: string }>;
@@ -14,6 +17,9 @@ export default async function PortalSupportNewPage({
 }: PortalSupportNewPageProps) {
   const { slug } = await params;
   const ctx = await loadClientPortalContext(slug);
+  const credits = await createPortalCreditsService(
+    getSupabaseServerClient(),
+  ).getCreditsBundle(ctx.clientOrgId);
 
   return (
     <div className="space-y-6">
@@ -48,6 +54,8 @@ export default async function PortalSupportNewPage({
         accountId={ctx.accountId}
         accountSlug={ctx.accountSlug}
         clientSlug={slug}
+        initialBalance={credits.balance}
+        initialRequestTypes={credits.requestTypes}
       />
     </div>
   );
