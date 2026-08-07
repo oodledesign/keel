@@ -25,6 +25,7 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import pathsConfig from '~/config/paths.config';
 import {
   PIPELINE_WORKSPACE_BUSINESS_PREFIX,
   pickDefaultPipelineTargetId,
@@ -92,6 +93,7 @@ export function AddDealDialog({
   const [clientId, setClientId] = useState('');
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientsError, setClientsError] = useState<string | null>(null);
   const [listingId, setListingId] = useState(NONE_LISTING);
 
   // Resolve the account this deal belongs to: explicit (workspace board) or
@@ -117,10 +119,21 @@ export function AddDealDialog({
   }, [resolvedAccountId, mode]);
 
   useEffect(() => {
-    if (!open || mode !== 'client' || !resolvedAccountId) return;
+    if (!open || !resolvedAccountId) {
+      if (!open) {
+        setClients([]);
+        setClientsError(null);
+      }
+      return;
+    }
+
+    let cancelled = false;
     setClientsLoading(true);
+    setClientsError(null);
+
     listClients({ accountId: resolvedAccountId, page: 1, pageSize: 100 })
       .then((r: unknown) => {
+        if (cancelled) return;
         const raw = r as { data?: unknown } | unknown[];
         const list = Array.isArray(raw)
           ? raw
@@ -129,9 +142,21 @@ export function AddDealDialog({
             : [];
         setClients((list || []) as ClientOption[]);
       })
-      .catch(() => setClients([]))
-      .finally(() => setClientsLoading(false));
-  }, [open, mode, resolvedAccountId]);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setClients([]);
+        setClientsError(
+          err instanceof Error ? err.message : 'Could not load clients',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setClientsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, resolvedAccountId]);
 
   const showAssignField = !workspaceScoped && businesses.length > 1;
   const canLinkClient = Boolean(resolvedAccountId);
@@ -312,6 +337,14 @@ export function AddDealDialog({
                   onValueChange={setClientId}
                   loading={clientsLoading}
                   placeholder="Select an existing client"
+                  emptyMessage={
+                    clientsError ? clientsError : 'No clients found.'
+                  }
+                  addClientHref={
+                    accountSlug
+                      ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}?create=client`
+                      : undefined
+                  }
                 />
               </div>
               {!commercial ? (

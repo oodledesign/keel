@@ -22,8 +22,20 @@ import {
   workspaceComboboxListClass,
   workspaceComboboxPopoverClass,
 } from '~/components/workspace-shell/workspace-combobox-styles';
+import { resolveClientListTitle } from '~/lib/clients/resolve-client-list-display';
 
-export type ClientOption = { id: string; display_name: string | null };
+export type ClientOption = {
+  id: string;
+  display_name: string | null;
+  company_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  client_type?: string | null;
+};
+
+function clientLabel(client: ClientOption): string {
+  return resolveClientListTitle(client);
+}
 
 export function ClientCombobox({
   clients,
@@ -50,11 +62,12 @@ export function ClientCombobox({
     () => (value ? clients.find((c) => c.id === value) : null),
     [clients, value],
   );
-  const displayValue = selected ? (selected.display_name ?? selected.id) : null;
+  const displayValue = selected ? clientLabel(selected) : null;
 
   return (
     <div className="space-y-1.5">
-      <Popover open={open} onOpenChange={setOpen}>
+      {/* modal: required when nested in Dialog so cmdk receives pointer/focus events */}
+      <Popover modal open={open} onOpenChange={setOpen}>
         <PopoverTrigger asChild>
           <Button
             type="button"
@@ -71,7 +84,10 @@ export function ClientCombobox({
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent className={workspaceComboboxPopoverClass} align="start">
+        <PopoverContent
+          className={cn(workspaceComboboxPopoverClass, 'z-[60]')}
+          align="start"
+        >
           <Command className="bg-[var(--workspace-shell-panel)] [&_[cmdk-input-wrapper]]:border-[color:var(--workspace-shell-border)]">
             <CommandInput
               placeholder="Search clients…"
@@ -100,11 +116,11 @@ export function ClientCombobox({
                   None
                 </CommandItem>
                 {clients.map((c) => {
-                  const label = c.display_name ?? c.id;
+                  const label = clientLabel(c);
                   return (
                     <CommandItem
                       key={c.id}
-                      value={label}
+                      value={`${label} ${c.id}`}
                       onSelect={() => {
                         onValueChange(c.id);
                         setOpen(false);

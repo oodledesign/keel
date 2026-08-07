@@ -24,6 +24,7 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import pathsConfig from '~/config/paths.config';
 import {
   PIPELINE_WORKSPACE_BUSINESS_PREFIX,
   pickDefaultPipelineTargetId,
@@ -94,6 +95,7 @@ export function EditDealDialog({
   const [clientId, setClientId] = useState(deal?.clientId ?? '');
   const [clients, setClients] = useState<ClientOption[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
+  const [clientsError, setClientsError] = useState<string | null>(null);
   const [listingId, setListingId] = useState(
     deal?.commercialListingId ?? NONE_LISTING,
   );
@@ -126,10 +128,21 @@ export function EditDealDialog({
   }, [deal, open, businesses, workspaceScoped]);
 
   useEffect(() => {
-    if (!open || mode !== 'client' || !resolvedAccountId) return;
+    if (!open || !resolvedAccountId) {
+      if (!open) {
+        setClients([]);
+        setClientsError(null);
+      }
+      return;
+    }
+
+    let cancelled = false;
     setClientsLoading(true);
+    setClientsError(null);
+
     listClients({ accountId: resolvedAccountId, page: 1, pageSize: 100 })
       .then((r: unknown) => {
+        if (cancelled) return;
         const raw = r as { data?: unknown } | unknown[];
         const list = Array.isArray(raw)
           ? raw
@@ -138,9 +151,21 @@ export function EditDealDialog({
             : [];
         setClients((list || []) as ClientOption[]);
       })
-      .catch(() => setClients([]))
-      .finally(() => setClientsLoading(false));
-  }, [open, mode, resolvedAccountId]);
+      .catch((err: unknown) => {
+        if (cancelled) return;
+        setClients([]);
+        setClientsError(
+          err instanceof Error ? err.message : 'Could not load clients',
+        );
+      })
+      .finally(() => {
+        if (!cancelled) setClientsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, resolvedAccountId]);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -356,6 +381,14 @@ export function EditDealDialog({
                   onValueChange={setClientId}
                   loading={clientsLoading}
                   placeholder="Select an existing client"
+                  emptyMessage={
+                    clientsError ? clientsError : 'No clients found.'
+                  }
+                  addClientHref={
+                    accountSlug
+                      ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}?create=client`
+                      : undefined
+                  }
                 />
               </div>
               {!commercial ? (
@@ -689,27 +722,27 @@ export function EditDealDialog({
               <span />
             )}
             <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => onOpenChange(false)}
-              className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={isPending}
-              className={workspaceBtnPrimaryMd}
-            >
-              {isPending ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Saving...
-                </>
-              ) : (
-                'Save changes'
-              )}
-            </button>
+              <button
+                type="button"
+                onClick={() => onOpenChange(false)}
+                className="h-9 rounded-xl border border-[color:var(--workspace-shell-border)] px-4 text-sm font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={isPending}
+                className={workspaceBtnPrimaryMd}
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save changes'
+                )}
+              </button>
             </div>
           </DialogFooter>
         </form>
