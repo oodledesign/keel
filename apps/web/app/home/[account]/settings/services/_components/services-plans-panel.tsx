@@ -105,6 +105,11 @@ export function ServicesPlansPanel({
 
   function save() {
     if (!draft) return;
+    const name = draft.name.trim();
+    if (!name) {
+      toast.error('Enter a plan name');
+      return;
+    }
     const pounds = Number(draft.amountPounds);
     if (!Number.isFinite(pounds) || pounds < 0) {
       toast.error('Enter a valid amount');
@@ -138,7 +143,7 @@ export function ServicesPlansPanel({
           accountId,
           id: draft.id,
           kind: draft.kind,
-          name: draft.name,
+          name,
           description: draft.description || null,
           amount,
           currency: 'gbp',

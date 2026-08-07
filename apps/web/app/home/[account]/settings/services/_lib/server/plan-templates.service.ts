@@ -220,10 +220,13 @@ class PlanTemplatesService {
       return mapTemplate(data as Record<string, unknown>);
     }
 
+    const businessId = await this.resolveBusinessId(input.accountId);
+
     const { data, error } = await this.db
       .from('plan_templates')
       .insert({
         account_id: input.accountId,
+        business_id: businessId,
         kind: input.kind,
         name: input.name,
         description: input.description ?? null,
@@ -419,13 +422,25 @@ class PlanTemplatesService {
     return customer.id;
   }
 
-  private async resolveBusinessId(accountId: string): Promise<string | null> {
+  private async resolveBusinessId(accountId: string): Promise<string> {
     const { data } = await this.db
       .from('businesses')
       .select('id')
       .eq('account_id', accountId)
       .maybeSingle();
-    return data?.id ? String(data.id) : accountId;
+    if (data?.id) return String(data.id);
+
+    // Legacy rows sometimes used account id as businesses.id
+    const { data: byId } = await this.db
+      .from('businesses')
+      .select('id')
+      .eq('id', accountId)
+      .maybeSingle();
+    if (byId?.id) return String(byId.id);
+
+    throw new Error(
+      'No business profile for this workspace — complete workspace setup first',
+    );
   }
 
   /**
