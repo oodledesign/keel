@@ -70,6 +70,27 @@ type MediaRow = {
   sort_order: number;
 };
 
+type CoAgentFeedRow = {
+  listing_id: string;
+  contact_name: string | null;
+  contact_email: string | null;
+  contact_phone: string | null;
+  clients:
+    | {
+        display_name: string | null;
+        company_name: string | null;
+        email: string | null;
+        phone: string | null;
+      }
+    | {
+        display_name: string | null;
+        company_name: string | null;
+        email: string | null;
+        phone: string | null;
+      }[]
+    | null;
+};
+
 function adminDb(): SupabaseClient {
   return getSupabaseServerAdminClient() as unknown as SupabaseClient;
 }
@@ -242,6 +263,7 @@ async function renderPropertyXml(
   listing: ListingRow,
   units: UnitRow[],
   media: MediaRow[],
+  coAgents: CoAgentFeedRow[] = [],
 ): Promise<string> {
   const isToLet = listing.disposal_type === 'to_let';
   const rentPounds = penceToPounds(listing.asking_rent_pence);
@@ -365,6 +387,67 @@ async function renderPropertyXml(
     isToLet ? 'tolet' : 'forsale'
   }">${escapeXml(availability)}</type></availabilities>`;
 
+  const resolveClient = (row: CoAgentFeedRow) =>
+    Array.isArray(row.clients) ? row.clients[0] : row.clients;
+
+  const contactsXml =
+    coAgents.length === 0
+      ? '<contacts/>'
+      : `<contacts>${coAgents
+          .map((row) => {
+            const linked = resolveClient(row);
+            const office =
+              linked?.company_name?.trim() ||
+              linked?.display_name?.trim() ||
+              'Joint agent';
+            const name =
+              row.contact_name?.trim() ||
+              linked?.display_name?.trim() ||
+              office;
+            const email =
+              row.contact_email?.trim() || linked?.email?.trim() || '';
+            const tel =
+              row.contact_phone?.trim() || linked?.phone?.trim() || '';
+            return [
+              '<contact>',
+              el('name', name),
+              el('email', email),
+              el('tel', tel),
+              el('mobile', tel),
+              el('office', office),
+              '<branch/>',
+              '</contact>',
+            ].join('');
+          })
+          .join('')}</contacts>`;
+
+  const jointAgentsXml =
+    coAgents.length === 0
+      ? '<joint_agents/>'
+      : `<joint_agents>${coAgents
+          .map((row) => {
+            const linked = resolveClient(row);
+            const office =
+              linked?.company_name?.trim() ||
+              linked?.display_name?.trim() ||
+              'Joint agent';
+            const name = row.contact_name?.trim() || office;
+            const email =
+              row.contact_email?.trim() || linked?.email?.trim() || '';
+            const tel =
+              row.contact_phone?.trim() || linked?.phone?.trim() || '';
+            return [
+              '<joint_agent>',
+              el('name', name),
+              el('email', email),
+              el('tel', tel),
+              el('mobile', tel),
+              el('office', office),
+              '</joint_agent>',
+            ].join('');
+          })
+          .join('')}</joint_agents>`;
+
   return [
     '<property>',
     el('id', propertyId),
@@ -407,7 +490,8 @@ async function renderPropertyXml(
     typesXml,
     availXml,
     el('status', mapStatus(listing.status)),
-    '<contacts/>',
+    contactsXml,
+    jointAgentsXml,
     el('class_of_use', listing.use_class),
     listing.epc_band
       ? elRaw(
@@ -591,18 +675,28 @@ export async function buildPropertyHiveFeedXml(
 
   const listingIds = listingRows.map((l) => l.id);
 
-  const [{ data: units }, { data: media }] = await Promise.all([
-    client
-      .from('commercial_listing_units')
-      .select('*')
-      .in('listing_id', listingIds)
-      .order('sort_order'),
-    client
-      .from('commercial_listing_media')
-      .select('*')
-      .in('listing_id', listingIds)
-      .order('sort_order'),
-  ]);
+  const [{ data: units }, { data: media }, { data: coAgentRows }] =
+    await Promise.all([
+      client
+        .from('commercial_listing_units')
+        .select('*')
+        .in('listing_id', listingIds)
+        .order('sort_order'),
+      client
+        .from('commercial_listing_media')
+        .select('*')
+        .in('listing_id', listingIds)
+        .order('sort_order'),
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (client as any)
+        .from('commercial_listing_co_agents')
+        .select(
+          'listing_id, contact_name, contact_email, contact_phone, clients(display_name, company_name, email, phone)',
+        )
+        .eq('account_id', accountId)
+        .in('listing_id', listingIds)
+        .order('sort_order'),
+    ]);
 
   const unitsByListing = new Map<string, UnitRow[]>();
   for (const unit of (units ?? []) as UnitRow[]) {
@@ -618,6 +712,13 @@ export async function buildPropertyHiveFeedXml(
     mediaByListing.set(item.listing_id, list);
   }
 
+  const coAgentsByListing = new Map<string, CoAgentFeedRow[]>();
+  for (const row of (coAgentRows ?? []) as CoAgentFeedRow[]) {
+    const list = coAgentsByListing.get(row.listing_id) ?? [];
+    list.push(row);
+    coAgentsByListing.set(row.listing_id, list);
+  }
+
   const propertiesXml: string[] = [];
   for (const listing of listingRows) {
     propertiesXml.push(
@@ -626,6 +727,7 @@ export async function buildPropertyHiveFeedXml(
         listing,
         unitsByListing.get(listing.id) ?? [],
         mediaByListing.get(listing.id) ?? [],
+        coAgentsByListing.get(listing.id) ?? [],
       ),
     );
   }

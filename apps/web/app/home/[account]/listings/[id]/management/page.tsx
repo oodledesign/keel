@@ -4,6 +4,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import { ListingAssignmentCard } from '../../_components/listing-assignment-card';
+import { ListingCoAgentsCard } from '../../_components/listing-co-agents-card';
 import { ListingManagementSection } from '../../_components/listing-detail-sections';
 import { createListingsService } from '../../_lib/server/listings.service';
 
@@ -20,10 +21,11 @@ async function ListingManagementPage({ params }: PageProps) {
 
   if (!listing) return null;
 
-  const [publications, members, assignment] = await Promise.all([
+  const [publications, members, assignment, coAgents] = await Promise.all([
     service.listPublicationsForListing(listingId),
     service.listAccountMembers(slug),
     service.getListingAssignment(listingId, accountId, slug),
+    service.listCoAgents(listingId, accountId),
   ]);
 
   return (
@@ -33,6 +35,11 @@ async function ListingManagementPage({ params }: PageProps) {
         accountSlug={slug}
         members={members}
         assignment={assignment}
+      />
+      <ListingCoAgentsCard
+        accountId={accountId}
+        listingId={listingId}
+        initialCoAgents={coAgents}
       />
       <ListingManagementSection
         listing={listing}

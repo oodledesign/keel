@@ -198,6 +198,44 @@ export const UpdateListingAssignmentSchema = z.object({
   teamId: z.string().uuid().nullable().optional(),
 });
 
+export const ListListingCoAgentsSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+});
+
+export const SearchCoAgentClientsSchema = z.object({
+  accountId: z.string().uuid(),
+  query: z.string().max(120).optional(),
+  excludeListingId: z.string().uuid().optional(),
+});
+
+export const AddListingCoAgentSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  clientId: z.string().uuid().optional(),
+  /** Create a new workspace client (agency) when clientId is omitted. */
+  companyName: z.string().trim().min(1).max(200).optional(),
+  contactName: z.string().trim().max(200).optional().nullable(),
+  contactEmail: z
+    .union([z.string().trim().email(), z.literal(''), z.null()])
+    .optional(),
+  contactPhone: z.string().trim().max(60).optional().nullable(),
+}).superRefine((data, ctx) => {
+  if (!data.clientId && !data.companyName?.trim()) {
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: 'Select a client or enter a company name',
+      path: ['companyName'],
+    });
+  }
+});
+
+export const RemoveListingCoAgentSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  coAgentId: z.string().uuid(),
+});
+
 export type CreateListingMediaInput = z.infer<typeof CreateListingMediaSchema>;
 export type SetListingMediaCoverInput = z.infer<
   typeof SetListingMediaCoverSchema
@@ -217,4 +255,11 @@ export type UpdateListingAssignmentInput = z.infer<
 >;
 export type CreateWorkspaceTeamInput = z.infer<
   typeof CreateWorkspaceTeamSchema
+>;
+export type AddListingCoAgentInput = z.infer<typeof AddListingCoAgentSchema>;
+export type RemoveListingCoAgentInput = z.infer<
+  typeof RemoveListingCoAgentSchema
+>;
+export type SearchCoAgentClientsInput = z.infer<
+  typeof SearchCoAgentClientsSchema
 >;

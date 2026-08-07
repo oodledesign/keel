@@ -73,7 +73,7 @@ export const CreateClientSchema = z
     postcode: optionalString,
     country: optionalString,
     commercial_role: z
-      .enum(['landlord', 'tenant', 'investor', 'solicitor'])
+      .enum(['landlord', 'tenant', 'investor', 'solicitor', 'agent'])
       .nullable()
       .optional(),
     /** Primary contact created with a new business client. */
@@ -130,7 +130,7 @@ export const UpdateClientSchema = z
     postcode: optionalNullableString,
     country: optionalNullableString,
     commercial_role: z
-      .enum(['landlord', 'tenant', 'investor', 'solicitor'])
+      .enum(['landlord', 'tenant', 'investor', 'solicitor', 'agent'])
       .nullable()
       .optional(),
   })

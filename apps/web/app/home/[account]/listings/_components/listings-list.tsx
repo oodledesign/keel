@@ -12,6 +12,7 @@ import {
   List,
   MoreHorizontal,
   Plus,
+  Search,
   Trash2,
   Upload,
 } from 'lucide-react';
@@ -35,6 +36,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import { Input } from '@kit/ui/input';
 import {
   Tooltip,
   TooltipContent,
@@ -116,6 +118,7 @@ export function ListingsList({
   const searchParams = useSearchParams();
   const createRequested = searchParams.get('create') === '1';
   const [listings, setListings] = useState(initialListings);
+  const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<ListingStatus | 'all'>(
     'all',
   );
@@ -139,9 +142,26 @@ export function ListingsList({
   }, [createRequested, router]);
 
   const filtered = useMemo(() => {
-    if (statusFilter === 'all') return listings;
-    return listings.filter((l) => l.status === statusFilter);
-  }, [listings, statusFilter]);
+    const q = searchQuery.trim().toLowerCase();
+    return listings.filter((l) => {
+      if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+      if (!q) return true;
+      const haystack = [
+        l.name,
+        l.addressLine1,
+        l.addressLine2,
+        l.town,
+        l.postcode,
+        l.county,
+        l.sector,
+        l.externalId,
+      ]
+        .filter(Boolean)
+        .join(' ')
+        .toLowerCase();
+      return haystack.includes(q);
+    });
+  }, [listings, searchQuery, statusFilter]);
 
   const openCreate = () => {
     setEditing(null);
@@ -240,6 +260,18 @@ export function ListingsList({
         </div>
       </div>
 
+      <div className="relative max-w-xl">
+        <Search className="pointer-events-none absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+        <Input
+          type="search"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          placeholder="Search by name, address, postcode, or sector…"
+          aria-label="Search disposals"
+          className="border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-9 text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
+        />
+      </div>
+
       <div className="flex flex-wrap gap-2">
         <FilterChip
           active={statusFilter === 'all'}
@@ -262,18 +294,35 @@ export function ListingsList({
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
             <p className="font-medium text-[var(--workspace-shell-text)]">
-              No disposals yet
+              {searchQuery.trim() || statusFilter !== 'all'
+                ? 'No matching disposals'
+                : 'No disposals yet'}
             </p>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-              Add a disposal instruction to get started.
+              {searchQuery.trim() || statusFilter !== 'all'
+                ? 'Try a different search or clear the status filter.'
+                : 'Add a disposal instruction to get started.'}
             </p>
-            <Button
-              onClick={openCreate}
-              className={`mt-4 ${workspaceBtnPrimaryMd}`}
-            >
-              <Plus className="h-4 w-4" />
-              Add disposal
-            </Button>
+            {searchQuery.trim() || statusFilter !== 'all' ? (
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => {
+                  setSearchQuery('');
+                  setStatusFilter('all');
+                }}
+              >
+                Clear filters
+              </Button>
+            ) : (
+              <Button
+                onClick={openCreate}
+                className={`mt-4 ${workspaceBtnPrimaryMd}`}
+              >
+                <Plus className="h-4 w-4" />
+                Add disposal
+              </Button>
+            )}
           </CardContent>
         </Card>
       ) : viewMode === 'cards' ? (
@@ -520,6 +569,25 @@ function ListingCard({
         {(listing.actingAgents?.length ?? 0) > 0 ? (
           <AgentAvatarStack agents={listing.actingAgents ?? []} />
         ) : null}
+
+        {(listing.coAgents?.length ?? 0) > 0 ? (
+          <div className="flex flex-wrap gap-1.5">
+            {listing.coAgents!.slice(0, 3).map((agent) => (
+              <span
+                key={agent.id}
+                className="inline-flex max-w-full truncate rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text)]/70"
+                title={agent.contactName ? `${agent.clientName} · ${agent.contactName}` : agent.clientName}
+              >
+                Joint: {agent.clientName}
+              </span>
+            ))}
+            {(listing.coAgents?.length ?? 0) > 3 ? (
+              <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text)]/55">
+                +{(listing.coAgents?.length ?? 0) - 3}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
       </CardContent>
     </Card>
   );
@@ -620,6 +688,7 @@ function FilterChip({
     <button
       type="button"
       onClick={onClick}
+      aria-pressed={active}
       className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
         active
           ? (activeClassName ?? 'bg-[var(--ozer-accent)] text-white')

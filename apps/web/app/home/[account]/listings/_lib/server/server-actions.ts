@@ -14,9 +14,13 @@ import {
   DeleteListingUnitSchema,
   GetListingAssignmentSchema,
   GetListingSchema,
+  AddListingCoAgentSchema,
+  ListListingCoAgentsSchema,
   ListListingMembersSchema,
   ListListingsSchema,
   ListWorkspaceTeamsSchema,
+  RemoveListingCoAgentSchema,
+  SearchCoAgentClientsSchema,
   SetLandlordShareSchema,
   SetListingMediaCoverSchema,
   UpdateListingAssignmentSchema,
@@ -194,4 +198,56 @@ export const getListingAssignment = enhanceAction(
 export const updateListingAssignment = enhanceAction(
   async (input) => getService().updateListingAssignment(input),
   { schema: UpdateListingAssignmentSchema },
+);
+
+export const listListingCoAgents = enhanceAction(
+  async (input) => getService().listCoAgents(input.listingId, input.accountId),
+  { schema: ListListingCoAgentsSchema },
+);
+
+export const searchCoAgentClients = enhanceAction(
+  async (input) => getService().searchCoAgentClients(input),
+  { schema: SearchCoAgentClientsSchema },
+);
+
+export const addListingCoAgent = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } = await import(
+      '~/lib/commercial/require-commercial-billable-actor'
+    );
+    await requireCommercialBillableActor(
+      input.accountId,
+      'link co-marketing agents',
+    );
+    const result = await getService().addCoAgent({
+      listingId: input.listingId,
+      accountId: input.accountId,
+      clientId: input.clientId,
+      companyName: input.companyName,
+      contactName: input.contactName,
+      contactEmail: input.contactEmail || null,
+      contactPhone: input.contactPhone,
+    });
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/home', 'layout');
+    return result;
+  },
+  { schema: AddListingCoAgentSchema },
+);
+
+export const removeListingCoAgent = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } = await import(
+      '~/lib/commercial/require-commercial-billable-actor'
+    );
+    await requireCommercialBillableActor(
+      input.accountId,
+      'link co-marketing agents',
+    );
+    const result = await getService().removeCoAgent(input);
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/home', 'layout');
+    return result;
+  },
+  { schema: RemoveListingCoAgentSchema },
 );

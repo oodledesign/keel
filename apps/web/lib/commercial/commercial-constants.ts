@@ -49,7 +49,7 @@ export const LISTING_STATUS_BADGE_CLASS: Record<ListingStatus, string> = {
   instructed:
     'bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-200/80 dark:bg-sky-500/15 dark:text-sky-100 dark:ring-sky-500/30',
   marketing:
-    'bg-[color-mix(in_srgb,var(--ozer-accent)_16%,white)] text-[var(--ozer-accent-muted)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-accent)_28%,transparent)]',
+    'bg-[var(--ozer-coral-100)] text-[var(--ozer-coral-600)] ring-1 ring-inset ring-[color-mix(in_srgb,var(--ozer-accent)_35%,transparent)] dark:bg-[var(--ozer-accent-subtle)] dark:text-[var(--ozer-coral-50)] dark:ring-[color-mix(in_srgb,var(--ozer-accent)_40%,transparent)]',
   under_offer:
     'bg-orange-100 text-orange-900 ring-1 ring-inset ring-orange-200/80 dark:bg-orange-500/15 dark:text-orange-100 dark:ring-orange-500/30',
   let: 'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
@@ -164,6 +164,7 @@ export const COMMERCIAL_CLIENT_ROLES = [
   'tenant',
   'investor',
   'solicitor',
+  'agent',
 ] as const;
 
 export type CommercialClientRole = (typeof COMMERCIAL_CLIENT_ROLES)[number];
@@ -176,6 +177,7 @@ export const COMMERCIAL_CLIENT_ROLE_LABELS: Record<
   tenant: 'Tenant',
   investor: 'Investor',
   solicitor: 'Solicitor',
+  agent: 'Agent',
 };
 
 export const ENQUIRY_STATUSES = [

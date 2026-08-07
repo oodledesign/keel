@@ -138,6 +138,8 @@ export type CommercialListing = {
   coverUrl?: string | null;
   /** Acting agents when loaded with list assignment data. */
   actingAgents?: ListingAgent[];
+  /** External co-marketing agents (workspace clients) when loaded. */
+  coAgents?: ListingCoAgent[];
 };
 
 export type ListingMemberOption = {
@@ -145,6 +147,26 @@ export type ListingMemberOption = {
   name: string;
   email: string | null;
   pictureUrl: string | null;
+};
+
+export type ListingCoAgent = {
+  id: string;
+  listingId: string;
+  clientId: string;
+  clientName: string;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  externalId: string | null;
+  sortOrder: number;
+};
+
+export type CoAgentClientOption = {
+  id: string;
+  name: string;
+  email: string | null;
+  phone: string | null;
+  commercialRole: string | null;
 };
 
 export type WorkspaceTeam = {
@@ -592,6 +614,62 @@ async function attachActingAgents(
   }));
 }
 
+async function attachCoAgents(
+  client: SupabaseClient,
+  accountId: string,
+  listings: CommercialListing[],
+): Promise<CommercialListing[]> {
+  if (listings.length === 0) return listings;
+
+  const listingIds = listings.map((l) => l.id);
+  const { data: rows, error } = await fromTable(
+    client,
+    'commercial_listing_co_agents',
+  )
+    .select(
+      'id, listing_id, client_id, contact_name, contact_email, contact_phone, external_id, sort_order, clients(display_name, company_name, first_name, last_name)',
+    )
+    .eq('account_id', accountId)
+    .in('listing_id', listingIds)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[listings] attachCoAgents:', error.message);
+    return listings.map((listing) => ({ ...listing, coAgents: [] }));
+  }
+
+  const byListing = new Map<string, ListingCoAgent[]>();
+  for (const row of (rows ?? []) as Array<Record<string, unknown>>) {
+    const clientRow = row.clients as Record<string, unknown> | null;
+    const clientName =
+      (clientRow?.display_name as string | null)?.trim() ||
+      (clientRow?.company_name as string | null)?.trim() ||
+      [clientRow?.first_name, clientRow?.last_name]
+        .filter(Boolean)
+        .join(' ')
+        .trim() ||
+      'Co-marketing agent';
+    const list = byListing.get(row.listing_id as string) ?? [];
+    list.push({
+      id: row.id as string,
+      listingId: row.listing_id as string,
+      clientId: row.client_id as string,
+      clientName,
+      contactName: (row.contact_name as string | null) ?? null,
+      contactEmail: (row.contact_email as string | null) ?? null,
+      contactPhone: (row.contact_phone as string | null) ?? null,
+      externalId: (row.external_id as string | null) ?? null,
+      sortOrder: Number(row.sort_order ?? list.length),
+    });
+    byListing.set(row.listing_id as string, list);
+  }
+
+  return listings.map((listing) => ({
+    ...listing,
+    coAgents: byListing.get(listing.id) ?? [],
+  }));
+}
+
 export function createListingsService(client: SupabaseClient) {
   return {
     async listListings(
@@ -617,7 +695,8 @@ export function createListingsService(client: SupabaseClient) {
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
       const withCovers = await attachCoverUrls(client, listings);
-      return attachActingAgents(client, accountId, withCovers);
+      const withAgents = await attachActingAgents(client, accountId, withCovers);
+      return attachCoAgents(client, accountId, withAgents);
     },
 
     async getListing(
@@ -1386,6 +1465,308 @@ export function createListingsService(client: SupabaseClient) {
         input.accountId,
         input.accountSlug,
       );
+    },
+
+    async listCoAgents(
+      listingId: string,
+      accountId: string,
+    ): Promise<ListingCoAgent[]> {
+      const { data: rows, error } = await fromTable(
+        client,
+        'commercial_listing_co_agents',
+      )
+        .select(
+          'id, listing_id, client_id, contact_name, contact_email, contact_phone, external_id, sort_order, clients(display_name, company_name, first_name, last_name)',
+        )
+        .eq('listing_id', listingId)
+        .eq('account_id', accountId)
+        .order('sort_order', { ascending: true });
+
+      if (error) {
+        console.error('[listings] listCoAgents:', error.message);
+        return [];
+      }
+
+      return ((rows ?? []) as Array<Record<string, unknown>>).map(
+        (row, index) => {
+          const clientRow = row.clients as Record<string, unknown> | null;
+          const clientName =
+            (clientRow?.display_name as string | null)?.trim() ||
+            (clientRow?.company_name as string | null)?.trim() ||
+            [clientRow?.first_name, clientRow?.last_name]
+              .filter(Boolean)
+              .join(' ')
+              .trim() ||
+            'Co-marketing agent';
+          return {
+            id: row.id as string,
+            listingId: row.listing_id as string,
+            clientId: row.client_id as string,
+            clientName,
+            contactName: (row.contact_name as string | null) ?? null,
+            contactEmail: (row.contact_email as string | null) ?? null,
+            contactPhone: (row.contact_phone as string | null) ?? null,
+            externalId: (row.external_id as string | null) ?? null,
+            sortOrder: Number(row.sort_order ?? index),
+          };
+        },
+      );
+    },
+
+    async searchCoAgentClients(input: {
+      accountId: string;
+      query?: string;
+      excludeListingId?: string;
+    }): Promise<CoAgentClientOption[]> {
+      let excludeIds: string[] = [];
+      if (input.excludeListingId) {
+        const { data: linked } = await fromTable(
+          client,
+          'commercial_listing_co_agents',
+        )
+          .select('client_id')
+          .eq('listing_id', input.excludeListingId)
+          .eq('account_id', input.accountId);
+        excludeIds = ((linked ?? []) as Array<{ client_id: string }>).map(
+          (r) => r.client_id,
+        );
+      }
+
+      let query = client
+        .from('clients')
+        .select(
+          'id, display_name, company_name, first_name, last_name, email, phone, commercial_role',
+        )
+        .eq('account_id', input.accountId)
+        .is('deleted_at', null)
+        .order('display_name', { ascending: true })
+        .limit(40);
+
+      const q = input.query?.trim().replace(/[%_,]/g, ' ');
+      if (q) {
+        query = query.or(
+          `display_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%`,
+        );
+      }
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+
+      return ((data ?? []) as Array<Record<string, unknown>>)
+        .filter((row) => !excludeIds.includes(row.id as string))
+        .map((row) => {
+          const name =
+            (row.display_name as string | null)?.trim() ||
+            (row.company_name as string | null)?.trim() ||
+            [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+            'Client';
+          return {
+            id: row.id as string,
+            name,
+            email: (row.email as string | null) ?? null,
+            phone: (row.phone as string | null) ?? null,
+            commercialRole: (row.commercial_role as string | null) ?? null,
+          };
+        });
+    },
+
+    async addCoAgent(input: {
+      listingId: string;
+      accountId: string;
+      clientId?: string;
+      companyName?: string;
+      contactName?: string | null;
+      contactEmail?: string | null;
+      contactPhone?: string | null;
+      externalId?: string | null;
+    }): Promise<ListingCoAgent[]> {
+      const listing = await this.getListing(input.listingId, input.accountId);
+      if (!listing) throw new Error('Listing not found');
+
+      let clientId = input.clientId ?? null;
+      const contactName = input.contactName?.trim() || null;
+      const contactEmail = input.contactEmail?.trim() || null;
+      const contactPhone = input.contactPhone?.trim() || null;
+
+      if (!clientId) {
+        const companyName = input.companyName?.trim();
+        if (!companyName) throw new Error('Company name is required');
+
+        const { data: created, error: createError } = await client
+          .from('clients')
+          .insert({
+            account_id: input.accountId,
+            client_type: 'business',
+            company_name: companyName,
+            display_name: companyName,
+            email: contactEmail,
+            phone: contactPhone,
+            commercial_role: 'agent',
+          })
+          .select('id')
+          .single();
+
+        if (createError || !created) {
+          throw new Error(createError?.message ?? 'Failed to create client');
+        }
+        clientId = created.id as string;
+      } else {
+        const { data: existing, error: existingError } = await client
+          .from('clients')
+          .select('id')
+          .eq('id', clientId)
+          .eq('account_id', input.accountId)
+          .is('deleted_at', null)
+          .maybeSingle();
+        if (existingError) throw new Error(existingError.message);
+        if (!existing) throw new Error('Client not found in this workspace');
+      }
+
+      const { count } = await fromTable(client, 'commercial_listing_co_agents')
+        .select('id', { count: 'exact', head: true })
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId);
+
+      const { error: insertError } = await fromTable(
+        client,
+        'commercial_listing_co_agents',
+      ).insert({
+        listing_id: input.listingId,
+        account_id: input.accountId,
+        client_id: clientId,
+        contact_name: contactName,
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
+        external_id: input.externalId ?? null,
+        sort_order: count ?? 0,
+      });
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          throw new Error('That agent is already linked to this disposal');
+        }
+        throw new Error(insertError.message);
+      }
+
+      if (listing.instructionNature !== 'joint') {
+        await client
+          .from('commercial_listings')
+          .update({
+            instruction_nature: 'joint',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', input.listingId)
+          .eq('account_id', input.accountId);
+      }
+
+      return this.listCoAgents(input.listingId, input.accountId);
+    },
+
+    async removeCoAgent(input: {
+      listingId: string;
+      accountId: string;
+      coAgentId: string;
+    }): Promise<ListingCoAgent[]> {
+      const { error } = await fromTable(client, 'commercial_listing_co_agents')
+        .delete()
+        .eq('id', input.coAgentId)
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId);
+
+      if (error) throw new Error(error.message);
+
+      const remaining = await this.listCoAgents(
+        input.listingId,
+        input.accountId,
+      );
+
+      if (remaining.length === 0) {
+        await client
+          .from('commercial_listings')
+          .update({
+            instruction_nature: 'exclusive',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', input.listingId)
+          .eq('account_id', input.accountId);
+      }
+
+      return remaining;
+    },
+
+    /**
+     * Upsert co-marketing agents from Agents Society / PH joint_agents.
+     * Skips own-agency marketing contacts — those are not joint agents.
+     */
+    async syncCoAgentsFromFeed(input: {
+      listingId: string;
+      accountId: string;
+      agents: Array<{
+        externalId?: string | null;
+        firmName: string;
+        contactName?: string | null;
+        contactEmail?: string | null;
+        contactPhone?: string | null;
+      }>;
+      /** Offices treated as “own desk” (not co-marketing). */
+      ownOfficeNames?: string[];
+    }): Promise<ListingCoAgent[]> {
+      const own = new Set(
+        (input.ownOfficeNames ?? []).map((n) => n.trim().toLowerCase()),
+      );
+
+      for (const agent of input.agents) {
+        const firm = agent.firmName.trim();
+        if (!firm) continue;
+        if (own.has(firm.toLowerCase())) continue;
+
+        let clientId: string | null = null;
+        const { data: byEmail } = agent.contactEmail
+          ? await client
+              .from('clients')
+              .select('id')
+              .eq('account_id', input.accountId)
+              .ilike('email', agent.contactEmail.trim())
+              .is('deleted_at', null)
+              .limit(1)
+              .maybeSingle()
+          : { data: null };
+
+        if (byEmail?.id) {
+          clientId = byEmail.id as string;
+        } else {
+          const { data: byName } = await client
+            .from('clients')
+            .select('id')
+            .eq('account_id', input.accountId)
+            .ilike('company_name', firm)
+            .is('deleted_at', null)
+            .limit(1)
+            .maybeSingle();
+          clientId = (byName?.id as string | undefined) ?? null;
+        }
+
+        await this.addCoAgent({
+          listingId: input.listingId,
+          accountId: input.accountId,
+          clientId: clientId ?? undefined,
+          companyName: clientId ? undefined : firm,
+          contactName: agent.contactName,
+          contactEmail: agent.contactEmail,
+          contactPhone: agent.contactPhone,
+          externalId: agent.externalId ?? null,
+        }).catch((err) => {
+          if (
+            err instanceof Error &&
+            err.message.includes('already linked')
+          ) {
+            return;
+          }
+          throw err;
+        });
+      }
+
+      return this.listCoAgents(input.listingId, input.accountId);
     },
   };
 }

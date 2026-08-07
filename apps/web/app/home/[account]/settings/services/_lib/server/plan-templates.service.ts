@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import Stripe from 'stripe';
 
 import { requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import type {
   ClientSubscriptionRecord,
@@ -106,6 +107,11 @@ class PlanTemplatesService {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private get db(): any {
     return this.client;
+  }
+
+  /** businesses RLS is owner_id-only (and many rows have null owner_id). */
+  private get adminDb(): SupabaseClient {
+    return getSupabaseServerAdminClient();
   }
 
   private async ensureMember(accountId: string) {
@@ -282,8 +288,8 @@ class PlanTemplatesService {
       };
     }
 
-    // Legacy agency_stripe via businesses
-    const { data: business } = await this.db
+    // Legacy agency_stripe via businesses (RLS is owner-only — use admin)
+    const { data: business } = await this.adminDb
       .from('businesses')
       .select('id')
       .eq('account_id', accountId)
@@ -423,24 +429,59 @@ class PlanTemplatesService {
   }
 
   private async resolveBusinessId(accountId: string): Promise<string> {
-    const { data } = await this.db
+    const { data: existing, error: lookupError } = await this.adminDb
       .from('businesses')
       .select('id')
       .eq('account_id', accountId)
+      .order('created_at', { ascending: true })
+      .limit(1)
       .maybeSingle();
-    if (data?.id) return String(data.id);
 
-    // Legacy rows sometimes used account id as businesses.id
-    const { data: byId } = await this.db
+    if (lookupError) throw lookupError;
+    if (existing?.id) return String(existing.id);
+
+    const { data: byId } = await this.adminDb
       .from('businesses')
       .select('id')
       .eq('id', accountId)
       .maybeSingle();
     if (byId?.id) return String(byId.id);
 
-    throw new Error(
-      'No business profile for this workspace — complete workspace setup first',
-    );
+    const { data: account, error: accountError } = await this.adminDb
+      .from('accounts')
+      .select('id, name, slug')
+      .eq('id', accountId)
+      .maybeSingle();
+
+    if (accountError) throw accountError;
+    if (!account) throw new Error('Workspace not found');
+
+    const accountRow = account as {
+      name?: string | null;
+      slug?: string | null;
+    };
+    const name =
+      accountRow.name?.trim() || accountRow.slug?.trim() || 'Workspace';
+    const slug =
+      accountRow.slug?.trim() ||
+      `workspace-${accountId.replace(/-/g, '').slice(0, 8)}`;
+
+    const { data: created, error: createError } = await this.adminDb
+      .from('businesses')
+      .insert({
+        name,
+        slug,
+        account_id: accountId,
+        type: 'other',
+      })
+      .select('id')
+      .single();
+
+    if (createError || !created) {
+      throw createError ?? new Error('Could not create business for workspace');
+    }
+
+    return String((created as { id: string }).id);
   }
 
   /**
