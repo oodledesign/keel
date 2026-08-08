@@ -375,10 +375,15 @@ export function ContractEditContent({
   const parsedTotalPence = Math.round(parseFloat(totalPence || '0') * 100) || 0;
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col gap-6 px-4 md:px-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button variant="ghost" size="sm" asChild>
+    <div className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 flex-col gap-5 sm:gap-6">
+      <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
+        <div className="flex flex-wrap items-center gap-3">
+          <Button
+            variant="ghost"
+            size="sm"
+            asChild
+            className="-ml-2 w-fit text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          >
             <Link href={contractsPath}>
               <ArrowLeft className="mr-2 h-4 w-4" />
               Contracts
@@ -390,7 +395,7 @@ export function ContractEditContent({
             recipientSignedAt={contract.recipient_signed_at}
           />
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           {canEditBody ? (
             <Button
               variant="outline"

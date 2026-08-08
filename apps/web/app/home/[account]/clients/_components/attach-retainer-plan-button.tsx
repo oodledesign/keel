@@ -32,6 +32,7 @@ import {
 import {
   type PlanTemplateRecord,
   formatMinorUnits,
+  planTemplateKindLabel,
 } from '~/lib/billing/plan-templates-types';
 
 export function AttachRetainerPlanButton({
@@ -56,7 +57,6 @@ export function AttachRetainerPlanButton({
     if (!open) return;
     void listPlanTemplatesAction({
       accountId,
-      kind: 'retainer',
       activeOnly: true,
     })
       .then((rows) => {
@@ -111,9 +111,10 @@ export function AttachRetainerPlanButton({
         <DialogHeader>
           <DialogTitle>Add retainer</DialogTitle>
           <DialogDescription>
-            Creates an incomplete subscription on your connected Stripe account.
-            To change amount later, cancel and create a new subscription — no
-            upgrades or prorations in this version.
+            Creates an incomplete subscription on your connected Stripe account
+            from any active Services plan (hosting, retainer, care plan, or
+            custom). To change amount later, cancel and create a new
+            subscription — no upgrades or prorations in this version.
           </DialogDescription>
         </DialogHeader>
 
@@ -179,19 +180,25 @@ export function AttachRetainerPlanButton({
                   onValueChange={setPlanTemplateId}
                 >
                   <SelectTrigger>
-                    <SelectValue placeholder="Select retainer" />
+                    <SelectValue placeholder="Select a plan" />
                   </SelectTrigger>
                   <SelectContent>
-                    {templates.map((row) => (
-                      <SelectItem key={row.id} value={row.id}>
-                        {row.name} —{' '}
-                        {formatMinorUnits(
-                          row.amount,
-                          row.currency,
-                          row.interval,
-                        )}
+                    {templates.length === 0 ? (
+                      <SelectItem value="__none__" disabled>
+                        No active plans in Services
                       </SelectItem>
-                    ))}
+                    ) : (
+                      templates.map((row) => (
+                        <SelectItem key={row.id} value={row.id}>
+                          {row.name} · {planTemplateKindLabel(row.kind)} —{' '}
+                          {formatMinorUnits(
+                            row.amount,
+                            row.currency,
+                            row.interval,
+                          )}
+                        </SelectItem>
+                      ))
+                    )}
                   </SelectContent>
                 </Select>
               </div>

@@ -40,6 +40,7 @@ function accountPath(accountSlug: string, template: string) {
 function ActionCard({
   href,
   label,
+  shortLabel,
   value,
   hint,
   icon: Icon,
@@ -47,19 +48,20 @@ function ActionCard({
 }: {
   href: string;
   label: string;
+  shortLabel?: string;
   value: number;
   hint: string;
   icon: React.ComponentType<{ className?: string }>;
   emphasize?: boolean;
 }) {
   return (
-    <Link href={href} className="block">
+    <Link href={href} className="block min-w-0">
       <Card
-        className={`${workspacePanelCard} transition-colors hover:border-[var(--ozer-accent)]/35`}
+        className={`${workspacePanelCard} h-full transition-colors hover:border-[var(--ozer-accent)]/35`}
       >
-        <CardContent className="flex items-start gap-3 p-4">
+        <CardContent className="flex flex-col gap-2 p-3 sm:flex-row sm:items-start sm:gap-3 sm:p-4">
           <div
-            className={`${workspaceIconChip} ${
+            className={`${workspaceIconChip} hidden sm:flex ${
               emphasize && value > 0
                 ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
                 : ''
@@ -68,13 +70,24 @@ function ActionCard({
             <Icon className="h-4 w-4" />
           </div>
           <div className="min-w-0 flex-1">
-            <p className="text-2xl font-semibold text-[var(--workspace-shell-text)] tabular-nums">
+            <p className="text-xl font-semibold text-[var(--workspace-shell-text)] tabular-nums sm:text-2xl">
               {value}
             </p>
-            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-              {label}
+            <p className="mt-0.5 text-[11px] leading-snug font-medium text-[var(--workspace-shell-text)] sm:text-sm">
+              {shortLabel ? (
+                <>
+                  <span className="sm:hidden">{shortLabel}</span>
+                  <span className="hidden sm:inline">{label}</span>
+                </>
+              ) : (
+                label
+              )}
             </p>
-            <p className={`mt-0.5 text-xs ${workspaceTextMuted}`}>{hint}</p>
+            <p
+              className={`mt-0.5 hidden text-xs sm:block ${workspaceTextMuted}`}
+            >
+              {hint}
+            </p>
           </div>
         </CardContent>
       </Card>
@@ -116,11 +129,12 @@ export function CommercialAgencyDashboard({
   );
 
   return (
-    <div className="space-y-6 p-4 lg:p-6">
-      <section className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <div className="min-w-0 space-y-6 p-4 pb-[calc(5.5rem+max(1.5rem,env(safe-area-inset-bottom)))] lg:p-6 lg:pb-6">
+      <section className="grid grid-cols-3 gap-2 sm:gap-3 xl:grid-cols-4">
         <ActionCard
           href={listingsHref}
           label="Unactioned enquiries"
+          shortLabel="Unactioned"
           value={metrics.unactionedEnquiries}
           hint={
             metrics.unactionedEnquiries > 0
@@ -133,6 +147,7 @@ export function CommercialAgencyDashboard({
         <ActionCard
           href={viewingsHref}
           label="Viewings awaiting feedback"
+          shortLabel="Awaiting feedback"
           value={metrics.awaitingFeedbackViewings}
           hint="Add feedback after viewings"
           icon={CalendarDays}
@@ -141,6 +156,7 @@ export function CommercialAgencyDashboard({
         <ActionCard
           href={listingsHref}
           label="Stock on market"
+          shortLabel="On market"
           value={metrics.stockOnMarket}
           hint="Live disposals"
           icon={Building2}
@@ -157,11 +173,11 @@ export function CommercialAgencyDashboard({
         />
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-[1.4fr_1fr]">
-        <Card className={workspacePanelCard}>
-          <CardContent className="p-5">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div>
+      <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+        <Card className={`${workspacePanelCard} min-w-0 overflow-hidden`}>
+          <CardContent className="p-4 sm:p-5">
+            <div className="mb-4 flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
                 <h3 className="text-base font-semibold text-[var(--workspace-shell-text)]">
                   Recent disposals
                 </h3>
@@ -169,7 +185,10 @@ export function CommercialAgencyDashboard({
                   Latest instructions and marketing stock
                 </p>
               </div>
-              <Link href={listingsHref} className={workspaceLinkAccent}>
+              <Link
+                href={listingsHref}
+                className={`${workspaceLinkAccent} shrink-0 whitespace-nowrap`}
+              >
                 View all
               </Link>
             </div>
@@ -192,41 +211,50 @@ export function CommercialAgencyDashboard({
               </div>
             ) : (
               <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
-                {recentListings.map((listing) => (
-                  <li key={listing.id}>
-                    <Link
-                      href={accountPath(
-                        accountSlug,
-                        pathsConfig.app.accountListingDetail,
-                      ).replace('[id]', listing.id)}
-                      className="flex items-center justify-between gap-3 py-3 transition-colors hover:text-[var(--ozer-accent)]"
-                    >
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                          {listing.name}
-                        </p>
-                        <p className={`truncate text-xs ${workspaceTextMuted}`}>
-                          {listingLocation(listing) || 'No location'} ·{' '}
-                          {DISPOSAL_TYPE_LABELS[
-                            listing.disposalType as DisposalType
-                          ] ?? listing.disposalType}
-                        </p>
-                      </div>
-                      <span className="shrink-0 rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/70">
-                        {LISTING_STATUS_LABELS[
-                          listing.status as ListingStatus
-                        ] ?? listing.status}
-                      </span>
-                    </Link>
-                  </li>
-                ))}
+                {recentListings.map((listing) => {
+                  const statusLabel =
+                    LISTING_STATUS_LABELS[listing.status as ListingStatus] ??
+                    listing.status;
+
+                  return (
+                    <li key={listing.id} className="min-w-0">
+                      <Link
+                        href={accountPath(
+                          accountSlug,
+                          pathsConfig.app.accountListingDetail,
+                        ).replace('[id]', listing.id)}
+                        className="flex min-w-0 items-start gap-2 py-3 transition-colors hover:text-[var(--ozer-accent)] sm:items-center sm:gap-3"
+                      >
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                            {listing.name}
+                          </p>
+                          <p
+                            className={`truncate text-xs ${workspaceTextMuted}`}
+                          >
+                            {listingLocation(listing) || 'No location'} ·{' '}
+                            {DISPOSAL_TYPE_LABELS[
+                              listing.disposalType as DisposalType
+                            ] ?? listing.disposalType}
+                          </p>
+                        </div>
+                        <span
+                          title={statusLabel}
+                          className="mt-0.5 max-w-[7.5rem] shrink-0 truncate rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text)]/70 sm:mt-0 sm:max-w-[9rem] sm:px-2.5 sm:text-[11px]"
+                        >
+                          {statusLabel}
+                        </span>
+                      </Link>
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </CardContent>
         </Card>
 
-        <Card className={workspacePanelCard}>
-          <CardContent className="p-5">
+        <Card className={`${workspacePanelCard} min-w-0 overflow-hidden`}>
+          <CardContent className="p-4 sm:p-5">
             <h3 className="text-base font-semibold text-[var(--workspace-shell-text)]">
               Quick links
             </h3>
@@ -247,10 +275,12 @@ export function CommercialAgencyDashboard({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2.5 text-sm text-[var(--workspace-shell-text)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  className="flex min-w-0 items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2.5 text-sm text-[var(--workspace-shell-text)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)]"
                 >
-                  <item.icon className={`h-4 w-4 ${workspaceTextMuted}`} />
-                  {item.label}
+                  <item.icon
+                    className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`}
+                  />
+                  <span className="truncate">{item.label}</span>
                 </Link>
               ))}
             </div>

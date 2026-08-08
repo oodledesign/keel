@@ -28,6 +28,7 @@ export type PortalCreditsBundle = {
     label: string;
     creditCost: number;
     isBillable: boolean;
+    isSupport: boolean;
     categoryGroup: string | null;
   }>;
   topupPacks: Array<{

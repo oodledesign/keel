@@ -93,7 +93,7 @@ export default async function ClientPortalOverviewPage({
 
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-base font-medium">Support</CardTitle>
+            <CardTitle className="text-base font-medium">Services</CardTitle>
             <LifeBuoy className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
           </CardHeader>
           <CardContent className="space-y-3">
@@ -104,7 +104,7 @@ export default async function ClientPortalOverviewPage({
               {overview.openTicketCount === 1 ? 'open ticket' : 'open tickets'}
             </p>
             <Button asChild size="sm" variant="outline">
-              <Link href={supportHref}>View support</Link>
+              <Link href={supportHref}>View services</Link>
             </Button>
           </CardContent>
         </Card>

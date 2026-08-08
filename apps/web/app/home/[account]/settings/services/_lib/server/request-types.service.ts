@@ -16,6 +16,7 @@ function mapRequestType(row: Record<string, unknown>): RequestTypeRecord {
     label: String(row.label ?? ''),
     creditCost: Number(row.credit_cost ?? 0),
     isBillable: Boolean(row.is_billable ?? true),
+    isSupport: Boolean(row.is_support ?? false),
     categoryGroup: row.category_group ? String(row.category_group) : null,
     sortOrder: Number(row.sort_order ?? 0),
     isActive: Boolean(row.is_active ?? true),
@@ -74,6 +75,7 @@ class RequestTypesService {
     label: string;
     creditCost: number;
     isBillable: boolean;
+    isSupport: boolean;
     categoryGroup?: string | null;
     sortOrder: number;
     isActive: boolean;
@@ -84,6 +86,7 @@ class RequestTypesService {
       label: input.label,
       credit_cost: input.creditCost,
       is_billable: input.isBillable,
+      is_support: input.isSupport,
       category_group: input.categoryGroup?.trim() || null,
       sort_order: input.sortOrder,
       is_active: input.isActive,

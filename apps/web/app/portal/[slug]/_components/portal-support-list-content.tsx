@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
-import { LifeBuoy, Plus } from 'lucide-react';
+import { Layers, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
@@ -81,18 +81,18 @@ export function PortalSupportListContent({
             />
           )}
           <h2 className="text-xl font-semibold text-[var(--ozer-text-on-light)]">
-            Support
+            Services
           </h2>
           <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
             {filteredTickets.length}{' '}
-            {filteredTickets.length === 1 ? 'ticket' : 'tickets'}
+            {filteredTickets.length === 1 ? 'request' : 'requests'}
           </p>
         </div>
 
         <Button asChild>
           <Link href={newHref}>
             <Plus className="h-4 w-4" />
-            Raise a ticket
+            New request
           </Link>
         </Button>
       </div>
@@ -107,7 +107,7 @@ export function PortalSupportListContent({
               onClick={() => setStatusFilter(tab.value)}
               className={`rounded-full px-3 py-1.5 text-sm font-medium transition-colors ${
                 active
-                  ? 'bg-[var(--ozer-accent-subtle)] text-[#1d6f65]'
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
                   : 'text-[var(--ozer-text-on-light-muted)] hover:bg-slate-100 hover:text-[var(--ozer-text-on-light)]'
               }`}
             >
@@ -120,17 +120,18 @@ export function PortalSupportListContent({
       {filteredTickets.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
-            <LifeBuoy className="mb-4 h-12 w-12 text-[var(--workspace-shell-text-muted)]" />
+            <Layers className="mb-4 h-12 w-12 text-[var(--workspace-shell-text-muted)]" />
             <p className="font-medium text-[var(--ozer-text-on-light)]">
-              No support tickets yet
+              No requests yet
             </p>
             <p className="mt-1 max-w-md text-sm text-[var(--ozer-text-on-light-muted)]">
-              Need help? Raise a ticket and our team will get back to you.
+              Request a service or open a support ticket and our team will get
+              back to you.
             </p>
             <Button asChild className="mt-4">
               <Link href={newHref}>
                 <Plus className="h-4 w-4" />
-                Raise a ticket
+                New request
               </Link>
             </Button>
           </CardContent>
@@ -141,7 +142,7 @@ export function PortalSupportListContent({
             <table className="min-w-full text-left text-sm">
               <thead className="border-b border-slate-200 bg-slate-50 text-xs tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase">
                 <tr>
-                  <th className="px-4 py-3 font-medium">Ticket</th>
+                  <th className="px-4 py-3 font-medium">Request</th>
                   <th className="px-4 py-3 font-medium">Title</th>
                   <th className="px-4 py-3 font-medium">Stage</th>
                   <th className="px-4 py-3 font-medium">Priority</th>

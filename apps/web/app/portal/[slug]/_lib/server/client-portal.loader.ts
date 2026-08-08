@@ -4,12 +4,13 @@ import { cache } from 'react';
 
 import { notFound, redirect } from 'next/navigation';
 
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
+import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import {
   loadClientPicturesByOrgIds,
   loadSupportBusinessBrand,
@@ -67,24 +68,16 @@ export const loadClientPortalContext = cache(
     }
 
     const businessId = (org as { business_id?: string | null }).business_id;
-    let accountId: string | null = null;
-
-    if (businessId) {
-      const { data: business } = await client
-        .from('businesses')
-        .select('account_id')
-        .eq('id', businessId)
-        .maybeSingle();
-      accountId =
-        (business as { account_id?: string | null } | null)?.account_id ??
-        businessId;
-    }
+    const accountId = await resolveClientOrgAccountId(client, {
+      business_id: businessId,
+    });
 
     if (!accountId) {
       notFound();
     }
 
-    const { data: account } = await client
+    const admin = getSupabaseServerAdminClient();
+    const { data: account } = await admin
       .from('accounts')
       .select('slug')
       .eq('id', accountId)
@@ -157,8 +150,6 @@ export const loadClientPortalContext = cache(
     // admin client — portal contacts have no accounts_memberships row, so
     // RLS on `contacts` (own row via user_id, or account-member) would hide
     // every row here regardless.
-    const admin = getSupabaseServerAdminClient();
-
     const { data: orgClientRows } = await admin
       .from('clients')
       .select('id')

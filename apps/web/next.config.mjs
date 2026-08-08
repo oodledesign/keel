@@ -538,6 +538,21 @@ async function getRedirects() {
       permanent: true,
     },
     {
+      source: '/portal/:clientSlug/support',
+      destination: '/portal/:clientSlug/services',
+      permanent: true,
+    },
+    {
+      source: '/portal/:clientSlug/support/new',
+      destination: '/portal/:clientSlug/services/new',
+      permanent: true,
+    },
+    {
+      source: '/portal/:clientSlug/support/:id',
+      destination: '/portal/:clientSlug/services/:id',
+      permanent: true,
+    },
+    {
       source: '/server-sitemap.xml',
       destination: '/sitemap.xml',
       permanent: true,

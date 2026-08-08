@@ -73,7 +73,7 @@ async function ProposalEditPage({ params }: ProposalEditPageProps) {
         account={accountSlug}
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-4 pb-[calc(5.5rem+max(1.5rem,env(safe-area-inset-bottom)))] md:px-6 md:py-6 md:pb-6">
         <ProposalEditContent
           accountSlug={accountSlug}
           accountId={accountId}

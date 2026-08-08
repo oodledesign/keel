@@ -156,7 +156,7 @@ export function PortalCreditsContent({
           {bundle.pendingCreditTicketCount} request
           {bundle.pendingCreditTicketCount === 1 ? '' : 's'} waiting on credits.{' '}
           <Link href={supportHref} className="font-medium underline">
-            View support
+            View services
           </Link>
         </div>
       ) : null}

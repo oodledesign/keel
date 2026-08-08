@@ -7,11 +7,12 @@ import { ArrowDown, ArrowUp, Loader2, Plus } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 import { cn } from '@kit/ui/utils';
 
 import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
+
 import {
   deleteRequestTypeAction,
   reorderRequestTypesAction,
@@ -23,6 +24,7 @@ type Draft = {
   label: string;
   creditCost: string;
   isBillable: boolean;
+  isSupport: boolean;
   categoryGroup: string;
   isActive: boolean;
 };
@@ -31,6 +33,7 @@ const emptyDraft = (): Draft => ({
   label: '',
   creditCost: '1',
   isBillable: true,
+  isSupport: false,
   categoryGroup: '',
   isActive: true,
 });
@@ -68,6 +71,7 @@ export function RequestTypesPanel({
       label: row.label,
       creditCost: String(row.creditCost),
       isBillable: row.isBillable,
+      isSupport: row.isSupport,
       categoryGroup: row.categoryGroup ?? '',
       isActive: row.isActive,
     });
@@ -85,9 +89,7 @@ export function RequestTypesPanel({
       return;
     }
 
-    const existing = draft.id
-      ? types.find((row) => row.id === draft.id)
-      : null;
+    const existing = draft.id ? types.find((row) => row.id === draft.id) : null;
 
     startTransition(async () => {
       try {
@@ -97,6 +99,7 @@ export function RequestTypesPanel({
           label: draft.label.trim(),
           creditCost: Math.round(creditCost),
           isBillable: draft.isBillable,
+          isSupport: draft.isSupport,
           categoryGroup: draft.categoryGroup.trim() || null,
           sortOrder: existing?.sortOrder ?? 0,
           isActive: draft.isActive,
@@ -106,10 +109,14 @@ export function RequestTypesPanel({
           return [...without, saved];
         });
         setDraft(null);
-        toast.success(draft.id ? 'Request type updated' : 'Request type created');
+        toast.success(
+          draft.id ? 'Request type updated' : 'Request type created',
+        );
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not save request type',
+          error instanceof Error
+            ? error.message
+            : 'Could not save request type',
         );
       }
     });
@@ -227,6 +234,28 @@ export function RequestTypesPanel({
                 placeholder="support / retainer_work"
               />
             </div>
+            <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2 sm:col-span-2">
+              <div className="min-w-0 pr-3">
+                <Label htmlFor="rt-support">Support request type</Label>
+                <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                  Shown when the client chooses Support Ticket; hidden from the
+                  Services list.
+                </p>
+              </div>
+              <Switch
+                id="rt-support"
+                checked={draft.isSupport}
+                onCheckedChange={(checked) =>
+                  setDraft({
+                    ...draft,
+                    isSupport: checked,
+                    ...(checked && draft.isBillable
+                      ? { isBillable: false, creditCost: '0' }
+                      : {}),
+                  })
+                }
+              />
+            </div>
             <div className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2">
               <Label htmlFor="rt-billable">Billable</Label>
               <Switch
@@ -291,6 +320,12 @@ export function RequestTypesPanel({
               <div>
                 <p className="text-sm font-medium">
                   {row.label}
+                  {row.isSupport ? (
+                    <span className="text-xs font-normal text-[var(--workspace-shell-text-muted)]">
+                      {' '}
+                      · support
+                    </span>
+                  ) : null}
                   {row.categoryGroup ? (
                     <span className="text-xs font-normal text-[var(--workspace-shell-text-muted)]">
                       {' '}

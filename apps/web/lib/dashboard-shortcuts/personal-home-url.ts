@@ -1,3 +1,5 @@
+import { isReservedWorkspaceUrlSegment } from '@kit/shared/workspace-url';
+
 import pathsConfig from '~/config/paths.config';
 
 /** Query flag: user explicitly chose personal home (skip default-workspace redirect). */
@@ -61,4 +63,35 @@ export function normalizeAppHref(href: string): string {
   }
 
   return trimmed;
+}
+
+/**
+ * Workspace-scoped shortcuts (mobile pins, dashboard chips) should stay under the
+ * current account. Stale rows often keep an old slug after rename
+ * (`/app/work/oodle/tasks` → `/app/oodle/tasks` while the live slug is
+ * `oodle-design`); those miss the workspace loader and bounce to home.
+ */
+export function rewriteHrefToWorkspaceSlug(
+  href: string,
+  accountSlug: string,
+): string {
+  const slug = accountSlug.trim();
+  if (!slug) return href;
+
+  const normalized = normalizeAppHref(href);
+  const [pathPart, ...queryParts] = normalized.split('?');
+  const path = pathPart ?? normalized;
+  const suffix = queryParts.length > 0 ? `?${queryParts.join('?')}` : '';
+
+  const match = path.match(/^\/app\/([^/]+)(\/.*)?$/);
+  if (!match) return normalized;
+
+  const segment = match[1]!;
+  const remainder = match[2] ?? '';
+
+  if (isReservedWorkspaceUrlSegment(segment) || segment === slug) {
+    return normalized;
+  }
+
+  return `/app/${slug}${remainder}${suffix}`;
 }

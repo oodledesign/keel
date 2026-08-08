@@ -76,7 +76,9 @@ export async function loadWorkspaceMobileNavShortcuts(
   if (stored.length === 0) return [];
 
   const catalog = await buildWorkspaceShortcutCatalog(client, accountSlug);
-  return resolveStoredShortcuts(stored, catalog);
+  return resolveStoredShortcuts(stored, catalog, {
+    workspaceSlug: accountSlug,
+  });
 }
 
 export async function loadPersonalDashboardShortcuts(
@@ -125,7 +127,9 @@ export async function loadWorkspaceDashboardShortcuts(
   if (stored.length === 0) return [];
 
   const catalog = await buildWorkspaceShortcutCatalog(client, accountSlug);
-  return resolveStoredShortcuts(stored, catalog);
+  return resolveStoredShortcuts(stored, catalog, {
+    workspaceSlug: accountSlug,
+  });
 }
 
 export async function loadDefaultLandingPreference(

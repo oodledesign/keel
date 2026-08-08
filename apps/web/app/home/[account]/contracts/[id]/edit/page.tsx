@@ -15,12 +15,7 @@ interface ContractEditPageProps {
   params: Promise<{ account: string; id: string }>;
 }
 
-export const generateMetadata = async ({
-  params,
-}: {
-  params: Promise<{ account: string; id: string }>;
-}) => {
-  const { id } = await params;
+export const generateMetadata = async () => {
   return { title: `Edit contract` };
 };
 
@@ -60,7 +55,7 @@ async function ContractEditPage({ params }: ContractEditPageProps) {
         account={accountSlug}
       />
 
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-4 md:px-6 md:py-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-4 py-4 pb-[calc(5.5rem+max(1.5rem,env(safe-area-inset-bottom)))] md:px-6 md:py-6 md:pb-6">
         <ContractEditContent
           accountSlug={accountSlug}
           accountId={accountId}

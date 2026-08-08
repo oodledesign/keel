@@ -1,9 +1,11 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+
+import { Briefcase, LifeBuoy } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -17,6 +19,7 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import { SupportAttachmentUploader } from '~/components/support/support-attachment-uploader';
 import type { SupportAttachmentItem } from '~/components/support/support-attachment-uploader';
@@ -32,8 +35,6 @@ import type {
 import {
   addPortalTicketMessage,
   createPortalTicket,
-  listPortalProjects,
-  listPortalRequestTypes,
 } from '../_lib/server/server-actions';
 import {
   PortalTicketPriorityBadge,
@@ -129,7 +130,7 @@ export function PortalSupportDetailContent({
         href={listHref}
         className="text-sm text-[var(--ozer-text-on-light-muted)] hover:text-[var(--ozer-text-on-light)]"
       >
-        ← Back to support
+        ← Back to services
       </Link>
 
       <div className="space-y-3">
@@ -276,6 +277,156 @@ const priorityOptions: { value: PortalTicketPriority; label: string }[] = [
   { value: 'urgent', label: 'Urgent' },
 ];
 
+const GENERAL_SUPPORT_ID = '__general_support__';
+
+type RequestIntent = 'service' | 'support';
+type WizardStep = 1 | 2 | 3 | 4;
+
+type PortalRequestTypeOption = {
+  id: string;
+  label: string;
+  creditCost: number;
+  isBillable: boolean;
+  isSupport: boolean;
+  categoryGroup: string | null;
+};
+
+const STEP_LABELS = ['Type', 'Service', 'Details', 'Confirm'] as const;
+
+function WizardStepHeader({
+  step,
+  intent,
+}: {
+  step: WizardStep;
+  intent: RequestIntent | null;
+}) {
+  const labels =
+    intent === 'support'
+      ? (['Type', 'Topic', 'Details', 'Confirm'] as const)
+      : STEP_LABELS;
+
+  return (
+    <ol className="flex flex-wrap gap-2">
+      {labels.map((label, index) => {
+        const n = (index + 1) as WizardStep;
+        const active = step === n;
+        const done = step > n;
+        return (
+          <li
+            key={label}
+            className={cn(
+              'inline-flex items-center gap-2 rounded-full px-3 py-1 text-xs font-medium',
+              active
+                ? 'bg-[var(--ozer-accent)] text-white'
+                : done
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-text-on-light)]'
+                  : 'bg-slate-100 text-[var(--ozer-text-on-light-muted)]',
+            )}
+          >
+            <span className="tabular-nums">{n}</span>
+            {label}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function IntentRadioCard({
+  selected,
+  onSelect,
+  title,
+  description,
+  icon,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  description: string;
+  icon: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-start gap-4 rounded-xl border px-4 py-4 text-left transition-colors',
+        selected
+          ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
+          : 'border-slate-200 bg-white hover:border-slate-300',
+      )}
+      aria-pressed={selected}
+    >
+      <span
+        className={cn(
+          'mt-0.5 flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+          selected
+            ? 'bg-[var(--ozer-accent)] text-white'
+            : 'bg-slate-100 text-[var(--ozer-text-on-light-muted)]',
+        )}
+      >
+        {icon}
+      </span>
+      <span className="min-w-0">
+        <span className="block text-base font-semibold text-[var(--ozer-text-on-light)]">
+          {title}
+        </span>
+        <span className="mt-1 block text-sm text-[var(--ozer-text-on-light-muted)]">
+          {description}
+        </span>
+      </span>
+    </button>
+  );
+}
+
+function TypeRadioCard({
+  selected,
+  onSelect,
+  title,
+  meta,
+}: {
+  selected: boolean;
+  onSelect: () => void;
+  title: string;
+  meta: string;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onSelect}
+      className={cn(
+        'flex w-full items-center justify-between gap-3 rounded-xl border px-4 py-3.5 text-left transition-colors',
+        selected
+          ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
+          : 'border-slate-200 bg-white hover:border-slate-300',
+      )}
+      aria-pressed={selected}
+    >
+      <span className="flex min-w-0 items-center gap-3">
+        <span
+          className={cn(
+            'flex h-4 w-4 shrink-0 items-center justify-center rounded-full border',
+            selected
+              ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent)]'
+              : 'border-slate-300 bg-white',
+          )}
+          aria-hidden
+        >
+          {selected ? (
+            <span className="h-1.5 w-1.5 rounded-full bg-white" />
+          ) : null}
+        </span>
+        <span className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
+          {title}
+        </span>
+      </span>
+      <span className="shrink-0 text-xs text-[var(--ozer-text-on-light-muted)]">
+        {meta}
+      </span>
+    </button>
+  );
+}
+
 export function PortalSupportNewForm({
   clientOrgId,
   accountId,
@@ -283,6 +434,7 @@ export function PortalSupportNewForm({
   clientSlug,
   initialBalance = 0,
   initialRequestTypes = [],
+  initialProjects = [],
 }: {
   clientOrgId: string;
   accountId: string;
@@ -294,36 +446,33 @@ export function PortalSupportNewForm({
     label: string;
     creditCost: number;
     isBillable: boolean;
+    isSupport?: boolean;
     categoryGroup: string | null;
   }>;
+  initialProjects?: ProjectOption[];
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
-  const [projects, setProjects] = useState<ProjectOption[]>([]);
-  const [requestTypes, setRequestTypes] = useState(initialRequestTypes);
+  const [step, setStep] = useState<WizardStep>(1);
+  const [intent, setIntent] = useState<RequestIntent | null>(null);
   const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
+  const [selectedTypeId, setSelectedTypeId] = useState('');
   const [form, setForm] = useState({
     title: '',
     description: '',
     priority: 'medium' as PortalTicketPriority,
     project_id: '',
-    request_type_id: '',
     recording_url: '',
     external_url: '',
   });
 
-  useEffect(() => {
-    listPortalProjects({ clientOrgId, accountId })
-      .then((rows) => setProjects(rows ?? []))
-      .catch(() => setProjects([]));
-  }, [accountId, clientOrgId]);
-
-  useEffect(() => {
-    if (initialRequestTypes.length > 0) return;
-    listPortalRequestTypes({ clientOrgId })
-      .then((rows) => setRequestTypes(rows ?? []))
-      .catch(() => setRequestTypes([]));
-  }, [clientOrgId, initialRequestTypes.length]);
+  const requestTypes: PortalRequestTypeOption[] = initialRequestTypes.map(
+    (row) => ({
+      ...row,
+      isSupport: Boolean(row.isSupport),
+    }),
+  );
+  const projects = initialProjects;
 
   const listHref = pathsConfig.app.clientPortalSupport.replace(
     '[clientSlug]',
@@ -334,15 +483,81 @@ export function PortalSupportNewForm({
     clientSlug,
   );
 
-  const selectedType = requestTypes.find(
-    (row) => row.id === form.request_type_id,
-  );
+  const serviceTypes = requestTypes.filter((row) => !row.isSupport);
+  const supportTypes = requestTypes.filter((row) => row.isSupport);
 
-  const handleSubmit = (event: React.FormEvent) => {
-    event.preventDefault();
+  const selectedType =
+    selectedTypeId === GENERAL_SUPPORT_ID
+      ? null
+      : (requestTypes.find((row) => row.id === selectedTypeId) ?? null);
 
+  const selectedTypeLabel =
+    selectedTypeId === GENERAL_SUPPORT_ID
+      ? 'General support'
+      : (selectedType?.label ?? null);
+
+  const creditMeta = selectedType
+    ? selectedType.isBillable
+      ? `${selectedType.creditCost} credit${selectedType.creditCost === 1 ? '' : 's'} when work starts`
+      : 'Free'
+    : intent === 'support'
+      ? 'Free'
+      : null;
+
+  function goNextFromIntent() {
+    if (!intent) {
+      toast.error('Choose Service or Support to continue');
+      return;
+    }
+    setSelectedTypeId('');
+    setStep(2);
+  }
+
+  function goNextFromType() {
+    if (intent === 'service') {
+      if (serviceTypes.length === 0) {
+        toast.error('No services are available yet');
+        return;
+      }
+      if (!selectedTypeId) {
+        toast.error('Select a service to continue');
+        return;
+      }
+    }
+    if (intent === 'support') {
+      if (supportTypes.length > 0 && !selectedTypeId) {
+        toast.error('Select a support topic to continue');
+        return;
+      }
+      if (supportTypes.length === 0) {
+        setSelectedTypeId(GENERAL_SUPPORT_ID);
+      }
+    }
+    setStep(3);
+  }
+
+  function goNextFromDetails() {
     if (!form.title.trim() || !form.description.trim()) {
       toast.error('Title and description are required');
+      return;
+    }
+    setStep(4);
+  }
+
+  function handleSubmit() {
+    if (!intent) return;
+    if (!form.title.trim() || !form.description.trim()) {
+      toast.error('Title and description are required');
+      return;
+    }
+
+    const requestTypeId =
+      !selectedTypeId || selectedTypeId === GENERAL_SUPPORT_ID
+        ? null
+        : selectedTypeId;
+
+    if (intent === 'service' && !requestTypeId) {
+      toast.error('Select a service to continue');
       return;
     }
 
@@ -356,7 +571,8 @@ export function PortalSupportNewForm({
           description: form.description.trim(),
           priority: form.priority,
           project_id: form.project_id || null,
-          request_type_id: form.request_type_id || null,
+          request_type_id: requestTypeId,
+          request_intent: intent,
           recording_url: form.recording_url.trim() || null,
           external_url: form.external_url.trim() || null,
           attachments,
@@ -370,14 +586,14 @@ export function PortalSupportNewForm({
         router.refresh();
       } catch (error) {
         toast.error(
-          error instanceof Error ? error.message : 'Could not create ticket',
+          error instanceof Error ? error.message : 'Could not create request',
         );
       }
     });
-  };
+  }
 
   return (
-    <form onSubmit={handleSubmit} className="mx-auto max-w-2xl space-y-6">
+    <div className="mx-auto max-w-2xl space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm">
         <span className="text-[var(--ozer-text-on-light-muted)]">
           Credit balance:{' '}
@@ -393,164 +609,358 @@ export function PortalSupportNewForm({
         </Link>
       </div>
 
-      <div className="space-y-4 rounded-xl border border-slate-200 bg-white p-5 md:p-6">
-        {requestTypes.length > 0 ? (
-          <div className="space-y-2">
-            <Label>Request type</Label>
-            <Select
-              value={form.request_type_id || undefined}
-              onValueChange={(value) =>
-                setForm((current) => ({ ...current, request_type_id: value }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a request type" />
-              </SelectTrigger>
-              <SelectContent>
-                {requestTypes.map((row) => (
-                  <SelectItem key={row.id} value={row.id}>
-                    {row.label}
-                    {row.isBillable ? ` · ${row.creditCost} credits` : ' · free'}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {selectedType ? (
-              <p className="text-xs text-[var(--ozer-text-on-light-muted)]">
-                {selectedType.isBillable
-                  ? `This request costs ${selectedType.creditCost} credit${selectedType.creditCost === 1 ? '' : 's'} when work starts.`
-                  : 'This request type is not billable.'}
+      <WizardStepHeader step={step} intent={intent} />
+
+      <div className="space-y-5 rounded-xl border border-slate-200 bg-white p-5 md:p-6">
+        {step === 1 ? (
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
+                What do you need?
+              </h3>
+              <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+                Services draw from your retainer credits. Support is for help
+                and questions.
               </p>
-            ) : null}
+            </div>
+            <IntentRadioCard
+              selected={intent === 'service'}
+              onSelect={() => setIntent('service')}
+              title="Request a service"
+              description="Choose from configured services — credits may apply when work starts."
+              icon={<Briefcase className="h-5 w-5" />}
+            />
+            <IntentRadioCard
+              selected={intent === 'support'}
+              onSelect={() => setIntent('support')}
+              title="Support ticket"
+              description="Ask a question or report an issue. Designed for help, not billable work."
+              icon={<LifeBuoy className="h-5 w-5" />}
+            />
           </div>
         ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor="title">Title</Label>
-          <Input
-            id="title"
-            value={form.title}
-            onChange={(event) =>
-              setForm((current) => ({ ...current, title: event.target.value }))
-            }
-            placeholder="Brief summary of the issue"
-            required
-          />
-        </div>
-
-        <div className="space-y-2">
-          <Label htmlFor="description">Description</Label>
-          <Textarea
-            id="description"
-            value={form.description}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                description: event.target.value,
-              }))
-            }
-            rows={6}
-            placeholder="Describe the issue in detail"
-            required
-          />
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label>Priority</Label>
-            <Select
-              value={form.priority}
-              onValueChange={(value) =>
-                setForm((current) => ({
-                  ...current,
-                  priority: value as PortalTicketPriority,
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {priorityOptions.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
-                    {option.label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {step === 2 && intent === 'service' ? (
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
+                Choose a service
+              </h3>
+              <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+                Select the service that best matches your request.
+              </p>
+            </div>
+            {serviceTypes.length === 0 ? (
+              <p className="rounded-lg border border-dashed border-slate-200 px-4 py-6 text-center text-sm text-[var(--ozer-text-on-light-muted)]">
+                No services are configured yet. Contact your agency, or go back
+                and open a support ticket instead.
+              </p>
+            ) : (
+              serviceTypes.map((row) => (
+                <TypeRadioCard
+                  key={row.id}
+                  selected={selectedTypeId === row.id}
+                  onSelect={() => setSelectedTypeId(row.id)}
+                  title={row.label}
+                  meta={
+                    row.isBillable
+                      ? `${row.creditCost} credit${row.creditCost === 1 ? '' : 's'}`
+                      : 'Free'
+                  }
+                />
+              ))
+            )}
           </div>
+        ) : null}
 
-          <div className="space-y-2">
-            <Label>Project (optional)</Label>
-            <Select
-              value={form.project_id || '__none__'}
-              onValueChange={(value) =>
-                setForm((current) => ({
-                  ...current,
-                  project_id: value === '__none__' ? '' : value,
-                }))
-              }
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select project" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="__none__">No project</SelectItem>
-                {projects.map((project) => (
-                  <SelectItem key={project.id} value={project.id}>
-                    {project.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+        {step === 2 && intent === 'support' ? (
+          <div className="space-y-3">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
+                Support topic
+              </h3>
+              <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+                Pick a topic so we can route your request.
+              </p>
+            </div>
+            {supportTypes.length === 0 ? (
+              <TypeRadioCard
+                selected={
+                  selectedTypeId === GENERAL_SUPPORT_ID || !selectedTypeId
+                }
+                onSelect={() => setSelectedTypeId(GENERAL_SUPPORT_ID)}
+                title="General support"
+                meta="Free"
+              />
+            ) : (
+              supportTypes.map((row) => (
+                <TypeRadioCard
+                  key={row.id}
+                  selected={selectedTypeId === row.id}
+                  onSelect={() => setSelectedTypeId(row.id)}
+                  title={row.label}
+                  meta={
+                    row.isBillable
+                      ? `${row.creditCost} credit${row.creditCost === 1 ? '' : 's'}`
+                      : 'Free'
+                  }
+                />
+              ))
+            )}
           </div>
-        </div>
+        ) : null}
 
-        <div className="space-y-2">
-          <Label htmlFor="recording_url">Recording URL (optional)</Label>
-          <Input
-            id="recording_url"
-            value={form.recording_url}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                recording_url: event.target.value,
-              }))
-            }
-            placeholder="https://loom.com/…"
-          />
-        </div>
+        {step === 3 ? (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
+                Details
+              </h3>
+              <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+                Tell us what you need — the clearer the better.
+              </p>
+            </div>
 
-        <div className="space-y-2">
-          <Label htmlFor="external_url">External link (optional)</Label>
-          <Input
-            id="external_url"
-            value={form.external_url}
-            onChange={(event) =>
-              setForm((current) => ({
-                ...current,
-                external_url: event.target.value,
-              }))
-            }
-            placeholder="https://"
-          />
-        </div>
+            <div className="space-y-2">
+              <Label htmlFor="title">Title</Label>
+              <Input
+                id="title"
+                value={form.title}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    title: event.target.value,
+                  }))
+                }
+                placeholder="Brief summary"
+              />
+            </div>
 
-        <SupportAttachmentUploader
-          accountId={accountId}
-          value={attachments}
-          onChange={setAttachments}
-        />
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={form.description}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    description: event.target.value,
+                  }))
+                }
+                rows={6}
+                placeholder="Describe what you need in detail"
+              />
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="space-y-2">
+                <Label>Priority</Label>
+                <Select
+                  value={form.priority}
+                  onValueChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      priority: value as PortalTicketPriority,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {priorityOptions.map((option) => (
+                      <SelectItem key={option.value} value={option.value}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label>Project (optional)</Label>
+                <Select
+                  value={form.project_id || '__none__'}
+                  onValueChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      project_id: value === '__none__' ? '' : value,
+                    }))
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select project" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="__none__">No project</SelectItem>
+                    {projects.map((project) => (
+                      <SelectItem key={project.id} value={project.id}>
+                        {project.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="recording_url">Recording URL (optional)</Label>
+              <Input
+                id="recording_url"
+                value={form.recording_url}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    recording_url: event.target.value,
+                  }))
+                }
+                placeholder="https://loom.com/…"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="external_url">External link (optional)</Label>
+              <Input
+                id="external_url"
+                value={form.external_url}
+                onChange={(event) =>
+                  setForm((current) => ({
+                    ...current,
+                    external_url: event.target.value,
+                  }))
+                }
+                placeholder="https://"
+              />
+            </div>
+
+            <SupportAttachmentUploader
+              accountId={accountId}
+              value={attachments}
+              onChange={setAttachments}
+            />
+          </div>
+        ) : null}
+
+        {step === 4 ? (
+          <div className="space-y-4">
+            <div>
+              <h3 className="text-base font-semibold text-[var(--ozer-text-on-light)]">
+                Confirm request
+              </h3>
+              <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
+                Double-check the details before submitting.
+              </p>
+            </div>
+
+            <dl className="space-y-3 rounded-lg border border-slate-200 bg-slate-50 px-4 py-4 text-sm">
+              <div className="flex justify-between gap-4">
+                <dt className="text-[var(--ozer-text-on-light-muted)]">
+                  Request type
+                </dt>
+                <dd className="font-medium text-[var(--ozer-text-on-light)]">
+                  {intent === 'service' ? 'Service' : 'Support'}
+                </dd>
+              </div>
+              {selectedTypeLabel ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[var(--ozer-text-on-light-muted)]">
+                    {intent === 'service' ? 'Service' : 'Topic'}
+                  </dt>
+                  <dd className="text-right font-medium text-[var(--ozer-text-on-light)]">
+                    {selectedTypeLabel}
+                  </dd>
+                </div>
+              ) : null}
+              {creditMeta ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[var(--ozer-text-on-light-muted)]">
+                    Credits
+                  </dt>
+                  <dd className="text-right font-medium text-[var(--ozer-text-on-light)]">
+                    {creditMeta}
+                  </dd>
+                </div>
+              ) : null}
+              <div className="flex justify-between gap-4">
+                <dt className="text-[var(--ozer-text-on-light-muted)]">
+                  Priority
+                </dt>
+                <dd className="font-medium text-[var(--ozer-text-on-light)] capitalize">
+                  {form.priority}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--ozer-text-on-light-muted)]">
+                  Title
+                </dt>
+                <dd className="mt-1 font-medium text-[var(--ozer-text-on-light)]">
+                  {form.title.trim()}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--ozer-text-on-light-muted)]">
+                  Description
+                </dt>
+                <dd className="mt-1 whitespace-pre-wrap text-[var(--ozer-text-on-light)]">
+                  {form.description.trim()}
+                </dd>
+              </div>
+              {attachments.length > 0 ? (
+                <div className="flex justify-between gap-4">
+                  <dt className="text-[var(--ozer-text-on-light-muted)]">
+                    Attachments
+                  </dt>
+                  <dd className="font-medium text-[var(--ozer-text-on-light)]">
+                    {attachments.length}
+                  </dd>
+                </div>
+              ) : null}
+            </dl>
+          </div>
+        ) : null}
       </div>
 
       <div className="flex flex-wrap items-center gap-3">
-        <Button type="submit" disabled={isPending}>
-          {isPending ? 'Submitting…' : 'Submit ticket'}
-        </Button>
-        <Button type="button" variant="ghost" asChild>
-          <Link href={listHref}>Cancel</Link>
-        </Button>
+        {step > 1 ? (
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => setStep((current) => (current - 1) as WizardStep)}
+          >
+            Back
+          </Button>
+        ) : (
+          <Button type="button" variant="ghost" asChild>
+            <Link href={listHref}>Cancel</Link>
+          </Button>
+        )}
+
+        {step === 1 ? (
+          <Button type="button" onClick={goNextFromIntent}>
+            Continue
+          </Button>
+        ) : null}
+        {step === 2 ? (
+          <Button
+            type="button"
+            onClick={goNextFromType}
+            disabled={intent === 'service' && serviceTypes.length === 0}
+          >
+            Continue
+          </Button>
+        ) : null}
+        {step === 3 ? (
+          <Button type="button" onClick={goNextFromDetails}>
+            Continue
+          </Button>
+        ) : null}
+        {step === 4 ? (
+          <Button type="button" disabled={isPending} onClick={handleSubmit}>
+            {isPending ? 'Submitting…' : 'Submit request'}
+          </Button>
+        ) : null}
       </div>
-    </form>
+    </div>
   );
 }

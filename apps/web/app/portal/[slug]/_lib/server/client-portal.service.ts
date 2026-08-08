@@ -775,6 +775,38 @@ class ClientPortalService {
       }
     }
 
+    const intent = input.request_intent;
+    if (intent === 'service' && !input.request_type_id) {
+      throw new Error('Select a service to continue');
+    }
+
+    if (input.request_type_id) {
+      const { getSupabaseServerAdminClient } =
+        await import('@kit/supabase/server-admin-client');
+      const admin = getSupabaseServerAdminClient();
+      const { data: requestType, error: requestTypeError } = await admin
+        .from('request_types')
+        .select('id, is_support, is_active, account_id')
+        .eq('id', input.request_type_id)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (requestTypeError) throw requestTypeError;
+      if (!requestType || !(requestType as { is_active?: boolean }).is_active) {
+        throw new Error('Invalid request type');
+      }
+
+      const isSupport = Boolean(
+        (requestType as { is_support?: boolean }).is_support,
+      );
+      if (intent === 'service' && isSupport) {
+        throw new Error('That option is a support type, not a service');
+      }
+      if (intent === 'support' && !isSupport) {
+        throw new Error('That option is a service, not a support type');
+      }
+    }
+
     const ticketNumber = await this.allocateTicketNumber(accountId);
     const now = new Date().toISOString();
     const { createSupportPublicToken } =

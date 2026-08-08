@@ -9,7 +9,7 @@ import {
   CreditCard,
   Globe,
   LayoutDashboard,
-  LifeBuoy,
+  Layers,
   MessageSquare,
   Settings,
 } from 'lucide-react';
@@ -50,10 +50,10 @@ const navItems = [
     showKey: 'showMessagesNav' as const,
   },
   {
-    key: 'support',
-    label: 'Support',
+    key: 'services',
+    label: 'Services',
     pathKey: 'clientPortalSupport' as const,
-    icon: <LifeBuoy className={iconClasses} />,
+    icon: <Layers className={iconClasses} />,
   },
   {
     key: 'credits',

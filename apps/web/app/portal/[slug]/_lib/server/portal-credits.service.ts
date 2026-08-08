@@ -10,8 +10,8 @@ import type { RequestTypeRecord } from '~/lib/credits/request-types-types';
 
 import {
   PORTAL_CREDIT_TOPUP_PACKS,
-  type PortalCreditsBundle,
   type PortalCreditTransaction,
+  type PortalCreditsBundle,
 } from '../types/portal-credits.types';
 
 export type { PortalCreditsBundle, PortalCreditTransaction };
@@ -25,6 +25,7 @@ function mapRequestType(row: Record<string, unknown>): RequestTypeRecord {
     label: String(row.label ?? ''),
     creditCost: Number(row.credit_cost ?? 0),
     isBillable: Boolean(row.is_billable ?? true),
+    isSupport: Boolean(row.is_support ?? false),
     categoryGroup: row.category_group ? String(row.category_group) : null,
     sortOrder: Number(row.sort_order ?? 0),
     isActive: Boolean(row.is_active ?? true),
@@ -96,8 +97,7 @@ class PortalCreditsService {
 
     if (!org?.business_id) throw new Error('Forbidden');
     if (
-      String(org.slug ?? '').toLowerCase() !==
-      clientSlug.trim().toLowerCase()
+      String(org.slug ?? '').toLowerCase() !== clientSlug.trim().toLowerCase()
     ) {
       throw new Error('Forbidden');
     }
@@ -140,6 +140,7 @@ class PortalCreditsService {
       label: string;
       creditCost: number;
       isBillable: boolean;
+      isSupport: boolean;
       categoryGroup: string | null;
     }>
   > {
@@ -149,7 +150,7 @@ class PortalCreditsService {
     const { data, error } = await this.admin
       .from('request_types')
       .select(
-        'id, account_id, business_id, label, credit_cost, is_billable, category_group, sort_order, is_active, created_at, updated_at',
+        'id, account_id, business_id, label, credit_cost, is_billable, is_support, category_group, sort_order, is_active, created_at, updated_at',
       )
       .eq('account_id', accountId)
       .eq('is_active', true)
@@ -165,6 +166,7 @@ class PortalCreditsService {
         label: mapped.label,
         creditCost: mapped.creditCost,
         isBillable: mapped.isBillable,
+        isSupport: mapped.isSupport,
         categoryGroup: mapped.categoryGroup,
       };
     });
@@ -174,13 +176,7 @@ class PortalCreditsService {
     await this.ensureMember(clientOrgId);
     const accountId = await this.resolveAccountIdFromOrg(clientOrgId);
 
-    const [
-      poolRes,
-      txRes,
-      typesRes,
-      pendingRes,
-      subRes,
-    ] = await Promise.all([
+    const [poolRes, txRes, typesRes, pendingRes, subRes] = await Promise.all([
       this.admin
         .from('client_credit_pools')
         .select('balance, cycle_start, cycle_end')
@@ -195,7 +191,7 @@ class PortalCreditsService {
       this.admin
         .from('request_types')
         .select(
-          'id, label, credit_cost, is_billable, category_group, sort_order',
+          'id, label, credit_cost, is_billable, is_support, category_group, sort_order',
         )
         .eq('account_id', accountId)
         .eq('is_active', true)
@@ -288,6 +284,7 @@ class PortalCreditsService {
         label: String(row.label ?? ''),
         creditCost: Number(row.credit_cost ?? 0),
         isBillable: Boolean(row.is_billable ?? true),
+        isSupport: Boolean(row.is_support ?? false),
         categoryGroup: row.category_group ? String(row.category_group) : null,
       })),
       topupPacks: PORTAL_CREDIT_TOPUP_PACKS.map((pack) => ({ ...pack })),

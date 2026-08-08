@@ -267,20 +267,20 @@ export function ProposalEditContent({
   ]);
 
   const canvasClassName =
-    'relative rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white p-8 text-[var(--ozer-text-on-light)] shadow-sm';
+    'relative rounded-xl border border-[color:var(--ozer-border-on-light)] bg-white p-4 text-[var(--ozer-text-on-light)] shadow-sm sm:p-6 md:p-8';
 
   const inputClassName =
     'border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-white)] text-[var(--ozer-text-on-light)] placeholder:text-[var(--workspace-shell-text-muted)]';
 
   return (
-    <div className="flex flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-6xl flex-col gap-5 sm:gap-6">
       <header className="flex flex-col gap-4 border-b border-[color:var(--workspace-shell-border)] pb-4">
-        <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center sm:justify-between">
           <Button
             variant="ghost"
             size="sm"
             asChild
-            className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+            className="-ml-2 w-fit text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
           >
             <Link href={proposalsPath}>
               <ArrowLeft className="mr-1 h-4 w-4" />
@@ -453,17 +453,17 @@ export function ProposalEditContent({
         <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className={canvasClassName}>
             {brandLogoUrl ? (
-              <div className="absolute top-8 right-8">
+              <div className="absolute top-4 right-4 sm:top-6 sm:right-6 md:top-8 md:right-8">
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={brandLogoUrl}
                   alt="Brand logo"
-                  className="h-12 w-auto max-w-[120px] object-contain object-right"
+                  className="h-10 w-auto max-w-[96px] object-contain object-right sm:h-12 sm:max-w-[120px]"
                 />
               </div>
             ) : null}
 
-            <div className="space-y-6 pr-0 sm:pr-32">
+            <div className="space-y-5 pr-0 sm:space-y-6 sm:pr-28 md:pr-32">
               <div>
                 {readOnly ? (
                   <h2 className="text-2xl font-bold text-[var(--ozer-text-on-light)]">

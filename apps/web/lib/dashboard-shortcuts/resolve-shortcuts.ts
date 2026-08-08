@@ -6,7 +6,10 @@ import {
   resolveNavIconKey,
 } from '~/lib/mobile-nav/nav-icon-keys';
 
-import { normalizeAppHref } from './personal-home-url';
+import {
+  normalizeAppHref,
+  rewriteHrefToWorkspaceSlug,
+} from './personal-home-url';
 import { catalogItemHref, resolveShortcutHref } from './resolve-href';
 import type {
   ResolvedShortcut,
@@ -73,12 +76,14 @@ function resolveStoredIconKey(
 export function resolveStoredShortcuts(
   stored: StoredShortcut[],
   catalog: ShortcutCatalogItem[],
+  options?: { workspaceSlug?: string },
 ): ResolvedShortcut[] {
   const catalogMap = new Map(
     catalog.map((item) => [catalogItemKey(item), item]),
   );
 
   const resolved: ResolvedShortcut[] = [];
+  const workspaceSlug = options?.workspaceSlug?.trim();
 
   for (const row of stored) {
     const key = catalogItemKey({
@@ -92,7 +97,9 @@ export function resolveStoredShortcuts(
 
     if (!href) continue;
 
-    const normalizedHref = normalizeAppHref(href);
+    const normalizedHref = workspaceSlug
+      ? rewriteHrefToWorkspaceSlug(href, workspaceSlug)
+      : normalizeAppHref(href);
 
     resolved.push({
       id: row.id,

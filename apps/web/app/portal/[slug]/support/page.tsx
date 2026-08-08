@@ -1,31 +1,13 @@
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import { redirect } from 'next/navigation';
 
-import { PortalSupportListContent } from '../_components/portal-support-list-content';
-import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
-import { createClientPortalService } from '../_lib/server/client-portal.service';
-
-interface PortalSupportPageProps {
+interface LegacySupportRedirectProps {
   params: Promise<{ slug: string }>;
 }
 
-export const generateMetadata = async () => ({ title: 'Support' });
-
-export default async function PortalSupportPage({
+/** Legacy /support → /services (also covered by next.config redirects). */
+export default async function LegacyPortalSupportRedirect({
   params,
-}: PortalSupportPageProps) {
+}: LegacySupportRedirectProps) {
   const { slug } = await params;
-  const ctx = await loadClientPortalContext(slug);
-  const service = createClientPortalService(getSupabaseServerClient());
-  const tickets = await service.listTickets(ctx.clientOrgId);
-
-  return (
-    <PortalSupportListContent
-      clientSlug={slug}
-      initialTickets={tickets}
-      clientName={ctx.orgName}
-      clientPictureUrl={ctx.clientPictureUrl}
-      businessName={ctx.accountName}
-      businessLogoUrl={ctx.accountLogoUrl}
-    />
-  );
+  redirect(`/portal/${slug}/services`);
 }
