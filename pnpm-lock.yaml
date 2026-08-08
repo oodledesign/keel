@@ -112,6 +112,7 @@ overrides:
   zod: 3.25.76
   nextra>zod: ^4.1.12
   nextra-theme-docs>zod: ^4.1.12
+  docs>zod: ^4.1.12
 
 patchedDependencies:
   nextra-theme-docs@4.6.1:
@@ -253,8 +254,8 @@ importers:
         specifier: 'catalog:'
         version: 19.2.4(react@19.2.4)
       zod:
-        specifier: 3.25.76
-        version: 3.25.76
+        specifier: ^4.1.12
+        version: 4.4.3
     devDependencies:
       '@kit/tsconfig':
         specifier: workspace:*
