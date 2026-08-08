@@ -18,6 +18,8 @@ describe('extractAgencyPortalSlug', () => {
     expect(extractAgencyPortalSlug('www.ozer.so')).toBeNull();
     expect(extractAgencyPortalSlug('app.ozer.so')).toBeNull();
     expect(extractAgencyPortalSlug('staging.ozer.so')).toBeNull();
+    expect(extractAgencyPortalSlug('docs.ozer.so')).toBeNull();
+    expect(extractAgencyPortalSlug('sites.ozer.so')).toBeNull();
     expect(extractAgencyPortalSlug('localhost')).toBeNull();
     expect(extractAgencyPortalSlug('localhost:3000')).toBeNull();
   });

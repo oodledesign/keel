@@ -1,6 +1,13 @@
 const AGENCY_PORTAL_DOMAIN = 'ozer.so';
 
-const IGNORED_SUBDOMAINS = new Set(['www', 'app', 'staging', 'localhost']);
+const IGNORED_SUBDOMAINS = new Set([
+  'www',
+  'app',
+  'staging',
+  'localhost',
+  'docs',
+  'sites',
+]);
 
 /**
  * Extract an agency portal slug from the request hostname.
