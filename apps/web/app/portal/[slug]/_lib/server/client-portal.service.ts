@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
 
+import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import {
   type WebsiteBrief,
   type WebsitePortalShareScope,
@@ -750,22 +751,15 @@ class ClientPortalService {
       throw new Error('Client organisation not found');
     }
 
-    const businessId = (org as { business_id?: string | null }).business_id;
-    let accountId: string | null = null;
-
-    if (businessId) {
-      const { data: business } = await this.db
-        .from('businesses')
-        .select('account_id')
-        .eq('id', businessId)
-        .maybeSingle();
-      accountId =
-        (business as { account_id?: string | null } | null)?.account_id ??
-        businessId;
-    }
+    const accountId = await resolveClientOrgAccountId(this.db, org);
 
     if (!accountId) {
       throw new Error('Workspace not found for client');
+    }
+
+    // Prefer loader-supplied accountId when present, but never trust a mismatch.
+    if (input.accountId && input.accountId !== accountId) {
+      throw new Error('Workspace mismatch for this client');
     }
 
     if (input.project_id) {
