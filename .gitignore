@@ -71,3 +71,5 @@ node-compile-cache/
 # Supabase CLI temp state
 **/.supabase/
 **/supabase/.temp/
+# Nextra / Pagefind search index (generated on docs postbuild)
+**/_pagefind/

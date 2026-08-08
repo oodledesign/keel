@@ -8,11 +8,12 @@ import { cn } from '@kit/ui/utils';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
+import { docsUrl } from '~/lib/docs-url';
 
 const paths = {
   home: pathsConfig.app.home,
   personalAccountSettings: pathsConfig.app.personalAccountSettings,
-  support: '/docs',
+  support: docsUrl(),
 };
 
 const features = {

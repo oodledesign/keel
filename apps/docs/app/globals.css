@@ -1,0 +1,49 @@
+@import 'nextra-theme-docs/style.css';
+
+@import url('https://api.fontshare.com/v2/css?f[]=general-sans@400,500,600&f[]=cabinet-grotesk@700&display=swap');
+
+:root {
+  --ozer-coral-500: #ff5c34;
+  --ozer-coral-400: #ff7a5c;
+  --ozer-plum-900: #351e28;
+  --ozer-plum-950: #2a1720;
+  --ozer-cream-50: #fbf6ec;
+  --ozer-info: #41606f;
+  --ozer-font-body: 'General Sans', system-ui, sans-serif;
+  --ozer-font-display: 'Cabinet Grotesk', 'General Sans', system-ui, sans-serif;
+
+  --nextra-primary-hue: 12deg;
+  --nextra-primary-saturation: 100%;
+  --nextra-primary-lightness: 60%;
+}
+
+html {
+  font-family: var(--ozer-font-body);
+}
+
+h1,
+h2,
+h3,
+h4,
+.nextra-navbar a {
+  font-family: var(--ozer-font-display);
+}
+
+.ozer-docs-logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.ozer-docs-logo img {
+  height: 1.75rem;
+  width: auto;
+}
+
+.dark .ozer-docs-logo-light {
+  display: none;
+}
+
+html:not(.dark) .ozer-docs-logo-dark {
+  display: none;
+}

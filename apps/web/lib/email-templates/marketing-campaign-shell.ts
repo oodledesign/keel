@@ -2,6 +2,7 @@ import {
   getAppSiteOrigin,
   getMarketingSiteOrigin,
 } from '~/lib/app-host-routing';
+import { docsUrl } from '~/lib/docs-url';
 
 const appOrigin = getAppSiteOrigin();
 const marketingOrigin = getMarketingSiteOrigin();
@@ -16,7 +17,7 @@ export const MARKETING_EMAIL_URLS = {
   signIn: `${appOrigin}/auth/sign-in`,
   signUp: `${appOrigin}/auth/sign-up`,
   onboarding: `${appOrigin}/onboarding`,
-  docs: `${marketingOrigin}/docs`,
+  docs: docsUrl(),
   marketing: marketingOrigin,
   support: `mailto:${supportEmail}`,
   info: `mailto:${supportEmail}`,

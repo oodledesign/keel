@@ -38,7 +38,9 @@
     "supabase:web:test": "pnpm --filter web supabase:test",
     "stripe:listen": "pnpm --filter '@kit/stripe' start",
     "env:generate": "turbo gen env",
-    "env:validate": "turbo gen validate-env"
+    "env:validate": "turbo gen validate-env",
+    "docs:dev": "pnpm --filter docs dev",
+    "docs:build": "pnpm --filter docs build"
   },
   "prettier": "@kit/prettier-config",
   "packageManager": "pnpm@10.19.0",
@@ -46,7 +48,13 @@
     "overrides": {
       "@supabase/ssr": "0.10.2",
       "@supabase/supabase-js": "2.103.0",
-      "zod": "3.25.76"
+      "zod": "3.25.76",
+      "nextra>zod": "^4.1.12",
+      "nextra-theme-docs>zod": "^4.1.12",
+      "docs>zod": "^4.1.12"
+    },
+    "patchedDependencies": {
+      "nextra-theme-docs@4.6.1": "patches/nextra-theme-docs@4.6.1.patch"
     }
   },
   "devDependencies": {

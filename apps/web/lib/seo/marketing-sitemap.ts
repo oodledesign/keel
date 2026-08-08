@@ -6,6 +6,7 @@ import { createCmsClient } from '@kit/cms';
 
 import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
 import { getPublishedBlogPostsForSitemap } from '~/lib/blog';
+import { docsUrl } from '~/lib/docs-url';
 import { APP_LANDING_SLUGS } from '~/lib/marketing/app-landing-pages';
 import { COMPARISON_SLUGS } from '~/lib/marketing/compare';
 import { FEATURE_SITEMAP_PATHS } from '~/lib/marketing/feature-landing-pages';
@@ -34,7 +35,6 @@ const STATIC_MARKETING_PATHS: Array<{
   { path: '/contact', priority: 0.6, changeFrequency: 'monthly' },
   { path: '/blog', priority: 0.8, changeFrequency: 'weekly' },
   { path: '/blog/rss.xml', priority: 0.4, changeFrequency: 'weekly' },
-  { path: '/docs', priority: 0.7, changeFrequency: 'weekly' },
   { path: '/changelog', priority: 0.6, changeFrequency: 'weekly' },
   { path: '/apps', priority: 0.85, changeFrequency: 'monthly' },
   { path: '/compare', priority: 0.85, changeFrequency: 'monthly' },
@@ -115,9 +115,8 @@ export async function buildMarketingSitemap(): Promise<MetadataRoute.Sitemap> {
     ),
   ];
 
-  const [blogPosts, docs, changelog] = await Promise.all([
+  const [blogPosts, changelog] = await Promise.all([
     getPublishedBlogPostsForSitemap(),
-    loadCmsPaths(base, 'documentation', '/docs'),
     loadCmsPaths(base, 'changelog', '/changelog'),
   ]);
 
@@ -136,11 +135,18 @@ export async function buildMarketingSitemap(): Promise<MetadataRoute.Sitemap> {
     }),
   );
 
+  const docsEntry: SitemapEntry = {
+    url: docsUrl(),
+    lastModified: new Date(),
+    changeFrequency: 'weekly',
+    priority: 0.7,
+  };
+
   return [
     ...staticEntries,
     ...featureEntries,
     ...blogEntries,
-    ...docs,
+    docsEntry,
     ...changelog,
   ];
 }

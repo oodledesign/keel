@@ -71,7 +71,6 @@ const config = {
   // Scope content tracing to content routes only (avoid whole-app include).
   outputFileTracingIncludes: {
     '/(marketing)/**': ['./content/**/*'],
-    '/docs/**': ['./content/**/*'],
     '/blog/**': ['./content/**/*'],
   },
   redirects: getRedirects,
@@ -444,9 +443,28 @@ async function getRedirects() {
     permanent: false,
   }));
 
+  // Keep in sync with apps/web/lib/docs-url.ts (next.config cannot import that module).
+  const docsOrigin = (
+    process.env.NEXT_PUBLIC_DOCS_URL ||
+    (process.env.NODE_ENV === 'development'
+      ? 'http://localhost:3012'
+      : 'https://docs.ozer.so')
+  ).replace(/\/$/, '');
+
+  const docsRedirects = [
+    {
+      source: '/docs',
+      destination: docsOrigin,
+      permanent: true,
+    },
+    {
+      source: '/docs/:path*',
+      destination: `${docsOrigin}/:path*`,
+      permanent: true,
+    },
+  ];
+
   const marketingRedirects = [
-    '/docs',
-    '/docs/:path*',
     '/changelog',
     '/changelog/:path*',
     '/about',
@@ -530,6 +548,7 @@ async function getRedirects() {
       permanent: true,
     },
     ...comingSoonRedirects,
+    ...docsRedirects,
     ...marketingRedirects,
   ];
 }

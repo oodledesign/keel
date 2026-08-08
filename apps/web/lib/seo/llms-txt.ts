@@ -2,6 +2,7 @@ import 'server-only';
 
 import appConfig from '~/config/app.config';
 import { getMarketingSiteOrigin } from '~/lib/app-host-routing';
+import { docsUrl } from '~/lib/docs-url';
 import {
   APP_LANDING_PAGES,
   APP_LANDING_SLUGS,
@@ -30,10 +31,7 @@ export async function buildLlmsTxt(): Promise<string> {
 
   const contentLines = sitemapEntries
     .filter(
-      (item) =>
-        item.url.includes('/blog/') ||
-        item.url.includes('/docs/') ||
-        item.url.includes('/changelog/'),
+      (item) => item.url.includes('/blog/') || item.url.includes('/changelog/'),
     )
     .slice(0, 40)
     .map((item) => `- ${item.url}`);
@@ -47,7 +45,7 @@ export async function buildLlmsTxt(): Promise<string> {
     `- [Home](${url(base, '/')}): Main marketing homepage`,
     `- [Pricing](${url(base, '/pricing')}): Plans and add-ons`,
     `- [Apps](${url(base, '/apps')}): Ozer app modules overview`,
-    `- [Documentation](${url(base, '/docs')}): Product documentation`,
+    `- [Documentation](${docsUrl()}): Product documentation`,
     `- [Blog](${url(base, '/blog')}): Articles and updates`,
     `- [Changelog](${url(base, '/changelog')}): Release notes`,
     `- [Contact](${url(base, '/contact')}): Get in touch`,

@@ -1,7 +1,7 @@
 import { Cms, CmsClient } from '@kit/cms-types';
 
 import { createKeystaticReader } from './create-reader';
-import { DocumentationEntryProps, PostEntryProps } from './keystatic.config';
+import { PostEntryProps } from './keystatic.config';
 import { renderMarkdoc } from './markdoc';
 
 export function createKeystaticClient() {
@@ -188,16 +188,6 @@ class KeystaticClient implements CmsClient {
           return (a.entry.order ?? 0) - (b.entry.order ?? 0);
         })
         .map((item) => {
-          if (collection === 'documentation') {
-            return this.mapDocumentationPost(
-              item as {
-                entry: DocumentationEntryProps;
-                slug: string;
-              },
-              { fetchContent },
-            );
-          }
-
           return this.mapPost(
             item as {
               entry: PostEntryProps;
@@ -258,60 +248,6 @@ class KeystaticClient implements CmsClient {
 
   async getCategoryBySlug() {
     return Promise.resolve(undefined);
-  }
-
-  private async mapDocumentationPost<
-    Type extends {
-      entry: DocumentationEntryProps;
-      slug: string;
-    },
-  >(
-    item: Type,
-    params: {
-      fetchContent: boolean;
-    } = {
-      fetchContent: true,
-    },
-  ): Promise<Cms.ContentItem> {
-    const publishedAt = item.entry.publishedAt
-      ? new Date(item.entry.publishedAt)
-      : new Date();
-
-    const content = await item.entry.content();
-    const html = params.fetchContent ? await renderMarkdoc(content.node) : [];
-
-    return {
-      id: item.slug,
-      title: item.entry.title,
-      label: item.entry.label,
-      url: item.slug,
-      slug: item.slug,
-      description: item.entry.description,
-      publishedAt: publishedAt.toISOString(),
-      content: html as string,
-      image: item.entry.image ?? undefined,
-      status: item.entry.status as Cms.ContentItemStatus,
-      collapsible: item.entry.collapsible,
-      collapsed: item.entry.collapsed,
-      categories:
-        (item.entry.categories ?? []).map((item) => {
-          return {
-            id: item,
-            name: item,
-            slug: item,
-          };
-        }) ?? [],
-      tags: (item.entry.tags ?? []).map((item) => {
-        return {
-          id: item,
-          name: item,
-          slug: item,
-        };
-      }),
-      parentId: item.entry.parent ?? undefined,
-      order: item.entry.order ?? 1,
-      children: [],
-    };
   }
 
   private async mapPost<

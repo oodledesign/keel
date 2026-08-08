@@ -11,13 +11,14 @@ import { Trans } from '@kit/ui/trans';
 import { ThemeModeToggle } from '~/components/theme-mode-toggle';
 import pathsConfig from '~/config/paths.config';
 import { MARKETING_FREE_SIGNUP_URL } from '~/lib/billing/pricing-marketing';
+import { docsUrl } from '~/lib/docs-url';
 
 import { SiteMobileMarketingMenu } from './site-mobile-marketing-menu';
 
 const paths = {
   home: pathsConfig.app.home,
   personalAccountSettings: pathsConfig.app.personalAccountSettings,
-  support: '/docs',
+  support: docsUrl(),
 };
 
 const features = {

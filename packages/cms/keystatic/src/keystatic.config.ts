@@ -39,10 +39,6 @@ export type PostEntryProps = Entry<
   (typeof keyStaticConfig)['collections']['posts']
 >;
 
-export type DocumentationEntryProps = Entry<
-  (typeof keyStaticConfig)['collections']['documentation']
->;
-
 export type ChangelogEntryProps = Entry<
   (typeof keyStaticConfig)['collections']['changelog']
 >;
@@ -107,44 +103,6 @@ function getKeystaticCollections(path: string) {
           defaultValue: 'draft',
           label: 'Status',
           options: statusOptions,
-        }),
-      },
-    }),
-    documentation: collection({
-      label: 'Documentation',
-      slugField: 'title',
-      path: `${path}documentation/**`,
-      format: { contentField: 'content' },
-      schema: {
-        title: fields.slug({ name: { label: 'Title' } }),
-        label: fields.text({
-          label: 'Label',
-          validation: { isRequired: false },
-        }),
-        content: getContentField(),
-        image: imageField,
-        description: fields.text({ label: 'Description' }),
-        publishedAt: fields.date({ label: 'Published At' }),
-        order: fields.number({ label: 'Order' }),
-        language: fields.text({ label: 'Language' }),
-        parent: fields.relationship({
-          label: 'Parent',
-          collection: 'documentation',
-        }),
-        categories: fields.array(fields.text({ label: 'Category' })),
-        tags: fields.array(fields.text({ label: 'Tag' })),
-        status: fields.select({
-          defaultValue: 'draft',
-          label: 'Status',
-          options: statusOptions,
-        }),
-        collapsible: fields.checkbox({
-          label: 'Collapsible',
-          defaultValue: false,
-        }),
-        collapsed: fields.checkbox({
-          label: 'Collapsed',
-          defaultValue: false,
         }),
       },
     }),

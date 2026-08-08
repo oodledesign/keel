@@ -6,6 +6,7 @@ import { Trans } from '@kit/ui/trans';
 
 import { AppLogo } from '~/components/app-logo';
 import appConfig from '~/config/app.config';
+import { docsUrl } from '~/lib/docs-url';
 
 import { MarketingFooterNewsletter } from './marketing-footer-newsletter';
 
@@ -84,6 +85,10 @@ export function SiteFooter() {
             { href: '/features/desktop-assistant', label: 'Assistant for Mac' },
             { href: '/apps', label: 'Apps' },
             { href: '/pricing', label: <Trans i18nKey="marketing:pricing" /> },
+            {
+              href: docsUrl(),
+              label: <Trans i18nKey="marketing:documentation" />,
+            },
             { href: '/faq', label: 'FAQ' },
           ],
         },

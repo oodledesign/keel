@@ -1,0 +1,30 @@
+{
+  "name": "docs",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "next --turbopack --port 3012",
+    "build": "next build --webpack",
+    "postbuild": "pagefind --site .next/server/app --output-path public/_pagefind",
+    "start": "next start --port 3012",
+    "typecheck": "tsc --noEmit",
+    "clean": "git clean -xdf .next .turbo node_modules public/_pagefind"
+  },
+  "dependencies": {
+    "next": "catalog:",
+    "nextra": "^4.6.1",
+    "nextra-theme-docs": "^4.6.1",
+    "react": "catalog:",
+    "react-dom": "catalog:",
+    "zod": "^4.1.12"
+  },
+  "devDependencies": {
+    "@kit/tsconfig": "workspace:*",
+    "@types/node": "catalog:",
+    "@types/react": "catalog:",
+    "@types/react-dom": "catalog:",
+    "pagefind": "^1.5.2",
+    "typescript": "^5.9.3"
+  }
+}

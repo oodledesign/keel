@@ -7,6 +7,7 @@ import { ArrowLeft } from 'lucide-react';
 import { Button } from '@kit/ui/button';
 
 import { AppLogo } from '~/components/app-logo';
+import { docsUrl } from '~/lib/docs-url';
 
 import {
   type CompanyRole,
@@ -44,7 +45,7 @@ export function OnboardingShell({
   dashboardHref,
   dashboardAccountName,
   isOwner = false,
-  helpHref = '/docs',
+  helpHref = docsUrl(),
 }: OnboardingShellProps) {
   const steps = getStepsForPersona(companyRole);
   const currentIndex = getStepIndex(companyRole, currentStep);
