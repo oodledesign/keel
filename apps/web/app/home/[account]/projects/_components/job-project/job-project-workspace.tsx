@@ -16,8 +16,6 @@ import {
   UserPlus,
 } from 'lucide-react';
 
-import { PhaseTemplatePickerDialog } from '~/components/projects/phase-template-picker-dialog';
-import { SaveProjectAsTemplateDialog } from '~/components/projects/save-project-as-template-dialog';
 import { Button } from '@kit/ui/button';
 import {
   Dialog,
@@ -42,6 +40,8 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import { PhaseTemplatePickerDialog } from '~/components/projects/phase-template-picker-dialog';
+import { SaveProjectAsTemplateDialog } from '~/components/projects/save-project-as-template-dialog';
 import { buildBrainChatUrl } from '~/lib/brain/build-brain-chat-url';
 
 import { getErrorMessage } from '../../_lib/error-message';
@@ -60,10 +60,12 @@ import {
 import { JobProjectBoard } from './job-project-board';
 import { JobProjectHeader } from './job-project-header';
 import { JobProjectList } from './job-project-list';
+import { JobProjectProgressBoard } from './job-project-progress-board';
 import { JobProjectTimeline } from './job-project-timeline';
 import { ProjectAiGenerateDialog } from './project-ai-generate-dialog';
 
 type ViewMode = 'board' | 'timeline' | 'list';
+type BoardMode = 'phase' | 'progress';
 
 type JobSummary = {
   title: string;
@@ -100,6 +102,7 @@ export function JobProjectWorkspace({
   onAssignmentsChange?: () => void;
 }) {
   const [view, setView] = useState<ViewMode>('board');
+  const [boardMode, setBoardMode] = useState<BoardMode>('phase');
   const [board, setBoard] = useState<JobBoardResult | null>(null);
   const [boardLoading, setBoardLoading] = useState(true);
   const [addingPhase, setAddingPhase] = useState(false);
@@ -294,23 +297,48 @@ export function JobProjectWorkspace({
         board={board ? { progressPct: board.progressPct } : { progressPct: 0 }}
       />
 
-      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] pb-3">
-        <div className="flex items-center gap-1">
-          {viewButtons.map(({ key, label, icon: Icon }) => (
-            <button
-              key={key}
-              type="button"
-              onClick={() => setView(key)}
-              className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
-                view === key
-                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]'
-              }`}
-            >
-              <Icon className="h-3.5 w-3.5" />
-              {label}
-            </button>
-          ))}
+      <div className="flex shrink-0 flex-wrap items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] pb-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex items-center gap-1">
+            {viewButtons.map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setView(key)}
+                className={`inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+                  view === key
+                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]'
+                }`}
+              >
+                <Icon className="h-3.5 w-3.5" />
+                {label}
+              </button>
+            ))}
+          </div>
+          {view === 'board' ? (
+            <div className="flex items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5">
+              {(
+                [
+                  { key: 'phase', label: 'Phase' },
+                  { key: 'progress', label: 'Progress' },
+                ] as const
+              ).map(({ key, label }) => (
+                <button
+                  key={key}
+                  type="button"
+                  onClick={() => setBoardMode(key)}
+                  className={`rounded px-2.5 py-1 text-xs font-medium transition-colors ${
+                    boardMode === key
+                      ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
+                  }`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex items-center gap-2">
@@ -402,7 +430,7 @@ export function JobProjectWorkspace({
           </div>
         ) : board ? (
           <>
-            {view === 'board' && (
+            {view === 'board' && boardMode === 'phase' && (
               <JobProjectBoard
                 accountSlug={accountSlug}
                 accountId={accountId}
@@ -414,6 +442,16 @@ export function JobProjectWorkspace({
                 onOpenTemplatePicker={handleOpenTemplatePicker}
                 phaseTemplates={phaseTemplates}
                 seedingPhases={seedingPhases}
+              />
+            )}
+            {view === 'board' && boardMode === 'progress' && (
+              <JobProjectProgressBoard
+                accountSlug={accountSlug}
+                accountId={accountId}
+                jobId={jobId}
+                board={board}
+                canEditJobs={canEditJobs}
+                onBoardChange={setBoard}
               />
             )}
             {view === 'timeline' && (

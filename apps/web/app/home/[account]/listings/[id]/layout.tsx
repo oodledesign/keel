@@ -7,7 +7,6 @@ import { PageBody } from '@kit/ui/page';
 import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
-import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
   COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES,
@@ -40,19 +39,15 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
 
   return (
     <>
-      <TeamAccountLayoutPageHeader
-        account={slug}
-        title="Disposal"
-        description={
-          <Link
-            href={pathsConfig.app.accountListings.replace('[account]', slug)}
-            className="text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-accent-text)]"
-          >
-            ← Back to disposals
-          </Link>
-        }
-      />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
+      <div className="hidden px-4 pt-4 pb-1 lg:block lg:px-6">
+        <Link
+          href={pathsConfig.app.accountListings.replace('[account]', slug)}
+          className="text-sm text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-accent-text)]"
+        >
+          ← Back to disposals
+        </Link>
+      </div>
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 pt-3 pb-6 lg:px-6">
         <ListingDetailShell listing={listing} accountSlug={slug}>
           {children}
         </ListingDetailShell>

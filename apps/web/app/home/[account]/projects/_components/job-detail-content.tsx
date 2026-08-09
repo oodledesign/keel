@@ -63,6 +63,7 @@ import { JobScheduleTabContent } from './job-schedule-tab';
 import { ProjectFinancePanel } from './project-finance-panel';
 import { ProjectGeneratePanel } from './project-generate-panel';
 import { ProjectGuestsPanel } from './project-guests-panel';
+import { ProjectImageUploader } from './project-image-uploader';
 import { ProjectPortalAccessToggle } from './project-portal-access-toggle';
 
 type Job = {
@@ -77,6 +78,7 @@ type Job = {
   cost_pence: number | null;
   client_id: string | null;
   portal_visible?: boolean | null;
+  picture_url?: string | null;
   [key: string]: unknown;
 };
 
@@ -207,6 +209,9 @@ export function JobDetailContent({
   const [notesLoading, setNotesLoading] = useState(false);
   const [newNote, setNewNote] = useState('');
   const [addingNote, setAddingNote] = useState(false);
+  const [pictureUrl, setPictureUrl] = useState<string | null>(
+    job.picture_url ?? null,
+  );
 
   const refreshAssignments = useCallback(() => {
     if (!accountId || !jobId) return;
@@ -412,24 +417,35 @@ export function JobDetailContent({
             <ArrowLeft className="h-3.5 w-3.5" />
             Back to projects
           </Link>
-          <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
-              {job.title}
-            </h1>
-            <span
-              className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
-                job.status === 'completed'
-                  ? 'border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
-                  : job.status === 'cancelled'
-                    ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
-                    : 'border border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--workspace-shell-text)]'
-              }`}
-            >
-              {STATUS_LABELS[job.status] ?? job.status}
-            </span>
-            <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
-              {PRIORITY_LABELS[job.priority] ?? job.priority}
-            </span>
+          <div className="flex flex-wrap items-center gap-3">
+            <ProjectImageUploader
+              accountId={accountId}
+              projectId={jobId}
+              displayName={job.title}
+              pictureUrl={pictureUrl}
+              canEdit={canEditJobs}
+              onUpdated={setPictureUrl}
+              size="md"
+            />
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+                {job.title}
+              </h1>
+              <span
+                className={`inline-flex rounded px-2 py-0.5 text-xs font-medium ${
+                  job.status === 'completed'
+                    ? 'border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                    : job.status === 'cancelled'
+                      ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]'
+                      : 'border border-[color-mix(in_srgb,var(--ozer-info)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-info)_12%,transparent)] text-[var(--workspace-shell-text)]'
+                }`}
+              >
+                {STATUS_LABELS[job.status] ?? job.status}
+              </span>
+              <span className="rounded bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+                {PRIORITY_LABELS[job.priority] ?? job.priority}
+              </span>
+            </div>
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--workspace-shell-text-muted)]">
             <span>Due {formatDueDate(job.due_date)}</span>

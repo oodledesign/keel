@@ -95,6 +95,13 @@ export type PortalProjectSummary = {
   name: string;
   status: string | null;
   dueDate: string | null;
+  pictureUrl: string | null;
+};
+
+export type PortalProjectPhase = {
+  id: string;
+  name: string;
+  sortOrder: number;
 };
 
 export type PortalProjectTask = {
@@ -103,6 +110,7 @@ export type PortalProjectTask = {
   status: string;
   priority: string | null;
   dueDate: string | null;
+  phaseId: string | null;
 };
 
 export type PortalTaskComment = {
@@ -578,7 +586,7 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('projects')
-      .select('id, name, title, status, due_date')
+      .select('id, name, title, status, due_date, picture_url')
       .eq('portal_visible', true)
       .order('updated_at', { ascending: false });
 
@@ -594,12 +602,14 @@ class ClientPortalService {
         title?: string | null;
         status?: string | null;
         due_date?: string | null;
+        picture_url?: string | null;
       }>
     ).map((row) => ({
       id: row.id,
       name: row.name?.trim() || row.title?.trim() || 'Project',
       status: row.status ?? null,
       dueDate: row.due_date ?? null,
+      pictureUrl: row.picture_url?.trim() || null,
     }));
   }
 
@@ -611,7 +621,7 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('projects')
-      .select('id, name, title, status, due_date')
+      .select('id, name, title, status, due_date, picture_url')
       .eq('id', projectId)
       .eq('portal_visible', true)
       .maybeSingle();
@@ -623,7 +633,39 @@ class ClientPortalService {
       name: data.name?.trim() || data.title?.trim() || 'Project',
       status: data.status ?? null,
       dueDate: data.due_date ?? null,
+      pictureUrl:
+        (data as { picture_url?: string | null }).picture_url?.trim() || null,
     };
+  }
+
+  async listPortalProjectPhases(
+    clientOrgId: string,
+    projectId: string,
+  ): Promise<PortalProjectPhase[]> {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('project_phases')
+      .select('id, name, sort_order')
+      .eq('project_id', projectId)
+      .order('sort_order', { ascending: true });
+
+    if (error) {
+      console.error('[client-portal] listPortalProjectPhases:', error.message);
+      return [];
+    }
+
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        name?: string | null;
+        sort_order?: number | null;
+      }>
+    ).map((row) => ({
+      id: row.id,
+      name: row.name?.trim() || 'Phase',
+      sortOrder: Number(row.sort_order ?? 0),
+    }));
   }
 
   async listPortalProjectTasks(
@@ -634,7 +676,7 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('tasks')
-      .select('id, title, status, priority, due_date')
+      .select('id, title, status, priority, due_date, phase_id')
       .eq('project_id', projectId)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true });
@@ -651,6 +693,7 @@ class ClientPortalService {
         status: string;
         priority: string | null;
         due_date: string | null;
+        phase_id?: string | null;
       }>
     ).map((row) => ({
       id: row.id,
@@ -658,6 +701,7 @@ class ClientPortalService {
       status: row.status ?? 'todo',
       priority: row.priority,
       dueDate: row.due_date,
+      phaseId: row.phase_id ?? null,
     }));
   }
 

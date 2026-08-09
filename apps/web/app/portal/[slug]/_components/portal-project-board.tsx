@@ -10,6 +10,7 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import type {
+  PortalProjectPhase,
   PortalProjectTask,
   PortalTaskComment,
 } from '../_lib/server/client-portal.service';
@@ -17,6 +18,7 @@ import { addPortalTaskComment } from '../_lib/server/server-actions';
 import { formatPortalDate } from './portal-badges';
 
 type ViewMode = 'board' | 'timeline' | 'list';
+type BoardMode = 'phase' | 'progress';
 
 const STATUS_COLUMNS = [
   { key: 'todo', label: 'To do' },
@@ -332,18 +334,149 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
   );
 }
 
+function PortalProjectPhaseKanbanView({
+  phases,
+  tasks,
+  commentsByTask,
+  drafts,
+  setDrafts,
+  pending,
+  onSubmit,
+  expandedTaskId,
+  setExpandedTaskId,
+}: {
+  phases: PortalProjectPhase[];
+  tasks: PortalProjectTask[];
+  commentsByTask: Map<string, PortalTaskComment[]>;
+  drafts: Record<string, string>;
+  setDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
+  pending: boolean;
+  onSubmit: (taskId: string) => void;
+  expandedTaskId: string | null;
+  setExpandedTaskId: (id: string | null) => void;
+}) {
+  const columns = useMemo(() => {
+    const phaseCols = [...phases]
+      .sort((a, b) => a.sortOrder - b.sortOrder)
+      .map((phase) => ({
+        key: phase.id,
+        label: phase.name,
+      }));
+    return [...phaseCols, { key: '__unassigned__', label: 'Unassigned' }];
+  }, [phases]);
+
+  const byPhase = useMemo(() => {
+    const map = new Map<string, PortalProjectTask[]>();
+    for (const col of columns) map.set(col.key, []);
+    for (const task of tasks) {
+      const key =
+        task.phaseId && map.has(task.phaseId) ? task.phaseId : '__unassigned__';
+      map.get(key)?.push(task);
+    }
+    return map;
+  }, [columns, tasks]);
+
+  if (phases.length === 0) {
+    return (
+      <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+        No phases yet. Switch to Progress to browse tasks by status.
+      </p>
+    );
+  }
+
+  if (tasks.length === 0) {
+    return (
+      <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+        No tasks yet.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex gap-3 overflow-x-auto pb-2">
+      {columns.map((col) => {
+        const columnTasks = byPhase.get(col.key) ?? [];
+        if (col.key === '__unassigned__' && columnTasks.length === 0) {
+          return null;
+        }
+        return (
+          <div
+            key={col.key}
+            className="w-[280px] shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel-hover)]/40 p-3"
+          >
+            <div className="mb-3 flex items-center justify-between">
+              <p className="text-xs font-semibold tracking-wide text-[var(--ozer-text-on-light)] uppercase">
+                {col.label}
+              </p>
+              <span className="text-xs text-[var(--ozer-text-on-light-muted)]">
+                {columnTasks.length}
+              </span>
+            </div>
+            <div className="space-y-2">
+              {columnTasks.map((task) => {
+                const open = expandedTaskId === task.id;
+                return (
+                  <div
+                    key={task.id}
+                    className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
+                  >
+                    <button
+                      type="button"
+                      className="w-full text-left"
+                      onClick={() => setExpandedTaskId(open ? null : task.id)}
+                    >
+                      <p className="text-sm font-medium text-[var(--ozer-text-on-light)]">
+                        {task.title}
+                      </p>
+                      {task.dueDate ? (
+                        <p className="mt-1 text-xs text-[var(--ozer-text-on-light-muted)]">
+                          Due {formatPortalDate(task.dueDate)}
+                        </p>
+                      ) : null}
+                    </button>
+                    {open ? (
+                      <TaskComments
+                        taskId={task.id}
+                        comments={commentsByTask.get(task.id) ?? []}
+                        drafts={drafts}
+                        setDrafts={setDrafts}
+                        pending={pending}
+                        onSubmit={onSubmit}
+                      />
+                    ) : (
+                      <p className="mt-2 text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                        {(commentsByTask.get(task.id) ?? []).length} comment
+                        {(commentsByTask.get(task.id) ?? []).length === 1
+                          ? ''
+                          : 's'}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 export function PortalProjectBoard({
   clientOrgId,
   projectId,
   initialTasks,
+  initialPhases,
   initialComments,
 }: {
   clientOrgId: string;
   projectId: string;
   initialTasks: PortalProjectTask[];
+  initialPhases: PortalProjectPhase[];
   initialComments: PortalTaskComment[];
 }) {
   const [view, setView] = useState<ViewMode>('board');
+  const [boardMode, setBoardMode] = useState<BoardMode>('phase');
   const [comments, setComments] =
     useState<PortalTaskComment[]>(initialComments);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -394,23 +527,49 @@ export function PortalProjectBoard({
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-1 border-b border-[color:var(--workspace-shell-border)] pb-3">
-        {viewButtons.map(({ key, label, icon: Icon }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setView(key)}
-            className={cn(
-              'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
-              view === key
-                ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
-                : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-            )}
-          >
-            <Icon className="h-3.5 w-3.5" />
-            {label}
-          </button>
-        ))}
+      <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] pb-3">
+        <div className="flex items-center gap-1">
+          {viewButtons.map(({ key, label, icon: Icon }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setView(key)}
+              className={cn(
+                'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium transition-colors',
+                view === key
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                  : 'text-[var(--ozer-text-on-light-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--ozer-text-on-light)]',
+              )}
+            >
+              <Icon className="h-3.5 w-3.5" />
+              {label}
+            </button>
+          ))}
+        </div>
+        {view === 'board' ? (
+          <div className="flex items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5">
+            {(
+              [
+                { key: 'phase', label: 'Phase' },
+                { key: 'progress', label: 'Progress' },
+              ] as const
+            ).map(({ key, label }) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setBoardMode(key)}
+                className={cn(
+                  'rounded px-2.5 py-1 text-xs font-medium transition-colors',
+                  boardMode === key
+                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                    : 'text-[var(--ozer-text-on-light-muted)] hover:text-[var(--ozer-text-on-light)]',
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        ) : null}
       </div>
 
       {view === 'list' ? (
@@ -424,8 +583,22 @@ export function PortalProjectBoard({
         />
       ) : null}
 
-      {view === 'board' ? (
+      {view === 'board' && boardMode === 'progress' ? (
         <PortalProjectKanbanView
+          tasks={initialTasks}
+          commentsByTask={commentsByTask}
+          drafts={drafts}
+          setDrafts={setDrafts}
+          pending={pending}
+          onSubmit={submitComment}
+          expandedTaskId={expandedTaskId}
+          setExpandedTaskId={setExpandedTaskId}
+        />
+      ) : null}
+
+      {view === 'board' && boardMode === 'phase' ? (
+        <PortalProjectPhaseKanbanView
+          phases={initialPhases}
           tasks={initialTasks}
           commentsByTask={commentsByTask}
           drafts={drafts}

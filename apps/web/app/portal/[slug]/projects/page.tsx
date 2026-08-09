@@ -1,11 +1,11 @@
 import Link from 'next/link';
 
-import { Briefcase } from 'lucide-react';
-
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 
 import pathsConfig from '~/config/paths.config';
+import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 import { formatPortalDate } from '../_components/portal-badges';
 import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
@@ -51,10 +51,18 @@ export default async function PortalProjectsPage({
             >
               <Card className="transition-colors hover:bg-[var(--workspace-shell-panel-hover)]">
                 <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                  <CardTitle className="text-base font-medium">
-                    {project.name}
-                  </CardTitle>
-                  <Briefcase className="h-4 w-4 text-[var(--workspace-shell-text-muted)]" />
+                  <div className="flex min-w-0 items-center gap-3">
+                    <ProfileAvatar
+                      displayName={project.name}
+                      pictureUrl={toSupabasePublicStorageUrl(
+                        project.pictureUrl,
+                      )}
+                      className="size-10 shrink-0"
+                    />
+                    <CardTitle className="truncate text-base font-medium">
+                      {project.name}
+                    </CardTitle>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-1">
                   {project.status ? (
