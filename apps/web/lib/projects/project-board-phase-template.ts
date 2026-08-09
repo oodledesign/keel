@@ -42,7 +42,8 @@ export const PROJECT_BOARD_TEMPLATE: {
     {
       name: 'Revisions',
       colour: '#EC4899',
-      description: 'Rework after feedback — separate from first-pass In Progress.',
+      description:
+        'Rework after feedback — separate from first-pass In Progress.',
       is_milestone: false,
     },
     {

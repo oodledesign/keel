@@ -150,6 +150,7 @@ export type CommercialPropertyWorkspaceModuleOrderKey =
 export const FAMILY_WORKSPACE_MODULE_ORDER = [
   'dashboard',
   'tasks',
+  'projects',
   'calendar',
   'meal_plan',
   'shopping',

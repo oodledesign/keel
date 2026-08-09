@@ -27,6 +27,8 @@ import { Label } from '@kit/ui/label';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@kit/ui/sheet';
 import { toast } from '@kit/ui/sonner';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import pathsConfig from '~/config/paths.config';
 import {
   listNotesAndFilesForContextAction,
@@ -115,6 +117,11 @@ export function ProposalsPageContent({
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const {
+    reportExhausted,
+    accountId: creditsAccountId,
+    billingHref,
+  } = useAiCreditsExhausted();
   const [tab, setTab] = useState<TabKey>('unapproved');
   const [proposals, setProposals] = useState<ProposalRow[]>([]);
   const [total, setTotal] = useState(0);
@@ -487,6 +494,17 @@ export function ProposalsPageContent({
         const payload = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId: creditsAccountId || accountId,
+            billingHref,
+            status: response.status,
+            body: payload,
+            message: payload?.error,
+          })
+        ) {
+          return;
+        }
         throw new Error(payload?.error ?? 'Generation failed');
       }
 
@@ -531,7 +549,17 @@ export function ProposalsPageContent({
         );
       }
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId: creditsAccountId || accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setAiGenerating(false);
     }

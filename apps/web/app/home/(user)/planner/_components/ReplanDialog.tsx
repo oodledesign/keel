@@ -18,6 +18,8 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
 import {
@@ -97,6 +99,11 @@ export function ReplanDialog({
   sessionUserContext,
   onPlanUpdated,
 }: Props) {
+  const {
+    reportExhausted,
+    accountId: creditsAccountId,
+    billingHref,
+  } = useAiCreditsExhausted();
   const [open, setOpen] = useState(false);
   const [whereIAm, setWhereIAm] = useState('');
   const [notDone, setNotDone] = useState('');
@@ -153,6 +160,17 @@ export function ReplanDialog({
         const body = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId: creditsAccountId || accountId,
+            billingHref,
+            status: response.status,
+            body,
+            message: body?.error,
+          })
+        ) {
+          return;
+        }
         throw new Error(body?.error ?? 'Could not re-plan');
       }
 
@@ -197,7 +215,18 @@ export function ReplanDialog({
         );
       }
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not re-plan');
+      const message =
+        err instanceof Error ? err.message : 'Could not re-plan';
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId: creditsAccountId || accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setIsReplanning(false);
     }

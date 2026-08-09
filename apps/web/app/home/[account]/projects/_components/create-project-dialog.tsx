@@ -31,6 +31,11 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
 import { WEBSITE_REVAMP_CAMPAIGN_FIELDS } from '~/lib/campaign-projects/website-revamp-template';
+import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
+import {
+  type ProjectsUiVariant,
+  projectDetailHref,
+} from '~/lib/projects/project-paths';
 import {
   PROJECT_TYPE_META,
   type ProjectType,
@@ -56,8 +61,10 @@ type Props = {
   accountId: string;
   accountSlug: string;
   onSuccess: () => void;
-  uiVariant?: 'projects' | 'maintenance';
+  uiVariant?: ProjectsUiVariant;
   defaultType?: ProjectType;
+  personalScope?: boolean;
+  projectDetailPathBuilder?: (id: string) => string;
 };
 
 export function CreateProjectDialog({
@@ -68,11 +75,14 @@ export function CreateProjectDialog({
   onSuccess,
   uiVariant = 'projects',
   defaultType = 'delivery',
+  personalScope = false,
+  projectDetailPathBuilder,
 }: Props) {
   const router = useRouter();
   const isMaintenance = uiVariant === 'maintenance';
+  const isSimple = uiVariant === 'simple';
   const [projectType, setProjectType] = useState<ProjectType>(
-    isMaintenance ? 'delivery' : defaultType,
+    isMaintenance || isSimple ? 'delivery' : defaultType,
   );
   const [name, setName] = useState('');
   const [clientId, setClientId] = useState('');
@@ -99,42 +109,46 @@ export function CreateProjectDialog({
     setDueDate('');
     setValuePence('');
     setCampaignTemplate('blank');
-    setProjectType(isMaintenance ? 'delivery' : defaultType);
+    setProjectType(isMaintenance || isSimple ? 'delivery' : defaultType);
   };
 
   useEffect(() => {
     if (!open) return;
-    setProjectType(isMaintenance ? 'delivery' : defaultType);
-  }, [open, defaultType, isMaintenance]);
+    setProjectType(isMaintenance || isSimple ? 'delivery' : defaultType);
+  }, [open, defaultType, isMaintenance, isSimple]);
 
   useEffect(() => {
-    if (!open || !accountId || projectType !== 'delivery') return;
+    if (!open || !accountId || projectType !== 'delivery' || isSimple) return;
 
     setClientsLoading(true);
     listClients({ accountId, page: 1, pageSize: 100 })
       .then((r: unknown) => {
-        const raw = r as { data?: unknown } | unknown[];
-        const list = Array.isArray(raw)
-          ? raw
-          : Array.isArray((raw as { data?: unknown })?.data)
-            ? (raw as { data: unknown[] }).data
-            : [];
-        setClients(
-          (list || []) as { id: string; display_name: string | null }[],
-        );
+        const unwrapped = unwrapListClientsResult<{
+          id: string;
+          display_name: string | null;
+        }>(r);
+        if (!unwrapped.ok) {
+          setClients([]);
+          return;
+        }
+        setClients(unwrapped.data);
       })
       .catch(() => setClients([]))
       .finally(() => setClientsLoading(false));
-  }, [open, accountId, projectType]);
+  }, [open, accountId, projectType, isSimple]);
 
   const handleOpenChange = (next: boolean) => {
     if (!next) resetForm();
     onOpenChange(next);
   };
 
-  const projectDetailPath = (id: string) =>
-    pathsConfig.app.accountProjects.replace('[account]', accountSlug) +
-    `/${id}`;
+  const resolveDetailPath = (id: string) => {
+    if (projectDetailPathBuilder) {
+      return projectDetailPathBuilder(id);
+    }
+
+    return projectDetailHref(accountSlug, id, personalScope);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,33 +169,49 @@ export function CreateProjectDialog({
         toast.success('Campaign tracker created');
         handleOpenChange(false);
         onSuccess();
-        router.push(projectDetailPath(project.id));
+        router.push(resolveDetailPath(project.id));
         router.refresh();
         return;
       }
 
-      await createJob({
+      const job = (await createJob({
         accountId,
         title: name.trim(),
         description: description.trim() || undefined,
-        client_id: clientId.trim() || undefined,
-        status: status as
+        client_id: isSimple ? undefined : clientId.trim() || undefined,
+        status: (isSimple ? 'pending' : status) as
           | 'pending'
           | 'in_progress'
           | 'on_hold'
           | 'completed'
           | 'cancelled',
-        priority: priority as 'low' | 'medium' | 'high' | 'urgent',
-        due_date: dueDate ? new Date(dueDate) : undefined,
-        value_pence: valuePence
-          ? Math.round(parseFloat(valuePence) * 100)
-          : undefined,
-      });
+        priority: (isSimple ? 'medium' : priority) as
+          | 'low'
+          | 'medium'
+          | 'high'
+          | 'urgent',
+        due_date: isSimple
+          ? undefined
+          : dueDate
+            ? new Date(dueDate)
+            : undefined,
+        value_pence: isSimple
+          ? undefined
+          : valuePence
+            ? Math.round(parseFloat(valuePence) * 100)
+            : undefined,
+      })) as { id?: string };
+
       toast.success(
         isMaintenance ? 'Maintenance job created' : 'Project created',
       );
       handleOpenChange(false);
       onSuccess();
+
+      if (job?.id && (isSimple || personalScope || projectDetailPathBuilder)) {
+        router.push(resolveDetailPath(job.id));
+        router.refresh();
+      }
     } catch (err) {
       toast.error(getErrorMessage(err));
     } finally {
@@ -194,7 +224,9 @@ export function CreateProjectDialog({
     : 'Create project';
   const dialogDescription = isMaintenance
     ? 'Track phased maintenance work for a client with tasks and timeline.'
-    : 'Choose a delivery project or a multi-client campaign tracker, then fill in the details.';
+    : isSimple
+      ? 'Name a project for DIY, parties, holidays, or anything else you are planning.'
+      : 'Choose a delivery project or a multi-client campaign tracker, then fill in the details.';
 
   const submitLabel =
     projectType === 'campaign'
@@ -217,7 +249,7 @@ export function CreateProjectDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {!isMaintenance ? (
+          {!isMaintenance && !isSimple ? (
             <div className="space-y-2">
               <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Project type
@@ -286,13 +318,32 @@ export function CreateProjectDialog({
               placeholder={
                 projectType === 'campaign'
                   ? 'Website revamp outreach'
-                  : 'ChurchWorks website build'
+                  : isSimple
+                    ? 'Kitchen renovation, birthday party…'
+                    : 'ChurchWorks website build'
               }
               autoFocus
             />
           </div>
 
-          {projectType === 'delivery' ? (
+          {isSimple ? (
+            <div>
+              <Label
+                htmlFor="description"
+                className="text-[var(--workspace-shell-text-muted)]"
+              >
+                Notes (optional)
+              </Label>
+              <Textarea
+                id="description"
+                value={description}
+                onChange={(e) => setDescription(e.target.value)}
+                rows={3}
+                className={fieldClass}
+                placeholder="Details, ideas, or what needs doing"
+              />
+            </div>
+          ) : projectType === 'delivery' ? (
             <>
               <div>
                 <Label className="text-[var(--workspace-shell-text-muted)]">

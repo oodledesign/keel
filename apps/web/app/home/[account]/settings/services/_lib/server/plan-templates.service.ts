@@ -47,8 +47,7 @@ function mapTemplate(row: Record<string, unknown>): PlanTemplateRecord {
       policy === 'rollover' || policy === 'cap' || policy === 'expire'
         ? policy
         : 'expire',
-    rolloverCap:
-      typeof row.rollover_cap === 'number' ? row.rollover_cap : null,
+    rolloverCap: typeof row.rollover_cap === 'number' ? row.rollover_cap : null,
     createdAt: String(row.created_at ?? ''),
     updatedAt: String(row.updated_at ?? ''),
   };
@@ -180,14 +179,10 @@ class PlanTemplatesService {
 
     const creditFields = {
       credits_per_cycle:
-        input.creditsPerCycle === undefined
-          ? undefined
-          : input.creditsPerCycle,
+        input.creditsPerCycle === undefined ? undefined : input.creditsPerCycle,
       rollover_policy: input.rolloverPolicy ?? 'expire',
       rollover_cap:
-        input.rolloverPolicy === 'cap'
-          ? (input.rolloverCap ?? null)
-          : null,
+        input.rolloverPolicy === 'cap' ? (input.rolloverCap ?? null) : null,
     };
 
     if (input.id) {

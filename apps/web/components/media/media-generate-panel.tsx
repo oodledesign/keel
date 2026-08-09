@@ -9,12 +9,15 @@ import { Label } from '@kit/ui/label';
 import { Spinner } from '@kit/ui/spinner';
 import { Textarea } from '@kit/ui/textarea';
 
-import { MediaJobsGrid, type MediaJobTile } from '~/components/media/media-jobs-grid';
 import {
+  type MediaJobTile,
+  MediaJobsGrid,
+} from '~/components/media/media-jobs-grid';
+import {
+  type ImageQualityTier,
   estimateImageBatchCost,
   estimateJobCost,
   resolveImageModelId,
-  type ImageQualityTier,
 } from '~/lib/billing/media-unit-pricing';
 import { MINIMAX_VIDEO_MODEL_ID } from '~/lib/media-generation/models/minimax-video';
 
@@ -161,7 +164,10 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
             required?: number;
           };
 
-          if (res.status === 402 || json.code === 'INSUFFICIENT_MEDIA_CREDITS') {
+          if (
+            res.status === 402 ||
+            json.code === 'INSUFFICIENT_MEDIA_CREDITS'
+          ) {
             setShortfall({
               balance: json.balance ?? 0,
               required: json.required ?? cost,
@@ -267,7 +273,9 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
         if (res.status === 402 || json.code === 'INSUFFICIENT_MEDIA_CREDITS') {
           setShortfall({
             balance: json.balance ?? 0,
-            required: json.required ?? estimateJobCost(resolveImageModelId(true, 'quality')),
+            required:
+              json.required ??
+              estimateJobCost(resolveImageModelId(true, 'quality')),
           });
           setError(json.error ?? 'Insufficient media credits');
           return;
@@ -344,8 +352,8 @@ export function MediaGeneratePanel(props: MediaGeneratePanelProps) {
                     variant={quality === 'draft' ? 'default' : 'outline'}
                     onClick={() => setQuality('draft')}
                   >
-                    Draft · {estimateJobCost(resolveImageModelId(hasRefs, 'draft'))}{' '}
-                    u
+                    Draft ·{' '}
+                    {estimateJobCost(resolveImageModelId(hasRefs, 'draft'))} u
                   </Button>
                   <Button
                     type="button"

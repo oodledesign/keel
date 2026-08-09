@@ -1,6 +1,7 @@
 import {
   Calendar,
   CheckSquare,
+  Kanban,
   LayoutDashboard,
   Settings,
   ShoppingCart,
@@ -11,8 +12,8 @@ import {
 
 import pathsConfig from '~/config/paths.config';
 import { FAMILY_WORKSPACE_MODULE_ORDER } from '~/config/workspace-module-order';
-import { isFamilyNavModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
+import { isFamilyNavModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 
 const iconClasses = 'w-4';
 
@@ -51,6 +52,14 @@ export function buildFamilySpaceNavChildren(
             label: 'Tasks',
             path: createPath(pathsConfig.app.accountCommunityTasks, account),
             Icon: <CheckSquare className={iconClasses} />,
+          }
+        : null,
+    projects: () =>
+      access.canViewProjects && isFamilyNavModuleEnabled(ms, 'projects')
+        ? {
+            label: 'Projects',
+            path: createPath(pathsConfig.app.accountProjects, account),
+            Icon: <Kanban className={iconClasses} />,
           }
         : null,
     calendar: () =>

@@ -31,6 +31,7 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
+import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
 
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -116,15 +117,16 @@ export function JobEditContent({
     setClientsError(null);
     listClients({ accountId, page: 1, pageSize: 100 })
       .then((r: unknown) => {
-        const raw = r as { data?: unknown } | unknown[];
-        const list = Array.isArray(raw)
-          ? raw
-          : Array.isArray((raw as { data?: unknown })?.data)
-            ? (raw as { data: unknown[] }).data
-            : [];
-        setClients(
-          (list || []) as { id: string; display_name: string | null }[],
-        );
+        const unwrapped = unwrapListClientsResult<{
+          id: string;
+          display_name: string | null;
+        }>(r);
+        if (!unwrapped.ok) {
+          setClientsError(unwrapped.error);
+          setClients([]);
+          return;
+        }
+        setClients(unwrapped.data);
       })
       .catch((err) => {
         setClientsError(

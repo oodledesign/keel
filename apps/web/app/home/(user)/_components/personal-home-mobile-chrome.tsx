@@ -20,6 +20,7 @@ import { WorkspaceMobileTopActions } from '~/components/workspace-shell/workspac
 import pathsConfig from '~/config/paths.config';
 import type { UserWorkspace } from '~/home/(user)/_lib/server/load-user-workspace';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { WorkspaceMobileScrollLock } from '~/lib/pwa/workspace-mobile-scroll-lock';
@@ -80,6 +81,10 @@ export function PersonalHomeMobileChrome({
             account={workspace.workspace}
             showProfileName={false}
             className="shrink-0"
+            billingAccountId={userId}
+            billingHref={toHomeBillingHref(
+              pathsConfig.app.personalAccountBilling,
+            )}
           />
         </WorkspaceMobileHeaderBar>
 

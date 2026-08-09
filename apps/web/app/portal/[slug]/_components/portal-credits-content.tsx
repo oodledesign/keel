@@ -12,8 +12,8 @@ import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
 
-import type { PortalCreditsBundle } from '../_lib/types/portal-credits.types';
 import { createPortalCreditTopupAction } from '../_lib/server/server-actions';
+import type { PortalCreditsBundle } from '../_lib/types/portal-credits.types';
 
 function formatPounds(pence: number) {
   return new Intl.NumberFormat('en-GB', {
@@ -182,9 +182,7 @@ export function PortalCreditsContent({
               <Button
                 type="button"
                 disabled={pending}
-                onClick={() =>
-                  buyPack(pack.id as 'small' | 'medium' | 'large')
-                }
+                onClick={() => buyPack(pack.id as 'small' | 'medium' | 'large')}
               >
                 {pending ? (
                   <Loader2 className="mr-1 size-4 animate-spin" />
@@ -212,29 +210,29 @@ export function PortalCreditsContent({
                   ? -Math.abs(tx.amount)
                   : tx.amount;
               return (
-              <li
-                key={tx.id}
-                className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
-              >
-                <div>
-                  <p className="font-medium text-[var(--ozer-text-on-light)]">
-                    {transactionLabel(tx.type)}
-                  </p>
-                  <p className="text-[var(--ozer-text-on-light-muted)]">
-                    {formatDate(tx.createdAt)}
-                  </p>
-                </div>
-                <p
-                  className={
-                    signed >= 0
-                      ? 'font-medium text-emerald-700'
-                      : 'font-medium text-rose-700'
-                  }
+                <li
+                  key={tx.id}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
                 >
-                  {signed > 0 ? '+' : ''}
-                  {signed}
-                </p>
-              </li>
+                  <div>
+                    <p className="font-medium text-[var(--ozer-text-on-light)]">
+                      {transactionLabel(tx.type)}
+                    </p>
+                    <p className="text-[var(--ozer-text-on-light-muted)]">
+                      {formatDate(tx.createdAt)}
+                    </p>
+                  </div>
+                  <p
+                    className={
+                      signed >= 0
+                        ? 'font-medium text-emerald-700'
+                        : 'font-medium text-rose-700'
+                    }
+                  >
+                    {signed > 0 ? '+' : ''}
+                    {signed}
+                  </p>
+                </li>
               );
             })}
           </ul>

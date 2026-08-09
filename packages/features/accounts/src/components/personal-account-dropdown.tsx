@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 
 import Link from 'next/link';
 
@@ -73,6 +73,7 @@ export function PersonalAccountDropdown({
   features,
   account,
   menuClassName,
+  menuExtras,
 }: {
   user: JWTUserData;
 
@@ -98,7 +99,11 @@ export function PersonalAccountDropdown({
 
   className?: string;
   menuClassName?: string;
+
+  /** Rendered between the profile header and menu links (e.g. AI credit meter). */
+  menuExtras?: ReactNode | ((open: boolean) => ReactNode);
 }) {
+  const [open, setOpen] = useState(false);
   const { data: personalAccountData } = usePersonalAccountData(
     user.id,
     account,
@@ -121,8 +126,11 @@ export function PersonalAccountDropdown({
     return hasAdminRole && isAal2;
   }, [user]);
 
+  const extras =
+    typeof menuExtras === 'function' ? menuExtras(open) : menuExtras;
+
   return (
-    <DropdownMenu>
+    <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger
         aria-label="Open your profile menu"
         data-test={'account-dropdown-trigger'}
@@ -203,6 +211,8 @@ export function PersonalAccountDropdown({
             </div>
           </div>
         </div>
+
+        {extras}
 
         <div className="space-y-0.5 px-1.5 py-1.5">
           <MenuLinkItem

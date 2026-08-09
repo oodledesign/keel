@@ -266,9 +266,7 @@ function InviteMembersForm({
   showSeatKind?: boolean;
 }) {
   const { t } = useTranslation('teams');
-  const defaultRole = roles.includes('staff')
-    ? 'staff'
-    : (roles[0] ?? 'staff');
+  const defaultRole = roles.includes('staff') ? 'staff' : (roles[0] ?? 'staff');
 
   const form = useForm({
     resolver: zodResolver(InviteMembersSchema),

@@ -11,9 +11,11 @@ import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
+import { AiCreditsExhaustedShell } from '~/components/ai/ai-credits-exhausted-shell';
 import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
+import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { buildWorkspaceShellMetadata } from '~/lib/seo/app-shell-metadata';
@@ -34,8 +36,8 @@ import { flattenTeamNavSections } from './_lib/flatten-team-nav-links';
 import { getTeamAccountAccess } from './_lib/role-access';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
 import {
-  loadTeamWorkspaceShellAdornments,
   type TeamWorkspaceShellAdornments,
+  loadTeamWorkspaceShellAdornments,
 } from './_lib/server/team-workspace-shell-adornments.loader';
 import { enforceWorkspaceBilling } from './_lib/server/workspace-billing-guard';
 import { spaceTypeFromProfile } from './_lib/workspace-profile';
@@ -158,24 +160,40 @@ async function SidebarLayout({
             {...EMPTY_SHELL_ADORNMENTS}
           >
             <TeamWorkspaceTopBarClient accountSlug={account} />
-            <BillingAccessBannerHost
+            <AiCreditsExhaustedShell
               accountId={accountId}
-              accountSlug={account}
-              canManageBilling={access.canManageBilling}
-            />
-            {children}
+              billingHref={toHomeBillingHref(
+                pathsConfig.app.accountBilling,
+                account,
+              )}
+            >
+              <BillingAccessBannerHost
+                accountId={accountId}
+                accountSlug={account}
+                canManageBilling={access.canManageBilling}
+              />
+              {children}
+            </AiCreditsExhaustedShell>
           </TeamWorkspaceSidebarShell>
         }
       >
         {(adornments) => (
           <TeamWorkspaceSidebarShell {...shellProps} {...adornments}>
             <TeamWorkspaceTopBarClient accountSlug={account} />
-            <BillingAccessBannerHost
+            <AiCreditsExhaustedShell
               accountId={accountId}
-              accountSlug={account}
-              canManageBilling={access.canManageBilling}
-            />
-            {children}
+              billingHref={toHomeBillingHref(
+                pathsConfig.app.accountBilling,
+                account,
+              )}
+            >
+              <BillingAccessBannerHost
+                accountId={accountId}
+                accountSlug={account}
+                canManageBilling={access.canManageBilling}
+              />
+              {children}
+            </AiCreditsExhaustedShell>
           </TeamWorkspaceSidebarShell>
         )}
       </TeamWorkspaceShellAdornmentsSuspense>
@@ -383,9 +401,7 @@ function HeaderLayoutShell({
   account: string;
   accountId: string;
   data: NonNullable<Awaited<ReturnType<typeof loadTeamWorkspace>>>;
-  accounts: React.ComponentProps<
-    typeof TeamWorkspaceMobileChrome
-  >['accounts'];
+  accounts: React.ComponentProps<typeof TeamWorkspaceMobileChrome>['accounts'];
   accountAccess: {
     permissions?: string[] | null;
     role?: string | null;
@@ -439,12 +455,20 @@ function HeaderLayoutShell({
           spaceType={spaceTypeFromProfile(data.workspaceProfile)}
           showNewMenu={access.canUseQuickCreate}
         >
-          <BillingAccessBannerHost
+          <AiCreditsExhaustedShell
             accountId={accountId}
-            accountSlug={account}
-            canManageBilling={access.canManageBilling}
-          />
-          {children}
+            billingHref={toHomeBillingHref(
+              pathsConfig.app.accountBilling,
+              account,
+            )}
+          >
+            <BillingAccessBannerHost
+              accountId={accountId}
+              accountSlug={account}
+              canManageBilling={access.canManageBilling}
+            />
+            {children}
+          </AiCreditsExhaustedShell>
         </TeamWorkspaceMobileChrome>
       </Page>
     </WorkspaceFocusProviderShell>

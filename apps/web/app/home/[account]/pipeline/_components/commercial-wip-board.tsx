@@ -60,6 +60,7 @@ import { EditDealDialog } from '~/home/(user)/pipeline/_components/edit-deal-dia
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
 import { moveDealToStage } from '~/home/(user)/pipeline/actions';
 import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
+import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import { RequirementFormModal } from '~/home/[account]/requirements/_components/requirement-form-modal';
 import type { RequirementDraftPrefill } from '~/home/[account]/requirements/_lib/schema/requirements.schema';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
@@ -122,6 +123,7 @@ type Props = {
   initialRequirements: CommercialRequirement[];
   accountSlug: string;
   accountId: string;
+  initialClients?: ClientOption[];
   listings?: PipelineListingOption[];
   stageConfig?: PipelineStageConfigItem[];
   boardName?: string;
@@ -191,6 +193,7 @@ export function CommercialWipBoard({
   initialRequirements,
   accountSlug,
   accountId,
+  initialClients = [],
   listings = [],
   stageConfig,
   boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
@@ -692,6 +695,7 @@ export function CommercialWipBoard({
         onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
         accountSlug={accountSlug}
         accountId={accountId}
+        initialClients={initialClients}
         stages={selectableInstructionStages}
         defaultStage={selectableInstructionStages[0]?.key}
         listings={listings}
@@ -724,6 +728,7 @@ export function CommercialWipBoard({
         }}
         accountSlug={accountSlug}
         accountId={accountId}
+        initialClients={initialClients}
         stages={selectableInstructionStages}
         listings={listings}
         commercial

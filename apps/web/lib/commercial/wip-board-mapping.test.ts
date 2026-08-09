@@ -23,9 +23,7 @@ describe('wip-board-mapping', () => {
     expect(toSharedStatus('instruction', 'under_offer_negotiating')).toBe(
       'under_offer_negotiating',
     );
-    expect(toSharedStatus('instruction', 'completed_exchanged')).toBe(
-      'closed',
-    );
+    expect(toSharedStatus('instruction', 'completed_exchanged')).toBe('closed');
     expect(toSharedStatus('instruction', 'fallen_through')).toBe('closed');
   });
 

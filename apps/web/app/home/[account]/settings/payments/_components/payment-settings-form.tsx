@@ -212,10 +212,10 @@ export function PaymentSettingsForm({
                   name="stripe_card_fee_mode"
                   className="mt-1"
                   disabled={!canEdit}
-              checked={
-                (settings.stripe_card_fee_mode ?? 'absorb_in_payout') ===
-                'absorb_in_payout'
-              }
+                  checked={
+                    (settings.stripe_card_fee_mode ?? 'absorb_in_payout') ===
+                    'absorb_in_payout'
+                  }
                   onChange={() =>
                     setSettings((prev) => ({
                       ...prev,

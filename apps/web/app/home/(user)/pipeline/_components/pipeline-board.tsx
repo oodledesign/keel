@@ -58,8 +58,9 @@ import {
   TooltipTrigger,
 } from '@kit/ui/tooltip';
 
-import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
 import pathsConfig from '~/config/paths.config';
+import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
+import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import {
   COMMERCIAL_PIPELINE_LOST_STAGE,
   COMMERCIAL_PIPELINE_WON_STAGE,
@@ -241,6 +242,7 @@ type Props = {
   /** When set, revalidates `/app/[account]/pipeline` after server actions */
   workspaceAccountSlug?: string;
   workspaceAccountId?: string;
+  initialClients?: ClientOption[];
   variant?: 'work' | 'commercial';
   listings?: PipelineListingOption[];
   /** Commercial stage overrides (rename/hide). */
@@ -255,6 +257,7 @@ export function PipelineBoard({
   onDealWon,
   workspaceAccountSlug,
   workspaceAccountId,
+  initialClients = [],
   variant = 'work',
   listings = [],
   stageConfig,
@@ -603,6 +606,7 @@ export function PipelineBoard({
             onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
             accountSlug={workspaceAccountSlug}
             accountId={workspaceAccountId}
+            initialClients={initialClients}
             stages={selectableStages}
             defaultStage={selectableStages[0]?.key}
             listings={listings}
@@ -639,6 +643,7 @@ export function PipelineBoard({
         onDealUpdated={handleDealUpdated}
         accountSlug={workspaceAccountSlug}
         accountId={workspaceAccountId}
+        initialClients={initialClients}
         stages={selectableStages}
         listings={listings}
         commercial={isCommercial}

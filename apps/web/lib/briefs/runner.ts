@@ -2,12 +2,12 @@ import 'server-only';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { resolveRanklyProjectAccountId } from '~/lib/page-optimize/claude-analyser';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
 import { synthesiseBrief } from './claude-synthesiser';
 import { scrapeTopCompetitors } from './competitor-scrape';
 import { getBriefJob, saveBrief, updateBriefJobStatus } from './db';
-import { resolveRanklyProjectAccountId } from '~/lib/page-optimize/claude-analyser';
 import {
   enrichCompetitors,
   fetchCompetitors,
@@ -154,33 +154,33 @@ export async function runBriefJob(jobId: string): Promise<void> {
     const accountId = await resolveRanklyProjectAccountId(job.project_id);
     const briefOutput = await synthesiseBrief(
       {
-      targetDomain: job.target_domain,
-      targetKeyword,
-      country: job.country,
-      template,
-      templateRationale: rationale,
-      brandContext: {
-        brandName: brandSettings.brief_brand_name,
-        voiceNotes: brandSettings.brief_voice_notes,
-        mentionRules: brandSettings.brief_mention_rules,
-        researchDepth: brandSettings.brief_research_depth,
-      },
-      domainKeywords,
-      competitors: competitorDomains,
-      targetOpr,
-      targetAhrefsDr,
-      targetReferringDomains,
-      keywordGaps,
-      serpResults: serpData.organic,
-      serpFeatures: serpData.features,
-      aiCitedBrands: aiOverviewData.citedDomains,
-      competitorPages,
-      relatedKeywords,
-      questionKeywords,
-      internalLinkCandidates,
-      competitorAvgWc,
-      primaryVolume,
-      traffic: estimateTraffic(primaryVolume),
+        targetDomain: job.target_domain,
+        targetKeyword,
+        country: job.country,
+        template,
+        templateRationale: rationale,
+        brandContext: {
+          brandName: brandSettings.brief_brand_name,
+          voiceNotes: brandSettings.brief_voice_notes,
+          mentionRules: brandSettings.brief_mention_rules,
+          researchDepth: brandSettings.brief_research_depth,
+        },
+        domainKeywords,
+        competitors: competitorDomains,
+        targetOpr,
+        targetAhrefsDr,
+        targetReferringDomains,
+        keywordGaps,
+        serpResults: serpData.organic,
+        serpFeatures: serpData.features,
+        aiCitedBrands: aiOverviewData.citedDomains,
+        competitorPages,
+        relatedKeywords,
+        questionKeywords,
+        internalLinkCandidates,
+        competitorAvgWc,
+        primaryVolume,
+        traffic: estimateTraffic(primaryVolume),
       },
       {
         accountId,

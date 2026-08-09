@@ -28,7 +28,7 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
-import pathsConfig from '~/config/paths.config';
+import { projectDetailHref } from '~/lib/projects/project-paths';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type { PhaseStatus } from '../../_lib/schema/project-phases.schema';
@@ -131,11 +131,7 @@ export function PhaseMetaPanel({
           phaseId: phase.id,
         });
         toast.success('Phase deleted');
-        router.push(
-          pathsConfig.app.accountJobDetail
-            .replace('[account]', accountSlug)
-            .replace('[id]', jobId),
-        );
+        router.push(projectDetailHref(accountSlug, jobId));
         router.refresh();
       } catch (err) {
         toast.error(getErrorMessage(err));

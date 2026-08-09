@@ -4,15 +4,25 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { Copy, Edit2, Link2, Loader2, Plus, Sparkles, Trash2 } from 'lucide-react';
+import {
+  Copy,
+  Edit2,
+  Link2,
+  Loader2,
+  Plus,
+  Sparkles,
+  Trash2,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import { Switch } from '@kit/ui/switch';
 import { toast } from '@kit/ui/sonner';
+import { Switch } from '@kit/ui/switch';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import pathsConfig from '~/config/paths.config';
 import {
   ENQUIRY_SOURCES,
@@ -320,6 +330,11 @@ export function ListingMarketingSection({
   listing: CommercialListing;
   accountId: string;
 }) {
+  const {
+    reportExhausted,
+    accountId: creditsAccountId,
+    billingHref,
+  } = useAiCreditsExhausted();
   const { listing, modalOpen, setModalOpen, onSaved } =
     useListingState(initial);
   const [generating, startGenerate] = useTransition();
@@ -341,11 +356,20 @@ export function ListingMarketingSection({
         setModalOpen(true);
         toast.success('Draft marketing copy ready — review and save');
       } catch (error) {
-        toast.error(
+        const message =
           error instanceof Error
             ? error.message
-            : 'Could not generate marketing copy',
-        );
+            : 'Could not generate marketing copy';
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId: creditsAccountId || accountId,
+            billingHref,
+            message,
+          })
+        ) {
+          return;
+        }
+        toast.error(message);
       }
     });
   };

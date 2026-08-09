@@ -64,9 +64,7 @@ function mapRequirement(row: Row): CommercialRequirement {
     sizeMaxSqft: num(row.size_max_sqft),
     budgetMinPence: num(row.budget_min_pence),
     budgetMaxPence: num(row.budget_max_pence),
-    stage: normalizeRequirementStage(
-      (row.stage as string | null) ?? 'new',
-    ),
+    stage: normalizeRequirementStage((row.stage as string | null) ?? 'new'),
     assignedTo: (row.assigned_to as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     source: (row.source as string | null) ?? null,

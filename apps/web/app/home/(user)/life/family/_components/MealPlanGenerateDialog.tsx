@@ -17,6 +17,9 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
+
 import { applyGeneratedWeekAction } from '../_lib/actions';
 import { weekdayLabel } from '../_lib/server/family-meal.dates';
 import type { MealPreferencesRow } from '../_lib/schema/family-meal.schema';
@@ -54,6 +57,7 @@ export function MealPlanGenerateDialog({
   accountSlug,
   onSaved,
 }: Props) {
+  const { reportExhausted, accountId, billingHref } = useAiCreditsExhausted();
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [step, setStep] = useState<Step>('confirm');
   const [generated, setGenerated] = useState<GeneratedMealPreview[]>([]);
@@ -103,16 +107,27 @@ export function MealPlanGenerateDialog({
         }),
       });
 
-      const body = (await response.json()) as {
+      const body = (await response.json().catch(() => null)) as {
         meals?: Array<Omit<GeneratedMealPreview, 'key'>>;
         error?: string;
-      };
+      } | null;
 
       if (!response.ok) {
-        throw new Error(body.error ?? 'Could not generate meal plan');
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId,
+            billingHref,
+            status: response.status,
+            body,
+            message: body?.error,
+          })
+        ) {
+          return;
+        }
+        throw new Error(body?.error ?? 'Could not generate meal plan');
       }
 
-      const items = (body.meals ?? []).map((meal) => ({
+      const items = (body?.meals ?? []).map((meal) => ({
         ...meal,
         key: meal.date,
       }));
@@ -125,9 +140,18 @@ export function MealPlanGenerateDialog({
       setSelectedKeys(new Set(items.map((item) => item.key)));
       setStep('preview');
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Could not generate meal plan',
-      );
+      const message =
+        err instanceof Error ? err.message : 'Could not generate meal plan';
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setIsGenerating(false);
     }

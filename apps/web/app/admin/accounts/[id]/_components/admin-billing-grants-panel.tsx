@@ -171,7 +171,9 @@ export function AdminBillingGrantsPanel(props: {
           parts.push(`${result.aiCreditsGranted.toLocaleString()} AI credits`);
         }
         if (result.mediaUnitsGranted) {
-          parts.push(`${result.mediaUnitsGranted.toLocaleString()} media units`);
+          parts.push(
+            `${result.mediaUnitsGranted.toLocaleString()} media units`,
+          );
         }
         toast.success(parts.join(' · '));
       } catch (e) {
@@ -205,9 +207,9 @@ export function AdminBillingGrantsPanel(props: {
           and refill the matching AI credit pool (Scale = 12,000). Media
           Generate Starter/Studio/Agency presets also grant monthly media units.
           Add-on <strong>Grant</strong> only unlocks the app — use a quick
-          preset when you need usage tokens. Workspace type grants
-          (Community / Lite / Property / Commercial Property) are different
-          products — do not stack them to “upgrade” a Business plan.
+          preset when you need usage tokens. Workspace type grants (Community /
+          Lite / Property / Commercial Property) are different products — do not
+          stack them to “upgrade” a Business plan.
         </p>
         <div>
           <p className="text-muted-foreground mb-2 text-xs font-medium tracking-wide uppercase">

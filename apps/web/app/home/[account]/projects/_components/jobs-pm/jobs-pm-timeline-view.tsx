@@ -14,9 +14,13 @@ import {
 export function JobsPmTimelineView({
   jobs,
   jobDetailPath,
+  resolveDetailHref,
+  hideClient = false,
 }: {
   jobs: JobsPmRow[];
   jobDetailPath: string;
+  resolveDetailHref?: (id: string) => string;
+  hideClient?: boolean;
 }) {
   const sorted = [...jobs].sort((a, b) => {
     const aDate = a.due_date ?? a.start_date ?? '';
@@ -26,6 +30,8 @@ export function JobsPmTimelineView({
 
   const withDates = sorted.filter((j) => j.start_date || j.due_date);
   const undated = sorted.filter((j) => !j.start_date && !j.due_date);
+  const hrefFor = (id: string) =>
+    resolveDetailHref?.(id) ?? jobDetailPath.replace('[id]', id);
 
   return (
     <div className="min-h-0 flex-1 overflow-auto p-4 md:p-5">
@@ -40,7 +46,7 @@ export function JobsPmTimelineView({
           return (
             <Link
               key={job.id}
-              href={jobDetailPath.replace('[id]', job.id)}
+              href={hrefFor(job.id)}
               className="flex flex-wrap items-center gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/60 px-4 py-3 transition-colors hover:bg-[var(--workspace-shell-panel-hover)]"
             >
               <span
@@ -51,7 +57,7 @@ export function JobsPmTimelineView({
                 <p className="font-medium text-[var(--workspace-shell-text)]">
                   {job.title}
                 </p>
-                {job.clients?.display_name ? (
+                {!hideClient && job.clients?.display_name ? (
                   <div className="mt-0.5 flex items-center gap-1.5">
                     <ProfileAvatar
                       displayName={job.clients.display_name}
@@ -62,11 +68,11 @@ export function JobsPmTimelineView({
                       {job.clients.display_name}
                     </p>
                   </div>
-                ) : (
+                ) : !hideClient ? (
                   <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                     No client
                   </p>
-                )}
+                ) : null}
               </div>
               <span
                 className="rounded px-2 py-1 text-xs font-medium"
@@ -90,7 +96,7 @@ export function JobsPmTimelineView({
               {undated.map((job) => (
                 <Link
                   key={job.id}
-                  href={jobDetailPath.replace('[id]', job.id)}
+                  href={hrefFor(job.id)}
                   className="block rounded-lg border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-2.5 text-sm text-[var(--workspace-shell-text-muted)] hover:border-[color:var(--workspace-shell-border)] hover:text-[var(--workspace-shell-text)]"
                 >
                   {job.title}

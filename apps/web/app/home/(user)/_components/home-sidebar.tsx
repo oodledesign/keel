@@ -50,6 +50,7 @@ interface HomeSidebarProps {
     slug: string;
     pictureUrl: string | null;
   }>;
+  emailNeedsReplyCount?: number;
 }
 
 export function HomeSidebar(props: HomeSidebarProps) {
@@ -61,7 +62,9 @@ export function HomeSidebar(props: HomeSidebarProps) {
   );
 
   const sidebarNavConfig = parsePersonalAccountNavigationConfig(
-    buildPersonalHomeNavRoutes(),
+    buildPersonalHomeNavRoutes({
+      emailNeedsReplyCount: props.emailNeedsReplyCount,
+    }),
   );
 
   return (

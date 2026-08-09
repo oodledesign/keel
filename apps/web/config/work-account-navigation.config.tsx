@@ -51,6 +51,7 @@ const iconClasses = 'w-4';
 
 export type WorkNavCounts = {
   supportOpenCount?: number;
+  emailNeedsReplyCount?: number;
   hasPartnerSupportLinks?: boolean;
   hasSharedClients?: boolean;
 };
@@ -380,6 +381,7 @@ function buildWorkNavItemsForKeys(
     const item = factory();
     if (item) items.push(item);
     if (item && key === 'activity' && emailAssistantAvailable) {
+      const needsReplyCount = navCounts?.emailNeedsReplyCount ?? 0;
       items.push({
         label: 'Emails',
         path: pathsConfig.app.accountEmailAssistant.replace(
@@ -388,6 +390,12 @@ function buildWorkNavItemsForKeys(
         ),
         Icon: <Mail className={iconClasses} />,
         description: 'Gmail inbox, action items, and AI-assisted replies.',
+        renderAction:
+          needsReplyCount > 0 ? (
+            <SidebarMenuBadge className="bg-[color:var(--ozer-accent)]/15 leading-none text-[color:var(--ozer-accent)]">
+              {needsReplyCount > 99 ? '99+' : needsReplyCount}
+            </SidebarMenuBadge>
+          ) : undefined,
       });
     }
     if (key === 'tasks') {

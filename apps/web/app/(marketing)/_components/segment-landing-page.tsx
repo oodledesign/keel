@@ -27,8 +27,8 @@ import {
 import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
 import type { SegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
 
-import { InterconnectedWorkspacesSection } from './interconnected-workspaces-section';
 import { CommercialSeatCalculator } from './commercial-seat-calculator';
+import { InterconnectedWorkspacesSection } from './interconnected-workspaces-section';
 import { MarketingFaqsSection } from './marketing-faqs';
 import { PricingComparisonTable } from './pricing-comparison-table';
 
@@ -47,7 +47,8 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
     planId:
       config.pricingPlans.find((p) => p.highlighted)?.planId ??
       config.pricingPlans.find((p) => p.priceGbp > 0)?.planId,
-    seats: config.pricingPlans.find((p) => p.highlighted)?.seats ??
+    seats:
+      config.pricingPlans.find((p) => p.highlighted)?.seats ??
       config.pricingPlans.find((p) => p.priceGbp > 0)?.seats,
   });
   const pricingComparison = getSegmentPricingComparison(config.slug);
@@ -110,9 +111,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 size="lg"
                 className={marketingBtnOutline}
               >
-                <Link href={pricingLink}>
-                  See pricing
-                </Link>
+                <Link href={pricingLink}>See pricing</Link>
               </Button>
             </div>
           </div>
@@ -381,8 +380,8 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
           </p>
         ) : (
           <p className={`mt-8 text-center text-sm ${marketingMutedText}`}>
-            Commercial property pricing lives on this page only — it is not mixed
-            into Ozer Business plans on /pricing.
+            Commercial property pricing lives on this page only — it is not
+            mixed into Ozer Business plans on /pricing.
           </p>
         )}
       </section>

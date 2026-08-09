@@ -8,7 +8,10 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { websitePlanningTabForPhase } from '~/lib/websites/website-design-template';
 
 import { TeamAccountLayoutPageHeader } from '../../../../_components/team-account-layout-page-header';
-import { isWorkModuleEnabled } from '../../../../_lib/server/account-modules';
+import {
+  isFamilyNavModuleEnabled,
+  isWorkModuleEnabled,
+} from '../../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
 import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
@@ -23,6 +26,11 @@ import { loadJobsPageData } from '../../../_lib/server/jobs-page.loader';
 import { createJobsService } from '../../../_lib/server/jobs.service';
 import { createProjectPhasesService } from '../../../_lib/server/project-phases.service';
 
+const PROJECT_PHASE_SPACE_TYPES = [
+  ...BUSINESS_WORKSPACE_SPACE_TYPES,
+  'family',
+] as const;
+
 interface JobPhasePageProps {
   params: Promise<{ account: string; id: string; phaseId: string }>;
 }
@@ -30,8 +38,14 @@ interface JobPhasePageProps {
 async function JobPhasePage({ params }: JobPhasePageProps) {
   const { account: accountSlug, id: jobId, phaseId } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
-  if (!isWorkModuleEnabled(workspace.moduleSettings, 'jobs')) {
+  redirectIfSpaceNotIn(workspace, accountSlug, [...PROJECT_PHASE_SPACE_TYPES]);
+  const spaceType = (workspace.account as { space_type?: string | null })
+    .space_type;
+  const jobsModuleOk =
+    spaceType === 'family'
+      ? isFamilyNavModuleEnabled(workspace.moduleSettings, 'projects')
+      : isWorkModuleEnabled(workspace.moduleSettings, 'jobs');
+  if (!jobsModuleOk) {
     notFound();
   }
 

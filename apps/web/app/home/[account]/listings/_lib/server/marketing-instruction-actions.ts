@@ -31,13 +31,15 @@ export const listPotentialInstructionsForListing = enhanceAction(
       throw new Error(error.message);
     }
 
-    return ((data ?? []) as Array<{
-      id: string;
-      name: string | null;
-      contact_name: string | null;
-      company_name: string | null;
-      stage: string;
-    }>).map((row) => ({
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        name: string | null;
+        contact_name: string | null;
+        company_name: string | null;
+        stage: string;
+      }>
+    ).map((row) => ({
       id: row.id,
       name:
         row.name?.trim() ||

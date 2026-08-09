@@ -9,7 +9,7 @@ import { ArrowLeft } from 'lucide-react';
 import { cn } from '@kit/ui/utils';
 
 import { workspacePageContentClassName } from '~/components/workspace-shell/workspace-shell-styles';
-import pathsConfig from '~/config/paths.config';
+import { projectDetailHref } from '~/lib/projects/project-paths';
 import type { WebsitePlanningTab } from '~/lib/websites/planning-types';
 
 import { AskBrainLink } from '../../../brain/_components/ask-brain-link';
@@ -54,9 +54,7 @@ export function PhaseDetailContent({
   const [pageContent, setPageContent] = useState(pageDoc.content ?? '');
   const [aiOpen, setAiOpen] = useState(false);
 
-  const jobPath = pathsConfig.app.accountJobDetail
-    .replace('[account]', accountSlug)
-    .replace('[id]', jobId);
+  const jobPath = projectDetailHref(accountSlug, jobId);
 
   return (
     <div className={cn('w-full space-y-6', workspacePageContentClassName)}>

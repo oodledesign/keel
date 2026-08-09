@@ -23,7 +23,10 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
-import pathsConfig from '~/config/paths.config';
+import {
+  type ProjectsUiVariant,
+  projectDetailHref,
+} from '~/lib/projects/project-paths';
 import { workspaceBtnPrimary } from '~/lib/workspace-ui';
 
 import { getErrorMessage } from '../../_lib/error-message';
@@ -78,6 +81,7 @@ export function JobsPmMainTable({
   onRefresh,
   onAddProject,
   uiVariant,
+  personalScope = false,
 }: {
   jobs: JobsPmRow[];
   campaigns?: Array<{ id: string; name: string; clientCount?: number }>;
@@ -88,12 +92,15 @@ export function JobsPmMainTable({
   members: MemberPreview[];
   onRefresh: () => void;
   onAddProject: () => void;
-  uiVariant: 'projects' | 'maintenance';
+  uiVariant: ProjectsUiVariant;
+  personalScope?: boolean;
 }) {
   const [collapsed, setCollapsed] = useState<Record<ProjectGroupId, boolean>>(
     {},
   );
   const [, startTransition] = useTransition();
+  const isSimple = uiVariant === 'simple';
+  const hideValue = isContractorView || isSimple;
 
   const memberById = useMemo(
     () => new Map(members.map((m) => [m.user_id, m])),
@@ -109,10 +116,8 @@ export function JobsPmMainTable({
     })).filter((group) => group.jobs.length > 0);
   }, [jobs]);
 
-  const jobDetailPath = pathsConfig.app.accountJobDetail.replace(
-    '[account]',
-    accountSlug,
-  );
+  const jobDetailPathFor = (id: string) =>
+    projectDetailHref(accountSlug, id, personalScope);
 
   const handleStatusChange = (jobId: string, status: JobStatus) => {
     if (!canEditJobs) return;
@@ -142,7 +147,7 @@ export function JobsPmMainTable({
 
   const projectLabel = uiVariant === 'maintenance' ? 'Job' : 'Project';
 
-  const showCampaigns = uiVariant !== 'maintenance' && campaigns.length > 0;
+  const showCampaigns = uiVariant === 'projects' && campaigns.length > 0;
 
   return (
     <div className="min-h-0 flex-1 overflow-auto">
@@ -174,7 +179,7 @@ export function JobsPmMainTable({
                   >
                     <td className="px-4 py-2 md:px-5">
                       <Link
-                        href={jobDetailPath.replace('[id]', campaign.id)}
+                        href={jobDetailPathFor(campaign.id)}
                         className="font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)]"
                       >
                         {campaign.name}
@@ -188,7 +193,7 @@ export function JobsPmMainTable({
                     </td>
                     <td className="px-2 py-2 md:pr-5">
                       <Link
-                        href={jobDetailPath.replace('[id]', campaign.id)}
+                        href={jobDetailPathFor(campaign.id)}
                         className="inline-flex h-8 w-8 items-center justify-center rounded text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                         aria-label={`Open ${campaign.name}`}
                       >
@@ -246,7 +251,7 @@ export function JobsPmMainTable({
                       <th className="w-[100px] px-2 py-2">Priority</th>
                       <th className="w-[110px] px-2 py-2">Phase</th>
                       <th className="w-[140px] px-2 py-2">Timeline</th>
-                      {!isContractorView && (
+                      {!hideValue && (
                         <th className="w-[80px] px-2 py-2">Value</th>
                       )}
                       <th className="w-[56px] px-2 py-2 md:pr-5" />
@@ -274,7 +279,7 @@ export function JobsPmMainTable({
                         >
                           <td className="px-4 py-1.5 md:px-5">
                             <Link
-                              href={jobDetailPath.replace('[id]', job.id)}
+                              href={jobDetailPathFor(job.id)}
                               className="flex items-center gap-2 font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)]"
                             >
                               <span className="inline-flex h-5 w-5 shrink-0 items-center justify-center rounded-full border border-[color:var(--workspace-shell-border)] text-[10px] text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100">
@@ -282,7 +287,7 @@ export function JobsPmMainTable({
                               </span>
                               {job.title}
                             </Link>
-                            {job.clients?.display_name ? (
+                            {!isSimple && job.clients?.display_name ? (
                               <div className="mt-0.5 flex items-center gap-1.5 pl-7">
                                 <ProfileAvatar
                                   displayName={job.clients.display_name}
@@ -398,14 +403,14 @@ export function JobsPmMainTable({
                               )}
                             </span>
                           </td>
-                          {!isContractorView && (
+                          {!hideValue && (
                             <td className="px-2 py-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
                               {formatValue(job.value_pence)}
                             </td>
                           )}
                           <td className="px-2 py-1.5 md:pr-5">
                             <Link
-                              href={jobDetailPath.replace('[id]', job.id)}
+                              href={jobDetailPathFor(job.id)}
                               className="inline-flex h-7 w-7 items-center justify-center rounded text-[var(--workspace-shell-text-muted)] opacity-0 transition-opacity group-hover:opacity-100 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
                               aria-label="Open project"
                             >
@@ -419,7 +424,7 @@ export function JobsPmMainTable({
                     {canEditJobs && (
                       <tr className="border-b border-[color:var(--workspace-shell-border)]">
                         <td
-                          colSpan={isContractorView ? 8 : 9}
+                          colSpan={hideValue ? 8 : 9}
                           className="px-4 py-2 md:px-5"
                         >
                           <button
@@ -452,7 +457,7 @@ export function JobsPmMainTable({
                       <td className="px-2 py-2 text-xs text-[var(--workspace-shell-text-muted)]">
                         {group.jobs.filter((j) => j.due_date).length} dated
                       </td>
-                      {!isContractorView && (
+                      {!hideValue && (
                         <td className="px-2 py-2 text-xs text-[var(--workspace-shell-text-muted)]">
                           {
                             group.jobs.filter((j) => j.value_pence != null)

@@ -76,9 +76,10 @@ export function isPropertyNavModuleEnabled(
   );
 }
 
-/** Family nav: Members → team module_key in settings. */
+/** Family nav: Members → team; Projects → jobs module_key in settings. */
 export function resolveFamilyNavModuleKey(navKey: string): string {
   if (navKey === 'members') return 'team';
+  if (navKey === 'projects') return 'jobs';
   return navKey;
 }
 

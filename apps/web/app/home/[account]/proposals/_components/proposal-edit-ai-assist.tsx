@@ -22,6 +22,9 @@ import { Label } from '@kit/ui/label';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
+import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
 import pathsConfig from '~/config/paths.config';
 import {
   listNotesAndFilesForContextAction,
@@ -33,7 +36,6 @@ import { listMeetingTranscripts } from '~/home/[account]/meeting-transcripts/_li
 
 import { getErrorMessage } from '../_lib/error-message';
 import { getProposal, listProposals } from '../_lib/server/server-actions';
-import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
 
 type DealOption = {
   id: string;
@@ -100,6 +102,11 @@ export function ProposalEditAiAssist({
   disabled,
   onContentApplied,
 }: Props) {
+  const {
+    reportExhausted,
+    accountId: creditsAccountId,
+    billingHref,
+  } = useAiCreditsExhausted();
   const [generateOpen, setGenerateOpen] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [templateOpen, setTemplateOpen] = useState(false);
@@ -329,6 +336,17 @@ export function ProposalEditAiAssist({
         const payload = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId: creditsAccountId || accountId,
+            billingHref,
+            status: response.status,
+            body: payload,
+            message: payload?.error,
+          })
+        ) {
+          return;
+        }
         throw new Error(payload?.error ?? 'Generation failed');
       }
       if (!response.body) throw new Error('Empty generation stream');
@@ -350,7 +368,17 @@ export function ProposalEditAiAssist({
       setGenerateOpen(false);
       toast.success('AI draft applied — review and save');
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId: creditsAccountId || accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setBusy(false);
     }
@@ -387,6 +415,17 @@ export function ProposalEditAiAssist({
         const payload = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId: creditsAccountId || accountId,
+            billingHref,
+            status: response.status,
+            body: payload,
+            message: payload?.error,
+          })
+        ) {
+          return;
+        }
         throw new Error(payload?.error ?? 'Edit failed');
       }
       if (!response.body) throw new Error('Empty edit stream');
@@ -409,7 +448,17 @@ export function ProposalEditAiAssist({
       setEditInstruction('');
       toast.success('AI edits applied — review and save');
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId: creditsAccountId || accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setBusy(false);
     }

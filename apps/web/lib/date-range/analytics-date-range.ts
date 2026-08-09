@@ -162,11 +162,7 @@ export function shiftDateRangeByMonth(
   now = new Date(),
 ): { fromIso: string; toIso: string; selection: DateRangeSelection } | null {
   const from = parseIsoDateLocal(fromIso);
-  const anchor = new Date(
-    from.getFullYear(),
-    from.getMonth() + deltaMonths,
-    1,
-  );
+  const anchor = new Date(from.getFullYear(), from.getMonth() + deltaMonths, 1);
   const currentMonthStart = startOfMonth(now);
 
   if (anchor.getTime() > currentMonthStart.getTime()) {
@@ -190,7 +186,10 @@ export function shiftDateRangeByMonth(
   };
 }
 
-export function formatNavigatorDateLabel(fromIso: string, toIso: string): string {
+export function formatNavigatorDateLabel(
+  fromIso: string,
+  toIso: string,
+): string {
   if (isSameCalendarMonth(fromIso, toIso)) {
     return new Intl.DateTimeFormat('en-GB', {
       month: 'long',

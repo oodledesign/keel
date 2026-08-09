@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
+import { formatGbp } from '~/lib/billing/billing-config-prices';
 import {
   COMMERCIAL_GRADUATED_PLAN_ID,
   COMMERCIAL_GRADUATED_PRODUCT_ID,
@@ -27,7 +28,6 @@ import {
   MARKETING_WORKSPACE_PLANS,
   type MarketingWorkspacePlan,
 } from '~/lib/billing/pricing-marketing';
-import { formatGbp } from '~/lib/billing/billing-config-prices';
 
 export type SegmentSlug = 'personal' | 'work' | 'commercial-property';
 

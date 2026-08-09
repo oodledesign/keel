@@ -6,7 +6,7 @@ import Link from 'next/link';
 
 import { toast } from '@kit/ui/sonner';
 
-import pathsConfig from '~/config/paths.config';
+import { projectPhaseHref } from '~/lib/projects/project-paths';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
@@ -40,10 +40,7 @@ function dateToInput(d: Date) {
 }
 
 function phasePath(accountSlug: string, jobId: string, phaseId: string) {
-  return pathsConfig.app.accountJobPhaseDetail
-    .replace('[account]', accountSlug)
-    .replace('[id]', jobId)
-    .replace('[phaseId]', phaseId);
+  return projectPhaseHref(accountSlug, jobId, phaseId);
 }
 
 type ResolvedPhase = PhaseListItem & {

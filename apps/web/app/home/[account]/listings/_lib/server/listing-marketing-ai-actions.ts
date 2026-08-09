@@ -6,6 +6,7 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { generateListingMarketingCopy } from '~/lib/commercial/ai-listing-marketing';
+import { INSUFFICIENT_AI_CREDITS_CODE } from '~/lib/ai/ai-credits-exhausted';
 import { isInsufficientCreditsError } from '~/lib/ai/router';
 
 import { createListingsService } from './listings.service';
@@ -57,7 +58,7 @@ export const generateListingMarketingCopyAction = enhanceAction(
     } catch (error) {
       if (isInsufficientCreditsError(error)) {
         throw new Error(
-          `Not enough AI credits (need ${error.creditsRequired}, have ${error.creditsRemaining}).`,
+          `Not enough AI credits (need ${error.creditsRequired}, have ${error.creditsRemaining}). [${INSUFFICIENT_AI_CREDITS_CODE}]`,
         );
       }
       throw error;

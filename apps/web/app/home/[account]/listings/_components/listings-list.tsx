@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState, useTransition } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from 'react';
 
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -576,7 +582,11 @@ function ListingCard({
               <span
                 key={agent.id}
                 className="inline-flex max-w-full truncate rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text)]/70"
-                title={agent.contactName ? `${agent.clientName} · ${agent.contactName}` : agent.clientName}
+                title={
+                  agent.contactName
+                    ? `${agent.clientName} · ${agent.contactName}`
+                    : agent.clientName
+                }
               >
                 Joint: {agent.clientName}
               </span>

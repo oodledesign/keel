@@ -7,7 +7,10 @@ import pathsConfig from '~/config/paths.config';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { DELIVERY_PROJECT_TYPE } from '~/lib/projects/project-types';
 
-import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
+import {
+  isFamilyNavModuleEnabled,
+  isWorkModuleEnabled,
+} from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
@@ -19,6 +22,11 @@ import { JobDetailContent } from '../_components/job-detail-content';
 import { loadCampaignDetailPageData } from '../_lib/campaign/server/campaign-page.loader';
 import { loadJobsPageData } from '../_lib/server/jobs-page.loader';
 import { createJobsService } from '../_lib/server/jobs.service';
+
+const PROJECT_DETAIL_SPACE_TYPES = [
+  ...BUSINESS_WORKSPACE_SPACE_TYPES,
+  'family',
+] as const;
 
 interface ProjectDetailPageProps {
   params: Promise<{ account: string; id: string }>;
@@ -52,8 +60,14 @@ async function ProjectDetailPage({
   const { tab } = await searchParams;
   const initialTab = tab ?? 'project';
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
-  if (!isWorkModuleEnabled(workspace.moduleSettings, 'jobs')) {
+  redirectIfSpaceNotIn(workspace, accountSlug, [...PROJECT_DETAIL_SPACE_TYPES]);
+  const spaceType = (workspace.account as { space_type?: string | null })
+    .space_type;
+  const jobsModuleOk =
+    spaceType === 'family'
+      ? isFamilyNavModuleEnabled(workspace.moduleSettings, 'projects')
+      : isWorkModuleEnabled(workspace.moduleSettings, 'jobs');
+  if (!jobsModuleOk) {
     notFound();
   }
 

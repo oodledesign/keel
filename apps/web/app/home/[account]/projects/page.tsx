@@ -7,6 +7,7 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 import { getDefaultAccountPath } from '../_lib/role-access';
 import {
   getSpaceTypeFromAccount,
+  isFamilyNavModuleEnabled,
   isPropertyNavModuleEnabled,
   isWorkModuleEnabled,
 } from '../_lib/server/account-modules';
@@ -43,7 +44,9 @@ async function JobsPage({ params }: JobsPageProps) {
   const jobsEnabled =
     spaceType === 'property'
       ? isPropertyNavModuleEnabled(workspace.moduleSettings, 'maintenance')
-      : isWorkModuleEnabled(workspace.moduleSettings, 'jobs');
+      : spaceType === 'family'
+        ? isFamilyNavModuleEnabled(workspace.moduleSettings, 'projects')
+        : isWorkModuleEnabled(workspace.moduleSettings, 'jobs');
 
   if (!jobsEnabled) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
@@ -57,11 +60,20 @@ async function JobsPage({ params }: JobsPageProps) {
     isContractorView,
   } = await loadJobsPageData(accountSlug);
 
-  const initialData = canViewJobs
-    ? await loadJobsPageInitialData(accountSlug, accountId)
-    : null;
-
+  const isFamily = spaceType === 'family';
   const isProperty = spaceType === 'property';
+  const uiVariant = isProperty
+    ? 'maintenance'
+    : isFamily
+      ? 'simple'
+      : 'projects';
+
+  const initialData = canViewJobs
+    ? await loadJobsPageInitialData(accountSlug, accountId, {
+        includeCampaigns: uiVariant === 'projects',
+        includeMembers: uiVariant === 'projects',
+      })
+    : null;
 
   return (
     <>
@@ -72,7 +84,7 @@ async function JobsPage({ params }: JobsPageProps) {
           canViewJobs={canViewJobs}
           canEditJobs={canEditJobs}
           isContractorView={isContractorView}
-          uiVariant={isProperty ? 'maintenance' : 'projects'}
+          uiVariant={uiVariant}
           initialJobs={initialData?.jobs as never}
           initialCampaigns={initialData?.campaigns}
           initialMembers={initialData?.members}

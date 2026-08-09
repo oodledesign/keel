@@ -85,7 +85,9 @@ export function ListingCoAgentsCard({
         setResults([]);
         toast.success(`Linked ${client.name}`);
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Could not link agent');
+        toast.error(
+          err instanceof Error ? err.message : 'Could not link agent',
+        );
       }
     });
   };
@@ -172,7 +174,9 @@ export function ListingCoAgentsCard({
                       onClick={() => addExisting(row)}
                     >
                       <Building2 className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text)]/40" />
-                      <span className="min-w-0 flex-1 truncate">{row.name}</span>
+                      <span className="min-w-0 flex-1 truncate">
+                        {row.name}
+                      </span>
                       {row.commercialRole ? (
                         <span className="text-[10px] tracking-wide text-[var(--workspace-shell-text)]/40 uppercase">
                           {row.commercialRole}

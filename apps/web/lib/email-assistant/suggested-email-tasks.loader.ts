@@ -139,9 +139,7 @@ export async function loadSuggestedEmailActionItems(
   return { items, totalCount: count ?? items.length };
 }
 
-function unwrapOne(
-  value: unknown,
-): Record<string, unknown> | null {
+function unwrapOne(value: unknown): Record<string, unknown> | null {
   if (!value) {
     return null;
   }

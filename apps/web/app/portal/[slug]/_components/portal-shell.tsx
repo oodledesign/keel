@@ -8,8 +8,8 @@ import {
   Coins,
   CreditCard,
   Globe,
-  LayoutDashboard,
   Layers,
+  LayoutDashboard,
   MessageSquare,
   Settings,
 } from 'lucide-react';

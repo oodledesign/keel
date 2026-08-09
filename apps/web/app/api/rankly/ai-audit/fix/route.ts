@@ -90,7 +90,9 @@ export async function POST(request: NextRequest) {
         dimension: rec.dimension,
       },
       {
-        accountId: await resolveRanklyProjectAccountId(job.project_id as string),
+        accountId: await resolveRanklyProjectAccountId(
+          job.project_id as string,
+        ),
         supabase: client,
       },
     );

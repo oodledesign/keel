@@ -26,9 +26,8 @@ export const createRequirement = enhanceAction(
     const {
       data: { user },
     } = await client.auth.getUser();
-    const { requireCommercialBillableActor } = await import(
-      '~/lib/commercial/require-commercial-billable-actor'
-    );
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'create or edit requirements',
@@ -41,9 +40,8 @@ export const createRequirement = enhanceAction(
 
     if (sourceEnquiryId) {
       try {
-        const { createListingsService } = await import(
-          '../../../listings/_lib/server/listings.service'
-        );
+        const { createListingsService } =
+          await import('../../../listings/_lib/server/listings.service');
         await createListingsService(client).updateEnquiry(
           sourceEnquiryId,
           input.accountId,
@@ -64,9 +62,8 @@ export const createRequirement = enhanceAction(
 
 export const updateRequirement = enhanceAction(
   async (input) => {
-    const { requireCommercialBillableActor } = await import(
-      '~/lib/commercial/require-commercial-billable-actor'
-    );
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'create or edit requirements',

@@ -44,7 +44,8 @@ export function ClientCombobox({
   loading,
   disabled,
   placeholder = 'Select client',
-  emptyMessage = 'No clients found.',
+  emptyMessage = 'No matching clients.',
+  loadError = null,
   addClientHref,
 }: {
   clients: ClientOption[];
@@ -53,7 +54,10 @@ export function ClientCombobox({
   loading?: boolean;
   disabled?: boolean;
   placeholder?: string;
+  /** Shown inside the search list when no items match the query. */
   emptyMessage?: string;
+  /** Surfaced under the trigger when the client list failed to load. */
+  loadError?: string | null;
   addClientHref?: string;
 }) {
   const [open, setOpen] = useState(false);
@@ -94,7 +98,11 @@ export function ClientCombobox({
               className={workspaceComboboxInputClass}
             />
             <CommandList className={workspaceComboboxListClass}>
-              <CommandEmpty>{emptyMessage}</CommandEmpty>
+              <CommandEmpty>
+                {clients.length === 0
+                  ? 'No clients in this account yet.'
+                  : emptyMessage}
+              </CommandEmpty>
               <CommandGroup>
                 <CommandItem
                   value="None"
@@ -142,7 +150,10 @@ export function ClientCombobox({
           </Command>
         </PopoverContent>
       </Popover>
-      {!loading && clients.length === 0 && addClientHref && (
+      {!loading && loadError ? (
+        <p className="text-destructive text-sm">{loadError}</p>
+      ) : null}
+      {!loading && !loadError && clients.length === 0 && addClientHref ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
           No clients in this account yet.{' '}
           <a
@@ -152,7 +163,7 @@ export function ClientCombobox({
             Add a client
           </a>
         </p>
-      )}
+      ) : null}
     </div>
   );
 }

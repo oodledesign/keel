@@ -2308,10 +2308,7 @@ export function InvoiceEditIndyContent({
                 <Label className="text-sm text-[var(--workspace-shell-text)]">
                   {label}
                 </Label>
-                <Switch
-                  checked={checked}
-                  onCheckedChange={setter}
-                />
+                <Switch checked={checked} onCheckedChange={setter} />
               </div>
             ))}
           </div>

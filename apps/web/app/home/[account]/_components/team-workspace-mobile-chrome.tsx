@@ -27,6 +27,7 @@ import pathsConfig from '~/config/paths.config';
 import type { CreateTaskWorkspaceChoice } from '~/home/(user)/_components/dashboard/add-task-dialog';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
+import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import type { MobileBottomNavTab } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
 import { isNoteEditorRoute } from '~/lib/pwa/is-note-editor-route';
 import { syncPullToRefreshPathname } from '~/lib/pwa/pull-to-refresh-context';
@@ -109,6 +110,11 @@ export function TeamWorkspaceMobileChrome({
             account={undefined}
             showProfileName={false}
             className="shrink-0"
+            billingAccountId={accountId}
+            billingHref={toHomeBillingHref(
+              pathsConfig.app.accountBilling,
+              account,
+            )}
           />
         </WorkspaceMobileHeaderBar>
 

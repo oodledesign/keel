@@ -224,9 +224,7 @@ function PortalProjectKanbanView({
                     <button
                       type="button"
                       className="w-full text-left"
-                      onClick={() =>
-                        setExpandedTaskId(open ? null : task.id)
-                      }
+                      onClick={() => setExpandedTaskId(open ? null : task.id)}
                     >
                       <p className="text-sm font-medium text-[var(--ozer-text-on-light)]">
                         {task.title}
@@ -272,10 +270,7 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
       .sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
   }, [tasks]);
 
-  const undated = useMemo(
-    () => tasks.filter((task) => !task.dueDate),
-    [tasks],
-  );
+  const undated = useMemo(() => tasks.filter((task) => !task.dueDate), [tasks]);
 
   if (tasks.length === 0) {
     return (
@@ -317,7 +312,9 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
               <div className="relative h-8 rounded-md bg-[var(--workspace-shell-panel-hover)]">
                 <div
                   className="absolute top-1.5 h-5 w-5 rounded-full bg-[var(--ozer-accent)]"
-                  style={{ left: `max(0%, min(calc(${left}% - 10px), calc(100% - 20px)))` }}
+                  style={{
+                    left: `max(0%, min(calc(${left}% - 10px), calc(100% - 20px)))`,
+                  }}
                   title={task.title}
                 />
               </div>

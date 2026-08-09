@@ -56,6 +56,7 @@ import {
   deletePhase,
   moveTask,
 } from '../../_lib/server/server-actions';
+import { JobProjectTaskSheet } from './job-project-task-sheet';
 import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
@@ -64,7 +65,6 @@ import {
   UNPHASED_KEY,
   formatShortDate,
 } from './job-project.constants';
-import { JobProjectTaskSheet } from './job-project-task-sheet';
 
 type MemberLookup = Map<
   string,
@@ -99,9 +99,7 @@ function TaskCard({
       ? `${attachedNoteCount} note${attachedNoteCount === 1 ? '' : 's'}`
       : null,
     hasNotes ? 'Scratch' : null,
-    linkCount > 0
-      ? `${linkCount} link${linkCount === 1 ? '' : 's'}`
-      : null,
+    linkCount > 0 ? `${linkCount} link${linkCount === 1 ? '' : 's'}` : null,
   ].filter(Boolean);
 
   return (

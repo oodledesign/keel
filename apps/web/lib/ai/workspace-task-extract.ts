@@ -1,14 +1,13 @@
 import 'server-only';
 
+import type { SupabaseClient } from '@supabase/supabase-js';
+
 import { z } from 'zod';
 
 import {
   normalizeAiExtractedDueDateYmd,
   todayLocalYmd,
 } from '~/home/_lib/due-date-ymd';
-
-import type { SupabaseClient } from '@supabase/supabase-js';
-
 import { callAI } from '~/lib/ai/router';
 
 import { formatExtractInstructionsBlock } from './extract-instructions';

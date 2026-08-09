@@ -8,6 +8,9 @@ import { GoogleGenAI } from '@google/genai';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { INSUFFICIENT_AI_CREDITS_CODE } from '~/lib/ai/ai-credits-exhausted';
+import { notifyAiCreditsExhausted } from '~/lib/ai/notify-ai-credits-exhausted';
+
 export const GEMINI_FLASH_LITE_MODEL = 'gemini-3.1-flash-lite';
 export const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
 export const SONNET_MODEL = 'claude-sonnet-4-6';
@@ -544,6 +547,7 @@ export async function checkAndDeductCredits(
   accountId: string,
   credits: number,
   _supabase?: SupabaseClient,
+  attempt = 0,
 ): Promise<AiCreditBalanceRow> {
   const supabase = aiCreditsDb();
   const { error: resetError } = await supabase.rpc(
@@ -592,6 +596,11 @@ export async function checkAndDeductCredits(
   const available = monthly + purchased;
 
   if (available < credits) {
+    await notifyAiCreditsExhausted({
+      accountId,
+      creditsRemaining: available,
+      creditsRequired: credits,
+    });
     throw new OzerInsufficientCreditsError({
       creditsRemaining: available,
       creditsRequired: credits,
@@ -633,12 +642,29 @@ export async function checkAndDeductCredits(
       credits_purchased?: number;
     } | null;
 
-    throw new OzerInsufficientCreditsError({
-      creditsRemaining:
-        Math.max(0, latestRow?.credits_remaining ?? 0) +
-        Math.max(0, latestRow?.credits_purchased ?? 0),
-      creditsRequired: credits,
-    });
+    const creditsRemaining =
+      Math.max(0, latestRow?.credits_remaining ?? 0) +
+      Math.max(0, latestRow?.credits_purchased ?? 0);
+
+    if (creditsRemaining < credits) {
+      await notifyAiCreditsExhausted({
+        accountId,
+        creditsRemaining,
+        creditsRequired: credits,
+      });
+
+      throw new OzerInsufficientCreditsError({
+        creditsRemaining,
+        creditsRequired: credits,
+      });
+    }
+
+    // Concurrent update won the lock but balance is still sufficient — retry a few times.
+    if (attempt >= 2) {
+      throw new Error('AI credit balance changed concurrently — please retry');
+    }
+
+    return checkAndDeductCredits(accountId, credits, _supabase, attempt + 1);
   }
 
   return updated as AiCreditBalanceRow;
@@ -815,7 +841,9 @@ export async function streamAI({
 }: OzerAICallParams): Promise<ReadableStream<Uint8Array>> {
   const config = FEATURE_CONFIG[feature];
   if (config.provider !== 'anthropic') {
-    throw new Error(`streamAI only supports Anthropic features (got ${feature})`);
+    throw new Error(
+      `streamAI only supports Anthropic features (got ${feature})`,
+    );
   }
 
   await checkAndDeductCredits(accountId, config.credits, supabase);
@@ -885,8 +913,11 @@ export async function streamAI({
   });
 }
 
-export function insufficientCreditsResponse(error: OzerInsufficientCreditsError) {
+export function insufficientCreditsResponse(
+  error: OzerInsufficientCreditsError,
+) {
   return {
+    code: INSUFFICIENT_AI_CREDITS_CODE,
     error: error.message,
     creditsRemaining: error.creditsRemaining,
     creditsRequired: error.creditsRequired,

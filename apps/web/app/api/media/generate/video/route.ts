@@ -9,7 +9,10 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { estimateJobCost } from '~/lib/billing/media-unit-pricing';
 import { minimaxVideoRecipe } from '~/lib/media-generation/models/minimax-video';
 import { isMediaGenerateEnabled } from '~/lib/media-generation/module-access';
-import { FalProviderError, falQueueSubmit } from '~/lib/media-generation/providers/fal';
+import {
+  FalProviderError,
+  falQueueSubmit,
+} from '~/lib/media-generation/providers/fal';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 
 export const runtime = 'nodejs';

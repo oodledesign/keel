@@ -24,6 +24,8 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import {
   REQUIREMENT_STATUSES,
   REQUIREMENT_STATUS_LABELS,
@@ -178,6 +180,11 @@ function RequirementFormFields({
   onClose: () => void;
   onSaved: () => void;
 }) {
+  const {
+    reportExhausted,
+    accountId: creditsAccountId,
+    billingHref,
+  } = useAiCreditsExhausted();
   const isEdit = Boolean(requirement);
   const [isPending, startTransition] = useTransition();
   const [draftPending, startDraft] = useTransition();
@@ -223,6 +230,15 @@ function RequirementFormFields({
       } catch (err) {
         const message =
           err instanceof Error ? err.message : 'Could not draft requirement';
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId: creditsAccountId || accountId,
+            billingHref,
+            message,
+          })
+        ) {
+          return;
+        }
         setError(message);
         toast.error(message);
       }

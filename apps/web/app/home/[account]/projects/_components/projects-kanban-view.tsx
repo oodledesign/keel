@@ -7,7 +7,7 @@ import { LayoutGrid } from 'lucide-react';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
+import { projectDetailHref } from '~/lib/projects/project-paths';
 import { deliveryProjectTitle } from '~/lib/projects/project-types';
 
 const STATUS_COLUMNS = [
@@ -30,13 +30,17 @@ export type ProjectsKanbanItem = {
 export function ProjectsKanbanView({
   accountSlug,
   items,
+  personalScope = false,
+  projectDetailPathBuilder,
 }: {
   accountSlug: string;
   items: ProjectsKanbanItem[];
+  personalScope?: boolean;
+  projectDetailPathBuilder?: (id: string) => string;
 }) {
   const detailPath = (id: string) =>
-    pathsConfig.app.accountProjects.replace('[account]', accountSlug) +
-    `/${id}`;
+    projectDetailPathBuilder?.(id) ??
+    projectDetailHref(accountSlug, id, personalScope);
 
   return (
     <div className="grid min-h-0 flex-1 grid-cols-1 gap-3 overflow-x-auto md:grid-cols-2 xl:grid-cols-4">

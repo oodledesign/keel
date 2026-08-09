@@ -2,9 +2,9 @@ import { describe, expect, it } from 'vitest';
 
 import {
   defaultCommercialPipelineStageConfig,
+  normalizeCommercialPipelineStage,
   resolveCommercialPipelineBoardStages,
   resolveCommercialPipelineStageConfig,
-  normalizeCommercialPipelineStage,
 } from './pipeline-stage-config';
 
 describe('pipeline-stage-config', () => {
@@ -48,9 +48,7 @@ describe('pipeline-stage-config', () => {
   it('keeps hidden columns when deals remain', () => {
     const board = resolveCommercialPipelineBoardStages({
       stored: defaultCommercialPipelineStageConfig().map((stage) =>
-        stage.key === 'fallen_through'
-          ? { ...stage, hidden: true }
-          : stage,
+        stage.key === 'fallen_through' ? { ...stage, hidden: true } : stage,
       ),
       dealStages: ['fallen_through'],
     });

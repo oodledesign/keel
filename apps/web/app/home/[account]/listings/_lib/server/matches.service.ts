@@ -67,8 +67,7 @@ function mapMatch(row: Row): CommercialInterestMatch {
     requirementId: row.requirement_id,
     status: normalizeInterestStatus(row.status),
     notes: row.notes,
-    lastActivityAt:
-      row.last_activity_at || row.updated_at || row.created_at,
+    lastActivityAt: row.last_activity_at || row.updated_at || row.created_at,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
     listingName: (listing?.name as string | null) ?? null,
@@ -76,8 +75,10 @@ function mapMatch(row: Row): CommercialInterestMatch {
     listingSector: (listing?.sector as string | null) ?? null,
     listingSizeMinSqft: num(listing?.size_min_sqft),
     listingSizeMaxSqft: num(listing?.size_max_sqft),
-    requirementCompanyName: (requirement?.company_name as string | null) ?? null,
-    requirementContactName: (requirement?.contact_name as string | null) ?? null,
+    requirementCompanyName:
+      (requirement?.company_name as string | null) ?? null,
+    requirementContactName:
+      (requirement?.contact_name as string | null) ?? null,
     requirementSector: (requirement?.sector as string | null) ?? null,
     requirementLocationText:
       (requirement?.location_text as string | null) ?? null,

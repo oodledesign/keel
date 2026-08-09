@@ -41,9 +41,7 @@ export function ProjectPortalAccessToggle(props: {
       } catch (err) {
         setPortalVisible(previous);
         toast.error(
-          err instanceof Error
-            ? err.message
-            : 'Could not update portal access',
+          err instanceof Error ? err.message : 'Could not update portal access',
         );
       }
     });

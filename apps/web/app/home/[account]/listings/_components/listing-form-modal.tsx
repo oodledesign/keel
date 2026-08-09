@@ -86,8 +86,6 @@ interface ListingFormModalProps {
   } | null;
 }
 
-
-
 export function ListingFormModal({
   open,
   onClose,
@@ -271,9 +269,8 @@ function ListingFormFields({
         onSaved(saved);
 
         if (form.status === 'marketing' && previousStatus !== 'marketing') {
-          const { maybeNudgeMoveInstructionToCurrent } = await import(
-            '../_lib/client/marketing-instruction-nudge'
-          );
+          const { maybeNudgeMoveInstructionToCurrent } =
+            await import('../_lib/client/marketing-instruction-nudge');
           await maybeNudgeMoveInstructionToCurrent({
             accountId,
             listingId: saved.id,

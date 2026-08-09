@@ -1,4 +1,4 @@
-import { Suspense, use } from 'react';
+import { use } from 'react';
 
 import { isRedirectError } from 'next/dist/client/components/redirect-error';
 import { cookies } from 'next/headers';
@@ -10,6 +10,7 @@ import { UserWorkspaceContextProvider } from '@kit/accounts/components';
 import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
+import { AiCreditsExhaustedShell } from '~/components/ai/ai-credits-exhausted-shell';
 import { AppLogo } from '~/components/app-logo';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
@@ -21,6 +22,7 @@ import {
 } from '~/config/personal-account-navigation.config';
 import type { WorkspaceAccountRow } from '~/home/_lib/server/workspace-scope';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
+import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 import { enrichPersonalShortcutsWithWorkspaceAvatars } from '~/lib/dashboard-shortcuts/enrich-workspace-shortcut-avatars';
 import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
@@ -34,8 +36,6 @@ import {
   workspaceSetupPath,
 } from '~/lib/server/workspace-setup-guard';
 import type { WorkspaceFocusInput } from '~/lib/workspace-focus';
-import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
-import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 
 import { HomeMenuNavigation } from './_components/home-menu-navigation';
 import { HomeMobileNavigation } from './_components/home-mobile-navigation';
@@ -111,9 +111,6 @@ async function SidebarLayout({
     );
   }
 
-  const personalNavLinks = flattenPersonalNavLinks(
-    parsePersonalAccountNavigationConfig(buildPersonalHomeNavRoutes()),
-  );
   const focusAccountIds = [
     ...new Set([
       ...sharedWorkspaces.map((workspaceRow) => workspaceRow.id),
@@ -137,7 +134,15 @@ async function SidebarLayout({
       ReturnType<typeof loadPersonalMobileNavShortcuts>
     >;
     focusSettingsByAccountId: Record<string, WorkspaceFocusInput>;
+    emailNeedsReplyCount?: number;
   }) => {
+    const navLinks = flattenPersonalNavLinks(
+      parsePersonalAccountNavigationConfig(
+        buildPersonalHomeNavRoutes({
+          emailNeedsReplyCount: params.emailNeedsReplyCount,
+        }),
+      ),
+    );
     const bottomNavTabs = resolveMobileBottomNavTabs({
       homePath: getExplicitPersonalHomePath(),
       shortcuts: enrichPersonalShortcutsWithWorkspaceAvatars(
@@ -160,6 +165,7 @@ async function SidebarLayout({
                 workspace={workspaceForShell}
                 sharedWorkspaces={sharedWorkspaces}
                 switcherAccounts={switcherAccounts}
+                emailNeedsReplyCount={params.emailNeedsReplyCount}
               />
             </PageNavigation>
 
@@ -167,7 +173,7 @@ async function SidebarLayout({
 
             <PersonalHomeMobileChrome
               workspace={workspaceForShell}
-              navLinks={personalNavLinks}
+              navLinks={navLinks}
               bottomNavTabs={bottomNavTabs}
               switcherAccounts={switcherAccounts}
             >
@@ -188,7 +194,14 @@ async function SidebarLayout({
                   accountId={workspaceForShell.workspace?.id ?? undefined}
                 />
               </div>
-              {children}
+              <AiCreditsExhaustedShell
+                accountId={workspaceForShell.user.id}
+                billingHref={toHomeBillingHref(
+                  pathsConfig.app.personalAccountBilling,
+                )}
+              >
+                {children}
+              </AiCreditsExhaustedShell>
             </PersonalHomeMobileChrome>
           </Page>
         </SidebarProvider>
@@ -218,6 +231,7 @@ async function SidebarLayout({
           renderShell({
             mobileNavShortcuts: adornments.mobileNavShortcuts,
             focusSettingsByAccountId: adornments.focusSettingsByAccountId,
+            emailNeedsReplyCount: adornments.emailNeedsReplyCount,
           })
         }
       </PersonalHomeShellAdornmentsSuspense>
@@ -239,7 +253,14 @@ function HeaderLayout({ children }: React.PropsWithChildren) {
           <MobileNavigation workspace={workspace} />
         </PageMobileNavigation>
 
-        {children}
+        <AiCreditsExhaustedShell
+          accountId={workspace.user.id}
+          billingHref={toHomeBillingHref(
+            pathsConfig.app.personalAccountBilling,
+          )}
+        >
+          {children}
+        </AiCreditsExhaustedShell>
       </Page>
     </UserWorkspaceContextProvider>
   );

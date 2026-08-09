@@ -7,6 +7,8 @@ import Link from 'next/link';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import { AuditCitationLayerPanel } from '~/home/[account]/(rankly)/_components/brand-visibility-layers';
 import { getErrorMessage } from '~/home/[account]/jobs/_lib/error-message';
 import {
@@ -93,6 +95,7 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
   const [expanded, setExpanded] = useState(false);
   const [snippet, setSnippet] = useState<string | null>(rec.fix_snippet);
   const [loadingFix, setLoadingFix] = useState(false);
+  const { reportExhausted, accountId, billingHref } = useAiCreditsExhausted();
 
   const handleHelpMeFix = async () => {
     setLoadingFix(true);
@@ -102,13 +105,61 @@ function RecommendationCard({ rec }: { rec: AuditRecommendationRow }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ recommendationId: rec.id }),
       });
-      const json = (await res.json()) as
+      const json = (await res.json().catch(() => null)) as
         | { ok: true; data: { snippet: string } }
-        | { ok: false; error: { message: string } };
-      if (!json.ok) throw new Error(json.error.message);
+        | { ok: false; error: { message: string } }
+        | {
+            code?: string;
+            error?: string | { message?: string };
+            creditsRemaining?: number;
+            creditsRequired?: number;
+          }
+        | null;
+
+      const message =
+        json &&
+        typeof json === 'object' &&
+        'error' in json &&
+        typeof json.error === 'string'
+          ? json.error
+          : json &&
+              typeof json === 'object' &&
+              'error' in json &&
+              json.error &&
+              typeof json.error === 'object' &&
+              typeof (json.error as { message?: unknown }).message === 'string'
+            ? (json.error as { message: string }).message
+            : undefined;
+
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId,
+          billingHref,
+          status: res.status,
+          body: json,
+          message,
+        })
+      ) {
+        return;
+      }
+
+      if (!json || typeof json !== 'object' || !('ok' in json) || !json.ok) {
+        throw new Error(message ?? 'Could not generate fix snippet');
+      }
+
       setSnippet(json.data.snippet);
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      const errMessage = getErrorMessage(err);
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId,
+          billingHref,
+          message: errMessage,
+        })
+      ) {
+        return;
+      }
+      toast.error(errMessage);
     } finally {
       setLoadingFix(false);
     }

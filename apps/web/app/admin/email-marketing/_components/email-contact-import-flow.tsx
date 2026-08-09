@@ -18,6 +18,8 @@ import {
 } from '@kit/ui/dialog';
 import { toast } from '@kit/ui/sonner';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+
 import {
   countEmailContactRowsMissingRequired,
   isEmailContactImportMappingComplete,
@@ -153,6 +155,7 @@ export function EmailContactImportFlow({
   customListId = null,
 }: EmailContactImportFlowProps) {
   const { t } = useTranslation('account');
+  const { reportExhausted, accountId, billingHref } = useAiCreditsExhausted();
   const [step, setStep] = useState(0);
   const [parseError, setParseError] = useState<string | null>(null);
   const [headers, setHeaders] = useState<string[]>([]);
@@ -249,11 +252,23 @@ export function EmailContactImportFlow({
       }
 
       if ('ok' in res && res.ok === false) {
-        toast.error(
-          'code' in res && res.code === 'credits'
-            ? 'Insufficient AI credits to map columns. Top up AI credits and try again.'
-            : asToastText(t('clientImportAiUnavailable')),
-        );
+        const code =
+          'code' in res && res.code != null ? String(res.code) : undefined;
+        if (code === 'credits' || code === 'INSUFFICIENT_AI_CREDITS') {
+          reportExhausted({
+            accountId,
+            billingHref,
+            error: 'Insufficient AI credits to map columns',
+          });
+          // Provider may be absent in admin — reportExhausted is then a no-op.
+          if (!billingHref) {
+            toast.error(
+              'Insufficient AI credits to map columns. Top up AI credits and try again.',
+            );
+          }
+          return;
+        }
+        toast.error(asToastText(t('clientImportAiUnavailable')));
         return;
       }
 

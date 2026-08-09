@@ -3,6 +3,7 @@ import 'server-only';
 import { classify } from '@kit/email-assistant';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
 import { extractEmailAddress, isFromOwner } from './address-utils';
@@ -10,7 +11,6 @@ import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
-import { createMeteredEmailGenerateText } from './metered-generate-text';
 import {
   extractEmailDomain,
   isAddressIgnored,
@@ -18,11 +18,13 @@ import {
   normalizeIgnoredSenders,
 } from './ignored-senders';
 import type { MailboxKind } from './mailbox-kind';
+import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
 import { reconcileRepliedNeedsReplyThreads } from './reconcile-replied-threads';
+import { resolveEmailAssistantBillingAccountId } from './resolve-email-assistant-billing-account';
 import { buildThreadText } from './thread-text';
 
-const MAX_CLASSIFY_PER_RUN = 25;
+const MAX_CLASSIFY_PER_RUN = 40;
 const MAX_AUTO_DRAFT_PER_RUN = 3;
 const MAX_AUTO_EXTRACT_PER_RUN = 5;
 
@@ -127,6 +129,12 @@ export async function runEmailAssistantPipeline(
     return result;
   }
 
+  const billingAccountId = await resolveEmailAssistantBillingAccountId(admin, {
+    userId,
+    mailboxKind,
+    preferredAccountId,
+  });
+
   try {
     await reconcileRepliedNeedsReplyThreads({
       userId,
@@ -149,7 +157,7 @@ export async function runEmailAssistantPipeline(
     .eq('connection_id', owner.connectionId)
     .order('assistant_category', { ascending: true, nullsFirst: true })
     .order('last_message_at', { ascending: false, nullsFirst: false })
-    .limit(30);
+    .limit(50);
 
   if (threadsError) {
     result.errors.push(threadsError.message);
@@ -239,6 +247,7 @@ export async function runEmailAssistantPipeline(
             ownerEmail: owner.email,
             ownerDisplayName: owner.displayName,
             preferredAccountId,
+            billingAccountId,
           });
           if (extractedCount > 0) {
             result.extracted += extractedCount;
@@ -248,6 +257,9 @@ export async function runEmailAssistantPipeline(
           result.errors.push(
             error instanceof Error ? error.message : 'Auto-extract failed',
           );
+          if (isInsufficientCreditsError(error)) {
+            break;
+          }
         }
       } else {
         result.skipped += 1;
@@ -279,6 +291,7 @@ export async function runEmailAssistantPipeline(
             userId,
             threadId: thread.id,
             saveToGmail: settings.auto_save_gmail_drafts,
+            billingAccountId,
           });
 
           if (draftResult) {
@@ -293,6 +306,9 @@ export async function runEmailAssistantPipeline(
           result.errors.push(
             error instanceof Error ? error.message : 'Auto-draft failed',
           );
+          if (isInsufficientCreditsError(error)) {
+            break;
+          }
         }
       } else {
         result.skipped += 1;
@@ -373,7 +389,7 @@ export async function runEmailAssistantPipeline(
           owner,
           createMeteredEmailGenerateText({
             feature: 'email_triage',
-            accountId: userId,
+            accountId: billingAccountId,
             supabase: admin,
           }),
         );
@@ -383,6 +399,9 @@ export async function runEmailAssistantPipeline(
         result.errors.push(
           error instanceof Error ? error.message : 'Classification failed',
         );
+        if (isInsufficientCreditsError(error)) {
+          break;
+        }
         continue;
       }
     }
@@ -452,6 +471,7 @@ export async function runEmailAssistantPipeline(
           userId,
           threadId: thread.id,
           saveToGmail: settings.auto_save_gmail_drafts,
+          billingAccountId,
         });
 
         if (draftResult) {
@@ -466,6 +486,9 @@ export async function runEmailAssistantPipeline(
         result.errors.push(
           error instanceof Error ? error.message : 'Auto-draft failed',
         );
+        if (isInsufficientCreditsError(error)) {
+          break;
+        }
       }
     }
 
@@ -478,6 +501,7 @@ export async function runEmailAssistantPipeline(
           ownerEmail: owner.email,
           ownerDisplayName: owner.displayName,
           preferredAccountId,
+          billingAccountId,
         });
         if (extractedCount > 0) {
           result.extracted += extractedCount;
@@ -487,6 +511,9 @@ export async function runEmailAssistantPipeline(
         result.errors.push(
           error instanceof Error ? error.message : 'Auto-extract failed',
         );
+        if (isInsufficientCreditsError(error)) {
+          break;
+        }
       }
     }
   }

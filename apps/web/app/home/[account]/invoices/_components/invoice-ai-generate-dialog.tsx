@@ -23,6 +23,8 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import type { AiInvoiceDraftLine } from '~/lib/ai/invoice-generate-types';
 import {
   calculateInvoiceLineTotalPence,
@@ -82,6 +84,11 @@ export function InvoiceAiGenerateDialog({
   hasExistingItems,
   onApply,
 }: InvoiceAiGenerateDialogProps) {
+  const {
+    reportExhausted,
+    accountId: creditsAccountId,
+    billingHref,
+  } = useAiCreditsExhausted();
   const symbol = invoiceCurrencySymbol(currency);
   const [prompt, setPrompt] = useState('');
   const [generating, setGenerating] = useState(false);
@@ -138,7 +145,17 @@ export function InvoiceAiGenerateDialog({
       setLines(toEditableLines(draft.items));
       toast.success('Line items drafted — review before applying');
     } catch (error) {
-      toast.error(getErrorMessage(error));
+      const message = getErrorMessage(error);
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId: creditsAccountId || accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setGenerating(false);
     }

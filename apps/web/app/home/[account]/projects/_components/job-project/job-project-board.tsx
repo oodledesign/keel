@@ -42,7 +42,7 @@ import {
 import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
-import pathsConfig from '~/config/paths.config';
+import { projectPhaseHref } from '~/lib/projects/project-paths';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type {
@@ -56,6 +56,7 @@ import {
   deletePhase,
   moveTask,
 } from '../../_lib/server/server-actions';
+import { JobProjectTaskSheet } from './job-project-task-sheet';
 import {
   PHASE_STATUS_LABELS,
   PHASE_STATUS_STYLES,
@@ -64,7 +65,6 @@ import {
   UNPHASED_KEY,
   formatShortDate,
 } from './job-project.constants';
-import { JobProjectTaskSheet } from './job-project-task-sheet';
 
 type MemberLookup = Map<
   string,
@@ -72,10 +72,7 @@ type MemberLookup = Map<
 >;
 
 function phasePath(accountSlug: string, jobId: string, phaseId: string) {
-  return pathsConfig.app.accountJobPhaseDetail
-    .replace('[account]', accountSlug)
-    .replace('[id]', jobId)
-    .replace('[phaseId]', phaseId);
+  return projectPhaseHref(accountSlug, jobId, phaseId);
 }
 
 function TaskCard({
@@ -99,9 +96,7 @@ function TaskCard({
       ? `${attachedNoteCount} note${attachedNoteCount === 1 ? '' : 's'}`
       : null,
     hasNotes ? 'Scratch' : null,
-    linkCount > 0
-      ? `${linkCount} link${linkCount === 1 ? '' : 's'}`
-      : null,
+    linkCount > 0 ? `${linkCount} link${linkCount === 1 ? '' : 's'}` : null,
   ].filter(Boolean);
 
   return (

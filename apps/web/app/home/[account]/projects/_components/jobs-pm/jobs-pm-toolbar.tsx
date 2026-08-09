@@ -18,6 +18,7 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 
+import type { ProjectsUiVariant } from '~/lib/projects/project-paths';
 import { workspaceBtnPrimary } from '~/lib/workspace-ui';
 
 export function JobsPmToolbar({
@@ -35,7 +36,7 @@ export function JobsPmToolbar({
   onNewProject: () => void;
   priorityFilter: string | null;
   onPriorityFilterChange: (value: string | null) => void;
-  uiVariant: 'projects' | 'maintenance';
+  uiVariant: ProjectsUiVariant;
 }) {
   const newLabel =
     uiVariant === 'maintenance' ? 'New maintenance job' : 'New project';

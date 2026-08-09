@@ -10,6 +10,7 @@ import {
   buildPersonalHomeNavRoutes,
   parsePersonalAccountNavigationConfig,
 } from '~/config/personal-account-navigation.config';
+import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 
 // home imports
@@ -76,6 +77,10 @@ export function HomeMenuNavigation(props: { workspace: UserWorkspace }) {
                 : undefined
             }
             showProfileName={false}
+            billingAccountId={user.id}
+            billingHref={toHomeBillingHref(
+              pathsConfig.app.personalAccountBilling,
+            )}
           />
         </div>
       </div>

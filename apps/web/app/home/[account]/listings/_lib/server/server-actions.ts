@@ -4,6 +4,7 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
+  AddListingCoAgentSchema,
   CreateListingEnquirySchema,
   CreateListingMediaSchema,
   CreateListingSchema,
@@ -14,7 +15,6 @@ import {
   DeleteListingUnitSchema,
   GetListingAssignmentSchema,
   GetListingSchema,
-  AddListingCoAgentSchema,
   ListListingCoAgentsSchema,
   ListListingMembersSchema,
   ListListingsSchema,
@@ -54,9 +54,8 @@ export const createListing = enhanceAction(
     const {
       data: { user },
     } = await client.auth.getUser();
-    const { requireCommercialBillableActor } = await import(
-      '~/lib/commercial/require-commercial-billable-actor'
-    );
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'create or edit disposals',
@@ -71,9 +70,8 @@ export const createListing = enhanceAction(
 
 export const updateListing = enhanceAction(
   async (input) => {
-    const { requireCommercialBillableActor } = await import(
-      '~/lib/commercial/require-commercial-billable-actor'
-    );
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'create or edit disposals',
@@ -86,9 +84,8 @@ export const updateListing = enhanceAction(
 
 export const deleteListing = enhanceAction(
   async (input) => {
-    const { requireCommercialBillableActor } = await import(
-      '~/lib/commercial/require-commercial-billable-actor'
-    );
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'create or edit disposals',
@@ -212,9 +209,8 @@ export const searchCoAgentClients = enhanceAction(
 
 export const addListingCoAgent = enhanceAction(
   async (input) => {
-    const { requireCommercialBillableActor } = await import(
-      '~/lib/commercial/require-commercial-billable-actor'
-    );
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'link co-marketing agents',
@@ -237,9 +233,8 @@ export const addListingCoAgent = enhanceAction(
 
 export const removeListingCoAgent = enhanceAction(
   async (input) => {
-    const { requireCommercialBillableActor } = await import(
-      '~/lib/commercial/require-commercial-billable-actor'
-    );
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
     await requireCommercialBillableActor(
       input.accountId,
       'link co-marketing agents',

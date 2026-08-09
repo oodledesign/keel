@@ -65,15 +65,13 @@ export async function moveDealToStage(
       .select('account_id')
       .eq('id', dealId)
       .maybeSingle();
-    const dealAccountId = (
-      dealRow as { account_id?: string | null } | null
-    )?.account_id;
+    const dealAccountId = (dealRow as { account_id?: string | null } | null)
+      ?.account_id;
 
     if (dealAccountId) {
       try {
-        const { assertCommercialBillableMember } = await import(
-          '~/lib/commercial/commercial-seat-access'
-        );
+        const { assertCommercialBillableMember } =
+          await import('~/lib/commercial/commercial-seat-access');
         await assertCommercialBillableMember({
           client,
           accountId: dealAccountId,

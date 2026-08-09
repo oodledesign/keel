@@ -252,8 +252,7 @@ class ProposalsService {
         client_id: input.client_id ?? null,
         deal_id: input.deal_id ?? null,
         title: input.title ?? 'Proposal',
-        content_html:
-          input.content_html ?? htmlDefault?.bodyHtml ?? '',
+        content_html: input.content_html ?? htmlDefault?.bodyHtml ?? '',
         status: 'draft',
         recipient_name: input.recipient_name ?? null,
         recipient_email: input.recipient_email ?? null,
@@ -262,8 +261,7 @@ class ProposalsService {
         expires_at: input.expires_at ?? null,
         private_note: input.private_note ?? null,
         context_refs: input.context_refs ?? [],
-        email_subject:
-          emailDefault?.subject ?? DEFAULT_PROPOSAL_EMAIL_SUBJECT,
+        email_subject: emailDefault?.subject ?? DEFAULT_PROPOSAL_EMAIL_SUBJECT,
         email_body: emailDefault?.bodyText ?? DEFAULT_PROPOSAL_EMAIL_BODY,
         email_signature:
           emailDefault?.signature ?? DEFAULT_PROPOSAL_EMAIL_SIGNATURE,

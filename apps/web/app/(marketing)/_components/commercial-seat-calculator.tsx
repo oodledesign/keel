@@ -87,7 +87,7 @@ export function CommercialSeatCalculator() {
         </div>
 
         <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 p-5">
-          <p className="text-sm tracking-[0.08em] uppercase text-[var(--workspace-shell-text-muted)]">
+          <p className="text-sm tracking-[0.08em] text-[var(--workspace-shell-text-muted)] uppercase">
             Estimated monthly total
           </p>
           <p className="text-4xl font-bold tracking-tight text-[var(--workspace-shell-text)]">

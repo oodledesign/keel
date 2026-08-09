@@ -6,10 +6,18 @@ type ApiFailure = {
 
 export class EmailApiError extends Error {
   code: string;
+  creditsRemaining?: number;
+  creditsRequired?: number;
 
-  constructor(code: string, message: string) {
+  constructor(
+    code: string,
+    message: string,
+    extras?: { creditsRemaining?: number; creditsRequired?: number },
+  ) {
     super(message);
     this.code = code;
+    this.creditsRemaining = extras?.creditsRemaining;
+    this.creditsRequired = extras?.creditsRequired;
   }
 }
 
@@ -46,10 +54,10 @@ export async function emailApiFetch<T>(
     },
   });
 
-  let payload: ApiSuccess<T> | ApiFailure;
+  let raw: unknown;
 
   try {
-    payload = (await response.json()) as ApiSuccess<T> | ApiFailure;
+    raw = await response.json();
   } catch {
     if (response.status === 504 || response.status === 408) {
       throw new EmailApiError(
@@ -58,6 +66,50 @@ export async function emailApiFetch<T>(
       );
     }
 
+    throw new EmailApiError(
+      'INVALID_RESPONSE',
+      response.ok
+        ? 'Unexpected response from email API'
+        : `Request failed (${response.status})`,
+    );
+  }
+
+  if (
+    raw &&
+    typeof raw === 'object' &&
+    ((raw as { code?: string }).code === 'INSUFFICIENT_AI_CREDITS' ||
+      response.status === 402)
+  ) {
+    const row = raw as {
+      code?: string;
+      error?: unknown;
+      creditsRemaining?: number;
+      creditsRequired?: number;
+    };
+    const message =
+      typeof row.error === 'string'
+        ? row.error
+        : row.error &&
+            typeof row.error === 'object' &&
+            typeof (row.error as { message?: unknown }).message === 'string'
+          ? (row.error as { message: string }).message
+          : 'Insufficient AI credits';
+
+    if (
+      row.code === 'INSUFFICIENT_AI_CREDITS' ||
+      /insufficient ai credits/i.test(message) ||
+      response.status === 402
+    ) {
+      throw new EmailApiError('INSUFFICIENT_AI_CREDITS', message, {
+        creditsRemaining: row.creditsRemaining,
+        creditsRequired: row.creditsRequired,
+      });
+    }
+  }
+
+  const payload = raw as ApiSuccess<T> | ApiFailure;
+
+  if (!payload || typeof payload !== 'object' || !('ok' in payload)) {
     throw new EmailApiError(
       'INVALID_RESPONSE',
       response.ok

@@ -92,9 +92,7 @@ export function RequirementsBoard({
     const map = new Map<RequirementStatus, CommercialRequirement[]>();
     for (const stage of BOARD_STAGES) map.set(stage, []);
     for (const item of items) {
-      const stage = BOARD_STAGES.includes(item.stage)
-        ? item.stage
-        : 'new';
+      const stage = BOARD_STAGES.includes(item.stage) ? item.stage : 'new';
       map.get(stage)!.push(item);
     }
     return map;

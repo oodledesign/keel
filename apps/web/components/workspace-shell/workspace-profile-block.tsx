@@ -6,8 +6,9 @@ import { useUser } from '@kit/supabase/hooks/use-user';
 import { JWTUserData } from '@kit/supabase/types';
 import { cn } from '@kit/ui/utils';
 
-import featureFlagsConfig from '~/config/feature-flags.config';
+import { AiCreditsMenuMeter } from '~/components/ai/ai-credits-menu-meter';
 import pathsConfig from '~/config/paths.config';
+import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { docsUrl } from '~/lib/docs-url';
 
 const paths = {
@@ -31,6 +32,8 @@ export function WorkspaceProfileBlock(props: {
     picture_url: string | null;
   };
   collapsed?: boolean;
+  billingAccountId?: string;
+  billingHref?: string;
 }) {
   const signOut = useSignOut();
   const userState = useUser(props.user);
@@ -39,6 +42,11 @@ export function WorkspaceProfileBlock(props: {
   if (!user) {
     return null;
   }
+
+  const billingAccountId = props.billingAccountId ?? user.id;
+  const billingHref =
+    props.billingHref ??
+    toHomeBillingHref(pathsConfig.app.personalAccountBilling);
 
   return (
     <PersonalAccountDropdown
@@ -53,6 +61,13 @@ export function WorkspaceProfileBlock(props: {
       account={props.account}
       signOutRequested={() => signOut.mutateAsync()}
       showProfileName={!props.collapsed}
+      menuExtras={(open) => (
+        <AiCreditsMenuMeter
+          accountId={billingAccountId}
+          billingHref={billingHref}
+          active={open}
+        />
+      )}
     />
   );
 }

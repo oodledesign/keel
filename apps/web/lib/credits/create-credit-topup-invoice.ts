@@ -127,9 +127,7 @@ export async function createCreditTopupInvoice(input: {
     publicToken =
       (existing as { public_token?: string | null } | null)?.public_token ??
       token;
-    if (
-      !(existing as { public_token?: string | null } | null)?.public_token
-    ) {
+    if (!(existing as { public_token?: string | null } | null)?.public_token) {
       await admin
         .from('invoices')
         .update({ public_token: publicToken })

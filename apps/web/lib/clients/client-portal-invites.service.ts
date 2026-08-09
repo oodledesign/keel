@@ -3,8 +3,8 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { createWebsitesService } from '~/home/[account]/websites/_lib/server/websites.service';
 import pathsConfig from '~/config/paths.config';
+import { createWebsitesService } from '~/home/[account]/websites/_lib/server/websites.service';
 import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
 import {
   escapeNotificationHtml,
@@ -35,8 +35,9 @@ function contactPrimaryEmail(contact: {
   email: string | null;
   emails?: Array<{ email: string; is_primary: boolean }> | null;
 }): string | null {
-  const fromList = contact.emails?.find((item) => item.is_primary)?.email
-    ?? contact.emails?.[0]?.email;
+  const fromList =
+    contact.emails?.find((item) => item.is_primary)?.email ??
+    contact.emails?.[0]?.email;
   const raw = (fromList ?? contact.email ?? '').trim().toLowerCase();
   return raw.includes('@') ? raw : null;
 }
@@ -373,7 +374,9 @@ export async function createClientPortalInvite(input: {
       .update({
         status: 'pending',
         role,
-        contact_id: input.contactId ?? (existing as { contact_id: string | null }).contact_id,
+        contact_id:
+          input.contactId ??
+          (existing as { contact_id: string | null }).contact_id,
         invited_by: user.id,
         invite_token: inviteToken,
         user_id: null,

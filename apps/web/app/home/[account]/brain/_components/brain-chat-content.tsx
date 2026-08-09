@@ -12,6 +12,9 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
+
 import {
   createBrainThread,
   listBrainThreadMessages,
@@ -175,6 +178,11 @@ export function BrainChatContent({
   initialScope?: BrainScope;
   starterQuestion?: string;
 }) {
+  const {
+    reportExhausted,
+    accountId: creditsAccountId,
+    billingHref,
+  } = useAiCreditsExhausted();
   const [threads, setThreads] = useState<ThreadRow[]>([]);
   const [threadId, setThreadId] = useState<string | null>(null);
   const [messages, setMessages] = useState<MessageRow[]>([]);
@@ -298,8 +306,37 @@ export function BrainChatContent({
         }),
       });
 
-      if (!res.ok || !res.body) {
-        throw new Error(await res.text());
+      if (!res.ok) {
+        const body = await res.json().catch(() => null);
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId: creditsAccountId || accountId,
+            billingHref,
+            status: res.status,
+            body,
+            message:
+              body &&
+              typeof body === 'object' &&
+              typeof (body as { error?: unknown }).error === 'string'
+                ? (body as { error: string }).error
+                : undefined,
+          })
+        ) {
+          return;
+        }
+        const errorMessage =
+          body &&
+          typeof body === 'object' &&
+          typeof (body as { error?: unknown }).error === 'string'
+            ? (body as { error: string }).error
+            : 'Chat failed';
+        toast.error(errorMessage);
+        return;
+      }
+
+      if (!res.body) {
+        toast.error('Chat failed');
+        return;
       }
 
       setSearching(false);
@@ -343,7 +380,17 @@ export function BrainChatContent({
 
       void loadThreads();
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Chat failed');
+      const message = err instanceof Error ? err.message : 'Chat failed';
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId: creditsAccountId || accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setSearching(false);
       setStreaming(false);

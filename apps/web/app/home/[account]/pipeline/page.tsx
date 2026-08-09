@@ -5,6 +5,8 @@ import { PageBody } from '@kit/ui/page';
 
 import { loadPipelineDataForAccount } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
+import { createClientsService } from '~/home/[account]/clients/_lib/server/clients.service';
+import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import { createRequirementsService } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
@@ -47,7 +49,36 @@ async function TeamAccountPipelinePage({
   }
 
   const accountId = workspace.account.id as string;
-  const data = await loadPipelineDataForAccount(accountId);
+  const client = getSupabaseServerClient();
+  const [data, clientsResult] = await Promise.all([
+    loadPipelineDataForAccount(accountId),
+    createClientsService(client)
+      .listClients({ accountId, page: 1, pageSize: 100 })
+      .catch((error) => {
+        console.error('[pipeline] failed to preload clients', {
+          accountId,
+          error: error instanceof Error ? error.message : String(error),
+        });
+        return { data: [] as unknown[], total: 0 };
+      }),
+  ]);
+  const initialClients: ClientOption[] = (
+    (clientsResult.data ?? []) as Array<{
+      id: string;
+      display_name: string | null;
+      company_name?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      client_type?: string | null;
+    }>
+  ).map((row) => ({
+    id: row.id,
+    display_name: row.display_name ?? null,
+    company_name: row.company_name ?? null,
+    first_name: row.first_name ?? null,
+    last_name: row.last_name ?? null,
+    client_type: row.client_type ?? null,
+  }));
   const isCommercial = workspace.workspaceProfile === 'commercial_property';
 
   let listings: PipelineListingOption[] = [];
@@ -56,7 +87,6 @@ async function TeamAccountPipelinePage({
   let requirements: CommercialRequirement[] = [];
 
   if (isCommercial) {
-    const client = getSupabaseServerClient();
     // commercial_* tables may lag generated Database types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = client as any;
@@ -166,6 +196,7 @@ async function TeamAccountPipelinePage({
           initialData={data}
           accountSlug={accountSlug}
           accountId={accountId}
+          initialClients={initialClients}
           variant={isCommercial ? 'commercial' : 'work'}
           listings={listings}
           stageConfig={stageConfig}

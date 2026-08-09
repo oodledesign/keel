@@ -5,12 +5,21 @@ import { redirect } from 'next/navigation';
 import pathsConfig from '~/config/paths.config';
 
 import { getTeamAccountAccess } from '../../../_lib/role-access';
-import { isWorkModuleEnabled } from '../../../_lib/server/account-modules';
+import {
+  getSpaceTypeFromAccount,
+  isFamilyNavModuleEnabled,
+  isWorkModuleEnabled,
+} from '../../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
 import {
   BUSINESS_WORKSPACE_SPACE_TYPES,
   redirectIfSpaceNotIn,
 } from '../../../_lib/server/workspace-route-guard';
+
+const JOBS_PAGE_SPACE_TYPES = [
+  ...BUSINESS_WORKSPACE_SPACE_TYPES,
+  'family',
+] as const;
 
 export async function loadJobsPageData(accountSlug: string) {
   const workspace = await loadTeamWorkspace(accountSlug);
@@ -19,7 +28,7 @@ export async function loadJobsPageData(accountSlug: string) {
     redirect(pathsConfig.app.home);
   }
 
-  redirectIfSpaceNotIn(workspace, accountSlug, BUSINESS_WORKSPACE_SPACE_TYPES);
+  redirectIfSpaceNotIn(workspace, accountSlug, [...JOBS_PAGE_SPACE_TYPES]);
 
   const account = workspace.account as {
     id: string;
@@ -27,12 +36,14 @@ export async function loadJobsPageData(accountSlug: string) {
     permissions?: string[] | null;
     role?: string | null;
     company_role?: string | null;
+    space_type?: string | null;
   };
+  const spaceType = getSpaceTypeFromAccount(account);
   const access = getTeamAccountAccess(account);
-  const jobsModuleEnabled = isWorkModuleEnabled(
-    workspace.moduleSettings,
-    'jobs',
-  );
+  const jobsModuleEnabled =
+    spaceType === 'family'
+      ? isFamilyNavModuleEnabled(workspace.moduleSettings, 'projects')
+      : isWorkModuleEnabled(workspace.moduleSettings, 'jobs');
   const canViewJobs = access.canViewProjects && jobsModuleEnabled;
   const canEditJobs = access.canCreateJob;
   const canDeleteJobs = access.isOwner || access.isAdmin;
@@ -45,5 +56,6 @@ export async function loadJobsPageData(accountSlug: string) {
     canEditJobs,
     canDeleteJobs,
     isContractorView: access.isContractor,
+    spaceType,
   };
 }

@@ -3,8 +3,8 @@ import {
   COMMERCIAL_PIPELINE_STAGE_LABELS,
   COMMERCIAL_PIPELINE_WON_STAGE,
   type CommercialPipelineStage,
-  REQUIREMENT_STATUS_LABELS,
   REQUIREMENT_STATUSES,
+  REQUIREMENT_STATUS_LABELS,
   type RequirementStatus,
   normalizeRequirementStage,
 } from './commercial-constants';
@@ -37,8 +37,12 @@ export type InstructionClosedChoice =
 
 export type RequirementClosedChoice = 'fulfilled' | 'withdrawn';
 
-export function isWipBoardView(value: string | null | undefined): value is WipBoardView {
-  return value === 'instructions' || value === 'requirements' || value === 'both';
+export function isWipBoardView(
+  value: string | null | undefined,
+): value is WipBoardView {
+  return (
+    value === 'instructions' || value === 'requirements' || value === 'both'
+  );
 }
 
 export function parseWipBoardView(
@@ -123,9 +127,7 @@ export function instructionBoardStages(
     return configKeys.map((key) => ({
       key,
       label:
-        COMMERCIAL_PIPELINE_STAGE_LABELS[
-          key as CommercialPipelineStage
-        ] ?? key,
+        COMMERCIAL_PIPELINE_STAGE_LABELS[key as CommercialPipelineStage] ?? key,
     }));
   }
   return [

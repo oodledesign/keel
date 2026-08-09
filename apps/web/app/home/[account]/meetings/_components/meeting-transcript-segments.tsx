@@ -2,12 +2,13 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
+import { Trash2 } from 'lucide-react';
+
 import { Button } from '@kit/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
-import { Trash2 } from 'lucide-react';
 
 import {
   type SpeakerBinding,
@@ -278,7 +279,9 @@ export function MeetingTranscriptSegments({
                       return;
                     }
                     onDraftChange(
-                      visibleSegments.filter((_, rowIndex) => rowIndex !== index),
+                      visibleSegments.filter(
+                        (_, rowIndex) => rowIndex !== index,
+                      ),
                     );
                   }}
                 >

@@ -35,9 +35,12 @@ function parseJointAgentNode(node: Element): FeedJointAgent | null {
     externalId: text(node, 'id') || text(node, 'object_id'),
     firmName,
     contactName:
-      contactName && contactName !== firmName ? contactName : text(node, 'name'),
+      contactName && contactName !== firmName
+        ? contactName
+        : text(node, 'name'),
     contactEmail: text(node, 'email'),
-    contactPhone: text(node, 'mobile') || text(node, 'tel') || text(node, 'phone'),
+    contactPhone:
+      text(node, 'mobile') || text(node, 'tel') || text(node, 'phone'),
   };
 }
 
@@ -75,7 +78,8 @@ export function parseJointAgentsFromPropertyXml(
   while ((match = agentRe.exec(block))) {
     const inner = match[1] ?? '';
     const field = (tag: string) =>
-      inner.match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'))?.[1]
+      inner
+        .match(new RegExp(`<${tag}[^>]*>([\\s\\S]*?)</${tag}>`, 'i'))?.[1]
         ?.replace(/<!\[CDATA\[([\s\S]*?)\]\]>/g, '$1')
         .trim() || null;
 

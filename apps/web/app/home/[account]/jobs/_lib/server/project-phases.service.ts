@@ -24,7 +24,6 @@ import {
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
 import {
-  PhaseTemplatePhaseSchema,
   type AddPhaseNoteInput,
   type ApplyPhaseTemplateInput,
   type CreateJobTaskInput,
@@ -43,6 +42,7 @@ import {
   type PhaseStatus,
   type PhaseTemplateListItem,
   type PhaseTemplatePhase,
+  PhaseTemplatePhaseSchema,
   type ReorderPhasesInput,
   type SavePhasePageDocInput,
   type SaveProjectAsPhaseTemplateInput,
@@ -203,6 +203,10 @@ class ProjectPhasesService {
     permission: 'jobs.view' | 'jobs.edit',
   ) {
     const user = await this.ensureUser();
+    // Personal accounts have no memberships; owner id === account id.
+    if (accountId === user.id) {
+      return user;
+    }
     const api = createTeamAccountsApi(this.client);
     const hasPermission = await api.hasPermission({
       userId: user.id,
@@ -1075,12 +1079,9 @@ class ProjectPhasesService {
             row.id as string,
             {
               id: row.id as string,
-              title:
-                ((row.title as string | null)?.trim() ||
-                  ((row.content as string | null) ?? '')
-                    .trim()
-                    .slice(0, 80) ||
-                  'Untitled note') as string,
+              title: ((row.title as string | null)?.trim() ||
+                ((row.content as string | null) ?? '').trim().slice(0, 80) ||
+                'Untitled note') as string,
             },
           ]),
         );

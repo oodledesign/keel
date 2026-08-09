@@ -2,8 +2,8 @@
 
 import { useCallback, useEffect, useState, useTransition } from 'react';
 
-import Link from 'next/link';
 import dynamic from 'next/dynamic';
+import Link from 'next/link';
 
 import { ImageIcon } from 'lucide-react';
 
@@ -142,7 +142,7 @@ export function MediaUnitsBillingCard(props: MediaUnitsBillingCardProps) {
           <>
             <div className="flex items-end justify-between gap-4">
               <div>
-                <p className="text-muted-foreground text-xs uppercase tracking-wide">
+                <p className="text-muted-foreground text-xs tracking-wide uppercase">
                   Balance
                 </p>
                 <p className="text-2xl font-semibold tabular-nums">
@@ -170,9 +170,9 @@ export function MediaUnitsBillingCard(props: MediaUnitsBillingCardProps) {
               </div>
             ) : null}
             {snapshot.expiringTopups.length > 0 ? (
-              <p className="text-amber-700 dark:text-amber-400 text-sm">
-                {snapshot.expiringTopups[0]!.units.toLocaleString('en-GB')} units
-                expiring on{' '}
+              <p className="text-sm text-amber-700 dark:text-amber-400">
+                {snapshot.expiringTopups[0]!.units.toLocaleString('en-GB')}{' '}
+                units expiring on{' '}
                 {new Date(
                   snapshot.expiringTopups[0]!.expiresAt,
                 ).toLocaleDateString('en-GB')}
@@ -252,7 +252,9 @@ export function MediaUnitsBillingCard(props: MediaUnitsBillingCardProps) {
 
         {snapshot?.transactions?.length ? (
           <div className="border-t pt-4">
-            <p className="mb-2 text-sm font-medium">Recent media transactions</p>
+            <p className="mb-2 text-sm font-medium">
+              Recent media transactions
+            </p>
             <ul className="space-y-1 text-sm">
               {snapshot.transactions.map((tx) => (
                 <li

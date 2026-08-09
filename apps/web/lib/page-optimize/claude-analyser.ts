@@ -4,11 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import {
-  callAI,
-  invokeAIProvider,
-  withMeteredAI,
-} from '~/lib/ai/router';
+import { callAI, invokeAIProvider, withMeteredAI } from '~/lib/ai/router';
 import type { CompetitorPage } from '~/lib/briefs/types';
 import { supabaseCustomSchema } from '~/lib/supabase-custom-schema';
 
@@ -164,7 +160,8 @@ export async function analysePageForOptimization(
             ...lastTokens,
           };
         } catch {
-          if (retry) throw new Error('Failed to parse page optimization analysis');
+          if (retry)
+            throw new Error('Failed to parse page optimization analysis');
         }
       }
 

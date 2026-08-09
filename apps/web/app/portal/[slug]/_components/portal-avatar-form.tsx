@@ -69,8 +69,8 @@ export function PortalAvatarForm({
           Profile photo
         </span>
         <span className="text-xs text-[var(--ozer-text-on-light-muted)]">
-          Ask your account manager to add you as a contact before you can set
-          a photo.
+          Ask your account manager to add you as a contact before you can set a
+          photo.
         </span>
       </div>
     );

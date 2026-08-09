@@ -35,6 +35,10 @@ import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  isPersonalProjectsScope,
+  projectListHref,
+} from '~/lib/projects/project-paths';
 
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
@@ -163,10 +167,8 @@ export function JobDetailContent({
   linkOptions: LinkOption[];
   defaultLink: LinkValue;
 }) {
-  const jobsPath = pathsConfig.app.accountJobs.replace(
-    '[account]',
-    accountSlug,
-  );
+  const jobsPath = projectListHref(accountSlug);
+  const isPersonal = isPersonalProjectsScope(accountSlug);
   const searchParams = useSearchParams();
   const initialTab = searchParams.get('tab') ?? 'project';
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -489,7 +491,7 @@ export function JobDetailContent({
             />
           </div>
         </div>
-        {canEditJobs && (
+        {canEditJobs && !isPersonal && (
           <Button
             asChild
             variant="outline"

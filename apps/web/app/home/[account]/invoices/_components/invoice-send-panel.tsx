@@ -893,10 +893,8 @@ export function InvoiceSendPanel({
                   <p className="text-muted-foreground text-xs">
                     Currently scheduled for{' '}
                     {
-                      formatUtcInTimezone(
-                        currentScheduledAt,
-                        workspaceTimezone,
-                      ).label
+                      formatUtcInTimezone(currentScheduledAt, workspaceTimezone)
+                        .label
                     }
                     .
                   </p>

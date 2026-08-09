@@ -2,7 +2,10 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import type { UpsertOrderParams, UpsertSubscriptionParams } from '@kit/billing/types';
+import type {
+  UpsertOrderParams,
+  UpsertSubscriptionParams,
+} from '@kit/billing/types';
 import { getLogger } from '@kit/shared/logger';
 
 import {

@@ -740,7 +740,9 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
 
             {tasks.length === 0 ? (
               <p className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-4 py-6 text-center text-sm text-[var(--workspace-shell-text)]/45">
-                {isViewingToday ? 'Nothing due today.' : 'Nothing due this day.'}
+                {isViewingToday
+                  ? 'Nothing due today.'
+                  : 'Nothing due this day.'}
               </p>
             ) : (
               <ul className="min-w-0 space-y-2">

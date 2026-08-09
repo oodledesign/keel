@@ -37,9 +37,7 @@ const BUILTIN_ORDER = [
 
 function sortTemplates(items: PhaseTemplatePickerItem[]) {
   const rank = (name: string) => {
-    const index = BUILTIN_ORDER.indexOf(
-      name as (typeof BUILTIN_ORDER)[number],
-    );
+    const index = BUILTIN_ORDER.indexOf(name as (typeof BUILTIN_ORDER)[number]);
     return index === -1 ? 100 : index;
   };
 
@@ -90,8 +88,8 @@ export function PhaseTemplatePickerDialog({
         <DialogHeader>
           <DialogTitle>Choose a phase template</DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-            Pick how this project should be organised. You can still add, rename,
-            or remove phases afterwards.
+            Pick how this project should be organised. You can still add,
+            rename, or remove phases afterwards.
           </DialogDescription>
         </DialogHeader>
 
@@ -246,9 +244,7 @@ function TemplateDetail({ template }: { template: PhaseTemplatePickerItem }) {
         </p>
       ) : null}
       {(template.phaseNames?.length ?? 0) > 0 ? (
-        <p className="text-xs">
-          {template.phaseNames!.join(' → ')}
-        </p>
+        <p className="text-xs">{template.phaseNames!.join(' → ')}</p>
       ) : null}
     </div>
   );

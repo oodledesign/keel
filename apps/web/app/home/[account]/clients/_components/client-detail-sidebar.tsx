@@ -58,7 +58,6 @@ import { formatWorkspaceMoney } from '~/lib/currency/workspace-currency';
 import { MeetingTranscriptsBlock } from '../../_components/meeting-transcripts-block';
 import { ContextWorkspaceNotes } from '../../_components/workspace-content/context-workspace-notes';
 import type { LinkValue } from '../../_components/workspace-content/link-to-select';
-import { ClientMediaRollup } from './client-media-rollup';
 import type {
   RanklyClientImportOption,
   RanklyProjectRow,
@@ -89,6 +88,7 @@ import { ClientForm } from './client-form';
 import { ClientImageUploader } from './client-image-uploader';
 import { ClientInvoicesBlock } from './client-invoices-block';
 import { ClientJobHistoryBlock } from './client-job-history-block';
+import { ClientMediaRollup } from './client-media-rollup';
 import { ClientNotesBlock } from './client-notes-block';
 import { ClientRanklyBlock } from './client-rankly-block';
 import { ClientSupportBlock } from './client-support-block';

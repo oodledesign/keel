@@ -28,7 +28,6 @@ const withWipScope = <T extends z.ZodTypeAny>(schema: T) =>
 
 const ScopeSchema = withWipScope(ScopeObjectSchema);
 
-
 export type WipAttachmentTask = {
   id: string;
   title: string;
@@ -68,12 +67,14 @@ export const listWipAttachmentTasks = enhanceAction(
     const { data, error } = await query;
     if (error) throw new Error(error.message);
 
-    return ((data ?? []) as Array<{
-      id: string;
-      title: string;
-      status: string;
-      due_date: string | null;
-    }>).map((row) => ({
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        title: string;
+        status: string;
+        due_date: string | null;
+      }>
+    ).map((row) => ({
       id: row.id,
       title: row.title,
       status: row.status,
@@ -106,12 +107,14 @@ export const listWipAttachmentNotes = enhanceAction(
     const { data, error } = await query;
     if (error) throw new Error(error.message);
 
-    return ((data ?? []) as Array<{
-      id: string;
-      title: string;
-      content: string;
-      updated_at: string;
-    }>).map((row) => ({
+    return (
+      (data ?? []) as Array<{
+        id: string;
+        title: string;
+        content: string;
+        updated_at: string;
+      }>
+    ).map((row) => ({
       id: row.id,
       title: row.title?.trim() || 'Untitled',
       content: row.content ?? '',

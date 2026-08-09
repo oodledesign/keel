@@ -4,8 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER } from '~/config/workspace-module-order';
 
-import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
 import { markBusinessUpgradedFromLite } from './business-lite';
+import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
 import {
   type OzerPlanDefinition,
   findPlanByProductAndPlanId,

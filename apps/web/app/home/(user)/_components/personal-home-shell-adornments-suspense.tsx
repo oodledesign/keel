@@ -2,7 +2,10 @@ import { Suspense } from 'react';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
+
 import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
+import { countNeedsReplyEmailThreads } from '~/lib/email-assistant/count-needs-reply-threads';
 import { loadWorkspaceFocusSettingsMap } from '~/lib/workspace-focus/load-workspace-focus-settings';
 import { serializeWorkspaceFocusMap } from '~/lib/workspace-focus/serialize-focus-map';
 
@@ -11,6 +14,7 @@ export type PersonalHomeShellAdornments = {
     ReturnType<typeof loadPersonalMobileNavShortcuts>
   >;
   focusSettingsByAccountId: ReturnType<typeof serializeWorkspaceFocusMap>;
+  emailNeedsReplyCount: number;
 };
 
 async function loadPersonalHomeShellAdornments(params: {
@@ -18,18 +22,38 @@ async function loadPersonalHomeShellAdornments(params: {
   userId: string;
   focusAccountIds: string[];
 }): Promise<PersonalHomeShellAdornments> {
-  const [mobileNavShortcuts, focusSettings] = await Promise.all([
-    loadPersonalMobileNavShortcuts(params.client, params.userId),
-    loadWorkspaceFocusSettingsMap(
-      params.client,
-      params.userId,
-      params.focusAccountIds,
-    ),
-  ]);
+  const [mobileNavShortcuts, focusSettings, emailNeedsReplyCount] =
+    await Promise.all([
+      loadPersonalMobileNavShortcuts(params.client, params.userId),
+      loadWorkspaceFocusSettingsMap(
+        params.client,
+        params.userId,
+        params.focusAccountIds,
+      ),
+      (async () => {
+        try {
+          const admin = getSupabaseServerAdminClient();
+          return await countNeedsReplyEmailThreads(admin, {
+            userId: params.userId,
+            mailboxKind: 'personal',
+          });
+        } catch {
+          try {
+            return await countNeedsReplyEmailThreads(params.client, {
+              userId: params.userId,
+              mailboxKind: 'personal',
+            });
+          } catch {
+            return 0;
+          }
+        }
+      })(),
+    ]);
 
   return {
     mobileNavShortcuts,
     focusSettingsByAccountId: serializeWorkspaceFocusMap(focusSettings),
+    emailNeedsReplyCount,
   };
 }
 

@@ -116,7 +116,9 @@ export async function distillVoiceProfile(
       (profile as { account_id?: string | null }).account_id ||
       (profile as { user_id?: string | null }).user_id;
     if (!accountId) {
-      throw new Error('Voice profile is missing account context for AI metering');
+      throw new Error(
+        'Voice profile is missing account context for AI metering',
+      );
     }
 
     const raw = await callAI({

@@ -31,13 +31,15 @@ import {
   pickDefaultPipelineTargetId,
 } from '~/home/(user)/_lib/pipeline-constants';
 import { listClients } from '~/home/[account]/clients/_lib/server/server-actions';
-import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
+import {
+  ClientCombobox,
+  type ClientOption,
+} from '~/home/[account]/projects/_components/client-combobox';
+import { unwrapListClientsResult } from '~/lib/clients/unwrap-list-clients-result';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { PipelineDeal } from '../../_lib/server/pipeline.loader';
 import { createDeal } from '../actions';
-
-type ClientOption = { id: string; display_name: string | null };
 
 const WORK_STAGES = [
   { key: 'lead', label: 'Lead' },
@@ -55,6 +57,8 @@ type Props = {
   accountSlug?: string;
   /** Workspace-scoped board passes its account id so existing clients can be linked. */
   accountId?: string;
+  /** Server-preloaded clients for the workspace (avoids empty first paint). */
+  initialClients?: ClientOption[];
   stages?: ReadonlyArray<{ key: string; label: string }>;
   defaultStage?: string;
   listings?: Array<{ id: string; name: string }>;
@@ -72,6 +76,7 @@ export function AddDealDialog({
   onDealCreated,
   accountSlug,
   accountId,
+  initialClients = [],
   stages = WORK_STAGES,
   defaultStage,
   listings = [],
@@ -94,7 +99,7 @@ export function AddDealDialog({
   );
   const [mode, setMode] = useState<Mode>('lead');
   const [clientId, setClientId] = useState('');
-  const [clients, setClients] = useState<ClientOption[]>([]);
+  const [clients, setClients] = useState<ClientOption[]>(initialClients);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [clientsError, setClientsError] = useState<string | null>(null);
   const [listingId, setListingId] = useState(NONE_LISTING);
@@ -124,7 +129,7 @@ export function AddDealDialog({
   useEffect(() => {
     if (!open || !resolvedAccountId) {
       if (!open) {
-        setClients([]);
+        setClients(initialClients);
         setClientsError(null);
       }
       return;
@@ -133,21 +138,31 @@ export function AddDealDialog({
     let cancelled = false;
     setClientsLoading(true);
     setClientsError(null);
+    // Keep any server preload visible while refreshing.
+    if (initialClients.length > 0) {
+      setClients(initialClients);
+    }
 
     listClients({ accountId: resolvedAccountId, page: 1, pageSize: 100 })
       .then((r: unknown) => {
         if (cancelled) return;
-        const raw = r as { data?: unknown } | unknown[];
-        const list = Array.isArray(raw)
-          ? raw
-          : Array.isArray((raw as { data?: unknown })?.data)
-            ? (raw as { data: unknown[] }).data
-            : [];
-        setClients((list || []) as ClientOption[]);
+        const unwrapped = unwrapListClientsResult<ClientOption>(r);
+        if (!unwrapped.ok) {
+          // Prefer keeping a good preload over wiping to empty.
+          if (initialClients.length === 0) {
+            setClients([]);
+          }
+          setClientsError(unwrapped.error);
+          return;
+        }
+        setClients(unwrapped.data);
+        setClientsError(null);
       })
       .catch((err: unknown) => {
         if (cancelled) return;
-        setClients([]);
+        if (initialClients.length === 0) {
+          setClients([]);
+        }
         setClientsError(
           err instanceof Error ? err.message : 'Could not load clients',
         );
@@ -159,6 +174,8 @@ export function AddDealDialog({
     return () => {
       cancelled = true;
     };
+    // initialClients is a seed only; identity may change every render from parents.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- refresh on open/account
   }, [open, resolvedAccountId]);
 
   const showAssignField = !workspaceScoped && businesses.length > 1;
@@ -342,9 +359,7 @@ export function AddDealDialog({
                   onValueChange={setClientId}
                   loading={clientsLoading}
                   placeholder="Select an existing client"
-                  emptyMessage={
-                    clientsError ? clientsError : 'No clients found.'
-                  }
+                  loadError={clientsError}
                   addClientHref={
                     accountSlug
                       ? `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}?create=client`

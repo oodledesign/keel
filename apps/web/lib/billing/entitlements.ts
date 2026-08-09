@@ -327,9 +327,7 @@ export async function getMemberSeatUsage(
     used,
     maxMembers,
     remaining:
-      unlimited || maxMembers == null
-        ? null
-        : Math.max(0, maxMembers - used),
+      unlimited || maxMembers == null ? null : Math.max(0, maxMembers - used),
     unlimited,
   };
 }

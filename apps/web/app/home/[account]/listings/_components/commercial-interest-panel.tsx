@@ -18,14 +18,6 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import {
-  INTEREST_STATUSES,
-  INTEREST_STATUS_LABELS,
-  type InterestStatus,
-} from '~/lib/commercial/commercial-constants';
-import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
-
-import { listListings } from '~/home/[account]/listings/_lib/server/server-actions';
-import {
   createInterestMatch,
   deleteInterestMatch,
   listMatchesForListing,
@@ -33,7 +25,14 @@ import {
   updateInterestMatch,
 } from '~/home/[account]/listings/_lib/server/matches-actions';
 import type { CommercialInterestMatch } from '~/home/[account]/listings/_lib/server/matches.service';
+import { listListings } from '~/home/[account]/listings/_lib/server/server-actions';
 import { listRequirements } from '~/home/[account]/requirements/_lib/server/server-actions';
+import {
+  INTEREST_STATUSES,
+  INTEREST_STATUS_LABELS,
+  type InterestStatus,
+} from '~/lib/commercial/commercial-constants';
+import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 type Mode =
   | { kind: 'listing'; listingId: string }
@@ -47,7 +46,8 @@ type Props = {
 
 function formatSize(min: number | null, max: number | null) {
   if (min == null && max == null) return null;
-  if (min != null && max != null) return `${min.toLocaleString()}–${max.toLocaleString()} sq ft`;
+  if (min != null && max != null)
+    return `${min.toLocaleString()}–${max.toLocaleString()} sq ft`;
   if (min != null) return `from ${min.toLocaleString()} sq ft`;
   return `up to ${max!.toLocaleString()} sq ft`;
 }
@@ -72,9 +72,9 @@ export function CommercialInterestPanel({
   const [addOpen, setAddOpen] = useState(false);
   const [pickId, setPickId] = useState('');
   const [notes, setNotes] = useState('');
-  const [options, setOptions] = useState<
-    Array<{ id: string; label: string }>
-  >([]);
+  const [options, setOptions] = useState<Array<{ id: string; label: string }>>(
+    [],
+  );
 
   const [sector, setSector] = useState('');
   const [sizeMin, setSizeMin] = useState('');
@@ -115,8 +115,7 @@ export function CommercialInterestPanel({
     }
   };
 
-  const scopeId =
-    mode.kind === 'listing' ? mode.listingId : mode.requirementId;
+  const scopeId = mode.kind === 'listing' ? mode.listingId : mode.requirementId;
 
   useEffect(() => {
     void load();
@@ -176,9 +175,7 @@ export function CommercialInterestPanel({
           matchId,
           status,
         });
-        setMatches((prev) =>
-          prev.map((m) => (m.id === matchId ? updated : m)),
-        );
+        setMatches((prev) => prev.map((m) => (m.id === matchId ? updated : m)));
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not update status',
@@ -190,9 +187,7 @@ export function CommercialInterestPanel({
   const onAdd = () => {
     if (!pickId) {
       toast.error(
-        mode.kind === 'listing'
-          ? 'Pick a requirement'
-          : 'Pick a disposal',
+        mode.kind === 'listing' ? 'Pick a requirement' : 'Pick a disposal',
       );
       return;
     }
@@ -200,8 +195,7 @@ export function CommercialInterestPanel({
       try {
         await createInterestMatch({
           accountId,
-          listingId:
-            mode.kind === 'listing' ? mode.listingId : pickId,
+          listingId: mode.kind === 'listing' ? mode.listingId : pickId,
           requirementId:
             mode.kind === 'requirement' ? mode.requirementId : pickId,
           notes: notes.trim() || null,

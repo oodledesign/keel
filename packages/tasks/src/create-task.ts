@@ -213,9 +213,7 @@ export async function createTaskForUser(
       ? { recurring_series_id: input.recurringSeriesId }
       : {}),
     ...(input.notes?.trim() ? { notes: input.notes.trim() } : {}),
-    ...(input.pipelineDealId
-      ? { pipeline_deal_id: input.pipelineDealId }
-      : {}),
+    ...(input.pipelineDealId ? { pipeline_deal_id: input.pipelineDealId } : {}),
     ...(input.commercialRequirementId
       ? { commercial_requirement_id: input.commercialRequirementId }
       : {}),

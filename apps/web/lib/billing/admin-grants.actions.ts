@@ -211,11 +211,7 @@ export const adminApplyPlanLimitsAction = enhanceAction(
 
     await syncWorkspaceStateAfterAdminPlan(admin, input.accountId, plan);
 
-    const usage = await applyAdminPlanUsageGrants(
-      admin,
-      input.accountId,
-      plan,
-    );
+    const usage = await applyAdminPlanUsageGrants(admin, input.accountId, plan);
 
     await logAdminAction(admin, {
       actorUserId: user.id,

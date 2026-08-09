@@ -36,6 +36,12 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import {
+  inviteAllContactsToPortalAction,
+  inviteContactToPortalAction,
+  listContactPortalAccessAction,
+} from '~/lib/clients/client-portal-invites-actions';
+import type { ContactPortalAccessStatus } from '~/lib/clients/client-portal-invites.types';
+import {
   CONTACT_ROLE_LABELS,
   CONTACT_ROLE_PRESETS,
   type ContactRolePreset,
@@ -53,12 +59,6 @@ import {
   updateContact,
   updateContactLink,
 } from '../_lib/server/server-actions';
-import {
-  inviteAllContactsToPortalAction,
-  inviteContactToPortalAction,
-  listContactPortalAccessAction,
-} from '~/lib/clients/client-portal-invites-actions';
-import type { ContactPortalAccessStatus } from '~/lib/clients/client-portal-invites.types';
 import { ContactImageUploader } from './contact-image-uploader';
 
 type Contact = {
@@ -954,9 +954,7 @@ export function ClientContactsBlock({
       }
       await fetchContacts();
     } catch (e) {
-      toast.error(
-        e instanceof Error ? e.message : 'Failed to invite contacts',
-      );
+      toast.error(e instanceof Error ? e.message : 'Failed to invite contacts');
     } finally {
       setInvitingAll(false);
     }

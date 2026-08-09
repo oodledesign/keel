@@ -20,6 +20,7 @@ import { ProfileAccountDropdownContainer } from '~/components/personal-account-d
 import featureFlagsConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
+import { toHomeBillingHref } from '~/lib/ai/billing-href';
 
 import { WorkspaceNewMenu } from './workspace-new-menu';
 import { WorkspaceSearchButton } from './workspace-search-button';
@@ -173,6 +174,17 @@ export function WorkspaceDesktopTopBar(
               account={props.account}
               showProfileName={false}
               className="shrink-0"
+              billingAccountId={
+                props.variant === 'team' ? props.accountId : props.userId
+              }
+              billingHref={
+                props.variant === 'team'
+                  ? toHomeBillingHref(
+                      pathsConfig.app.accountBilling,
+                      props.accountSlug,
+                    )
+                  : toHomeBillingHref(pathsConfig.app.personalAccountBilling)
+              }
             />
           ) : null}
         </div>

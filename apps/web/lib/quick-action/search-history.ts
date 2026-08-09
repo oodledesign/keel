@@ -33,7 +33,9 @@ export function loadSearchHistory(): SearchHistoryItem[] {
   }
 }
 
-export function pushSearchHistory(item: SearchHistoryItem): SearchHistoryItem[] {
+export function pushSearchHistory(
+  item: SearchHistoryItem,
+): SearchHistoryItem[] {
   const next = [
     item,
     ...loadSearchHistory().filter(

@@ -5,6 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { savePlannerPlanAction } from '~/lib/planner/plan-actions';
@@ -48,6 +50,8 @@ const defaultPreferences: PlannerPreferences = {
 };
 
 export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
+  const { reportExhausted, accountId: creditsAccountId, billingHref } =
+    useAiCreditsExhausted();
   const previousTaskIdsRef = useRef(
     new Set(
       initialData.taskTree.flatMap((workspace) =>
@@ -299,6 +303,17 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
         const body = (await response.json().catch(() => null)) as {
           error?: string;
         } | null;
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId: creditsAccountId || payload.accountId,
+            billingHref,
+            status: response.status,
+            body,
+            message: body?.error,
+          })
+        ) {
+          return;
+        }
         throw new Error(body?.error ?? 'Could not generate plan');
       }
 
@@ -344,9 +359,18 @@ export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
         }
       }
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Could not generate plan',
-      );
+      const message =
+        err instanceof Error ? err.message : 'Could not generate plan';
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId: creditsAccountId || payload.accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setIsGenerating(false);
     }

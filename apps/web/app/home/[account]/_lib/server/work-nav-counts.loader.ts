@@ -10,6 +10,7 @@ import type { WorkNavCounts } from '~/config/work-account-navigation.config';
 import { isWorkModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { countOpenSupportTickets } from '~/home/[account]/support/_lib/server/support-tickets.service';
 import { countActiveSharesForGuest } from '~/lib/clients/client-workspace-shares.service';
+import { countNeedsReplyEmailThreads } from '~/lib/email-assistant/count-needs-reply-threads';
 import { countPartnerSupportLinks } from '~/lib/support/partner-support.service';
 
 function formatSupabaseError(error: PostgrestError | null | undefined): string {
@@ -32,8 +33,11 @@ export async function loadWorkNavCounts(
   client: SupabaseClient,
   accountId: string,
   moduleSettings?: Record<string, boolean>,
+  options?: { userId?: string; emailAssistantAvailable?: boolean },
 ): Promise<WorkNavCounts> {
   const counts: WorkNavCounts = {};
+  const userId = options?.userId?.trim() || null;
+  const emailAssistantAvailable = options?.emailAssistantAvailable ?? false;
 
   try {
     const partnerLinkCount = await countPartnerSupportLinks(accountId);
@@ -61,32 +65,58 @@ export async function loadWorkNavCounts(
     }
   }
 
-  if (!isWorkModuleEnabled(moduleSettings, 'support_tickets')) {
-    return counts;
+  if (isWorkModuleEnabled(moduleSettings, 'support_tickets')) {
+    try {
+      // Admin bypasses RLS so the nav badge stays accurate for all staff roles.
+      const admin = getSupabaseServerAdminClient();
+      counts.supportOpenCount = await countOpenSupportTickets(admin, accountId);
+    } catch (error) {
+      const pgError = error as PostgrestError;
+      if (!pgError?.code || !isMissingRelationError(pgError)) {
+        console.warn(
+          '[work-nav-counts] supportOpenCount:',
+          formatSupabaseError(pgError),
+        );
+
+        try {
+          counts.supportOpenCount = await countOpenSupportTickets(
+            client,
+            accountId,
+          );
+        } catch {
+          // keep unset
+        }
+      }
+    }
   }
 
-  try {
-    // Admin bypasses RLS so the nav badge stays accurate for all staff roles.
-    const admin = getSupabaseServerAdminClient();
-    counts.supportOpenCount = await countOpenSupportTickets(admin, accountId);
-  } catch (error) {
-    const pgError = error as PostgrestError;
-    if (pgError?.code && isMissingRelationError(pgError)) {
-      return counts;
-    }
-
-    console.warn(
-      '[work-nav-counts] supportOpenCount:',
-      formatSupabaseError(pgError),
-    );
-
+  if (emailAssistantAvailable && userId) {
     try {
-      counts.supportOpenCount = await countOpenSupportTickets(
-        client,
-        accountId,
-      );
-    } catch {
-      // keep unset
+      const admin = getSupabaseServerAdminClient();
+      counts.emailNeedsReplyCount = await countNeedsReplyEmailThreads(admin, {
+        userId,
+        mailboxKind: 'business',
+      });
+    } catch (error) {
+      const pgError = error as PostgrestError;
+      if (!pgError?.code || !isMissingRelationError(pgError)) {
+        console.warn(
+          '[work-nav-counts] emailNeedsReplyCount:',
+          formatSupabaseError(pgError),
+        );
+
+        try {
+          counts.emailNeedsReplyCount = await countNeedsReplyEmailThreads(
+            client,
+            {
+              userId,
+              mailboxKind: 'business',
+            },
+          );
+        } catch {
+          // keep unset
+        }
+      }
     }
   }
 

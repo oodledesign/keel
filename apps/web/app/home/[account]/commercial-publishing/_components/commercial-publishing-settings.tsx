@@ -400,8 +400,8 @@ export function CommercialPublishingSettings({
         <CardContent className="space-y-8">
           {!portalPublishingUnlocked ? (
             <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
-              Portal publishing (Rightmove / EACH) unlocks from 2 billable seats.
-              Property Hive website sync remains available on Solo.
+              Portal publishing (Rightmove / EACH) unlocks from 2 billable
+              seats. Property Hive website sync remains available on Solo.
             </p>
           ) : null}
           <p className="text-sm text-[var(--workspace-shell-text)]/60">

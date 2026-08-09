@@ -4,7 +4,10 @@ import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
-import { MediaJobsGrid, type MediaJobTile } from '~/components/media/media-jobs-grid';
+import {
+  type MediaJobTile,
+  MediaJobsGrid,
+} from '~/components/media/media-jobs-grid';
 
 export function ClientMediaRollup(props: {
   accountId: string;

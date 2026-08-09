@@ -5,8 +5,9 @@ import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { draftRequirementFromText } from '~/lib/commercial/ai-requirement-draft';
+import { INSUFFICIENT_AI_CREDITS_CODE } from '~/lib/ai/ai-credits-exhausted';
 import { isInsufficientCreditsError } from '~/lib/ai/router';
+import { draftRequirementFromText } from '~/lib/commercial/ai-requirement-draft';
 
 import { createListingsService } from '../../../listings/_lib/server/listings.service';
 import {
@@ -26,7 +27,7 @@ export const draftRequirementFromPaste = enhanceAction(
     } catch (error) {
       if (isInsufficientCreditsError(error)) {
         throw new Error(
-          `Not enough AI credits (need ${error.creditsRequired}, have ${error.creditsRemaining}).`,
+          `Not enough AI credits (need ${error.creditsRequired}, have ${error.creditsRemaining}). [${INSUFFICIENT_AI_CREDITS_CODE}]`,
         );
       }
       throw error;
@@ -94,7 +95,7 @@ export const draftRequirementFromEnquiry = enhanceAction(
     } catch (error) {
       if (isInsufficientCreditsError(error)) {
         throw new Error(
-          `Not enough AI credits (need ${error.creditsRequired}, have ${error.creditsRemaining}).`,
+          `Not enough AI credits (need ${error.creditsRequired}, have ${error.creditsRemaining}). [${INSUFFICIENT_AI_CREDITS_CODE}]`,
         );
       }
       throw error;

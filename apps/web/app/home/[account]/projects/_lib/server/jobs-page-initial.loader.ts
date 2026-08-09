@@ -20,7 +20,13 @@ export type JobsPageInitialData = {
 export async function loadJobsPageInitialData(
   accountSlug: string,
   accountId: string,
+  options?: {
+    includeCampaigns?: boolean;
+    includeMembers?: boolean;
+  },
 ): Promise<JobsPageInitialData> {
+  const includeCampaigns = options?.includeCampaigns ?? true;
+  const includeMembers = options?.includeMembers ?? true;
   const client = getSupabaseServerClient();
   const jobsService = createJobsService(client);
   const campaignService = createCampaignProjectsService(client);
@@ -32,8 +38,12 @@ export async function loadJobsPageInitialData(
       page: 1,
       pageSize: 50,
     }),
-    campaignService.listProjects({ accountId }),
-    client.rpc('get_account_members', { account_slug: accountSlug }),
+    includeCampaigns
+      ? campaignService.listProjects({ accountId })
+      : Promise.resolve([]),
+    includeMembers
+      ? client.rpc('get_account_members', { account_slug: accountSlug })
+      : Promise.resolve({ data: [] }),
   ]);
 
   const jobsPayload = jobsResult as { data?: unknown[]; total?: number };
@@ -45,12 +55,16 @@ export async function loadJobsPageInitialData(
   return {
     jobs: jobsPayload.data ?? [],
     jobsTotal: jobsPayload.total ?? 0,
-    campaigns: campaignRows.map((row) => ({
-      id: row.id,
-      name: row.name,
-      clientCount: (row as { clientCount?: number }).clientCount,
-    })),
-    members:
-      ((membersResult.data ?? []) as JobsPageInitialData['members']) ?? [],
+    campaigns: includeCampaigns
+      ? campaignRows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          clientCount: (row as { clientCount?: number }).clientCount,
+        }))
+      : [],
+    members: includeMembers
+      ? (((membersResult as { data?: JobsPageInitialData['members'] }).data ??
+          []) as JobsPageInitialData['members'])
+      : [],
   };
 }

@@ -4,8 +4,8 @@ import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { Switch } from '@kit/ui/switch';
 import { Label } from '@kit/ui/label';
+import { Switch } from '@kit/ui/switch';
 
 type MediaGenerateAppToggleProps = {
   accountId: string;
@@ -86,10 +86,7 @@ export function MediaGenerateAppToggle(props: MediaGenerateAppToggleProps) {
             Generate
           </Link>
           {' · '}
-          <Link
-            href={`/home/${props.accountSlug}/media`}
-            className="underline"
-          >
+          <Link href={`/home/${props.accountSlug}/media`} className="underline">
             Gallery
           </Link>
         </p>

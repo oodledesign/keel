@@ -25,6 +25,7 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { listTemplatesPickerAction } from '~/lib/content-templates/account.actions';
 import type { PickerTemplate } from '~/lib/content-templates/types';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
@@ -34,7 +35,7 @@ import {
 } from '~/lib/email-assistant/message-body-display';
 
 import { loadEmailThreadDetail } from '../_lib/actions/email-assistant-actions';
-import { emailApiFetch } from '../_lib/email-api';
+import { EmailApiError, emailApiFetch } from '../_lib/email-api';
 import type {
   EmailActionItemRow,
   EmailDraftRow,
@@ -75,6 +76,7 @@ export function EmailThreadPanel({
   onBack,
   showBackButton = false,
 }: Props) {
+  const { reportExhausted, accountId, billingHref } = useAiCreditsExhausted();
   const [detail, setDetail] = useState<EmailThreadDetail | null>(null);
   const [loading, setLoading] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -181,6 +183,19 @@ export function EmailThreadPanel({
         }
         refreshDetail();
       } catch (error) {
+        if (
+          error instanceof EmailApiError &&
+          error.code === 'INSUFFICIENT_AI_CREDITS'
+        ) {
+          reportExhausted({
+            accountId,
+            billingHref,
+            creditsRemaining: error.creditsRemaining,
+            creditsRequired: error.creditsRequired,
+            error: error.message,
+          });
+          return;
+        }
         toast.error(
           error instanceof Error ? error.message : 'Extraction failed',
         );
@@ -220,6 +235,19 @@ export function EmailThreadPanel({
         setDraftBody(data.draft.body_text);
         toast.success('Draft generated');
       } catch (error) {
+        if (
+          error instanceof EmailApiError &&
+          error.code === 'INSUFFICIENT_AI_CREDITS'
+        ) {
+          reportExhausted({
+            accountId,
+            billingHref,
+            creditsRemaining: error.creditsRemaining,
+            creditsRequired: error.creditsRequired,
+            error: error.message,
+          });
+          return;
+        }
         toast.error(
           error instanceof Error ? error.message : 'Draft generation failed',
         );

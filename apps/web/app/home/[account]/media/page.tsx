@@ -11,14 +11,22 @@ import { MediaGalleryClient } from './_components/media-gallery-client';
 
 interface MediaGalleryPageProps {
   params: Promise<{ account: string }>;
-  searchParams: Promise<{ job?: string; project?: string; client?: string; type?: string }>;
+  searchParams: Promise<{
+    job?: string;
+    project?: string;
+    client?: string;
+    type?: string;
+  }>;
 }
 
 export const generateMetadata = async () => ({
   title: 'Media gallery',
 });
 
-async function MediaGalleryPage({ params, searchParams }: MediaGalleryPageProps) {
+async function MediaGalleryPage({
+  params,
+  searchParams,
+}: MediaGalleryPageProps) {
   const { account: accountSlug } = await params;
   const query = await searchParams;
   const workspace = await loadTeamWorkspace(accountSlug);
@@ -84,7 +92,13 @@ async function MediaGalleryPage({ params, searchParams }: MediaGalleryPageProps)
         accountId={accountId}
         accountSlug={accountSlug}
         initialJobs={(jobs ?? []) as Array<Record<string, unknown>>}
-        projects={(projects ?? []) as Array<{ id: string; title?: string | null; name?: string | null }>}
+        projects={
+          (projects ?? []) as Array<{
+            id: string;
+            title?: string | null;
+            name?: string | null;
+          }>
+        }
         clients={
           (clients ?? []) as Array<{
             id: string;

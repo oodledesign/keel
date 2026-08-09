@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
 import { generateInvoiceDraftFromPrompt } from '~/lib/ai/invoice-generate';
+import { INSUFFICIENT_AI_CREDITS_CODE } from '~/lib/ai/ai-credits-exhausted';
 import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { normalizePence } from '~/lib/invoices/invoice-quantity';
 
@@ -80,7 +81,7 @@ export const generateInvoiceLineItemsAction = enhanceAction(
     } catch (error) {
       if (isInsufficientCreditsError(error)) {
         throw new Error(
-          `${error.message}. Purchase more AI credits to continue.`,
+          `Not enough AI credits (need ${error.creditsRequired}, have ${error.creditsRemaining}). [${INSUFFICIENT_AI_CREDITS_CODE}]`,
         );
       }
       throw error;

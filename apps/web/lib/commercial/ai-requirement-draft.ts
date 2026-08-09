@@ -1,8 +1,8 @@
 import 'server-only';
 
-import { z } from 'zod';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
 
 import { callAI } from '~/lib/ai/router';
 import { extractJson } from '~/lib/websites/extract-json';
@@ -86,7 +86,10 @@ function normalizeDraft(raw: RequirementDraft): RequirementDraft {
     contactPhone: nullishTrim(raw.contactPhone ?? null),
     locationText: nullishTrim(raw.locationText ?? null),
     sector: nullishTrim(raw.sector ?? null),
-    tenure: tenure === 'rent' || tenure === 'buy' || tenure === 'both' ? tenure : null,
+    tenure:
+      tenure === 'rent' || tenure === 'buy' || tenure === 'both'
+        ? tenure
+        : null,
     sizeMinSqft:
       raw.sizeMinSqft != null && Number.isFinite(raw.sizeMinSqft)
         ? raw.sizeMinSqft

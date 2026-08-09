@@ -12,6 +12,7 @@ import {
 import { z } from 'zod';
 
 import { NavigationConfigSchema } from '@kit/ui/navigation-schema';
+import { SidebarMenuBadge } from '@kit/ui/shadcn-sidebar';
 
 import pathsConfig from '~/config/paths.config';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
@@ -35,7 +36,10 @@ function navigationShell() {
 }
 
 /** Personal home sidebar: Home only (workspace shortcuts rendered separately). */
-export function buildPersonalHomeNavRoutes() {
+export function buildPersonalHomeNavRoutes(options?: {
+  emailNeedsReplyCount?: number;
+}) {
+  const needsReplyCount = options?.emailNeedsReplyCount ?? 0;
   const routes: z.infer<typeof NavigationConfigSchema>['routes'] = [
     {
       label: 'ozer-nav',
@@ -53,6 +57,11 @@ export function buildPersonalHomeNavRoutes() {
           Icon: <CheckSquare className={iconClasses} />,
         },
         {
+          label: 'Projects',
+          path: pathsConfig.app.personalProjects,
+          Icon: <Kanban className={iconClasses} />,
+        },
+        {
           label: 'Planner',
           path: pathsConfig.app.personalPlanner,
           Icon: <CalendarDays className={iconClasses} />,
@@ -61,6 +70,12 @@ export function buildPersonalHomeNavRoutes() {
           label: 'Personal email',
           path: pathsConfig.app.personalEmailAssistant,
           Icon: <Mail className={iconClasses} />,
+          renderAction:
+            needsReplyCount > 0 ? (
+              <SidebarMenuBadge className="bg-[color:var(--ozer-accent)]/15 leading-none text-[color:var(--ozer-accent)]">
+                {needsReplyCount > 99 ? '99+' : needsReplyCount}
+              </SidebarMenuBadge>
+            ) : undefined,
         },
         {
           label: 'Notes',
@@ -135,6 +150,12 @@ export function buildPersonalShortcutRoutes(): PersonalShortcutRoute[] {
       path: pathsConfig.app.personalPlanner,
       description: 'AI day planning across personal life and workspaces',
       keywords: ['planner', 'plan', 'schedule', 'today'],
+    },
+    {
+      label: 'Projects',
+      path: pathsConfig.app.personalProjects,
+      description: 'Personal DIY, parties, holidays, and plans',
+      keywords: ['projects', 'diy', 'plans'],
     },
     {
       label: 'Notes',

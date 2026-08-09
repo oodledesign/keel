@@ -18,6 +18,10 @@ import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
+import {
+  type ProjectsUiVariant,
+  projectDetailHref,
+} from '~/lib/projects/project-paths';
 
 import { listCampaignProjects } from '../_lib/campaign/server/server-actions';
 import { getErrorMessage } from '../_lib/error-message';
@@ -46,13 +50,15 @@ export function JobsPageContent({
   initialJobs,
   initialCampaigns,
   initialMembers,
+  personalScope = false,
+  projectDetailPathBuilder,
 }: {
   accountSlug: string;
   accountId: string;
   canViewJobs: boolean;
   canEditJobs: boolean;
   isContractorView: boolean;
-  uiVariant?: 'projects' | 'maintenance';
+  uiVariant?: ProjectsUiVariant;
   initialJobs?: JobsPmRow[];
   initialCampaigns?: Array<{ id: string; name: string; clientCount?: number }>;
   initialMembers?: Array<{
@@ -61,7 +67,10 @@ export function JobsPageContent({
     email: string | null;
     picture_url?: string | null;
   }>;
+  personalScope?: boolean;
+  projectDetailPathBuilder?: (id: string) => string;
 }) {
+  const isSimple = uiVariant === 'simple';
   const copy =
     uiVariant === 'maintenance'
       ? {
@@ -69,7 +78,7 @@ export function JobsPageContent({
           accessDenied: 'maintenance jobs',
         }
       : {
-          title: 'Projects overview',
+          title: 'Projects',
           accessDenied: 'projects',
         };
 
@@ -80,18 +89,24 @@ export function JobsPageContent({
   const [jobs, setJobs] = useState<JobsPmRow[]>(initialJobs ?? []);
   const [campaigns, setCampaigns] = useState<
     Array<{ id: string; name: string; clientCount?: number }>
-  >(initialCampaigns ?? []);
+  >(isSimple ? [] : (initialCampaigns ?? []));
   const [loading, setLoading] = useState(initialJobs === undefined);
   const skipInitialFetchRef = useRef(initialJobs !== undefined);
   const [view, setView] = useState<PageView>(
-    searchParams.get('view') === 'kanban' ? 'kanban' : 'table',
+    isSimple
+      ? 'table'
+      : searchParams.get('view') === 'kanban'
+        ? 'kanban'
+        : 'table',
   );
   const [typeFilter, setTypeFilter] = useState<ProjectTypeFilter>(
-    searchParams.get('type') === 'campaign'
-      ? 'campaign'
-      : searchParams.get('type') === 'delivery'
-        ? 'delivery'
-        : 'all',
+    isSimple
+      ? 'delivery'
+      : searchParams.get('type') === 'campaign'
+        ? 'campaign'
+        : searchParams.get('type') === 'delivery'
+          ? 'delivery'
+          : 'all',
   );
   const [search, setSearch] = useState('');
   const [searchDebounced, setSearchDebounced] = useState('');
@@ -107,17 +122,18 @@ export function JobsPageContent({
       email: string | null;
       picture_url?: string | null;
     }[]
-  >(initialMembers ?? []);
+  >(isSimple ? [] : (initialMembers ?? []));
 
   const openCreateDialog = useCallback(
     (type: 'delivery' | 'campaign' = 'delivery') => {
-      setCreateDialogType(type);
+      setCreateDialogType(isSimple ? 'delivery' : type);
       setCreateDialogOpen(true);
     },
-    [],
+    [isSimple],
   );
 
   useEffect(() => {
+    if (isSimple) return;
     if (searchParams.get('create') === 'campaign') {
       openCreateDialog('campaign');
       const params = new URLSearchParams(searchParams.toString());
@@ -127,13 +143,13 @@ export function JobsPageContent({
         scroll: false,
       });
     }
-  }, [searchParams, pathname, router, openCreateDialog]);
+  }, [searchParams, pathname, router, openCreateDialog, isSimple]);
 
   const schedulePath = pathsConfig.app.accountSchedule.replace(
     '[account]',
     accountSlug,
   );
-  const jobDetailPath = pathsConfig.app.accountJobDetail.replace(
+  const jobDetailPathTemplate = pathsConfig.app.accountJobDetail.replace(
     '[account]',
     accountSlug,
   );
@@ -160,7 +176,7 @@ export function JobsPageContent({
                   }
                 : {}),
             }),
-        typeFilter === 'delivery'
+        isSimple || typeFilter === 'delivery'
           ? Promise.resolve([] as Array<{ id: string; name: string }>)
           : listCampaignProjects({ accountId }),
       ]);
@@ -184,7 +200,9 @@ export function JobsPageContent({
         }
       }
 
-      if (campaignsSettled.status === 'rejected') {
+      if (isSimple) {
+        setCampaigns([]);
+      } else if (campaignsSettled.status === 'rejected') {
         toast.error(getErrorMessage(campaignsSettled.reason));
         setCampaigns([]);
       } else {
@@ -211,21 +229,21 @@ export function JobsPageContent({
     } finally {
       setLoading(false);
     }
-  }, [accountId, searchDebounced, priorityFilter, typeFilter]);
+  }, [accountId, searchDebounced, priorityFilter, typeFilter, isSimple]);
 
   useEffect(() => {
     if (
       skipInitialFetchRef.current &&
       !searchDebounced &&
       !priorityFilter &&
-      typeFilter === 'all'
+      (isSimple || typeFilter === 'all')
     ) {
       skipInitialFetchRef.current = false;
       return;
     }
 
     void fetchJobs();
-  }, [fetchJobs, priorityFilter, searchDebounced, typeFilter]);
+  }, [fetchJobs, priorityFilter, searchDebounced, typeFilter, isSimple]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -233,7 +251,7 @@ export function JobsPageContent({
   }, [search]);
 
   useEffect(() => {
-    if (initialMembers !== undefined) {
+    if (isSimple || initialMembers !== undefined) {
       return;
     }
 
@@ -242,7 +260,7 @@ export function JobsPageContent({
         setMembers(Array.isArray(raw) ? (raw as typeof members) : []);
       })
       .catch(() => setMembers([]));
-  }, [accountSlug, initialMembers]);
+  }, [accountSlug, initialMembers, isSimple]);
 
   useEffect(() => {
     if (!canEditJobs || searchParams.get('create') !== 'job') {
@@ -274,15 +292,21 @@ export function JobsPageContent({
     key: PageView;
     label: string;
     icon: typeof LayoutGrid;
-  }[] = [
-    { key: 'table', label: 'Main table', icon: LayoutGrid },
-    { key: 'kanban', label: 'Board', icon: Columns3 },
-    { key: 'timeline', label: 'Timeline', icon: GanttChart },
-    { key: 'schedule', label: 'Schedule', icon: CalendarDays },
-  ];
+  }[] = isSimple
+    ? [
+        { key: 'table', label: 'Main table', icon: LayoutGrid },
+        { key: 'kanban', label: 'Board', icon: Columns3 },
+        { key: 'timeline', label: 'Timeline', icon: GanttChart },
+      ]
+    : [
+        { key: 'table', label: 'Main table', icon: LayoutGrid },
+        { key: 'kanban', label: 'Board', icon: Columns3 },
+        { key: 'timeline', label: 'Timeline', icon: GanttChart },
+        { key: 'schedule', label: 'Schedule', icon: CalendarDays },
+      ];
 
   const visibleCampaigns =
-    typeFilter === 'delivery'
+    isSimple || typeFilter === 'delivery'
       ? []
       : campaigns.filter((row) => {
           if (!searchDebounced.trim()) return true;
@@ -328,22 +352,24 @@ export function JobsPageContent({
         )}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2 md:px-5">
-        {typeFilters.map(({ key, label }) => (
-          <button
-            key={key}
-            type="button"
-            onClick={() => setTypeFilter(key)}
-            className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
-              typeFilter === key
-                ? 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]'
-                : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
-            }`}
-          >
-            {label}
-          </button>
-        ))}
-      </div>
+      {!isSimple ? (
+        <div className="flex flex-wrap items-center gap-2 border-b border-[color:var(--workspace-shell-border)] px-4 py-2 md:px-5">
+          {typeFilters.map(({ key, label }) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setTypeFilter(key)}
+              className={`rounded-full px-3 py-1 text-xs font-medium transition-colors ${
+                typeFilter === key
+                  ? 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]'
+                  : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {/* View tabs */}
       <div className="flex items-center gap-0 border-b border-[color:var(--workspace-shell-border)] px-2 md:px-3">
@@ -373,13 +399,15 @@ export function JobsPageContent({
             </button>
           ),
         )}
-        <button
-          type="button"
-          className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-          aria-label="Add view"
-        >
-          <Plus className="h-3.5 w-3.5" />
-        </button>
+        {!isSimple ? (
+          <button
+            type="button"
+            className="ml-1 inline-flex h-7 w-7 items-center justify-center rounded text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+            aria-label="Add view"
+          >
+            <Plus className="h-3.5 w-3.5" />
+          </button>
+        ) : null}
       </div>
 
       {view === 'table' && (
@@ -412,11 +440,25 @@ export function JobsPageContent({
           onRefresh={fetchJobs}
           onAddProject={() => openCreateDialog('delivery')}
           uiVariant={uiVariant}
+          personalScope={personalScope}
         />
       ) : view === 'kanban' ? (
-        <ProjectsKanbanView accountSlug={accountSlug} items={kanbanItems} />
+        <ProjectsKanbanView
+          accountSlug={accountSlug}
+          items={kanbanItems}
+          personalScope={personalScope}
+          projectDetailPathBuilder={projectDetailPathBuilder}
+        />
       ) : view === 'timeline' ? (
-        <JobsPmTimelineView jobs={visibleJobs} jobDetailPath={jobDetailPath} />
+        <JobsPmTimelineView
+          jobs={visibleJobs}
+          jobDetailPath={jobDetailPathTemplate}
+          resolveDetailHref={(id) =>
+            projectDetailPathBuilder?.(id) ??
+            projectDetailHref(accountSlug, id, personalScope)
+          }
+          hideClient={isSimple}
+        />
       ) : null}
 
       <CreateProjectDialog
@@ -427,6 +469,8 @@ export function JobsPageContent({
         onSuccess={fetchJobs}
         uiVariant={uiVariant}
         defaultType={createDialogType}
+        personalScope={personalScope}
+        projectDetailPathBuilder={projectDetailPathBuilder}
       />
     </div>
   );

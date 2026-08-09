@@ -2,10 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import {
-  invokeAIProvider,
-  withMeteredAI,
-} from '~/lib/ai/router';
+import { invokeAIProvider, withMeteredAI } from '~/lib/ai/router';
 
 import type { BriefOutput, BriefSynthesisInput } from './types';
 

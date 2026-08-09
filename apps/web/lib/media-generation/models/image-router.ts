@@ -39,7 +39,8 @@ export function resolveImageRecipe(params: {
       return {
         modelId: NANO_BANANA_QUALITY_MODEL_ID,
         unitsPerGeneration: nanoBananaQualityRecipe.unitsPerGeneration,
-        providerCostUsdEstimate: nanoBananaQualityRecipe.providerCostUsdEstimate,
+        providerCostUsdEstimate:
+          nanoBananaQualityRecipe.providerCostUsdEstimate,
         supportsSeed: nanoBananaQualityRecipe.supportsSeed,
         buildInput: (input) =>
           nanoBananaQualityRecipe.buildInput(input) as unknown as Record<
@@ -54,7 +55,9 @@ export function resolveImageRecipe(params: {
           ),
         extractSeed: (response) =>
           nanoBananaQualityRecipe.extractSeed(
-            response as Parameters<typeof nanoBananaQualityRecipe.extractSeed>[0],
+            response as Parameters<
+              typeof nanoBananaQualityRecipe.extractSeed
+            >[0],
           ),
       };
     }

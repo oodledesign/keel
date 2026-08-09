@@ -27,8 +27,8 @@ import {
   freeSupportSeats,
   portalPublishingAllowed,
 } from '~/lib/billing/commercial-graduated-pricing';
-import { formatGbp } from '~/lib/billing/pricing-marketing';
 import { productIdsForWorkspaceProfile } from '~/lib/billing/ozer-plan-catalog';
+import { formatGbp } from '~/lib/billing/pricing-marketing';
 
 import { createTeamAccountCheckoutSession } from '../_lib/server/server-actions';
 

@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { type EmailActionItem, extract } from '@kit/email-assistant';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
+import { isInsufficientCreditsError } from '~/lib/ai/router';
 
 import {
   loadAccountMembersForExtraction,
@@ -26,6 +27,8 @@ export async function autoExtractEmailActionItems(params: {
   ownerEmail: string;
   ownerDisplayName: string | null;
   preferredAccountId?: string | null;
+  /** Workspace to bill AI against (business mailbox). Defaults to userId. */
+  billingAccountId?: string | null;
 }): Promise<number> {
   const {
     admin,
@@ -34,6 +37,7 @@ export async function autoExtractEmailActionItems(params: {
     ownerEmail,
     ownerDisplayName,
     preferredAccountId,
+    billingAccountId,
   } = params;
 
   const { count: existingCount, error: existingError } = await admin
@@ -104,11 +108,15 @@ export async function autoExtractEmailActionItems(params: {
       },
       createMeteredEmailGenerateText({
         feature: 'task_extract',
-        accountId: userId,
+        accountId: billingAccountId?.trim() || userId,
         supabase: admin,
       }),
     );
-  } catch {
+  } catch (error) {
+    // Re-throw credit errors so the sync pipeline can stop early.
+    if (isInsufficientCreditsError(error)) {
+      throw error;
+    }
     return 0;
   }
 

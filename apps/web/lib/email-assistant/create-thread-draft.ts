@@ -7,6 +7,7 @@ import { loadVoicePromptBlock } from '~/lib/voice/load-voice-prompt-block';
 
 import { resolveDraftOwnerContext } from './draft-owner';
 import { createMeteredEmailGenerateText } from './metered-generate-text';
+import { resolveEmailAssistantBillingAccountId } from './resolve-email-assistant-billing-account';
 import { resolveEmailAssistantSignature } from './resolve-signature';
 import { saveDraftToGmail } from './save-draft-to-gmail';
 import { buildThreadText } from './thread-text';
@@ -15,6 +16,8 @@ export async function createThreadDraft(input: {
   userId: string;
   threadId: string;
   saveToGmail?: boolean;
+  billingAccountId?: string | null;
+  preferredAccountId?: string | null;
 }): Promise<{ draftId: string; gmailDraftId?: string } | null> {
   const admin = getSupabaseServerAdminClient();
 
@@ -140,6 +143,14 @@ export async function createThreadDraft(input: {
       (settings as { style_notes?: string | null } | null)?.style_notes ?? null,
   });
 
+  const billingAccountId =
+    input.billingAccountId?.trim() ||
+    (await resolveEmailAssistantBillingAccountId(admin, {
+      userId: input.userId,
+      mailboxKind,
+      preferredAccountId: input.preferredAccountId,
+    }));
+
   const bodyText = await draft(
     threadText,
     owner,
@@ -147,7 +158,7 @@ export async function createThreadDraft(input: {
     signature.plain,
     createMeteredEmailGenerateText({
       feature: 'email_draft',
-      accountId: input.userId,
+      accountId: billingAccountId,
       supabase: admin,
     }),
   );

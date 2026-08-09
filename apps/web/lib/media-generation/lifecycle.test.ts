@@ -42,10 +42,7 @@ describe('media generate lifecycle policies', () => {
   });
 
   it('forfeits unused units immediately on account closure', () => {
-    const batches = [
-      { units_remaining: 40 },
-      { units_remaining: 10 },
-    ];
+    const batches = [{ units_remaining: 40 }, { units_remaining: 10 }];
     let balance = 50;
 
     const forfeit = () => {

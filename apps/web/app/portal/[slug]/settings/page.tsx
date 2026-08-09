@@ -65,9 +65,9 @@ export default async function PortalSettingsPage({
           </CardHeader>
           <CardContent className="space-y-3">
             <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-              Create your own personal or family workspace for free —
-              separate from this client portal. You can always come back here
-              from your dashboard.
+              Create your own personal or family workspace for free — separate
+              from this client portal. You can always come back here from your
+              dashboard.
             </p>
             <Button asChild>
               <Link href={`${pathsConfig.app.workspaceSetup}?start=1`}>

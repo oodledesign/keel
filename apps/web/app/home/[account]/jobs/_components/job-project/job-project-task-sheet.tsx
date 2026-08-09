@@ -4,13 +4,7 @@ import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import {
-  ExternalLink,
-  Link2,
-  Plus,
-  StickyNote,
-  Trash2,
-} from 'lucide-react';
+import { ExternalLink, Link2, Plus, StickyNote, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -29,8 +23,8 @@ import {
   SheetHeader,
   SheetTitle,
 } from '@kit/ui/sheet';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';

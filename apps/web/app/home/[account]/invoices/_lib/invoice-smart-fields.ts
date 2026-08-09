@@ -132,6 +132,4 @@ export function resolveInvoiceEmailField(
 /** Default invoice footer when card fees are not passed to the client. */
 export const DEFAULT_INVOICE_FOOTER_MESSAGE = '';
 
-export {
-  PASS_TO_CLIENT_FEE_NOTE_LONG as INVOICE_CARD_FEE_FOOTER_MESSAGE,
-} from './invoice-stripe-fee';
+export { PASS_TO_CLIENT_FEE_NOTE_LONG as INVOICE_CARD_FEE_FOOTER_MESSAGE } from './invoice-stripe-fee';

@@ -378,7 +378,10 @@ Never invent field names. Never guess — use null when unsure.`;
     });
   } catch (error) {
     if (isInsufficientCreditsError(error)) {
-      return { ok: false as const, code: 'credits' as const };
+      return {
+        ok: false as const,
+        code: 'INSUFFICIENT_AI_CREDITS' as const,
+      };
     }
     return { ok: false as const, code: 'api' as const };
   }

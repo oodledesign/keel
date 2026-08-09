@@ -51,7 +51,8 @@ export const listPortalProjects = enhanceAction(
 );
 
 export const listPortalRequestTypes = enhanceAction(
-  async (input) => getCreditsService().listActiveRequestTypes(input.clientOrgId),
+  async (input) =>
+    getCreditsService().listActiveRequestTypes(input.clientOrgId),
   { schema: ListPortalRequestTypesSchema },
 );
 

@@ -75,7 +75,8 @@ async function applyPaidCheckoutSession(
       {
         total_pence: invoice.total_pence ?? 0,
         amount_paid_pence: invoice.amount_paid_pence,
-        deposit_type: (invoice as { deposit_type?: string | null }).deposit_type,
+        deposit_type: (invoice as { deposit_type?: string | null })
+          .deposit_type,
         deposit_value: (invoice as { deposit_value?: number | null })
           .deposit_value,
       },

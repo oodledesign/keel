@@ -695,7 +695,11 @@ export function createListingsService(client: SupabaseClient) {
 
       const listings = ((data ?? []) as ListingRow[]).map(mapListing);
       const withCovers = await attachCoverUrls(client, listings);
-      const withAgents = await attachActingAgents(client, accountId, withCovers);
+      const withAgents = await attachActingAgents(
+        client,
+        accountId,
+        withCovers,
+      );
       return attachCoAgents(client, accountId, withAgents);
     },
 
@@ -1274,7 +1278,10 @@ export function createListingsService(client: SupabaseClient) {
     },
 
     async listWorkspaceTeams(accountId: string): Promise<WorkspaceTeam[]> {
-      const { data, error } = await fromTable(client, 'commercial_workspace_teams')
+      const { data, error } = await fromTable(
+        client,
+        'commercial_workspace_teams',
+      )
         .select('id, account_id, name, sort_order')
         .eq('account_id', accountId)
         .order('sort_order', { ascending: true })
@@ -1300,7 +1307,10 @@ export function createListingsService(client: SupabaseClient) {
       const name = input.name.trim();
       if (!name) throw new Error('Team name is required');
 
-      const { data: existing } = await fromTable(client, 'commercial_workspace_teams')
+      const { data: existing } = await fromTable(
+        client,
+        'commercial_workspace_teams',
+      )
         .select('id, account_id, name, sort_order')
         .eq('account_id', input.accountId)
         .ilike('name', name)
@@ -1319,7 +1329,10 @@ export function createListingsService(client: SupabaseClient) {
         .select('id', { count: 'exact', head: true })
         .eq('account_id', input.accountId);
 
-      const { data, error } = await fromTable(client, 'commercial_workspace_teams')
+      const { data, error } = await fromTable(
+        client,
+        'commercial_workspace_teams',
+      )
         .insert({
           account_id: input.accountId,
           name,
@@ -1351,7 +1364,10 @@ export function createListingsService(client: SupabaseClient) {
       const members = await this.listAccountMembers(accountSlug);
       const byUser = new Map(members.map((m) => [m.userId, m]));
 
-      const { data: agentRows, error: agentError } = await fromTable(client, 'commercial_listing_agents')
+      const { data: agentRows, error: agentError } = await fromTable(
+        client,
+        'commercial_listing_agents',
+      )
         .select('user_id, sort_order')
         .eq('listing_id', listingId)
         .eq('account_id', accountId)
@@ -1379,7 +1395,10 @@ export function createListingsService(client: SupabaseClient) {
 
       let teamName: string | null = null;
       if (listing.teamId) {
-        const { data: team } = await fromTable(client, 'commercial_workspace_teams')
+        const { data: team } = await fromTable(
+          client,
+          'commercial_workspace_teams',
+        )
           .select('name')
           .eq('id', listing.teamId)
           .eq('account_id', accountId)
@@ -1440,22 +1459,27 @@ export function createListingsService(client: SupabaseClient) {
           new Set(input.actingAgentUserIds.filter(Boolean)),
         );
 
-        const { error: deleteError } = await fromTable(client, 'commercial_listing_agents')
+        const { error: deleteError } = await fromTable(
+          client,
+          'commercial_listing_agents',
+        )
           .delete()
           .eq('listing_id', input.listingId)
           .eq('account_id', input.accountId);
         if (deleteError) throw new Error(deleteError.message);
 
         if (uniqueIds.length > 0) {
-          const { error: insertError } = await fromTable(client, 'commercial_listing_agents')
-            .insert(
-              uniqueIds.map((userId, index) => ({
-                listing_id: input.listingId,
-                account_id: input.accountId,
-                user_id: userId,
-                sort_order: index,
-              })),
-            );
+          const { error: insertError } = await fromTable(
+            client,
+            'commercial_listing_agents',
+          ).insert(
+            uniqueIds.map((userId, index) => ({
+              listing_id: input.listingId,
+              account_id: input.accountId,
+              user_id: userId,
+              sort_order: index,
+            })),
+          );
           if (insertError) throw new Error(insertError.message);
         }
       }
@@ -1756,10 +1780,7 @@ export function createListingsService(client: SupabaseClient) {
           contactPhone: agent.contactPhone,
           externalId: agent.externalId ?? null,
         }).catch((err) => {
-          if (
-            err instanceof Error &&
-            err.message.includes('already linked')
-          ) {
+          if (err instanceof Error && err.message.includes('already linked')) {
             return;
           }
           throw err;

@@ -19,12 +19,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Spinner } from '@kit/ui/spinner';
 import { toast } from '@kit/ui/sonner';
+import { Spinner } from '@kit/ui/spinner';
 
 import {
-  MediaJobsGrid,
   type MediaJobTile,
+  MediaJobsGrid,
 } from '~/components/media/media-jobs-grid';
 
 type MediaGalleryClientProps = {
@@ -53,14 +53,12 @@ function toTile(row: Record<string, unknown>): MediaJobTile {
     thumbnail_url: (row.thumbnail_url as string | null) ?? null,
     prompt: (row.prompt as string | null) ?? null,
     error_message: (row.error_message as string | null) ?? null,
-    media_credits_charged:
-      (row.media_credits_charged as number | null) ?? null,
+    media_credits_charged: (row.media_credits_charged as number | null) ?? null,
     created_at: String(row.created_at),
     project_id: (row.project_id as string | null) ?? null,
     client_id: (row.client_id as string | null) ?? null,
     params: params ?? null,
-    promoted_from_job_id:
-      (row.promoted_from_job_id as string | null) ?? null,
+    promoted_from_job_id: (row.promoted_from_job_id as string | null) ?? null,
   };
 }
 
@@ -75,14 +73,12 @@ export function MediaGalleryClient(props: MediaGalleryClientProps) {
   const [pending, startTransition] = useTransition();
 
   const jobs = useMemo(() => {
-    return jobsState
-      .map(toTile)
-      .filter((job) => {
-        if (projectId !== 'all' && job.project_id !== projectId) return false;
-        if (clientId !== 'all' && job.client_id !== clientId) return false;
-        if (type !== 'all' && job.type !== type) return false;
-        return true;
-      });
+    return jobsState.map(toTile).filter((job) => {
+      if (projectId !== 'all' && job.project_id !== projectId) return false;
+      if (clientId !== 'all' && job.client_id !== clientId) return false;
+      if (type !== 'all' && job.type !== type) return false;
+      return true;
+    });
   }, [jobsState, projectId, clientId, type]);
 
   const selected = jobsState.find((j) => String(j.id) === selectedId);

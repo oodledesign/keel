@@ -28,6 +28,7 @@ import {
 } from '~/home/(user)/pipeline/actions';
 import { ListingFormModal } from '~/home/[account]/listings/_components/listing-form-modal';
 import type { CommercialListing } from '~/home/[account]/listings/_lib/server/listings.service';
+import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/server/requirements.service';
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import type { PipelineStageConfigItem } from '~/lib/commercial/pipeline-stage-config';
@@ -41,8 +42,7 @@ const PipelineBoard = dynamic(
 );
 
 const CommercialWipBoard = dynamic(
-  () =>
-    import('./commercial-wip-board').then((mod) => mod.CommercialWipBoard),
+  () => import('./commercial-wip-board').then((mod) => mod.CommercialWipBoard),
   { ssr: false },
 );
 
@@ -50,6 +50,7 @@ type Props = {
   initialData: PipelineData;
   accountSlug: string;
   accountId: string;
+  initialClients?: ClientOption[];
   variant?: 'work' | 'commercial';
   listings?: PipelineListingOption[];
   stageConfig?: PipelineStageConfigItem[];
@@ -70,6 +71,7 @@ export function WorkspacePipelineBoardWrapper({
   initialData,
   accountSlug,
   accountId,
+  initialClients = [],
   variant = 'work',
   listings = [],
   stageConfig,
@@ -134,6 +136,7 @@ export function WorkspacePipelineBoardWrapper({
           initialRequirements={initialRequirements}
           accountSlug={accountSlug}
           accountId={accountId}
+          initialClients={initialClients}
           listings={listings}
           stageConfig={stageConfig}
           boardName={boardName}
@@ -146,6 +149,7 @@ export function WorkspacePipelineBoardWrapper({
           onDealWon={handleDealWon}
           workspaceAccountSlug={accountSlug}
           workspaceAccountId={accountId}
+          initialClients={initialClients}
           variant="work"
         />
       )}

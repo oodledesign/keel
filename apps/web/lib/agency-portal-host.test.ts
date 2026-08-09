@@ -33,8 +33,8 @@ describe('buildAgencyPortalRewritePath', () => {
     expect(buildAgencyPortalRewritePath('thistleleaf', '/support')).toBe(
       '/portal/thistleleaf/support',
     );
-    expect(buildAgencyPortalRewritePath('thistleleaf', '/portal/thistleleaf')).toBe(
-      '/portal/thistleleaf',
-    );
+    expect(
+      buildAgencyPortalRewritePath('thistleleaf', '/portal/thistleleaf'),
+    ).toBe('/portal/thistleleaf');
   });
 });

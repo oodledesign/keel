@@ -73,6 +73,10 @@ class JobsService {
     permission: 'jobs.view' | 'jobs.edit',
   ) {
     const user = await this.ensureUser();
+    // Personal accounts have no memberships; owner id === account id.
+    if (accountId === user.id) {
+      return user;
+    }
     const api = createTeamAccountsApi(this.client);
     const hasPermission = await api.hasPermission({
       userId: user.id,
@@ -86,6 +90,9 @@ class JobsService {
   /** Returns current user's role on the account (owner, admin, staff, contractor, client) or null. */
   private async getMembershipRole(accountId: string): Promise<AccountRole> {
     const user = await this.ensureUser();
+    if (accountId === user.id) {
+      return 'owner';
+    }
     const { data, error } = await this.db
       .from('accounts_memberships')
       .select('account_role')
@@ -313,11 +320,13 @@ class JobsService {
   async updateJob(input: UpdateJobInput) {
     const user = await this.ensureUser();
     const api = createTeamAccountsApi(this.client);
-    const hasEdit = await api.hasPermission({
-      userId: user.id,
-      accountId: input.accountId,
-      permission: 'jobs.edit',
-    });
+    const hasEdit =
+      input.accountId === user.id ||
+      (await api.hasPermission({
+        userId: user.id,
+        accountId: input.accountId,
+        permission: 'jobs.edit',
+      }));
 
     const existing = await this.getJob({
       accountId: input.accountId,
@@ -473,11 +482,13 @@ class JobsService {
   async addJobNote(input: AddJobNoteInput) {
     const user = await this.ensureUser();
     const api = createTeamAccountsApi(this.client);
-    const hasEdit = await api.hasPermission({
-      userId: user.id,
-      accountId: input.accountId,
-      permission: 'jobs.edit',
-    });
+    const hasEdit =
+      input.accountId === user.id ||
+      (await api.hasPermission({
+        userId: user.id,
+        accountId: input.accountId,
+        permission: 'jobs.edit',
+      }));
     const assigned = await this.isAssignedToJob(input.accountId, input.jobId);
 
     if (!hasEdit && !assigned) {

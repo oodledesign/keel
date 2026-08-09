@@ -9,6 +9,7 @@ import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import { TeamAccountAccountsSelector } from '~/home/[account]/_components/team-account-accounts-selector';
 import { loadWorkspaceSwitcherAccounts } from '~/home/_lib/server/workspace-switcher.loader';
+import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { APP_LOGO_SHELL_CLASSNAME } from '~/lib/app-logo-shell';
 
 // local imports
@@ -88,6 +89,11 @@ export async function TeamAccountNavigationMenu(props: {
           <ProfileAccountDropdownContainer
             user={user}
             showProfileName={false}
+            billingAccountId={account.id}
+            billingHref={toHomeBillingHref(
+              pathsConfig.app.accountBilling,
+              account.slug,
+            )}
           />
         </div>
       </div>

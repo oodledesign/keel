@@ -38,11 +38,11 @@ export async function loadTeamWorkspaceShellAdornments(params: {
     emailAssistantAvailable,
     pipelineBoardName,
   ] = await Promise.all([
-    loadWorkNavCounts(
-      params.client,
-      params.accountId,
-      params.moduleSettings,
-    ).catch((error) => {
+    loadWorkNavCounts(params.client, params.accountId, params.moduleSettings, {
+      userId: params.userId,
+      // Count even if entitlement is still resolving; badge only renders when Emails is shown.
+      emailAssistantAvailable: true,
+    }).catch((error) => {
       console.error('[team-workspace] loadWorkNavCounts:', error);
       return {} as WorkNavCounts;
     }),

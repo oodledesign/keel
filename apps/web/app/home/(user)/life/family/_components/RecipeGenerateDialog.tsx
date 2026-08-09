@@ -20,6 +20,9 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
+import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
+import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
+
 import { bulkAddGeneratedRecipesAction } from '../_lib/actions';
 import {
   type MealPreferencesRow,
@@ -62,6 +65,7 @@ export function RecipeGenerateDialog({
   accountSlug,
   onSaved,
 }: Props) {
+  const { reportExhausted, accountId, billingHref } = useAiCreditsExhausted();
   const scopeFields = accountSlug ? { accountSlug } : {};
   const favoriteCount = recipes.filter((r) => r.is_favorite).length;
 
@@ -111,16 +115,27 @@ export function RecipeGenerateDialog({
         }),
       });
 
-      const body = (await response.json()) as {
+      const body = (await response.json().catch(() => null)) as {
         recipes?: Array<Omit<GeneratedRecipePreview, 'key'>>;
         error?: string;
-      };
+      } | null;
 
       if (!response.ok) {
-        throw new Error(body.error ?? 'Could not generate recipes');
+        if (
+          handleAiCreditsFailure(reportExhausted, {
+            accountId,
+            billingHref,
+            status: response.status,
+            body,
+            message: body?.error,
+          })
+        ) {
+          return;
+        }
+        throw new Error(body?.error ?? 'Could not generate recipes');
       }
 
-      const items = (body.recipes ?? []).map((recipe, index) => ({
+      const items = (body?.recipes ?? []).map((recipe, index) => ({
         ...recipe,
         key: `${recipe.name}-${index}`,
         meal_type: (recipe.meal_type ?? mealType) as RecipeMealType,
@@ -134,9 +149,18 @@ export function RecipeGenerateDialog({
       setSelectedKeys(new Set(items.map((item) => item.key)));
       setStep('preview');
     } catch (err) {
-      toast.error(
-        err instanceof Error ? err.message : 'Could not generate recipes',
-      );
+      const message =
+        err instanceof Error ? err.message : 'Could not generate recipes';
+      if (
+        handleAiCreditsFailure(reportExhausted, {
+          accountId,
+          billingHref,
+          message,
+        })
+      ) {
+        return;
+      }
+      toast.error(message);
     } finally {
       setIsGenerating(false);
     }
