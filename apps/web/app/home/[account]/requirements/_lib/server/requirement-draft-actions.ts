@@ -1,7 +1,5 @@
 'use server';
 
-import { z } from 'zod';
-
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
@@ -13,6 +11,7 @@ import { createListingsService } from '../../../listings/_lib/server/listings.se
 import {
   DraftRequirementFromEnquirySchema,
   DraftRequirementFromPasteSchema,
+  LinkEnquiryRequirementSchema,
 } from '../schema/requirements.schema';
 
 export const draftRequirementFromPaste = enhanceAction(
@@ -103,12 +102,6 @@ export const draftRequirementFromEnquiry = enhanceAction(
   },
   { schema: DraftRequirementFromEnquirySchema },
 );
-
-export const LinkEnquiryRequirementSchema = z.object({
-  accountId: z.string().uuid(),
-  enquiryId: z.string().uuid(),
-  requirementId: z.string().uuid(),
-});
 
 export const linkEnquiryToRequirement = enhanceAction(
   async (input) => {

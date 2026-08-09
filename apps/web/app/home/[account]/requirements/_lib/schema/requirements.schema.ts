@@ -39,6 +39,12 @@ export const DraftRequirementFromEnquirySchema = z.object({
   enquiryId: z.string().uuid(),
 });
 
+export const LinkEnquiryRequirementSchema = z.object({
+  accountId: z.string().uuid(),
+  enquiryId: z.string().uuid(),
+  requirementId: z.string().uuid(),
+});
+
 export const UpdateRequirementSchema = CreateRequirementSchema.omit({
   accountId: true,
   sourceEnquiryId: true,
