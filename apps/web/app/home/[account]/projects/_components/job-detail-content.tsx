@@ -450,7 +450,9 @@ export function JobDetailContent({
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--workspace-shell-text-muted)]">
             <span>
-              {job.is_ongoing ? 'Ongoing' : `Due ${formatDueDate(job.due_date)}`}
+              {job.is_ongoing
+                ? 'Ongoing'
+                : `Due ${formatDueDate(job.due_date)}`}
             </span>
             {!isContractorView && (
               <span>Value {formatValue(job.value_pence)}</span>
@@ -658,9 +660,7 @@ export function JobDetailContent({
               <ul className="mt-4 list-disc space-y-1 pl-5 text-[var(--workspace-shell-text-muted)]">
                 <li>
                   Due:{' '}
-                  {job.is_ongoing
-                    ? 'Ongoing'
-                    : formatDueDate(job.due_date)}
+                  {job.is_ongoing ? 'Ongoing' : formatDueDate(job.due_date)}
                   {!isContractorView
                     ? ` · Value: ${formatValue(job.value_pence)}`
                     : ''}

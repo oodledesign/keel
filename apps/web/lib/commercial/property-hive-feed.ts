@@ -6,7 +6,21 @@ import { createHash, randomBytes, timingSafeEqual } from 'crypto';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  type DisposalType,
+  disposalIncludesForSale,
+  disposalIncludesToLet,
+} from '~/lib/commercial/commercial-constants';
+
 const FEED_TOKEN_META_KEY = 'xml_feed_token';
+
+/** Portals that pull the Kato-compatible listing XML feed. */
+export type CommercialXmlFeedPortal = 'property_hive' | 'each';
+
+const FEED_PATH: Record<CommercialXmlFeedPortal, string> = {
+  property_hive: '/api/commercial/property-hive-feed',
+  each: '/api/commercial/each-feed',
+};
 const MEDIA_BUCKET = 'commercial-listing-media';
 const SIGNED_URL_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days — PH fetches during import
 
@@ -30,9 +44,11 @@ type ListingRow = {
   disposal_type: string;
   status: string;
   asking_rent_pence: number | null;
+  asking_rent_to_pence: number | null;
   asking_price_pence: number | null;
   rent_frequency: string | null;
   hide_rent_from_marketing: boolean;
+  hide_price_from_marketing: boolean;
   size_min_sqft: number | null;
   size_max_sqft: number | null;
   measurement_standard: string | null;
@@ -146,7 +162,26 @@ function mapStatus(status: string): string {
 }
 
 function mapAvailability(disposalType: string): string {
+  if (disposalType === 'to_let_and_for_sale') return 'To Let & For Sale';
   return disposalType === 'to_let' ? 'To Let' : 'For Sale';
+}
+
+function renderAvailabilities(disposalType: DisposalType): string {
+  const includesLet = disposalIncludesToLet(disposalType);
+  const includesSale = disposalIncludesForSale(disposalType);
+  const types: string[] = [];
+  if (includesLet) {
+    types.push(`<type id="tolet">To Let</type>`);
+  }
+  if (includesSale) {
+    types.push(`<type id="forsale">For Sale</type>`);
+  }
+  if (!types.length) {
+    types.push(
+      `<type id="${disposalType === 'to_let' ? 'tolet' : 'forsale'}">${escapeXml(mapAvailability(disposalType))}</type>`,
+    );
+  }
+  return `<availabilities>${types.join('')}</availabilities>`;
 }
 
 function mapSizeMeasure(standard: string | null): string {
@@ -209,7 +244,11 @@ async function resolveMediaUrl(
   return data.signedUrl;
 }
 
-function renderFloorUnits(units: UnitRow[], isToLet: boolean): string {
+function renderFloorUnits(
+  units: UnitRow[],
+  includesToLet: boolean,
+  includesForSale: boolean,
+): string {
   if (!units.length) return '<floor_units/>';
 
   const items = units
@@ -233,13 +272,13 @@ function renderFloorUnits(units: UnitRow[], isToLet: boolean): string {
         el('size', size),
         el('size_metric', 'sqft'),
         el('size_sqft', sizeLabel),
-        el('rent_available', isToLet ? 't' : 'f'),
+        el('rent_available', includesToLet ? 't' : 'f'),
         '<rent_prefix/>',
         '<rent_price/>',
         '<rent_metric/>',
         '<rent_suffix/>',
         '<rent_sqft/>',
-        el('freehold_available', isToLet ? 'f' : 't'),
+        el('freehold_available', includesForSale ? 't' : 'f'),
         '<freehold_prefix/>',
         '<freehold_price/>',
         '<freehold_metric/>',
@@ -265,8 +304,12 @@ async function renderPropertyXml(
   media: MediaRow[],
   coAgents: CoAgentFeedRow[] = [],
 ): Promise<string> {
-  const isToLet = listing.disposal_type === 'to_let';
-  const rentPounds = penceToPounds(listing.asking_rent_pence);
+  const disposalType = (listing.disposal_type as DisposalType) ?? 'to_let';
+  const includesToLet = disposalIncludesToLet(disposalType);
+  const includesForSale = disposalIncludesForSale(disposalType);
+  const rentFromPounds = penceToPounds(listing.asking_rent_pence);
+  const rentToPounds =
+    penceToPounds(listing.asking_rent_to_pence) ?? rentFromPounds;
   const pricePounds = penceToPounds(listing.asking_price_pence);
   const sizeFrom = listing.size_min_sqft;
   const sizeTo = listing.size_max_sqft ?? listing.size_min_sqft;
@@ -299,50 +342,74 @@ async function renderPropertyXml(
     }
   }
 
-  const rentInner =
-    isToLet && rentPounds != null && !listing.hide_rent_from_marketing
-      ? [
-          '<qualifier/>',
-          el('from', rentPounds),
-          el('to', rentPounds),
-          el(
-            'metric',
-            listing.rent_frequency === 'per_month'
-              ? 'month'
-              : listing.rent_frequency === 'per_sqft'
-                ? 'sqft'
-                : 'annum',
-          ),
-          el('on_application', '0'),
-          '<comment/>',
-        ].join('')
-      : '';
+  const showRent =
+    includesToLet &&
+    rentFromPounds != null &&
+    !listing.hide_rent_from_marketing;
+  const showPrice =
+    includesForSale &&
+    pricePounds != null &&
+    !listing.hide_price_from_marketing;
 
-  const priceInner =
-    !isToLet && pricePounds != null
-      ? [
-          el('value', pricePounds),
-          '<qualifier/>',
-          '<comment/>',
-          el('on_application', '0'),
-        ].join('')
-      : '';
-
-  const rentLabel =
-    isToLet && rentPounds != null && !listing.hide_rent_from_marketing
-      ? formatMoneyLabel(
-          rentPounds,
+  const rentInner = showRent
+    ? [
+        '<qualifier/>',
+        el('from', rentFromPounds),
+        el('to', rentToPounds ?? rentFromPounds),
+        el(
+          'metric',
           listing.rent_frequency === 'per_month'
-            ? 'per month'
+            ? 'month'
             : listing.rent_frequency === 'per_sqft'
-              ? 'per sq ft'
-              : 'per annum',
-        )
+              ? 'sqft'
+              : 'annum',
+        ),
+        el('on_application', '0'),
+        '<comment/>',
+      ].join('')
+    : includesToLet && listing.hide_rent_from_marketing
+      ? [
+          '<qualifier/>',
+          '<from/>',
+          '<to/>',
+          el('on_application', '1'),
+          '<comment/>',
+        ].join('')
       : '';
 
-  const priceLabel =
-    !isToLet && pricePounds != null
-      ? `£${pricePounds.toLocaleString('en-GB', { maximumFractionDigits: 0 })}`
+  const priceInner = showPrice
+    ? [
+        el('value', pricePounds),
+        '<qualifier/>',
+        '<comment/>',
+        el('on_application', '0'),
+      ].join('')
+    : includesForSale && listing.hide_price_from_marketing
+      ? [
+          '<value/>',
+          '<qualifier/>',
+          '<comment/>',
+          el('on_application', '1'),
+        ].join('')
+      : '';
+
+  const rentLabel = showRent
+    ? formatMoneyLabel(
+        rentFromPounds!,
+        listing.rent_frequency === 'per_month'
+          ? 'per month'
+          : listing.rent_frequency === 'per_sqft'
+            ? 'per sq ft'
+            : 'per annum',
+      )
+    : includesToLet && listing.hide_rent_from_marketing
+      ? 'POA'
+      : '';
+
+  const priceLabel = showPrice
+    ? `£${pricePounds!.toLocaleString('en-GB', { maximumFractionDigits: 0 })}`
+    : includesForSale && listing.hide_price_from_marketing
+      ? 'POA'
       : '';
 
   const imagesXml = images.length
@@ -382,10 +449,7 @@ async function renderPropertyXml(
     ? `<types><type>${escapeXml(listing.sector)}</type></types>`
     : '<types/>';
 
-  const availability = mapAvailability(listing.disposal_type);
-  const availXml = `<availabilities><type id="${
-    isToLet ? 'tolet' : 'forsale'
-  }">${escapeXml(availability)}</type></availabilities>`;
+  const availXml = renderAvailabilities(disposalType);
 
   const resolveClient = (row: CoAgentFeedRow) =>
     Array.isArray(row.clients) ? row.clients[0] : row.clients;
@@ -481,8 +545,8 @@ async function renderPropertyXml(
     elRaw('rent_components', rentInner),
     el('price', priceLabel),
     elRaw('price_components', priceInner),
-    el('sale_type', !isToLet ? listing.tenure : ''),
-    renderFloorUnits(units, isToLet),
+    el('sale_type', includesForSale ? listing.tenure : ''),
+    renderFloorUnits(units, includesToLet, includesForSale),
     imagesXml,
     originalImagesXml,
     filesXml,
@@ -507,14 +571,25 @@ export function generatePropertyHiveFeedToken(): string {
   return randomBytes(32).toString('hex');
 }
 
-export function buildPropertyHiveFeedUrl(token: string): string {
+export function buildCommercialFeedUrl(
+  token: string,
+  portal: CommercialXmlFeedPortal,
+): string {
   const configured =
     process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, '') ||
     (process.env.VERCEL_URL
       ? `https://${process.env.VERCEL_URL.replace(/\/$/, '')}`
       : '');
   const base = configured || 'http://localhost:3000';
-  return `${base}/api/commercial/property-hive-feed?token=${encodeURIComponent(token)}`;
+  return `${base}${FEED_PATH[portal]}?token=${encodeURIComponent(token)}`;
+}
+
+export function buildPropertyHiveFeedUrl(token: string): string {
+  return buildCommercialFeedUrl(token, 'property_hive');
+}
+
+export function buildEachFeedUrl(token: string): string {
+  return buildCommercialFeedUrl(token, 'each');
 }
 
 function tokensEqual(a: string, b: string): boolean {
@@ -523,14 +598,15 @@ function tokensEqual(a: string, b: string): boolean {
   return timingSafeEqual(ha, hb);
 }
 
-export async function getPropertyHiveFeedToken(
+export async function getCommercialFeedToken(
   accountId: string,
+  portal: CommercialXmlFeedPortal,
 ): Promise<string | null> {
   const { data, error } = await adminDb()
     .from('commercial_portal_credentials')
     .select('metadata')
     .eq('account_id', accountId)
-    .eq('portal', 'property_hive')
+    .eq('portal', portal)
     .maybeSingle();
 
   if (error) throw new Error(error.message);
@@ -539,96 +615,117 @@ export async function getPropertyHiveFeedToken(
   return typeof token === 'string' && token.length > 0 ? token : null;
 }
 
-export async function ensurePropertyHiveFeedToken(
+export async function getPropertyHiveFeedToken(
   accountId: string,
+): Promise<string | null> {
+  return getCommercialFeedToken(accountId, 'property_hive');
+}
+
+export async function getEachFeedToken(
+  accountId: string,
+): Promise<string | null> {
+  return getCommercialFeedToken(accountId, 'each');
+}
+
+async function upsertFeedToken(
+  accountId: string,
+  portal: CommercialXmlFeedPortal,
+  token: string,
+): Promise<void> {
+  const client = adminDb();
+
+  const { data: row } = await client
+    .from('commercial_portal_credentials')
+    .select('id, metadata')
+    .eq('account_id', accountId)
+    .eq('portal', portal)
+    .maybeSingle();
+
+  const metadata = {
+    ...((row?.metadata as Record<string, unknown> | null) ?? {}),
+    [FEED_TOKEN_META_KEY]: token,
+  };
+
+  if (row?.id) {
+    const { error } = await client
+      .from('commercial_portal_credentials')
+      .update({ metadata, updated_at: new Date().toISOString() })
+      .eq('id', row.id as string);
+    if (error) throw new Error(error.message);
+    return;
+  }
+
+  const { error } = await client.from('commercial_portal_credentials').insert({
+    account_id: accountId,
+    portal,
+    metadata,
+  });
+  if (error) throw new Error(error.message);
+}
+
+export async function ensureCommercialFeedToken(
+  accountId: string,
+  portal: CommercialXmlFeedPortal,
 ): Promise<{ token: string; feedUrl: string; created: boolean }> {
-  const existing = await getPropertyHiveFeedToken(accountId);
+  const existing = await getCommercialFeedToken(accountId, portal);
   if (existing) {
     return {
       token: existing,
-      feedUrl: buildPropertyHiveFeedUrl(existing),
+      feedUrl: buildCommercialFeedUrl(existing, portal),
       created: false,
     };
   }
 
   const token = generatePropertyHiveFeedToken();
-  const client = adminDb();
-
-  const { data: row } = await client
-    .from('commercial_portal_credentials')
-    .select('id, metadata')
-    .eq('account_id', accountId)
-    .eq('portal', 'property_hive')
-    .maybeSingle();
-
-  const metadata = {
-    ...((row?.metadata as Record<string, unknown> | null) ?? {}),
-    [FEED_TOKEN_META_KEY]: token,
+  await upsertFeedToken(accountId, portal, token);
+  return {
+    token,
+    feedUrl: buildCommercialFeedUrl(token, portal),
+    created: true,
   };
+}
 
-  if (row?.id) {
-    const { error } = await client
-      .from('commercial_portal_credentials')
-      .update({ metadata, updated_at: new Date().toISOString() })
-      .eq('id', row.id as string);
-    if (error) throw new Error(error.message);
-  } else {
-    const { error } = await client
-      .from('commercial_portal_credentials')
-      .insert({
-        account_id: accountId,
-        portal: 'property_hive',
-        metadata,
-      });
-    if (error) throw new Error(error.message);
-  }
+export async function rotateCommercialFeedToken(
+  accountId: string,
+  portal: CommercialXmlFeedPortal,
+): Promise<{ token: string; feedUrl: string }> {
+  const token = generatePropertyHiveFeedToken();
+  await upsertFeedToken(accountId, portal, token);
+  return { token, feedUrl: buildCommercialFeedUrl(token, portal) };
+}
 
-  return { token, feedUrl: buildPropertyHiveFeedUrl(token), created: true };
+export async function ensurePropertyHiveFeedToken(
+  accountId: string,
+): Promise<{ token: string; feedUrl: string; created: boolean }> {
+  return ensureCommercialFeedToken(accountId, 'property_hive');
 }
 
 export async function rotatePropertyHiveFeedToken(
   accountId: string,
 ): Promise<{ token: string; feedUrl: string }> {
-  const token = generatePropertyHiveFeedToken();
-  const client = adminDb();
-
-  const { data: row } = await client
-    .from('commercial_portal_credentials')
-    .select('id, metadata')
-    .eq('account_id', accountId)
-    .eq('portal', 'property_hive')
-    .maybeSingle();
-
-  const metadata = {
-    ...((row?.metadata as Record<string, unknown> | null) ?? {}),
-    [FEED_TOKEN_META_KEY]: token,
-  };
-
-  if (row?.id) {
-    const { error } = await client
-      .from('commercial_portal_credentials')
-      .update({ metadata, updated_at: new Date().toISOString() })
-      .eq('id', row.id as string);
-    if (error) throw new Error(error.message);
-  } else {
-    const { error } = await client
-      .from('commercial_portal_credentials')
-      .insert({
-        account_id: accountId,
-        portal: 'property_hive',
-        metadata,
-      });
-    if (error) throw new Error(error.message);
-  }
-
-  return { token, feedUrl: buildPropertyHiveFeedUrl(token) };
+  return rotateCommercialFeedToken(accountId, 'property_hive');
 }
 
-async function findAccountIdByFeedToken(token: string): Promise<string | null> {
+export async function ensureEachFeedToken(
+  accountId: string,
+): Promise<{ token: string; feedUrl: string; created: boolean }> {
+  return ensureCommercialFeedToken(accountId, 'each');
+}
+
+export async function rotateEachFeedToken(
+  accountId: string,
+): Promise<{ token: string; feedUrl: string }> {
+  return rotateCommercialFeedToken(accountId, 'each');
+}
+
+async function findAccountIdByFeedToken(
+  token: string,
+  portal: CommercialXmlFeedPortal,
+): Promise<string | null> {
   const { data, error } = await adminDb()
     .from('commercial_portal_credentials')
     .select('account_id, metadata')
-    .eq('portal', 'property_hive')
+    .eq('portal', portal)
     .eq('metadata->>xml_feed_token', token)
     .maybeSingle();
 
@@ -645,10 +742,15 @@ async function findAccountIdByFeedToken(token: string): Promise<string | null> {
   return data.account_id as string;
 }
 
-export async function buildPropertyHiveFeedXml(
+/**
+ * Build Kato-compatible listing XML for a portal feed token.
+ * Content is identical across portals today; per-portal listing filters come next.
+ */
+export async function buildCommercialFeedXml(
   token: string,
+  portal: CommercialXmlFeedPortal,
 ): Promise<{ xml: string; accountId: string } | null> {
-  const accountId = await findAccountIdByFeedToken(token);
+  const accountId = await findAccountIdByFeedToken(token, portal);
   if (!accountId) return null;
 
   const client = adminDb();
@@ -665,6 +767,9 @@ export async function buildPropertyHiveFeedXml(
   const listingRows = ((listings ?? []) as ListingRow[]).filter((row) =>
     ON_MARKET_STATUSES.has(row.status),
   );
+
+  // Future: filter by portal-specific inclusion flags (e.g. publish_to_each).
+  void portal;
 
   if (!listingRows.length) {
     return {
@@ -737,4 +842,16 @@ export async function buildPropertyHiveFeedXml(
     accountId,
     xml: `<?xml version="1.0" encoding="utf-8"?>\n<properties>${propertiesXml.join('')}</properties>\n`,
   };
+}
+
+export async function buildPropertyHiveFeedXml(
+  token: string,
+): Promise<{ xml: string; accountId: string } | null> {
+  return buildCommercialFeedXml(token, 'property_hive');
+}
+
+export async function buildEachFeedXml(
+  token: string,
+): Promise<{ xml: string; accountId: string } | null> {
+  return buildCommercialFeedXml(token, 'each');
 }

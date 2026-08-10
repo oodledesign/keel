@@ -1148,6 +1148,43 @@ class ClientsService {
     }));
   }
 
+  private resolvePrimaryContactEmail(contact: {
+    email?: string | null;
+    emails?: Array<{ email?: string | null; is_primary?: boolean | null }>;
+  }) {
+    const emails = contact.emails ?? [];
+    return (
+      emails.find((address) => address.is_primary)?.email?.trim() ||
+      emails.find((address) => address.email?.trim())?.email?.trim() ||
+      contact.email?.trim() ||
+      null
+    );
+  }
+
+  private async finalizeWorkspaceContacts(
+    accountId: string,
+    contacts: Array<{
+      id: string;
+      full_name: string;
+      email: string | null;
+      phone: string | null;
+      picture_url: string | null;
+    }>,
+  ) {
+    const withAddresses = await this.attachContactEmailAddresses(
+      accountId,
+      contacts,
+    );
+
+    return withAddresses.map((contact) => ({
+      id: contact.id,
+      full_name: contact.full_name,
+      email: this.resolvePrimaryContactEmail(contact),
+      phone: contact.phone,
+      picture_url: contact.picture_url,
+    }));
+  }
+
   async listContacts(params: ListContactsInput) {
     await this.ensureUserAndPermission(params.accountId, 'clients.view');
     await this.ensureClientInAccount(params.clientId, params.accountId);
@@ -1707,20 +1744,23 @@ class ClientsService {
 
     if (!error) {
       return {
-        data: (data ?? []).map(
-          (row: {
-            id: string;
-            full_name: string;
-            email: string | null;
-            phone: string | null;
-            picture_url?: string | null;
-          }) => ({
-            id: row.id,
-            full_name: row.full_name,
-            email: row.email,
-            phone: row.phone,
-            picture_url: row.picture_url ?? null,
-          }),
+        data: await this.finalizeWorkspaceContacts(
+          params.accountId,
+          (data ?? []).map(
+            (row: {
+              id: string;
+              full_name: string;
+              email: string | null;
+              phone: string | null;
+              picture_url?: string | null;
+            }) => ({
+              id: row.id,
+              full_name: row.full_name,
+              email: row.email,
+              phone: row.phone,
+              picture_url: row.picture_url ?? null,
+            }),
+          ),
         ),
       };
     }
@@ -1738,19 +1778,22 @@ class ClientsService {
 
     if (!withoutPhotoError) {
       return {
-        data: (withoutPhoto ?? []).map(
-          (row: {
-            id: string;
-            full_name: string;
-            email: string | null;
-            phone: string | null;
-          }) => ({
-            id: row.id,
-            full_name: row.full_name,
-            email: row.email,
-            phone: row.phone,
-            picture_url: null,
-          }),
+        data: await this.finalizeWorkspaceContacts(
+          params.accountId,
+          (withoutPhoto ?? []).map(
+            (row: {
+              id: string;
+              full_name: string;
+              email: string | null;
+              phone: string | null;
+            }) => ({
+              id: row.id,
+              full_name: row.full_name,
+              email: row.email,
+              phone: row.phone,
+              picture_url: null,
+            }),
+          ),
         ),
       };
     }
@@ -1811,8 +1854,11 @@ class ClientsService {
       }
 
       return {
-        data: [...byId.values()].sort((a, b) =>
-          a.full_name.localeCompare(b.full_name),
+        data: await this.finalizeWorkspaceContacts(
+          params.accountId,
+          [...byId.values()].sort((a, b) =>
+            a.full_name.localeCompare(b.full_name),
+          ),
         ),
       };
     }
@@ -1853,7 +1899,11 @@ class ClientsService {
       });
     }
 
-    return { data: [...byId.values()] };
+    return {
+      data: await this.finalizeWorkspaceContacts(params.accountId, [
+        ...byId.values(),
+      ]),
+    };
   }
 
   async createWorkspaceContact(input: CreateWorkspaceContactInput) {

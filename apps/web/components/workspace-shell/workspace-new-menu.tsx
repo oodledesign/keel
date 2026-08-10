@@ -5,7 +5,6 @@ import { useCallback, useEffect, useState } from 'react';
 import Link from 'next/link';
 
 import {
-  BriefcaseBusiness,
   Building2,
   Calendar,
   CalendarCheck2,
@@ -19,6 +18,7 @@ import {
   StickyNote,
   UserRoundPlus,
   UtensilsCrossed,
+  Video,
   Wrench,
   X,
 } from 'lucide-react';
@@ -33,6 +33,7 @@ import {
 import { cn } from '@kit/ui/utils';
 
 import { HapticButton, HapticLink } from '~/components/haptic-link';
+import { openWorkspaceCreateMeetingDialog } from '~/components/workspace-shell/workspace-create-meeting-host';
 import { openWorkspaceCreateTaskDialog } from '~/components/workspace-shell/workspace-create-task-host';
 import pathsConfig from '~/config/paths.config';
 import type { WorkspaceSpaceType } from '~/home/[account]/_lib/server/account-modules';
@@ -53,7 +54,7 @@ type NewMenuItem = {
   label: string;
   icon: React.ComponentType<{ className?: string }>;
   href?: string;
-  action?: 'create-task';
+  action?: 'create-task' | 'create-meeting';
 };
 
 const MOBILE_NEW_MENU_ROW_CLASS =
@@ -102,7 +103,7 @@ function NewMenuItemRow({
       ? 'h-5 w-5 shrink-0 text-[var(--ozer-accent)]'
       : 'h-4 w-4 shrink-0 text-[var(--ozer-accent)]';
 
-  if (item.action === 'create-task') {
+  if (item.action === 'create-task' || item.action === 'create-meeting') {
     const className =
       variant === 'mobile'
         ? MOBILE_NEW_MENU_ROW_CLASS
@@ -116,6 +117,10 @@ function NewMenuItemRow({
         className={className}
         onClick={() => {
           onNavigate();
+          if (item.action === 'create-meeting') {
+            openWorkspaceCreateMeetingDialog();
+            return;
+          }
           openWorkspaceCreateTaskDialog();
         }}
       >
@@ -507,16 +512,10 @@ function getTeamItems(
       href: `${accountPath(account, pathsConfig.app.accountNotes)}?new=1`,
     },
     {
-      key: 'project',
-      label: 'New Project',
-      icon: BriefcaseBusiness,
-      href: `${accountPath(account, pathsConfig.app.accountJobs)}?create=job`,
-    },
-    {
-      key: 'invite',
-      label: 'Invite Member',
-      icon: UserRoundPlus,
-      href: `${accountPath(account, pathsConfig.app.accountMembers)}?create=invite`,
+      key: 'meeting',
+      label: 'New Meeting',
+      icon: Video,
+      action: 'create-meeting',
     },
     {
       key: 'client',

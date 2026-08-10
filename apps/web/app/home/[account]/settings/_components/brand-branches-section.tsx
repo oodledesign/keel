@@ -134,8 +134,8 @@ export function BrandBranchesSection({
         <p className="text-muted-foreground mt-1 text-sm">
           Office locations used in email signatures
           {showRightmoveBranchId ? ' and portal publishing' : ''}. Staff pick a
-          branch; address, phone, and email fall back to branch details when
-          not overridden on their profile.
+          branch; address, phone, and email fall back to branch details when not
+          overridden on their profile.
           {showRightmoveBranchId
             ? " Add each office's Rightmove Branch ID for disposal feeds (also editable under Website & portals)."
             : ''}

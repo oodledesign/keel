@@ -588,7 +588,9 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('projects')
-      .select('id, name, title, status, due_date, is_ongoing, is_phased, picture_url')
+      .select(
+        'id, name, title, status, due_date, is_ongoing, is_phased, picture_url',
+      )
       .eq('portal_visible', true)
       .order('updated_at', { ascending: false });
 
@@ -627,7 +629,9 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('projects')
-      .select('id, name, title, status, due_date, is_ongoing, is_phased, picture_url')
+      .select(
+        'id, name, title, status, due_date, is_ongoing, is_phased, picture_url',
+      )
       .eq('id', projectId)
       .eq('portal_visible', true)
       .maybeSingle();
@@ -639,9 +643,7 @@ class ClientPortalService {
       name: data.name?.trim() || data.title?.trim() || 'Project',
       status: data.status ?? null,
       dueDate: data.due_date ?? null,
-      isOngoing: Boolean(
-        (data as { is_ongoing?: boolean | null }).is_ongoing,
-      ),
+      isOngoing: Boolean((data as { is_ongoing?: boolean | null }).is_ongoing),
       isPhased: Boolean((data as { is_phased?: boolean | null }).is_phased),
       pictureUrl:
         (data as { picture_url?: string | null }).picture_url?.trim() || null,

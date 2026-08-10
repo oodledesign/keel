@@ -16,7 +16,9 @@ import {
 import {
   type ExistingListingSnapshot,
   type ListingDuplicateMatch,
+  type ListingImportDraft,
   findListingDuplicate,
+  preferDualDisposal,
   recordToListingDraft,
 } from '~/lib/commercial/listing-import';
 import {
@@ -25,6 +27,50 @@ import {
 } from '~/lib/csv/rows-to-records';
 
 import { createListingsService } from './listings.service';
+
+/** Collapse same-external-id drafts that would be both to_let and for_sale into dual. */
+function coalesceDualDisposalDrafts(
+  drafts: ListingImportDraft[],
+): ListingImportDraft[] {
+  const byExternal = new Map<string, ListingImportDraft[]>();
+  const rest: ListingImportDraft[] = [];
+
+  for (const draft of drafts) {
+    if (!draft.externalId) {
+      rest.push(draft);
+      continue;
+    }
+    const list = byExternal.get(draft.externalId) ?? [];
+    list.push(draft);
+    byExternal.set(draft.externalId, list);
+  }
+
+  const merged: ListingImportDraft[] = [];
+  for (const group of byExternal.values()) {
+    if (group.length === 1) {
+      merged.push(group[0]!);
+      continue;
+    }
+    const primary = { ...group[0]! };
+    for (const other of group.slice(1)) {
+      primary.disposalType = preferDualDisposal(
+        primary.disposalType,
+        other.disposalType,
+      );
+      primary.askingRentPence ??= other.askingRentPence;
+      primary.askingRentToPence ??= other.askingRentToPence;
+      primary.askingPricePence ??= other.askingPricePence;
+      primary.serviceChargePerSqft ??= other.serviceChargePerSqft;
+      primary.ratesPayablePerSqft ??= other.ratesPayablePerSqft;
+      primary.estateChargePerSqft ??= other.estateChargePerSqft;
+      primary.sizeMinSqft ??= other.sizeMinSqft;
+      primary.sizeMaxSqft ??= other.sizeMaxSqft;
+    }
+    merged.push(primary);
+  }
+
+  return [...merged, ...rest].sort((a, b) => a.rowIndex - b.rowIndex);
+}
 
 async function assertCanEditListings(accountId: string) {
   const client = getSupabaseServerClient();
@@ -107,11 +153,13 @@ export const previewListingImportAction = enhanceAction(
       input.mapping as CsvFieldMapping,
     );
 
-    const drafts = records.map((record, index) =>
-      recordToListingDraft(
-        index,
-        record,
-        input.defaultDisposalType ?? 'to_let',
+    const drafts = coalesceDualDisposalDrafts(
+      records.map((record, index) =>
+        recordToListingDraft(
+          index,
+          record,
+          input.defaultDisposalType ?? 'to_let',
+        ),
       ),
     );
 
@@ -158,11 +206,13 @@ export const commitListingImportAction = enhanceAction(
       input.rows,
       input.mapping as CsvFieldMapping,
     );
-    const drafts = records.map((record, index) =>
-      recordToListingDraft(
-        index,
-        record,
-        input.defaultDisposalType ?? 'to_let',
+    const drafts = coalesceDualDisposalDrafts(
+      records.map((record, index) =>
+        recordToListingDraft(
+          index,
+          record,
+          input.defaultDisposalType ?? 'to_let',
+        ),
       ),
     );
 
@@ -214,8 +264,12 @@ export const commitListingImportAction = enhanceAction(
           sizeMinSqft: draft.sizeMinSqft,
           sizeMaxSqft: draft.sizeMaxSqft,
           askingRentPence: draft.askingRentPence,
+          askingRentToPence: draft.askingRentToPence,
           askingPricePence: draft.askingPricePence,
           rentFrequency: draft.rentFrequency,
+          serviceChargePerSqft: draft.serviceChargePerSqft,
+          ratesPayablePerSqft: draft.ratesPayablePerSqft,
+          estateChargePerSqft: draft.estateChargePerSqft,
           summary: draft.summary,
           description: draft.description,
           notes: draft.notes,

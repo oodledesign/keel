@@ -13,6 +13,7 @@ import {
   type WorkspaceSwitcherPortal,
   buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
+import { WorkspaceCreateMeetingHost } from '~/components/workspace-shell/workspace-create-meeting-host';
 import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-create-task-host';
 import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import {
@@ -167,6 +168,7 @@ export function TeamWorkspaceMobileChrome({
         accountSlug={account}
         workspaceChoices={workspaceChoices}
       />
+      <WorkspaceCreateMeetingHost accountId={accountId} accountSlug={account} />
       {/* Desktop-only floating help; mobile support lives in the hamburger menu. */}
       <WorkspaceHelpButton defaultAccountId={accountId} />
     </>

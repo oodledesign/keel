@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { Building2, EyeOff, Plus, X } from 'lucide-react';
-import { toast } from '@kit/ui/sonner';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { toast } from '@kit/ui/sonner';
 
 import type { ListingPartyRole } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
@@ -148,9 +148,7 @@ export function ListingPartiesCard({
         });
         setParties(next);
       } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : 'Could not remove',
-        );
+        toast.error(err instanceof Error ? err.message : 'Could not remove');
       }
     });
   };
@@ -216,9 +214,7 @@ export function ListingPartiesCard({
         ) : null}
 
         <div className="space-y-2">
-          <Label htmlFor={`${role}-party-search`}>
-            Add from clients
-          </Label>
+          <Label htmlFor={`${role}-party-search`}>Add from clients</Label>
           <Input
             id={`${role}-party-search`}
             placeholder="Search companies or contacts…"
@@ -357,9 +353,7 @@ export function ListingPartiesCard({
                     className="h-7 w-7"
                     disabled={pending}
                     title={
-                      party.isPrivate
-                        ? 'Show landlord name'
-                        : 'Mark as private'
+                      party.isPrivate ? 'Show landlord name' : 'Mark as private'
                     }
                     onClick={() => togglePrivate(party, !party.isPrivate)}
                   >

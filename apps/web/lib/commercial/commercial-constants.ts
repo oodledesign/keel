@@ -22,7 +22,12 @@ export const LISTING_STATUS_LABELS: Record<ListingStatus, string> = {
   withdrawn: 'Withdrawn',
 };
 
-export const DISPOSAL_TYPES = ['to_let', 'for_sale', 'investment'] as const;
+export const DISPOSAL_TYPES = [
+  'to_let',
+  'for_sale',
+  'investment',
+  'to_let_and_for_sale',
+] as const;
 
 export type DisposalType = (typeof DISPOSAL_TYPES)[number];
 
@@ -30,10 +35,27 @@ export const DISPOSAL_TYPE_LABELS: Record<DisposalType, string> = {
   to_let: 'To let',
   for_sale: 'For sale',
   investment: 'Investment',
+  to_let_and_for_sale: 'To let & for sale',
 };
 
 /** Occupational disposal types (leasing / sale) vs investment. */
-export const OCCUPATIONAL_DISPOSAL_TYPES = ['to_let', 'for_sale'] as const;
+export const OCCUPATIONAL_DISPOSAL_TYPES = [
+  'to_let',
+  'for_sale',
+  'to_let_and_for_sale',
+] as const;
+
+export function disposalIncludesToLet(type: DisposalType): boolean {
+  return type === 'to_let' || type === 'to_let_and_for_sale';
+}
+
+export function disposalIncludesForSale(type: DisposalType): boolean {
+  return (
+    type === 'for_sale' ||
+    type === 'investment' ||
+    type === 'to_let_and_for_sale'
+  );
+}
 
 export const TERMS_OF_ENGAGEMENT = ['yes', 'no', 'pending'] as const;
 
@@ -94,15 +116,13 @@ export const LISTING_SIZE_ACCURACIES = [
 
 export type ListingSizeAccuracy = (typeof LISTING_SIZE_ACCURACIES)[number];
 
-export const LISTING_SIZE_ACCURACY_LABELS: Record<
-  ListingSizeAccuracy,
-  string
-> = {
-  approximate: 'Approximate',
-  measured: 'Measured',
-  estimated: 'Estimated',
-  unknown: 'Unknown',
-};
+export const LISTING_SIZE_ACCURACY_LABELS: Record<ListingSizeAccuracy, string> =
+  {
+    approximate: 'Approximate',
+    measured: 'Measured',
+    estimated: 'Estimated',
+    unknown: 'Unknown',
+  };
 
 export const BREEAM_RATINGS = [
   'outstanding',
@@ -134,6 +154,8 @@ export const DISPOSAL_TYPE_BADGE_CLASS: Record<DisposalType, string> = {
     'bg-teal-100 text-teal-900 ring-1 ring-inset ring-teal-200/80 dark:bg-teal-500/15 dark:text-teal-100 dark:ring-teal-500/30',
   investment:
     'bg-violet-100 text-violet-900 ring-1 ring-inset ring-violet-200/80 dark:bg-violet-500/15 dark:text-violet-100 dark:ring-violet-500/30',
+  to_let_and_for_sale:
+    'bg-cyan-100 text-cyan-900 ring-1 ring-inset ring-cyan-200/80 dark:bg-cyan-500/15 dark:text-cyan-100 dark:ring-cyan-500/30',
 };
 
 /** Semantic badge classes for listing status pills. */

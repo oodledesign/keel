@@ -1,14 +1,14 @@
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { ListingAdvancedAttrsCard } from '../../_components/listing-advanced-attrs-card';
 import { ListingAssignmentCard } from '../../_components/listing-assignment-card';
 import { ListingCoAgentsCard } from '../../_components/listing-co-agents-card';
-import { ListingInstructionCard } from '../../_components/listing-instruction-card';
 import { ListingManagementSection } from '../../_components/listing-detail-sections';
+import { ListingInstructionCard } from '../../_components/listing-instruction-card';
 import { ListingPartiesCard } from '../../_components/listing-parties-card';
 import { ListingPrivateMediaSection } from '../../_components/listing-private-media-section';
 import { createListingsService } from '../../_lib/server/listings.service';
@@ -51,7 +51,8 @@ async function ListingManagementPage({ params }: PageProps) {
   const privateMediaWithUrls = await service.withSignedMediaUrls(privateMedia);
   const privateImages = privateMediaWithUrls.filter(
     (item) =>
-      item.mediaType === 'image' || Boolean(item.mimeType?.startsWith('image/')),
+      item.mediaType === 'image' ||
+      Boolean(item.mimeType?.startsWith('image/')),
   );
   const privateFiles = privateMediaWithUrls.filter(
     (item) =>

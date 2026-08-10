@@ -7,6 +7,11 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { isBlockedLogoHostname } from '~/lib/clients/client-logo-icons';
 
 import {
+  type DisposalType,
+  disposalIncludesForSale,
+  disposalIncludesToLet,
+} from './commercial-constants';
+import {
   decryptCommercialSecret,
   encryptCommercialSecret,
 } from './commercial-crypto';
@@ -29,12 +34,14 @@ export type CommercialListingRow = {
   country: string | null;
   sector: string | null;
   tenure: string | null;
-  disposal_type: 'to_let' | 'for_sale' | 'investment';
+  disposal_type: DisposalType;
   status: string;
   asking_rent_pence: number | null;
+  asking_rent_to_pence?: number | null;
   asking_price_pence: number | null;
   rent_frequency: string | null;
   hide_rent_from_marketing: boolean;
+  hide_price_from_marketing?: boolean;
   size_min_sqft: number | null;
   size_max_sqft: number | null;
   measurement_standard: string | null;
@@ -132,21 +139,24 @@ export function mapListingToPropertyHivePayload(
   listing: CommercialListingRow,
   options?: { officeId?: string | null; onMarket?: boolean },
 ): PropertyHivePayload {
-  const isToLet = listing.disposal_type === 'to_let';
+  const includesToLet = disposalIncludesToLet(listing.disposal_type);
+  const includesForSale = disposalIncludesForSale(listing.disposal_type);
   const onMarket =
     options?.onMarket ??
     (listing.status === 'marketing' || listing.status === 'under_offer');
 
   const rentPounds = penceToPounds(listing.asking_rent_pence);
+  const rentToPounds =
+    penceToPounds(listing.asking_rent_to_pence ?? null) ?? rentPounds;
   const pricePounds = penceToPounds(listing.asking_price_pence);
 
   const payload: PropertyHivePayload = {
     title: listing.name,
     status: onMarket ? 'publish' : 'draft',
     on_market: onMarket ? 'yes' : 'no',
-    department: isToLet ? 'commercial_to_rent' : 'commercial_for_sale',
-    for_sale: isToLet ? 'no' : 'yes',
-    to_rent: isToLet ? 'yes' : 'no',
+    department: includesToLet ? 'commercial_to_rent' : 'commercial_for_sale',
+    for_sale: includesForSale ? 'yes' : 'no',
+    to_rent: includesToLet ? 'yes' : 'no',
     address_street: listing.address_line_1 ?? undefined,
     address_two: listing.address_line_2 ?? undefined,
     address_three: listing.town ?? undefined,
@@ -171,14 +181,22 @@ export function mapListingToPropertyHivePayload(
     payload.floor_area_to = Number(listing.size_min_sqft);
   }
 
-  if (isToLet && rentPounds != null && !listing.hide_rent_from_marketing) {
+  if (
+    includesToLet &&
+    rentPounds != null &&
+    !listing.hide_rent_from_marketing
+  ) {
     payload.rent = rentPounds;
     payload.rent_from = rentPounds;
-    payload.rent_to = rentPounds;
+    payload.rent_to = rentToPounds ?? rentPounds;
     payload.rent_frequency = listing.rent_frequency ?? 'per_annum';
   }
 
-  if (!isToLet && pricePounds != null) {
+  if (
+    includesForSale &&
+    pricePounds != null &&
+    !listing.hide_price_from_marketing
+  ) {
     payload.price = pricePounds;
     payload.price_from = pricePounds;
     payload.price_to = pricePounds;

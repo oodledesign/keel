@@ -5,7 +5,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadAccountBranches } from '~/lib/brand/account-branches';
-import { buildPropertyHiveFeedUrl } from '~/lib/commercial/property-hive-feed';
+import {
+  buildEachFeedUrl,
+  buildPropertyHiveFeedUrl,
+} from '~/lib/commercial/property-hive-feed';
 import {
   getRightmoveEnvironmentLabel,
   isRightmoveOAuthConfigured,
@@ -37,10 +40,10 @@ export type CommercialPublishingSettings = {
     workspaceBranches: RightmoveWorkspaceBranch[];
   };
   each: {
+    /** Dedicated EACH XML feed enabled (separate token from Property Hive). */
     configured: boolean;
-    branchId: string;
-    networkId: string;
-    username: string;
+    feedUrl: string | null;
+    feedEnabled: boolean;
   };
 };
 
@@ -76,12 +79,21 @@ export async function loadCommercialPublishingSettings(
   );
 
   const ph = byPortal.property_hive ?? null;
-  const each = byPortal.each ?? null;
+  const eachRow = byPortal.each ?? null;
   const phMetadata = (ph?.metadata ?? {}) as Record<string, unknown>;
+  const eachMetadata = (eachRow?.metadata ?? {}) as Record<string, unknown>;
   const feedToken =
     typeof phMetadata.xml_feed_token === 'string'
       ? phMetadata.xml_feed_token
       : null;
+  const eachFeedToken =
+    typeof eachMetadata.xml_feed_token === 'string'
+      ? eachMetadata.xml_feed_token
+      : null;
+  const feedUrl = feedToken ? buildPropertyHiveFeedUrl(feedToken) : null;
+  const eachFeedUrl = eachFeedToken ? buildEachFeedUrl(eachFeedToken) : null;
+  const feedEnabled = Boolean(feedToken);
+  const eachFeedEnabled = Boolean(eachFeedToken);
 
   const oauthConfigured = isRightmoveOAuthConfigured();
   const workspaceBranches: RightmoveWorkspaceBranch[] = branches.map(
@@ -101,8 +113,8 @@ export async function loadCommercialPublishingSettings(
       siteUrl: (ph?.site_url as string | undefined) ?? '',
       username: (ph?.username as string | undefined) ?? '',
       officeId: (ph?.office_id as string | null | undefined) ?? null,
-      feedUrl: feedToken ? buildPropertyHiveFeedUrl(feedToken) : null,
-      feedEnabled: Boolean(feedToken),
+      feedUrl,
+      feedEnabled,
     },
     rightmove: {
       oauthConfigured,
@@ -112,10 +124,9 @@ export async function loadCommercialPublishingSettings(
       workspaceBranches,
     },
     each: {
-      configured: isConfigured(each),
-      branchId: (each?.branch_id as string | undefined) ?? '',
-      networkId: (each?.network_id as string | undefined) ?? '',
-      username: (each?.username as string | undefined) ?? '',
+      configured: eachFeedEnabled,
+      feedUrl: eachFeedUrl,
+      feedEnabled: eachFeedEnabled,
     },
   };
 }

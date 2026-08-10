@@ -101,10 +101,7 @@ type PositionedBusy = {
   source: 'calendar' | 'booking';
 };
 
-function busyForDay(
-  ymd: string,
-  busy: HostBusyInterval[],
-): PositionedBusy[] {
+function busyForDay(ymd: string, busy: HostBusyInterval[]): PositionedBusy[] {
   const dayStart = parseYmdLocal(ymd);
   dayStart.setHours(DAY_START_HOUR, 0, 0, 0);
   const dayEnd = parseYmdLocal(ymd);
@@ -164,7 +161,8 @@ export function CreateMeetingWeekGrid({
   onSelectSlot,
 }: Props) {
   const days = useMemo(
-    () => Array.from({ length: 7 }, (_, index) => addDaysYmd(weekStartYmd, index)),
+    () =>
+      Array.from({ length: 7 }, (_, index) => addDaysYmd(weekStartYmd, index)),
     [weekStartYmd],
   );
 
@@ -218,7 +216,8 @@ export function CreateMeetingWeekGrid({
     const rect = event.currentTarget.getBoundingClientRect();
     const y = event.clientY - rect.top;
     const rawMinutes =
-      DAY_START_HOUR * 60 + Math.round(y / PX_PER_MINUTE / SNAP_MINUTES) * SNAP_MINUTES;
+      DAY_START_HOUR * 60 +
+      Math.round(y / PX_PER_MINUTE / SNAP_MINUTES) * SNAP_MINUTES;
     const startMin = clamp(
       rawMinutes,
       DAY_START_HOUR * 60,
@@ -252,7 +251,9 @@ export function CreateMeetingWeekGrid({
           >
             <ChevronLeft className="h-4 w-4" />
           </Button>
-          <span className={`min-w-[9.5rem] text-center text-xs ${workspaceTextMuted}`}>
+          <span
+            className={`min-w-[9.5rem] text-center text-xs ${workspaceTextMuted}`}
+          >
             {weekLabel}
           </span>
           <Button
@@ -287,7 +288,8 @@ export function CreateMeetingWeekGrid({
                 key={`header-${ymd}`}
                 className={cn(
                   'border-b border-l border-[color:var(--workspace-shell-border)] px-1 py-1.5 text-center',
-                  selected && 'bg-[color-mix(in_srgb,var(--ozer-accent)_12%,transparent)]',
+                  selected &&
+                    'bg-[color-mix(in_srgb,var(--ozer-accent)_12%,transparent)]',
                 )}
               >
                 <p className={`text-[10px] uppercase ${workspaceTextMuted}`}>
@@ -327,7 +329,7 @@ export function CreateMeetingWeekGrid({
               <button
                 key={`day-${ymd}`}
                 type="button"
-                className="relative border-l border-[color:var(--workspace-shell-border)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]"
+                className="relative border-l border-[color:var(--workspace-shell-border)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none"
                 style={{ height: GRID_HEIGHT }}
                 onClick={(event) => handleColumnClick(ymd, event)}
                 aria-label={`Select time on ${ymd}`}
@@ -352,7 +354,9 @@ export function CreateMeetingWeekGrid({
                         : 'bg-[color-mix(in_srgb,var(--workspace-shell-text)_18%,transparent)]',
                     )}
                     style={{ top: item.top, height: item.height }}
-                    title={item.source === 'booking' ? 'Booking' : 'Calendar busy'}
+                    title={
+                      item.source === 'booking' ? 'Booking' : 'Calendar busy'
+                    }
                   />
                 ))}
 

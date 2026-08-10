@@ -18,8 +18,12 @@ export type ListingImportDraft = {
   sizeMinSqft: number | null;
   sizeMaxSqft: number | null;
   askingRentPence: number | null;
+  askingRentToPence: number | null;
   askingPricePence: number | null;
   rentFrequency: string | null;
+  serviceChargePerSqft: number | null;
+  ratesPayablePerSqft: number | null;
+  estateChargePerSqft: number | null;
   summary: string | null;
   description: string | null;
   notes: string | null;
@@ -125,23 +129,68 @@ export function mapKatoListingStatus(raw: string | null): ListingStatus {
 
 export function inferDisposalType(input: {
   disposalTypeRaw?: string | null;
+  investmentRaw?: string | null;
   askingRentPence?: number | null;
   askingPricePence?: number | null;
   defaultDisposalType?: DisposalType;
 }): DisposalType {
+  const investment = (input.investmentRaw ?? '').toLowerCase().trim();
+  if (investment === 'yes' || investment === 'y' || investment === 'true') {
+    return 'investment';
+  }
+
   const raw = (input.disposalTypeRaw ?? '').toLowerCase().trim();
-  if (raw === 'yes' || raw.includes('investment')) return 'investment';
-  if (raw.includes('sale') || raw === 'for_sale' || raw === 'for sale')
-    return 'for_sale';
-  if (raw.includes('let') || raw === 'to_let' || raw === 'to let')
-    return 'to_let';
-  if (input.askingPricePence != null && input.askingRentPence == null) {
-    return 'for_sale';
+  if (raw === 'to_let_and_for_sale' || raw === 'to let & for sale') {
+    return 'to_let_and_for_sale';
   }
-  if (input.askingRentPence != null && input.askingPricePence == null) {
-    return 'to_let';
+  if (raw.includes('investment')) return 'investment';
+
+  const signalsLet =
+    raw.includes('to let') ||
+    raw === 'to_let' ||
+    raw === 'let' ||
+    raw.includes('letting');
+  const signalsSale =
+    raw.includes('for sale') ||
+    raw === 'for_sale' ||
+    raw === 'sale' ||
+    (raw.includes('sale') && !raw.includes('wholesale'));
+
+  if (
+    (signalsLet && signalsSale) ||
+    raw.includes('to let & for sale') ||
+    raw.includes('to let and for sale') ||
+    raw.includes('let and sale')
+  ) {
+    return 'to_let_and_for_sale';
   }
+  if (signalsSale && !signalsLet) return 'for_sale';
+  if (signalsLet && !signalsSale) return 'to_let';
+
+  const hasRent = input.askingRentPence != null;
+  const hasPrice = input.askingPricePence != null;
+  if (hasRent && hasPrice) return 'to_let_and_for_sale';
+  if (hasPrice && !hasRent) return 'for_sale';
+  if (hasRent && !hasPrice) return 'to_let';
+
   return input.defaultDisposalType ?? 'to_let';
+}
+
+/** Prefer dual when the same external id attracts both let + sale signals. */
+export function preferDualDisposal(
+  a: DisposalType,
+  b: DisposalType,
+): DisposalType {
+  if (a === 'investment' || b === 'investment') return 'investment';
+  if (a === b) return a;
+  const set = new Set([a, b]);
+  if (
+    (set.has('to_let') && set.has('for_sale')) ||
+    set.has('to_let_and_for_sale')
+  ) {
+    return 'to_let_and_for_sale';
+  }
+  return a;
 }
 
 export function mapRentFrequency(raw: string | null): string | null {
@@ -158,10 +207,13 @@ function buildNotes(record: Record<string, string>): string | null {
   const parts: string[] = [];
   const notes = emptyToNull(record.notes);
   if (notes) parts.push(notes);
+  // Keep SC/rates text as notes backup when present (numeric fields stored separately).
   const sc = emptyToNull(record.service_charge);
   if (sc) parts.push(`Service charge: ${sc}`);
   const rates = emptyToNull(record.rates_payable);
   if (rates) parts.push(`Rates payable: ${rates}`);
+  const estate = emptyToNull(record.estate_charge);
+  if (estate) parts.push(`Estate charge: ${estate}`);
   const instructed = emptyToNull(record.our_instructions);
   if (instructed) parts.push(`Our instructions: ${instructed}`);
   return parts.length ? parts.join('\n') : null;
@@ -183,6 +235,7 @@ export function recordToListingDraft(
   const sizeMin = sizeToSqft(parseNumber(record.size_min_sqft), metric);
   const sizeMax = sizeToSqft(parseNumber(record.size_max_sqft), metric);
   const askingRentPence = parseGbpToPence(record.asking_rent);
+  const askingRentToPence = parseGbpToPence(record.asking_rent_to);
   const askingPricePence = parseGbpToPence(record.asking_price);
 
   const base: Omit<ListingImportDraft, 'errors'> = {
@@ -196,7 +249,8 @@ export function recordToListingDraft(
     status: mapKatoListingStatus(emptyToNull(record.status)),
     disposalType: inferDisposalType({
       disposalTypeRaw: emptyToNull(record.disposal_type),
-      askingRentPence,
+      investmentRaw: emptyToNull(record.investment),
+      askingRentPence: askingRentPence ?? askingRentToPence,
       askingPricePence,
       defaultDisposalType,
     }),
@@ -205,8 +259,12 @@ export function recordToListingDraft(
     sizeMinSqft: sizeMin,
     sizeMaxSqft: sizeMax,
     askingRentPence,
+    askingRentToPence,
     askingPricePence,
     rentFrequency: mapRentFrequency(emptyToNull(record.rent_frequency)),
+    serviceChargePerSqft: parseNumber(record.service_charge),
+    ratesPayablePerSqft: parseNumber(record.rates_payable),
+    estateChargePerSqft: parseNumber(record.estate_charge),
     summary: emptyToNull(record.summary),
     description: emptyToNull(record.description),
     notes: buildNotes(record),

@@ -9,6 +9,11 @@ import type {
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
 import {
+  disposalIncludesForSale,
+  disposalIncludesToLet,
+} from '~/lib/commercial/commercial-constants';
+import {
+  RightmoveApiError,
   deleteCommercialProperty,
   putCommercialProperty,
 } from '~/lib/commercial/rightmove-api';
@@ -17,11 +22,12 @@ import {
   isRightmoveOAuthConfigured,
 } from '~/lib/commercial/rightmove-env';
 import {
-  mapListingToRightmovePayload,
-  resolveRightmovePropertyReference,
   type RightmoveMapperListing,
   type RightmoveMapperMedia,
   type RightmoveMapperUnit,
+  asOptionalNumber,
+  mapListingToRightmovePayload,
+  resolveRightmovePropertyReference,
 } from '~/lib/commercial/rightmove-mapper';
 import type { RightmoveRemovalReason } from '~/lib/commercial/rightmove-types';
 
@@ -93,7 +99,7 @@ async function loadListingForRightmove(
       id, name, address_line_1, address_line_2, town, postcode,
       latitude, longitude, sector, tenure, disposal_type, status,
       asking_rent_pence, asking_price_pence, rent_frequency,
-      hide_rent_from_marketing, size_min_sqft, size_max_sqft,
+      hide_rent_from_marketing, hide_price_from_marketing, size_min_sqft, size_max_sqft,
       measurement_standard, use_class, available_from, epc_rating,
       breeam_rating, summary, description, key_points, reference_number
     `,
@@ -124,22 +130,23 @@ async function loadListingForRightmove(
     addressLine2: (data.address_line_2 as string | null) ?? null,
     town: (data.town as string | null) ?? null,
     postcode: (data.postcode as string | null) ?? null,
-    latitude: (data.latitude as number | null) ?? null,
-    longitude: (data.longitude as number | null) ?? null,
+    latitude: asOptionalNumber(data.latitude),
+    longitude: asOptionalNumber(data.longitude),
     sector: (data.sector as string | null) ?? null,
     tenure: (data.tenure as string | null) ?? null,
     disposalType: (data.disposal_type as DisposalType) ?? 'to_let',
     status: (data.status as ListingStatus) ?? 'draft',
-    askingRentPence: (data.asking_rent_pence as number | null) ?? null,
-    askingPricePence: (data.asking_price_pence as number | null) ?? null,
+    askingRentPence: asOptionalNumber(data.asking_rent_pence),
+    askingPricePence: asOptionalNumber(data.asking_price_pence),
     rentFrequency: (data.rent_frequency as string | null) ?? null,
     hideRentFromMarketing: Boolean(data.hide_rent_from_marketing),
-    sizeMinSqft: (data.size_min_sqft as number | null) ?? null,
-    sizeMaxSqft: (data.size_max_sqft as number | null) ?? null,
+    hidePriceFromMarketing: Boolean(data.hide_price_from_marketing),
+    sizeMinSqft: asOptionalNumber(data.size_min_sqft),
+    sizeMaxSqft: asOptionalNumber(data.size_max_sqft),
     measurementStandard: (data.measurement_standard as string | null) ?? null,
     useClass: (data.use_class as string | null) ?? null,
     availableFrom: (data.available_from as string | null) ?? null,
-    epcRating: (data.epc_rating as number | null) ?? null,
+    epcRating: asOptionalNumber(data.epc_rating),
     breeamRating: (data.breeam_rating as string | null) ?? null,
     summary: (data.summary as string | null) ?? null,
     description: (data.description as string | null) ?? null,
@@ -167,9 +174,9 @@ async function loadUnitsForRightmove(
     id: row.id as string,
     label: (row.label as string) ?? '',
     floorOrUnit: (row.floor_or_unit as string | null) ?? null,
-    sizeSqft: (row.size_sqft as number | null) ?? null,
+    sizeSqft: asOptionalNumber(row.size_sqft),
     measurementStandard: (row.measurement_standard as string | null) ?? null,
-    sortOrder: (row.sort_order as number) ?? 0,
+    sortOrder: asOptionalNumber(row.sort_order) ?? 0,
     externalId: (row.external_id as string | null) ?? null,
   }));
 }
@@ -239,15 +246,27 @@ function validateRightmoveCommercialFields(listing: {
   if (!listing.name?.trim()) missing.push('name');
   if (!listing.postcode?.trim()) missing.push('postcode');
   if (!listing.address_line_1?.trim()) missing.push('address_line_1');
-  if (listing.disposal_type === 'to_let' && listing.asking_rent_pence == null) {
+  const disposalType = listing.disposal_type as DisposalType;
+  if (
+    disposalIncludesToLet(disposalType) &&
+    listing.asking_rent_pence == null
+  ) {
     missing.push('asking_rent_pence');
   }
   if (
-    (listing.disposal_type === 'for_sale' ||
-      listing.disposal_type === 'investment') &&
+    disposalIncludesForSale(disposalType) &&
+    !disposalIncludesToLet(disposalType) &&
     listing.asking_price_pence == null
   ) {
     missing.push('asking_price_pence');
+  }
+  if (
+    disposalIncludesForSale(disposalType) &&
+    disposalIncludesToLet(disposalType) &&
+    listing.asking_rent_pence == null &&
+    listing.asking_price_pence == null
+  ) {
+    missing.push('asking_rent_pence');
   }
   return missing;
 }
@@ -502,13 +521,33 @@ export async function publishToRightmove(
       },
     });
   } catch (err) {
+    const env = (() => {
+      try {
+        return getRightmoveEnv();
+      } catch {
+        return null;
+      }
+    })();
+
     return recordStubPublication({
       accountId,
       listingId,
       portal: 'rightmove',
       lastError:
         err instanceof Error ? err.message : 'Rightmove publish failed',
-      metadata: { stage: 'put_error' },
+      metadata: {
+        stage: 'put_error',
+        environment: env?.environment ?? null,
+        agentId: resolved.agentId,
+        branchRef: resolved.branchRef,
+        accountBranchId: resolved.accountBranchId,
+        ...(err instanceof RightmoveApiError
+          ? {
+              httpStatus: err.status,
+              rawResponse: err.rawBody.slice(0, 4000),
+            }
+          : {}),
+      },
     });
   }
 }
@@ -591,16 +630,24 @@ export async function unpublishFromRightmove(
       accountId,
       listingId,
       portal: 'rightmove',
-      lastError:
-        err instanceof Error ? err.message : 'Rightmove remove failed',
-      metadata: { stage: 'delete_error', removalReason },
+      lastError: err instanceof Error ? err.message : 'Rightmove remove failed',
+      metadata: {
+        stage: 'delete_error',
+        removalReason,
+        ...(err instanceof RightmoveApiError
+          ? {
+              httpStatus: err.status,
+              rawResponse: err.rawBody.slice(0, 4000),
+            }
+          : {}),
+      },
     });
   }
 }
 
 /**
- * Scaffold: validate EACH commercial fields and record a pending/error
- * publication until EACH API credentials are wired.
+ * EACH pulls the shared Kato-compatible XML feed (same URL as Property Hive).
+ * Records a feed-linked publication after basic field checks.
  */
 export async function publishToEach(
   accountId: string,
@@ -619,12 +666,28 @@ export async function publishToEach(
     });
   }
 
-  return recordStubPublication({
+  const { ensureEachFeedToken } =
+    await import('~/lib/commercial/property-hive-feed');
+  const { feedUrl } = await ensureEachFeedToken(accountId);
+  const onMarket =
+    listing.status === 'marketing' || listing.status === 'under_offer';
+
+  return recordPublication({
     accountId,
     listingId,
     portal: 'each',
-    lastError: 'EACH credentials not configured',
-    metadata: { stage: 'pending_credentials' },
+    status: onMarket ? 'published' : 'pending',
+    lastError: onMarket
+      ? null
+      : `Listing is ${listing.status} — set Marketing or Under offer for EACH feed pickup`,
+    externalUrl: feedUrl,
+    metadata: {
+      stage: 'xml_feed',
+      portalFeed: 'each',
+      note: onMarket
+        ? 'Listed on the dedicated EACH XML feed'
+        : 'EACH feed ready; listing not yet on-market for export',
+    },
   });
 }
 

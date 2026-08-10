@@ -195,11 +195,12 @@ export function CreateProjectDialog({
           | 'medium'
           | 'high'
           | 'urgent',
-        due_date: isSimple || isOngoing
-          ? undefined
-          : dueDate
-            ? new Date(dueDate)
-            : undefined,
+        due_date:
+          isSimple || isOngoing
+            ? undefined
+            : dueDate
+              ? new Date(dueDate)
+              : undefined,
         is_ongoing: isSimple ? false : isOngoing,
         is_phased: isSimple ? false : isPhased,
         value_pence: isSimple

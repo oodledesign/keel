@@ -9,6 +9,8 @@ import {
   type EnquiryStatus,
   LISTING_STATUS_LABELS,
   type ListingStatus,
+  disposalIncludesForSale,
+  disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { workspacePanelCard } from '~/lib/workspace-ui';
@@ -27,10 +29,12 @@ type SharedListing = {
   status: string;
   disposal_type: string;
   asking_rent_pence: number | null;
+  asking_rent_to_pence: number | null;
   asking_price_pence: number | null;
   size_min_sqft: number | null;
   size_max_sqft: number | null;
   hide_rent_from_marketing: boolean;
+  hide_price_from_marketing: boolean;
 };
 
 type SharedEnquiry = {
@@ -76,7 +80,7 @@ async function loadSharedListing(
   const { data: listing, error } = await admin
     .from('commercial_listings')
     .select(
-      'id, name, address_line_1, address_line_2, town, postcode, status, disposal_type, asking_rent_pence, asking_price_pence, size_min_sqft, size_max_sqft, hide_rent_from_marketing',
+      'id, name, address_line_1, address_line_2, town, postcode, status, disposal_type, asking_rent_pence, asking_rent_to_pence, asking_price_pence, size_min_sqft, size_max_sqft, hide_rent_from_marketing, hide_price_from_marketing',
     )
     .eq('landlord_share_token', token)
     .eq('landlord_share_enabled', true)
@@ -165,10 +169,23 @@ async function LandlordSharePage({ params }: LandlordSharePageProps) {
           .join('–')} sq ft`
       : '—';
 
-  const rentLabel =
-    listing.hide_rent_from_marketing && disposalType === 'to_let'
-      ? 'On application'
-      : formatMoney(listing.asking_rent_pence);
+  const rentLabel = (() => {
+    if (!disposalIncludesToLet(disposalType)) return '—';
+    if (listing.hide_rent_from_marketing) return 'On application';
+    const from = listing.asking_rent_pence;
+    const to = listing.asking_rent_to_pence;
+    if (from == null && to == null) return '—';
+    if (from != null && to != null && from !== to) {
+      return `${formatMoney(from)} – ${formatMoney(to)}`;
+    }
+    return formatMoney(from ?? to);
+  })();
+
+  const priceLabel = (() => {
+    if (!disposalIncludesForSale(disposalType)) return '—';
+    if (listing.hide_price_from_marketing) return 'On application';
+    return formatMoney(listing.asking_price_pence);
+  })();
 
   return (
     <main className="min-h-screen bg-[var(--workspace-shell-canvas)] px-4 py-10">
@@ -195,10 +212,7 @@ async function LandlordSharePage({ params }: LandlordSharePageProps) {
 
         <div className="grid gap-4 sm:grid-cols-3">
           <SummaryTile label="Asking rent" value={rentLabel} />
-          <SummaryTile
-            label="Asking price"
-            value={formatMoney(listing.asking_price_pence)}
-          />
+          <SummaryTile label="Asking price" value={priceLabel} />
           <SummaryTile label="Size" value={sizeLabel} />
         </div>
 

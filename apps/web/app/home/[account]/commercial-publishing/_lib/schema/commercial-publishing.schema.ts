@@ -11,40 +11,15 @@ export const SavePropertyHiveCredentialsSchema = AccountIdSchema.extend({
   officeId: z.string().optional().nullable(),
 });
 
-export const SavePortalCredentialsSchema = z
-  .object({
-    accountId: z.string().uuid(),
-    portal: z.enum(['rightmove', 'each']),
-    branchId: z.string().optional().nullable(),
-    networkId: z.string().optional().nullable(),
-    username: z.string().optional(),
-    secret: z.string().optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.portal === 'each') {
-      if (!data.branchId?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Branch ID is required',
-          path: ['branchId'],
-        });
-      }
-      if (!data.networkId?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Network ID is required',
-          path: ['networkId'],
-        });
-      }
-      if (!data.username?.trim()) {
-        ctx.addIssue({
-          code: z.ZodIssueCode.custom,
-          message: 'Username is required',
-          path: ['username'],
-        });
-      }
-    }
-  });
+export const SavePortalCredentialsSchema = z.object({
+  accountId: z.string().uuid(),
+  /** @deprecated Rightmove uses env OAuth; EACH uses a dedicated XML feed. */
+  portal: z.enum(['rightmove', 'each']),
+  branchId: z.string().optional().nullable(),
+  networkId: z.string().optional().nullable(),
+  username: z.string().optional(),
+  secret: z.string().optional(),
+});
 
 export const TestPublishListingSchema = AccountIdSchema.extend({
   listingId: z.string().uuid().optional(),
@@ -56,6 +31,10 @@ export const TestPublishListingSchema = AccountIdSchema.extend({
 export const EnsurePropertyHiveFeedSchema = AccountIdSchema;
 
 export const RotatePropertyHiveFeedSchema = AccountIdSchema;
+
+export const EnsureEachFeedSchema = AccountIdSchema;
+
+export const RotateEachFeedSchema = AccountIdSchema;
 
 export const SaveRightmoveWorkspaceBranchesSchema = z.object({
   accountId: z.string().uuid(),

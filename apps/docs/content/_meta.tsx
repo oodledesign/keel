@@ -1,12 +1,17 @@
 import type { MetaRecord } from 'nextra';
 
+import { WorkspaceSidebarHeader } from '../../components/workspace-sidebar-header';
+
 /**
- * Root meta: introduction only in the sidebar.
- * Workspace trees are routed under /personal, /work, /commercial-property
- * and filtered via getPageMap in the layout — hide them here so they do not
- * appear as sibling nav groups on the homepage.
+ * Root meta: introduction + workspace picker.
+ * Workspace trees are filtered via getPageMap in the layout — hide them here
+ * so they do not appear as sibling nav groups on the homepage.
  */
 const meta: MetaRecord = {
+  '--workspace': {
+    type: 'separator',
+    title: <WorkspaceSidebarHeader />,
+  },
   index: 'Introduction',
   personal: {
     type: 'page',

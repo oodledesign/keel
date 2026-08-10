@@ -22,6 +22,7 @@ import {
 } from '~/lib/commercial/commercial-constants';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
+import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 
 const NAV = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, href: '' },
@@ -161,14 +162,24 @@ function OverviewHeader({
         </div>
 
         <div className="flex min-w-0 flex-1 flex-col justify-center gap-2">
-          <div>
-            <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
-              {listing.name}
-            </h2>
-            <p className="mt-1 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text)]/55">
-              <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-              <span>{address || 'No address'}</span>
-            </p>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <h2 className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+                {listing.name}
+              </h2>
+              <p className="mt-1 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text)]/55">
+                <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+                <span>{address || 'No address'}</span>
+              </p>
+            </div>
+            {(listing.actingAgents?.length ?? 0) > 0 ? (
+              <div className="shrink-0 pt-0.5">
+                <ListingAgentAvatarStack
+                  agents={listing.actingAgents ?? []}
+                  size="md"
+                />
+              </div>
+            ) : null}
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/60">

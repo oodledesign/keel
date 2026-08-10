@@ -29,7 +29,7 @@ export type RightmoveEnvConfig = {
 export function isRightmoveOAuthConfigured(): boolean {
   return Boolean(
     process.env.RIGHTMOVE_CLIENT_ID?.trim() &&
-      process.env.RIGHTMOVE_CLIENT_KEY?.trim(),
+    process.env.RIGHTMOVE_CLIENT_KEY?.trim(),
   );
 }
 
@@ -73,4 +73,7 @@ export function getRightmoveEnvironmentLabel(): RightmoveEnvironment {
   }
 }
 
-export { STAGING_BASE as RIGHTMOVE_STAGING_BASE, PRODUCTION_BASE as RIGHTMOVE_PRODUCTION_BASE };
+export {
+  STAGING_BASE as RIGHTMOVE_STAGING_BASE,
+  PRODUCTION_BASE as RIGHTMOVE_PRODUCTION_BASE,
+};

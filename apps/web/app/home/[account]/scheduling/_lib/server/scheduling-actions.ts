@@ -373,9 +373,8 @@ export const createHostBookingAction = enhanceAction(
       resolvedClientId = clientRow.id;
     }
 
-    const { createPublicBooking } = await import(
-      '~/book/_lib/server/public-booking.service'
-    );
+    const { createPublicBooking } =
+      await import('~/book/_lib/server/public-booking.service');
 
     const record = await createPublicBooking(
       {

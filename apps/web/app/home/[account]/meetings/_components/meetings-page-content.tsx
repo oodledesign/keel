@@ -12,8 +12,11 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  CalendarPlus,
+  ChevronDown,
   Copy,
   Eye,
+  FileText,
   Loader2,
   Mic,
   MoreHorizontal,
@@ -49,7 +52,12 @@ import {
   createMeetingTranscript,
   deleteMeetingTranscript,
 } from '../../meeting-transcripts/_lib/server/server-actions';
-import { meetingDisplayDate, todayIsoDate } from '../_lib/format-meeting-date';
+import { CreateMeetingDialog } from '../../scheduling/_components/create-meeting-dialog';
+import {
+  meetingDisplayDate,
+  todayIsoDate,
+  yesterdayIsoDate,
+} from '../_lib/format-meeting-date';
 import type { MeetingTranscriptListRow } from '../_lib/server/meetings-page.loader';
 import { MeetingParticipantAvatars } from './meeting-participant-avatars';
 
@@ -80,6 +88,7 @@ export function MeetingsPageContent({
   const searchParams = useSearchParams();
   const [rows, setRows] = useState(initialTranscripts);
   const [showForm, setShowForm] = useState(false);
+  const [createMeetingOpen, setCreateMeetingOpen] = useState(false);
   const [pending, startTransition] = useTransition();
   const [title, setTitle] = useState('');
   const [meetingDate, setMeetingDate] = useState(todayIsoDate());
@@ -176,6 +185,11 @@ export function MeetingsPageContent({
 
   const handleFile = async (file: File) => {
     if (!canEdit) return;
+    const maxTranscriptBytes = 5 * 1024 * 1024;
+    if (file.size > maxTranscriptBytes) {
+      toast.error('File is too large (max 5 MB)');
+      return;
+    }
     const text = await file.text();
     setTitle(file.name.replace(/\.[^.]+$/, ''));
     setContent(text);
@@ -232,23 +246,68 @@ export function MeetingsPageContent({
           </p>
         </div>
         {canEdit ? (
-          <Button
-            size="sm"
-            className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-            onClick={() => setShowForm((open) => !open)}
-          >
-            <PlusCircle className="mr-2 h-4 w-4" />
-            {showForm ? 'Cancel' : 'Add meeting'}
-          </Button>
+          showForm ? (
+            <Button
+              size="sm"
+              variant="outline"
+              className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text)]"
+              onClick={resetForm}
+            >
+              Cancel
+            </Button>
+          ) : (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  size="sm"
+                  className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
+                >
+                  <PlusCircle className="mr-2 h-4 w-4" />
+                  Add meeting
+                  <ChevronDown className="ml-1.5 h-3.5 w-3.5 opacity-80" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+              >
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2"
+                  onSelect={() => setCreateMeetingOpen(true)}
+                >
+                  <CalendarPlus className="h-4 w-4 text-[var(--ozer-accent)]" />
+                  Add upcoming meeting
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  className="cursor-pointer gap-2"
+                  onSelect={() => {
+                    setMeetingDate(yesterdayIsoDate());
+                    setShowForm(true);
+                  }}
+                >
+                  <FileText className="h-4 w-4 text-[var(--ozer-accent)]" />
+                  Add past meeting
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )
         ) : null}
       </div>
+
+      <CreateMeetingDialog
+        open={createMeetingOpen}
+        onOpenChange={setCreateMeetingOpen}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        onCreated={() => router.refresh()}
+      />
 
       {canEdit && showForm ? (
         <div className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
           <div className="flex items-center gap-2">
             <Mic className="h-4 w-4 text-[var(--ozer-accent)]" />
             <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-              New meeting
+              Past meeting
             </h3>
           </div>
           <div className="grid gap-3 sm:grid-cols-2">

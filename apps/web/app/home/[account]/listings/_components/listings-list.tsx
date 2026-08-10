@@ -43,12 +43,6 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@kit/ui/tooltip';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -67,11 +61,9 @@ import {
   workspacePanelCard,
 } from '~/lib/workspace-ui';
 
-import type {
-  CommercialListing,
-  ListingAgent,
-} from '../_lib/server/listings.service';
+import type { CommercialListing } from '../_lib/server/listings.service';
 import { deleteListing } from '../_lib/server/server-actions';
+import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
 
 interface ListingsListProps {
@@ -573,7 +565,10 @@ function ListingCard({
         )}
 
         {(listing.actingAgents?.length ?? 0) > 0 ? (
-          <AgentAvatarStack agents={listing.actingAgents ?? []} />
+          <ListingAgentAvatarStack
+            agents={listing.actingAgents ?? []}
+            size="sm"
+          />
         ) : null}
 
         {(listing.coAgents?.length ?? 0) > 0 ? (
@@ -640,46 +635,6 @@ function ListingActions({
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
-  );
-}
-
-function AgentAvatarStack({ agents }: { agents: ListingAgent[] }) {
-  return (
-    <TooltipProvider delayDuration={200}>
-      <div className="flex items-center -space-x-2">
-        {agents.slice(0, 4).map((agent) => (
-          <Tooltip key={agent.userId}>
-            <TooltipTrigger asChild>
-              <span className="relative inline-flex h-7 w-7 overflow-hidden rounded-full ring-2 ring-[var(--workspace-shell-panel)]">
-                {agent.pictureUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={agent.pictureUrl}
-                    alt=""
-                    className="h-full w-full object-cover"
-                  />
-                ) : (
-                  <span className="flex h-full w-full items-center justify-center bg-[var(--workspace-shell-sidebar-accent)] text-[10px] font-semibold text-[var(--workspace-shell-text)]/70">
-                    {agent.name
-                      .split(/\s+/)
-                      .map((p) => p[0])
-                      .join('')
-                      .slice(0, 2)
-                      .toUpperCase()}
-                  </span>
-                )}
-              </span>
-            </TooltipTrigger>
-            <TooltipContent side="top">{agent.name}</TooltipContent>
-          </Tooltip>
-        ))}
-        {agents.length > 4 ? (
-          <span className="inline-flex h-7 w-7 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[10px] font-medium text-[var(--workspace-shell-text)]/60 ring-2 ring-[var(--workspace-shell-panel)]">
-            +{agents.length - 4}
-          </span>
-        ) : null}
-      </div>
-    </TooltipProvider>
   );
 }
 

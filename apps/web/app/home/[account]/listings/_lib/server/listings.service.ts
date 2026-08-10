@@ -123,9 +123,14 @@ export type CommercialListing = {
   conditionDescription: string | null;
   status: ListingStatus;
   askingRentPence: number | null;
+  askingRentToPence: number | null;
   askingPricePence: number | null;
   rentFrequency: string | null;
   hideRentFromMarketing: boolean;
+  hidePriceFromMarketing: boolean;
+  serviceChargePerSqft: number | null;
+  ratesPayablePerSqft: number | null;
+  estateChargePerSqft: number | null;
   sizeMinSqft: number | null;
   sizeMaxSqft: number | null;
   measurementStandard: string | null;
@@ -133,6 +138,10 @@ export type CommercialListing = {
   availableFrom: string | null;
   epcBand: string | null;
   epcRating: number | null;
+  possession: string | null;
+  buildStatus: string | null;
+  planningStatus: string | null;
+  fittedSpace: boolean | null;
   summary: string | null;
   description: string | null;
   locationCopy: string | null;
@@ -222,8 +231,25 @@ export type CommercialListingUnit = {
   accountId: string;
   label: string;
   floorOrUnit: string | null;
+  description: string | null;
+  partFloor: boolean;
+  sector: string | null;
+  tenure: string | null;
+  status: string | null;
   sizeSqft: number | null;
   measurementStandard: string | null;
+  askingRentPence: number | null;
+  rentPerSqft: number | null;
+  serviceChargePerSqft: number | null;
+  ratesPayablePerSqft: number | null;
+  estateChargePerSqft: number | null;
+  epcBand: string | null;
+  possession: string | null;
+  buildStatus: string | null;
+  planningStatus: string | null;
+  fittedSpace: boolean | null;
+  sizeAccuracy: string | null;
+  notes: string | null;
   sortOrder: number;
   externalId: string | null;
 };
@@ -366,9 +392,14 @@ function mapListing(row: ListingRow): CommercialListing {
     conditionDescription: (row.condition_description as string | null) ?? null,
     status: (row.status as ListingStatus) ?? 'draft',
     askingRentPence: num(row.asking_rent_pence),
+    askingRentToPence: num(row.asking_rent_to_pence),
     askingPricePence: num(row.asking_price_pence),
     rentFrequency: (row.rent_frequency as string | null) ?? null,
     hideRentFromMarketing: Boolean(row.hide_rent_from_marketing),
+    hidePriceFromMarketing: Boolean(row.hide_price_from_marketing),
+    serviceChargePerSqft: num(row.service_charge_per_sqft),
+    ratesPayablePerSqft: num(row.rates_payable_per_sqft),
+    estateChargePerSqft: num(row.estate_charge_per_sqft),
     sizeMinSqft: num(row.size_min_sqft),
     sizeMaxSqft: num(row.size_max_sqft),
     measurementStandard: (row.measurement_standard as string | null) ?? null,
@@ -376,6 +407,10 @@ function mapListing(row: ListingRow): CommercialListing {
     availableFrom: (row.available_from as string | null) ?? null,
     epcBand: (row.epc_band as string | null) ?? null,
     epcRating: num(row.epc_rating),
+    possession: (row.possession as string | null) ?? null,
+    buildStatus: (row.build_status as string | null) ?? null,
+    planningStatus: (row.planning_status as string | null) ?? null,
+    fittedSpace: row.fitted_space == null ? null : Boolean(row.fitted_space),
     summary: (row.summary as string | null) ?? null,
     description: (row.description as string | null) ?? null,
     locationCopy: (row.location_copy as string | null) ?? null,
@@ -401,8 +436,25 @@ function mapUnit(row: UnitRow): CommercialListingUnit {
     accountId: row.account_id,
     label: row.label,
     floorOrUnit: (row.floor_or_unit as string | null) ?? null,
+    description: (row.description as string | null) ?? null,
+    partFloor: Boolean(row.part_floor),
+    sector: (row.sector as string | null) ?? null,
+    tenure: (row.tenure as string | null) ?? null,
+    status: (row.status as string | null) ?? null,
     sizeSqft: num(row.size_sqft),
     measurementStandard: (row.measurement_standard as string | null) ?? null,
+    askingRentPence: num(row.asking_rent_pence),
+    rentPerSqft: num(row.rent_per_sqft),
+    serviceChargePerSqft: num(row.service_charge_per_sqft),
+    ratesPayablePerSqft: num(row.rates_payable_per_sqft),
+    estateChargePerSqft: num(row.estate_charge_per_sqft),
+    epcBand: (row.epc_band as string | null) ?? null,
+    possession: (row.possession as string | null) ?? null,
+    buildStatus: (row.build_status as string | null) ?? null,
+    planningStatus: (row.planning_status as string | null) ?? null,
+    fittedSpace: row.fitted_space == null ? null : Boolean(row.fitted_space),
+    sizeAccuracy: (row.size_accuracy as string | null) ?? null,
+    notes: (row.notes as string | null) ?? null,
     sortOrder: row.sort_order ?? 0,
     externalId: (row.external_id as string | null) ?? null,
   };
@@ -533,6 +585,9 @@ function writeColumns(input: Partial<CreateListingInput>) {
     ...(input.askingRentPence !== undefined && {
       asking_rent_pence: input.askingRentPence,
     }),
+    ...(input.askingRentToPence !== undefined && {
+      asking_rent_to_pence: input.askingRentToPence,
+    }),
     ...(input.askingPricePence !== undefined && {
       asking_price_pence: input.askingPricePence,
     }),
@@ -541,6 +596,18 @@ function writeColumns(input: Partial<CreateListingInput>) {
     }),
     ...(input.hideRentFromMarketing !== undefined && {
       hide_rent_from_marketing: input.hideRentFromMarketing,
+    }),
+    ...(input.hidePriceFromMarketing !== undefined && {
+      hide_price_from_marketing: input.hidePriceFromMarketing,
+    }),
+    ...(input.serviceChargePerSqft !== undefined && {
+      service_charge_per_sqft: input.serviceChargePerSqft,
+    }),
+    ...(input.ratesPayablePerSqft !== undefined && {
+      rates_payable_per_sqft: input.ratesPayablePerSqft,
+    }),
+    ...(input.estateChargePerSqft !== undefined && {
+      estate_charge_per_sqft: input.estateChargePerSqft,
     }),
     ...(input.sizeMinSqft !== undefined && {
       size_min_sqft: input.sizeMinSqft,
@@ -557,6 +624,16 @@ function writeColumns(input: Partial<CreateListingInput>) {
     }),
     ...(input.epcBand !== undefined && { epc_band: input.epcBand }),
     ...(input.epcRating !== undefined && { epc_rating: input.epcRating }),
+    ...(input.possession !== undefined && { possession: input.possession }),
+    ...(input.buildStatus !== undefined && {
+      build_status: input.buildStatus,
+    }),
+    ...(input.planningStatus !== undefined && {
+      planning_status: input.planningStatus,
+    }),
+    ...(input.fittedSpace !== undefined && {
+      fitted_space: input.fittedSpace,
+    }),
     ...(input.summary !== undefined && { summary: input.summary }),
     ...(input.description !== undefined && { description: input.description }),
     ...(input.locationCopy !== undefined && {
@@ -811,10 +888,12 @@ export function createListingsService(client: SupabaseClient) {
         .maybeSingle();
 
       if (error || !data) return null;
-      const [withCover] = await attachCoverUrls(client, [
-        mapListing(data as ListingRow),
+      const mapped = mapListing(data as ListingRow);
+      const [withCover] = await attachCoverUrls(client, [mapped]);
+      const [withAgents] = await attachActingAgents(client, accountId, [
+        withCover ?? mapped,
       ]);
-      return withCover ?? null;
+      return withAgents ?? withCover ?? mapped;
     },
 
     async createListing(
@@ -839,9 +918,14 @@ export function createListingsService(client: SupabaseClient) {
           instruction_nature: input.instructionNature ?? 'exclusive',
           status: input.status ?? 'draft',
           asking_rent_pence: input.askingRentPence ?? null,
+          asking_rent_to_pence: input.askingRentToPence ?? null,
           asking_price_pence: input.askingPricePence ?? null,
           rent_frequency: input.rentFrequency ?? 'per_annum',
           hide_rent_from_marketing: input.hideRentFromMarketing ?? false,
+          hide_price_from_marketing: input.hidePriceFromMarketing ?? false,
+          service_charge_per_sqft: input.serviceChargePerSqft ?? null,
+          rates_payable_per_sqft: input.ratesPayablePerSqft ?? null,
+          estate_charge_per_sqft: input.estateChargePerSqft ?? null,
           size_min_sqft: input.sizeMinSqft ?? null,
           size_max_sqft: input.sizeMaxSqft ?? null,
           measurement_standard: input.measurementStandard ?? 'gia',
@@ -849,6 +933,10 @@ export function createListingsService(client: SupabaseClient) {
           available_from: input.availableFrom ?? null,
           epc_band: input.epcBand ?? null,
           epc_rating: input.epcRating ?? null,
+          possession: input.possession ?? null,
+          build_status: input.buildStatus ?? null,
+          planning_status: input.planningStatus ?? null,
+          fitted_space: input.fittedSpace ?? null,
           summary: input.summary ?? null,
           description: input.description ?? null,
           location_copy: input.locationCopy ?? null,
@@ -971,8 +1059,25 @@ export function createListingsService(client: SupabaseClient) {
           listing_id: input.listingId,
           label: input.label,
           floor_or_unit: input.floorOrUnit ?? null,
+          description: input.description ?? null,
+          part_floor: input.partFloor ?? false,
+          sector: input.sector ?? null,
+          tenure: input.tenure ?? null,
+          status: input.status ?? null,
           size_sqft: input.sizeSqft ?? null,
           measurement_standard: input.measurementStandard ?? 'gia',
+          asking_rent_pence: input.askingRentPence ?? null,
+          rent_per_sqft: input.rentPerSqft ?? null,
+          service_charge_per_sqft: input.serviceChargePerSqft ?? null,
+          rates_payable_per_sqft: input.ratesPayablePerSqft ?? null,
+          estate_charge_per_sqft: input.estateChargePerSqft ?? null,
+          epc_band: input.epcBand ?? null,
+          possession: input.possession ?? null,
+          build_status: input.buildStatus ?? null,
+          planning_status: input.planningStatus ?? null,
+          fitted_space: input.fittedSpace ?? null,
+          size_accuracy: input.sizeAccuracy ?? null,
+          notes: input.notes ?? null,
           sort_order: input.sortOrder ?? 0,
           external_id: input.externalId ?? null,
         })
@@ -989,7 +1094,7 @@ export function createListingsService(client: SupabaseClient) {
     async updateUnit(
       unitId: string,
       accountId: string,
-      input: UpdateListingUnitInput,
+      input: Omit<UpdateListingUnitInput, 'unitId' | 'accountId'>,
     ): Promise<CommercialListingUnit> {
       const patch: Record<string, unknown> = {
         updated_at: new Date().toISOString(),
@@ -997,10 +1102,45 @@ export function createListingsService(client: SupabaseClient) {
       if (input.label !== undefined) patch.label = input.label;
       if (input.floorOrUnit !== undefined)
         patch.floor_or_unit = input.floorOrUnit;
+      if (input.description !== undefined)
+        patch.description = input.description;
+      if (input.partFloor !== undefined) patch.part_floor = input.partFloor;
+      if (input.sector !== undefined) patch.sector = input.sector;
+      if (input.tenure !== undefined) patch.tenure = input.tenure;
+      if (input.status !== undefined) patch.status = input.status;
       if (input.sizeSqft !== undefined) patch.size_sqft = input.sizeSqft;
       if (input.measurementStandard !== undefined) {
         patch.measurement_standard = input.measurementStandard;
       }
+      if (input.askingRentPence !== undefined) {
+        patch.asking_rent_pence = input.askingRentPence;
+      }
+      if (input.rentPerSqft !== undefined)
+        patch.rent_per_sqft = input.rentPerSqft;
+      if (input.serviceChargePerSqft !== undefined) {
+        patch.service_charge_per_sqft = input.serviceChargePerSqft;
+      }
+      if (input.ratesPayablePerSqft !== undefined) {
+        patch.rates_payable_per_sqft = input.ratesPayablePerSqft;
+      }
+      if (input.estateChargePerSqft !== undefined) {
+        patch.estate_charge_per_sqft = input.estateChargePerSqft;
+      }
+      if (input.epcBand !== undefined) patch.epc_band = input.epcBand;
+      if (input.possession !== undefined) patch.possession = input.possession;
+      if (input.buildStatus !== undefined) {
+        patch.build_status = input.buildStatus;
+      }
+      if (input.planningStatus !== undefined) {
+        patch.planning_status = input.planningStatus;
+      }
+      if (input.fittedSpace !== undefined) {
+        patch.fitted_space = input.fittedSpace;
+      }
+      if (input.sizeAccuracy !== undefined) {
+        patch.size_accuracy = input.sizeAccuracy;
+      }
+      if (input.notes !== undefined) patch.notes = input.notes;
       if (input.sortOrder !== undefined) patch.sort_order = input.sortOrder;
       if (input.externalId !== undefined) patch.external_id = input.externalId;
 
@@ -1160,9 +1300,8 @@ export function createListingsService(client: SupabaseClient) {
       if (fetchError) throw new Error(fetchError.message);
       if (!existing) throw new Error('Media not found');
 
-      const previousPath = (
-        existing as { storage_path?: string | null } | null
-      )?.storage_path;
+      const previousPath = (existing as { storage_path?: string | null } | null)
+        ?.storage_path;
 
       const patch: Record<string, unknown> = {};
       if (input.fileName !== undefined) {
@@ -1226,7 +1365,8 @@ export function createListingsService(client: SupabaseClient) {
         fetchQuery = fetchQuery.eq('listing_id', listingId);
       }
 
-      const { data: existing, error: fetchError } = await fetchQuery.maybeSingle();
+      const { data: existing, error: fetchError } =
+        await fetchQuery.maybeSingle();
 
       if (fetchError) throw new Error(fetchError.message);
       if (!existing) throw new Error('Media not found');
@@ -2149,8 +2289,7 @@ export function createListingsService(client: SupabaseClient) {
       const contactName = input.contactName?.trim() || null;
       const contactEmail = input.contactEmail?.trim() || null;
       const contactPhone = input.contactPhone?.trim() || null;
-      const commercialRole =
-        input.role === 'landlord' ? 'landlord' : 'other';
+      const commercialRole = input.role === 'landlord' ? 'landlord' : 'other';
 
       if (!clientId) {
         const companyName = input.companyName?.trim();

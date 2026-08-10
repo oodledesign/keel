@@ -14,10 +14,18 @@ export const UNIT_CSV_FIELDS = [
   'part_floor',
   'size_sqft',
   'sector',
+  'tenure',
   'status',
   'asking_rent',
   'rent_per_sqft',
+  'service_charge',
+  'rates_payable',
+  'estate_charge',
   'epc_band',
+  'possession',
+  'build_status',
+  'planning_status',
+  'fitted_space',
   'notes',
 ] as const;
 
@@ -36,10 +44,18 @@ export const UNIT_CSV_FIELD_OPTIONS: Array<{
   { value: 'part_floor', label: 'Part floor' },
   { value: 'size_sqft', label: 'Size (sq ft)' },
   { value: 'sector', label: 'Property type' },
+  { value: 'tenure', label: 'Tenure' },
   { value: 'status', label: 'Status' },
   { value: 'asking_rent', label: 'Rent (annum)' },
   { value: 'rent_per_sqft', label: 'Rent (sq ft)' },
+  { value: 'service_charge', label: 'Service charge (£/sq ft)' },
+  { value: 'rates_payable', label: 'Rates payable (£/sq ft)' },
+  { value: 'estate_charge', label: 'Estate charge (£/sq ft)' },
   { value: 'epc_band', label: 'EPC rating' },
+  { value: 'possession', label: 'Possession' },
+  { value: 'build_status', label: 'Build status' },
+  { value: 'planning_status', label: 'Planning status' },
+  { value: 'fitted_space', label: 'Fitted space' },
   { value: 'notes', label: 'Notes' },
 ];
 
@@ -103,7 +119,15 @@ export function heuristicUnitMapping(
   assignExact('status', 'status');
   assignExact('asking_rent', 'rent (annum)');
   assignExact('rent_per_sqft', 'rent (sq ft)');
+  assignExact('service_charge', 'service charge (sq ft)', 'service charge');
+  assignExact('rates_payable', 'rates payable (sq ft)', 'rates payable');
+  assignExact('estate_charge', 'estate charge (sq ft)', 'estate charge');
   assignExact('epc_band', 'epc rating');
+  assignExact('possession', 'possession');
+  assignExact('build_status', 'build status');
+  assignExact('planning_status', 'planning status');
+  assignExact('fitted_space', 'fitted space');
+  assignExact('tenure', 'tenure', 'lease type');
 
   return {
     mapping,

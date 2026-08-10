@@ -1,9 +1,9 @@
 import 'server-only';
 
 import {
+  type RightmoveEnvironment,
   getRightmoveEnv,
   isRightmoveOAuthConfigured,
-  type RightmoveEnvironment,
 } from './rightmove-env';
 import type {
   RemoveCommercialProperty,
@@ -36,14 +36,108 @@ function basicAuthHeader(clientId: string, clientKey: string) {
   return `Basic ${credentials}`;
 }
 
-function parseProblemDetail(body: string): string {
+export class RightmoveApiError extends Error {
+  readonly status: number;
+  readonly rawBody: string;
+
+  constructor(message: string, status: number, rawBody: string) {
+    super(message);
+    this.name = 'RightmoveApiError';
+    this.status = status;
+    this.rawBody = rawBody;
+  }
+}
+
+function formatValidationErrors(value: unknown): string | null {
+  if (!value) return null;
+
+  if (typeof value === 'string' && value.trim()) {
+    return value.trim();
+  }
+
+  if (Array.isArray(value)) {
+    const parts = value
+      .map((item) => {
+        if (typeof item === 'string') return item.trim();
+        if (!item || typeof item !== 'object') return null;
+        const row = item as Record<string, unknown>;
+        const field =
+          (typeof row.field === 'string' && row.field) ||
+          (typeof row.path === 'string' && row.path) ||
+          (typeof row.pointer === 'string' && row.pointer) ||
+          (typeof row.property === 'string' && row.property) ||
+          null;
+        const message =
+          (typeof row.message === 'string' && row.message) ||
+          (typeof row.defaultMessage === 'string' && row.defaultMessage) ||
+          (typeof row.error === 'string' && row.error) ||
+          (typeof row.detail === 'string' && row.detail) ||
+          null;
+        if (field && message) return `${field}: ${message}`;
+        return message || field;
+      })
+      .filter((part): part is string => Boolean(part?.trim()));
+    return parts.length ? parts.join('; ') : null;
+  }
+
+  if (typeof value === 'object') {
+    const row = value as Record<string, unknown>;
+    // Nested property-errors map: { "building.pricing.price": ["must be …"] }
+    const entries = Object.entries(row).flatMap(([key, val]) => {
+      if (typeof val === 'string') return [`${key}: ${val}`];
+      if (Array.isArray(val)) {
+        return val
+          .filter(
+            (v): v is string => typeof v === 'string' && Boolean(v.trim()),
+          )
+          .map((v) => `${key}: ${v}`);
+      }
+      return [];
+    });
+    if (entries.length) return entries.join('; ');
+
+    return (
+      formatValidationErrors(row.errors) ||
+      formatValidationErrors(row.violations) ||
+      formatValidationErrors(row.fieldErrors) ||
+      formatValidationErrors(row.messages)
+    );
+  }
+
+  return null;
+}
+
+/**
+ * Parse Rightmove RFC 7807 ProblemDetail (and common nested validation payloads)
+ * into a short human-readable error string.
+ */
+export function parseProblemDetail(body: string): string {
   try {
     const parsed = JSON.parse(body) as {
       title?: string;
       detail?: string;
       status?: number;
+      type?: string;
+      errors?: unknown;
+      violations?: unknown;
+      properties?: {
+        validationError?: unknown;
+        errors?: unknown;
+        violations?: unknown;
+        traceId?: string;
+      };
     };
-    const parts = [parsed.title, parsed.detail].filter(Boolean);
+
+    const validation =
+      formatValidationErrors(parsed.properties?.validationError) ||
+      formatValidationErrors(parsed.properties?.errors) ||
+      formatValidationErrors(parsed.properties?.violations) ||
+      formatValidationErrors(parsed.errors) ||
+      formatValidationErrors(parsed.violations);
+
+    const parts = [parsed.title, parsed.detail, validation].filter(
+      (part): part is string => Boolean(part?.trim()),
+    );
     if (parts.length) return parts.join(' — ');
   } catch {
     // fall through
@@ -109,8 +203,7 @@ export async function getRightmoveAccessToken(
   cachedToken = {
     accessToken: json.access_token,
     tokenType: json.token_type ?? 'Bearer',
-    expiresIn:
-      typeof json.expires_in === 'number' ? json.expires_in : null,
+    expiresIn: typeof json.expires_in === 'number' ? json.expires_in : null,
     obtainedAt: Date.now(),
   };
 
@@ -240,10 +333,7 @@ export type RightmoveDeleteResult = {
 };
 
 function firstDisplayPath(
-  display:
-    | Record<string, string>
-    | Record<string, unknown>
-    | undefined,
+  display: Record<string, string> | Record<string, unknown> | undefined,
 ): string | null {
   if (!display || typeof display !== 'object') return null;
   for (const value of Object.values(display)) {
@@ -275,11 +365,14 @@ export async function putCommercialProperty(input: {
   payload: RightmovePropertyPayload;
 }): Promise<RightmovePutResult> {
   const reference = encodeURIComponent(input.reference);
-  const response = await rightmoveFetch(`/v2/property/commercial/${reference}`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input.payload),
-  });
+  const response = await rightmoveFetch(
+    `/v2/property/commercial/${reference}`,
+    {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(input.payload),
+    },
+  );
 
   const raw = await response.text();
   let body: RightmovePropertySaveAction | null = null;
@@ -292,8 +385,10 @@ export async function putCommercialProperty(input: {
   }
 
   if (!response.ok) {
-    throw new Error(
+    throw new RightmoveApiError(
       `Rightmove PUT failed (${response.status}): ${parseProblemDetail(raw)}`,
+      response.status,
+      raw,
     );
   }
 
@@ -317,19 +412,24 @@ export async function deleteCommercialProperty(input: {
   removalReason: RightmoveRemovalReason;
 }): Promise<RightmoveDeleteResult> {
   const reference = encodeURIComponent(input.reference);
-  const response = await rightmoveFetch(`/v2/property/commercial/${reference}`, {
-    method: 'DELETE',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      agentId: input.agentId,
-      removalReason: input.removalReason,
-    } satisfies RemoveCommercialProperty),
-  });
+  const response = await rightmoveFetch(
+    `/v2/property/commercial/${reference}`,
+    {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        agentId: input.agentId,
+        removalReason: input.removalReason,
+      } satisfies RemoveCommercialProperty),
+    },
+  );
 
   const raw = await response.text();
   if (!response.ok) {
-    throw new Error(
+    throw new RightmoveApiError(
       `Rightmove DELETE failed (${response.status}): ${parseProblemDetail(raw)}`,
+      response.status,
+      raw,
     );
   }
 

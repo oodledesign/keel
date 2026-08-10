@@ -27,19 +27,17 @@ import { Textarea } from '@kit/ui/textarea';
 
 import {
   listClients,
-  listContacts,
+  listWorkspaceContacts,
 } from '~/home/[account]/clients/_lib/server/server-actions';
 import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
-import {
-  workspaceBtnPrimaryMd,
-  workspaceTextMuted,
-} from '~/lib/workspace-ui';
+import { workspaceBtnPrimaryMd, workspaceTextMuted } from '~/lib/workspace-ui';
 
 import {
   createHostBookingAction,
   getHostBusyIntervalsAction,
   listCreateMeetingOptionsAction,
 } from '../_lib/server/scheduling-actions';
+import { CreateMeetingContactCombobox } from './create-meeting-contact-combobox';
 import {
   CreateMeetingWeekGrid,
   type HostBusyInterval,
@@ -130,6 +128,19 @@ function browserTimezone() {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function resolveContactEmail(contact: {
+  email?: string | null;
+  emails?: Array<{ email?: string | null; is_primary?: boolean | null }>;
+}) {
+  const emails = contact.emails ?? [];
+  return (
+    emails.find((address) => address.is_primary)?.email?.trim() ||
+    emails.find((address) => address.email?.trim())?.email?.trim() ||
+    contact.email?.trim() ||
+    null
+  );
 }
 
 function makeAttendeeKey() {
@@ -227,6 +238,7 @@ export function CreateMeetingDialog({
     setBusy([]);
     setLoadingOptions(true);
     setClientsLoading(true);
+    setContactsLoading(true);
 
     void listCreateMeetingOptionsAction({ accountId })
       .then((options) => {
@@ -272,6 +284,34 @@ export function CreateMeetingDialog({
       })
       .catch(() => setClients([]))
       .finally(() => setClientsLoading(false));
+
+    void listWorkspaceContacts({ accountId })
+      .then((result) => {
+        const rows = Array.isArray((result as { data?: unknown })?.data)
+          ? (
+              result as {
+                data: Array<{
+                  id: string;
+                  full_name: string;
+                  email?: string | null;
+                  emails?: Array<{
+                    email?: string | null;
+                    is_primary?: boolean | null;
+                  }>;
+                }>;
+              }
+            ).data
+          : [];
+        setContacts(
+          rows.map((row) => ({
+            id: row.id,
+            full_name: row.full_name,
+            email: resolveContactEmail(row),
+          })),
+        );
+      })
+      .catch(() => setContacts([]))
+      .finally(() => setContactsLoading(false));
   }, [
     open,
     accountId,
@@ -288,49 +328,6 @@ export function CreateMeetingDialog({
       );
     }
   }, [selectedEvent, durationMinutes]);
-
-  useEffect(() => {
-    if (!open || !clientId) {
-      setContacts([]);
-      setContactToAdd('');
-      return;
-    }
-
-    let cancelled = false;
-    setContactsLoading(true);
-    void listContacts({ accountId, clientId })
-      .then((result) => {
-        if (cancelled) return;
-        const rows = Array.isArray((result as { data?: unknown })?.data)
-          ? (
-              result as {
-                data: Array<{
-                  id: string;
-                  full_name: string;
-                  email?: string | null;
-                }>;
-              }
-            ).data
-          : [];
-        setContacts(
-          rows.map((row) => ({
-            id: row.id,
-            full_name: row.full_name,
-            email: row.email ?? null,
-          })),
-        );
-      })
-      .catch(() => {
-        if (!cancelled) setContacts([]);
-      })
-      .finally(() => {
-        if (!cancelled) setContactsLoading(false);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [open, accountId, clientId]);
 
   useEffect(() => {
     if (!open || !accountId) return;
@@ -650,8 +647,9 @@ export function CreateMeetingDialog({
                   Invitees
                 </p>
                 <p className={`text-xs ${workspaceTextMuted}`}>
-                  Assign a client (optional), add contacts, or type any email.
-                  The first person is the primary invitee; others are guests.
+                  Optionally link a client, search any workspace contact, or
+                  type an email. The first person is the primary invitee; others
+                  are guests.
                 </p>
               </div>
 
@@ -723,49 +721,34 @@ export function CreateMeetingDialog({
                 </p>
               )}
 
-              {clientId ? (
-                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
-                  <div className="min-w-0 flex-1 space-y-2">
-                    <Label>Add contact</Label>
-                    <Select
-                      value={contactToAdd || undefined}
-                      onValueChange={setContactToAdd}
-                      disabled={
-                        contactsLoading || availableContacts.length === 0
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue
-                          placeholder={
-                            contactsLoading
-                              ? 'Loading contacts…'
-                              : availableContacts.length === 0
-                                ? 'No contacts with email'
-                                : 'Select contact'
-                          }
-                        />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {availableContacts.map((contact) => (
-                          <SelectItem key={contact.id} value={contact.id}>
-                            {contact.full_name}
-                            {contact.email ? ` · ${contact.email}` : ''}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={addContactAttendee}
-                    disabled={!contactToAdd}
-                  >
-                    <Plus className="mr-1.5 h-4 w-4" />
-                    Add contact
-                  </Button>
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                <div className="min-w-0 flex-1 space-y-2">
+                  <Label>Add contact</Label>
+                  <CreateMeetingContactCombobox
+                    contacts={availableContacts}
+                    value={contactToAdd}
+                    onValueChange={setContactToAdd}
+                    loading={contactsLoading}
+                    disabled={contactsLoading || availableContacts.length === 0}
+                    placeholder={
+                      contactsLoading
+                        ? 'Loading contacts…'
+                        : availableContacts.length === 0
+                          ? 'No contacts with email'
+                          : 'Search contacts…'
+                    }
+                  />
                 </div>
-              ) : null}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addContactAttendee}
+                  disabled={!contactToAdd}
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Add contact
+                </Button>
+              </div>
 
               <div className="grid gap-2 sm:grid-cols-[1fr_1.2fr_auto] sm:items-end">
                 <div className="space-y-2">

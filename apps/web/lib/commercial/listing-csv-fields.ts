@@ -20,6 +20,7 @@ export const LISTING_CSV_FIELDS = [
   'size_max_sqft',
   'size_metric',
   'asking_rent',
+  'asking_rent_to',
   'asking_price',
   'rent_frequency',
   'summary',
@@ -27,7 +28,9 @@ export const LISTING_CSV_FIELDS = [
   'notes',
   'service_charge',
   'rates_payable',
+  'estate_charge',
   'our_instructions',
+  'investment',
 ] as const;
 
 export type ListingCsvField = (typeof LISTING_CSV_FIELDS)[number];
@@ -50,15 +53,18 @@ export const LISTING_CSV_FIELD_OPTIONS: Array<{
   { value: 'size_min_sqft', label: 'Size from' },
   { value: 'size_max_sqft', label: 'Size to' },
   { value: 'size_metric', label: 'Size metric (sq ft, hectares…)' },
-  { value: 'asking_rent', label: 'Rent / asking rent' },
+  { value: 'asking_rent', label: 'Rent / asking rent from' },
+  { value: 'asking_rent_to', label: 'Rent to' },
   { value: 'asking_price', label: 'Sale price' },
   { value: 'rent_frequency', label: 'Rent metric' },
   { value: 'summary', label: 'Summary' },
   { value: 'description', label: 'Terms / description' },
   { value: 'notes', label: 'Notes' },
-  { value: 'service_charge', label: 'Service charge' },
-  { value: 'rates_payable', label: 'Rates payable' },
+  { value: 'service_charge', label: 'Service charge (£/sq ft)' },
+  { value: 'rates_payable', label: 'Rates payable (£/sq ft)' },
+  { value: 'estate_charge', label: 'Estate charge (£/sq ft)' },
   { value: 'our_instructions', label: 'Our instructions?' },
+  { value: 'investment', label: 'Investment?' },
 ];
 
 export type ListingCsvMapResult = {
@@ -132,7 +138,8 @@ export function heuristicListingMapping(
   assignExact('size_min_sqft', 'size from');
   assignExact('size_max_sqft', 'size to');
   assignExact('size_metric', 'size metric');
-  assignExact('asking_rent', 'rent from', 'rent to');
+  assignExact('asking_rent', 'rent from');
+  assignExact('asking_rent_to', 'rent to');
   assignExact('asking_price', 'price (sortable)', 'price');
   assignExact('rent_frequency', 'rent metric');
   assignExact('tenure', 'lease type', 'sale type');
@@ -141,8 +148,10 @@ export function heuristicListingMapping(
   assignExact('description', 'terms');
   assignExact('service_charge', 'service charge (sq ft)', 'service charge');
   assignExact('rates_payable', 'rates payable (sq ft)', 'rates payable');
+  assignExact('estate_charge', 'estate charge (sq ft)', 'estate charge');
   assignExact('our_instructions', 'our instructions?');
-  assignExact('disposal_type', 'investment?');
+  assignExact('investment', 'investment?');
+  assignExact('disposal_type', 'disposal type', 'availability');
 
   assignIncludes('name', 'listing name', 'property name', 'name');
   assignIncludes('address_line_2', 'address 2', 'address line 2');
@@ -159,15 +168,16 @@ export function heuristicListingMapping(
     }
   }
 
-  // Prefer Rent From over Rent To when both map would collide.
+  // Map Rent From / Rent To as separate first-class fields.
   const rentFromIdx = lower.findIndex((h) => h === 'rent from');
   if (rentFromIdx >= 0) {
     mapping[headers[rentFromIdx]!] = 'asking_rent';
     used.add('asking_rent');
-    const rentToIdx = lower.findIndex((h) => h === 'rent to');
-    if (rentToIdx >= 0 && rentToIdx !== rentFromIdx) {
-      mapping[headers[rentToIdx]!] = CSV_SKIP_FIELD;
-    }
+  }
+  const rentToIdx = lower.findIndex((h) => h === 'rent to');
+  if (rentToIdx >= 0) {
+    mapping[headers[rentToIdx]!] = 'asking_rent_to';
+    used.add('asking_rent_to');
   }
 
   return {

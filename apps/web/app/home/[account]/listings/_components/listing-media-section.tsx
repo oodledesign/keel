@@ -19,7 +19,6 @@ import {
   Upload,
   X,
 } from 'lucide-react';
-import { toast } from '@kit/ui/sonner';
 
 import { getSupabaseBrowserClient } from '@kit/supabase/browser-client';
 import { Button } from '@kit/ui/button';
@@ -47,6 +46,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 

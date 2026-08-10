@@ -27,9 +27,10 @@ import {
 import type { CommercialListing } from '../../listings/_lib/server/listings.service';
 import type { CommercialPublishingSettings } from '../_lib/server/commercial-publishing.loader';
 import {
+  ensureEachFeedAction,
   ensurePropertyHiveFeedAction,
+  rotateEachFeedAction,
   rotatePropertyHiveFeedAction,
-  savePortalCredentialsAction,
   savePropertyHiveCredentialsAction,
   saveRightmoveWorkspaceBranchesAction,
   testPublishListingAction,
@@ -39,7 +40,7 @@ interface CommercialPublishingSettingsProps {
   accountId: string;
   initialSettings: CommercialPublishingSettings;
   listings: CommercialListing[];
-  /** Rightmove / EG require 2+ billable seats. */
+  /** Rightmove requires 2+ billable seats. */
   portalPublishingUnlocked?: boolean;
 }
 
@@ -79,11 +80,14 @@ export function CommercialPublishingSettings({
   const [settings, setSettings] = useState(initialSettings);
   const [phPending, startPhTransition] = useTransition();
   const [rmPending, startRmTransition] = useTransition();
-  const [eachPending, startEachTransition] = useTransition();
   const [testPending, startTestTransition] = useTransition();
   const [feedPending, startFeedTransition] = useTransition();
+  const [eachFeedPending, startEachFeedTransition] = useTransition();
   const [feedUrl, setFeedUrl] = useState(
     initialSettings.propertyHive.feedUrl ?? '',
+  );
+  const [eachFeedUrl, setEachFeedUrl] = useState(
+    initialSettings.each.feedUrl ?? '',
   );
 
   const [phForm, setPhForm] = useState({
@@ -101,13 +105,6 @@ export function CommercialPublishingSettings({
       ]),
     ),
   );
-
-  const [eachForm, setEachForm] = useState({
-    branchId: initialSettings.each.branchId,
-    networkId: initialSettings.each.networkId,
-    username: initialSettings.each.username,
-    secret: '',
-  });
 
   const [testListingId, setTestListingId] = useState<string>('');
   const [testAccountBranchId, setTestAccountBranchId] = useState<string>('');
@@ -160,26 +157,6 @@ export function CommercialPublishingSettings({
     });
   };
 
-  const saveEach = () => {
-    startEachTransition(async () => {
-      try {
-        const updated = await savePortalCredentialsAction({
-          accountId,
-          portal: 'each',
-          branchId: eachForm.branchId,
-          networkId: eachForm.networkId,
-          username: eachForm.username,
-          secret: eachForm.secret || undefined,
-        });
-        setSettings(updated);
-        setEachForm((prev) => ({ ...prev, secret: '' }));
-        toast.success('EACH credentials saved');
-      } catch (error) {
-        toast.error(error instanceof Error ? error.message : 'Save failed');
-      }
-    });
-  };
-
   const runTestPublish = () => {
     startTestTransition(async () => {
       try {
@@ -196,7 +173,11 @@ export function CommercialPublishingSettings({
             typeof result.feedUrl === 'string' &&
             result.feedUrl
           ) {
-            setFeedUrl(result.feedUrl);
+            if (testPortal === 'each') {
+              setEachFeedUrl(result.feedUrl);
+            } else if (testPortal === 'property_hive') {
+              setFeedUrl(result.feedUrl);
+            }
           }
         } else {
           toast.error(result.message);
@@ -229,7 +210,7 @@ export function CommercialPublishingSettings({
   const rotateFeed = () => {
     if (
       !confirm(
-        'Rotate the feed token? Property Hive will stop updating until you paste the new URL.',
+        'Rotate the Property Hive feed token? Property Hive will stop updating until you paste the new URL.',
       )
     ) {
       return;
@@ -240,7 +221,7 @@ export function CommercialPublishingSettings({
         setSettings(result.settings);
         setFeedUrl(result.feedUrl);
         toast.success(
-          'Feed token rotated — update Property Hive with the new URL',
+          'Property Hive feed token rotated — update Property Hive with the new URL',
         );
       } catch (error) {
         toast.error(
@@ -250,11 +231,60 @@ export function CommercialPublishingSettings({
     });
   };
 
+  const enableEachFeed = () => {
+    startEachFeedTransition(async () => {
+      try {
+        const result = await ensureEachFeedAction({ accountId });
+        setSettings(result.settings);
+        setEachFeedUrl(result.feedUrl);
+        toast.success(
+          result.created ? 'EACH XML feed enabled' : 'EACH XML feed ready',
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not enable EACH feed',
+        );
+      }
+    });
+  };
+
+  const rotateEachFeed = () => {
+    if (
+      !confirm(
+        'Rotate the EACH feed token? EACH will stop updating until you send them the new URL.',
+      )
+    ) {
+      return;
+    }
+    startEachFeedTransition(async () => {
+      try {
+        const result = await rotateEachFeedAction({ accountId });
+        setSettings(result.settings);
+        setEachFeedUrl(result.feedUrl);
+        toast.success('EACH feed token rotated — send EACH the new URL');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not rotate EACH feed',
+        );
+      }
+    });
+  };
+
   const copyFeedUrl = async () => {
     if (!feedUrl) return;
     try {
       await navigator.clipboard.writeText(feedUrl);
-      toast.success('Feed URL copied');
+      toast.success('Property Hive feed URL copied');
+    } catch {
+      toast.error('Could not copy URL');
+    }
+  };
+
+  const copyEachFeedUrl = async () => {
+    if (!eachFeedUrl) return;
+    try {
+      await navigator.clipboard.writeText(eachFeedUrl);
+      toast.success('EACH feed URL copied');
     } catch {
       toast.error('Could not copy URL');
     }
@@ -353,9 +383,9 @@ export function CommercialPublishingSettings({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Kato-compatible XML that Property Hive can pull every 15 minutes.
-            Includes marketing / under-offer disposals, units, images and
-            documents. Prefer this over push if you already run PH Import.
+            Kato-compatible XML for Property Hive Import. EACH has a separate
+            feed URL under Portal publishing so you can later choose different
+            stock per portal.
           </p>
 
           {feedUrl ? (
@@ -374,18 +404,9 @@ export function CommercialPublishingSettings({
                 </Button>
               </div>
               <ol className="list-decimal space-y-1 pl-4 text-xs text-[var(--workspace-shell-text)]/55">
-                <li>
-                  In Property Hive → Property Import, create/edit an import
-                </li>
-                <li>
-                  Format: <strong>Kato XML</strong> or{' '}
-                  <strong>generic XML</strong>
-                </li>
+                <li>Property Hive → Property Import: Kato XML / generic XML</li>
                 <li>Paste this URL, Frequency → Every 15 minutes</li>
-                <li>
-                  For reliable timing, add a real server cron (WP-Cron alone can
-                  drift)
-                </li>
+                <li>Prefer a real server cron (WP-Cron alone can drift)</li>
               </ol>
             </div>
           ) : (
@@ -431,15 +452,16 @@ export function CommercialPublishingSettings({
         <CardContent className="space-y-8">
           {!portalPublishingUnlocked ? (
             <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
-              Portal publishing (Rightmove / EACH) unlocks from 2 billable
-              seats. Property Hive website sync remains available on Solo.
+              Rightmove publishing unlocks from 2 billable seats. Property Hive
+              and EACH use the listing XML feed and remain available on Solo.
             </p>
           ) : null}
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
             Rightmove Commercial Listings uses platform OAuth (env). Rightmove
             Branch IDs live on each workspace office under Brand settings →
-            Branches, and disposals pick an office on Management. EACH still
-            uses per-workspace feed credentials.
+            Branches, and disposals pick an office on Management. EACH has its
+            own XML feed URL (separate from Property Hive) so stock can diverge
+            later.
           </p>
 
           <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
@@ -447,7 +469,9 @@ export function CommercialPublishingSettings({
               <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
                 Rightmove
               </h3>
-              <ConfiguredBadge configured={settings.rightmove.oauthConfigured} />
+              <ConfiguredBadge
+                configured={settings.rightmove.oauthConfigured}
+              />
             </div>
             <p className="text-xs text-[var(--workspace-shell-text)]/55">
               OAuth Client ID / Key live in server env (
@@ -530,76 +554,61 @@ export function CommercialPublishingSettings({
               </h3>
               <ConfiguredBadge configured={settings.each.configured} />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
+            <p className="text-xs text-[var(--workspace-shell-text)]/55">
+              Dedicated Kato-compatible feed URL for EACH. Contents match
+              Property Hive today; per-listing inclusion can be filtered later
+              without changing this URL.
+            </p>
+            {eachFeedUrl ? (
               <div className="space-y-2">
-                <Label htmlFor="each-branch-id">Branch ID</Label>
-                <Input
-                  id="each-branch-id"
-                  value={eachForm.branchId}
-                  onChange={(e) =>
-                    setEachForm((prev) => ({
-                      ...prev,
-                      branchId: e.target.value,
-                    }))
-                  }
-                />
+                <Label>EACH feed URL</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    readOnly
+                    value={eachFeedUrl}
+                    className="font-mono text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={copyEachFeedUrl}
+                    className="shrink-0 gap-1.5"
+                  >
+                    <Copy className="h-4 w-4" />
+                    Copy
+                  </Button>
+                </div>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="each-network-id">Network ID</Label>
-                <Input
-                  id="each-network-id"
-                  value={eachForm.networkId}
-                  onChange={(e) =>
-                    setEachForm((prev) => ({
-                      ...prev,
-                      networkId: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="each-username">Username</Label>
-                <Input
-                  id="each-username"
-                  autoComplete="off"
-                  value={eachForm.username}
-                  onChange={(e) =>
-                    setEachForm((prev) => ({
-                      ...prev,
-                      username: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="each-secret">Secret</Label>
-                <Input
-                  id="each-secret"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder={
-                    settings.each.configured
-                      ? 'Leave blank to keep existing'
-                      : 'Required'
-                  }
-                  value={eachForm.secret}
-                  onChange={(e) =>
-                    setEachForm((prev) => ({ ...prev, secret: e.target.value }))
-                  }
-                />
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={eachPending || !portalPublishingUnlocked}
-              onClick={saveEach}
-            >
-              {eachPending ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <p className="text-xs text-amber-200/90">
+                Enable the EACH feed, then send that URL to EACH.
+              </p>
+            )}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                disabled={eachFeedPending}
+                onClick={enableEachFeed}
+              >
+                {eachFeedPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : null}
+                {eachFeedUrl ? 'Refresh EACH feed' : 'Enable EACH feed'}
+              </Button>
+              {eachFeedUrl ? (
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={eachFeedPending}
+                  onClick={rotateEachFeed}
+                  className="gap-1.5"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                  Rotate EACH token
+                </Button>
               ) : null}
-              Save EACH credentials
-            </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -612,12 +621,11 @@ export function CommercialPublishingSettings({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            For Property Hive, this checks your XML feed (or live REST push if
-            WordPress credentials are saved). For Rightmove, leave Listing empty
-            to verify OAuth (optionally pick an office to probe its Branch ID);
-            pick a listing to PUT — that listing must have an Office / branch
-            assigned on Management. EACH still records validation until its feed
-            is connected.
+            For Property Hive and EACH, this checks each portal’s XML feed (or
+            live REST push for PH if WordPress credentials are saved). For
+            Rightmove, leave Listing empty to verify OAuth (optionally pick an
+            office to probe its Branch ID); pick a listing to PUT — that listing
+            must have an Office / branch assigned on Management.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -721,7 +729,7 @@ export function CommercialPublishingSettings({
             variant="outline"
             disabled={
               testPending ||
-              (testPortal !== 'property_hive' && !portalPublishingUnlocked)
+              (testPortal === 'rightmove' && !portalPublishingUnlocked)
             }
             onClick={runTestPublish}
           >

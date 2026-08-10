@@ -49,7 +49,7 @@ async function CommercialPublishingPage({
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Website & portals"
-        description="Property Hive website sync and Rightmove / EACH portal credentials."
+        description="Property Hive and EACH listing XML feeds, plus Rightmove portal setup."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
         <CommercialPublishingSettings

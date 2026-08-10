@@ -64,6 +64,19 @@ function formatMoney(pence: number | null) {
   }).format(pence / 100);
 }
 
+function formatRentRange(fromPence: number | null, toPence: number | null) {
+  if (fromPence == null && toPence == null) return '—';
+  if (fromPence != null && toPence != null && fromPence !== toPence) {
+    return `${formatMoney(fromPence)} – ${formatMoney(toPence)}`;
+  }
+  return formatMoney(fromPence ?? toPence);
+}
+
+function formatPerSqft(value: number | null) {
+  if (value == null) return null;
+  return `£${value.toLocaleString('en-GB', { maximumFractionDigits: 2 })}/sq ft`;
+}
+
 function daysOnMarket(onMarketAt: string | null) {
   if (!onMarketAt) return null;
   const start = new Date(onMarketAt).getTime();
@@ -182,11 +195,22 @@ export function ListingOverviewSection({
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Asking rent"
-          value={formatMoney(listing.askingRentPence)}
+          value={
+            listing.hideRentFromMarketing
+              ? 'On application'
+              : formatRentRange(
+                  listing.askingRentPence,
+                  listing.askingRentToPence,
+                )
+          }
         />
         <SummaryCard
           label="Asking price"
-          value={formatMoney(listing.askingPricePence)}
+          value={
+            listing.hidePriceFromMarketing
+              ? 'On application'
+              : formatMoney(listing.askingPricePence)
+          }
         />
         <SummaryCard
           label="Size"
@@ -285,8 +309,40 @@ export function ListingOverviewSection({
               <DetailItem label="County" value={listing.county} />
               <DetailItem label="External ID" value={listing.externalId} />
               <DetailItem
+                label="Service charge"
+                value={formatPerSqft(listing.serviceChargePerSqft)}
+              />
+              <DetailItem
+                label="Rates payable"
+                value={formatPerSqft(listing.ratesPayablePerSqft)}
+              />
+              <DetailItem
+                label="Estate charge"
+                value={formatPerSqft(listing.estateChargePerSqft)}
+              />
+              <DetailItem
                 label="Hide rent"
                 value={listing.hideRentFromMarketing ? 'Yes' : 'No'}
+              />
+              <DetailItem
+                label="Hide price"
+                value={listing.hidePriceFromMarketing ? 'Yes' : 'No'}
+              />
+              <DetailItem label="Possession" value={listing.possession} />
+              <DetailItem label="Build status" value={listing.buildStatus} />
+              <DetailItem
+                label="Planning status"
+                value={listing.planningStatus}
+              />
+              <DetailItem
+                label="Fitted space"
+                value={
+                  listing.fittedSpace == null
+                    ? null
+                    : listing.fittedSpace
+                      ? 'Yes'
+                      : 'No'
+                }
               />
             </dl>
           </CardContent>
@@ -908,9 +964,17 @@ export function ListingAvailabilitySection({
                       {unit.label}
                     </p>
                     <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                      {' '}
                       {[
                         unit.floorOrUnit,
                         unit.sizeSqft != null ? `${unit.sizeSqft} sq ft` : null,
+                        unit.askingRentPence != null
+                          ? formatMoney(unit.askingRentPence)
+                          : unit.rentPerSqft != null
+                            ? `£${unit.rentPerSqft}/sq ft`
+                            : null,
+                        unit.status,
+                        unit.epcBand ? `EPC ${unit.epcBand}` : null,
                       ]
                         .filter(Boolean)
                         .join(' · ') || '—'}

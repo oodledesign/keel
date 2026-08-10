@@ -50,9 +50,14 @@ const emptyForm = {
   instructionNature: 'exclusive' as 'exclusive' | 'joint',
   status: 'draft' as ListingStatus,
   askingRent: '',
+  askingRentTo: '',
   askingPrice: '',
   rentFrequency: 'per_annum',
   hideRentFromMarketing: false,
+  hidePriceFromMarketing: false,
+  serviceChargePerSqft: '',
+  ratesPayablePerSqft: '',
+  estateChargePerSqft: '',
   sizeMinSqft: '',
   sizeMaxSqft: '',
   measurementStandard: 'gia',
@@ -60,6 +65,10 @@ const emptyForm = {
   availableFrom: '',
   epcBand: '',
   epcRating: '',
+  possession: '',
+  buildStatus: '',
+  planningStatus: '',
+  fittedSpace: '' as '' | 'yes' | 'no',
   summary: '',
   description: '',
   locationCopy: '',
@@ -165,12 +174,29 @@ function ListingFormFields({
             listing.askingRentPence != null
               ? String(listing.askingRentPence / 100)
               : '',
+          askingRentTo:
+            listing.askingRentToPence != null
+              ? String(listing.askingRentToPence / 100)
+              : '',
           askingPrice:
             listing.askingPricePence != null
               ? String(listing.askingPricePence / 100)
               : '',
           rentFrequency: listing.rentFrequency ?? 'per_annum',
           hideRentFromMarketing: listing.hideRentFromMarketing,
+          hidePriceFromMarketing: listing.hidePriceFromMarketing,
+          serviceChargePerSqft:
+            listing.serviceChargePerSqft != null
+              ? String(listing.serviceChargePerSqft)
+              : '',
+          ratesPayablePerSqft:
+            listing.ratesPayablePerSqft != null
+              ? String(listing.ratesPayablePerSqft)
+              : '',
+          estateChargePerSqft:
+            listing.estateChargePerSqft != null
+              ? String(listing.estateChargePerSqft)
+              : '',
           sizeMinSqft:
             listing.sizeMinSqft != null ? String(listing.sizeMinSqft) : '',
           sizeMaxSqft:
@@ -180,6 +206,15 @@ function ListingFormFields({
           availableFrom: listing.availableFrom ?? '',
           epcBand: listing.epcBand ?? '',
           epcRating: listing.epcRating != null ? String(listing.epcRating) : '',
+          possession: listing.possession ?? '',
+          buildStatus: listing.buildStatus ?? '',
+          planningStatus: listing.planningStatus ?? '',
+          fittedSpace:
+            listing.fittedSpace == null
+              ? ''
+              : listing.fittedSpace
+                ? 'yes'
+                : 'no',
           summary: listing.summary ?? '',
           description: listing.description ?? '',
           locationCopy: listing.locationCopy ?? '',
@@ -230,11 +265,24 @@ function ListingFormFields({
           askingRentPence: form.askingRent
             ? Math.round(parseFloat(form.askingRent) * 100)
             : null,
+          askingRentToPence: form.askingRentTo
+            ? Math.round(parseFloat(form.askingRentTo) * 100)
+            : null,
           askingPricePence: form.askingPrice
             ? Math.round(parseFloat(form.askingPrice) * 100)
             : null,
           rentFrequency: form.rentFrequency || null,
           hideRentFromMarketing: form.hideRentFromMarketing,
+          hidePriceFromMarketing: form.hidePriceFromMarketing,
+          serviceChargePerSqft: form.serviceChargePerSqft
+            ? parseFloat(form.serviceChargePerSqft)
+            : null,
+          ratesPayablePerSqft: form.ratesPayablePerSqft
+            ? parseFloat(form.ratesPayablePerSqft)
+            : null,
+          estateChargePerSqft: form.estateChargePerSqft
+            ? parseFloat(form.estateChargePerSqft)
+            : null,
           sizeMinSqft: form.sizeMinSqft ? parseFloat(form.sizeMinSqft) : null,
           sizeMaxSqft: form.sizeMaxSqft ? parseFloat(form.sizeMaxSqft) : null,
           measurementStandard: form.measurementStandard || null,
@@ -242,6 +290,11 @@ function ListingFormFields({
           availableFrom: form.availableFrom.trim() || null,
           epcBand: form.epcBand.trim() || null,
           epcRating: form.epcRating ? parseInt(form.epcRating, 10) : null,
+          possession: form.possession.trim() || null,
+          buildStatus: form.buildStatus.trim() || null,
+          planningStatus: form.planningStatus.trim() || null,
+          fittedSpace:
+            form.fittedSpace === '' ? null : form.fittedSpace === 'yes',
           summary: form.summary.trim() || null,
           description: form.description.trim() || null,
           locationCopy: form.locationCopy.trim() || null,
@@ -479,7 +532,7 @@ function ListingFormFields({
         <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">
-              Asking rent (£)
+              Asking rent from (£)
             </Label>
             <Input
               type="number"
@@ -490,6 +543,22 @@ function ListingFormFields({
               className={inputClass}
             />
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Asking rent to (£)
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.askingRentTo}
+              onChange={(e) => field('askingRentTo', e.target.value)}
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1.5">
             <Label className="text-[var(--workspace-shell-text)]/70">
               Rent frequency
@@ -508,36 +577,93 @@ function ListingFormFields({
               </SelectContent>
             </Select>
           </div>
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Asking price (£)
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.askingPrice}
+              onChange={(e) => field('askingPrice', e.target.value)}
+              className={inputClass}
+            />
+          </div>
         </div>
 
-        <div className="space-y-1.5">
-          <Label className="text-[var(--workspace-shell-text)]/70">
-            Asking price (£)
-          </Label>
-          <Input
-            type="number"
-            min={0}
-            step={0.01}
-            value={form.askingPrice}
-            onChange={(e) => field('askingPrice', e.target.value)}
-            className={inputClass}
-          />
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Service charge (£/sq ft)
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.serviceChargePerSqft}
+              onChange={(e) => field('serviceChargePerSqft', e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Rates payable (£/sq ft)
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.ratesPayablePerSqft}
+              onChange={(e) => field('ratesPayablePerSqft', e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Estate charge (£/sq ft)
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step={0.01}
+              value={form.estateChargePerSqft}
+              onChange={(e) => field('estateChargePerSqft', e.target.value)}
+              className={inputClass}
+            />
+          </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">
-          <input
-            type="checkbox"
-            checked={form.hideRentFromMarketing}
-            onChange={(e) =>
-              setForm((prev) => ({
-                ...prev,
-                hideRentFromMarketing: e.target.checked,
-              }))
-            }
-            className="rounded border-[color:var(--workspace-shell-border)]"
-          />
-          Hide rent from marketing / feed
-        </label>
+        <div className="flex flex-col gap-2 sm:flex-row sm:gap-6">
+          <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">
+            <input
+              type="checkbox"
+              checked={form.hideRentFromMarketing}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  hideRentFromMarketing: e.target.checked,
+                }))
+              }
+              className="rounded border-[color:var(--workspace-shell-border)]"
+            />
+            Hide rent from marketing (POA)
+          </label>
+          <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/70">
+            <input
+              type="checkbox"
+              checked={form.hidePriceFromMarketing}
+              onChange={(e) =>
+                setForm((prev) => ({
+                  ...prev,
+                  hidePriceFromMarketing: e.target.checked,
+                }))
+              }
+              className="rounded border-[color:var(--workspace-shell-border)]"
+            />
+            Hide price from marketing (POA)
+          </label>
+        </div>
 
         <div className="grid grid-cols-3 gap-4">
           <div className="space-y-1.5">
@@ -663,6 +789,64 @@ function ListingFormFields({
               value={form.epcRating}
               onChange={(e) => field('epcRating', e.target.value)}
               placeholder="1–100"
+              className={inputClass}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Possession
+            </Label>
+            <Input
+              value={form.possession}
+              onChange={(e) => field('possession', e.target.value)}
+              placeholder="Immediate, by arrangement…"
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Fitted space
+            </Label>
+            <Select
+              value={form.fittedSpace || 'unset'}
+              onValueChange={(v) =>
+                field('fittedSpace', v === 'unset' ? '' : v)
+              }
+            >
+              <SelectTrigger className={inputClass}>
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">—</SelectItem>
+                <SelectItem value="yes">Yes</SelectItem>
+                <SelectItem value="no">No</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Build status
+            </Label>
+            <Input
+              value={form.buildStatus}
+              onChange={(e) => field('buildStatus', e.target.value)}
+              placeholder="Complete, under construction…"
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Planning status
+            </Label>
+            <Input
+              value={form.planningStatus}
+              onChange={(e) => field('planningStatus', e.target.value)}
               className={inputClass}
             />
           </div>

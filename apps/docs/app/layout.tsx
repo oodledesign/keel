@@ -9,7 +9,6 @@ import { Footer, Layout, Navbar } from 'nextra-theme-docs';
 import { Head } from 'nextra/components';
 import { getPageMap } from 'nextra/page-map';
 
-import { WorkspaceSwitcher } from '../components/workspace-switcher';
 import { workspaceFromPathname } from '../lib/workspaces';
 
 import './globals.css';
@@ -99,9 +98,16 @@ export default async function RootLayout({
       }
       logoLink="/"
       projectLink="https://www.ozer.so"
-    >
-      <WorkspaceSwitcher />
-    </Navbar>
+      projectIcon={
+        <Image
+          src="/brand/ozer-icon.svg"
+          alt="Ozer"
+          width={24}
+          height={24}
+          className="ozer-docs-project-icon"
+        />
+      }
+    />
   );
 
   return (

@@ -4,6 +4,10 @@ import type {
   DisposalType,
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
+import {
+  disposalIncludesForSale,
+  disposalIncludesToLet,
+} from '~/lib/commercial/commercial-constants';
 
 import type {
   RightmoveAreaSizeUnit,
@@ -37,6 +41,7 @@ export type RightmoveMapperListing = {
   askingPricePence: number | null;
   rentFrequency: string | null;
   hideRentFromMarketing: boolean;
+  hidePriceFromMarketing: boolean;
   sizeMinSqft: number | null;
   sizeMaxSqft: number | null;
   measurementStandard: string | null;
@@ -79,16 +84,20 @@ const SECTOR_RULES: Array<{ test: RegExp; subType: RightmoveSubType }> = [
   { test: /convenience/i, subType: 'CONVENIENCE_STORE' },
   { test: /post\s*office/i, subType: 'POST_OFFICE' },
   { test: /trade\s*counter/i, subType: 'TRADE_COUNTER' },
-  { test: /shopping\s*centre|shopping\s*center/i, subType: 'RETAIL_PROPERTY_SHOPPING_CENTRE' },
+  {
+    test: /shopping\s*centre|shopping\s*center/i,
+    subType: 'RETAIL_PROPERTY_SHOPPING_CENTRE',
+  },
   { test: /out\s*of\s*town/i, subType: 'RETAIL_OUT_OF_TOWN' },
   { test: /retail|shop|high\s*street/i, subType: 'RETAIL_HIGH_STREET' },
   { test: /self[\s-]?storage/i, subType: 'SELF_STORAGE' },
-  { test: /distribution|logistics/i, subType: 'DISTRIBUTION_WAREHOUSE' },
   { test: /warehouse/i, subType: 'WAREHOUSE' },
   { test: /workshop/i, subType: 'WORKSHOP' },
   { test: /heavy\s*industrial/i, subType: 'HEAVY_INDUSTRIAL' },
   { test: /industrial\s*park/i, subType: 'INDUSTRIAL_PARK' },
+  // Match industrial before logistics so "Industrial/Logistics" → LIGHT_INDUSTRIAL.
   { test: /industrial|factory|manufactur/i, subType: 'LIGHT_INDUSTRIAL' },
+  { test: /distribution|logistics/i, subType: 'DISTRIBUTION_WAREHOUSE' },
   { test: /hotel|guest\s*house/i, subType: 'HOTEL' },
   { test: /takeaway/i, subType: 'TAKEAWAY' },
   { test: /\bpub\b/i, subType: 'PUB' },
@@ -128,6 +137,13 @@ function clip(value: string, max: number): string {
   const trimmed = value.trim();
   if (trimmed.length <= max) return trimmed;
   return trimmed.slice(0, max - 1).trimEnd() + '…';
+}
+
+/** Coerce Postgres `numeric` (often a string via PostgREST) to a finite number. */
+export function asOptionalNumber(value: unknown): number | null {
+  if (value == null || value === '') return null;
+  const n = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(n) ? n : null;
 }
 
 function penceToPounds(pence: number | null | undefined): number | null {
@@ -175,7 +191,8 @@ export function mapSectorToSubType(sector: string | null): RightmoveSubType {
 function mapTransactionType(
   disposalType: DisposalType,
 ): RightmoveTransactionType {
-  return disposalType === 'to_let' ? 'LETTINGS' : 'SALES';
+  // Rightmove accepts a single transaction type; dual disposals publish as lettings.
+  return disposalIncludesToLet(disposalType) ? 'LETTINGS' : 'SALES';
 }
 
 export function mapListingStatusToRightmove(
@@ -229,7 +246,10 @@ function mapTenure(
 
 function mapUseClasses(useClass: string | null): string[] | undefined {
   if (!useClass?.trim()) return undefined;
-  const parts = useClass.split(/[,/;+|]+/).map((p) => p.trim()).filter(Boolean);
+  const parts = useClass
+    .split(/[,/;+|]+/)
+    .map((p) => p.trim())
+    .filter(Boolean);
   const mapped = parts
     .map((part) => {
       const key = part.toLowerCase().replace(/^class\s+/i, 'class ');
@@ -247,7 +267,10 @@ function mapUseClasses(useClass: string | null): string[] | undefined {
 
 function mapMeasurementType(standard: string | null): string | undefined {
   if (!standard?.trim()) return undefined;
-  const value = standard.trim().toUpperCase().replace(/[\s-]+/g, '_');
+  const value = standard
+    .trim()
+    .toUpperCase()
+    .replace(/[\s-]+/g, '_');
   const allowed = new Set([
     'GEA',
     'GIA',
@@ -301,32 +324,37 @@ function buildClassification(
   return { subType: mapSectorToSubType(sector) };
 }
 
-function buildBuildingPricing(
-  listing: RightmoveMapperListing,
-): {
+function buildBuildingPricing(listing: RightmoveMapperListing): {
   price: number;
   displayQualifier?: RightmoveBuildingPriceDisplayQualifier;
   frequency?: RightmoveRentFrequency;
 } {
-  const isLettings = listing.disposalType === 'to_let';
-  const hide = listing.hideRentFromMarketing && isLettings;
+  const isLettings = disposalIncludesToLet(listing.disposalType);
+  const isSales = disposalIncludesForSale(listing.disposalType);
+  const hideRent = listing.hideRentFromMarketing && isLettings;
+  const hidePrice = listing.hidePriceFromMarketing && isSales;
   const rent = penceToPounds(listing.askingRentPence);
   const price = penceToPounds(listing.askingPricePence);
 
-  if (hide) {
-    return {
-      price: rent ?? price ?? 0,
-      displayQualifier: 'PRICE_ON_APPLICATION',
-      frequency: isLettings
-        ? mapRentFrequency(listing.rentFrequency) ?? 'YEARLY'
-        : undefined,
-    };
-  }
-
-  if (isLettings) {
+  // Prefer lettings channel pricing when dual / to-let.
+  if (isLettings && (!isSales || rent != null || hideRent)) {
+    if (hideRent) {
+      return {
+        price: rent ?? price ?? 0,
+        displayQualifier: 'PRICE_ON_APPLICATION',
+        frequency: mapRentFrequency(listing.rentFrequency) ?? 'YEARLY',
+      };
+    }
     return {
       price: rent ?? 0,
       frequency: mapRentFrequency(listing.rentFrequency) ?? 'YEARLY',
+    };
+  }
+
+  if (hidePrice) {
+    return {
+      price: price ?? rent ?? 0,
+      displayQualifier: 'PRICE_ON_APPLICATION',
     };
   }
 
@@ -338,8 +366,8 @@ function buildBuildingPricing(
 function buildBuildingSizing(
   listing: RightmoveMapperListing,
 ): RightmoveBuildingSizing | undefined {
-  const min = listing.sizeMinSqft;
-  const max = listing.sizeMaxSqft;
+  const min = asOptionalNumber(listing.sizeMinSqft);
+  const max = asOptionalNumber(listing.sizeMaxSqft);
   const unit: RightmoveAreaSizeUnit = 'SQFT';
   const measurementType = mapMeasurementType(listing.measurementStandard);
 
@@ -473,11 +501,21 @@ function mapUnitsToSpaces(input: {
   published: boolean;
   classification: RightmovePropertyClassification;
 }): RightmoveSpace[] {
-  const { buildingReference, listing, units, status, published, classification } =
-    input;
+  const {
+    buildingReference,
+    listing,
+    units,
+    status,
+    published,
+    classification,
+  } = input;
 
   return units.map((unit, index) => {
-    const size = unit.sizeSqft ?? listing.sizeMinSqft ?? listing.sizeMaxSqft ?? 1;
+    const size =
+      asOptionalNumber(unit.sizeSqft) ??
+      asOptionalNumber(listing.sizeMinSqft) ??
+      asOptionalNumber(listing.sizeMaxSqft) ??
+      1;
     const features = keyFeatures(listing.keyPoints, 1);
     const measurementType = mapMeasurementType(
       unit.measurementStandard ?? listing.measurementStandard,
@@ -562,14 +600,19 @@ export function mapListingToRightmovePayload(input: {
     published,
     location: {
       displayAddress: buildDisplayAddress(listing),
-      buildingIdentifier: clip(
-        listing.addressLine1 || listing.name,
-        100,
-      ),
+      buildingIdentifier: clip(listing.addressLine1 || listing.name, 100),
       postcode: clip(listing.postcode?.trim() || '', 9),
-      ...(listing.latitude != null ? { latitude: listing.latitude } : {}),
-      ...(listing.longitude != null ? { longitude: listing.longitude } : {}),
-      showMap: listing.latitude != null && listing.longitude != null,
+      ...(listing.latitude != null && Number.isFinite(listing.latitude)
+        ? { latitude: listing.latitude }
+        : {}),
+      ...(listing.longitude != null && Number.isFinite(listing.longitude)
+        ? { longitude: listing.longitude }
+        : {}),
+      showMap:
+        listing.latitude != null &&
+        listing.longitude != null &&
+        Number.isFinite(listing.latitude) &&
+        Number.isFinite(listing.longitude),
     },
     ...(sizing ? { sizing } : {}),
     ...(features ? { keyFeatures: features } : {}),

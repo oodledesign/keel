@@ -6,15 +6,13 @@ import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
-  decryptCommercialSecret,
-  encryptCommercialSecret,
-} from '~/lib/commercial/commercial-crypto';
-import {
   publishToEach,
   publishToRightmove,
 } from '~/lib/commercial/portal-publishers';
 import {
+  ensureEachFeedToken,
   ensurePropertyHiveFeedToken,
+  rotateEachFeedToken,
   rotatePropertyHiveFeedToken,
 } from '~/lib/commercial/property-hive-feed';
 import {
@@ -24,7 +22,9 @@ import {
 } from '~/lib/commercial/property-hive-sync';
 
 import {
+  EnsureEachFeedSchema,
   EnsurePropertyHiveFeedSchema,
+  RotateEachFeedSchema,
   RotatePropertyHiveFeedSchema,
   SavePortalCredentialsSchema,
   SavePropertyHiveCredentialsSchema,
@@ -36,61 +36,6 @@ import { loadCommercialPublishingSettings } from './commercial-publishing.loader
 /** Untyped until `pnpm supabase:web:typegen` includes commercial_* tables. */
 function db(): SupabaseClient {
   return getSupabaseServerClient() as unknown as SupabaseClient;
-}
-
-async function getExistingPortalSecret(
-  accountId: string,
-  portal: 'rightmove' | 'each',
-): Promise<string | null> {
-  const { data } = await db()
-    .from('commercial_portal_credentials')
-    .select('secret_ciphertext')
-    .eq('account_id', accountId)
-    .eq('portal', portal)
-    .maybeSingle();
-
-  if (!data?.secret_ciphertext) return null;
-
-  return decryptCommercialSecret(data.secret_ciphertext as string);
-}
-
-async function saveAddonPortalCredentials(
-  accountId: string,
-  portal: 'rightmove' | 'each',
-  input: {
-    branchId: string;
-    networkId?: string | null;
-    username?: string;
-    secret?: string | null;
-  },
-): Promise<void> {
-  const patch: Record<string, unknown> = {
-    account_id: accountId,
-    portal,
-    branch_id: input.branchId.trim(),
-    network_id: input.networkId?.trim() || null,
-    updated_at: new Date().toISOString(),
-  };
-
-  if (input.username !== undefined) {
-    patch.username = input.username.trim() || null;
-  }
-
-  if (input.secret?.trim()) {
-    patch.secret_ciphertext = encryptCommercialSecret(input.secret.trim());
-  } else if (portal === 'each') {
-    // EACH still requires a secret on first save — caller validates.
-    const existing = await getExistingPortalSecret(accountId, portal);
-    if (!existing) {
-      throw new Error('Secret is required');
-    }
-  }
-
-  const { error } = await db()
-    .from('commercial_portal_credentials')
-    .upsert(patch, { onConflict: 'account_id,portal' });
-
-  if (error) throw new Error(error.message);
 }
 
 export const savePropertyHiveCredentialsAction = enhanceAction(
@@ -126,30 +71,9 @@ export const savePortalCredentialsAction = enhanceAction(
       accountId: input.accountId,
     });
 
-    if (input.portal === 'rightmove') {
-      // Rightmove Branch IDs live on workspace account_branches now.
-      return loadCommercialPublishingSettings(input.accountId);
-    }
-
-    let secret = input.secret?.trim() ?? '';
-    if (!secret) {
-      const existing = await getExistingPortalSecret(
-        input.accountId,
-        input.portal,
-      );
-      if (!existing) {
-        throw new Error('Secret is required');
-      }
-      secret = existing;
-    }
-
-    await saveAddonPortalCredentials(input.accountId, input.portal, {
-      branchId: input.branchId!.trim(),
-      networkId: input.networkId,
-      username: input.username,
-      secret,
-    });
-
+    // Rightmove: OAuth env + workspace branch IDs. EACH: dedicated XML feed.
+    // Legacy EACH credential saves are no-ops.
+    void input.portal;
     return loadCommercialPublishingSettings(input.accountId);
   },
   { schema: SavePortalCredentialsSchema },
@@ -189,7 +113,7 @@ export const saveRightmoveWorkspaceBranchesAction = enhanceAction(
 export const testPublishListingAction = enhanceAction(
   async (input) => {
     try {
-      if (input.portal !== 'property_hive') {
+      if (input.portal !== 'property_hive' && input.portal !== 'each') {
         const client = getSupabaseServerClient();
         const { assertCommercialPortalPublishingAllowed } =
           await import('~/lib/commercial/commercial-seat-access');
@@ -329,17 +253,40 @@ export const testPublishListingAction = enhanceAction(
         };
       }
 
+      // EACH uses a dedicated Kato XML feed URL (separate token from Property Hive).
+      const settings = await loadCommercialPublishingSettings(input.accountId);
+      const feedUrl = settings.each.feedUrl;
+
+      if (!feedUrl) {
+        return {
+          ok: false as const,
+          message:
+            'EACH XML feed is not enabled yet. Enable it under Portal publishing → EACH.',
+        };
+      }
+
       if (!input.listingId) {
         return {
           ok: true as const,
-          message: 'Select a listing to test publish',
+          message:
+            'EACH feed is ready. Send them this dedicated URL (not the Property Hive one).',
+          feedUrl,
         };
       }
 
       const publication = await publishToEach(input.accountId, input.listingId);
+      const meta = publication.metadata ?? {};
+      const note = typeof meta.note === 'string' ? meta.note : null;
       return {
         ok: publication.status !== 'error',
-        message: publication.last_error ?? 'EACH publish recorded',
+        message:
+          publication.last_error ??
+          note ??
+          (publication.status === 'published'
+            ? 'Ready on the EACH XML feed'
+            : 'EACH feed link recorded'),
+        feedUrl,
+        externalUrl: publication.external_url,
       };
     } catch (error) {
       // Avoid opaque Next.js production digests for business failures.
@@ -376,4 +323,27 @@ export const rotatePropertyHiveFeedAction = enhanceAction(
     };
   },
   { schema: RotatePropertyHiveFeedSchema },
+);
+
+export const ensureEachFeedAction = enhanceAction(
+  async (input) => {
+    const result = await ensureEachFeedToken(input.accountId);
+    return {
+      feedUrl: result.feedUrl,
+      created: result.created,
+      settings: await loadCommercialPublishingSettings(input.accountId),
+    };
+  },
+  { schema: EnsureEachFeedSchema },
+);
+
+export const rotateEachFeedAction = enhanceAction(
+  async (input) => {
+    const result = await rotateEachFeedToken(input.accountId);
+    return {
+      feedUrl: result.feedUrl,
+      settings: await loadCommercialPublishingSettings(input.accountId),
+    };
+  },
+  { schema: RotateEachFeedSchema },
 );

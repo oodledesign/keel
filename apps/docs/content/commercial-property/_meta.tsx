@@ -1,6 +1,12 @@
 import type { MetaRecord } from 'nextra';
 
+import { WorkspaceSidebarHeader } from '../../components/workspace-sidebar-header';
+
 const meta: MetaRecord = {
+  '--workspace': {
+    type: 'separator',
+    title: <WorkspaceSidebarHeader />,
+  },
   index: 'Introduction',
   'getting-started': 'Getting started',
   workspace: 'Workspace',
