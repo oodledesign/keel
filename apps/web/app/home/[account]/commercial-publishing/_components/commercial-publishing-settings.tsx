@@ -31,6 +31,7 @@ import {
   rotatePropertyHiveFeedAction,
   savePortalCredentialsAction,
   savePropertyHiveCredentialsAction,
+  saveRightmoveWorkspaceBranchesAction,
   testPublishListingAction,
 } from '../_lib/server/server-actions';
 
@@ -92,10 +93,14 @@ export function CommercialPublishingSettings({
     officeId: initialSettings.propertyHive.officeId ?? '',
   });
 
-  const [rmForm, setRmForm] = useState({
-    branchId: initialSettings.rightmove.branchId,
-    networkId: initialSettings.rightmove.networkId,
-  });
+  const [rmBranchIds, setRmBranchIds] = useState<Record<string, string>>(() =>
+    Object.fromEntries(
+      initialSettings.rightmove.workspaceBranches.map((b) => [
+        b.id,
+        b.rightmoveBranchId ?? '',
+      ]),
+    ),
+  );
 
   const [eachForm, setEachForm] = useState({
     branchId: initialSettings.each.branchId,
@@ -105,6 +110,7 @@ export function CommercialPublishingSettings({
   });
 
   const [testListingId, setTestListingId] = useState<string>('');
+  const [testAccountBranchId, setTestAccountBranchId] = useState<string>('');
   const [testPortal, setTestPortal] = useState<
     'property_hive' | 'rightmove' | 'each'
   >('property_hive');
@@ -128,17 +134,26 @@ export function CommercialPublishingSettings({
     });
   };
 
-  const saveRightmove = () => {
+  const saveRightmoveBranches = () => {
     startRmTransition(async () => {
       try {
-        const updated = await savePortalCredentialsAction({
+        const updated = await saveRightmoveWorkspaceBranchesAction({
           accountId,
-          portal: 'rightmove',
-          branchId: rmForm.branchId,
-          networkId: rmForm.networkId || null,
+          branches: settings.rightmove.workspaceBranches.map((branch) => ({
+            id: branch.id,
+            rightmoveBranchId: rmBranchIds[branch.id]?.trim() || null,
+          })),
         });
         setSettings(updated);
-        toast.success('Rightmove branch details saved');
+        setRmBranchIds(
+          Object.fromEntries(
+            updated.rightmove.workspaceBranches.map((b) => [
+              b.id,
+              b.rightmoveBranchId ?? '',
+            ]),
+          ),
+        );
+        toast.success('Rightmove branch IDs saved');
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Save failed');
       }
@@ -172,6 +187,7 @@ export function CommercialPublishingSettings({
           accountId,
           portal: testPortal,
           listingId: testListingId || undefined,
+          accountBranchId: testAccountBranchId || undefined,
         });
         if (result.ok) {
           toast.success(result.message);
@@ -420,9 +436,10 @@ export function CommercialPublishingSettings({
             </p>
           ) : null}
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Rightmove Commercial Listings uses platform OAuth (env). Save your
-            Branch ID here — it is sent as agentId on upload and used for
-            connection probes. EACH still uses per-workspace feed credentials.
+            Rightmove Commercial Listings uses platform OAuth (env). Rightmove
+            Branch IDs live on each workspace office under Brand settings →
+            Branches, and disposals pick an office on Management. EACH still
+            uses per-workspace feed credentials.
           </p>
 
           <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
@@ -442,43 +459,68 @@ export function CommercialPublishingSettings({
                 ? 'Platform credentials are present.'
                 : 'Set RIGHTMOVE_CLIENT_ID and RIGHTMOVE_CLIENT_KEY, then use Test publish → Rightmove with no listing to verify the token.'}
             </p>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="rm-branch-id">Branch ID</Label>
-                <Input
-                  id="rm-branch-id"
-                  value={rmForm.branchId}
-                  onChange={(e) =>
-                    setRmForm((prev) => ({
-                      ...prev,
-                      branchId: e.target.value,
-                    }))
-                  }
-                />
+            {settings.rightmove.workspaceBranches.length === 0 ? (
+              <p className="text-xs text-amber-200/90">
+                No workspace offices yet — add offices under Brand settings →
+                Branches, then set each Rightmove Branch ID here.
+              </p>
+            ) : (
+              <div className="space-y-3">
+                {settings.rightmove.workspaceBranches.map((branch) => (
+                  <div
+                    key={branch.id}
+                    className="grid gap-2 rounded-lg bg-black/10 px-3 py-3 sm:grid-cols-[1fr_160px] sm:items-center"
+                  >
+                    <div>
+                      <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {branch.name}
+                      </p>
+                      <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                        Workspace office from Brand settings
+                      </p>
+                    </div>
+                    <div className="space-y-1">
+                      <Label
+                        htmlFor={`rm-id-${branch.id}`}
+                        className="text-xs text-[var(--workspace-shell-text)]/55"
+                      >
+                        Rightmove Branch ID
+                      </Label>
+                      <Input
+                        id={`rm-id-${branch.id}`}
+                        inputMode="numeric"
+                        value={rmBranchIds[branch.id] ?? ''}
+                        disabled={!portalPublishingUnlocked}
+                        onChange={(e) =>
+                          setRmBranchIds((prev) => ({
+                            ...prev,
+                            [branch.id]: e.target.value.replace(/\D/g, ''),
+                          }))
+                        }
+                        placeholder="e.g. 283634"
+                      />
+                    </div>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  disabled={rmPending || !portalPublishingUnlocked}
+                  onClick={saveRightmoveBranches}
+                >
+                  {rmPending ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : null}
+                  Save Rightmove branch IDs
+                </Button>
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="rm-network-id">Network ID (optional)</Label>
-                <Input
-                  id="rm-network-id"
-                  value={rmForm.networkId}
-                  onChange={(e) =>
-                    setRmForm((prev) => ({
-                      ...prev,
-                      networkId: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={rmPending || !portalPublishingUnlocked}
-              onClick={saveRightmove}
-            >
-              {rmPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Save Rightmove branch
-            </Button>
+            )}
+            {!settings.rightmove.branchConfigured ? (
+              <p className="text-xs text-amber-200/90">
+                Enter a numeric Rightmove Branch ID for each office that should
+                publish disposals.
+              </p>
+            ) : null}
           </div>
 
           <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
@@ -572,9 +614,10 @@ export function CommercialPublishingSettings({
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
             For Property Hive, this checks your XML feed (or live REST push if
             WordPress credentials are saved). For Rightmove, leave Listing empty
-            to verify OAuth (and Branch ID probe if saved); pick a listing to
-            PUT via the Commercial Listings API. EACH still records validation
-            until its feed is connected.
+            to verify OAuth (optionally pick an office to probe its Branch ID);
+            pick a listing to PUT — that listing must have an Office / branch
+            assigned on Management. EACH still records validation until its feed
+            is connected.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
@@ -616,14 +659,14 @@ export function CommercialPublishingSettings({
                 }
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="Select a listing" />
+                  <SelectValue placeholder="No listing — connection only" />
                 </SelectTrigger>
                 <SelectContent className={workspaceSelectContentClass}>
                   <SelectItem
                     value="__none__"
                     className={workspaceSelectItemClass}
                   >
-                    None — credentials check only
+                    No listing — connection only
                   </SelectItem>
                   {listings.map((listing) => (
                     <SelectItem
@@ -637,6 +680,41 @@ export function CommercialPublishingSettings({
                 </SelectContent>
               </Select>
             </div>
+            {testPortal === 'rightmove' && !testListingId ? (
+              <div className="space-y-2 sm:col-span-2">
+                <Label>Office for branch probe (optional)</Label>
+                <Select
+                  value={testAccountBranchId || '__none__'}
+                  onValueChange={(value) =>
+                    setTestAccountBranchId(value === '__none__' ? '' : value)
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="First office with RM ID" />
+                  </SelectTrigger>
+                  <SelectContent className={workspaceSelectContentClass}>
+                    <SelectItem
+                      value="__none__"
+                      className={workspaceSelectItemClass}
+                    >
+                      Auto — first office with a Rightmove Branch ID
+                    </SelectItem>
+                    {settings.rightmove.workspaceBranches.map((branch) => (
+                      <SelectItem
+                        key={branch.id}
+                        value={branch.id}
+                        className={workspaceSelectItemClass}
+                      >
+                        {branch.name}
+                        {branch.rightmoveBranchId
+                          ? ` · RM ${branch.rightmoveBranchId}`
+                          : ' · no RM ID'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
           </div>
           <Button
             type="button"

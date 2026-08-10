@@ -23,6 +23,7 @@ type BranchDraft = {
   address: string;
   phone: string;
   email: string;
+  rightmoveBranchId: string;
   is_default: boolean;
 };
 
@@ -33,6 +34,7 @@ function toDraft(branch: AccountBranch): BranchDraft {
     address: branch.address ?? '',
     phone: branch.phone ?? '',
     email: branch.email ?? '',
+    rightmoveBranchId: branch.rightmoveBranchId ?? '',
     is_default: branch.isDefault,
   };
 }
@@ -43,6 +45,7 @@ function emptyDraft(isDefault: boolean): BranchDraft {
     address: '',
     phone: '',
     email: '',
+    rightmoveBranchId: '',
     is_default: isDefault,
   };
 }
@@ -51,10 +54,13 @@ export function BrandBranchesSection({
   accountId,
   initialBranches,
   canEdit,
+  showRightmoveBranchId = false,
 }: {
   accountId: string;
   initialBranches: AccountBranch[];
   canEdit: boolean;
+  /** Commercial property workspaces only. */
+  showRightmoveBranchId?: boolean;
 }) {
   const router = useRouter();
   const [branches, setBranches] = useState<BranchDraft[]>(
@@ -108,6 +114,7 @@ export function BrandBranchesSection({
           address: b.address.trim() || null,
           phone: b.phone.trim() || null,
           email: b.email.trim() || null,
+          rightmove_branch_id: b.rightmoveBranchId.trim() || null,
           is_default: b.is_default,
         })),
       });
@@ -125,9 +132,13 @@ export function BrandBranchesSection({
       <div>
         <h2 className="text-lg font-semibold">Branches</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Office locations used in email signatures. Staff pick a branch;
-          address, phone, and email fall back to branch details when not
-          overridden on their profile.
+          Office locations used in email signatures
+          {showRightmoveBranchId ? ' and portal publishing' : ''}. Staff pick a
+          branch; address, phone, and email fall back to branch details when
+          not overridden on their profile.
+          {showRightmoveBranchId
+            ? " Add each office's Rightmove Branch ID for disposal feeds (also editable under Website & portals)."
+            : ''}
         </p>
       </div>
 
@@ -193,6 +204,22 @@ export function BrandBranchesSection({
                   disabled={!canEdit}
                 />
               </div>
+              {showRightmoveBranchId ? (
+                <div className="space-y-2 md:col-span-2">
+                  <Label>Rightmove Branch ID</Label>
+                  <Input
+                    inputMode="numeric"
+                    value={branch.rightmoveBranchId}
+                    onChange={(e) =>
+                      updateRow(index, {
+                        rightmoveBranchId: e.target.value.replace(/\D/g, ''),
+                      })
+                    }
+                    placeholder="Numeric ID from Rightmove Data Feed Team"
+                    disabled={!canEdit}
+                  />
+                </div>
+              ) : null}
             </div>
 
             <label className="flex items-center gap-2 text-sm">

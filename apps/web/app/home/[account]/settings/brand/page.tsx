@@ -71,6 +71,9 @@ export default async function BrandSettingsPage(props: BrandSettingsPageProps) {
         accountId={accountId}
         initialBranches={branches}
         canEdit={canEditBrand}
+        showRightmoveBranchId={
+          workspace.workspaceProfile === 'commercial_property'
+        }
       />
     </div>
   );

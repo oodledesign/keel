@@ -4,11 +4,18 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { buildPropertyHiveFeedUrl } from '~/lib/commercial/property-hive-feed';
 import {
   getRightmoveEnvironmentLabel,
   isRightmoveOAuthConfigured,
 } from '~/lib/commercial/rightmove-env';
+
+export type RightmoveWorkspaceBranch = {
+  id: string;
+  name: string;
+  rightmoveBranchId: string | null;
+};
 
 export type CommercialPublishingSettings = {
   propertyHive: {
@@ -23,13 +30,11 @@ export type CommercialPublishingSettings = {
     /** Platform OAuth client credentials present in env. */
     oauthConfigured: boolean;
     environment: 'test' | 'production';
-    /** Workspace has a Branch ID saved for probes / publish. */
+    /** At least one workspace branch has a Rightmove Branch ID. */
     branchConfigured: boolean;
     /** Legacy combined flag — true when OAuth env is ready. */
     configured: boolean;
-    branchId: string;
-    networkId: string;
-    username: string;
+    workspaceBranches: RightmoveWorkspaceBranch[];
   };
   each: {
     configured: boolean;
@@ -53,12 +58,15 @@ export async function loadCommercialPublishingSettings(
 ): Promise<CommercialPublishingSettings> {
   const client = getSupabaseServerClient() as unknown as SupabaseClient;
 
-  const { data, error } = await client
-    .from('commercial_portal_credentials')
-    .select(
-      'portal, site_url, username, office_id, branch_id, network_id, secret_ciphertext, metadata',
-    )
-    .eq('account_id', accountId);
+  const [{ data, error }, branches] = await Promise.all([
+    client
+      .from('commercial_portal_credentials')
+      .select(
+        'portal, site_url, username, office_id, branch_id, network_id, secret_ciphertext, metadata',
+      )
+      .eq('account_id', accountId),
+    loadAccountBranches(accountId),
+  ]);
 
   if (error) throw new Error(error.message);
 
@@ -68,7 +76,6 @@ export async function loadCommercialPublishingSettings(
   );
 
   const ph = byPortal.property_hive ?? null;
-  const rm = byPortal.rightmove ?? null;
   const each = byPortal.each ?? null;
   const phMetadata = (ph?.metadata ?? {}) as Record<string, unknown>;
   const feedToken =
@@ -77,7 +84,16 @@ export async function loadCommercialPublishingSettings(
       : null;
 
   const oauthConfigured = isRightmoveOAuthConfigured();
-  const branchId = (rm?.branch_id as string | undefined) ?? '';
+  const workspaceBranches: RightmoveWorkspaceBranch[] = branches.map(
+    (branch) => ({
+      id: branch.id,
+      name: branch.name,
+      rightmoveBranchId: branch.rightmoveBranchId,
+    }),
+  );
+  const branchConfigured = workspaceBranches.some((b) =>
+    Boolean(b.rightmoveBranchId?.trim()),
+  );
 
   return {
     propertyHive: {
@@ -91,11 +107,9 @@ export async function loadCommercialPublishingSettings(
     rightmove: {
       oauthConfigured,
       environment: getRightmoveEnvironmentLabel(),
-      branchConfigured: Boolean(branchId.trim()),
+      branchConfigured,
       configured: oauthConfigured,
-      branchId,
-      networkId: (rm?.network_id as string | undefined) ?? '',
-      username: (rm?.username as string | undefined) ?? '',
+      workspaceBranches,
     },
     each: {
       configured: isConfigured(each),

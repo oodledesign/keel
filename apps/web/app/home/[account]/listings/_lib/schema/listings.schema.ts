@@ -38,6 +38,7 @@ export const CreateListingSchema = z.object({
   hideLandlordFromMarketing: z.boolean().optional(),
   referenceNumber: z.string().trim().max(120).optional().nullable(),
   projectCode: z.string().trim().max(120).optional().nullable(),
+  accountBranchId: z.string().uuid().optional().nullable(),
   onMarketAt: z.string().optional().nullable(),
   offMarketAt: z.string().optional().nullable(),
   averageFloorPlateSqft: z.number().min(0).optional().nullable(),
@@ -237,6 +238,7 @@ export const UpdateListingAssignmentSchema = z.object({
   paUserId: z.string().uuid().nullable().optional(),
   recordOwnerUserId: z.string().uuid().nullable().optional(),
   teamId: z.string().uuid().nullable().optional(),
+  accountBranchId: z.string().uuid().nullable().optional(),
   restrictAccessToAssigned: z.boolean().optional(),
 });
 

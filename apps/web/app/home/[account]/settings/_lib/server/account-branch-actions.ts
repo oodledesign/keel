@@ -50,7 +50,10 @@ async function clearOtherDefaults(accountId: string, exceptId?: string | null) {
 }
 
 export const loadAccountBranchesAction = enhanceAction(
-  async (input) => loadAccountBranches(input.accountId),
+  async (input, user) => {
+    await assertAccountOwnerOrAdmin(input.accountId, user.id);
+    return loadAccountBranches(input.accountId);
+  },
   {
     schema: z.object({ accountId: z.string().uuid() }),
   },
@@ -70,6 +73,7 @@ export const saveAccountBranchAction = enhanceAction(
       address: input.address?.trim() || null,
       phone: input.phone?.trim() || null,
       email: input.email?.trim() || null,
+      rightmove_branch_id: input.rightmove_branch_id?.trim() || null,
       is_default: input.is_default ?? false,
     };
 
@@ -143,6 +147,7 @@ export const saveAccountBranchesAction = enhanceAction(
         address: branch.address?.trim() || null,
         phone: branch.phone?.trim() || null,
         email: branch.email?.trim() || null,
+        rightmove_branch_id: branch.rightmove_branch_id?.trim() || null,
         is_default: index === defaultIndex,
         sort_order: index,
       };
@@ -174,11 +179,13 @@ export const deleteAccountBranchAction = enhanceAction(
     );
 
     const admin = getSupabaseServerAdminClient();
-    await admin
+    const { error } = await admin
       .from('account_branches')
       .delete()
       .eq('id', input.branchId)
       .eq('account_id', input.accountId);
+
+    if (error) throw new Error(error.message);
 
     revalidateBrandPaths(accountSlug);
     return { ok: true as const };

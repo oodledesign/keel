@@ -28,6 +28,7 @@ import {
   RotatePropertyHiveFeedSchema,
   SavePortalCredentialsSchema,
   SavePropertyHiveCredentialsSchema,
+  SaveRightmoveWorkspaceBranchesSchema,
   TestPublishListingSchema,
 } from '../schema/commercial-publishing.schema';
 import { loadCommercialPublishingSettings } from './commercial-publishing.loader';
@@ -126,12 +127,7 @@ export const savePortalCredentialsAction = enhanceAction(
     });
 
     if (input.portal === 'rightmove') {
-      await saveAddonPortalCredentials(input.accountId, 'rightmove', {
-        branchId: input.branchId,
-        networkId: input.networkId,
-        username: input.username,
-        secret: input.secret,
-      });
+      // Rightmove Branch IDs live on workspace account_branches now.
       return loadCommercialPublishingSettings(input.accountId);
     }
 
@@ -148,7 +144,7 @@ export const savePortalCredentialsAction = enhanceAction(
     }
 
     await saveAddonPortalCredentials(input.accountId, input.portal, {
-      branchId: input.branchId,
+      branchId: input.branchId!.trim(),
       networkId: input.networkId,
       username: input.username,
       secret,
@@ -157,6 +153,37 @@ export const savePortalCredentialsAction = enhanceAction(
     return loadCommercialPublishingSettings(input.accountId);
   },
   { schema: SavePortalCredentialsSchema },
+);
+
+/**
+ * Save Rightmove Branch IDs onto existing workspace offices (account_branches).
+ */
+export const saveRightmoveWorkspaceBranchesAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const { assertCommercialPortalPublishingAllowed } =
+      await import('~/lib/commercial/commercial-seat-access');
+    await assertCommercialPortalPublishingAllowed({
+      client,
+      accountId: input.accountId,
+    });
+
+    for (const branch of input.branches) {
+      const { error } = await db()
+        .from('account_branches')
+        .update({
+          rightmove_branch_id: branch.rightmoveBranchId?.trim() || null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', branch.id)
+        .eq('account_id', input.accountId);
+
+      if (error) throw new Error(error.message);
+    }
+
+    return loadCommercialPublishingSettings(input.accountId);
+  },
+  { schema: SaveRightmoveWorkspaceBranchesSchema },
 );
 
 export const testPublishListingAction = enhanceAction(
@@ -255,8 +282,28 @@ export const testPublishListingAction = enhanceAction(
         );
 
         if (!input.listingId) {
+          let probeBranchId: string | null = null;
+          if (input.accountBranchId) {
+            probeBranchId =
+              settings.rightmove.workspaceBranches.find(
+                (b) => b.id === input.accountBranchId,
+              )?.rightmoveBranchId ?? null;
+            if (!probeBranchId) {
+              return {
+                ok: false,
+                message:
+                  'Selected office has no Rightmove Branch ID — add it under Brand settings → Branches',
+              };
+            }
+          } else {
+            probeBranchId =
+              settings.rightmove.workspaceBranches.find((b) =>
+                Boolean(b.rightmoveBranchId?.trim()),
+              )?.rightmoveBranchId ?? null;
+          }
+
           const connection = await testRightmoveConnection({
-            branchId: settings.rightmove.branchId || null,
+            branchId: probeBranchId,
           });
           return {
             ok: connection.ok,

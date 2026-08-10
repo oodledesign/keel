@@ -5,6 +5,13 @@ const branchFields = {
   address: z.string().trim().max(1000).optional().nullable(),
   phone: z.string().trim().max(80).optional().nullable(),
   email: z.string().trim().max(320).optional().nullable(),
+  rightmove_branch_id: z
+    .string()
+    .trim()
+    .max(40)
+    .regex(/^\d*$/, 'Rightmove Branch ID must be numeric')
+    .optional()
+    .nullable(),
   is_default: z.boolean().optional(),
 };
 

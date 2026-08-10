@@ -34,6 +34,12 @@ import {
   updateListingAssignment,
 } from '../_lib/server/server-actions';
 
+export type ListingBranchOption = {
+  id: string;
+  name: string;
+  rightmoveBranchId: string | null;
+};
+
 function MemberAvatar({
   name,
   pictureUrl,
@@ -172,16 +178,19 @@ export function ListingAssignmentCard({
   accountSlug,
   members: initialMembers,
   teams: initialTeams,
+  branches: initialBranches,
   assignment: initialAssignment,
 }: {
   accountId: string;
   accountSlug: string;
   members: ListingMemberOption[];
   teams: WorkspaceTeam[];
+  branches: ListingBranchOption[];
   assignment: ListingAssignment;
 }) {
   const [members] = useState(initialMembers);
   const [teams, setTeams] = useState(initialTeams);
+  const [branches] = useState(initialBranches);
   const [assignment, setAssignment] = useState(initialAssignment);
   const [newTeamName, setNewTeamName] = useState('');
   const [pending, startTransition] = useTransition();
@@ -380,6 +389,52 @@ export function ListingAssignmentCard({
               }))
             }
           />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="branch-select">Office / branch</Label>
+          <Select
+            value={assignment.accountBranchId ?? '__none__'}
+            disabled={pending}
+            onValueChange={(value) =>
+              persist(
+                { accountBranchId: value === '__none__' ? null : value },
+                (prev) => ({
+                  ...prev,
+                  accountBranchId: value === '__none__' ? null : value,
+                  accountBranchName:
+                    value === '__none__'
+                      ? null
+                      : (branches.find((b) => b.id === value)?.name ?? null),
+                }),
+              )
+            }
+          >
+            <SelectTrigger id="branch-select">
+              <SelectValue placeholder="Select branch" />
+            </SelectTrigger>
+            <SelectContent className={workspaceSelectContentClass}>
+              <SelectItem value="__none__" className={workspaceSelectItemClass}>
+                No branch
+              </SelectItem>
+              {branches.map((branch) => (
+                <SelectItem
+                  key={branch.id}
+                  value={branch.id}
+                  className={workspaceSelectItemClass}
+                >
+                  {branch.name}
+                  {branch.rightmoveBranchId
+                    ? ` · RM ${branch.rightmoveBranchId}`
+                    : ''}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <p className="text-xs text-[var(--workspace-shell-text)]/45">
+            Required for Rightmove publish. Set each office&apos;s Rightmove
+            Branch ID under Brand settings → Branches.
+          </p>
         </div>
 
         <div className="space-y-2">

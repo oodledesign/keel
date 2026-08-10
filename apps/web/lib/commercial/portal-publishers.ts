@@ -328,6 +328,79 @@ function parseAgentId(branchId: string | null | undefined): number | null {
   return Math.trunc(n);
 }
 
+async function resolveRightmoveAgentFromListing(input: {
+  accountId: string;
+  listingId: string;
+}): Promise<
+  | {
+      ok: true;
+      agentId: number;
+      branchRef: string;
+      accountBranchId: string;
+      accountBranchName: string;
+    }
+  | { ok: false; error: string; stage: string }
+> {
+  const { data: listing, error } = await db()
+    .from('commercial_listings')
+    .select('account_branch_id')
+    .eq('id', input.listingId)
+    .eq('account_id', input.accountId)
+    .single();
+
+  if (error) {
+    return { ok: false, error: error.message, stage: 'listing_load' };
+  }
+
+  const accountBranchId =
+    (listing?.account_branch_id as string | null | undefined) ?? null;
+  if (!accountBranchId) {
+    return {
+      ok: false,
+      error:
+        'Assign an Office / branch on the disposal Management tab before publishing to Rightmove',
+      stage: 'missing_account_branch',
+    };
+  }
+
+  const { data: branch, error: branchError } = await db()
+    .from('account_branches')
+    .select('id, name, rightmove_branch_id')
+    .eq('id', accountBranchId)
+    .eq('account_id', input.accountId)
+    .maybeSingle();
+
+  if (branchError) {
+    return { ok: false, error: branchError.message, stage: 'branch_load' };
+  }
+  if (!branch) {
+    return {
+      ok: false,
+      error: 'Assigned workspace branch was not found',
+      stage: 'branch_missing',
+    };
+  }
+
+  const agentId = parseAgentId(
+    (branch.rightmove_branch_id as string | null) ?? null,
+  );
+  if (agentId == null) {
+    return {
+      ok: false,
+      error: `Add a Rightmove Branch ID for “${branch.name as string}” under Brand settings → Branches`,
+      stage: 'missing_rightmove_branch_id',
+    };
+  }
+
+  return {
+    ok: true,
+    agentId,
+    branchRef: String(agentId),
+    accountBranchId: branch.id as string,
+    accountBranchName: (branch.name as string) ?? 'Branch',
+  };
+}
+
 /**
  * Validate commercial fields, map listing → Rightmove payload, and PUT
  * /v2/property/commercial/{reference}. Branch ID is sent as building.agentId.
@@ -363,24 +436,17 @@ export async function publishToRightmove(
     });
   }
 
-  const { data: creds } = await db()
-    .from('commercial_portal_credentials')
-    .select('branch_id, network_id')
-    .eq('account_id', accountId)
-    .eq('portal', 'rightmove')
-    .maybeSingle();
-
-  const branchId = (creds?.branch_id as string | null | undefined) ?? null;
-  const agentId = parseAgentId(branchId);
-
-  if (agentId == null) {
+  const resolved = await resolveRightmoveAgentFromListing({
+    accountId,
+    listingId,
+  });
+  if (!resolved.ok) {
     return recordStubPublication({
       accountId,
       listingId,
       portal: 'rightmove',
-      lastError:
-        'Save a numeric Rightmove Branch ID in Commercial Publishing (used as agentId)',
-      metadata: { stage: 'missing_branch_id' },
+      lastError: resolved.error,
+      metadata: { stage: resolved.stage },
     });
   }
 
@@ -394,7 +460,7 @@ export async function publishToRightmove(
 
     const mapped = mapListingToRightmovePayload({
       listing,
-      agentId,
+      agentId: resolved.agentId,
       units,
       media,
     });
@@ -418,7 +484,7 @@ export async function publishToRightmove(
       lastError: null,
       externalId: mapped.reference,
       externalUrl: result.displayUrl,
-      branchRef: branchId,
+      branchRef: resolved.branchRef,
       metadata: {
         stage: 'put_ok',
         environment: env.environment,
@@ -429,6 +495,9 @@ export async function publishToRightmove(
         spaceCount: units.length,
         mediaCount: media.filter((m) => m.url).length,
         listingName: listing.name,
+        accountBranchId: resolved.accountBranchId,
+        accountBranchName: resolved.accountBranchName,
+        agentId: resolved.agentId,
         note,
       },
     });
@@ -463,22 +532,17 @@ export async function unpublishFromRightmove(
     });
   }
 
-  const { data: creds } = await db()
-    .from('commercial_portal_credentials')
-    .select('branch_id')
-    .eq('account_id', accountId)
-    .eq('portal', 'rightmove')
-    .maybeSingle();
-
-  const branchId = (creds?.branch_id as string | null | undefined) ?? null;
-  const agentId = parseAgentId(branchId);
-  if (agentId == null) {
+  const resolved = await resolveRightmoveAgentFromListing({
+    accountId,
+    listingId,
+  });
+  if (!resolved.ok) {
     return recordStubPublication({
       accountId,
       listingId,
       portal: 'rightmove',
-      lastError: 'Save a numeric Rightmove Branch ID before removing listings',
-      metadata: { stage: 'missing_branch_id' },
+      lastError: resolved.error,
+      metadata: { stage: resolved.stage },
     });
   }
 
@@ -499,7 +563,7 @@ export async function unpublishFromRightmove(
 
     await deleteCommercialProperty({
       reference,
-      agentId,
+      agentId: resolved.agentId,
       removalReason,
     });
 
@@ -511,11 +575,14 @@ export async function unpublishFromRightmove(
       lastError: null,
       externalId: reference,
       externalUrl: null,
-      branchRef: branchId,
+      branchRef: resolved.branchRef,
       metadata: {
         stage: 'delete_ok',
         environment: env.environment,
         removalReason,
+        accountBranchId: resolved.accountBranchId,
+        accountBranchName: resolved.accountBranchName,
+        agentId: resolved.agentId,
         note: 'Removed from Rightmove (async processing may delay site updates).',
       },
     });

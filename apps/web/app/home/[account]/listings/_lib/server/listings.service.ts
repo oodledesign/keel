@@ -113,6 +113,7 @@ export type CommercialListing = {
   hideLandlordFromMarketing: boolean;
   referenceNumber: string | null;
   projectCode: string | null;
+  accountBranchId: string | null;
   averageFloorPlateSqft: number | null;
   sizeBreakdown: string | null;
   controlledBy: string | null;
@@ -210,6 +211,8 @@ export type ListingAssignment = {
   recordOwnerUserId: string | null;
   teamId: string | null;
   teamName: string | null;
+  accountBranchId: string | null;
+  accountBranchName: string | null;
   restrictAccessToAssigned: boolean;
 };
 
@@ -353,6 +356,7 @@ function mapListing(row: ListingRow): CommercialListing {
     hideLandlordFromMarketing: Boolean(row.hide_landlord_from_marketing),
     referenceNumber: (row.reference_number as string | null) ?? null,
     projectCode: (row.project_code as string | null) ?? null,
+    accountBranchId: (row.account_branch_id as string | null) ?? null,
     averageFloorPlateSqft: num(row.average_floor_plate_sqft),
     sizeBreakdown: (row.size_breakdown as string | null) ?? null,
     controlledBy: (row.controlled_by as string | null) ?? null,
@@ -494,6 +498,9 @@ function writeColumns(input: Partial<CreateListingInput>) {
     }),
     ...(input.projectCode !== undefined && {
       project_code: input.projectCode,
+    }),
+    ...(input.accountBranchId !== undefined && {
+      account_branch_id: input.accountBranchId,
     }),
     ...(input.onMarketAt !== undefined && {
       on_market_at: input.onMarketAt,
@@ -1597,6 +1604,17 @@ export function createListingsService(client: SupabaseClient) {
         teamName = (team?.name as string | null | undefined)?.trim() || null;
       }
 
+      let accountBranchName: string | null = null;
+      if (listing.accountBranchId) {
+        const { data: branch } = await fromTable(client, 'account_branches')
+          .select('name')
+          .eq('id', listing.accountBranchId)
+          .eq('account_id', accountId)
+          .maybeSingle();
+        accountBranchName =
+          (branch?.name as string | null | undefined)?.trim() || null;
+      }
+
       return {
         listingId,
         accountId,
@@ -1605,6 +1623,8 @@ export function createListingsService(client: SupabaseClient) {
         recordOwnerUserId: listing.recordOwnerUserId ?? listing.assignedTo,
         teamId: listing.teamId,
         teamName,
+        accountBranchId: listing.accountBranchId,
+        accountBranchName,
         restrictAccessToAssigned: listing.restrictAccessToAssigned,
       };
     },
@@ -1617,6 +1637,7 @@ export function createListingsService(client: SupabaseClient) {
       paUserId?: string | null;
       recordOwnerUserId?: string | null;
       teamId?: string | null;
+      accountBranchId?: string | null;
       restrictAccessToAssigned?: boolean;
     }): Promise<ListingAssignment> {
       const listing = await this.getListing(input.listingId, input.accountId);
@@ -1636,6 +1657,21 @@ export function createListingsService(client: SupabaseClient) {
       }
       if (input.teamId !== undefined) {
         patch.team_id = input.teamId;
+      }
+      if (input.accountBranchId !== undefined) {
+        if (input.accountBranchId) {
+          const { data: branch, error: branchError } = await fromTable(
+            client,
+            'account_branches',
+          )
+            .select('id')
+            .eq('id', input.accountBranchId)
+            .eq('account_id', input.accountId)
+            .maybeSingle();
+          if (branchError) throw new Error(branchError.message);
+          if (!branch) throw new Error('Branch not found for this workspace');
+        }
+        patch.account_branch_id = input.accountBranchId;
       }
       if (input.restrictAccessToAssigned !== undefined) {
         patch.restrict_access_to_assigned = input.restrictAccessToAssigned;

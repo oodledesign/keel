@@ -3,6 +3,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
+import { loadAccountBranches } from '~/lib/brand/account-branches';
 import { ListingAdvancedAttrsCard } from '../../_components/listing-advanced-attrs-card';
 import { ListingAssignmentCard } from '../../_components/listing-assignment-card';
 import { ListingCoAgentsCard } from '../../_components/listing-co-agents-card';
@@ -31,6 +32,7 @@ async function ListingManagementPage({ params }: PageProps) {
     assignment,
     coAgents,
     teams,
+    branches,
     privateMedia,
     landlords,
     otherParties,
@@ -40,6 +42,7 @@ async function ListingManagementPage({ params }: PageProps) {
     service.getListingAssignment(listingId, accountId, slug),
     service.listCoAgents(listingId, accountId),
     service.listWorkspaceTeams(accountId),
+    loadAccountBranches(accountId),
     service.listMedia(listingId, { privacy: 'private' }),
     service.listParties(listingId, accountId, 'landlord'),
     service.listParties(listingId, accountId, 'other'),
@@ -63,6 +66,11 @@ async function ListingManagementPage({ params }: PageProps) {
         accountSlug={slug}
         members={members}
         teams={teams}
+        branches={branches.map((branch) => ({
+          id: branch.id,
+          name: branch.name,
+          rightmoveBranchId: branch.rightmoveBranchId,
+        }))}
         assignment={assignment}
       />
       <ListingCoAgentsCard
