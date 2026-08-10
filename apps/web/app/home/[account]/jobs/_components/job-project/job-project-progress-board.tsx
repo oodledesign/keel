@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 
 import { toast } from '@kit/ui/sonner';
 
@@ -10,6 +10,14 @@ import type {
   JobBoardTask,
 } from '../../_lib/schema/project-phases.schema';
 import { updateJobTask } from '../../_lib/server/server-actions';
+import { JobProjectTaskSheet } from './job-project-task-sheet';
+import {
+  PRIORITY_DOT,
+  PROGRESS_STATUS_COLOURS,
+  TASK_STATUS_LABELS,
+  TASK_STATUS_STYLES,
+  formatShortDate,
+} from './job-project.constants';
 
 const STATUS_COLUMNS = [
   { key: 'todo', label: 'To do' },
@@ -19,6 +27,11 @@ const STATUS_COLUMNS = [
 ] as const;
 
 type ProgressStatus = (typeof STATUS_COLUMNS)[number]['key'];
+
+type MemberLookup = Map<
+  string,
+  { name: string | null; email: string | null; picture_url?: string | null }
+>;
 
 function normalizeStatus(status: string): ProgressStatus {
   if (status === 'completed') return 'done';
@@ -55,12 +68,113 @@ function patchTaskStatus(
   return { ...board, tasksByPhase };
 }
 
+function ProgressTaskCard({
+  task,
+  memberLookup,
+  canEditJobs,
+  onOpen,
+  onStatusChange,
+}: {
+  task: JobBoardTask;
+  memberLookup: MemberLookup;
+  canEditJobs: boolean;
+  onOpen: () => void;
+  onStatusChange: (status: ProgressStatus) => void;
+}) {
+  const assignee = task.user_id ? memberLookup.get(task.user_id) : null;
+  const priorityKey = task.priority || 'none';
+  const status = normalizeStatus(task.status);
+  const linkCount = task.links?.length ?? 0;
+  const attachedNoteCount = task.note_refs?.length ?? 0;
+  const hasNotes = Boolean(task.notes?.trim());
+  const metaBits = [
+    attachedNoteCount > 0
+      ? `${attachedNoteCount} note${attachedNoteCount === 1 ? '' : 's'}`
+      : null,
+    hasNotes ? 'Scratch' : null,
+    linkCount > 0 ? `${linkCount} link${linkCount === 1 ? '' : 's'}` : null,
+  ].filter(Boolean);
+
+  return (
+    <div
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          onOpen();
+        }
+      }}
+      className="cursor-pointer rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80 p-3 shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-panel)]"
+    >
+      <div className="flex items-start gap-2">
+        <span
+          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[priorityKey] ?? PRIORITY_DOT.none}`}
+          title={task.priority}
+        />
+        <div className="min-w-0 flex-1">
+          <p className="text-sm leading-snug font-medium text-[var(--workspace-shell-text)]">
+            {task.title}
+          </p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {canEditJobs ? (
+              <select
+                className={`rounded-full border-0 px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase outline-none ${
+                  TASK_STATUS_STYLES[status] ?? TASK_STATUS_STYLES.todo
+                }`}
+                value={status}
+                onClick={(e) => e.stopPropagation()}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  onStatusChange(e.target.value as ProgressStatus);
+                }}
+                aria-label="Task status"
+              >
+                {STATUS_COLUMNS.map((option) => (
+                  <option key={option.key} value={option.key}>
+                    {TASK_STATUS_LABELS[option.key] ?? option.label}
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <span
+                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+                  TASK_STATUS_STYLES[status] ?? TASK_STATUS_STYLES.todo
+                }`}
+              >
+                {TASK_STATUS_LABELS[status] ?? status.replace('_', ' ')}
+              </span>
+            )}
+            {task.due_date ? (
+              <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                {formatShortDate(task.due_date)}
+              </span>
+            ) : null}
+            {assignee ? (
+              <span className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
+                {assignee.name ?? assignee.email ?? 'Assigned'}
+              </span>
+            ) : null}
+            {metaBits.length > 0 ? (
+              <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+                {metaBits.join(' · ')}
+              </span>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function JobProjectProgressBoard({
   accountSlug,
   accountId,
   jobId,
   board,
   canEditJobs,
+  members,
   onBoardChange,
 }: {
   accountSlug: string;
@@ -68,10 +182,39 @@ export function JobProjectProgressBoard({
   jobId: string;
   board: JobBoardResult;
   canEditJobs: boolean;
+  members: {
+    user_id: string;
+    name: string | null;
+    email: string | null;
+    picture_url?: string | null;
+  }[];
   onBoardChange: (board: JobBoardResult) => void;
 }) {
   const [, startTransition] = useTransition();
+  const [selectedTask, setSelectedTask] = useState<JobBoardTask | null>(null);
+  const [taskSheetOpen, setTaskSheetOpen] = useState(false);
   const tasks = useMemo(() => flattenBoardTasks(board), [board]);
+
+  const memberLookup = useMemo(() => {
+    const map: MemberLookup = new Map();
+    for (const member of members) {
+      map.set(member.user_id, member);
+    }
+    for (const assignee of board.assignees ?? []) {
+      if (!map.has(assignee.user_id)) {
+        map.set(assignee.user_id, assignee);
+      }
+    }
+    return map;
+  }, [board.assignees, members]);
+
+  const phaseNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const phase of board.phases ?? []) {
+      map.set(phase.id, phase.name);
+    }
+    return map;
+  }, [board.phases]);
 
   const byStatus = useMemo(() => {
     const map = new Map<string, JobBoardTask[]>();
@@ -104,6 +247,27 @@ export function JobProjectProgressBoard({
     });
   }
 
+  function openTask(task: JobBoardTask) {
+    setSelectedTask(task);
+    setTaskSheetOpen(true);
+  }
+
+  function handleTaskUpdated(updated: JobBoardTask) {
+    const next: JobBoardResult = {
+      ...board,
+      tasksByPhase: Object.fromEntries(
+        Object.entries(board.tasksByPhase ?? {}).map(([phaseId, list]) => [
+          phaseId,
+          (list ?? []).map((task) =>
+            task.id === updated.id ? { ...task, ...updated } : task,
+          ),
+        ]),
+      ),
+    };
+    onBoardChange(next);
+    setSelectedTask(updated);
+  }
+
   if (tasks.length === 0) {
     return (
       <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -113,57 +277,74 @@ export function JobProjectProgressBoard({
   }
 
   return (
-    <div className="flex gap-3 overflow-x-auto pb-2">
-      {STATUS_COLUMNS.map((col) => {
-        const columnTasks = byStatus.get(col.key) ?? [];
-        return (
-          <div
-            key={col.key}
-            className="w-[280px] shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel-hover)]/40 p-3"
-          >
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text)] uppercase">
-                {col.label}
-              </p>
-              <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                {columnTasks.length}
-              </span>
-            </div>
-            <div className="space-y-2">
-              {columnTasks.map((task) => (
-                <div
-                  key={task.id}
-                  className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
-                >
-                  <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                    {task.title}
-                  </p>
-                  {task.due_date ? (
-                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                      Due {task.due_date}
-                    </p>
-                  ) : null}
-                  {canEditJobs ? (
-                    <select
-                      className="mt-2 w-full rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] px-2 py-1 text-xs text-[var(--workspace-shell-text)]"
-                      value={normalizeStatus(task.status)}
-                      onChange={(e) =>
-                        moveTaskStatus(task, e.target.value as ProgressStatus)
-                      }
-                    >
-                      {STATUS_COLUMNS.map((option) => (
-                        <option key={option.key} value={option.key}>
-                          {option.label}
-                        </option>
-                      ))}
-                    </select>
-                  ) : null}
+    <div className="flex h-full min-h-0 flex-1 flex-col overflow-hidden">
+      <div className="flex h-full min-h-0 flex-1 items-stretch gap-4 overflow-x-auto overscroll-x-contain pb-2">
+        {STATUS_COLUMNS.map((col) => {
+          const columnTasks = byStatus.get(col.key) ?? [];
+          const colour = PROGRESS_STATUS_COLOURS[col.key] ?? '#64748B';
+          return (
+            <div
+              key={col.key}
+              className="flex h-full w-[min(100%,280px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
+              style={{ borderTopWidth: 3, borderTopColor: colour }}
+            >
+              <div className="border-b border-[color:var(--workspace-shell-border)]/80 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+                    {col.label}
+                  </h3>
+                  <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text-muted)]">
+                    {columnTasks.length}
+                  </span>
                 </div>
-              ))}
+                <p className="mt-1 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                  {columnTasks.length === 0
+                    ? 'No tasks'
+                    : `${columnTasks.length} task${columnTasks.length === 1 ? '' : 's'}`}
+                </p>
+              </div>
+
+              <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-3">
+                {columnTasks.length === 0 ? (
+                  <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
+                    Drop tasks here by changing status
+                  </div>
+                ) : (
+                  columnTasks.map((task) => (
+                    <div key={task.id} className="space-y-1">
+                      <ProgressTaskCard
+                        task={task}
+                        memberLookup={memberLookup}
+                        canEditJobs={canEditJobs}
+                        onOpen={() => openTask(task)}
+                        onStatusChange={(status) =>
+                          moveTaskStatus(task, status)
+                        }
+                      />
+                      {task.phase_id && phaseNameById.get(task.phase_id) ? (
+                        <p className="px-1 text-[10px] text-[var(--workspace-shell-text-muted)]">
+                          {phaseNameById.get(task.phase_id)}
+                        </p>
+                      ) : null}
+                    </div>
+                  ))
+                )}
+              </div>
             </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
+
+      <JobProjectTaskSheet
+        open={taskSheetOpen}
+        onOpenChange={setTaskSheetOpen}
+        task={selectedTask}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        jobId={jobId}
+        canEditJobs={canEditJobs}
+        onUpdated={handleTaskUpdated}
+      />
     </div>
   );
 }

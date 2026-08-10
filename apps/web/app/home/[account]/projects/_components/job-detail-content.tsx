@@ -532,15 +532,16 @@ export function JobDetailContent({
         onValueChange={setActiveTab}
         className="flex min-h-0 flex-1 flex-col"
       >
-        <div className="shrink-0 overflow-x-auto border-b border-[color:var(--workspace-shell-border)]">
-          <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-0 rounded-none border-0 bg-transparent px-0 md:px-0">
-            <TabsTrigger
-              value="project"
-              className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
-            >
-              <LayoutGrid className="h-3.5 w-3.5" />
-              Project
-            </TabsTrigger>
+        <div className="relative shrink-0">
+          <div className="overflow-x-auto border-b border-[color:var(--workspace-shell-border)] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <TabsList className="inline-flex h-auto w-max min-w-full justify-start gap-0 rounded-none border-0 bg-transparent px-0 md:px-0">
+              <TabsTrigger
+                value="project"
+                className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Project
+              </TabsTrigger>
             <TabsTrigger
               value="overview"
               className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
@@ -601,7 +602,12 @@ export function JobDetailContent({
                 Notes and files
               </TabsTrigger>
             )}
-          </TabsList>
+            </TabsList>
+          </div>
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-y-0 right-0 w-12 bg-gradient-to-l from-[var(--workspace-shell-canvas)] to-transparent md:hidden"
+          />
         </div>
 
         <TabsContent

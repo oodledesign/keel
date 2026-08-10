@@ -21,10 +21,10 @@ type ViewMode = 'board' | 'timeline' | 'list';
 type BoardMode = 'phase' | 'progress';
 
 const STATUS_COLUMNS = [
-  { key: 'todo', label: 'To do' },
-  { key: 'in_progress', label: 'In progress' },
-  { key: 'client_review', label: 'Review' },
-  { key: 'done', label: 'Done' },
+  { key: 'todo', label: 'To do', colour: '#64748B' },
+  { key: 'in_progress', label: 'In progress', colour: '#41606F' },
+  { key: 'client_review', label: 'Review', colour: '#FF5C34' },
+  { key: 'done', label: 'Done', colour: '#16A34A' },
 ] as const;
 
 const STATUS_LABELS: Record<string, string> = {
@@ -35,6 +35,32 @@ const STATUS_LABELS: Record<string, string> = {
   completed: 'Done',
   cancelled: 'Cancelled',
 };
+
+const STATUS_STYLES: Record<string, string> = {
+  todo: 'bg-[var(--workspace-shell-panel-hover)] text-[var(--ozer-text-on-light-muted)]',
+  in_progress: 'bg-[var(--ozer-info)]/15 text-[var(--ozer-info)]',
+  client_review: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
+  done: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
+  cancelled:
+    'bg-[var(--workspace-shell-panel-hover)] text-[var(--ozer-text-on-light-muted)]',
+};
+
+const PRIORITY_DOT: Record<string, string> = {
+  low: 'bg-[var(--ozer-text-on-light-muted)]',
+  medium: 'bg-[var(--ozer-info)]',
+  high: 'bg-[var(--ozer-gold-500,#F0C14B)]',
+  urgent: 'bg-[var(--ozer-accent)]',
+  none: 'bg-[var(--workspace-shell-panel-hover)]',
+};
+
+const PHASE_COLUMN_COLOURS = [
+  '#41606F',
+  '#8B5CF6',
+  '#FF5C34',
+  '#F0C14B',
+  '#64748B',
+  '#16A34A',
+] as const;
 
 function normalizeStatus(status: string) {
   if (status === 'completed') return 'done';
@@ -205,58 +231,90 @@ function PortalProjectKanbanView({
         return (
           <div
             key={col.key}
-            className="w-[280px] shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel-hover)]/40 p-3"
+            className="flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
+            style={{ borderTopWidth: 3, borderTopColor: col.colour }}
           >
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-wide text-[var(--ozer-text-on-light)] uppercase">
-                {col.label}
+            <div className="border-b border-[color:var(--workspace-shell-border)]/80 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-sm font-semibold text-[var(--ozer-text-on-light)]">
+                  {col.label}
+                </h3>
+                <span className="rounded-full bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[10px] font-medium text-[var(--ozer-text-on-light-muted)]">
+                  {columnTasks.length}
+                </span>
+              </div>
+              <p className="mt-1 text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                {columnTasks.length === 0
+                  ? 'No tasks'
+                  : `${columnTasks.length} task${columnTasks.length === 1 ? '' : 's'}`}
               </p>
-              <span className="text-xs text-[var(--ozer-text-on-light-muted)]">
-                {columnTasks.length}
-              </span>
             </div>
-            <div className="space-y-2">
-              {columnTasks.map((task) => {
-                const open = expandedTaskId === task.id;
-                return (
-                  <div
-                    key={task.id}
-                    className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
-                  >
-                    <button
-                      type="button"
-                      className="w-full text-left"
-                      onClick={() => setExpandedTaskId(open ? null : task.id)}
+            <div className="flex flex-col gap-2 p-3">
+              {columnTasks.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-8 text-center text-xs text-[var(--ozer-text-on-light-muted)]">
+                  No tasks in this stage
+                </div>
+              ) : (
+                columnTasks.map((task) => {
+                  const open = expandedTaskId === task.id;
+                  const priorityKey = task.priority || 'none';
+                  const status = normalizeStatus(task.status);
+                  return (
+                    <div
+                      key={task.id}
+                      className="rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)] p-3 shadow-sm"
                     >
-                      <p className="text-sm font-medium text-[var(--ozer-text-on-light)]">
-                        {task.title}
-                      </p>
-                      {task.dueDate ? (
-                        <p className="mt-1 text-xs text-[var(--ozer-text-on-light-muted)]">
-                          Due {formatPortalDate(task.dueDate)}
+                      <button
+                        type="button"
+                        className="w-full text-left"
+                        onClick={() => setExpandedTaskId(open ? null : task.id)}
+                      >
+                        <div className="flex items-start gap-2">
+                          <span
+                            className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[priorityKey] ?? PRIORITY_DOT.none}`}
+                          />
+                          <div className="min-w-0 flex-1">
+                            <p className="text-sm leading-snug font-medium text-[var(--ozer-text-on-light)]">
+                              {task.title}
+                            </p>
+                            <div className="mt-2 flex flex-wrap items-center gap-2">
+                              <span
+                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+                                  STATUS_STYLES[status] ?? STATUS_STYLES.todo
+                                }`}
+                              >
+                                {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                              </span>
+                              {task.dueDate ? (
+                                <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                                  {formatPortalDate(task.dueDate)}
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+                        </div>
+                      </button>
+                      {open ? (
+                        <TaskComments
+                          taskId={task.id}
+                          comments={commentsByTask.get(task.id) ?? []}
+                          drafts={drafts}
+                          setDrafts={setDrafts}
+                          pending={pending}
+                          onSubmit={onSubmit}
+                        />
+                      ) : (
+                        <p className="mt-2 pl-4 text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                          {(commentsByTask.get(task.id) ?? []).length} comment
+                          {(commentsByTask.get(task.id) ?? []).length === 1
+                            ? ''
+                            : 's'}
                         </p>
-                      ) : null}
-                    </button>
-                    {open ? (
-                      <TaskComments
-                        taskId={task.id}
-                        comments={commentsByTask.get(task.id) ?? []}
-                        drafts={drafts}
-                        setDrafts={setDrafts}
-                        pending={pending}
-                        onSubmit={onSubmit}
-                      />
-                    ) : (
-                      <p className="mt-2 text-[11px] text-[var(--ozer-text-on-light-muted)]">
-                        {(commentsByTask.get(task.id) ?? []).length} comment
-                        {(commentsByTask.get(task.id) ?? []).length === 1
-                          ? ''
-                          : 's'}
-                      </p>
-                    )}
-                  </div>
-                );
-              })}
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         );
@@ -394,45 +452,70 @@ function PortalProjectPhaseKanbanView({
 
   return (
     <div className="flex gap-3 overflow-x-auto pb-2">
-      {columns.map((col) => {
+      {columns.map((col, index) => {
         const columnTasks = byPhase.get(col.key) ?? [];
         if (col.key === '__unassigned__' && columnTasks.length === 0) {
           return null;
         }
+        const colour =
+          PHASE_COLUMN_COLOURS[index % PHASE_COLUMN_COLOURS.length] ??
+          '#64748B';
         return (
           <div
             key={col.key}
-            className="w-[280px] shrink-0 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel-hover)]/40 p-3"
+            className="flex w-[min(100%,280px)] shrink-0 flex-col rounded-xl border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/80"
+            style={{ borderTopWidth: 3, borderTopColor: colour }}
           >
-            <div className="mb-3 flex items-center justify-between">
-              <p className="text-xs font-semibold tracking-wide text-[var(--ozer-text-on-light)] uppercase">
-                {col.label}
-              </p>
-              <span className="text-xs text-[var(--ozer-text-on-light-muted)]">
-                {columnTasks.length}
-              </span>
+            <div className="border-b border-[color:var(--workspace-shell-border)]/80 p-3">
+              <div className="flex items-start justify-between gap-2">
+                <h3 className="text-sm font-semibold text-[var(--ozer-text-on-light)]">
+                  {col.label}
+                </h3>
+                <span className="rounded-full bg-[var(--workspace-shell-panel-hover)] px-2 py-0.5 text-[10px] font-medium text-[var(--ozer-text-on-light-muted)]">
+                  {columnTasks.length}
+                </span>
+              </div>
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2 p-3">
               {columnTasks.map((task) => {
                 const open = expandedTaskId === task.id;
+                const priorityKey = task.priority || 'none';
+                const status = normalizeStatus(task.status);
                 return (
                   <div
                     key={task.id}
-                    className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3"
+                    className="rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)] p-3 shadow-sm"
                   >
                     <button
                       type="button"
                       className="w-full text-left"
                       onClick={() => setExpandedTaskId(open ? null : task.id)}
                     >
-                      <p className="text-sm font-medium text-[var(--ozer-text-on-light)]">
-                        {task.title}
-                      </p>
-                      {task.dueDate ? (
-                        <p className="mt-1 text-xs text-[var(--ozer-text-on-light-muted)]">
-                          Due {formatPortalDate(task.dueDate)}
-                        </p>
-                      ) : null}
+                      <div className="flex items-start gap-2">
+                        <span
+                          className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[priorityKey] ?? PRIORITY_DOT.none}`}
+                        />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm leading-snug font-medium text-[var(--ozer-text-on-light)]">
+                            {task.title}
+                          </p>
+                          <div className="mt-2 flex flex-wrap items-center gap-2">
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+                                STATUS_STYLES[status] ?? STATUS_STYLES.todo
+                              }`}
+                            >
+                              {STATUS_LABELS[status] ??
+                                status.replace('_', ' ')}
+                            </span>
+                            {task.dueDate ? (
+                              <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                                {formatPortalDate(task.dueDate)}
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+                      </div>
                     </button>
                     {open ? (
                       <TaskComments
@@ -444,7 +527,7 @@ function PortalProjectPhaseKanbanView({
                         onSubmit={onSubmit}
                       />
                     ) : (
-                      <p className="mt-2 text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                      <p className="mt-2 pl-4 text-[11px] text-[var(--ozer-text-on-light-muted)]">
                         {(commentsByTask.get(task.id) ?? []).length} comment
                         {(commentsByTask.get(task.id) ?? []).length === 1
                           ? ''

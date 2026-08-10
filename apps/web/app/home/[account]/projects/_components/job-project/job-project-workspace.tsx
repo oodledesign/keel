@@ -451,6 +451,7 @@ export function JobProjectWorkspace({
                 jobId={jobId}
                 board={board}
                 canEditJobs={canEditJobs}
+                members={members}
                 onBoardChange={setBoard}
               />
             )}

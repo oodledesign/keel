@@ -44,6 +44,14 @@ export const TASK_STATUS_STYLES: Record<string, string> = {
     'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text-muted)]',
 };
 
+/** Column accent colours for the Progress (status) kanban. */
+export const PROGRESS_STATUS_COLOURS: Record<string, string> = {
+  todo: '#64748B',
+  in_progress: ozerColors.info,
+  client_review: ozerColors.accent,
+  done: '#16A34A',
+};
+
 export const PRIORITY_DOT: Record<string, string> = {
   low: 'bg-[var(--workspace-shell-text-muted)]',
   medium: 'bg-[var(--ozer-info)]',
