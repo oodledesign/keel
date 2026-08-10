@@ -168,6 +168,41 @@ export const CancelBookingSchema = z.object({
   cancellationReason: z.string().max(1000).nullable().optional(),
 });
 
+export const CreateHostBookingSchema = z.object({
+  accountId: z.string().uuid(),
+  pageSlug: z.string().min(1).max(64),
+  eventSlug: z.string().min(1).max(64),
+  durationMinutes: z.number().int().min(5).max(480),
+  startAtIso: z.string().datetime({ offset: true }),
+  inviteeName: z.string().min(1).max(120),
+  inviteeEmail: z.string().email(),
+  inviteeTimezone: z.string().min(1).max(100),
+  inviteeNotes: z.string().max(2000).nullable().optional(),
+  clientId: z.string().uuid().nullable().optional(),
+  notifyInvitee: z.boolean().default(true),
+});
+
+export const ListCreateMeetingOptionsSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
+export const GetHostBusyIntervalsSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1),
+  fromIso: z.string().datetime({ offset: true }),
+  toIso: z.string().datetime({ offset: true }),
+  /** Booking-page host; falls back to workspace primary owner when omitted. */
+  hostUserId: z.string().uuid().optional(),
+  timeZone: z.string().min(1).max(100).optional(),
+});
+
 export type LocationType = z.infer<typeof LocationTypeSchema>;
 export type FormFieldType = z.infer<typeof FormFieldTypeSchema>;
 export type BookingStatus = z.infer<typeof BookingStatusSchema>;
+export type CreateHostBookingInput = z.infer<typeof CreateHostBookingSchema>;
+export type ListCreateMeetingOptionsInput = z.infer<
+  typeof ListCreateMeetingOptionsSchema
+>;
+export type GetHostBusyIntervalsInput = z.infer<
+  typeof GetHostBusyIntervalsSchema
+>;

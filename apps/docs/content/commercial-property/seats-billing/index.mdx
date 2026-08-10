@@ -1,0 +1,61 @@
+# Seats & billing
+
+Commercial property uses **graduated per-seat billing** for **billable** seats, plus a small number of free **support** seats at team scale.
+
+Manage membership on **Team** (`/app/[account]/members`) and the plan under workspace billing settings.
+
+## Billable vs support
+
+| Seat kind | Pays on Stripe | Can do |
+| --- | --- | --- |
+| **Billable** | Yes | Create/edit disposals, move WIP and requirement stages, configure Website & portals, run day-to-day negotiating work |
+| **Support** | No (within free allowance) | View workspace data and contribute notes / activity; **cannot** mutate stages, disposals, or publishing |
+
+If a support user tries a restricted action, Ozer asks them to use a billable colleague or upgrade the seat.
+
+## Graduated pricing (illustrative)
+
+Billable seats are priced graduated (exact Stripe tiers apply at checkout):
+
+1. Seat 1 → higher solo rate
+2. Seats 2–7 → mid team rate each
+3. Seats 8+ → lower scale rate each
+
+Marketing illustrations:
+
+| Example | Billable seats | Free support seats | Portal publishing (Rightmove / EG) |
+| --- | --- | --- | --- |
+| Commercial Solo | 1 | 0 | Property Hive website sync only |
+| Commercial Team | 2–7 (example card often uses 4) | 2 | Included |
+| Commercial Scale | 8+ (example card often uses 10) | 4 | Included |
+
+**Portal publishing** to Rightmove and EACH / EG requires **at least two billable seats**. Property Hive website sync remains available on Solo.
+
+Current public pricing: [ozer.so/pricing](https://www.ozer.so/pricing).
+
+## Invite with the right seat
+
+1. Open `/app/[account]/members`.
+2. Invite the colleague.
+3. Choose **billable** for negotiators and anyone who edits stock or stages.
+4. Choose **support** for PAs, trainees, or viewers within your free support allowance.
+5. Do not assign more billable members than your subscribed quantity without updating billing.
+6. After accept, confirm their seat kind on the members list.
+
+## Change seats and plan
+
+1. Open workspace **Billing**.
+2. Adjust billable seat quantity to match the negotiators you need.
+3. Confirm the graduated monthly estimate.
+4. Save — Stripe updates the subscription item quantity.
+5. Invite or convert members so billable headcount matches seats purchased.
+6. Recheck Website & portals unlock after moving from 1 → 2+ billable seats.
+
+## Practical tips
+
+1. Keep owners/admins billable during setup.
+2. Use support seats for visibility without inflating Stripe quantity.
+3. Unlock Rightmove / EG only when you intentionally take a second billable seat.
+4. If publishing is blocked, count billable seats first — then credentials.
+
+Related: [Invite your team](/commercial-property/getting-started/invite-team), [Website & portals](/commercial-property/publishing-portals).

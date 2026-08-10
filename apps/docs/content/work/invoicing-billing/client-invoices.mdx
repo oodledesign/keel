@@ -1,0 +1,62 @@
+# Client invoices
+
+## Goal
+
+Create invoices against clients (and often projects), send them, and track status through to paid. Optionally use proposals and contracts on the same Commercial track.
+
+## Prerequisites
+
+- Business workspace
+- **Invoices** visible under **Commercial**
+- Client records (and preferably projects) already created
+- **Settings → Payments** configured with how you expect to get paid (bank details / provider defaults as offered)
+
+## Steps: configure payment defaults (once)
+
+1. Open **Settings → Payments** (`/app/[account]/settings/payments`).
+2. Enter payment instructions and options your invoices should carry.
+3. Optionally set up **Services** (`/app/[account]/settings/services`) for reusable line items.
+4. Check **Brand** so PDFs and portals match your studio.
+
+## Steps: create and send an invoice
+
+1. Open **Invoices** → `/app/[account]/invoices`.
+2. Create a new invoice.
+3. Select the **client** (and project when applicable).
+4. Add line items — manually or from services/templates.
+5. Set issue date, due date, tax, and notes.
+6. Save draft, then open edit at `/app/[account]/invoices/[id]/edit` if you need to refine.
+7. Send / share the invoice using the actions on the invoice (email or share link depending on workspace).
+8. Watch status move (draft → sent → paid / overdue) on the invoices list.
+
+## Steps: proposals and contracts
+
+1. For pre-invoice sales docs, open **Proposals** (`/app/[account]/proposals`) or **Contracts** (`/app/[account]/contracts`).
+2. Create the document, link the client, edit at the `/edit` route, and send for review/signature as offered.
+3. When accepted, create the matching **Invoice** so finance stays in sync.
+
+## Steps: finances overview
+
+1. Open **Finances** under **Commercial** when enabled (`/app/[account]/finances` or settings finances).
+2. Use it for higher-level money views / integrations (for example accounting connections when configured).
+
+## What you’ll see
+
+- Invoice list with status filters
+- Editor for line items and client details
+- Related proposal/contract lists nearby in the same sidebar section
+
+## Tips
+
+- Invoice from the client or project context when available so links stay correct.
+- Keep currency and VAT approach consistent with your legal entity.
+- Recurring or retainer patterns: duplicate a prior invoice as a starting point when templates aren’t enough.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Can’t create invoices | Role needs invoice permission; check Business plan includes invoicing |
+| Send fails | Confirm client email; verify outbound email / provider settings |
+| Wrong branding on PDF | Update **Settings → Brand** |
+| Looking for Stripe subscription UI | That’s **Settings → Billing** — see [Workspace subscription](/work/invoicing-billing/workspace-subscription) |

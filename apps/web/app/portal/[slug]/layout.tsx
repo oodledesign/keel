@@ -40,6 +40,9 @@ export default async function PortalSlugLayout({
     <PortalShell
       clientSlug={slug}
       orgName={ctx.orgName}
+      clientPictureUrl={ctx.clientPictureUrl}
+      accountName={ctx.accountName}
+      accountLogoUrl={ctx.accountLogoUrl}
       userEmail={ctx.userEmail}
       userAvatarUrl={ctx.userAvatarUrl}
       hasWorkspaceAccess={ctx.hasWorkspaceAccess}

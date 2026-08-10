@@ -18,7 +18,17 @@ pnpm docs:dev
 
 ## Content
 
-MDX lives in [`content/`](./content). Sidebar order is controlled by `_meta.ts` files.
+MDX lives in [`content/`](./content), organised by workspace type:
+
+| Path | Workspace |
+|------|-----------|
+| `content/personal/` | Personal hub |
+| `content/work/` | Business (studio / agency CRM) |
+| `content/commercial-property/` | Commercial property |
+
+The homepage (`content/index.mdx`) is a picker. The navbar **Workspace** dropdown filters the sidebar via `getPageMap('/{workspace}')` so only the active workspace’s docs appear. Sidebar order is controlled by `_meta.ts` files inside each tree.
+
+Legacy flat URLs (e.g. `/getting-started`) permanently redirect to `/work/...`.
 
 ## Deploy
 

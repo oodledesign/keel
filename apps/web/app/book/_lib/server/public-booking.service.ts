@@ -798,6 +798,23 @@ async function assertSlotStillAvailable(input: {
   return endAt;
 }
 
+export type CreatePublicBookingOptions = {
+  /** Host create: skip availability / busy checks; still compute end from duration. */
+  skipAvailabilityCheck?: boolean;
+  /** Prefer explicit client membership over invitee email match. */
+  clientId?: string | null;
+  /**
+   * When false, confirmation email to invitee and Google attendee notifications
+   * are suppressed. Host email still follows notification settings.
+   * Defaults to workspace notification settings for public bookings.
+   */
+  notifyInvitee?: boolean;
+  /** When set, verify the booking page belongs to this account (host create). */
+  expectedAccountId?: string;
+  /** Host create: allow omitting required public form fields. */
+  skipFormValidation?: boolean;
+};
+
 /**
  * Race-condition strategy:
  * 1. Recompute slots with live free/busy + existing bookings (rejects overlaps).
@@ -806,13 +823,23 @@ async function assertSlotStillAvailable(input: {
  *    identical starts fail with 23505 — we surface a friendly “slot taken”.
  * Advisory locks were not chosen: the index already exists and is atomic.
  */
-export async function createPublicBooking(input: CreatePublicBookingInput) {
+export async function createPublicBooking(
+  input: CreatePublicBookingInput,
+  options: CreatePublicBookingOptions = {},
+) {
   const loaded = await loadPublicEventType(input.pageSlug, input.eventSlug);
   if (!loaded) {
     throw new Error('Event type not found');
   }
 
   const { page, eventType, formFields } = loaded;
+
+  if (
+    options.expectedAccountId &&
+    page.accountId !== options.expectedAccountId
+  ) {
+    throw new Error('Event type not found for this workspace');
+  }
 
   if (!eventType.durations.includes(input.durationMinutes)) {
     throw new Error('Invalid duration for this event type');
@@ -822,21 +849,28 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
     throw new Error('Guest invites are not allowed for this event type');
   }
 
-  validateFormResponses(formFields, input.formResponses);
+  if (!options.skipFormValidation) {
+    validateFormResponses(formFields, input.formResponses);
+  }
 
   const startAt = new Date(input.startAtIso);
-  const endAt = await assertSlotStillAvailable({
-    page,
-    eventType,
-    durationMinutes: input.durationMinutes,
-    startAt,
-    inviteeTimezone: input.inviteeTimezone,
-  });
+  if (Number.isNaN(startAt.getTime())) {
+    throw new Error('Invalid start time');
+  }
 
-  const clientId = await findClientIdByEmail(
-    page.accountId,
-    input.inviteeEmail,
-  );
+  const endAt = options.skipAvailabilityCheck
+    ? new Date(startAt.getTime() + input.durationMinutes * 60_000)
+    : await assertSlotStillAvailable({
+        page,
+        eventType,
+        durationMinutes: input.durationMinutes,
+        startAt,
+        inviteeTimezone: input.inviteeTimezone,
+      });
+
+  const clientId =
+    options.clientId ??
+    (await findClientIdByEmail(page.accountId, input.inviteeEmail));
 
   const client = getSupabaseServerAdminClient();
   const managementToken = randomUUID();
@@ -954,6 +988,12 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
     .filter(Boolean)
     .join('\n');
 
+  const settings = await getNotificationSettings(page.accountId);
+  const notifyInvitee =
+    options.notifyInvitee === undefined
+      ? settings.sendConfirmationToInvitee
+      : options.notifyInvitee;
+
   try {
     const gcal = await createGoogleBookingCalendarEvent({
       accountId: page.accountId,
@@ -972,6 +1012,7 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
       ],
       createMeet: eventType.locationType === 'google_meet',
       location: conferencingUrl,
+      sendUpdates: notifyInvitee ? 'all' : 'none',
     });
 
     googleEventId = gcal.eventId;
@@ -994,15 +1035,18 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
     })
     .eq('id', bookingId);
 
-  const settings = await getNotificationSettings(page.accountId);
+  const effectiveSettings = {
+    ...settings,
+    sendConfirmationToInvitee: notifyInvitee,
+  };
 
   try {
     await enqueueReminders(
       bookingId,
       startAt,
-      settings.reminderOffsetsMinutes,
-      settings.sendConfirmationToInvitee,
-      settings.sendConfirmationToHost,
+      effectiveSettings.reminderOffsetsMinutes,
+      effectiveSettings.sendConfirmationToInvitee,
+      effectiveSettings.sendConfirmationToHost,
     );
   } catch (error) {
     console.error('[public-booking] reminder enqueue failed', error);
@@ -1021,7 +1065,7 @@ export async function createPublicBooking(input: CreatePublicBookingInput) {
     ]);
     await sendBookingConfirmationEmails({
       booking: record,
-      settings,
+      settings: effectiveSettings,
       hostUserId: page.hostUserId,
       guests,
       formResponses,

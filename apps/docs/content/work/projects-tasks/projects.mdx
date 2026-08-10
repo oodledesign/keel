@@ -1,0 +1,55 @@
+# Projects
+
+## Goal
+
+Create and run delivery projects linked to clients, with phases and optional client-portal visibility.
+
+## Prerequisites
+
+- Business workspace
+- Sidebar **Work → Projects** (`/app/[account]/projects`)
+- Ideally an existing [client](/work/clients-pipeline/clients)
+
+## Steps: create a project
+
+1. Open **Projects** in the sidebar.
+2. Choose create / new project.
+3. Set the project name and link a **client**.
+4. Choose status / dates if prompted.
+5. Save. You’ll open the project detail at `/app/[account]/projects/[id]`.
+
+## Steps: structure delivery
+
+1. On the project detail page, add **phases** (milestones or workstreams).
+2. Open a phase (`/app/[account]/projects/[id]/phases/[phaseId]`) to manage its tasks.
+3. Assign owners and due dates so Planner and Tasks stay useful.
+4. Use edit at `/app/[account]/projects/[id]/edit` when you need to change basics (client, title, status).
+
+## Steps: share with the client portal
+
+1. Ensure the project is linked to a client with portal-ready contacts.
+2. On the project, toggle **Client portal access** / “Shared with client portal” when you want the client to see the project, tasks, and comments in their portal.
+3. Leave portal sharing off for internal-only work.
+4. Invite contacts from the client record if they don’t have portal access yet ([Portals & websites](/work/portals-websites)).
+
+## What you’ll see
+
+- Project list / kanban overview under **Projects**
+- Detail with phases, tasks, and portal toggle
+- Links into invoices / notes depending on workspace modules
+
+## Tips
+
+- Name projects the way clients recognise them (e.g. “Acme — Website redesign”).
+- Keep one primary project per engagement unless you intentionally split tracks.
+- Campaign-style trackers also live under **Projects** in Business workspaces.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Can’t see Projects | Check module + role (`canViewProjects`) |
+| Portal toggle disabled | Link a client first |
+| Tasks don’t show in Planner | Confirm due dates / assignees and open **Planner** for the same workspace |
+
+Next: [Tasks & planner](/work/projects-tasks/tasks-planner).

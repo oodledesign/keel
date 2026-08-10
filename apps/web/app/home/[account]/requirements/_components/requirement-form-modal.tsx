@@ -21,8 +21,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
-import { Textarea } from '@kit/ui/textarea';
 import { toast } from '@kit/ui/sonner';
+import { Textarea } from '@kit/ui/textarea';
 
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
@@ -41,8 +41,8 @@ import {
 import { CommercialInterestPanel } from '../../listings/_components/commercial-interest-panel';
 import { WipAttachmentsStrip } from '../../pipeline/_components/wip-attachments-strip';
 import type { RequirementDraftPrefill } from '../_lib/schema/requirements.schema';
-import type { CommercialRequirement } from '../_lib/server/requirements.service';
 import { draftRequirementFromPaste } from '../_lib/server/requirement-draft-actions';
+import type { CommercialRequirement } from '../_lib/server/requirements.service';
 import {
   createRequirement,
   updateRequirement,

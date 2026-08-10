@@ -215,8 +215,7 @@ export function ReplanDialog({
         );
       }
     } catch (err) {
-      const message =
-        err instanceof Error ? err.message : 'Could not re-plan';
+      const message = err instanceof Error ? err.message : 'Could not re-plan';
       if (
         handleAiCreditsFailure(reportExhausted, {
           accountId: creditsAccountId || accountId,

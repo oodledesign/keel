@@ -24,6 +24,7 @@ import {
   WorkspaceAccountsSelector,
   buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
+import type { WorkspaceSwitcherPortal } from '~/components/workspace-shell/workspace-accounts-selector';
 import { workspaceSidebarClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import featureFlagsConfig from '~/config/feature-flags.config';
 import {
@@ -43,6 +44,7 @@ import { PersonalWorkspaceNav } from './personal-workspace-nav';
 interface HomeSidebarProps {
   workspace: UserWorkspace;
   switcherAccounts: WorkspaceSwitcherAccount[];
+  switcherPortals?: WorkspaceSwitcherPortal[];
   /** Shared workspaces for sidebar shortcuts (from memberships). */
   sharedWorkspaces?: Array<{
     id: string;
@@ -71,11 +73,17 @@ export function HomeSidebar(props: HomeSidebarProps) {
     <Sidebar collapsible={collapsible} className={workspaceSidebarClassName}>
       <SidebarHeader className="gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-3">
         <HomeSidebarLogo />
-        <If condition={featureFlagsConfig.enableTeamAccounts}>
+        <If
+          condition={
+            featureFlagsConfig.enableTeamAccounts ||
+            (props.switcherPortals?.length ?? 0) > 0
+          }
+        >
           <WorkspaceAccountsSelector
             selectedAccount={PERSONAL_WORKSPACE_VALUE}
             userId={user.id}
             accounts={switcherAccounts}
+            portals={props.switcherPortals}
             personalAccount={
               workspace
                 ? {

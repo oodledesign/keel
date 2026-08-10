@@ -1,0 +1,44 @@
+# Invite your team
+
+## Goal
+
+Add colleagues to your Business workspace with roles that match what they should see and edit.
+
+## Prerequisites
+
+- A Business team workspace you own or administer
+- Colleague email addresses
+- Seats available on your plan (see [Workspace subscription](/work/invoicing-billing/workspace-subscription))
+
+## Steps
+
+1. Switch to the Business workspace with the account switcher.
+2. In the sidebar under **Team & tools**, open **Team** (`/app/[account]/members`).
+3. Choose invite / add member (also available at `/app/[account]/members/invites`).
+4. Enter the email address and select a **role** (owner, admin, or member — exact labels depend on your workspace roles).
+5. Send the invitation.
+6. Ask your colleague to open the invite email (or the in-app invitation), accept it, and sign in with the same email.
+7. Confirm they appear under **Team** and can open shared Clients and Projects.
+
+## What you’ll see
+
+- Member list with roles and status
+- Pending invites until the person accepts
+- Role-gated sidebar items (someone without invoice permission won’t see **Invoices**)
+
+## Tips
+
+- Invite owners/admins first for setup, then collaborators.
+- Use the shared Business workspace for client work; keep purely personal items in your personal account when that split helps.
+- Permissions follow workspace roles; Postgres row-level security enforces access on the server — you don’t configure RLS yourself.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Invite email missing | Check spam; resend from **Team**; confirm the email spelling |
+| “Seat limit” or can’t invite | Upgrade plan or remove unused members under **Settings → Billing** |
+| Member sees empty sidebar | They may need a different role, or modules are disabled for the workspace |
+| Stale permissions after role change | Have them sign out and back in |
+
+Next: [Workspace overview](/work/workspace) or jump into [Clients](/work/clients-pipeline/clients).

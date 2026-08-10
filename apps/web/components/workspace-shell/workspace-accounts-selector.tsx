@@ -42,10 +42,22 @@ type PersonalAccountSeed = {
   picture_url: string | null;
 };
 
+/** Client portal memberships for the switcher “Client portals” section. */
+export type WorkspaceSwitcherPortal = {
+  clientOrgId: string;
+  slug: string;
+  name: string;
+  agencyName: string;
+  agencyLogoUrl: string | null;
+  clientLogoUrl: string | null;
+};
+
 type WorkspaceAccountsSelectorProps = {
   selectedAccount: string;
   userId: string;
   accounts: WorkspaceSwitcherAccount[];
+  /** Portals the user can open as a client contact (separate dropdown section). */
+  portals?: WorkspaceSwitcherPortal[];
   className?: string;
   enableTeamCreation?: boolean;
   /** Popover (default) or inline expand — inline pushes sibling content down (mobile menu). */
@@ -59,6 +71,7 @@ export function WorkspaceAccountsSelector({
   selectedAccount,
   userId,
   accounts,
+  portals = [],
   className,
   enableTeamCreation = true,
   variant = 'popover',
@@ -103,6 +116,14 @@ export function WorkspaceAccountsSelector({
 
     router.replace(
       pathsConfig.app.accountHome.replace('[account]', account.slug),
+    );
+  }
+
+  function navigateToPortal(portal: WorkspaceSwitcherPortal) {
+    setOpen(false);
+    onNavigate?.();
+    router.push(
+      pathsConfig.app.clientPortalHome.replace('[clientSlug]', portal.slug),
     );
   }
 
@@ -169,6 +190,41 @@ export function WorkspaceAccountsSelector({
             />
           ))}
         </CommandGroup>
+
+        {portals.length > 0 ? (
+          <>
+            <CommandSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
+            <CommandGroup heading="Client portals">
+              {portals.map((portal) => (
+                <CommandItem
+                  key={portal.clientOrgId}
+                  value={`${portal.name} ${portal.slug} portal ${portal.agencyName}`}
+                  className="my-1 cursor-pointer text-[var(--workspace-shell-text)] aria-selected:bg-[var(--workspace-shell-sidebar-accent)] aria-selected:text-[var(--workspace-shell-text)]"
+                  onSelect={() => navigateToPortal(portal)}
+                >
+                  <div className="flex min-w-0 flex-1 items-center gap-2.5">
+                    <WorkspaceAvatar
+                      name={portal.name}
+                      color="var(--workspace-shell-sidebar-accent)"
+                      image={portal.clientLogoUrl ?? portal.agencyLogoUrl}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium">
+                        {portal.name}
+                      </p>
+                      <p className="truncate text-[11px] text-[var(--workspace-shell-text-muted)]">
+                        {portal.agencyName.trim() &&
+                        portal.agencyName.trim() !== portal.name.trim()
+                          ? `Via ${portal.agencyName}`
+                          : 'Client portal'}
+                      </p>
+                    </div>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </>
+        ) : null}
 
         {enableTeamCreation ? (
           <>

@@ -12,7 +12,10 @@ import { cn } from '@kit/ui/utils';
 import { HapticButton, HapticLink } from '~/components/haptic-link';
 import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
 import { PlatformSupportTicketDialog } from '~/components/workspace-shell/platform-support-ticket-dialog';
-import { WorkspaceAccountsSelector } from '~/components/workspace-shell/workspace-accounts-selector';
+import {
+  WorkspaceAccountsSelector,
+  type WorkspaceSwitcherPortal,
+} from '~/components/workspace-shell/workspace-accounts-selector';
 import { WorkspaceMobileBackButton } from '~/components/workspace-shell/workspace-mobile-back-button';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import { navHrefPathname } from '~/lib/dashboard-shortcuts/personal-home-url';
@@ -37,6 +40,7 @@ type WorkspaceMobileMenuProps = {
   account: string;
   userId: string;
   accounts: WorkspaceSwitcherAccount[];
+  portals?: WorkspaceSwitcherPortal[];
   navLinks?: MobileNavLink[];
   navSections?: MobileNavSection[];
   open: boolean;
@@ -49,6 +53,7 @@ export function WorkspaceMobileMenu({
   account,
   userId,
   accounts,
+  portals = [],
   navLinks,
   navSections,
   open,
@@ -127,6 +132,7 @@ export function WorkspaceMobileMenu({
                 selectedAccount={account}
                 userId={userId}
                 accounts={accounts}
+                portals={portals}
                 className="w-full max-w-none justify-between px-0"
                 variant="inline"
                 onNavigate={close}
@@ -398,6 +404,7 @@ export function WorkspaceMobileHeaderSelector(props: {
   account: string;
   userId: string;
   accounts: WorkspaceSwitcherAccount[];
+  portals?: WorkspaceSwitcherPortal[];
 }) {
   return (
     <div className="min-w-0 flex-1">
@@ -405,6 +412,7 @@ export function WorkspaceMobileHeaderSelector(props: {
         selectedAccount={props.account}
         userId={props.userId}
         accounts={props.accounts}
+        portals={props.portals}
         className="h-9 max-w-none justify-start px-1"
         enableTeamCreation={false}
       />

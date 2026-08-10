@@ -1,0 +1,27 @@
+# Workspace
+
+Ozer is multi-tenant: every disposal, contact, viewing, and proposal belongs to an **account** (workspace). Commercial property work runs on a team workspace with the commercial property profile.
+
+## Personal vs team
+
+| | Personal | Commercial team |
+| --- | --- | --- |
+| Ownership | You alone | Shared with members |
+| Best for | Hub across life and work | Agency disposals, WIP, portals |
+| Invites | N/A | Roles, billable / support seats |
+| URL | Personal home routes | `/app/[account]/…` |
+
+## Steps to switch workspace
+
+1. Open the account switcher in the app shell.
+2. Select the commercial team workspace (not your personal hub).
+3. Confirm the URL contains your slug: `/app/[account]/…`.
+4. Check the sidebar shows commercial labels (Disposals, WIP, Contacts, Requirements).
+
+## Key ideas
+
+1. **Slug = account** — replace `[account]` with your workspace slug in every path in these docs.
+2. **Seat kind** — billable members edit agency data; support seats are limited (see [Seats & billing](/commercial-property/seats-billing)).
+3. **Modules** — workspace settings can show or hide nav items; missing keys default to on for new modules.
+
+Next: [Navigation](/commercial-property/workspace/navigation).

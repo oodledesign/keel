@@ -1005,6 +1005,8 @@ export function ClientDetailSidebar({
             accountSlug={accountSlug}
             accountId={accountId}
             clientId={client.id}
+            inviteeName={displayName}
+            inviteeEmail={client.email}
           />
           <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-6">
             <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">

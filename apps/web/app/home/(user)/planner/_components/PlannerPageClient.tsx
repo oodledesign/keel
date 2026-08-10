@@ -50,8 +50,11 @@ const defaultPreferences: PlannerPreferences = {
 };
 
 export function PlannerPageClient({ initialData }: PlannerPageClientProps) {
-  const { reportExhausted, accountId: creditsAccountId, billingHref } =
-    useAiCreditsExhausted();
+  const {
+    reportExhausted,
+    accountId: creditsAccountId,
+    billingHref,
+  } = useAiCreditsExhausted();
   const previousTaskIdsRef = useRef(
     new Set(
       initialData.taskTree.flatMap((workspace) =>

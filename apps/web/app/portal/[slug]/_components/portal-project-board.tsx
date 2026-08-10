@@ -39,7 +39,8 @@ const STATUS_LABELS: Record<string, string> = {
 const STATUS_STYLES: Record<string, string> = {
   todo: 'bg-[var(--workspace-shell-panel-hover)] text-[var(--ozer-text-on-light-muted)]',
   in_progress: 'bg-[var(--ozer-info)]/15 text-[var(--ozer-info)]',
-  client_review: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
+  client_review:
+    'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
   done: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
   cancelled:
     'bg-[var(--workspace-shell-panel-hover)] text-[var(--ozer-text-on-light-muted)]',
@@ -283,7 +284,8 @@ function PortalProjectKanbanView({
                                   STATUS_STYLES[status] ?? STATUS_STYLES.todo
                                 }`}
                               >
-                                {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                                {STATUS_LABELS[status] ??
+                                  status.replace('_', ' ')}
                               </span>
                               {task.dueDate ? (
                                 <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">

@@ -345,6 +345,107 @@ export function createSchedulingService(client: AnyClient) {
       return ((data ?? []) as Record<string, unknown>[]).map(mapEventType);
     },
 
+    /**
+     * Active booking pages + active event types for the host "Create meeting" dialog.
+     */
+    async listCreateMeetingOptions(accountId: string): Promise<
+      Array<{
+        pageId: string;
+        pageSlug: string;
+        pageTitle: string;
+        timezone: string;
+        hostUserId: string | null;
+        eventTypes: Array<{
+          id: string;
+          slug: string;
+          name: string;
+          durations: number[];
+          defaultDuration: number;
+          locationType: LocationType;
+        }>;
+      }>
+    > {
+      const { data: pages, error: pagesError } = await table(
+        client,
+        'booking_pages',
+      )
+        .select('id, slug, title, timezone, is_active, host_user_id')
+        .eq('account_id', accountId)
+        .eq('is_active', true)
+        .order('created_at', { ascending: false });
+
+      throwIfError(pagesError, 'Could not load booking pages');
+
+      const pageRows = (pages ?? []) as Array<{
+        id: string;
+        slug: string;
+        title: string;
+        timezone: string;
+        is_active: boolean;
+        host_user_id: string | null;
+      }>;
+
+      if (pageRows.length === 0) return [];
+
+      const pageIds = pageRows.map((page) => page.id);
+      const { data: eventTypes, error: eventTypesError } = await table(
+        client,
+        'event_types',
+      )
+        .select(
+          'id, booking_page_id, slug, name, durations, default_duration, location_type, is_active',
+        )
+        .in('booking_page_id', pageIds)
+        .eq('is_active', true)
+        .order('created_at', { ascending: true });
+
+      throwIfError(eventTypesError, 'Could not load event types');
+
+      const byPage = new Map<
+        string,
+        Array<{
+          id: string;
+          slug: string;
+          name: string;
+          durations: number[];
+          defaultDuration: number;
+          locationType: LocationType;
+        }>
+      >();
+
+      for (const row of (eventTypes ?? []) as Array<{
+        id: string;
+        booking_page_id: string;
+        slug: string;
+        name: string;
+        durations: number[] | null;
+        default_duration: number;
+        location_type: string;
+      }>) {
+        const list = byPage.get(row.booking_page_id) ?? [];
+        list.push({
+          id: row.id,
+          slug: row.slug,
+          name: row.name,
+          durations: Array.isArray(row.durations) ? row.durations : [30],
+          defaultDuration: row.default_duration,
+          locationType: row.location_type as LocationType,
+        });
+        byPage.set(row.booking_page_id, list);
+      }
+
+      return pageRows
+        .map((page) => ({
+          pageId: page.id,
+          pageSlug: page.slug,
+          pageTitle: page.title,
+          timezone: page.timezone,
+          hostUserId: page.host_user_id,
+          eventTypes: byPage.get(page.id) ?? [],
+        }))
+        .filter((page) => page.eventTypes.length > 0);
+    },
+
     async createEventType(
       input: z.infer<typeof CreateEventTypeSchema>,
     ): Promise<EventTypeRow> {

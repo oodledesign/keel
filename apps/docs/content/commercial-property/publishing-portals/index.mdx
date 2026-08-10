@@ -1,0 +1,63 @@
+# Website & portals
+
+Configure agency marketing destinations under **Website & portals** at `/app/[account]/commercial-publishing`.
+
+This page is for commercial publishing only:
+
+1. **Property Hive** — website sync (XML feed and optional WordPress REST)
+2. **Rightmove** — UK property portal
+3. **EACH / EG** — commercial portal publishing (EG / EACH credentials)
+
+It is **not** Site Studio. Site Studio is a Business-workspace website builder and is out of scope for commercial property docs.
+
+## Prerequisites
+
+1. You hold a **billable** seat (support seats cannot change publishing settings).
+2. For **Rightmove** and **EACH / EG**, the workspace has **at least two billable seats**. Property Hive website sync remains available on a single billable (Solo) seat.
+3. Disposals you intend to publish are at **Marketing** (or otherwise on-market per your process) with Marketing and Media completed.
+
+## Property Hive
+
+Preferred path: Kato-compatible **XML feed** that Property Hive pulls on a schedule.
+
+1. Open `/app/[account]/commercial-publishing`.
+2. Find the **Property Hive** section.
+3. Click **Enable feed** (or equivalent) to generate a secret feed URL.
+4. Copy the feed URL.
+5. In Property Hive → **Property Import**, create or edit an import source and paste the feed URL.
+6. Set Property Hive to pull on your usual cadence (for example every 15 minutes).
+7. Optionally save WordPress REST credentials (site URL, username, application password, office ID) for live push — only if you need REST instead of, or in addition to, the feed.
+8. Run a test publish for a marketing disposal from the test controls on the same page.
+9. If you rotate the feed token, paste the new URL into Property Hive immediately or imports will stop.
+
+## Rightmove
+
+1. Confirm the workspace has **two or more billable seats**.
+2. Open `/app/[account]/commercial-publishing`.
+3. Enter Rightmove **branch ID**, **network ID**, **username**, and **secret**.
+4. Save credentials.
+5. Ensure the disposal’s marketing data and media meet Rightmove requirements.
+6. Use the page’s test publish control against a marketing listing.
+7. Monitor publication status on the disposal **Management** tab.
+
+## EACH / EG
+
+1. Confirm **two or more billable seats**.
+2. On `/app/[account]/commercial-publishing`, open the EACH / EG credentials section.
+3. Enter **branch ID**, **network ID**, **username**, and **secret** from your EG / EACH account.
+4. Save credentials.
+5. Test publish a marketing disposal.
+6. Check Management → publications for success or error detail.
+
+## Going live checklist
+
+1. Disposal status is **Marketing**.
+2. Marketing copy and Media (primary image) are complete.
+3. Availability schedule matches what you want portals to show.
+4. Property Hive feed and/or portal credentials are configured.
+5. Test publish succeeds before a bulk go-live.
+6. Off-market status changes (withdrawn / let / sold) are reflected so feeds and portals do not keep live stock incorrectly.
+
+Credentials are stored for the workspace — never commit them to documentation or share secrets in tickets.
+
+Related: [Seats & billing](/commercial-property/seats-billing), [Disposals](/commercial-property/disposals).

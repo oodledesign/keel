@@ -140,64 +140,125 @@ export const savePortalCredentialsAction = enhanceAction(
 
 export const testPublishListingAction = enhanceAction(
   async (input) => {
-    if (input.portal !== 'property_hive') {
-      const client = getSupabaseServerClient();
-      const { assertCommercialPortalPublishingAllowed } =
-        await import('~/lib/commercial/commercial-seat-access');
-      await assertCommercialPortalPublishingAllowed({
-        client,
-        accountId: input.accountId,
-      });
-    }
+    try {
+      if (input.portal !== 'property_hive') {
+        const client = getSupabaseServerClient();
+        const { assertCommercialPortalPublishingAllowed } =
+          await import('~/lib/commercial/commercial-seat-access');
+        await assertCommercialPortalPublishingAllowed({
+          client,
+          accountId: input.accountId,
+        });
+      }
 
-    if (!input.listingId) {
       if (input.portal === 'property_hive') {
-        const credentials = await getPropertyHiveCredentials(input.accountId);
-        if (!credentials) {
-          throw new Error('Property Hive credentials not configured');
+        const settings = await loadCommercialPublishingSettings(
+          input.accountId,
+        );
+        const restConfigured = settings.propertyHive.configured;
+        const feedEnabled = settings.propertyHive.feedEnabled;
+        const feedUrl = settings.propertyHive.feedUrl;
+
+        // Preferred path: Kato-compatible XML feed (no live WordPress REST push)
+        if (feedEnabled && feedUrl) {
+          if (!input.listingId) {
+            return {
+              ok: true as const,
+              message:
+                'Property Hive XML feed is enabled. Paste the feed URL in Property Hive → Property Import.',
+              feedUrl,
+            };
+          }
+
+          const { data: listing, error: listingError } = await db()
+            .from('commercial_listings')
+            .select('id, name, status')
+            .eq('id', input.listingId)
+            .eq('account_id', input.accountId)
+            .maybeSingle();
+
+          if (listingError) {
+            return { ok: false as const, message: listingError.message };
+          }
+          if (!listing) {
+            return {
+              ok: false as const,
+              message: 'Listing not found in this workspace',
+            };
+          }
+
+          const name = listing.name as string;
+          const status = listing.status as string;
+          const onMarket = status === 'marketing' || status === 'under_offer';
+
+          return {
+            ok: true as const,
+            message: onMarket
+              ? `"${name}" is on-market and will appear in the XML feed on the next Property Hive import.`
+              : `"${name}" is ${status} — set status to Marketing or Under offer for it to appear in the feed.`,
+            feedUrl,
+          };
         }
+
+        if (!restConfigured) {
+          return {
+            ok: false as const,
+            message:
+              'Property Hive XML feed is not enabled yet. Click “Enable feed” above, or save WordPress REST credentials for live push.',
+          };
+        }
+
+        if (!input.listingId) {
+          return {
+            ok: true as const,
+            message: 'Property Hive WordPress credentials are configured',
+          };
+        }
+
+        const result = await pushListingToPropertyHive(
+          input.accountId,
+          input.listingId,
+        );
         return {
           ok: true as const,
-          message: 'Property Hive credentials are configured',
+          message: `Pushed to Property Hive (id ${result.externalId})`,
+          externalUrl: result.externalUrl,
         };
       }
 
-      return {
-        ok: true as const,
-        message: 'Select a listing to test publish',
-      };
-    }
+      if (!input.listingId) {
+        return {
+          ok: true as const,
+          message: 'Select a listing to test publish',
+        };
+      }
 
-    if (input.portal === 'property_hive') {
-      const result = await pushListingToPropertyHive(
-        input.accountId,
-        input.listingId,
-      );
-      return {
-        ok: true as const,
-        message: `Pushed to Property Hive (id ${result.externalId})`,
-        externalUrl: result.externalUrl,
-      };
-    }
+      if (input.portal === 'rightmove') {
+        const publication = await publishToRightmove(
+          input.accountId,
+          input.listingId,
+        );
+        return {
+          ok: publication.status !== 'error',
+          message: publication.last_error ?? 'Rightmove publish recorded',
+        };
+      }
 
-    if (input.portal === 'rightmove') {
-      const publication = await publishToRightmove(
-        input.accountId,
-        input.listingId,
-      );
+      const publication = await publishToEach(input.accountId, input.listingId);
       return {
         ok: publication.status !== 'error',
-        message: publication.last_error ?? 'Rightmove publish recorded',
-        publication,
+        message: publication.last_error ?? 'EACH publish recorded',
+      };
+    } catch (error) {
+      // Avoid opaque Next.js production digests for business failures.
+      return {
+        ok: false as const,
+        message:
+          error instanceof Error
+            ? error.message
+            : 'Test publish failed unexpectedly',
       };
     }
-
-    const publication = await publishToEach(input.accountId, input.listingId);
-    return {
-      ok: publication.status !== 'error',
-      message: publication.last_error ?? 'EACH publish recorded',
-      publication,
-    };
   },
   { schema: TestPublishListingSchema },
 );

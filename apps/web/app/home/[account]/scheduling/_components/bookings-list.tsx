@@ -1,8 +1,9 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useRouter } from 'next/navigation';
+import { useEffect, useState, useTransition } from 'react';
 
-import { ExternalLink } from 'lucide-react';
+import { ExternalLink, Plus } from 'lucide-react';
 
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
@@ -25,6 +26,7 @@ import {
 
 import { cancelBookingAction } from '../_lib/server/scheduling-actions';
 import type { BookingListRow } from '../_lib/server/scheduling.service';
+import { CreateMeetingDialog } from './create-meeting-dialog';
 
 type Props = {
   accountId: string;
@@ -59,11 +61,18 @@ export function BookingsList({
   upcoming: initialUpcoming,
   past: initialPast,
 }: Props) {
+  const router = useRouter();
   const [upcoming, setUpcoming] = useState(initialUpcoming);
   const [past, setPast] = useState(initialPast);
   const [pending, startTransition] = useTransition();
   const [cancelTarget, setCancelTarget] = useState<BookingListRow | null>(null);
   const [reason, setReason] = useState('');
+  const [createOpen, setCreateOpen] = useState(false);
+
+  useEffect(() => {
+    setUpcoming(initialUpcoming);
+    setPast(initialPast);
+  }, [initialUpcoming, initialPast]);
 
   function confirmCancel() {
     if (!cancelTarget) return;
@@ -97,6 +106,19 @@ export function BookingsList({
 
   return (
     <div className="space-y-8">
+      {canEdit ? (
+        <div className="flex justify-end">
+          <Button
+            type="button"
+            className={workspaceBtnPrimaryMd}
+            onClick={() => setCreateOpen(true)}
+          >
+            <Plus className="mr-1.5 h-4 w-4" />
+            Create meeting
+          </Button>
+        </div>
+      ) : null}
+
       <BookingSection
         title="Upcoming"
         empty="No upcoming bookings."
@@ -112,6 +134,14 @@ export function BookingsList({
         canEdit={false}
         pending={pending}
         onCancel={setCancelTarget}
+      />
+
+      <CreateMeetingDialog
+        open={createOpen}
+        onOpenChange={setCreateOpen}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        onCreated={() => router.refresh()}
       />
 
       <Dialog

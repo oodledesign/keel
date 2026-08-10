@@ -22,6 +22,8 @@ export async function createGoogleBookingCalendarEvent(input: {
   attendees: Attendee[];
   createMeet: boolean;
   location?: string | null;
+  /** When `none`, host calendar event is created without notifying attendees. */
+  sendUpdates?: 'all' | 'none';
 }): Promise<{
   eventId: string;
   conferencingUrl: string | null;
@@ -63,7 +65,7 @@ export async function createGoogleBookingCalendarEvent(input: {
 
   const query = new URLSearchParams({
     conferenceDataVersion: input.createMeet ? '1' : '0',
-    sendUpdates: 'all',
+    sendUpdates: input.sendUpdates ?? 'all',
   });
 
   const res = await fetch(

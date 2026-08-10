@@ -153,6 +153,25 @@ export const SetListingMediaCoverSchema = z.object({
   accountId: z.string().uuid(),
 });
 
+export const UpdateListingMediaSchema = z
+  .object({
+    mediaId: z.string().uuid(),
+    listingId: z.string().uuid(),
+    accountId: z.string().uuid(),
+    fileName: z.string().trim().min(1).max(200).optional(),
+    storagePath: z.string().min(1).optional(),
+    mimeType: z.string().trim().max(120).optional().nullable(),
+    mediaType: z.enum(MEDIA_TYPES).optional(),
+  })
+  .refine(
+    (data) =>
+      data.fileName !== undefined ||
+      data.storagePath !== undefined ||
+      data.mimeType !== undefined ||
+      data.mediaType !== undefined,
+    { message: 'Provide at least one field to update' },
+  );
+
 export const DeleteListingMediaSchema = z.object({
   mediaId: z.string().uuid(),
   listingId: z.string().uuid(),
@@ -315,6 +334,7 @@ export type CreateListingMediaInput = z.infer<typeof CreateListingMediaSchema>;
 export type SetListingMediaCoverInput = z.infer<
   typeof SetListingMediaCoverSchema
 >;
+export type UpdateListingMediaInput = z.infer<typeof UpdateListingMediaSchema>;
 export type CreateListingUnitInput = z.infer<typeof CreateListingUnitSchema>;
 export type UpdateListingUnitInput = z.infer<typeof UpdateListingUnitSchema>;
 export type CreateListingInput = z.infer<typeof CreateListingSchema>;

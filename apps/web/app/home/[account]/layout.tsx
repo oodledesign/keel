@@ -9,12 +9,13 @@ import { TeamAccountWorkspaceContextProvider } from '@kit/team-accounts/componen
 import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
+import { AiCreditsExhaustedShell } from '~/components/ai/ai-credits-exhausted-shell';
 import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
-import { AiCreditsExhaustedShell } from '~/components/ai/ai-credits-exhausted-shell';
 import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
 import type { WorkNavCounts } from '~/config/work-account-navigation.config';
+import { listUserClientPortalMemberships } from '~/home/(user)/_lib/server/list-user-client-portal-memberships';
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
@@ -105,9 +106,10 @@ async function SidebarLayout({
     await import('@kit/supabase/server-client')
   ).getSupabaseServerClient();
 
-  const [data, switcherAccounts] = await Promise.all([
+  const [data, switcherAccounts, switcherPortals] = await Promise.all([
     loadTeamWorkspace(account),
     loadWorkspaceSwitcherAccounts(client, user.id),
+    listUserClientPortalMemberships(user.id),
     enforceWorkspaceBilling(account),
   ]);
 
@@ -118,6 +120,7 @@ async function SidebarLayout({
   const accountId = data.account.id;
   const workspaceProfile = data.workspaceProfile;
   const accounts = switcherAccounts.length > 0 ? switcherAccounts : [];
+  const portals = switcherPortals;
   const focusAccountIds = [
     ...new Set([accountId, ...accounts.map((row) => row.id)]),
   ];
@@ -136,6 +139,7 @@ async function SidebarLayout({
     accountId,
     user: data.user,
     accounts,
+    portals,
     moduleSettings: data.moduleSettings,
     workspaceProfile,
     accountAccess,
@@ -206,6 +210,7 @@ function TeamWorkspaceSidebarShell({
   accountId,
   user,
   accounts,
+  portals = [],
   moduleSettings,
   workspaceProfile,
   accountAccess,
@@ -223,6 +228,7 @@ function TeamWorkspaceSidebarShell({
   accountId: string;
   user: React.ComponentProps<typeof TeamAccountLayoutSidebar>['user'];
   accounts: React.ComponentProps<typeof TeamAccountLayoutSidebar>['accounts'];
+  portals?: React.ComponentProps<typeof TeamAccountLayoutSidebar>['portals'];
   moduleSettings: Record<string, boolean>;
   workspaceProfile: React.ComponentProps<
     typeof TeamAccountLayoutSidebar
@@ -272,6 +278,7 @@ function TeamWorkspaceSidebarShell({
               account={account}
               accountId={accountId}
               accounts={accounts}
+              portals={portals}
               user={user}
               moduleSettings={moduleSettings}
               workspaceProfile={workspaceProfile}
@@ -289,6 +296,7 @@ function TeamWorkspaceSidebarShell({
             accountId={accountId}
             user={user}
             accounts={accounts}
+            portals={portals}
             navSections={mobileNavSections}
             bottomNavTabs={bottomNavTabs}
             spaceType={spaceTypeFromProfile(workspaceProfile)}
@@ -318,9 +326,10 @@ async function HeaderLayout({
   const client = (
     await import('@kit/supabase/server-client')
   ).getSupabaseServerClient();
-  const [data, switcherAccounts] = await Promise.all([
+  const [data, switcherAccounts, switcherPortals] = await Promise.all([
     loadTeamWorkspace(account),
     loadWorkspaceSwitcherAccounts(client, user.id),
+    listUserClientPortalMemberships(user.id),
     enforceWorkspaceBilling(account),
   ]);
 
@@ -330,6 +339,7 @@ async function HeaderLayout({
 
   const accountId = data.account.id;
   const accounts = switcherAccounts;
+  const portals = switcherPortals;
   const focusAccountIds = [
     ...new Set([accountId, ...accounts.map((row) => row.id)]),
   ];
@@ -359,6 +369,7 @@ async function HeaderLayout({
             accountId={accountId}
             data={data}
             accounts={accounts}
+            portals={portals}
             accountAccess={accountAccess}
             access={access}
             homePath={homePath}
@@ -374,6 +385,7 @@ async function HeaderLayout({
             accountId={accountId}
             data={data}
             accounts={accounts}
+            portals={portals}
             accountAccess={accountAccess}
             access={access}
             homePath={homePath}
@@ -392,6 +404,7 @@ function HeaderLayoutShell({
   accountId,
   data,
   accounts,
+  portals = [],
   accountAccess,
   access,
   homePath,
@@ -402,6 +415,7 @@ function HeaderLayoutShell({
   accountId: string;
   data: NonNullable<Awaited<ReturnType<typeof loadTeamWorkspace>>>;
   accounts: React.ComponentProps<typeof TeamWorkspaceMobileChrome>['accounts'];
+  portals?: React.ComponentProps<typeof TeamWorkspaceMobileChrome>['portals'];
   accountAccess: {
     permissions?: string[] | null;
     role?: string | null;
@@ -438,6 +452,8 @@ function HeaderLayoutShell({
         <PageNavigation>
           <TeamAccountNavigationMenu
             workspace={data}
+            accounts={accounts}
+            portals={portals}
             emailAssistantAvailable={adornments.emailAssistantAvailable}
             pipelineBoardName={adornments.pipelineBoardName}
           />
@@ -450,6 +466,7 @@ function HeaderLayoutShell({
           accountId={accountId}
           user={data.user}
           accounts={accounts}
+          portals={portals}
           navSections={mobileNavSections}
           bottomNavTabs={bottomNavTabs}
           spaceType={spaceTypeFromProfile(data.workspaceProfile)}

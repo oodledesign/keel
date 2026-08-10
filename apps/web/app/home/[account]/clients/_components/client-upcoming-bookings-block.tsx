@@ -4,12 +4,14 @@ import { useCallback, useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
-import { Calendar, ExternalLink, Video } from 'lucide-react';
+import { Calendar, ExternalLink, Plus, Video } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
+import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
+import { CreateMeetingDialog } from '../../scheduling/_components/create-meeting-dialog';
 import { listClientUpcomingBookingsAction } from '../../scheduling/_lib/server/scheduling-actions';
 import type { ClientBookingRow } from '../../scheduling/_lib/server/scheduling.service';
 
@@ -27,17 +29,24 @@ export function ClientUpcomingBookingsBlock({
   accountSlug,
   accountId,
   clientId,
+  inviteeName,
+  inviteeEmail,
+  canCreate = true,
   limit,
   compact = false,
 }: {
   accountSlug: string;
   accountId: string;
   clientId: string;
+  inviteeName?: string | null;
+  inviteeEmail?: string | null;
+  canCreate?: boolean;
   limit?: number;
   compact?: boolean;
 }) {
   const [bookings, setBookings] = useState<ClientBookingRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [createOpen, setCreateOpen] = useState(false);
 
   const fetchBookings = useCallback(async () => {
     setLoading(true);
@@ -66,6 +75,23 @@ export function ClientUpcomingBookingsBlock({
   const visible =
     typeof limit === 'number' ? bookings.slice(0, limit) : bookings;
 
+  const createDialog = canCreate ? (
+    <CreateMeetingDialog
+      open={createOpen}
+      onOpenChange={setCreateOpen}
+      accountId={accountId}
+      accountSlug={accountSlug}
+      prefill={{
+        clientId,
+        inviteeName,
+        inviteeEmail,
+      }}
+      onCreated={() => {
+        void fetchBookings();
+      }}
+    />
+  ) : null;
+
   if (compact) {
     if (loading) {
       return (
@@ -77,28 +103,47 @@ export function ClientUpcomingBookingsBlock({
 
     if (visible.length === 0) {
       return (
-        <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          No upcoming bookings.
-        </p>
+        <>
+          <div className="space-y-2">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              No upcoming bookings.
+            </p>
+            {canCreate ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={() => setCreateOpen(true)}
+              >
+                <Plus className="mr-1.5 h-3.5 w-3.5" />
+                Schedule meeting
+              </Button>
+            ) : null}
+          </div>
+          {createDialog}
+        </>
       );
     }
 
     return (
-      <ul className="space-y-2">
-        {visible.map((booking) => (
-          <li key={booking.id}>
-            <div className="rounded-md px-1 py-1">
-              <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                {booking.eventTypeName ?? 'Meeting'}
-              </p>
-              <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
-                {formatWhen(booking.startAt)}
-                {booking.inviteeName ? ` · ${booking.inviteeName}` : ''}
-              </p>
-            </div>
-          </li>
-        ))}
-      </ul>
+      <>
+        <ul className="space-y-2">
+          {visible.map((booking) => (
+            <li key={booking.id}>
+              <div className="rounded-md px-1 py-1">
+                <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                  {booking.eventTypeName ?? 'Meeting'}
+                </p>
+                <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                  {formatWhen(booking.startAt)}
+                  {booking.inviteeName ? ` · ${booking.inviteeName}` : ''}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+        {createDialog}
+      </>
     );
   }
 
@@ -108,12 +153,25 @@ export function ClientUpcomingBookingsBlock({
         <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
           Upcoming bookings
         </h3>
-        <Button type="button" variant="ghost" size="sm" asChild>
-          <Link href={schedulingHref}>
-            All bookings
-            <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-1">
+          {canCreate ? (
+            <Button
+              type="button"
+              size="sm"
+              className={workspaceBtnPrimaryMd}
+              onClick={() => setCreateOpen(true)}
+            >
+              <Plus className="mr-1.5 h-3.5 w-3.5" />
+              Schedule meeting
+            </Button>
+          ) : null}
+          <Button type="button" variant="ghost" size="sm" asChild>
+            <Link href={schedulingHref}>
+              All bookings
+              <ExternalLink className="ml-1.5 h-3.5 w-3.5" />
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {loading ? (
@@ -122,9 +180,9 @@ export function ClientUpcomingBookingsBlock({
         </p>
       ) : visible.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          No upcoming bookings linked to this client yet. New public bookings
-          match automatically when the invitee email matches the client or a
-          contact.
+          No upcoming bookings linked to this client yet. Schedule one here, or
+          they will match automatically when a public booking uses the client
+          email.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -163,6 +221,8 @@ export function ClientUpcomingBookingsBlock({
           ))}
         </ul>
       )}
+
+      {createDialog}
     </div>
   );
 }

@@ -42,19 +42,29 @@ interface CommercialPublishingSettingsProps {
   portalPublishingUnlocked?: boolean;
 }
 
-function ConfiguredBadge({ configured }: { configured: boolean }) {
-  if (!configured) {
+function ConfiguredBadge({
+  configured,
+  feedEnabled,
+}: {
+  configured: boolean;
+  feedEnabled?: boolean;
+}) {
+  if (configured || feedEnabled) {
     return (
-      <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/50">
-        Not configured
+      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)]">
+        <CheckCircle2 className="h-3 w-3" />
+        {configured && feedEnabled
+          ? 'REST + feed'
+          : feedEnabled
+            ? 'XML feed on'
+            : 'Configured'}
       </span>
     );
   }
 
   return (
-    <span className="inline-flex items-center gap-1 rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)]">
-      <CheckCircle2 className="h-3 w-3" />
-      Configured
+    <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/50">
+      Not configured
     </span>
   );
 }
@@ -170,8 +180,15 @@ export function CommercialPublishingSettings({
         });
         if (result.ok) {
           toast.success(result.message);
+          if (
+            'feedUrl' in result &&
+            typeof result.feedUrl === 'string' &&
+            result.feedUrl
+          ) {
+            setFeedUrl(result.feedUrl);
+          }
         } else {
-          toast.message(result.message);
+          toast.error(result.message);
         }
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Test failed');
@@ -239,12 +256,15 @@ export function CommercialPublishingSettings({
           <CardTitle className="text-base text-[var(--workspace-shell-text)]">
             Property Hive
           </CardTitle>
-          <ConfiguredBadge configured={settings.propertyHive.configured} />
+          <ConfiguredBadge
+            configured={settings.propertyHive.configured}
+            feedEnabled={settings.propertyHive.feedEnabled}
+          />
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Connect your WordPress Property Hive site to push disposals to your
-            agency website.
+            Prefer the XML feed below for Property Hive imports. WordPress REST
+            credentials are optional for a live API push.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2 sm:col-span-2">
@@ -576,9 +596,9 @@ export function CommercialPublishingSettings({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Optionally push a disposal to verify credentials. Property Hive
-            performs a live API call; Rightmove and EACH record validation
-            status until feeds are connected.
+            For Property Hive, this checks your XML feed (or live REST push if
+            WordPress credentials are saved). Rightmove and EACH record
+            validation until their feeds are connected.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

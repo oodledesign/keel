@@ -14,9 +14,12 @@ import {
   CheckBookingPageSlugSchema,
   CreateBookingPageSchema,
   CreateEventTypeSchema,
+  CreateHostBookingSchema,
   DeleteAvailabilityScheduleSchema,
   DeleteBookingPageSchema,
   DeleteEventTypeSchema,
+  GetHostBusyIntervalsSchema,
+  ListCreateMeetingOptionsSchema,
   SaveFormFieldsSchema,
   SetDefaultAvailabilityScheduleSchema,
   ToggleBookingPageActiveSchema,
@@ -217,6 +220,198 @@ export const cancelBookingAction = enhanceAction(
     return { success: true as const };
   },
   { schema: withAccountSlug(CancelBookingSchema) },
+);
+
+export const listCreateMeetingOptionsAction = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.listCreateMeetingOptions(input.accountId);
+  },
+  { schema: ListCreateMeetingOptionsSchema },
+);
+
+export const getHostBusyIntervalsAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const { data: account } = await client
+      .from('accounts')
+      .select('id, primary_owner_user_id')
+      .eq('slug', input.accountSlug)
+      .maybeSingle();
+
+    if (!account?.id || account.id !== input.accountId) {
+      throw new Error('Account not found');
+    }
+
+    const from = new Date(input.fromIso);
+    const to = new Date(input.toIso);
+    if (
+      Number.isNaN(from.getTime()) ||
+      Number.isNaN(to.getTime()) ||
+      !(to.getTime() > from.getTime())
+    ) {
+      throw new Error('Invalid time range');
+    }
+
+    const maxMs = 14 * 24 * 60 * 60 * 1000;
+    if (to.getTime() - from.getTime() > maxMs) {
+      throw new Error('Busy range is too large (max 14 days)');
+    }
+
+    const hostUserId =
+      input.hostUserId?.trim() ||
+      (account as { primary_owner_user_id?: string | null })
+        .primary_owner_user_id ||
+      undefined;
+
+    const timeZone = input.timeZone?.trim() || 'UTC';
+
+    type BusyRow = {
+      start: string;
+      end: string;
+      source: 'calendar' | 'booking';
+    };
+
+    const intervals: BusyRow[] = [];
+
+    try {
+      const { getBusyIntervals } = await import('@kit/scheduling/google');
+      const {
+        GoogleCalendarNotConnectedError,
+        GoogleCalendarReconnectRequiredError,
+      } = await import('@kit/scheduling');
+
+      try {
+        const busy = await getBusyIntervals(account.id, from, to, {
+          hostUserId,
+          timeZone,
+        });
+        for (const interval of busy) {
+          intervals.push({
+            start: interval.start.toISOString(),
+            end: interval.end.toISOString(),
+            source: 'calendar',
+          });
+        }
+      } catch (error) {
+        if (
+          !(error instanceof GoogleCalendarNotConnectedError) &&
+          !(error instanceof GoogleCalendarReconnectRequiredError)
+        ) {
+          console.warn('[scheduling] host busy intervals failed', error);
+        }
+      }
+    } catch (error) {
+      console.warn('[scheduling] host busy module load failed', error);
+    }
+
+    // Overlay confirmed bookings even when Google is disconnected.
+    try {
+      const { data: bookingRows, error: bookingError } = await client
+        .from('bookings')
+        .select('start_at, end_at, status')
+        .eq('account_id', account.id)
+        .eq('status', 'confirmed')
+        .lt('start_at', to.toISOString())
+        .gt('end_at', from.toISOString());
+
+      if (bookingError) {
+        console.warn(
+          '[scheduling] host busy bookings overlay failed',
+          bookingError.message,
+        );
+      } else {
+        for (const row of (bookingRows ?? []) as Array<{
+          start_at: string;
+          end_at: string;
+        }>) {
+          intervals.push({
+            start: row.start_at,
+            end: row.end_at,
+            source: 'booking',
+          });
+        }
+      }
+    } catch (error) {
+      console.warn('[scheduling] host busy bookings overlay failed', error);
+    }
+
+    intervals.sort(
+      (a, b) => new Date(a.start).getTime() - new Date(b.start).getTime(),
+    );
+
+    return { intervals };
+  },
+  { schema: GetHostBusyIntervalsSchema },
+);
+
+export const createHostBookingAction = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+    const { data: account } = await client
+      .from('accounts')
+      .select('id')
+      .eq('slug', input.accountSlug)
+      .maybeSingle();
+
+    if (!account?.id || account.id !== input.accountId) {
+      throw new Error('Account not found');
+    }
+
+    let resolvedClientId: string | null = null;
+    if (input.clientId) {
+      const { data: clientRow } = await client
+        .from('clients')
+        .select('id')
+        .eq('id', input.clientId)
+        .eq('account_id', account.id)
+        .maybeSingle();
+
+      if (!clientRow?.id) {
+        throw new Error('Client not found');
+      }
+      resolvedClientId = clientRow.id;
+    }
+
+    const { createPublicBooking } = await import(
+      '~/book/_lib/server/public-booking.service'
+    );
+
+    const record = await createPublicBooking(
+      {
+        pageSlug: input.pageSlug,
+        eventSlug: input.eventSlug,
+        durationMinutes: input.durationMinutes,
+        startAtIso: input.startAtIso,
+        inviteeName: input.inviteeName,
+        inviteeEmail: input.inviteeEmail,
+        inviteeTimezone: input.inviteeTimezone,
+        inviteeNotes: input.inviteeNotes ?? null,
+        guests: [],
+        formResponses: [],
+      },
+      {
+        skipAvailabilityCheck: true,
+        clientId: resolvedClientId,
+        notifyInvitee: input.notifyInvitee,
+        expectedAccountId: account.id,
+        skipFormValidation: true,
+      },
+    );
+
+    revalidateScheduling(input.accountSlug);
+    return {
+      id: record.id,
+      startAt: record.startAt,
+      endAt: record.endAt,
+      inviteeName: record.inviteeName,
+      inviteeEmail: record.inviteeEmail,
+      status: record.status,
+      conferencingUrl: record.conferencingUrl,
+      managementToken: record.managementToken,
+    };
+  },
+  { schema: withAccountSlug(CreateHostBookingSchema) },
 );
 
 export const disconnectConferencingAction = enhanceAction(

@@ -5,6 +5,7 @@ import { ProfileAccountDropdownContainer } from '~/components/personal-account-d
 import { PullToRefresh } from '~/components/pull-to-refresh';
 import {
   WorkspaceAccountsSelector,
+  type WorkspaceSwitcherPortal,
   buildPersonalSwitcherAccounts,
 } from '~/components/workspace-shell/workspace-accounts-selector';
 import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-create-task-host';
@@ -31,6 +32,7 @@ type PersonalHomeMobileChromeProps = {
   navLinks: MobileNavLink[];
   bottomNavTabs: MobileBottomNavTab[];
   switcherAccounts: WorkspaceSwitcherAccount[];
+  switcherPortals?: WorkspaceSwitcherPortal[];
   children: React.ReactNode;
 };
 
@@ -39,6 +41,7 @@ export function PersonalHomeMobileChrome({
   navLinks,
   bottomNavTabs,
   switcherAccounts: rawSwitcherAccounts,
+  switcherPortals = [],
   children,
 }: PersonalHomeMobileChromeProps) {
   const { menuOpen, setMenuOpen } = useWorkspaceMobileNav();
@@ -57,6 +60,7 @@ export function PersonalHomeMobileChrome({
               selectedAccount={PERSONAL_WORKSPACE_VALUE}
               userId={userId}
               accounts={switcherAccounts}
+              portals={switcherPortals}
               personalAccount={
                 workspace.workspace
                   ? {
@@ -95,6 +99,7 @@ export function PersonalHomeMobileChrome({
         account={PERSONAL_WORKSPACE_VALUE}
         userId={userId}
         accounts={switcherAccounts}
+        portals={switcherPortals}
         navLinks={navLinks}
         open={menuOpen}
         onOpenChange={setMenuOpen}

@@ -1133,6 +1133,77 @@ export function createListingsService(client: SupabaseClient) {
       return mapMedia(data as MediaRow);
     },
 
+    async updateMedia(input: {
+      mediaId: string;
+      listingId: string;
+      accountId: string;
+      fileName?: string;
+      storagePath?: string;
+      mimeType?: string | null;
+      mediaType?: MediaType;
+    }): Promise<CommercialListingMedia> {
+      const { data: existing, error: fetchError } = await client
+        .from('commercial_listing_media')
+        .select('storage_path')
+        .eq('id', input.mediaId)
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (fetchError) throw new Error(fetchError.message);
+      if (!existing) throw new Error('Media not found');
+
+      const previousPath = (
+        existing as { storage_path?: string | null } | null
+      )?.storage_path;
+
+      const patch: Record<string, unknown> = {};
+      if (input.fileName !== undefined) {
+        patch.file_name = input.fileName.trim() || null;
+      }
+      if (input.storagePath !== undefined) {
+        patch.storage_path = input.storagePath;
+        patch.external_url = null;
+      }
+      if (input.mimeType !== undefined) {
+        patch.mime_type = input.mimeType;
+      }
+      if (input.mediaType !== undefined) {
+        patch.media_type = input.mediaType;
+      }
+
+      const { data, error } = await client
+        .from('commercial_listing_media')
+        .update(patch)
+        .eq('id', input.mediaId)
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to update media');
+      }
+
+      if (
+        input.storagePath &&
+        previousPath &&
+        previousPath !== input.storagePath
+      ) {
+        const { error: storageError } = await client.storage
+          .from('commercial-listing-media')
+          .remove([previousPath]);
+        if (storageError) {
+          console.error(
+            '[listings] updateMedia storage cleanup:',
+            storageError.message,
+          );
+        }
+      }
+
+      return mapMedia(data as MediaRow);
+    },
+
     async deleteMedia(
       mediaId: string,
       accountId: string,

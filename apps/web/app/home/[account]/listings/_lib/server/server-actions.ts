@@ -29,6 +29,7 @@ import {
   SetListingMediaCoverSchema,
   UpdateListingAssignmentSchema,
   UpdateListingEnquirySchema,
+  UpdateListingMediaSchema,
   UpdateListingPartySchema,
   UpdateListingSchema,
   UpdateListingUnitSchema,
@@ -153,6 +154,15 @@ export const setListingMediaCover = enhanceAction(
     return withUrl ?? media;
   },
   { schema: SetListingMediaCoverSchema },
+);
+
+export const updateListingMedia = enhanceAction(
+  async (input) => {
+    const media = await getService().updateMedia(input);
+    const [withUrl] = await getService().withSignedMediaUrls([media]);
+    return withUrl ?? media;
+  },
+  { schema: UpdateListingMediaSchema },
 );
 
 export const deleteListingMedia = enhanceAction(

@@ -5,9 +5,9 @@ import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
-import { generateListingMarketingCopy } from '~/lib/commercial/ai-listing-marketing';
 import { INSUFFICIENT_AI_CREDITS_CODE } from '~/lib/ai/ai-credits-exhausted';
 import { isInsufficientCreditsError } from '~/lib/ai/router';
+import { generateListingMarketingCopy } from '~/lib/commercial/ai-listing-marketing';
 
 import { createListingsService } from './listings.service';
 

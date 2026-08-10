@@ -1,0 +1,54 @@
+# Clients
+
+## Goal
+
+Create and maintain client records with contacts so projects, invoices, and portals all point at the same account.
+
+## Prerequisites
+
+- Business workspace (`/app/[account]`)
+- Access to **Clients** in the sidebar (**Clients** section)
+
+## Steps: create a client
+
+1. Open **Clients** → `/app/[account]/clients`.
+2. Choose **Create client** (or the primary new-client action).
+3. Enter company / client name and any address or trading details you need.
+4. Add **contacts** (name, email, phone). Emails are required for portal invites and many notifications.
+5. Save. You’ll land on the client detail view with sections for related work.
+
+## Steps: import clients
+
+1. From **Clients**, choose **Import CSV** → `/app/[account]/clients/import`.
+2. Download or match the expected columns, then upload your file.
+3. Review the preview and confirm the import.
+4. Optionally use LinkedIn import when shown (`/app/[account]/import/linkedin`) for contact seeding.
+
+## Steps: use a client record day to day
+
+1. Open a client from the list.
+2. Review linked projects, invoices, and portal status in the detail UI.
+3. Update contacts when people change roles.
+4. From the client, create related work (projects / invoices) using the actions offered on the page so records stay linked.
+5. For portal access, ensure contacts have emails, then invite them to the portal (see [Portals & websites](/work/portals-websites)).
+
+## What you’ll see
+
+- List / table of clients with search and filters
+- Detail page with contacts and related CRM objects
+- Import entry points in the Clients toolbar when enabled
+
+## Tips
+
+- Prefer one client record per organisation, with multiple contacts underneath.
+- **Shared clients** in the sidebar means another workspace shared a client with you — treat those carefully before editing.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Can’t create clients | Check role permission and that the Clients module is on |
+| Import fails | Validate required columns and UTF-8 CSV encoding |
+| Portal invite blocked | Add contact emails first, then invite again |
+
+Next: [Pipeline](/work/clients-pipeline/pipeline).

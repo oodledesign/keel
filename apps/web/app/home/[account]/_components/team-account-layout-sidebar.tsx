@@ -13,6 +13,7 @@ import {
 } from '@kit/ui/shadcn-sidebar';
 
 import { OzerSidebarLogo } from '~/components/workspace-shell/ozer-sidebar-logo';
+import type { WorkspaceSwitcherPortal } from '~/components/workspace-shell/workspace-accounts-selector';
 import { workspaceSidebarClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import pathsConfig from '~/config/paths.config';
 import { getTeamAccountSidebarConfig } from '~/config/team-account-navigation.config';
@@ -33,6 +34,7 @@ export function TeamAccountLayoutSidebar(props: {
   account: string;
   accountId: string;
   accounts: WorkspaceSwitcherAccount[];
+  portals?: WorkspaceSwitcherPortal[];
   user: JWTUserData;
   accountAccess?: TeamAccountAccessSource;
   moduleSettings?: Record<string, boolean>;
@@ -64,6 +66,7 @@ export function TeamAccountLayoutSidebar(props: {
           userId={props.user.id}
           selectedAccount={props.account}
           accounts={props.accounts}
+          portals={props.portals}
           className="w-full px-0"
         />
       </SidebarHeader>

@@ -1,0 +1,57 @@
+# Tasks & planner
+
+## Goal
+
+Capture work as tasks, review imports/extractions items, and plan the day so nothing important stays buried.
+
+## Prerequisites
+
+- Business workspace with **Tasks** and **Planner** under **Work**
+- Optional: meetings or email connected so extracted tasks can appear
+
+## Steps: work from Tasks
+
+1. Open **Tasks** → `/app/[account]/tasks`.
+2. Create a task or open an existing one; link it to a project when relevant.
+3. Set status, assignee, and due date.
+4. Use related flows when you need bulk capture:
+   - Extract — `/app/[account]/tasks/extract`
+   - Review — `/app/[account]/tasks/review`
+   - Import — `/app/[account]/tasks/import`
+5. Admins can tune automation under **Settings → Task automation** (`/app/[account]/settings/task-automation`).
+
+## Steps: plan the day with Planner
+
+1. Open **Planner** → `/app/[account]/planner/day` (plan view also at `/app/[account]/planner/plan`).
+2. Review what’s scheduled for today across the workspace.
+3. Pull in or prioritise tasks so the day list matches real capacity.
+4. Use AI day planning if offered to reshape the day; accept or edit suggestions before committing.
+5. Recheck **Schedule** (`/app/[account]/schedule`) if you need a broader calendar layout.
+
+## Steps: scheduling clients (bookings)
+
+1. Open **Scheduling** under **Work** → `/app/[account]/scheduling`.
+2. Configure availability and public booking pages.
+3. Share the booking link with clients; meetings land in your scheduling / meetings flows.
+
+## What you’ll see
+
+- **Tasks**: list / board of actionable items, including review queues
+- **Planner**: focused “today” composition and optional AI assist
+- Badges or counts when review queues need attention
+
+## Tips
+
+- Prefer linking tasks to projects so reporting and portals stay coherent.
+- Meeting transcripts can feed tasks — see [Activity & meetings](/work/activity-meetings).
+- Email assistant can surface suggested tasks under `/app/[account]/email/suggested-tasks` when connected.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Planner empty | Add due dates / plan items; confirm timezone under Settings → General |
+| Extract/review empty | Run extract after a meeting or import; nothing appears until there’s input |
+| Can’t assign teammates | Invite them under **Team** first |
+
+Related: [Projects](/work/projects-tasks/projects) · [Email assistant](/work/email-assistant)

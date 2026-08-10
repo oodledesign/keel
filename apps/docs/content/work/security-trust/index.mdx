@@ -1,0 +1,54 @@
+# Security & trust
+
+Ozer is built for studios that care where data lives and who can see it.
+
+## Goal
+
+Understand how access works in a Business workspace, what you control as an admin, and where to read formal trust / legal documents.
+
+## Prerequisites
+
+- Access to a Business workspace (owner/admin for settings that affect the whole team)
+
+## At a glance
+
+- Marketing trust centre: [ozer.so/trust](https://www.ozer.so/trust)
+- Workspace data access is enforced with Postgres **row-level security** (RLS) — the app client only sees rows your membership allows
+- Auth uses Supabase Auth; workspace billing uses Stripe
+- Desktop activity and email connects add optional data flows — configure them deliberately
+
+Legal: [Privacy](https://www.ozer.so/privacy-policy) · [Terms](https://www.ozer.so/terms-of-service) · [DPA](https://www.ozer.so/dpa)
+
+## Steps: lock down a Business workspace
+
+1. Open **Team** (`/app/[account]/members`) and audit members and pending invites.
+2. Assign the least-privilege role that still lets people do their jobs.
+3. Remove people who left the studio; revoke stale invites.
+4. Open **Settings → Activity tracking** (`/app/[account]/settings/activity`) and set capture / retention expectations the team has agreed.
+5. Review connected integrations (Gmail, Mac assistant, finances) and disconnect accounts that are no longer needed.
+6. Confirm **Settings → Billing** is owned by a current admin with a company card — not a personal card of someone who’s leaving.
+7. For client portals, invite only required contacts and share only the projects that should be external ([Portals & websites](/work/portals-websites)).
+
+## Steps: if something looks wrong
+
+1. Have the affected user sign out and back in (role and membership claims refresh).
+2. Compare their role to a known-good teammate.
+3. Check whether the data lives in a different account in the switcher (personal vs Business slug).
+4. Contact [hello@ozer.so](mailto:hello@ozer.so) with the workspace slug and approximate time of the issue — don’t share passwords or full card numbers.
+
+## Tips
+
+- Prefer Business workspaces for client work you’ll share; keep sensitive personal life data in the personal hub.
+- Treat portal and guest links like credentials — don’t post them publicly.
+- Admins should rarely use elevated admin/service clients in integrations; stick to normal app access so RLS stays in force.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| User sees another studio’s data | They’re likely on the wrong workspace — switch accounts |
+| User sees too little | Raise role or enable modules; don’t bypass RLS |
+| Ex-employee still has access | Remove from **Team**; rotate shared passwords for any connected email/DNS |
+| Compliance questionnaire | Start from [Trust](https://www.ozer.so/trust) and the DPA, then email support for specifics |
+
+Return to the [Business overview](/work) or [Getting started](/work/getting-started) when you’re ready to continue setup.

@@ -9,7 +9,10 @@ import type { JWTUserData } from '@kit/supabase/types';
 import { MobileTapHaptics } from '~/components/mobile-tap-haptics';
 import { ProfileAccountDropdownContainer } from '~/components/personal-account-dropdown-container';
 import { PullToRefresh } from '~/components/pull-to-refresh';
-import { buildPersonalSwitcherAccounts } from '~/components/workspace-shell/workspace-accounts-selector';
+import {
+  type WorkspaceSwitcherPortal,
+  buildPersonalSwitcherAccounts,
+} from '~/components/workspace-shell/workspace-accounts-selector';
 import { WorkspaceCreateTaskHost } from '~/components/workspace-shell/workspace-create-task-host';
 import { WorkspaceHelpButton } from '~/components/workspace-shell/workspace-help-button';
 import {
@@ -38,6 +41,7 @@ type TeamWorkspaceMobileChromeProps = {
   accountId: string;
   user: JWTUserData;
   accounts: WorkspaceSwitcherAccount[];
+  portals?: WorkspaceSwitcherPortal[];
   navLinks?: MobileNavLink[];
   navSections?: MobileNavSection[];
   bottomNavTabs: MobileBottomNavTab[];
@@ -51,6 +55,7 @@ export function TeamWorkspaceMobileChrome({
   accountId,
   user,
   accounts: rawAccounts,
+  portals = [],
   navLinks,
   navSections,
   bottomNavTabs,
@@ -96,6 +101,7 @@ export function TeamWorkspaceMobileChrome({
             account={account}
             userId={user.id}
             accounts={accounts}
+            portals={portals}
           />
           <WorkspaceMobileTopActions
             variant="team"
@@ -129,6 +135,7 @@ export function TeamWorkspaceMobileChrome({
         account={account}
         userId={user.id}
         accounts={accounts}
+        portals={portals}
         navLinks={navLinks}
         navSections={navSections}
         open={menuOpen}

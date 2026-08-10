@@ -43,6 +43,7 @@ import { HomeSidebar } from './_components/home-sidebar';
 import { PersonalHomeMobileChrome } from './_components/personal-home-mobile-chrome';
 import { PersonalHomeShellAdornmentsSuspense } from './_components/personal-home-shell-adornments-suspense';
 import { flattenPersonalNavLinks } from './_lib/flatten-personal-nav-links';
+import { listUserClientPortalMemberships } from './_lib/server/list-user-client-portal-memberships';
 import { loadUserWorkspace } from './_lib/server/load-user-workspace';
 import { loadPersonalSidebarWorkspaces } from './_lib/server/personal-sidebar-workspaces.loader';
 
@@ -81,6 +82,9 @@ async function SidebarLayout({
   let switcherAccounts: Awaited<
     ReturnType<typeof loadWorkspaceSwitcherAccounts>
   > = [];
+  let switcherPortals: Awaited<
+    ReturnType<typeof listUserClientPortalMemberships>
+  > = [];
   let client: Awaited<
     ReturnType<
       (typeof import('@kit/supabase/server-client'))['getSupabaseServerClient']
@@ -91,16 +95,19 @@ async function SidebarLayout({
     client = (
       await import('@kit/supabase/server-client')
     ).getSupabaseServerClient();
-    [workspace, sharedWorkspaces, switcherAccounts] = await Promise.all([
-      loadUserWorkspace(),
-      loadPersonalSidebarWorkspaces(),
-      loadWorkspaceSwitcherAccounts(client, user.id),
-    ]);
+    [workspace, sharedWorkspaces, switcherAccounts, switcherPortals] =
+      await Promise.all([
+        loadUserWorkspace(),
+        loadPersonalSidebarWorkspaces(),
+        loadWorkspaceSwitcherAccounts(client, user.id),
+        listUserClientPortalMemberships(user.id),
+      ]);
   } catch (e) {
     if (isRedirectError(e)) throw e;
     workspace = null;
     sharedWorkspaces = [];
     switcherAccounts = [];
+    switcherPortals = [];
   }
 
   if (!workspace) {
@@ -165,6 +172,7 @@ async function SidebarLayout({
                 workspace={workspaceForShell}
                 sharedWorkspaces={sharedWorkspaces}
                 switcherAccounts={switcherAccounts}
+                switcherPortals={switcherPortals}
                 emailNeedsReplyCount={params.emailNeedsReplyCount}
               />
             </PageNavigation>
@@ -176,6 +184,7 @@ async function SidebarLayout({
               navLinks={navLinks}
               bottomNavTabs={bottomNavTabs}
               switcherAccounts={switcherAccounts}
+              switcherPortals={switcherPortals}
             >
               <div className="hidden lg:block">
                 <WorkspaceTopBar

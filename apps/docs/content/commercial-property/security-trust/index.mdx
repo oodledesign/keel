@@ -1,0 +1,25 @@
+# Security & trust
+
+Ozer Commercial property is built for agencies that care where client and instruction data lives.
+
+## At a glance
+
+1. Access to workspace data is enforced with Postgres **row-level security** (RLS) — members only see their account’s data
+2. Auth and billing use established providers (for example Supabase Auth and Stripe)
+3. Commercial portal credentials (Property Hive, Rightmove, EACH / EG) are stored for the workspace and must stay out of tickets and shareable docs
+4. Support seats are limited by design so viewers cannot change stages, disposals, or publishing
+
+## Steps for a secure desk
+
+1. Invite colleagues only from **Team** (`/app/[account]/members`) with the correct seat kind.
+2. Prefer **support** seats for people who only need visibility.
+3. Rotate Property Hive feed tokens from Website & portals if a URL may have leaked, then update Property Hive Import immediately.
+4. Avoid pasting portal secrets into chat, email signatures, or public boards.
+5. Keep private listing media on the disposal **Management** private media section, not on public Media.
+6. Review members when staff leave — remove memberships that should no longer access instructions.
+
+## Read more
+
+Full trust and security overview: [ozer.so/trust](https://www.ozer.so/trust).
+
+Legal: [Privacy](https://www.ozer.so/privacy-policy) · [Terms](https://www.ozer.so/terms-of-service) · [DPA](https://www.ozer.so/dpa)

@@ -1,0 +1,47 @@
+# Personal & team accounts
+
+## Goal
+
+Choose the right account type for data, sharing, and billing.
+
+## Prerequisites
+
+- An Ozer login ([Create your account](/work/getting-started/create-account))
+
+## Account types
+
+### Personal account
+
+- Linked to your user ID (`auth.users.id` matches `accounts.id` in Makerkit terms).
+- Good for private pipelines, personal projects, planner, and life context that isn’t shared with a studio.
+- Reach it via `/app` and the personal entries in the account switcher.
+
+### Team (Business) account
+
+- A shared workspace with **members**, **roles**, and shared CRM / projects / invoices.
+- Data is scoped by `account_id`. You only see what your membership allows.
+- URLs use the workspace slug: `/app/[account]/…`.
+- Billing for Business plans lives under **Settings → Billing** on that account.
+
+## Steps: create another Business workspace
+
+1. Open the account switcher in the sidebar.
+2. Create a new team / Business workspace.
+3. Name it, set the slug, and pick the Business profile.
+4. Invite people from **Team** (`/app/[account]/members`) as needed.
+
+Create additional team workspaces when you need a clean boundary between brands or legal entities.
+
+## Tips
+
+- Don’t put studio client data only in personal space if colleagues need access — use a Business workspace.
+- One person can belong to many team accounts; switch deliberately before creating clients or invoices.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Created data in the wrong space | Switch account in the switcher; recreate or migrate by creating records in the correct workspace |
+| Can’t access a colleague’s workspace | Ask an owner to invite your email under **Team** |
+
+Related: [Invite your team](/work/getting-started/invite-team) · [Navigation](/work/workspace/navigation)

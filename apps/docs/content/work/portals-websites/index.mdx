@@ -1,0 +1,96 @@
+# Portals & websites
+
+Share selected work with clients through **portals**, and publish marketing or client sites from **Websites** when that module is enabled.
+
+## Goal
+
+Give clients a scoped view of projects and status without a full workspace login, and ship a public site when you need one.
+
+## Prerequisites
+
+- Business workspace
+- Clients with contact emails for portal invites
+- Projects linked to those clients when sharing delivery
+- For sites: **Websites** module under the **Clients** sidebar section
+- Portal publishing entitlement / add-on when required by plan ([Workspace subscription](/work/invoicing-billing/workspace-subscription))
+
+---
+
+## Client portals
+
+Portals live at `/portal/[clientSlug]/…` for invited clients. Inside the studio app you manage access from **Clients** and project detail.
+
+### Steps: prepare a client for portal access
+
+1. Open **Clients** → `/app/[account]/clients` and select the client.
+2. Add contacts with valid **email** addresses.
+3. Invite contacts to the portal (invite-all / per-contact actions on the client detail). Invites use `/join/portal-invite/[token]` for the recipient.
+4. Ask the client to accept the invite and sign in with the invited email.
+
+### Steps: share a project into the portal
+
+1. Open **Projects** → the project detail.
+2. Confirm a **client** is linked (portal sharing requires it).
+3. Toggle **Shared with client portal** / Client portal access on.
+4. Clients then see that project under their portal **Projects** (`/portal/[clientSlug]/projects` and detail routes).
+5. Turn sharing off for confidential phases that should stay internal.
+
+### What clients typically see
+
+Depending on configuration, portal areas can include home, projects, messages, support/services, billing, credits, website, and settings — for example:
+
+- `/portal/[clientSlug]`
+- `/portal/[clientSlug]/projects`
+- `/portal/[clientSlug]/messages`
+- `/portal/[clientSlug]/billing`
+
+### Portal tips
+
+- Invite only people who should see delivery status.
+- Prefer sharing whole projects you’re happy to expose; keep internal checklists in unshared projects or notes.
+- Support tickets from portal users can land under workspace **Support**.
+
+### Portal troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Can’t invite | Add contact emails first |
+| Client sees no projects | Toggle portal visibility on the project; confirm same client link |
+| Invite expired | Resend from the client detail; have them use the newest email |
+| Join link 404 | Token already used or invalid — issue a fresh invite |
+
+---
+
+## Websites
+
+### Steps: create and publish a site
+
+1. Open **Websites** → `/app/[account]/websites`.
+2. Choose **New** → `/app/[account]/websites/new`.
+3. Pick a template / blank site as offered and set the site name.
+4. Open the site (`/app/[account]/websites/[id]`) and use **Edit** (`/app/[account]/websites/[id]/edit`) to build pages.
+5. Configure domain: start on an Ozer sites host (for example `*.sites.ozer.so`) then attach a custom domain when the UI allows DNS verification.
+6. Publish / update the live site from the editor or site overview.
+7. Optionally surface the site in the client portal website area when both portal and site are wired for that client.
+
+### Website tips
+
+- Keep brand tokens aligned with **Settings → Brand** so studio and sites match.
+- Publish drafts only when content and legal pages (privacy/terms) are ready.
+- Use marketplace Site Studio capabilities when advanced tabs appear for your plan.
+
+### Website troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Websites missing | Enable the websites module; check plan |
+| Custom domain not resolving | Confirm DNS records and wait for propagation |
+| Client can’t see site in portal | Link site/portal configuration for that client; republish |
+
+---
+
+## Related docs
+
+- [Clients](/work/clients-pipeline/clients)
+- [Projects](/work/projects-tasks/projects)
+- [Security & trust](/work/security-trust)

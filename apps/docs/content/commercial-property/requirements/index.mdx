@@ -1,0 +1,40 @@
+# Requirements
+
+Requirements capture what occupiers and investors are searching for. Open the board at `/app/[account]/pipeline?view=requirements` (sidebar label: **Requirements**).
+
+Requirements sit beside WIP on the pipeline surface but use their own stages.
+
+## Requirement stages
+
+1. **New** — freshly logged requirement
+2. **Actively Searching** — shortlisting and viewing stock
+3. **Under Offer / Negotiating** — deal discussions in progress
+4. **Fulfilled** — requirement satisfied
+5. **Withdrawn** — search ended without fulfilment
+
+## Create a requirement
+
+1. Open `/app/[account]/pipeline?view=requirements`.
+2. Choose **New requirement** (or the create action on the board).
+3. Link a **Contact** (or create one first under `/app/[account]/clients`).
+4. Capture size, location, budget, use, and timeline notes.
+5. Save — the card appears in **New**.
+6. Move to **Actively Searching** when you start matching stock.
+
+## Match requirements to disposals
+
+1. Identify candidate disposals on `/app/[account]/listings`.
+2. Add interest on the disposal’s **Interest** tab, linking the requirement / contact.
+3. Book viewings from `/app/[account]/viewings`.
+4. As negotiations firm up, move the requirement to **Under Offer / Negotiating**.
+5. When they take space (or buy), set **Fulfilled**, update the disposal, and close related WIP.
+6. If they stop looking, set **Withdrawn** so the board stays clean.
+
+## Weekly requirements hygiene
+
+1. Review **New** cards — chase missing briefs within 24–48 hours.
+2. Confirm **Actively Searching** cards still have a named negotiator.
+3. Cross-check under-offer requirements against HoTs / Proposals.
+4. Use Insights (`/app/[account]/commercial-reports`) to spot bottlenecks.
+
+Billable seats create and move requirements; support seats cannot mutate stages.

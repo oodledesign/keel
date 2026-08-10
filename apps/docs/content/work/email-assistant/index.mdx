@@ -1,0 +1,64 @@
+# Email assistant
+
+Connect Gmail to triage inbox mail, draft replies in your voice, and skip noise with ignored senders/domains.
+
+## Goal
+
+Cut inbox time: surface messages that need a reply, draft answers you can edit, and optionally save drafts back to Gmail.
+
+## Prerequisites
+
+- Business workspace with the **Email assistant** add-on / entitlement available
+- A Google account with Gmail you are allowed to connect
+- Sidebar entry **Emails** under **Clients** (appears when email assistant is available) → `/app/[account]/email`
+
+Marketing: [Email assistant](https://www.ozer.so/features/email-assistant). Billing of the add-on: [Workspace subscription](/work/invoicing-billing/workspace-subscription).
+
+## Steps: connect Gmail
+
+1. Upgrade or enable the Email assistant add-on from **Settings → Billing** if it isn’t already on the plan.
+2. Open **Emails** in the sidebar → `/app/[account]/email`.
+3. Choose **Connect Gmail** (or equivalent) and complete Google OAuth.
+4. Grant the mail scopes requested. Without them, triage and draft save can’t run.
+5. Return to Ozer and confirm the inbox view loads threads.
+
+## Steps: triage and reply
+
+1. In **Emails**, review messages flagged as needing a reply (badge counts may appear on the sidebar item).
+2. Open a thread; read the suggestion / draft the assistant proposes.
+3. Edit the draft so it matches your voice and facts — never send AI text blindly.
+4. Send from Gmail or Ozer according to the controls offered, or save as a Gmail draft if auto-save is enabled.
+5. Mark noise as ignored (sender or domain) so similar mail skips the needs-reply queue next time.
+
+## Steps: tune behaviour
+
+1. Open email settings from the Emails surface (or linked workspace/personal tone settings when shared).
+2. Add **style notes** — short guidance like “short UK English, no emojis, sign off with Thanks,”.
+3. Set or confirm your **signature**.
+4. Maintain the ignored senders / domains list for newsletters and automated mail.
+5. Visit **Suggested tasks** at `/app/[account]/email/suggested-tasks` when the assistant proposes tasks from mail, and accept into **Tasks**.
+
+## What you’ll see
+
+- Inbox / needs-reply list under **Emails**
+- Draft pane with AI suggestion
+- Sidebar badge when counts are available
+- Empty state until Gmail is connected
+
+## Tips
+
+- Start with advisory drafts only; turn on auto-save of drafts once you trust the tone settings.
+- Prefer ignored domains (`updates.example.com`) over one-off deletes for recurring noise.
+- Keep client commitments in Projects/Tasks — email is a capture surface, not the system of record.
+
+## Troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| **Emails** missing from sidebar | Check add-on entitlement and refresh; confirm email assistant is available for the account |
+| OAuth / connect fails | Allow pop-ups; retry with the correct Google account; revoke and reconnect in Google Account → Security → Third-party access |
+| Drafts not in Gmail | Enable draft save; re-auth if scopes were reduced |
+| Wrong tone | Update style notes; regenerate the draft |
+| Suggested tasks empty | Only actionable threads produce tasks; open `/app/[account]/email/suggested-tasks` after triage |
+
+Related: [Tasks & planner](/work/projects-tasks/tasks-planner) · [Activity & meetings](/work/activity-meetings)

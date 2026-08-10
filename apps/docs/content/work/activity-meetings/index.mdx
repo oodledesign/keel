@@ -1,0 +1,102 @@
+# Activity & meetings
+
+Understand where time went — desktop activity from **Assistant for Mac**, plus meeting capture that feeds tasks and client context.
+
+## Goal
+
+Install and link desktop activity where you want it, capture meetings, and pull follow-ups into Tasks without manual copy-paste.
+
+## Prerequisites
+
+- Business workspace at `/app/[account]`
+- Permission to view **Activity** / **Meetings** (under the **Clients** sidebar section)
+- For activity: a Mac you control, and awareness of privacy settings
+- For meetings: audio/transcript sources as offered in-product
+
+Marketing: [Activity tracking](https://www.ozer.so/features/activity) · [Desktop assistant](https://www.ozer.so/features/desktop-assistant)
+
+---
+
+## Activity tracking
+
+### What you’ll see
+
+- **Activity** → `/app/[account]/activity` — desktop activity captured for this workspace
+- **Reports** → `/app/[account]/activity/reports` — summaries when available
+- **Settings → Activity tracking** → `/app/[account]/settings/activity` — privacy and capture preferences
+
+### Steps: recommended Mac setup
+
+1. On your Mac, download **Assistant for Mac** / KeelAssistant from the link provided in-app or on the [desktop assistant](https://www.ozer.so/features/desktop-assistant) page.
+2. Install the app and open it from Applications (or the installer prompt).
+3. Sign in with the same Ozer account you use in the browser.
+4. Select the **Business workspace** that should receive activity (match the `[account]` you work in day to day).
+5. Grant macOS permissions when prompted — typically **Accessibility**, **Screen Recording** (if required for the capture mode you enable), and **Notifications**. Deny only what you’re sure you don’t need; capture quality drops without the permissions you enabled features for.
+6. In the web app, open **Settings → Activity tracking** and review what is stored, retained, and visible to the team.
+7. Open **Activity** in the sidebar and confirm samples appear after you use apps/sites for a few minutes.
+
+### Steps: use activity at work
+
+1. Open **Activity** during or after deep work blocks.
+2. Spot which apps/sites dominated the period.
+3. Cross-check against **Projects** / **Tasks** if you bill time or need narrative for a client update.
+4. Use **Activity → Reports** for longer ranges when available.
+
+### Activity tips
+
+- Treat activity as context, not surveillance theatre — align with your team’s trust norms first.
+- Keep personal browsing off the work Mac profile when possible, or tighten privacy settings.
+- If you switch Business workspaces often, confirm the assistant is posting to the correct account.
+
+### Activity troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Nothing in Activity | Confirm Mac app is signed in, permissions granted, and the correct workspace is selected |
+| Permission denied loops | Open System Settings → Privacy & Security and re-enable Accessibility / Screen Recording for the assistant |
+| Wrong workspace data | Change target account in the Mac app; refresh the web Activity page |
+| Feature missing | Check plan entitlements and that Activity isn’t disabled for the role |
+
+---
+
+## Meetings
+
+### What you’ll see
+
+- **Meetings** → `/app/[account]/meetings` — list of transcripts / meetings
+- Detail → `/app/[account]/meetings/[transcriptId]` — transcript, summary, task extraction
+
+### Steps: capture and review a meeting
+
+1. Start or upload a meeting capture using the controls offered in **Meetings** (or the assistant / recorder flow configured for your workspace).
+2. Wait for processing to finish; open the meeting from the list.
+3. Read the transcript and AI summary on the detail page.
+4. Extract tasks into the workspace task system when prompted, then review them under **Tasks** (`/app/[account]/tasks/review` or the main tasks list).
+5. Link follow-ups to the right **client** or **project** before assigning owners.
+
+### Steps: booking meetings (optional)
+
+1. For client-booked calls, configure **Scheduling** (`/app/[account]/scheduling`) with availability and a public page.
+2. Share the booking link; accepted bookings appear under scheduling bookings and can feed your meeting workflow.
+
+### Meetings tips
+
+- Record with consent and follow local regulations.
+- Extract tasks while the meeting is fresh — review queues go stale quickly.
+- Use **Notes and files** for artefacts that aren’t tasks.
+
+### Meetings troubleshooting
+
+| Problem | What to try |
+| --- | --- |
+| Transcript stuck processing | Refresh later; check recorder settings under personal/workspace recorder preferences |
+| No tasks extracted | Run extract manually; ensure AI credits / plan allow it |
+| Meeting list empty | Confirm you’re in the Business workspace where capture was stored |
+
+---
+
+## Related docs
+
+- [Tasks & planner](/work/projects-tasks/tasks-planner)
+- [Email assistant](/work/email-assistant)
+- [Security & trust](/work/security-trust)

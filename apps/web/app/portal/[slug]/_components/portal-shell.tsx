@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 
 import { useSignOut } from '@kit/supabase/hooks/use-sign-out';
+import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
@@ -90,9 +91,36 @@ function isNavActive(pathname: string, href: string, key: string) {
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
+function initials(label: string) {
+  const parts = label.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
+  return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
+}
+
+function PortalBrandMark(props: {
+  src: string | null;
+  label: string;
+  sizeClass: string;
+}) {
+  return (
+    <Avatar
+      className={`${props.sizeClass} border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]`}
+    >
+      {props.src ? <AvatarImage src={props.src} alt="" /> : null}
+      <AvatarFallback className="text-xs font-semibold text-[var(--workspace-shell-text)]">
+        {initials(props.label)}
+      </AvatarFallback>
+    </Avatar>
+  );
+}
+
 export function PortalShell({
   clientSlug,
   orgName,
+  clientPictureUrl = null,
+  accountName = null,
+  accountLogoUrl = null,
   userEmail,
   userAvatarUrl,
   hasWorkspaceAccess = false,
@@ -103,6 +131,9 @@ export function PortalShell({
 }: {
   clientSlug: string;
   orgName: string;
+  clientPictureUrl?: string | null;
+  accountName?: string | null;
+  accountLogoUrl?: string | null;
   userEmail: string | null;
   userAvatarUrl?: string | null;
   hasWorkspaceAccess?: boolean;
@@ -120,18 +151,43 @@ export function PortalShell({
     showMessagesNav,
   };
 
+  const primaryLogo = clientPictureUrl || accountLogoUrl;
+  const agencyName = accountName?.trim() || 'Agency';
+  const secondaryLogo =
+    accountLogoUrl && accountLogoUrl !== clientPictureUrl
+      ? accountLogoUrl
+      : null;
+
   return (
     <div className="min-h-screen bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]">
       <header className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
         <div className="mx-auto flex max-w-6xl flex-col gap-4 px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-                Client portal
-              </p>
-              <h1 className="font-[family-name:var(--ozer-font-display)] text-lg font-semibold text-[var(--workspace-shell-text)]">
-                {orgName}
-              </h1>
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="relative shrink-0">
+                <PortalBrandMark
+                  src={primaryLogo}
+                  label={orgName}
+                  sizeClass="size-12"
+                />
+                {secondaryLogo ? (
+                  <div className="absolute -right-1 -bottom-1">
+                    <PortalBrandMark
+                      src={secondaryLogo}
+                      label={agencyName}
+                      sizeClass="size-7"
+                    />
+                  </div>
+                ) : null}
+              </div>
+              <div className="min-w-0">
+                <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                  Client portal
+                </p>
+                <h1 className="truncate font-[family-name:var(--ozer-font-display)] text-lg font-semibold text-[var(--workspace-shell-text)]">
+                  {orgName}
+                </h1>
+              </div>
             </div>
 
             <div className="flex items-center gap-3">

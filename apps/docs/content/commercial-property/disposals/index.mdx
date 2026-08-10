@@ -1,0 +1,52 @@
+# Disposals
+
+Disposals are your commercial listings — to let, for sale, or investment. Open the list at `/app/[account]/listings`.
+
+You need a **billable** seat to create or edit disposals. Support seats can view.
+
+## Disposal types
+
+| Type | Typical use |
+| --- | --- |
+| To let | Occupational letting |
+| For sale | Occupational / freehold sale |
+| Investment | Investment disposal |
+
+## Status lifecycle
+
+Statuses move a disposal from draft through marketing to let, sold, or withdrawn:
+
+1. **Draft** — capture address and basics before instruction is confirmed
+2. **Instructed** — terms of engagement in place; not yet on the market
+3. **Marketing** — live for marketing / portals (when publishing is configured)
+4. **Under offer** — negotiation in progress
+5. **Let** or **Sold** — completed outcome
+6. **Withdrawn** — off the market without a deal
+
+## Create a disposal
+
+1. Go to `/app/[account]/listings`.
+2. Choose **New disposal** (or the create action shown on the page).
+3. Enter the address, disposal type (to let / for sale / investment), and key size / tenure fields you have.
+4. Save as **Draft**, then open the listing detail.
+5. On **Management**, capture instruction details, landlords / parties, assignment, and co-agents.
+6. Move status to **Instructed** when terms are agreed.
+7. Complete **Marketing** and **Media**, then move to **Marketing** when you are ready to publish.
+8. Track interest on the **Interest** tab and keep **Availability** accurate as units change.
+
+## Move a disposal through the market
+
+1. Keep WIP in sync: marketing disposals are usually **Current Instructions** on `/app/[account]/pipeline` — see [WIP pipeline](/commercial-property/wip-pipeline).
+2. When status becomes **Marketing**, ensure Website & portals credentials are set if you expect Property Hive or portal updates — see [Website & portals](/commercial-property/publishing-portals).
+3. Log viewings from `/app/[account]/viewings` and link them to the disposal and contact.
+4. Progress interest statuses (new → viewing → offer → agreed) on the listing **Interest** tab.
+5. When the deal completes, set status to **Let** or **Sold**, update WIP to **Completed / Exchanged**, and record the outcome on the [Sales register](/commercial-property/proposals-sales) as needed.
+6. If the instruction dies, set **Withdrawn** (or **Fallen through** on WIP) so Insights stay honest.
+
+## Filters and bulk hygiene
+
+1. Filter the disposals list by status (draft, instructed, marketing, under offer, let, sold, withdrawn).
+2. Filter by disposal type when reviewing to-let vs sale stock.
+3. Prefer withdrawing rather than deleting when audit history matters.
+
+Listing tabs in detail: [Listing detail](/commercial-property/disposals/listing-detail).

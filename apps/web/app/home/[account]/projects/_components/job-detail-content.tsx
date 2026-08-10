@@ -542,66 +542,66 @@ export function JobDetailContent({
                 <LayoutGrid className="h-3.5 w-3.5" />
                 Project
               </TabsTrigger>
-            <TabsTrigger
-              value="overview"
-              className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
-            >
-              <ClipboardList className="h-3.5 w-3.5" />
-              Overview
-            </TabsTrigger>
-            <TabsTrigger
-              value="schedule"
-              className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
-            >
-              <Calendar className="h-3.5 w-3.5" />
-              Schedule
-            </TabsTrigger>
-            <TabsTrigger
-              value="team"
-              className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
-            >
-              <Users className="h-3.5 w-3.5" />
-              Team
-            </TabsTrigger>
-            <TabsTrigger
-              value="messages"
-              className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
-            >
-              <MessageSquare className="h-3.5 w-3.5" />
-              Messages
-            </TabsTrigger>
-            <TabsTrigger
-              value="meetings"
-              className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
-            >
-              <Mic className="h-3.5 w-3.5" />
-              Meetings
-            </TabsTrigger>
-            <TabsTrigger
-              value="generate"
-              className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
-            >
-              <ImageIcon className="h-3.5 w-3.5" />
-              Generate
-            </TabsTrigger>
-            {!isContractorView && (
               <TabsTrigger
-                value="finance"
+                value="overview"
                 className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
               >
-                <Wallet className="h-3.5 w-3.5" />
-                Finance
+                <ClipboardList className="h-3.5 w-3.5" />
+                Overview
               </TabsTrigger>
-            )}
-            {!isContractorView && (
               <TabsTrigger
-                value="docs"
+                value="schedule"
                 className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
               >
-                <FileText className="h-3.5 w-3.5" />
-                Notes and files
+                <Calendar className="h-3.5 w-3.5" />
+                Schedule
               </TabsTrigger>
-            )}
+              <TabsTrigger
+                value="team"
+                className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+              >
+                <Users className="h-3.5 w-3.5" />
+                Team
+              </TabsTrigger>
+              <TabsTrigger
+                value="messages"
+                className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+              >
+                <MessageSquare className="h-3.5 w-3.5" />
+                Messages
+              </TabsTrigger>
+              <TabsTrigger
+                value="meetings"
+                className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+              >
+                <Mic className="h-3.5 w-3.5" />
+                Meetings
+              </TabsTrigger>
+              <TabsTrigger
+                value="generate"
+                className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+              >
+                <ImageIcon className="h-3.5 w-3.5" />
+                Generate
+              </TabsTrigger>
+              {!isContractorView && (
+                <TabsTrigger
+                  value="finance"
+                  className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+                >
+                  <Wallet className="h-3.5 w-3.5" />
+                  Finance
+                </TabsTrigger>
+              )}
+              {!isContractorView && (
+                <TabsTrigger
+                  value="docs"
+                  className="shrink-0 gap-1.5 rounded-none border-b-2 border-transparent px-3 py-2.5 text-xs whitespace-nowrap data-[state=active]:border-[var(--ozer-accent)] data-[state=active]:bg-transparent data-[state=active]:text-[var(--workspace-shell-text)] data-[state=active]:shadow-none"
+                >
+                  <FileText className="h-3.5 w-3.5" />
+                  Notes and files
+                </TabsTrigger>
+              )}
             </TabsList>
           </div>
           <div

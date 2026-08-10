@@ -21,8 +21,8 @@ import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-cont
 import { handleAiCreditsFailure } from '~/components/ai/handle-ai-credits-failure';
 
 import { applyGeneratedWeekAction } from '../_lib/actions';
-import { weekdayLabel } from '../_lib/server/family-meal.dates';
 import type { MealPreferencesRow } from '../_lib/schema/family-meal.schema';
+import { weekdayLabel } from '../_lib/server/family-meal.dates';
 import { ACCENT, titleCase } from './meal-ui';
 
 type GeneratedMealPreview = {
@@ -241,7 +241,7 @@ export function MealPlanGenerateDialog({
                   {preferenceSummary.map((item) => (
                     <span
                       key={item}
-                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] capitalize text-[var(--workspace-shell-text-muted)]"
+                      className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)] capitalize"
                     >
                       {item}
                     </span>
@@ -256,8 +256,8 @@ export function MealPlanGenerateDialog({
 
             {mode === 'generate' ? (
               <p className="rounded-xl border border-amber-400/20 bg-amber-400/5 px-3 py-2 text-xs text-amber-100/80">
-                Days that already have meals will be replaced if you include them
-                in the preview.
+                Days that already have meals will be replaced if you include
+                them in the preview.
               </p>
             ) : null}
           </div>
@@ -312,7 +312,7 @@ export function MealPlanGenerateDialog({
                     />
                     <div className="min-w-0 flex-1">
                       <div className="flex items-baseline gap-2">
-                        <span className="text-[11px] font-semibold uppercase text-[var(--ozer-accent-muted)]/90">
+                        <span className="text-[11px] font-semibold text-[var(--ozer-accent-muted)]/90 uppercase">
                           {weekdayLabel(meal.date).slice(0, 3)}
                         </span>
                         <span className="text-[11px] text-[var(--workspace-shell-text-muted)]">
@@ -332,7 +332,7 @@ export function MealPlanGenerateDialog({
                           {meal.tags.slice(0, 4).map((tag) => (
                             <span
                               key={tag}
-                              className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 capitalize text-[var(--workspace-shell-text-muted)]"
+                              className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 text-[var(--workspace-shell-text-muted)] capitalize"
                             >
                               {tag}
                             </span>
