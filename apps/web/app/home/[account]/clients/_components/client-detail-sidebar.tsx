@@ -1260,15 +1260,15 @@ export function ClientDetailSidebar({
                       type="button"
                       onClick={() => setActiveTab(key)}
                       className={cn(
-                        'border-b-2 px-4 py-3 text-left transition-colors',
+                        'inline-flex items-center gap-1.5 border-b-2 px-4 py-3 text-left text-sm font-medium transition-colors',
                         activeTab === key
                           ? 'border-[var(--ozer-accent)] text-[var(--workspace-shell-text)]'
                           : 'border-transparent text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
                       )}
                     >
-                      <span className="block text-sm font-medium">{label}</span>
+                      {label}
                       {meta ? (
-                        <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
+                        <span className="text-xs font-normal text-[var(--workspace-shell-text-muted)]">
                           {meta}
                         </span>
                       ) : null}

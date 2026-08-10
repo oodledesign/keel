@@ -6,6 +6,9 @@ import {
   useMemo,
   useState,
   useTransition,
+  type CSSProperties,
+  type HTMLAttributes,
+  type Ref,
 } from 'react';
 
 import Link from 'next/link';
@@ -36,6 +39,7 @@ import { updateSupportTicket } from '../_lib/server/server-actions';
 import type { SupportTicket } from '../_lib/server/support-tickets.service';
 import {
   TicketPriorityBadge,
+  TicketStatusBadge,
   formatTicketNumber,
 } from './support-ticket-badges';
 
@@ -176,7 +180,7 @@ export function SupportTicketsBoard({
         </div>
         <DragOverlay>
           {activeTicket ? (
-            <TicketCard
+            <TicketCardBody
               ticket={activeTicket}
               accountSlug={accountSlug}
               isOverlay
@@ -247,11 +251,9 @@ function StatusColumn({
 function TicketCard({
   ticket,
   accountSlug,
-  isOverlay = false,
 }: {
   ticket: SupportTicket;
   accountSlug: string;
-  isOverlay?: boolean;
 }) {
   const {
     attributes,
@@ -262,26 +264,50 @@ function TicketCard({
     isDragging,
   } = useSortable({ id: ticket.id });
 
+  return (
+    <TicketCardBody
+      ticket={ticket}
+      accountSlug={accountSlug}
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.4 : 1,
+      }}
+      dragHandleProps={{ ...attributes, ...listeners }}
+    />
+  );
+}
+
+function TicketCardBody({
+  ticket,
+  accountSlug,
+  isOverlay = false,
+  ref,
+  style,
+  dragHandleProps,
+}: {
+  ticket: SupportTicket;
+  accountSlug: string;
+  isOverlay?: boolean;
+  ref?: Ref<HTMLDivElement>;
+  style?: CSSProperties;
+  dragHandleProps?: HTMLAttributes<HTMLDivElement>;
+}) {
   const detailHref = pathsConfig.app.accountSupportDetail
     .replace('[account]', accountSlug)
     .replace('[id]', ticket.id);
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.4 : 1,
-  };
-
   return (
     <div
-      ref={isOverlay ? undefined : setNodeRef}
-      style={isOverlay ? undefined : style}
+      ref={ref}
+      style={style}
       className={`${panelClass} cursor-grab p-3 active:cursor-grabbing ${
         isOverlay
           ? 'scale-105 rotate-1 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]'
           : ''
       }`}
-      {...(isOverlay ? {} : { ...attributes, ...listeners })}
+      {...(dragHandleProps ?? {})}
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <Link
