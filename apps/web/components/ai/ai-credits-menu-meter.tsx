@@ -85,18 +85,18 @@ export function AiCreditsMenuMeter({
     (remaining === 0 || (capacity > 0 && remaining / capacity < 0.1));
 
   return (
-    <div className="border-b border-[color:var(--workspace-shell-border)] px-3 py-2.5">
+    <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-2.5">
       <Link
         href={billingHref}
-        className="block rounded-lg px-1 py-0.5 transition-colors outline-none hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40"
+        className="block rounded-lg py-0.5 transition-colors outline-none hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/40"
       >
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-xs font-medium text-[var(--workspace-shell-text-muted)]">
+        <div className="flex items-baseline justify-between gap-3">
+          <span className="shrink-0 text-xs font-medium text-[var(--workspace-shell-text-muted)]">
             AI credits
           </span>
           <span
             className={cn(
-              'text-xs tabular-nums',
+              'min-w-0 truncate text-right text-xs tabular-nums',
               low
                 ? 'font-semibold text-[var(--ozer-accent)]'
                 : 'text-[var(--workspace-shell-text)]',
