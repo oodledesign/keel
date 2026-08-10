@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
+import { Plus, X } from 'lucide-react';
+
 import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import {
@@ -23,6 +25,11 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import {
+  listClients,
+  listContacts,
+} from '~/home/[account]/clients/_lib/server/server-actions';
+import { ClientCombobox } from '~/home/[account]/projects/_components/client-combobox';
 import {
   workspaceBtnPrimaryMd,
   workspaceTextMuted,
@@ -63,6 +70,19 @@ type MeetingPageOption = {
   }>;
 };
 
+type AttendeeDraft = {
+  key: string;
+  name: string;
+  email: string;
+  contactId?: string | null;
+};
+
+type ClientContactOption = {
+  id: string;
+  full_name: string;
+  email: string | null;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -71,6 +91,8 @@ type Props = {
   prefill?: CreateMeetingPrefill;
   onCreated?: () => void;
 };
+
+const MAX_ATTENDEES = 11;
 
 function pad2(value: number) {
   return String(value).padStart(2, '0');
@@ -106,6 +128,28 @@ function browserTimezone() {
   }
 }
 
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function makeAttendeeKey() {
+  return `attendee-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function attendeesFromPrefill(prefill?: CreateMeetingPrefill): AttendeeDraft[] {
+  const email = prefill?.inviteeEmail?.trim() || '';
+  const name = prefill?.inviteeName?.trim() || '';
+  if (!email && !name) return [];
+  return [
+    {
+      key: makeAttendeeKey(),
+      name,
+      email,
+      contactId: null,
+    },
+  ];
+}
+
 export function CreateMeetingDialog({
   open,
   onOpenChange,
@@ -126,8 +170,21 @@ export function CreateMeetingDialog({
   const [weekStartYmd, setWeekStartYmd] = useState(() =>
     startOfWeekMonday(defaults.date),
   );
-  const [inviteeName, setInviteeName] = useState('');
-  const [inviteeEmail, setInviteeEmail] = useState('');
+  const [clientId, setClientId] = useState('');
+  const [clients, setClients] = useState<
+    Array<{
+      id: string;
+      display_name: string | null;
+      company_name?: string | null;
+    }>
+  >([]);
+  const [clientsLoading, setClientsLoading] = useState(false);
+  const [contacts, setContacts] = useState<ClientContactOption[]>([]);
+  const [contactsLoading, setContactsLoading] = useState(false);
+  const [attendees, setAttendees] = useState<AttendeeDraft[]>([]);
+  const [manualName, setManualName] = useState('');
+  const [manualEmail, setManualEmail] = useState('');
+  const [contactToAdd, setContactToAdd] = useState('');
   const [inviteeNotes, setInviteeNotes] = useState('');
   const [notifyInvitee, setNotifyInvitee] = useState(true);
   const [busy, setBusy] = useState<HostBusyInterval[]>([]);
@@ -138,6 +195,21 @@ export function CreateMeetingDialog({
     (event) => event.slug === eventSlug,
   );
 
+  const availableContacts = useMemo(() => {
+    const takenEmails = new Set(
+      attendees.map((item) => item.email.trim().toLowerCase()).filter(Boolean),
+    );
+    const takenIds = new Set(
+      attendees.map((item) => item.contactId).filter(Boolean),
+    );
+    return contacts.filter((contact) => {
+      const email = contact.email?.trim().toLowerCase() || '';
+      if (takenIds.has(contact.id)) return false;
+      if (email && takenEmails.has(email)) return false;
+      return Boolean(email);
+    });
+  }, [attendees, contacts]);
+
   useEffect(() => {
     if (!open) return;
 
@@ -145,12 +217,16 @@ export function CreateMeetingDialog({
     setDateYmd(nextDefaults.date);
     setTimeHm(nextDefaults.time);
     setWeekStartYmd(startOfWeekMonday(nextDefaults.date));
-    setInviteeName(prefill?.inviteeName?.trim() || '');
-    setInviteeEmail(prefill?.inviteeEmail?.trim() || '');
+    setClientId(prefill?.clientId?.trim() || '');
+    setAttendees(attendeesFromPrefill(prefill));
+    setManualName('');
+    setManualEmail('');
+    setContactToAdd('');
     setInviteeNotes('');
     setNotifyInvitee(true);
     setBusy([]);
     setLoadingOptions(true);
+    setClientsLoading(true);
 
     void listCreateMeetingOptionsAction({ accountId })
       .then((options) => {
@@ -172,7 +248,37 @@ export function CreateMeetingDialog({
         );
       })
       .finally(() => setLoadingOptions(false));
-  }, [open, accountId, prefill?.inviteeName, prefill?.inviteeEmail]);
+
+    void listClients({ accountId, page: 1, pageSize: 100 })
+      .then((result) => {
+        const rows = Array.isArray((result as { data?: unknown })?.data)
+          ? (
+              result as {
+                data: Array<{
+                  id: string;
+                  display_name: string | null;
+                  company_name?: string | null;
+                }>;
+              }
+            ).data
+          : [];
+        setClients(
+          rows.map((row) => ({
+            id: row.id,
+            display_name: row.display_name ?? null,
+            company_name: row.company_name ?? null,
+          })),
+        );
+      })
+      .catch(() => setClients([]))
+      .finally(() => setClientsLoading(false));
+  }, [
+    open,
+    accountId,
+    prefill?.clientId,
+    prefill?.inviteeName,
+    prefill?.inviteeEmail,
+  ]);
 
   useEffect(() => {
     if (!selectedEvent) return;
@@ -182,6 +288,49 @@ export function CreateMeetingDialog({
       );
     }
   }, [selectedEvent, durationMinutes]);
+
+  useEffect(() => {
+    if (!open || !clientId) {
+      setContacts([]);
+      setContactToAdd('');
+      return;
+    }
+
+    let cancelled = false;
+    setContactsLoading(true);
+    void listContacts({ accountId, clientId })
+      .then((result) => {
+        if (cancelled) return;
+        const rows = Array.isArray((result as { data?: unknown })?.data)
+          ? (
+              result as {
+                data: Array<{
+                  id: string;
+                  full_name: string;
+                  email?: string | null;
+                }>;
+              }
+            ).data
+          : [];
+        setContacts(
+          rows.map((row) => ({
+            id: row.id,
+            full_name: row.full_name,
+            email: row.email ?? null,
+          })),
+        );
+      })
+      .catch(() => {
+        if (!cancelled) setContacts([]);
+      })
+      .finally(() => {
+        if (!cancelled) setContactsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, accountId, clientId]);
 
   useEffect(() => {
     if (!open || !accountId) return;
@@ -217,13 +366,7 @@ export function CreateMeetingDialog({
     return () => {
       cancelled = true;
     };
-  }, [
-    open,
-    accountId,
-    accountSlug,
-    weekStartYmd,
-    selectedPage?.hostUserId,
-  ]);
+  }, [open, accountId, accountSlug, weekStartYmd, selectedPage?.hostUserId]);
 
   function onPageChange(nextPageSlug: string) {
     setPageSlug(nextPageSlug);
@@ -254,12 +397,81 @@ export function CreateMeetingDialog({
 
   function onWeekChange(nextWeekStart: string) {
     setWeekStartYmd(nextWeekStart);
-    if (
-      dateYmd < nextWeekStart ||
-      dateYmd > addDaysYmd(nextWeekStart, 6)
-    ) {
+    if (dateYmd < nextWeekStart || dateYmd > addDaysYmd(nextWeekStart, 6)) {
       setDateYmd(nextWeekStart);
     }
+  }
+
+  function addAttendee(attendee: Omit<AttendeeDraft, 'key'>) {
+    const email = attendee.email.trim().toLowerCase();
+    if (!isValidEmail(email)) {
+      toast.error('Enter a valid email address');
+      return false;
+    }
+    if (attendees.some((item) => item.email.trim().toLowerCase() === email)) {
+      toast.error('That person is already on the invite');
+      return false;
+    }
+    if (attendees.length >= MAX_ATTENDEES) {
+      toast.error(`You can add up to ${MAX_ATTENDEES} people`);
+      return false;
+    }
+
+    setAttendees((current) => [
+      ...current,
+      {
+        key: makeAttendeeKey(),
+        name: attendee.name.trim(),
+        email,
+        contactId: attendee.contactId ?? null,
+      },
+    ]);
+    return true;
+  }
+
+  function addManualAttendee() {
+    if (
+      addAttendee({
+        name: manualName,
+        email: manualEmail,
+        contactId: null,
+      })
+    ) {
+      setManualName('');
+      setManualEmail('');
+    }
+  }
+
+  function addContactAttendee() {
+    const contact = contacts.find((item) => item.id === contactToAdd);
+    if (!contact?.email) {
+      toast.error('Choose a contact with an email address');
+      return;
+    }
+    if (
+      addAttendee({
+        name: contact.full_name,
+        email: contact.email,
+        contactId: contact.id,
+      })
+    ) {
+      setContactToAdd('');
+    }
+  }
+
+  function removeAttendee(key: string) {
+    setAttendees((current) => current.filter((item) => item.key !== key));
+  }
+
+  function makePrimary(key: string) {
+    setAttendees((current) => {
+      const index = current.findIndex((item) => item.key === key);
+      if (index <= 0) return current;
+      const next = [...current];
+      const [item] = next.splice(index, 1);
+      if (!item) return current;
+      return [item, ...next];
+    });
   }
 
   function submit() {
@@ -267,10 +479,19 @@ export function CreateMeetingDialog({
       toast.error('Choose a booking page and event type');
       return;
     }
-    if (!inviteeName.trim() || !inviteeEmail.trim()) {
-      toast.error('Invitee name and email are required');
+
+    const primary = attendees[0];
+    if (!primary?.email || !isValidEmail(primary.email)) {
+      toast.error('Add at least one invitee with a valid email');
       return;
     }
+
+    const inviteeName =
+      primary.name.trim() || primary.email.split('@')[0] || 'Invitee';
+    const guests = attendees.slice(1).map((item) => ({
+      name: item.name.trim() || null,
+      email: item.email.trim().toLowerCase(),
+    }));
 
     startTransition(async () => {
       try {
@@ -282,16 +503,17 @@ export function CreateMeetingDialog({
           eventSlug,
           durationMinutes,
           startAtIso,
-          inviteeName: inviteeName.trim(),
-          inviteeEmail: inviteeEmail.trim(),
+          inviteeName,
+          inviteeEmail: primary.email.trim().toLowerCase(),
           inviteeTimezone: browserTimezone(),
           inviteeNotes: inviteeNotes.trim() || null,
-          clientId: prefill?.clientId ?? null,
+          clientId: clientId || null,
           notifyInvitee,
+          guests,
         });
         toast.success(
           notifyInvitee
-            ? 'Meeting created and invitee notified'
+            ? 'Meeting created and invitees notified'
             : 'Meeting created',
         );
         onOpenChange(false);
@@ -422,52 +644,191 @@ export function CreateMeetingDialog({
               are not enforced — you can still book over busy times.
             </p>
 
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="create-meeting-name">Invitee name</Label>
-                <Input
-                  id="create-meeting-name"
-                  value={inviteeName}
-                  onChange={(event) => setInviteeName(event.target.value)}
-                  autoComplete="name"
-                />
+            <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] p-3">
+              <div>
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Invitees
+                </p>
+                <p className={`text-xs ${workspaceTextMuted}`}>
+                  Assign a client (optional), add contacts, or type any email.
+                  The first person is the primary invitee; others are guests.
+                </p>
               </div>
 
               <div className="space-y-2">
-                <Label htmlFor="create-meeting-email">Invitee email</Label>
-                <Input
-                  id="create-meeting-email"
-                  type="email"
-                  value={inviteeEmail}
-                  onChange={(event) => setInviteeEmail(event.target.value)}
-                  autoComplete="email"
+                <Label>Client</Label>
+                <ClientCombobox
+                  clients={clients}
+                  value={clientId}
+                  onValueChange={setClientId}
+                  loading={clientsLoading}
+                  placeholder="Optional — link a client"
                 />
               </div>
 
-              <div className="space-y-2 sm:col-span-2">
-                <Label htmlFor="create-meeting-notes">Notes (optional)</Label>
-                <Textarea
-                  id="create-meeting-notes"
-                  value={inviteeNotes}
-                  onChange={(event) => setInviteeNotes(event.target.value)}
-                  rows={3}
-                />
-              </div>
+              {attendees.length > 0 ? (
+                <ul className="space-y-2">
+                  {attendees.map((attendee, index) => (
+                    <li
+                      key={attendee.key}
+                      className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                          {attendee.name || attendee.email}
+                          {index === 0 ? (
+                            <span
+                              className={`ml-2 text-xs font-normal ${workspaceTextMuted}`}
+                            >
+                              Primary
+                            </span>
+                          ) : null}
+                        </p>
+                        {attendee.name ? (
+                          <p
+                            className={`truncate text-xs ${workspaceTextMuted}`}
+                          >
+                            {attendee.email}
+                          </p>
+                        ) : null}
+                      </div>
+                      <div className="flex items-center gap-1">
+                        {index > 0 ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => makePrimary(attendee.key)}
+                          >
+                            Make primary
+                          </Button>
+                        ) : null}
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8"
+                          onClick={() => removeAttendee(attendee.key)}
+                          aria-label={`Remove ${attendee.email}`}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className={`text-sm ${workspaceTextMuted}`}>
+                  No invitees yet.
+                </p>
+              )}
 
-              <label className="flex items-start gap-2 sm:col-span-2">
-                <Checkbox
-                  checked={notifyInvitee}
-                  onCheckedChange={(value) => setNotifyInvitee(value === true)}
-                  className="mt-0.5"
-                />
-                <span className="text-sm">
-                  Notify invitee
-                  <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
-                    Sends confirmation email and calendar invite notifications.
-                  </span>
-                </span>
-              </label>
+              {clientId ? (
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end">
+                  <div className="min-w-0 flex-1 space-y-2">
+                    <Label>Add contact</Label>
+                    <Select
+                      value={contactToAdd || undefined}
+                      onValueChange={setContactToAdd}
+                      disabled={
+                        contactsLoading || availableContacts.length === 0
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue
+                          placeholder={
+                            contactsLoading
+                              ? 'Loading contacts…'
+                              : availableContacts.length === 0
+                                ? 'No contacts with email'
+                                : 'Select contact'
+                          }
+                        />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableContacts.map((contact) => (
+                          <SelectItem key={contact.id} value={contact.id}>
+                            {contact.full_name}
+                            {contact.email ? ` · ${contact.email}` : ''}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={addContactAttendee}
+                    disabled={!contactToAdd}
+                  >
+                    <Plus className="mr-1.5 h-4 w-4" />
+                    Add contact
+                  </Button>
+                </div>
+              ) : null}
+
+              <div className="grid gap-2 sm:grid-cols-[1fr_1.2fr_auto] sm:items-end">
+                <div className="space-y-2">
+                  <Label htmlFor="create-meeting-manual-name">Name</Label>
+                  <Input
+                    id="create-meeting-manual-name"
+                    value={manualName}
+                    onChange={(event) => setManualName(event.target.value)}
+                    placeholder="Optional"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="create-meeting-manual-email">Email</Label>
+                  <Input
+                    id="create-meeting-manual-email"
+                    type="email"
+                    value={manualEmail}
+                    onChange={(event) => setManualEmail(event.target.value)}
+                    placeholder="name@company.com"
+                    onKeyDown={(event) => {
+                      if (event.key === 'Enter') {
+                        event.preventDefault();
+                        addManualAttendee();
+                      }
+                    }}
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={addManualAttendee}
+                  disabled={!manualEmail.trim()}
+                >
+                  <Plus className="mr-1.5 h-4 w-4" />
+                  Add email
+                </Button>
+              </div>
             </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="create-meeting-notes">Notes (optional)</Label>
+              <Textarea
+                id="create-meeting-notes"
+                value={inviteeNotes}
+                onChange={(event) => setInviteeNotes(event.target.value)}
+                rows={3}
+              />
+            </div>
+
+            <label className="flex items-start gap-2">
+              <Checkbox
+                checked={notifyInvitee}
+                onCheckedChange={(value) => setNotifyInvitee(value === true)}
+                className="mt-0.5"
+              />
+              <span className="text-sm">
+                Notify invitees
+                <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
+                  Sends confirmation emails and calendar invite notifications to
+                  everyone on the list.
+                </span>
+              </span>
+            </label>
           </div>
         )}
 

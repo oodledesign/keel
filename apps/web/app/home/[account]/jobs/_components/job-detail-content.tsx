@@ -600,6 +600,8 @@ export function JobDetailContent({
               priority: job.priority,
               start_date: job.start_date,
               due_date: job.due_date,
+              is_ongoing: Boolean(job.is_ongoing),
+              is_phased: Boolean(job.is_phased),
               value_pence: job.value_pence,
               cost_pence: job.cost_pence,
             }}

@@ -112,7 +112,8 @@ const PRIORITY_LABELS: Record<string, string> = {
   urgent: 'Urgent',
 };
 
-function formatDueDate(iso: string | null): string {
+function formatDueDate(iso: string | null, isOngoing?: boolean): string {
+  if (isOngoing) return 'Ongoing';
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-GB', {
     day: 'numeric',
@@ -448,7 +449,9 @@ export function JobDetailContent({
             </div>
           </div>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-[var(--workspace-shell-text-muted)]">
-            <span>Due {formatDueDate(job.due_date)}</span>
+            <span>
+              {job.is_ongoing ? 'Ongoing' : `Due ${formatDueDate(job.due_date)}`}
+            </span>
             {!isContractorView && (
               <span>Value {formatValue(job.value_pence)}</span>
             )}
@@ -624,6 +627,8 @@ export function JobDetailContent({
               priority: job.priority,
               start_date: job.start_date,
               due_date: job.due_date,
+              is_ongoing: Boolean(job.is_ongoing),
+              is_phased: Boolean(job.is_phased),
               value_pence: job.value_pence,
               cost_pence: job.cost_pence,
             }}
@@ -652,7 +657,10 @@ export function JobDetailContent({
               </p>
               <ul className="mt-4 list-disc space-y-1 pl-5 text-[var(--workspace-shell-text-muted)]">
                 <li>
-                  Due: {formatDueDate(job.due_date)}
+                  Due:{' '}
+                  {job.is_ongoing
+                    ? 'Ongoing'
+                    : formatDueDate(job.due_date)}
                   {!isContractorView
                     ? ` · Value: ${formatValue(job.value_pence)}`
                     : ''}

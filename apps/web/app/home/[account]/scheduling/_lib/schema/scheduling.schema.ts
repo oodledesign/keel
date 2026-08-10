@@ -180,6 +180,15 @@ export const CreateHostBookingSchema = z.object({
   inviteeNotes: z.string().max(2000).nullable().optional(),
   clientId: z.string().uuid().nullable().optional(),
   notifyInvitee: z.boolean().default(true),
+  guests: z
+    .array(
+      z.object({
+        name: z.string().max(120).nullable().optional(),
+        email: z.string().email(),
+      }),
+    )
+    .max(10)
+    .default([]),
 });
 
 export const ListCreateMeetingOptionsSchema = z.object({

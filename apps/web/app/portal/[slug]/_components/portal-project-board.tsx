@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useState, useTransition } from 'react';
 
 import { Columns3, GanttChart, List } from 'lucide-react';
 
@@ -553,15 +553,23 @@ export function PortalProjectBoard({
   initialTasks,
   initialPhases,
   initialComments,
+  isPhased = false,
 }: {
   clientOrgId: string;
   projectId: string;
   initialTasks: PortalProjectTask[];
   initialPhases: PortalProjectPhase[];
   initialComments: PortalTaskComment[];
+  isPhased?: boolean;
 }) {
   const [view, setView] = useState<ViewMode>('board');
-  const [boardMode, setBoardMode] = useState<BoardMode>('phase');
+  const [boardMode, setBoardMode] = useState<BoardMode>(
+    isPhased ? 'phase' : 'progress',
+  );
+
+  useEffect(() => {
+    if (!isPhased) setBoardMode('progress');
+  }, [isPhased]);
   const [comments, setComments] =
     useState<PortalTaskComment[]>(initialComments);
   const [drafts, setDrafts] = useState<Record<string, string>>({});
@@ -631,7 +639,7 @@ export function PortalProjectBoard({
             </button>
           ))}
         </div>
-        {view === 'board' ? (
+        {view === 'board' && isPhased ? (
           <div className="flex items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5">
             {(
               [
@@ -681,7 +689,7 @@ export function PortalProjectBoard({
         />
       ) : null}
 
-      {view === 'board' && boardMode === 'phase' ? (
+      {view === 'board' && isPhased && boardMode === 'phase' ? (
         <PortalProjectPhaseKanbanView
           phases={initialPhases}
           tasks={initialTasks}

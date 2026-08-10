@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { ClipboardList, LayoutGrid } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -90,6 +91,8 @@ export function CreateProjectDialog({
   const [status, setStatus] = useState('pending');
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
+  const [isOngoing, setIsOngoing] = useState(false);
+  const [isPhased, setIsPhased] = useState(false);
   const [valuePence, setValuePence] = useState('');
   const [campaignTemplate, setCampaignTemplate] = useState<
     'blank' | 'website_revamp'
@@ -107,6 +110,8 @@ export function CreateProjectDialog({
     setStatus('pending');
     setPriority('medium');
     setDueDate('');
+    setIsOngoing(false);
+    setIsPhased(false);
     setValuePence('');
     setCampaignTemplate('blank');
     setProjectType(isMaintenance || isSimple ? 'delivery' : defaultType);
@@ -190,11 +195,13 @@ export function CreateProjectDialog({
           | 'medium'
           | 'high'
           | 'urgent',
-        due_date: isSimple
+        due_date: isSimple || isOngoing
           ? undefined
           : dueDate
             ? new Date(dueDate)
             : undefined,
+        is_ongoing: isSimple ? false : isOngoing,
+        is_phased: isSimple ? false : isPhased,
         value_pence: isSimple
           ? undefined
           : valuePence
@@ -463,7 +470,7 @@ export function CreateProjectDialog({
               </div>
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="space-y-2">
                   <Label
                     htmlFor="due_date"
                     className="text-[var(--workspace-shell-text-muted)]"
@@ -473,10 +480,25 @@ export function CreateProjectDialog({
                   <Input
                     id="due_date"
                     type="date"
-                    value={dueDate}
-                    onChange={(e) => setDueDate(e.target.value)}
+                    value={isOngoing ? '' : dueDate}
+                    disabled={isOngoing}
+                    onChange={(e) => {
+                      setDueDate(e.target.value);
+                      if (e.target.value) setIsOngoing(false);
+                    }}
                     className={fieldClass}
                   />
+                  <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
+                    <Checkbox
+                      checked={isOngoing}
+                      onCheckedChange={(checked) => {
+                        const next = checked === true;
+                        setIsOngoing(next);
+                        if (next) setDueDate('');
+                      }}
+                    />
+                    Ongoing — no deadline
+                  </label>
                 </div>
                 <div>
                   <Label
@@ -497,6 +519,20 @@ export function CreateProjectDialog({
                   />
                 </div>
               </div>
+
+              <label className="flex items-start gap-2.5 text-sm text-[var(--workspace-shell-text)]">
+                <Checkbox
+                  checked={isPhased}
+                  onCheckedChange={(checked) => setIsPhased(checked === true)}
+                  className="mt-0.5"
+                />
+                <span>
+                  Phased project
+                  <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
+                    Enable Phase board view. Leave off for Progress-only.
+                  </span>
+                </span>
+              </label>
             </>
           ) : (
             <>

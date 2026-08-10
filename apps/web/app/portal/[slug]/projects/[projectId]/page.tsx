@@ -54,7 +54,9 @@ export default async function PortalProjectDetailPage({
           </h2>
           <p className="mt-1 text-sm text-[var(--ozer-text-on-light-muted)]">
             {project.status ? `${project.status.replace(/_/g, ' ')} · ` : ''}
-            Due {formatPortalDate(project.dueDate)}
+            {project.isOngoing
+              ? 'Ongoing'
+              : `Due ${formatPortalDate(project.dueDate)}`}
           </p>
         </div>
       </div>
@@ -65,6 +67,7 @@ export default async function PortalProjectDetailPage({
         initialTasks={tasks}
         initialPhases={phases}
         initialComments={comments}
+        isPhased={project.isPhased}
       />
     </div>
   );

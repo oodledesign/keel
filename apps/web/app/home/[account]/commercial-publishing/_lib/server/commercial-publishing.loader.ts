@@ -5,6 +5,10 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { buildPropertyHiveFeedUrl } from '~/lib/commercial/property-hive-feed';
+import {
+  getRightmoveEnvironmentLabel,
+  isRightmoveOAuthConfigured,
+} from '~/lib/commercial/rightmove-env';
 
 export type CommercialPublishingSettings = {
   propertyHive: {
@@ -16,6 +20,12 @@ export type CommercialPublishingSettings = {
     feedEnabled: boolean;
   };
   rightmove: {
+    /** Platform OAuth client credentials present in env. */
+    oauthConfigured: boolean;
+    environment: 'test' | 'production';
+    /** Workspace has a Branch ID saved for probes / publish. */
+    branchConfigured: boolean;
+    /** Legacy combined flag — true when OAuth env is ready. */
     configured: boolean;
     branchId: string;
     networkId: string;
@@ -66,6 +76,9 @@ export async function loadCommercialPublishingSettings(
       ? phMetadata.xml_feed_token
       : null;
 
+  const oauthConfigured = isRightmoveOAuthConfigured();
+  const branchId = (rm?.branch_id as string | undefined) ?? '';
+
   return {
     propertyHive: {
       configured: isConfigured(ph),
@@ -76,8 +89,11 @@ export async function loadCommercialPublishingSettings(
       feedEnabled: Boolean(feedToken),
     },
     rightmove: {
-      configured: isConfigured(rm),
-      branchId: (rm?.branch_id as string | undefined) ?? '',
+      oauthConfigured,
+      environment: getRightmoveEnvironmentLabel(),
+      branchConfigured: Boolean(branchId.trim()),
+      configured: oauthConfigured,
+      branchId,
       networkId: (rm?.network_id as string | undefined) ?? '',
       username: (rm?.username as string | undefined) ?? '',
     },

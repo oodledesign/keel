@@ -58,25 +58,36 @@ async function saveAddonPortalCredentials(
   portal: 'rightmove' | 'each',
   input: {
     branchId: string;
-    networkId: string;
-    username: string;
-    secret: string;
+    networkId?: string | null;
+    username?: string;
+    secret?: string | null;
   },
 ): Promise<void> {
-  const ciphertext = encryptCommercialSecret(input.secret.trim());
+  const patch: Record<string, unknown> = {
+    account_id: accountId,
+    portal,
+    branch_id: input.branchId.trim(),
+    network_id: input.networkId?.trim() || null,
+    updated_at: new Date().toISOString(),
+  };
 
-  const { error } = await db().from('commercial_portal_credentials').upsert(
-    {
-      account_id: accountId,
-      portal,
-      branch_id: input.branchId.trim(),
-      network_id: input.networkId.trim(),
-      username: input.username.trim(),
-      secret_ciphertext: ciphertext,
-      updated_at: new Date().toISOString(),
-    },
-    { onConflict: 'account_id,portal' },
-  );
+  if (input.username !== undefined) {
+    patch.username = input.username.trim() || null;
+  }
+
+  if (input.secret?.trim()) {
+    patch.secret_ciphertext = encryptCommercialSecret(input.secret.trim());
+  } else if (portal === 'each') {
+    // EACH still requires a secret on first save — caller validates.
+    const existing = await getExistingPortalSecret(accountId, portal);
+    if (!existing) {
+      throw new Error('Secret is required');
+    }
+  }
+
+  const { error } = await db()
+    .from('commercial_portal_credentials')
+    .upsert(patch, { onConflict: 'account_id,portal' });
 
   if (error) throw new Error(error.message);
 }
@@ -113,6 +124,16 @@ export const savePortalCredentialsAction = enhanceAction(
       client,
       accountId: input.accountId,
     });
+
+    if (input.portal === 'rightmove') {
+      await saveAddonPortalCredentials(input.accountId, 'rightmove', {
+        branchId: input.branchId,
+        networkId: input.networkId,
+        username: input.username,
+        secret: input.secret,
+      });
+      return loadCommercialPublishingSettings(input.accountId);
+    }
 
     let secret = input.secret?.trim() ?? '';
     if (!secret) {
@@ -226,21 +247,45 @@ export const testPublishListingAction = enhanceAction(
         };
       }
 
-      if (!input.listingId) {
-        return {
-          ok: true as const,
-          message: 'Select a listing to test publish',
-        };
-      }
-
       if (input.portal === 'rightmove') {
+        const { testRightmoveConnection } =
+          await import('~/lib/commercial/rightmove-api');
+        const settings = await loadCommercialPublishingSettings(
+          input.accountId,
+        );
+
+        if (!input.listingId) {
+          const connection = await testRightmoveConnection({
+            branchId: settings.rightmove.branchId || null,
+          });
+          return {
+            ok: connection.ok,
+            message: connection.message,
+          };
+        }
+
         const publication = await publishToRightmove(
           input.accountId,
           input.listingId,
         );
+        const meta = publication.metadata ?? {};
+        const note = typeof meta.note === 'string' ? meta.note : null;
         return {
           ok: publication.status !== 'error',
-          message: publication.last_error ?? 'Rightmove publish recorded',
+          message:
+            publication.last_error ??
+            note ??
+            (publication.status === 'published'
+              ? 'Published to Rightmove'
+              : 'Rightmove sync recorded'),
+          externalUrl: publication.external_url,
+        };
+      }
+
+      if (!input.listingId) {
+        return {
+          ok: true as const,
+          message: 'Select a listing to test publish',
         };
       }
 

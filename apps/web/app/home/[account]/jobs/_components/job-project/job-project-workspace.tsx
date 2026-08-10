@@ -73,6 +73,8 @@ type JobSummary = {
   priority: string;
   start_date: string | null;
   due_date: string | null;
+  is_ongoing?: boolean;
+  is_phased?: boolean;
   value_pence: number | null;
   cost_pence: number | null;
 };
@@ -102,7 +104,16 @@ export function JobProjectWorkspace({
   onAssignmentsChange?: () => void;
 }) {
   const [view, setView] = useState<ViewMode>('board');
-  const [boardMode, setBoardMode] = useState<BoardMode>('phase');
+  const isPhased = Boolean(job.is_phased);
+  const [boardMode, setBoardMode] = useState<BoardMode>(
+    isPhased ? 'phase' : 'progress',
+  );
+
+  useEffect(() => {
+    if (!isPhased) {
+      setBoardMode('progress');
+    }
+  }, [isPhased]);
   const [board, setBoard] = useState<JobBoardResult | null>(null);
   const [boardLoading, setBoardLoading] = useState(true);
   const [addingPhase, setAddingPhase] = useState(false);
@@ -316,7 +327,7 @@ export function JobProjectWorkspace({
               </button>
             ))}
           </div>
-          {view === 'board' ? (
+          {view === 'board' && isPhased ? (
             <div className="flex items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5">
               {(
                 [
@@ -403,7 +414,7 @@ export function JobProjectWorkspace({
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {canEditJobs ? (
+          {canEditJobs && isPhased ? (
             <Button
               type="button"
               size="sm"
@@ -430,7 +441,7 @@ export function JobProjectWorkspace({
           </div>
         ) : board ? (
           <>
-            {view === 'board' && boardMode === 'phase' && (
+            {view === 'board' && isPhased && boardMode === 'phase' && (
               <JobProjectBoard
                 accountSlug={accountSlug}
                 accountId={accountId}

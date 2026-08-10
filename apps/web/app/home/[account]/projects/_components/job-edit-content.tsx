@@ -18,6 +18,7 @@ import {
   AlertDialogTrigger,
 } from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -51,6 +52,8 @@ type Job = {
   status: string;
   priority: string;
   due_date: string | null;
+  is_ongoing?: boolean | null;
+  is_phased?: boolean | null;
   value_pence: number | null;
   client_id: string | null;
   [key: string]: unknown;
@@ -89,6 +92,8 @@ export function JobEditContent({
   const [dueDate, setDueDate] = useState(
     job.due_date ? new Date(job.due_date).toISOString().slice(0, 10) : '',
   );
+  const [isOngoing, setIsOngoing] = useState(Boolean(job.is_ongoing));
+  const [isPhased, setIsPhased] = useState(Boolean(job.is_phased));
   const [valuePence, setValuePence] = useState(
     job.value_pence != null ? (job.value_pence / 100).toFixed(2) : '',
   );
@@ -194,12 +199,14 @@ export function JobEditContent({
           | 'completed'
           | 'cancelled',
         priority: priority as 'low' | 'medium' | 'high' | 'urgent',
-        due_date: dueDate ? new Date(dueDate) : null,
+        due_date: isOngoing ? null : dueDate ? new Date(dueDate) : null,
+        is_ongoing: isOngoing,
+        is_phased: isPhased,
         value_pence: valuePence
           ? Math.round(parseFloat(valuePence) * 100)
           : null,
       });
-      toast.success('Job updated');
+      toast.success('Project updated');
       router.push(detailPath);
     } catch (err) {
       toast.error(getErrorMessage(err));
@@ -379,7 +386,7 @@ export function JobEditContent({
               </Select>
             </div>
           </div>
-          <div>
+          <div className="space-y-2">
             <Label
               htmlFor="due_date"
               className="text-[var(--workspace-shell-text-muted)]"
@@ -389,11 +396,41 @@ export function JobEditContent({
             <Input
               id="due_date"
               type="date"
-              value={dueDate}
-              onChange={(e) => setDueDate(e.target.value)}
+              value={isOngoing ? '' : dueDate}
+              disabled={isOngoing || !canEditJobs}
+              onChange={(e) => {
+                setDueDate(e.target.value);
+                if (e.target.value) setIsOngoing(false);
+              }}
               className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-[var(--workspace-shell-text)]"
             />
+            <label className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]">
+              <Checkbox
+                checked={isOngoing}
+                disabled={!canEditJobs}
+                onCheckedChange={(checked) => {
+                  const next = checked === true;
+                  setIsOngoing(next);
+                  if (next) setDueDate('');
+                }}
+              />
+              Ongoing — no deadline
+            </label>
           </div>
+          <label className="flex items-start gap-2.5 text-sm text-[var(--workspace-shell-text)]">
+            <Checkbox
+              checked={isPhased}
+              disabled={!canEditJobs}
+              onCheckedChange={(checked) => setIsPhased(checked === true)}
+              className="mt-0.5"
+            />
+            <span>
+              Phased project
+              <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
+                Enable Phase board view. Leave off for Progress-only.
+              </span>
+            </span>
+          </label>
           <div>
             <Label
               htmlFor="value"

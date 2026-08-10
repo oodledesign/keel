@@ -813,6 +813,8 @@ export type CreatePublicBookingOptions = {
   expectedAccountId?: string;
   /** Host create: allow omitting required public form fields. */
   skipFormValidation?: boolean;
+  /** Host create: allow guests even when the event type disables public guest invites. */
+  skipGuestInviteRestriction?: boolean;
 };
 
 /**
@@ -845,7 +847,11 @@ export async function createPublicBooking(
     throw new Error('Invalid duration for this event type');
   }
 
-  if (!eventType.allowGuestInvites && input.guests.length > 0) {
+  if (
+    !options.skipGuestInviteRestriction &&
+    !eventType.allowGuestInvites &&
+    input.guests.length > 0
+  ) {
     throw new Error('Guest invites are not allowed for this event type');
   }
 

@@ -11,13 +11,33 @@ export const SavePropertyHiveCredentialsSchema = AccountIdSchema.extend({
   officeId: z.string().optional().nullable(),
 });
 
-export const SavePortalCredentialsSchema = AccountIdSchema.extend({
-  portal: z.enum(['rightmove', 'each']),
-  branchId: z.string().min(1, 'Branch ID is required'),
-  networkId: z.string().min(1, 'Network ID is required'),
-  username: z.string().min(1, 'Username is required'),
-  secret: z.string().optional(),
-});
+export const SavePortalCredentialsSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    portal: z.enum(['rightmove', 'each']),
+    branchId: z.string().min(1, 'Branch ID is required'),
+    networkId: z.string().optional().nullable(),
+    username: z.string().optional(),
+    secret: z.string().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.portal === 'each') {
+      if (!data.networkId?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Network ID is required',
+          path: ['networkId'],
+        });
+      }
+      if (!data.username?.trim()) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'Username is required',
+          path: ['username'],
+        });
+      }
+    }
+  });
 
 export const TestPublishListingSchema = AccountIdSchema.extend({
   listingId: z.string().uuid().optional(),

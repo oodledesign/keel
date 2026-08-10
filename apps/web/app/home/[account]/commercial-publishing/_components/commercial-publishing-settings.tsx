@@ -95,8 +95,6 @@ export function CommercialPublishingSettings({
   const [rmForm, setRmForm] = useState({
     branchId: initialSettings.rightmove.branchId,
     networkId: initialSettings.rightmove.networkId,
-    username: initialSettings.rightmove.username,
-    secret: '',
   });
 
   const [eachForm, setEachForm] = useState({
@@ -137,13 +135,10 @@ export function CommercialPublishingSettings({
           accountId,
           portal: 'rightmove',
           branchId: rmForm.branchId,
-          networkId: rmForm.networkId,
-          username: rmForm.username,
-          secret: rmForm.secret || undefined,
+          networkId: rmForm.networkId || null,
         });
         setSettings(updated);
-        setRmForm((prev) => ({ ...prev, secret: '' }));
-        toast.success('Rightmove credentials saved');
+        toast.success('Rightmove branch details saved');
       } catch (error) {
         toast.error(error instanceof Error ? error.message : 'Save failed');
       }
@@ -425,9 +420,9 @@ export function CommercialPublishingSettings({
             </p>
           ) : null}
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Store RTDF / EACH feed credentials. Live Rightmove RTDF requires an
-            ADF certificate — these fields save credentials for when the feed is
-            wired.
+            Rightmove Commercial Listings uses platform OAuth (env). Save your
+            Branch ID here — it is sent as agentId on upload and used for
+            connection probes. EACH still uses per-workspace feed credentials.
           </p>
 
           <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
@@ -435,8 +430,18 @@ export function CommercialPublishingSettings({
               <h3 className="text-sm font-medium text-[var(--workspace-shell-text)]">
                 Rightmove
               </h3>
-              <ConfiguredBadge configured={settings.rightmove.configured} />
+              <ConfiguredBadge configured={settings.rightmove.oauthConfigured} />
             </div>
+            <p className="text-xs text-[var(--workspace-shell-text)]/55">
+              OAuth Client ID / Key live in server env (
+              {settings.rightmove.environment === 'production'
+                ? 'production'
+                : 'test'}{' '}
+              API).{' '}
+              {settings.rightmove.oauthConfigured
+                ? 'Platform credentials are present.'
+                : 'Set RIGHTMOVE_CLIENT_ID and RIGHTMOVE_CLIENT_KEY, then use Test publish → Rightmove with no listing to verify the token.'}
+            </p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="rm-branch-id">Branch ID</Label>
@@ -452,7 +457,7 @@ export function CommercialPublishingSettings({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="rm-network-id">Network ID</Label>
+                <Label htmlFor="rm-network-id">Network ID (optional)</Label>
                 <Input
                   id="rm-network-id"
                   value={rmForm.networkId}
@@ -464,37 +469,6 @@ export function CommercialPublishingSettings({
                   }
                 />
               </div>
-              <div className="space-y-2">
-                <Label htmlFor="rm-username">Username</Label>
-                <Input
-                  id="rm-username"
-                  autoComplete="off"
-                  value={rmForm.username}
-                  onChange={(e) =>
-                    setRmForm((prev) => ({
-                      ...prev,
-                      username: e.target.value,
-                    }))
-                  }
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="rm-secret">Secret</Label>
-                <Input
-                  id="rm-secret"
-                  type="password"
-                  autoComplete="new-password"
-                  placeholder={
-                    settings.rightmove.configured
-                      ? 'Leave blank to keep existing'
-                      : 'Required'
-                  }
-                  value={rmForm.secret}
-                  onChange={(e) =>
-                    setRmForm((prev) => ({ ...prev, secret: e.target.value }))
-                  }
-                />
-              </div>
             </div>
             <Button
               type="button"
@@ -503,7 +477,7 @@ export function CommercialPublishingSettings({
               onClick={saveRightmove}
             >
               {rmPending ? <Loader2 className="h-4 w-4 animate-spin" /> : null}
-              Save Rightmove credentials
+              Save Rightmove branch
             </Button>
           </div>
 
@@ -597,8 +571,10 @@ export function CommercialPublishingSettings({
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
             For Property Hive, this checks your XML feed (or live REST push if
-            WordPress credentials are saved). Rightmove and EACH record
-            validation until their feeds are connected.
+            WordPress credentials are saved). For Rightmove, leave Listing empty
+            to verify OAuth (and Branch ID probe if saved); pick a listing to
+            PUT via the Commercial Listings API. EACH still records validation
+            until its feed is connected.
           </p>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

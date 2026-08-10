@@ -71,7 +71,9 @@ export default async function PortalProjectsPage({
                     </p>
                   ) : null}
                   <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-                    Due {formatPortalDate(project.dueDate)}
+                    {project.isOngoing
+                      ? 'Ongoing'
+                      : `Due ${formatPortalDate(project.dueDate)}`}
                   </p>
                 </CardContent>
               </Card>

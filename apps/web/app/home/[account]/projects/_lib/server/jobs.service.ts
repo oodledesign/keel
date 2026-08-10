@@ -302,7 +302,9 @@ class JobsService {
         status: input.status ?? 'pending',
         priority: input.priority ?? 'medium',
         start_date: input.start_date ?? null,
-        due_date: input.due_date ?? null,
+        due_date: input.is_ongoing ? null : (input.due_date ?? null),
+        is_ongoing: input.is_ongoing ?? false,
+        is_phased: input.is_phased ?? false,
         estimated_minutes: input.estimated_minutes ?? null,
         actual_minutes: input.actual_minutes ?? null,
         value_pence: input.value_pence ?? null,
@@ -346,7 +348,19 @@ class JobsService {
       if (input.status !== undefined) payload.status = input.status;
       if (input.priority !== undefined) payload.priority = input.priority;
       if (input.start_date !== undefined) payload.start_date = input.start_date;
-      if (input.due_date !== undefined) payload.due_date = input.due_date;
+      if (input.is_ongoing !== undefined) {
+        payload.is_ongoing = input.is_ongoing;
+        if (input.is_ongoing) {
+          payload.due_date = null;
+        }
+      }
+      if (input.due_date !== undefined && input.is_ongoing !== true) {
+        payload.due_date = input.due_date;
+        if (input.due_date != null && input.is_ongoing === undefined) {
+          payload.is_ongoing = false;
+        }
+      }
+      if (input.is_phased !== undefined) payload.is_phased = input.is_phased;
       if (input.estimated_minutes !== undefined)
         payload.estimated_minutes = input.estimated_minutes;
       if (input.actual_minutes !== undefined)

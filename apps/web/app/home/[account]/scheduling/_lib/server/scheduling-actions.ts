@@ -387,7 +387,7 @@ export const createHostBookingAction = enhanceAction(
         inviteeEmail: input.inviteeEmail,
         inviteeTimezone: input.inviteeTimezone,
         inviteeNotes: input.inviteeNotes ?? null,
-        guests: [],
+        guests: input.guests ?? [],
         formResponses: [],
       },
       {
@@ -396,6 +396,7 @@ export const createHostBookingAction = enhanceAction(
         notifyInvitee: input.notifyInvitee,
         expectedAccountId: account.id,
         skipFormValidation: true,
+        skipGuestInviteRestriction: true,
       },
     );
 
