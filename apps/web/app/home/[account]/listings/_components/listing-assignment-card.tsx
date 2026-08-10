@@ -3,20 +3,36 @@
 import { useMemo, useState, useTransition } from 'react';
 
 import { UserRound, X } from 'lucide-react';
-import { toast } from 'sonner';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
+import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 
-import { workspacePanelCard } from '~/lib/workspace-ui';
+import {
+  workspacePanelCard,
+  workspaceSelectContentClass,
+  workspaceSelectItemClass,
+} from '~/lib/workspace-ui';
 
 import type {
   ListingAssignment,
   ListingMemberOption,
+  WorkspaceTeam,
 } from '../_lib/server/listings.service';
-import { updateListingAssignment } from '../_lib/server/server-actions';
+import {
+  createWorkspaceTeam,
+  updateListingAssignment,
+} from '../_lib/server/server-actions';
 
 function MemberAvatar({
   name,
@@ -50,50 +66,157 @@ function MemberAvatar({
   );
 }
 
-export function ListingAssignmentCard({
-  accountId,
-  accountSlug,
-  members: initialMembers,
-  assignment: initialAssignment,
+function MemberSearchAdd({
+  id,
+  label,
+  members,
+  excludedIds,
+  onPick,
+  disabled,
 }: {
-  accountId: string;
-  accountSlug: string;
+  id: string;
+  label: string;
   members: ListingMemberOption[];
-  assignment: ListingAssignment;
+  excludedIds: string[];
+  onPick: (userId: string) => void;
+  disabled?: boolean;
 }) {
-  const [members] = useState(initialMembers);
-  const [assignment, setAssignment] = useState(initialAssignment);
-  const [agentQuery, setAgentQuery] = useState('');
-  const [pending, startTransition] = useTransition();
-
-  const agentIds = useMemo(
-    () => assignment.actingAgents.map((a) => a.userId),
-    [assignment.actingAgents],
-  );
-
-  const availableAgents = useMemo(() => {
-    const q = agentQuery.trim().toLowerCase();
+  const [query, setQuery] = useState('');
+  const available = useMemo(() => {
+    const q = query.trim().toLowerCase();
     return members.filter((member) => {
-      if (agentIds.includes(member.userId)) return false;
+      if (excludedIds.includes(member.userId)) return false;
       if (!q) return true;
       return (
         member.name.toLowerCase().includes(q) ||
         (member.email?.toLowerCase().includes(q) ?? false)
       );
     });
-  }, [agentIds, agentQuery, members]);
+  }, [excludedIds, members, query]);
 
-  const persistAgents = (actingAgentUserIds: string[]) => {
+  return (
+    <div className="space-y-2">
+      <Label htmlFor={id}>{label}</Label>
+      <Input
+        id={id}
+        placeholder="Search for a user…"
+        value={query}
+        disabled={disabled}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      {query.trim() && available.length > 0 ? (
+        <ul className="max-h-40 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
+          {available.slice(0, 8).map((member) => (
+            <li key={member.userId}>
+              <button
+                type="button"
+                disabled={disabled}
+                className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                onClick={() => {
+                  onPick(member.userId);
+                  setQuery('');
+                }}
+              >
+                <MemberAvatar
+                  name={member.name}
+                  pictureUrl={member.pictureUrl}
+                />
+                <span className="min-w-0 truncate">{member.name}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      ) : null}
+    </div>
+  );
+}
+
+function SelectedMemberChip({
+  member,
+  onClear,
+  disabled,
+}: {
+  member: ListingMemberOption | null;
+  onClear: () => void;
+  disabled?: boolean;
+}) {
+  if (!member) {
+    return (
+      <p className="text-sm text-[var(--workspace-shell-text)]/45">Not set</p>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2">
+      <MemberAvatar name={member.name} pictureUrl={member.pictureUrl} />
+      <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+        {member.name}
+      </span>
+      <Button
+        type="button"
+        variant="ghost"
+        size="icon"
+        disabled={disabled}
+        className="h-7 w-7 shrink-0"
+        onClick={onClear}
+        aria-label={`Clear ${member.name}`}
+      >
+        <X className="h-3.5 w-3.5" />
+      </Button>
+    </div>
+  );
+}
+
+export function ListingAssignmentCard({
+  accountId,
+  accountSlug,
+  members: initialMembers,
+  teams: initialTeams,
+  assignment: initialAssignment,
+}: {
+  accountId: string;
+  accountSlug: string;
+  members: ListingMemberOption[];
+  teams: WorkspaceTeam[];
+  assignment: ListingAssignment;
+}) {
+  const [members] = useState(initialMembers);
+  const [teams, setTeams] = useState(initialTeams);
+  const [assignment, setAssignment] = useState(initialAssignment);
+  const [newTeamName, setNewTeamName] = useState('');
+  const [pending, startTransition] = useTransition();
+
+  const memberById = useMemo(
+    () => new Map(members.map((m) => [m.userId, m])),
+    [members],
+  );
+
+  const agentIds = useMemo(
+    () => assignment.actingAgents.map((a) => a.userId),
+    [assignment.actingAgents],
+  );
+
+  const persist = (
+    patch: Parameters<typeof updateListingAssignment>[0] extends infer T
+      ? Omit<T, 'accountId' | 'accountSlug' | 'listingId'>
+      : never,
+    optimistic?: (prev: ListingAssignment) => ListingAssignment,
+  ) => {
+    const previous = assignment;
+    if (optimistic) {
+      setAssignment(optimistic);
+    }
     startTransition(async () => {
       try {
         const updated = await updateListingAssignment({
           accountId,
           accountSlug,
-          listingId: assignment.listingId,
-          actingAgentUserIds,
+          listingId: previous.listingId,
+          ...patch,
         });
         setAssignment(updated);
       } catch (err) {
+        setAssignment(previous);
         toast.error(err instanceof Error ? err.message : 'Could not save');
       }
     });
@@ -101,9 +224,8 @@ export function ListingAssignmentCard({
 
   const addAgent = (userId: string) => {
     const next = [...agentIds, userId];
-    setAgentQuery('');
-    setAssignment((prev) => {
-      const member = members.find((m) => m.userId === userId);
+    persist({ actingAgentUserIds: next }, (prev) => {
+      const member = memberById.get(userId);
       return {
         ...prev,
         actingAgents: [
@@ -118,89 +240,225 @@ export function ListingAssignmentCard({
         ],
       };
     });
-    persistAgents(next);
   };
 
   const removeAgent = (userId: string) => {
     const next = agentIds.filter((id) => id !== userId);
-    setAssignment((prev) => ({
+    persist({ actingAgentUserIds: next }, (prev) => ({
       ...prev,
       actingAgents: prev.actingAgents
         .filter((a) => a.userId !== userId)
         .map((a, index) => ({ ...a, sortOrder: index })),
     }));
-    persistAgents(next);
+  };
+
+  const createTeam = () => {
+    const name = newTeamName.trim();
+    if (!name) return;
+    startTransition(async () => {
+      try {
+        const team = await createWorkspaceTeam({ accountId, name });
+        setTeams((prev) => [...prev, team]);
+        setNewTeamName('');
+        const updated = await updateListingAssignment({
+          accountId,
+          accountSlug,
+          listingId: assignment.listingId,
+          teamId: team.id,
+        });
+        setAssignment(updated);
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Could not create team',
+        );
+      }
+    });
   };
 
   return (
     <Card className={workspacePanelCard}>
       <CardHeader>
         <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-          Acting Agents
+          Assigned users & teams
         </CardTitle>
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
-          Workspace members acting on this disposal.
+          Workspace members acting on this disposal, plus PA, record owner and
+          team.
         </p>
       </CardHeader>
-      <CardContent className="max-w-md space-y-3">
-        <Label htmlFor="acting-agent-search">Add agent</Label>
-        <Input
-          id="acting-agent-search"
-          placeholder="Search for a user…"
-          value={agentQuery}
-          disabled={pending}
-          onChange={(e) => setAgentQuery(e.target.value)}
-        />
-        {agentQuery.trim() && availableAgents.length > 0 ? (
-          <ul className="max-h-40 overflow-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
-            {availableAgents.slice(0, 8).map((member) => (
-              <li key={member.userId}>
-                <button
-                  type="button"
-                  disabled={pending}
-                  className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                  onClick={() => addAgent(member.userId)}
-                >
-                  <MemberAvatar
-                    name={member.name}
-                    pictureUrl={member.pictureUrl}
+      <CardContent className="max-w-lg space-y-6">
+        <div className="space-y-3">
+          <MemberSearchAdd
+            id="acting-agent-search"
+            label="Acting agents"
+            members={members}
+            excludedIds={agentIds}
+            disabled={pending}
+            onPick={addAgent}
+          />
+          <ul className="space-y-2">
+            {assignment.actingAgents.length === 0 ? (
+              <li className="text-sm text-[var(--workspace-shell-text)]/45">
+                No acting agents yet.
+              </li>
+            ) : (
+              assignment.actingAgents.map((agent) => (
+                <li key={agent.userId}>
+                  <SelectedMemberChip
+                    member={{
+                      userId: agent.userId,
+                      name: agent.name,
+                      email: agent.email,
+                      pictureUrl: agent.pictureUrl,
+                    }}
+                    disabled={pending}
+                    onClear={() => removeAgent(agent.userId)}
                   />
-                  <span className="min-w-0 truncate">{member.name}</span>
-                </button>
-              </li>
-            ))}
+                </li>
+              ))
+            )}
           </ul>
-        ) : null}
-        <ul className="space-y-2">
-          {assignment.actingAgents.length === 0 ? (
-            <li className="text-sm text-[var(--workspace-shell-text)]/45">
-              No acting agents yet.
-            </li>
-          ) : (
-            assignment.actingAgents.map((agent) => (
-              <li
-                key={agent.userId}
-                className="flex items-center gap-2 rounded-lg bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-2"
-              >
-                <MemberAvatar name={agent.name} pictureUrl={agent.pictureUrl} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                  {agent.name}
-                </span>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon"
-                  disabled={pending}
-                  className="h-7 w-7 shrink-0"
-                  onClick={() => removeAgent(agent.userId)}
-                  aria-label={`Remove ${agent.name}`}
+        </div>
+
+        <div className="space-y-2">
+          <MemberSearchAdd
+            id="pa-search"
+            label="PA"
+            members={members}
+            excludedIds={assignment.paUserId ? [assignment.paUserId] : []}
+            disabled={pending}
+            onPick={(userId) =>
+              persist({ paUserId: userId }, (prev) => ({
+                ...prev,
+                paUserId: userId,
+              }))
+            }
+          />
+          <SelectedMemberChip
+            member={
+              assignment.paUserId
+                ? (memberById.get(assignment.paUserId) ?? null)
+                : null
+            }
+            disabled={pending}
+            onClear={() =>
+              persist({ paUserId: null }, (prev) => ({
+                ...prev,
+                paUserId: null,
+              }))
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <MemberSearchAdd
+            id="owner-search"
+            label="Record owner"
+            members={members}
+            excludedIds={
+              assignment.recordOwnerUserId ? [assignment.recordOwnerUserId] : []
+            }
+            disabled={pending}
+            onPick={(userId) =>
+              persist({ recordOwnerUserId: userId }, (prev) => ({
+                ...prev,
+                recordOwnerUserId: userId,
+              }))
+            }
+          />
+          <SelectedMemberChip
+            member={
+              assignment.recordOwnerUserId
+                ? (memberById.get(assignment.recordOwnerUserId) ?? null)
+                : null
+            }
+            disabled={pending}
+            onClear={() =>
+              persist({ recordOwnerUserId: null }, (prev) => ({
+                ...prev,
+                recordOwnerUserId: null,
+              }))
+            }
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor="team-select">Team</Label>
+          <Select
+            value={assignment.teamId ?? '__none__'}
+            disabled={pending}
+            onValueChange={(value) =>
+              persist(
+                { teamId: value === '__none__' ? null : value },
+                (prev) => ({
+                  ...prev,
+                  teamId: value === '__none__' ? null : value,
+                  teamName:
+                    value === '__none__'
+                      ? null
+                      : (teams.find((t) => t.id === value)?.name ?? null),
+                }),
+              )
+            }
+          >
+            <SelectTrigger id="team-select">
+              <SelectValue placeholder="Select team" />
+            </SelectTrigger>
+            <SelectContent className={workspaceSelectContentClass}>
+              <SelectItem value="__none__" className={workspaceSelectItemClass}>
+                No team
+              </SelectItem>
+              {teams.map((team) => (
+                <SelectItem
+                  key={team.id}
+                  value={team.id}
+                  className={workspaceSelectItemClass}
                 >
-                  <X className="h-3.5 w-3.5" />
-                </Button>
-              </li>
-            ))
-          )}
-        </ul>
+                  {team.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <div className="flex gap-2">
+            <Input
+              placeholder="New team name…"
+              value={newTeamName}
+              disabled={pending}
+              onChange={(e) => setNewTeamName(e.target.value)}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={pending || !newTeamName.trim()}
+              onClick={createTeam}
+            >
+              Add
+            </Button>
+          </div>
+        </div>
+
+        <label className="flex items-start gap-2.5 text-sm text-[var(--workspace-shell-text)]">
+          <Checkbox
+            checked={assignment.restrictAccessToAssigned}
+            disabled={pending}
+            onCheckedChange={(checked) =>
+              persist(
+                { restrictAccessToAssigned: checked === true },
+                (prev) => ({
+                  ...prev,
+                  restrictAccessToAssigned: checked === true,
+                }),
+              )
+            }
+          />
+          <span>
+            Restrict access to assigned users &amp; the PA
+            <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text)]/50">
+              Preference stored on the disposal; full enforcement rolls out with
+              workspace permissions.
+            </span>
+          </span>
+        </label>
       </CardContent>
     </Card>
   );

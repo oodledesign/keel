@@ -32,6 +32,100 @@ export const DISPOSAL_TYPE_LABELS: Record<DisposalType, string> = {
   investment: 'Investment',
 };
 
+/** Occupational disposal types (leasing / sale) vs investment. */
+export const OCCUPATIONAL_DISPOSAL_TYPES = ['to_let', 'for_sale'] as const;
+
+export const TERMS_OF_ENGAGEMENT = ['yes', 'no', 'pending'] as const;
+
+export type TermsOfEngagement = (typeof TERMS_OF_ENGAGEMENT)[number];
+
+export const TERMS_OF_ENGAGEMENT_LABELS: Record<TermsOfEngagement, string> = {
+  yes: 'Yes — agreed',
+  no: 'No',
+  pending: 'Pending',
+};
+
+export const LISTING_PARTY_ROLES = ['landlord', 'other'] as const;
+
+export type ListingPartyRole = (typeof LISTING_PARTY_ROLES)[number];
+
+export const LISTING_SIZE_BREAKDOWNS = [
+  'floor_by_floor',
+  'unit_by_unit',
+  'total_only',
+  'unknown',
+] as const;
+
+export type ListingSizeBreakdown = (typeof LISTING_SIZE_BREAKDOWNS)[number];
+
+export const LISTING_SIZE_BREAKDOWN_LABELS: Record<
+  ListingSizeBreakdown,
+  string
+> = {
+  floor_by_floor: 'Floor by floor',
+  unit_by_unit: 'Unit by unit',
+  total_only: 'Total only',
+  unknown: 'Unknown',
+};
+
+export const LISTING_CONTROLLED_BY = [
+  'agent',
+  'landlord',
+  'vendor',
+  'unknown',
+] as const;
+
+export type ListingControlledBy = (typeof LISTING_CONTROLLED_BY)[number];
+
+export const LISTING_CONTROLLED_BY_LABELS: Record<ListingControlledBy, string> =
+  {
+    agent: 'Agent',
+    landlord: 'Landlord',
+    vendor: 'Vendor',
+    unknown: 'Unknown',
+  };
+
+export const LISTING_SIZE_ACCURACIES = [
+  'approximate',
+  'measured',
+  'estimated',
+  'unknown',
+] as const;
+
+export type ListingSizeAccuracy = (typeof LISTING_SIZE_ACCURACIES)[number];
+
+export const LISTING_SIZE_ACCURACY_LABELS: Record<
+  ListingSizeAccuracy,
+  string
+> = {
+  approximate: 'Approximate',
+  measured: 'Measured',
+  estimated: 'Estimated',
+  unknown: 'Unknown',
+};
+
+export const BREEAM_RATINGS = [
+  'outstanding',
+  'excellent',
+  'very_good',
+  'good',
+  'pass',
+  'unclassified',
+  'n_a',
+] as const;
+
+export type BreeamRating = (typeof BREEAM_RATINGS)[number];
+
+export const BREEAM_RATING_LABELS: Record<BreeamRating, string> = {
+  outstanding: 'Outstanding',
+  excellent: 'Excellent',
+  very_good: 'Very good',
+  good: 'Good',
+  pass: 'Pass',
+  unclassified: 'Unclassified',
+  n_a: 'N/A',
+};
+
 /** Semantic badge classes for disposal type pills (bg + text). */
 export const DISPOSAL_TYPE_BADGE_CLASS: Record<DisposalType, string> = {
   for_sale:

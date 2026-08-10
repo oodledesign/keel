@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
   AddListingCoAgentSchema,
+  AddListingPartySchema,
   CreateListingEnquirySchema,
   CreateListingMediaSchema,
   CreateListingSchema,
@@ -17,14 +18,18 @@ import {
   GetListingSchema,
   ListListingCoAgentsSchema,
   ListListingMembersSchema,
+  ListListingPartiesSchema,
   ListListingsSchema,
   ListWorkspaceTeamsSchema,
   RemoveListingCoAgentSchema,
+  RemoveListingPartySchema,
   SearchCoAgentClientsSchema,
+  SearchListingPartyClientsSchema,
   SetLandlordShareSchema,
   SetListingMediaCoverSchema,
   UpdateListingAssignmentSchema,
   UpdateListingEnquirySchema,
+  UpdateListingPartySchema,
   UpdateListingSchema,
   UpdateListingUnitSchema,
 } from '../schema/listings.schema';
@@ -98,6 +103,12 @@ export const deleteListing = enhanceAction(
 
 export const setLandlordShare = enhanceAction(
   async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
     return getService().setLandlordShare(input);
   },
   { schema: SetLandlordShareSchema },
@@ -146,7 +157,11 @@ export const setListingMediaCover = enhanceAction(
 
 export const deleteListingMedia = enhanceAction(
   async (input) => {
-    await getService().deleteMedia(input.mediaId, input.accountId);
+    await getService().deleteMedia(
+      input.mediaId,
+      input.accountId,
+      input.listingId,
+    );
     return { success: true };
   },
   { schema: DeleteListingMediaSchema },
@@ -245,4 +260,73 @@ export const removeListingCoAgent = enhanceAction(
     return result;
   },
   { schema: RemoveListingCoAgentSchema },
+);
+
+export const listListingParties = enhanceAction(
+  async (input) =>
+    getService().listParties(input.listingId, input.accountId, input.role),
+  { schema: ListListingPartiesSchema },
+);
+
+export const searchListingPartyClients = enhanceAction(
+  async (input) => getService().searchPartyClients(input),
+  { schema: SearchListingPartyClientsSchema },
+);
+
+export const addListingParty = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'link listing parties',
+    );
+    const result = await getService().addParty({
+      listingId: input.listingId,
+      accountId: input.accountId,
+      role: input.role,
+      clientId: input.clientId,
+      companyName: input.companyName,
+      contactName: input.contactName,
+      contactEmail: input.contactEmail || null,
+      contactPhone: input.contactPhone,
+      isPrivate: input.isPrivate,
+    });
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/home', 'layout');
+    return result;
+  },
+  { schema: AddListingPartySchema },
+);
+
+export const removeListingParty = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'link listing parties',
+    );
+    const result = await getService().removeParty(input);
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/home', 'layout');
+    return result;
+  },
+  { schema: RemoveListingPartySchema },
+);
+
+export const updateListingParty = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'link listing parties',
+    );
+    const result = await getService().updateParty(input);
+    const { revalidatePath } = await import('next/cache');
+    revalidatePath('/home', 'layout');
+    return result;
+  },
+  { schema: UpdateListingPartySchema },
 );

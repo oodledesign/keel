@@ -686,6 +686,7 @@ export async function buildPropertyHiveFeedXml(
         .from('commercial_listing_media')
         .select('*')
         .in('listing_id', listingIds)
+        .eq('is_private', false)
         .order('sort_order'),
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       (client as any)

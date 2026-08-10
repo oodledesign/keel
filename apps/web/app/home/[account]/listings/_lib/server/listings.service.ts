@@ -107,6 +107,19 @@ export type CommercialListing = {
   tenure: string | null;
   disposalType: DisposalType;
   instructionNature: 'exclusive' | 'joint';
+  isInstructed: boolean;
+  termsOfEngagement: 'yes' | 'no' | 'pending' | null;
+  restrictAccessToAssigned: boolean;
+  hideLandlordFromMarketing: boolean;
+  referenceNumber: string | null;
+  projectCode: string | null;
+  averageFloorPlateSqft: number | null;
+  sizeBreakdown: string | null;
+  controlledBy: string | null;
+  sizeAccuracy: string | null;
+  termsInternal: string | null;
+  breeamRating: string | null;
+  conditionDescription: string | null;
   status: ListingStatus;
   askingRentPence: number | null;
   askingPricePence: number | null;
@@ -169,6 +182,19 @@ export type CoAgentClientOption = {
   commercialRole: string | null;
 };
 
+export type ListingParty = {
+  id: string;
+  listingId: string;
+  clientId: string;
+  role: 'landlord' | 'other';
+  clientName: string;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  isPrivate: boolean;
+  sortOrder: number;
+};
+
 export type WorkspaceTeam = {
   id: string;
   accountId: string;
@@ -184,6 +210,7 @@ export type ListingAssignment = {
   recordOwnerUserId: string | null;
   teamId: string | null;
   teamName: string | null;
+  restrictAccessToAssigned: boolean;
 };
 
 export type CommercialListingUnit = {
@@ -209,6 +236,7 @@ export type CommercialListingMedia = {
   mimeType: string | null;
   sortOrder: number;
   isCover: boolean;
+  isPrivate: boolean;
   createdAt: string;
   /** Signed or external URL for display (filled by loader when available). */
   url?: string | null;
@@ -318,6 +346,20 @@ function mapListing(row: ListingRow): CommercialListing {
     disposalType: (row.disposal_type as DisposalType) ?? 'to_let',
     instructionNature:
       (row.instruction_nature as 'exclusive' | 'joint') ?? 'exclusive',
+    isInstructed: row.is_instructed !== false,
+    termsOfEngagement:
+      (row.terms_of_engagement as 'yes' | 'no' | 'pending' | null) ?? null,
+    restrictAccessToAssigned: Boolean(row.restrict_access_to_assigned),
+    hideLandlordFromMarketing: Boolean(row.hide_landlord_from_marketing),
+    referenceNumber: (row.reference_number as string | null) ?? null,
+    projectCode: (row.project_code as string | null) ?? null,
+    averageFloorPlateSqft: num(row.average_floor_plate_sqft),
+    sizeBreakdown: (row.size_breakdown as string | null) ?? null,
+    controlledBy: (row.controlled_by as string | null) ?? null,
+    sizeAccuracy: (row.size_accuracy as string | null) ?? null,
+    termsInternal: (row.terms_internal as string | null) ?? null,
+    breeamRating: (row.breeam_rating as string | null) ?? null,
+    conditionDescription: (row.condition_description as string | null) ?? null,
     status: (row.status as ListingStatus) ?? 'draft',
     askingRentPence: num(row.asking_rent_pence),
     askingPricePence: num(row.asking_price_pence),
@@ -374,6 +416,7 @@ function mapMedia(row: MediaRow): CommercialListingMedia {
     mimeType: (row.mime_type as string | null) ?? null,
     sortOrder: row.sort_order ?? 0,
     isCover: Boolean(row.is_cover),
+    isPrivate: Boolean(row.is_private),
     createdAt: row.created_at,
   };
 }
@@ -433,6 +476,51 @@ function writeColumns(input: Partial<CreateListingInput>) {
     }),
     ...(input.instructionNature !== undefined && {
       instruction_nature: input.instructionNature,
+    }),
+    ...(input.isInstructed !== undefined && {
+      is_instructed: input.isInstructed,
+    }),
+    ...(input.termsOfEngagement !== undefined && {
+      terms_of_engagement: input.termsOfEngagement,
+    }),
+    ...(input.restrictAccessToAssigned !== undefined && {
+      restrict_access_to_assigned: input.restrictAccessToAssigned,
+    }),
+    ...(input.hideLandlordFromMarketing !== undefined && {
+      hide_landlord_from_marketing: input.hideLandlordFromMarketing,
+    }),
+    ...(input.referenceNumber !== undefined && {
+      reference_number: input.referenceNumber,
+    }),
+    ...(input.projectCode !== undefined && {
+      project_code: input.projectCode,
+    }),
+    ...(input.onMarketAt !== undefined && {
+      on_market_at: input.onMarketAt,
+    }),
+    ...(input.offMarketAt !== undefined && {
+      off_market_at: input.offMarketAt,
+    }),
+    ...(input.averageFloorPlateSqft !== undefined && {
+      average_floor_plate_sqft: input.averageFloorPlateSqft,
+    }),
+    ...(input.sizeBreakdown !== undefined && {
+      size_breakdown: input.sizeBreakdown,
+    }),
+    ...(input.controlledBy !== undefined && {
+      controlled_by: input.controlledBy,
+    }),
+    ...(input.sizeAccuracy !== undefined && {
+      size_accuracy: input.sizeAccuracy,
+    }),
+    ...(input.termsInternal !== undefined && {
+      terms_internal: input.termsInternal,
+    }),
+    ...(input.breeamRating !== undefined && {
+      breeam_rating: input.breeamRating,
+    }),
+    ...(input.conditionDescription !== undefined && {
+      condition_description: input.conditionDescription,
     }),
     ...(input.status !== undefined && { status: input.status }),
     ...(input.askingRentPence !== undefined && {
@@ -516,6 +604,7 @@ async function attachCoverUrls(
     .from('commercial_listing_media')
     .select('*')
     .in('listing_id', listingIds)
+    .eq('is_private', false)
     .or('media_type.eq.image,mime_type.ilike.image/%')
     .order('is_cover', { ascending: false })
     .order('sort_order', { ascending: true })
@@ -933,13 +1022,25 @@ export function createListingsService(client: SupabaseClient) {
       if (error) throw new Error(error.message);
     },
 
-    async listMedia(listingId: string): Promise<CommercialListingMedia[]> {
-      const { data, error } = await client
+    async listMedia(
+      listingId: string,
+      options?: { privacy?: 'public' | 'private' | 'all' },
+    ): Promise<CommercialListingMedia[]> {
+      let query = client
         .from('commercial_listing_media')
         .select('*')
         .eq('listing_id', listingId)
         .order('sort_order')
         .order('created_at');
+
+      const privacy = options?.privacy ?? 'public';
+      if (privacy === 'public') {
+        query = query.eq('is_private', false);
+      } else if (privacy === 'private') {
+        query = query.eq('is_private', true);
+      }
+
+      const { data, error } = await query;
 
       if (error) {
         console.error('[listings] listMedia error:', error.message);
@@ -957,16 +1058,18 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       const mediaType = input.mediaType ?? 'image';
+      const isPrivate = Boolean(input.isPrivate);
       const isImage =
         mediaType === 'image' || Boolean(input.mimeType?.startsWith('image/'));
 
-      let isCover = Boolean(input.isCover);
-      if (isImage && !isCover) {
+      let isCover = Boolean(input.isCover) && !isPrivate;
+      if (isImage && !isCover && !isPrivate) {
         const { count } = await client
           .from('commercial_listing_media')
           .select('id', { count: 'exact', head: true })
           .eq('listing_id', input.listingId)
-          .eq('is_cover', true);
+          .eq('is_cover', true)
+          .eq('is_private', false);
         isCover = (count ?? 0) === 0;
       }
 
@@ -990,6 +1093,7 @@ export function createListingsService(client: SupabaseClient) {
           mime_type: input.mimeType ?? null,
           sort_order: input.sortOrder ?? 0,
           is_cover: isCover,
+          is_private: isPrivate,
         })
         .select('*')
         .single();
@@ -1029,24 +1133,40 @@ export function createListingsService(client: SupabaseClient) {
       return mapMedia(data as MediaRow);
     },
 
-    async deleteMedia(mediaId: string, accountId: string): Promise<void> {
-      const { data: existing, error: fetchError } = await client
+    async deleteMedia(
+      mediaId: string,
+      accountId: string,
+      listingId?: string,
+    ): Promise<void> {
+      let fetchQuery = client
         .from('commercial_listing_media')
         .select('storage_path')
         .eq('id', mediaId)
-        .eq('account_id', accountId)
-        .maybeSingle();
+        .eq('account_id', accountId);
+
+      if (listingId) {
+        fetchQuery = fetchQuery.eq('listing_id', listingId);
+      }
+
+      const { data: existing, error: fetchError } = await fetchQuery.maybeSingle();
 
       if (fetchError) throw new Error(fetchError.message);
+      if (!existing) throw new Error('Media not found');
 
       const storagePath = (existing as { storage_path?: string | null } | null)
         ?.storage_path;
 
-      const { error } = await client
+      let deleteQuery = client
         .from('commercial_listing_media')
         .delete()
         .eq('id', mediaId)
         .eq('account_id', accountId);
+
+      if (listingId) {
+        deleteQuery = deleteQuery.eq('listing_id', listingId);
+      }
+
+      const { error } = await deleteQuery;
 
       if (error) throw new Error(error.message);
 
@@ -1414,6 +1534,7 @@ export function createListingsService(client: SupabaseClient) {
         recordOwnerUserId: listing.recordOwnerUserId ?? listing.assignedTo,
         teamId: listing.teamId,
         teamName,
+        restrictAccessToAssigned: listing.restrictAccessToAssigned,
       };
     },
 
@@ -1425,6 +1546,7 @@ export function createListingsService(client: SupabaseClient) {
       paUserId?: string | null;
       recordOwnerUserId?: string | null;
       teamId?: string | null;
+      restrictAccessToAssigned?: boolean;
     }): Promise<ListingAssignment> {
       const listing = await this.getListing(input.listingId, input.accountId);
       if (!listing) throw new Error('Listing not found');
@@ -1443,6 +1565,9 @@ export function createListingsService(client: SupabaseClient) {
       }
       if (input.teamId !== undefined) {
         patch.team_id = input.teamId;
+      }
+      if (input.restrictAccessToAssigned !== undefined) {
+        patch.restrict_access_to_assigned = input.restrictAccessToAssigned;
       }
 
       if (Object.keys(patch).length > 1) {
@@ -1788,6 +1913,303 @@ export function createListingsService(client: SupabaseClient) {
       }
 
       return this.listCoAgents(input.listingId, input.accountId);
+    },
+
+    async listParties(
+      listingId: string,
+      accountId: string,
+      role?: 'landlord' | 'other',
+    ): Promise<ListingParty[]> {
+      let query = fromTable(client, 'commercial_listing_parties')
+        .select(
+          'id, listing_id, client_id, role, contact_name, contact_email, contact_phone, is_private, sort_order, clients(display_name, company_name, first_name, last_name)',
+        )
+        .eq('listing_id', listingId)
+        .eq('account_id', accountId)
+        .order('sort_order', { ascending: true });
+
+      if (role) {
+        query = query.eq('role', role);
+      }
+
+      const { data: rows, error } = await query;
+      if (error) {
+        console.error('[listings] listParties:', error.message);
+        return [];
+      }
+
+      return ((rows ?? []) as Array<Record<string, unknown>>).map(
+        (row, index) => {
+          const clientRow = row.clients as Record<string, unknown> | null;
+          const clientName =
+            (clientRow?.display_name as string | null)?.trim() ||
+            (clientRow?.company_name as string | null)?.trim() ||
+            [clientRow?.first_name, clientRow?.last_name]
+              .filter(Boolean)
+              .join(' ')
+              .trim() ||
+            (row.role === 'landlord' ? 'Landlord' : 'Contact');
+          return {
+            id: row.id as string,
+            listingId: row.listing_id as string,
+            clientId: row.client_id as string,
+            role: row.role as 'landlord' | 'other',
+            clientName,
+            contactName: (row.contact_name as string | null) ?? null,
+            contactEmail: (row.contact_email as string | null) ?? null,
+            contactPhone: (row.contact_phone as string | null) ?? null,
+            isPrivate: Boolean(row.is_private),
+            sortOrder: Number(row.sort_order ?? index),
+          };
+        },
+      );
+    },
+
+    async searchPartyClients(input: {
+      accountId: string;
+      query?: string;
+      excludeListingId?: string;
+      role?: 'landlord' | 'other';
+    }): Promise<CoAgentClientOption[]> {
+      let excludeIds: string[] = [];
+      if (input.excludeListingId) {
+        let linkedQuery = fromTable(client, 'commercial_listing_parties')
+          .select('client_id')
+          .eq('listing_id', input.excludeListingId)
+          .eq('account_id', input.accountId);
+        if (input.role) {
+          linkedQuery = linkedQuery.eq('role', input.role);
+        }
+        const { data: linked } = await linkedQuery;
+        excludeIds = ((linked ?? []) as Array<{ client_id: string }>).map(
+          (r) => r.client_id,
+        );
+      }
+
+      let query = client
+        .from('clients')
+        .select(
+          'id, display_name, company_name, first_name, last_name, email, phone, commercial_role',
+        )
+        .eq('account_id', input.accountId)
+        .is('deleted_at', null)
+        .order('display_name', { ascending: true })
+        .limit(40);
+
+      const q = input.query?.trim().replace(/[%_,]/g, ' ');
+      if (q) {
+        query = query.or(
+          `display_name.ilike.%${q}%,company_name.ilike.%${q}%,email.ilike.%${q}%`,
+        );
+      }
+
+      const { data, error } = await query;
+      if (error) throw new Error(error.message);
+
+      return ((data ?? []) as Array<Record<string, unknown>>)
+        .filter((row) => !excludeIds.includes(row.id as string))
+        .map((row) => {
+          const name =
+            (row.display_name as string | null)?.trim() ||
+            (row.company_name as string | null)?.trim() ||
+            [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+            'Client';
+          return {
+            id: row.id as string,
+            name,
+            email: (row.email as string | null) ?? null,
+            phone: (row.phone as string | null) ?? null,
+            commercialRole: (row.commercial_role as string | null) ?? null,
+          };
+        });
+    },
+
+    async addParty(input: {
+      listingId: string;
+      accountId: string;
+      role: 'landlord' | 'other';
+      clientId?: string;
+      companyName?: string;
+      contactName?: string | null;
+      contactEmail?: string | null;
+      contactPhone?: string | null;
+      isPrivate?: boolean;
+    }): Promise<ListingParty[]> {
+      const listing = await this.getListing(input.listingId, input.accountId);
+      if (!listing) throw new Error('Listing not found');
+
+      let clientId = input.clientId ?? null;
+      const contactName = input.contactName?.trim() || null;
+      const contactEmail = input.contactEmail?.trim() || null;
+      const contactPhone = input.contactPhone?.trim() || null;
+      const commercialRole =
+        input.role === 'landlord' ? 'landlord' : 'other';
+
+      if (!clientId) {
+        const companyName = input.companyName?.trim();
+        if (!companyName) throw new Error('Company name is required');
+
+        const { data: created, error: createError } = await client
+          .from('clients')
+          .insert({
+            account_id: input.accountId,
+            client_type: 'business',
+            company_name: companyName,
+            display_name: companyName,
+            email: contactEmail,
+            phone: contactPhone,
+            commercial_role: commercialRole,
+          })
+          .select('id')
+          .single();
+
+        if (createError || !created) {
+          throw new Error(createError?.message ?? 'Failed to create client');
+        }
+        clientId = created.id as string;
+      } else {
+        const { data: existing, error: existingError } = await client
+          .from('clients')
+          .select('id')
+          .eq('id', clientId)
+          .eq('account_id', input.accountId)
+          .is('deleted_at', null)
+          .maybeSingle();
+        if (existingError) throw new Error(existingError.message);
+        if (!existing) throw new Error('Client not found in this workspace');
+      }
+
+      const { count } = await fromTable(client, 'commercial_listing_parties')
+        .select('id', { count: 'exact', head: true })
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .eq('role', input.role);
+
+      const { error: insertError } = await fromTable(
+        client,
+        'commercial_listing_parties',
+      ).insert({
+        listing_id: input.listingId,
+        account_id: input.accountId,
+        client_id: clientId,
+        role: input.role,
+        contact_name: contactName,
+        contact_email: contactEmail,
+        contact_phone: contactPhone,
+        is_private: Boolean(input.isPrivate),
+        sort_order: count ?? 0,
+      });
+
+      if (insertError) {
+        if (insertError.code === '23505') {
+          throw new Error('That party is already linked to this disposal');
+        }
+        throw new Error(insertError.message);
+      }
+
+      if (input.role === 'landlord' && !listing.instructingClientId) {
+        await client
+          .from('commercial_listings')
+          .update({
+            instructing_client_id: clientId,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', input.listingId)
+          .eq('account_id', input.accountId);
+      }
+
+      return this.listParties(input.listingId, input.accountId, input.role);
+    },
+
+    async removeParty(input: {
+      listingId: string;
+      accountId: string;
+      partyId: string;
+    }): Promise<ListingParty[]> {
+      const { data: existing, error: findError } = await fromTable(
+        client,
+        'commercial_listing_parties',
+      )
+        .select('id, client_id, role')
+        .eq('id', input.partyId)
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (findError) throw new Error(findError.message);
+      if (!existing) throw new Error('Party not found');
+
+      const role = existing.role as 'landlord' | 'other';
+      const clientId = existing.client_id as string;
+
+      const { error } = await fromTable(client, 'commercial_listing_parties')
+        .delete()
+        .eq('id', input.partyId)
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId);
+
+      if (error) throw new Error(error.message);
+
+      if (role === 'landlord') {
+        const listing = await this.getListing(input.listingId, input.accountId);
+        if (listing?.instructingClientId === clientId) {
+          const remaining = await this.listParties(
+            input.listingId,
+            input.accountId,
+            'landlord',
+          );
+          await client
+            .from('commercial_listings')
+            .update({
+              instructing_client_id: remaining[0]?.clientId ?? null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('id', input.listingId)
+            .eq('account_id', input.accountId);
+        }
+      }
+
+      return this.listParties(input.listingId, input.accountId, role);
+    },
+
+    async updateParty(input: {
+      listingId: string;
+      accountId: string;
+      partyId: string;
+      isPrivate?: boolean;
+    }): Promise<ListingParty[]> {
+      const patch: Record<string, unknown> = {};
+      if (input.isPrivate !== undefined) {
+        patch.is_private = input.isPrivate;
+      }
+
+      const { data: existing, error: findError } = await fromTable(
+        client,
+        'commercial_listing_parties',
+      )
+        .select('role')
+        .eq('id', input.partyId)
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (findError) throw new Error(findError.message);
+      if (!existing) throw new Error('Party not found');
+
+      if (Object.keys(patch).length > 0) {
+        const { error } = await fromTable(client, 'commercial_listing_parties')
+          .update(patch)
+          .eq('id', input.partyId)
+          .eq('listing_id', input.listingId)
+          .eq('account_id', input.accountId);
+        if (error) throw new Error(error.message);
+      }
+
+      return this.listParties(
+        input.listingId,
+        input.accountId,
+        existing.role as 'landlord' | 'other',
+      );
     },
   };
 }

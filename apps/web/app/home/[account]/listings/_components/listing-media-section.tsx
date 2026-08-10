@@ -150,7 +150,7 @@ export function ListingMediaSection({
     if (!confirm('Remove this media item?')) return;
     startTransition(async () => {
       try {
-        await deleteListingMedia({ mediaId, accountId });
+        await deleteListingMedia({ mediaId, accountId, listingId });
         setMedia((prev) => prev.filter((m) => m.id !== mediaId));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Delete failed');

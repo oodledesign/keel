@@ -1,7 +1,12 @@
 import { z } from 'zod';
 
 import {
+  BREEAM_RATINGS,
   DISPOSAL_TYPES,
+  LISTING_CONTROLLED_BY,
+  LISTING_PARTY_ROLES,
+  LISTING_SIZE_ACCURACIES,
+  LISTING_SIZE_BREAKDOWNS,
   LISTING_STATUSES,
 } from '~/lib/commercial/commercial-constants';
 
@@ -27,6 +32,21 @@ export const CreateListingSchema = z.object({
   tenure: z.string().optional().nullable(),
   disposalType: z.enum(DISPOSAL_TYPES).optional(),
   instructionNature: z.enum(['exclusive', 'joint']).optional(),
+  isInstructed: z.boolean().optional(),
+  termsOfEngagement: z.enum(['yes', 'no', 'pending']).optional().nullable(),
+  restrictAccessToAssigned: z.boolean().optional(),
+  hideLandlordFromMarketing: z.boolean().optional(),
+  referenceNumber: z.string().trim().max(120).optional().nullable(),
+  projectCode: z.string().trim().max(120).optional().nullable(),
+  onMarketAt: z.string().optional().nullable(),
+  offMarketAt: z.string().optional().nullable(),
+  averageFloorPlateSqft: z.number().min(0).optional().nullable(),
+  sizeBreakdown: z.enum(LISTING_SIZE_BREAKDOWNS).optional().nullable(),
+  controlledBy: z.enum(LISTING_CONTROLLED_BY).optional().nullable(),
+  sizeAccuracy: z.enum(LISTING_SIZE_ACCURACIES).optional().nullable(),
+  termsInternal: z.string().trim().max(2000).optional().nullable(),
+  breeamRating: z.enum(BREEAM_RATINGS).optional().nullable(),
+  conditionDescription: z.string().trim().max(2000).optional().nullable(),
   status: z.enum(LISTING_STATUSES).optional(),
   askingRentPence: z.number().int().min(0).optional().nullable(),
   askingPricePence: z.number().int().min(0).optional().nullable(),
@@ -124,6 +144,7 @@ export const CreateListingMediaSchema = z.object({
   mimeType: z.string().optional().nullable(),
   sortOrder: z.number().int().min(0).optional(),
   isCover: z.boolean().optional(),
+  isPrivate: z.boolean().optional(),
 });
 
 export const SetListingMediaCoverSchema = z.object({
@@ -134,6 +155,7 @@ export const SetListingMediaCoverSchema = z.object({
 
 export const DeleteListingMediaSchema = z.object({
   mediaId: z.string().uuid(),
+  listingId: z.string().uuid(),
   accountId: z.string().uuid(),
 });
 
@@ -196,6 +218,7 @@ export const UpdateListingAssignmentSchema = z.object({
   paUserId: z.string().uuid().nullable().optional(),
   recordOwnerUserId: z.string().uuid().nullable().optional(),
   teamId: z.string().uuid().nullable().optional(),
+  restrictAccessToAssigned: z.boolean().optional(),
 });
 
 export const ListListingCoAgentsSchema = z.object({
@@ -238,6 +261,56 @@ export const RemoveListingCoAgentSchema = z.object({
   coAgentId: z.string().uuid(),
 });
 
+export const ListListingPartiesSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  role: z.enum(LISTING_PARTY_ROLES).optional(),
+});
+
+export const SearchListingPartyClientsSchema = z.object({
+  accountId: z.string().uuid(),
+  query: z.string().max(120).optional(),
+  excludeListingId: z.string().uuid().optional(),
+  role: z.enum(LISTING_PARTY_ROLES).optional(),
+});
+
+export const AddListingPartySchema = z
+  .object({
+    listingId: z.string().uuid(),
+    accountId: z.string().uuid(),
+    role: z.enum(LISTING_PARTY_ROLES),
+    clientId: z.string().uuid().optional(),
+    companyName: z.string().trim().min(1).max(200).optional(),
+    contactName: z.string().trim().max(200).optional().nullable(),
+    contactEmail: z
+      .union([z.string().trim().email(), z.literal(''), z.null()])
+      .optional(),
+    contactPhone: z.string().trim().max(60).optional().nullable(),
+    isPrivate: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (!data.clientId && !data.companyName?.trim()) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Select a client or enter a company name',
+        path: ['companyName'],
+      });
+    }
+  });
+
+export const RemoveListingPartySchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  partyId: z.string().uuid(),
+});
+
+export const UpdateListingPartySchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  partyId: z.string().uuid(),
+  isPrivate: z.boolean().optional(),
+});
+
 export type CreateListingMediaInput = z.infer<typeof CreateListingMediaSchema>;
 export type SetListingMediaCoverInput = z.infer<
   typeof SetListingMediaCoverSchema
@@ -264,4 +337,10 @@ export type RemoveListingCoAgentInput = z.infer<
 >;
 export type SearchCoAgentClientsInput = z.infer<
   typeof SearchCoAgentClientsSchema
+>;
+export type AddListingPartyInput = z.infer<typeof AddListingPartySchema>;
+export type RemoveListingPartyInput = z.infer<typeof RemoveListingPartySchema>;
+export type UpdateListingPartyInput = z.infer<typeof UpdateListingPartySchema>;
+export type SearchListingPartyClientsInput = z.infer<
+  typeof SearchListingPartyClientsSchema
 >;
