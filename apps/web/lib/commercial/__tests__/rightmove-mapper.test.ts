@@ -5,6 +5,7 @@ import {
   asOptionalNumber,
   mapListingToRightmovePayload,
   mapSectorToSubType,
+  roundCoordinate,
 } from '../rightmove-mapper';
 
 function baseListing(
@@ -43,6 +44,14 @@ function baseListing(
   };
 }
 
+describe('roundCoordinate', () => {
+  it('rounds to at most 6 decimal places', () => {
+    expect(roundCoordinate(0.31167038063432)).toBe(0.31167);
+    expect(roundCoordinate(51.217228469899)).toBe(51.217228);
+    expect(roundCoordinate(null)).toBeNull();
+  });
+});
+
 describe('asOptionalNumber', () => {
   it('coerces Postgres numeric strings', () => {
     expect(asOptionalNumber('1776')).toBe(1776);
@@ -77,6 +86,19 @@ describe('mapListingToRightmovePayload', () => {
       measurementType: 'GIA',
     });
     expect(typeof payload.building.sizing?.size).toBe('number');
+  });
+
+  it('rounds coordinates to 6 decimal places for ADF', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        latitude: 51.217228469899,
+        longitude: 0.31167038063432,
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.location.latitude).toBe(51.217228);
+    expect(payload.building.location.longitude).toBe(0.31167);
   });
 
   it('maps New Lease tenure and POA rent', () => {

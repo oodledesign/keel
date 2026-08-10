@@ -146,6 +146,18 @@ export function asOptionalNumber(value: unknown): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
+/**
+ * Rightmove rejects lat/long with more than 6 decimal places
+ * (`building.location.longitude` / `latitude` validation).
+ */
+export function roundCoordinate(
+  value: number | null | undefined,
+): number | null {
+  const n = asOptionalNumber(value);
+  if (n == null) return null;
+  return Math.round(n * 1_000_000) / 1_000_000;
+}
+
 function penceToPounds(pence: number | null | undefined): number | null {
   if (pence == null) return null;
   return Math.round(pence) / 100;
@@ -585,6 +597,8 @@ export function mapListingToRightmovePayload(input: {
       ? Math.round(listing.epcRating)
       : undefined;
   const breeamRating = mapBreeamToScore(listing.breeamRating);
+  const latitude = roundCoordinate(listing.latitude);
+  const longitude = roundCoordinate(listing.longitude);
 
   const buildingBase = {
     agentId,
@@ -602,17 +616,9 @@ export function mapListingToRightmovePayload(input: {
       displayAddress: buildDisplayAddress(listing),
       buildingIdentifier: clip(listing.addressLine1 || listing.name, 100),
       postcode: clip(listing.postcode?.trim() || '', 9),
-      ...(listing.latitude != null && Number.isFinite(listing.latitude)
-        ? { latitude: listing.latitude }
-        : {}),
-      ...(listing.longitude != null && Number.isFinite(listing.longitude)
-        ? { longitude: listing.longitude }
-        : {}),
-      showMap:
-        listing.latitude != null &&
-        listing.longitude != null &&
-        Number.isFinite(listing.latitude) &&
-        Number.isFinite(listing.longitude),
+      ...(latitude != null ? { latitude } : {}),
+      ...(longitude != null ? { longitude } : {}),
+      showMap: latitude != null && longitude != null,
     },
     ...(sizing ? { sizing } : {}),
     ...(features ? { keyFeatures: features } : {}),

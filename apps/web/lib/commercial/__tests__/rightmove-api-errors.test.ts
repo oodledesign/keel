@@ -33,19 +33,20 @@ describe('parseProblemDetail', () => {
     ).toContain('building.sizing.size: must be a number');
   });
 
-  it('formats field-error maps', () => {
+  it('formats root-level single validationError objects', () => {
     expect(
       parseProblemDetail(
         JSON.stringify({
           title: 'Bad Request',
           detail: 'Validation error occurred.',
-          properties: {
-            validationError: {
-              'building.pricing.frequency': ['must not be null'],
-            },
+          validationError: {
+            field: 'building.location.longitude',
+            message: 'Longitude must be to a maximum of 6 decimal places.',
           },
         }),
       ),
-    ).toContain('building.pricing.frequency: must not be null');
+    ).toBe(
+      'Bad Request — Validation error occurred. — building.location.longitude: Longitude must be to a maximum of 6 decimal places.',
+    );
   });
 });

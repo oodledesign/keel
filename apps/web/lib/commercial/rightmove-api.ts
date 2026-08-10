@@ -82,8 +82,21 @@ function formatValidationErrors(value: unknown): string | null {
 
   if (typeof value === 'object') {
     const row = value as Record<string, unknown>;
+    // Single ADF error object: { field, message }
+    const field =
+      (typeof row.field === 'string' && row.field) ||
+      (typeof row.path === 'string' && row.path) ||
+      null;
+    const message =
+      (typeof row.message === 'string' && row.message) ||
+      (typeof row.defaultMessage === 'string' && row.defaultMessage) ||
+      null;
+    if (field && message) return `${field}: ${message}`;
+    if (message) return message;
+
     // Nested property-errors map: { "building.pricing.price": ["must be …"] }
     const entries = Object.entries(row).flatMap(([key, val]) => {
+      if (key === 'field' || key === 'path' || key === 'message') return [];
       if (typeof val === 'string') return [`${key}: ${val}`];
       if (Array.isArray(val)) {
         return val
@@ -120,6 +133,8 @@ export function parseProblemDetail(body: string): string {
       type?: string;
       errors?: unknown;
       violations?: unknown;
+      // ADF puts validationError on the ProblemDetail root (not under properties).
+      validationError?: unknown;
       properties?: {
         validationError?: unknown;
         errors?: unknown;
@@ -129,6 +144,7 @@ export function parseProblemDetail(body: string): string {
     };
 
     const validation =
+      formatValidationErrors(parsed.validationError) ||
       formatValidationErrors(parsed.properties?.validationError) ||
       formatValidationErrors(parsed.properties?.errors) ||
       formatValidationErrors(parsed.properties?.violations) ||
