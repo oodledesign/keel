@@ -27,6 +27,10 @@ type ContactLinkRow = {
     full_name?: string | null;
     first_name?: string | null;
     last_name?: string | null;
+    contact_email_addresses?: Array<{
+      email?: string | null;
+      is_primary?: boolean | null;
+    }> | null;
   } | null;
 };
 
@@ -42,8 +46,19 @@ function contactDisplayName(
   return composed || contact.full_name?.trim() || null;
 }
 
+function contactEmail(contact: ContactLinkRow['contacts']): string | null {
+  const primary = contact?.email?.trim();
+  if (primary) return primary;
+
+  const addresses = contact?.contact_email_addresses ?? [];
+  const primaryAddress = addresses.find((row) => row.is_primary)?.email?.trim();
+  if (primaryAddress) return primaryAddress;
+
+  return addresses[0]?.email?.trim() || null;
+}
+
 function withEmail(row: ContactLinkRow): boolean {
-  return Boolean(row.contacts?.email?.trim());
+  return Boolean(contactEmail(row.contacts));
 }
 
 /**
@@ -79,7 +94,7 @@ export async function resolveClientRecipientEmail(
   const { data: links, error: linksError } = await db
     .from('client_contacts')
     .select(
-      'client_id, role, is_primary, created_at, contacts ( id, email, full_name, first_name, last_name )',
+      'client_id, role, is_primary, created_at, contacts ( id, email, full_name, first_name, last_name, contact_email_addresses ( email, is_primary ) )',
     )
     .eq('client_id', clientId)
     .order('is_primary', { ascending: false })
@@ -101,10 +116,11 @@ export async function resolveClientRecipientEmail(
 
   if (purpose === 'invoice') {
     const finance = withEmails.find((row) => isFinanceRole(row.role));
-    if (finance?.contacts?.email) {
+    const financeEmail = contactEmail(finance?.contacts ?? null);
+    if (finance && financeEmail) {
       return {
-        email: finance.contacts.email.trim(),
-        contactId: finance.contacts.id ?? null,
+        email: financeEmail,
+        contactId: finance.contacts?.id ?? null,
         contactName: contactDisplayName(finance.contacts),
         role: finance.role ?? null,
         source: 'finance',
@@ -113,10 +129,11 @@ export async function resolveClientRecipientEmail(
   }
 
   const primary = withEmails.find((row) => Boolean(row.is_primary));
-  if (primary?.contacts?.email) {
+  const primaryEmail = contactEmail(primary?.contacts ?? null);
+  if (primary && primaryEmail) {
     return {
-      email: primary.contacts.email.trim(),
-      contactId: primary.contacts.id ?? null,
+      email: primaryEmail,
+      contactId: primary.contacts?.id ?? null,
       contactName: contactDisplayName(primary.contacts),
       role: primary.role ?? null,
       source: 'primary',
@@ -124,10 +141,11 @@ export async function resolveClientRecipientEmail(
   }
 
   const anyContact = withEmails[0];
-  if (anyContact?.contacts?.email) {
+  const anyEmail = contactEmail(anyContact?.contacts ?? null);
+  if (anyContact && anyEmail) {
     return {
-      email: anyContact.contacts.email.trim(),
-      contactId: anyContact.contacts.id ?? null,
+      email: anyEmail,
+      contactId: anyContact.contacts?.id ?? null,
       contactName: contactDisplayName(anyContact.contacts),
       role: anyContact.role ?? null,
       source: 'contact',

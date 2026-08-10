@@ -93,9 +93,16 @@ export function AttachRetainerPlanButton({
           'Retainer attached — send the payment link to your client',
         );
       } catch (error) {
-        toast.error(
-          error instanceof Error ? error.message : 'Could not attach',
-        );
+        const message =
+          error instanceof Error
+            ? error.message
+            : typeof error === 'object' &&
+                error &&
+                'message' in error &&
+                typeof (error as { message: unknown }).message === 'string'
+              ? (error as { message: string }).message
+              : 'Could not attach retainer';
+        toast.error(message);
       }
     });
   }

@@ -18,6 +18,7 @@ import {
   getSiteOrigin,
   getStripeClientSecret,
 } from '~/lib/billing/stripe-connect';
+import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
 
 type Db = SupabaseClient;
 
@@ -511,12 +512,18 @@ class PlanTemplatesService {
     if (clientError) throw clientError;
     if (!clientRow) throw new Error('Client not found');
 
-    const email = String(
-      (clientRow as { email?: string | null }).email ?? '',
-    ).trim();
+    const recipient = await resolveClientRecipientEmail(
+      this.db,
+      input.clientId,
+      {
+        purpose: 'invoice',
+        fallbackEmail: (clientRow as { email?: string | null }).email,
+      },
+    );
+    const email = recipient.email?.trim() || '';
     if (!email) {
       throw new Error(
-        'Client needs a billing email before starting a subscription',
+        'Add a contact email (or client email) before creating a payment link',
       );
     }
 
