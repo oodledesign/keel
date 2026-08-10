@@ -555,9 +555,9 @@ export function CommercialPublishingSettings({
               <ConfiguredBadge configured={settings.each.configured} />
             </div>
             <p className="text-xs text-[var(--workspace-shell-text)]/55">
-              Dedicated Kato-compatible feed URL for EACH. Contents match
-              Property Hive today; per-listing inclusion can be filtered later
-              without changing this URL.
+              Dedicated Kato-compatible feed URL for EACH. Includes all
+              Marketing / Under offer disposals unless switched Off on the
+              listing (Overview or Management).
             </p>
             {eachFeedUrl ? (
               <div className="space-y-2">

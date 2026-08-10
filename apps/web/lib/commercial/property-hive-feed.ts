@@ -11,6 +11,8 @@ import {
   disposalIncludesForSale,
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
+import { filterOnMarketListingsForPortalFeed } from '~/lib/commercial/each-feed-inclusion';
+import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 
 const FEED_TOKEN_META_KEY = 'xml_feed_token';
 
@@ -225,23 +227,53 @@ function sqlTimestamp(value: string | null): string {
     .replace(/\.\d{3}Z$/, '');
 }
 
-async function resolveMediaUrl(
+async function createSignedUrlMap(
   client: SupabaseClient,
-  media: MediaRow,
-): Promise<string | null> {
-  if (media.external_url) return media.external_url;
-  if (!media.storage_path) return null;
+  storagePaths: string[],
+): Promise<Map<string, string>> {
+  const unique = [...new Set(storagePaths.map((p) => p.trim()).filter(Boolean))];
+  const signedByPath = new Map<string, string>();
+  const CHUNK = 100;
 
-  const { data, error } = await client.storage
-    .from(MEDIA_BUCKET)
-    .createSignedUrl(media.storage_path, SIGNED_URL_TTL_SECONDS);
+  for (let i = 0; i < unique.length; i += CHUNK) {
+    const chunk = unique.slice(i, i + CHUNK);
+    const { data, error } = await client.storage
+      .from(MEDIA_BUCKET)
+      .createSignedUrls(chunk, SIGNED_URL_TTL_SECONDS);
 
-  if (error) {
-    console.error('[property-hive-feed] signed url error:', error.message);
-    return null;
+    if (error) {
+      console.error(
+        '[property-hive-feed] batch signed url error:',
+        error.message,
+      );
+      continue;
+    }
+
+    for (let j = 0; j < chunk.length; j++) {
+      const requestedPath = chunk[j]!;
+      const row = data?.[j];
+      const signedUrl = row?.signedUrl;
+      if (!signedUrl || row?.error) continue;
+
+      signedByPath.set(requestedPath, signedUrl);
+      if (row.path) signedByPath.set(row.path, signedUrl);
+    }
   }
 
-  return data.signedUrl;
+  return signedByPath;
+}
+
+function resolveMediaUrlFromMaps(
+  media: MediaRow,
+  signedByPath: Map<string, string>,
+): string | null {
+  const storagePath = media.storage_path?.trim() || null;
+  return resolveCommercialMediaPublicUrl({
+    storageSignedUrl: storagePath
+      ? (signedByPath.get(storagePath) ?? null)
+      : null,
+    externalUrl: media.external_url,
+  });
 }
 
 function renderFloorUnits(
@@ -297,13 +329,13 @@ function renderFloorUnits(
   return `<floor_units>${items}</floor_units>`;
 }
 
-async function renderPropertyXml(
-  client: SupabaseClient,
+function renderPropertyXml(
   listing: ListingRow,
   units: UnitRow[],
   media: MediaRow[],
   coAgents: CoAgentFeedRow[] = [],
-): Promise<string> {
+  signedByPath: Map<string, string> = new Map(),
+): string {
   const disposalType = (listing.disposal_type as DisposalType) ?? 'to_let';
   const includesToLet = disposalIncludesToLet(disposalType);
   const includesForSale = disposalIncludesForSale(disposalType);
@@ -322,7 +354,7 @@ async function renderPropertyXml(
   for (const item of media
     .slice()
     .sort((a, b) => a.sort_order - b.sort_order)) {
-    const url = await resolveMediaUrl(client, item);
+    const url = resolveMediaUrlFromMaps(item, signedByPath);
     if (!url) continue;
     const name = item.file_name || `${item.media_type}-${item.id}`;
     const isImage =
@@ -744,7 +776,7 @@ async function findAccountIdByFeedToken(
 
 /**
  * Build Kato-compatible listing XML for a portal feed token.
- * Content is identical across portals today; per-portal listing filters come next.
+ * EACH excludes opt-out (unpublished) listings; Property Hive includes all on-market.
  */
 export async function buildCommercialFeedXml(
   token: string,
@@ -764,12 +796,31 @@ export async function buildCommercialFeedXml(
 
   if (error) throw new Error(error.message);
 
-  const listingRows = ((listings ?? []) as ListingRow[]).filter((row) =>
+  let listingRows = ((listings ?? []) as ListingRow[]).filter((row) =>
     ON_MARKET_STATUSES.has(row.status),
   );
 
-  // Future: filter by portal-specific inclusion flags (e.g. publish_to_each).
-  void portal;
+  if (portal === 'each' && listingRows.length > 0) {
+    const candidateIds = listingRows.map((l) => l.id);
+    const { data: optedOut, error: pubError } = await client
+      .from('commercial_portal_publications')
+      .select('listing_id')
+      .eq('account_id', accountId)
+      .eq('portal', 'each')
+      .eq('status', 'unpublished')
+      .in('listing_id', candidateIds);
+
+    if (pubError) throw new Error(pubError.message);
+
+    const unpublishedEachListingIds = new Set(
+      (optedOut ?? []).map((row) => row.listing_id as string),
+    );
+    listingRows = filterOnMarketListingsForPortalFeed({
+      portal,
+      listings: listingRows,
+      unpublishedEachListingIds,
+    });
+  }
 
   if (!listingRows.length) {
     return {
@@ -825,18 +876,23 @@ export async function buildCommercialFeedXml(
     coAgentsByListing.set(row.listing_id, list);
   }
 
-  const propertiesXml: string[] = [];
-  for (const listing of listingRows) {
-    propertiesXml.push(
-      await renderPropertyXml(
-        client,
-        listing,
-        unitsByListing.get(listing.id) ?? [],
-        mediaByListing.get(listing.id) ?? [],
-        coAgentsByListing.get(listing.id) ?? [],
-      ),
-    );
-  }
+  const allMedia = (media ?? []) as MediaRow[];
+  const signedByPath = await createSignedUrlMap(
+    client,
+    allMedia
+      .map((item) => item.storage_path)
+      .filter((path): path is string => Boolean(path?.trim())),
+  );
+
+  const propertiesXml = listingRows.map((listing) =>
+    renderPropertyXml(
+      listing,
+      unitsByListing.get(listing.id) ?? [],
+      mediaByListing.get(listing.id) ?? [],
+      coAgentsByListing.get(listing.id) ?? [],
+      signedByPath,
+    ),
+  );
 
   return {
     accountId,

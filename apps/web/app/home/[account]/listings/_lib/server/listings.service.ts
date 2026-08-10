@@ -12,6 +12,7 @@ import type {
   DisposalType,
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
+import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   pushListingToPropertyHive,
   unpublishListingFromPropertyHive,
@@ -661,20 +662,23 @@ async function signMediaUrl(
   client: SupabaseClient,
   item: CommercialListingMedia,
 ): Promise<CommercialListingMedia> {
-  if (item.externalUrl) {
-    return { ...item, url: item.externalUrl };
+  let storageSignedUrl: string | null = null;
+  if (item.storagePath) {
+    const { data, error } = await client.storage
+      .from('commercial-listing-media')
+      .createSignedUrl(item.storagePath, 3600);
+    if (error) {
+      console.error('[listings] signed media url error:', error.message);
+    } else {
+      storageSignedUrl = data.signedUrl ?? null;
+    }
   }
-  if (!item.storagePath) {
-    return { ...item, url: null };
-  }
-  const { data, error } = await client.storage
-    .from('commercial-listing-media')
-    .createSignedUrl(item.storagePath, 3600);
-  if (error) {
-    console.error('[listings] signed media url error:', error.message);
-    return { ...item, url: null };
-  }
-  return { ...item, url: data.signedUrl };
+
+  const url = resolveCommercialMediaPublicUrl({
+    storageSignedUrl,
+    externalUrl: item.externalUrl,
+  });
+  return { ...item, url };
 }
 
 async function attachCoverUrls(

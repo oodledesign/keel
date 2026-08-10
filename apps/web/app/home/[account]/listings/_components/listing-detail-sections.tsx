@@ -30,6 +30,7 @@ import {
   type EnquirySource,
   type EnquiryStatus,
 } from '~/lib/commercial/commercial-constants';
+import { isEachFeedIncluded } from '~/lib/commercial/each-feed-inclusion';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import { RequirementFormModal } from '../../requirements/_components/requirement-form-modal';
@@ -50,6 +51,7 @@ import {
   updateListingEnquiry,
 } from '../_lib/server/server-actions';
 import { CommercialInterestPanel } from './commercial-interest-panel';
+import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
@@ -1067,6 +1069,8 @@ export function ListingManagementSection({
       ? `${window.location.origin}${sharePath}`
       : sharePath;
 
+  const otherPublications = publications.filter((pub) => pub.portal !== 'each');
+
   return (
     <div className="grid gap-4 md:grid-cols-2">
       <Card className={workspacePanelCard}>
@@ -1075,15 +1079,21 @@ export function ListingManagementSection({
             Portal publishing
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          {publications.length === 0 ? (
+        <CardContent className="space-y-4">
+          <ListingEachFeedToggle
+            accountId={accountId}
+            listingId={listing.id}
+            initialEnabled={isEachFeedIncluded(publications)}
+          />
+
+          {otherPublications.length === 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text)]/50">
-              Not published to any portals yet. Configure the Property Hive XML
-              feed under Commercial Publishing.
+              Rightmove and Property Hive status will appear here after you
+              publish or sync from Commercial publishing.
             </p>
           ) : (
             <ul className="space-y-2">
-              {publications.map((pub) => (
+              {otherPublications.map((pub) => (
                 <li
                   key={pub.id}
                   className="flex items-center justify-between text-sm"

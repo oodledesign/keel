@@ -23,6 +23,7 @@ import {
 
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
+import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 
 const NAV = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, href: '' },
@@ -58,10 +59,14 @@ function listingAddress(listing: CommercialListing) {
 export function ListingDetailShell({
   listing,
   accountSlug,
+  accountId,
+  eachFeedEnabled,
   children,
 }: {
   listing: CommercialListing;
   accountSlug: string;
+  accountId: string;
+  eachFeedEnabled: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
@@ -75,7 +80,12 @@ export function ListingDetailShell({
   return (
     <div className="space-y-5">
       {isOverview ? (
-        <OverviewHeader listing={listing} address={address} />
+        <OverviewHeader
+          listing={listing}
+          address={address}
+          accountId={accountId}
+          eachFeedEnabled={eachFeedEnabled}
+        />
       ) : (
         <CompactHeader listing={listing} address={address} />
       )}
@@ -136,9 +146,13 @@ function CompactHeader({
 function OverviewHeader({
   listing,
   address,
+  accountId,
+  eachFeedEnabled,
 }: {
   listing: CommercialListing;
   address: string;
+  accountId: string;
+  eachFeedEnabled: boolean;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
@@ -198,6 +212,14 @@ function OverviewHeader({
                 sq ft
               </span>
             ) : null}
+          </div>
+          <div className="mt-1 max-w-sm">
+            <ListingEachFeedToggle
+              accountId={accountId}
+              listingId={listing.id}
+              initialEnabled={eachFeedEnabled}
+              compact
+            />
           </div>
         </div>
       </div>

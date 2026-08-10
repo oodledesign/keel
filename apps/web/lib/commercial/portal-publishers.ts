@@ -12,6 +12,7 @@ import {
   disposalIncludesForSale,
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
+import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   RightmoveApiError,
   deleteCommercialProperty,
@@ -200,37 +201,58 @@ async function loadPublicMediaForRightmove(
 
   const client = db();
   const rows = data ?? [];
+  const storagePaths = [
+    ...new Set(
+      rows
+        .map((row) => (row.storage_path as string | null)?.trim() || null)
+        .filter((path): path is string => Boolean(path)),
+    ),
+  ];
 
-  return Promise.all(
-    rows.map(async (row) => {
-      const externalUrl = (row.external_url as string | null)?.trim() || null;
-      const storagePath = (row.storage_path as string | null)?.trim() || null;
-      let url: string | null = externalUrl;
+  const signedByPath = new Map<string, string>();
+  const CHUNK = 100;
+  for (let i = 0; i < storagePaths.length; i += CHUNK) {
+    const chunk = storagePaths.slice(i, i + CHUNK);
+    const { data: signedRows, error: signError } = await client.storage
+      .from('commercial-listing-media')
+      .createSignedUrls(chunk, RIGHTMOVE_MEDIA_URL_TTL_SECONDS);
 
-      if (!url && storagePath) {
-        const { data: signed, error: signError } = await client.storage
-          .from('commercial-listing-media')
-          .createSignedUrl(storagePath, RIGHTMOVE_MEDIA_URL_TTL_SECONDS);
-        if (signError) {
-          console.error(
-            '[rightmove] media signed URL error:',
-            signError.message,
-          );
-        } else {
-          url = signed?.signedUrl ?? null;
-        }
-      }
+    if (signError) {
+      console.error('[rightmove] media signed URL error:', signError.message);
+      continue;
+    }
 
-      return {
-        mediaType: (row.media_type as string) ?? 'image',
-        mimeType: (row.mime_type as string | null) ?? null,
-        fileName: (row.file_name as string | null) ?? null,
-        url,
-        sortOrder: (row.sort_order as number) ?? 0,
-        isCover: Boolean(row.is_cover),
-      };
-    }),
-  );
+    for (let j = 0; j < chunk.length; j++) {
+      const requestedPath = chunk[j]!;
+      const row = signedRows?.[j];
+      const signedUrl = row?.signedUrl;
+      if (!signedUrl || row?.error) continue;
+      signedByPath.set(requestedPath, signedUrl);
+      if (row.path) signedByPath.set(row.path, signedUrl);
+    }
+  }
+
+  return rows.map((row) => {
+    const externalUrl = (row.external_url as string | null)?.trim() || null;
+    const storagePath = (row.storage_path as string | null)?.trim() || null;
+    const storageSignedUrl = storagePath
+      ? (signedByPath.get(storagePath) ?? null)
+      : null;
+
+    const url = resolveCommercialMediaPublicUrl({
+      storageSignedUrl,
+      externalUrl,
+    });
+
+    return {
+      mediaType: (row.media_type as string) ?? 'image',
+      mimeType: (row.mime_type as string | null) ?? null,
+      fileName: (row.file_name as string | null) ?? null,
+      url,
+      sortOrder: (row.sort_order as number) ?? 0,
+      isCover: Boolean(row.is_cover),
+    };
+  });
 }
 
 /** Minimal RTDF commercial field checks before a real Rightmove push. */
@@ -646,29 +668,40 @@ export async function unpublishFromRightmove(
 }
 
 /**
- * EACH pulls the shared Kato-compatible XML feed (same URL as Property Hive).
- * Records a feed-linked publication after basic field checks.
+ * EACH is opt-out of the dedicated XML feed.
+ * Off → unpublished (excluded from feed). On → published (included when on-market).
  */
-export async function publishToEach(
-  accountId: string,
-  listingId: string,
-): Promise<CommercialPortalPublication> {
-  const listing = await loadListingForPortalValidation(accountId, listingId);
-  const missing = validateEachCommercialFields(listing);
+export async function setEachListingFeedInclusion(input: {
+  accountId: string;
+  listingId: string;
+  enabled: boolean;
+}): Promise<CommercialPortalPublication> {
+  const { accountId, listingId, enabled } = input;
 
-  if (missing.length > 0) {
-    return recordStubPublication({
+  const listing = await loadListingForPortalValidation(accountId, listingId);
+
+  const { buildEachFeedUrl, ensureEachFeedToken, getEachFeedToken } =
+    await import('~/lib/commercial/property-hive-feed');
+
+  if (!enabled) {
+    const existingToken = await getEachFeedToken(accountId);
+    return recordPublication({
       accountId,
       listingId,
       portal: 'each',
-      lastError: `Missing EACH commercial fields: ${missing.join(', ')}`,
-      metadata: { missingFields: missing, stage: 'validation' },
+      status: 'unpublished',
+      lastError: null,
+      externalUrl: existingToken ? buildEachFeedUrl(existingToken) : null,
+      metadata: {
+        stage: 'feed_opt_out',
+        portalFeed: 'each',
+        note: 'Excluded from EACH XML feed',
+      },
     });
   }
 
-  const { ensureEachFeedToken } =
-    await import('~/lib/commercial/property-hive-feed');
   const { feedUrl } = await ensureEachFeedToken(accountId);
+  const missing = validateEachCommercialFields(listing);
   const onMarket =
     listing.status === 'marketing' || listing.status === 'under_offer';
 
@@ -676,18 +709,36 @@ export async function publishToEach(
     accountId,
     listingId,
     portal: 'each',
-    status: onMarket ? 'published' : 'pending',
-    lastError: onMarket
-      ? null
-      : `Listing is ${listing.status} — set Marketing or Under offer for EACH feed pickup`,
+    status: onMarket ? 'published' : 'draft',
+    lastError: missing.length
+      ? `Missing EACH commercial fields: ${missing.join(', ')}`
+      : onMarket
+        ? null
+        : `Listing is ${listing.status} — set Marketing or Under offer for EACH feed pickup`,
     externalUrl: feedUrl,
     metadata: {
       stage: 'xml_feed',
       portalFeed: 'each',
+      ...(missing.length ? { missingFields: missing } : {}),
       note: onMarket
-        ? 'Listed on the dedicated EACH XML feed'
-        : 'EACH feed ready; listing not yet on-market for export',
+        ? 'Included on the EACH XML feed'
+        : 'EACH inclusion on; listing not yet on-market for export',
     },
+  });
+}
+
+/**
+ * EACH pulls its dedicated Kato-compatible XML feed.
+ * Records a feed-linked publication after basic field checks (explicit include).
+ */
+export async function publishToEach(
+  accountId: string,
+  listingId: string,
+): Promise<CommercialPortalPublication> {
+  return setEachListingFeedInclusion({
+    accountId,
+    listingId,
+    enabled: true,
   });
 }
 

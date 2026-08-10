@@ -8,6 +8,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   publishToEach,
   publishToRightmove,
+  setEachListingFeedInclusion,
 } from '~/lib/commercial/portal-publishers';
 import {
   ensureEachFeedToken,
@@ -29,6 +30,7 @@ import {
   SavePortalCredentialsSchema,
   SavePropertyHiveCredentialsSchema,
   SaveRightmoveWorkspaceBranchesSchema,
+  SetEachListingFeedInclusionSchema,
   TestPublishListingSchema,
 } from '../schema/commercial-publishing.schema';
 import { loadCommercialPublishingSettings } from './commercial-publishing.loader';
@@ -274,6 +276,40 @@ export const testPublishListingAction = enhanceAction(
         };
       }
 
+      const { data: listing, error: listingError } = await db()
+        .from('commercial_listings')
+        .select('id, name, status')
+        .eq('id', input.listingId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+
+      if (listingError) {
+        return { ok: false as const, message: listingError.message };
+      }
+      if (!listing) {
+        return {
+          ok: false as const,
+          message: 'Listing not found in this workspace',
+        };
+      }
+
+      const { data: eachPub } = await db()
+        .from('commercial_portal_publications')
+        .select('status')
+        .eq('listing_id', input.listingId)
+        .eq('account_id', input.accountId)
+        .eq('portal', 'each')
+        .maybeSingle();
+
+      const name = listing.name as string;
+      if ((eachPub?.status as string | undefined) === 'unpublished') {
+        return {
+          ok: false as const,
+          message: `"${name}" is switched Off for EACH — turn EACH on for this disposal (Management / Overview) to include it in the feed.`,
+          feedUrl,
+        };
+      }
+
       const publication = await publishToEach(input.accountId, input.listingId);
       const meta = publication.metadata ?? {};
       const note = typeof meta.note === 'string' ? meta.note : null;
@@ -346,4 +382,19 @@ export const rotateEachFeedAction = enhanceAction(
     };
   },
   { schema: RotateEachFeedSchema },
+);
+
+export const setEachListingFeedInclusionAction = enhanceAction(
+  async (input) => {
+    const publication = await setEachListingFeedInclusion({
+      accountId: input.accountId,
+      listingId: input.listingId,
+      enabled: input.enabled,
+    });
+    return {
+      publication,
+      enabled: publication.status !== 'unpublished',
+    };
+  },
+  { schema: SetEachListingFeedInclusionSchema },
 );

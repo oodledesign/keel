@@ -5,6 +5,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
 import pathsConfig from '~/config/paths.config';
+import { isEachFeedIncluded } from '~/lib/commercial/each-feed-inclusion';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
@@ -31,7 +32,10 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
 
   const accountId = workspace.account.id as string;
   const service = createListingsService(getSupabaseServerClient());
-  const listing = await service.getListing(listingId, accountId);
+  const [listing, publications] = await Promise.all([
+    service.getListing(listingId, accountId),
+    service.listPublicationsForListing(listingId),
+  ]);
 
   if (!listing) {
     notFound();
@@ -48,7 +52,12 @@ async function ListingDetailLayout({ children, params }: LayoutProps) {
         </Link>
       </div>
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 pt-3 pb-6 lg:px-6">
-        <ListingDetailShell listing={listing} accountSlug={slug}>
+        <ListingDetailShell
+          listing={listing}
+          accountSlug={slug}
+          accountId={accountId}
+          eachFeedEnabled={isEachFeedIncluded(publications)}
+        >
           {children}
         </ListingDetailShell>
       </PageBody>

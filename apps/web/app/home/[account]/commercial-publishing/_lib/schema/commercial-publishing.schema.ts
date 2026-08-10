@@ -36,6 +36,11 @@ export const EnsureEachFeedSchema = AccountIdSchema;
 
 export const RotateEachFeedSchema = AccountIdSchema;
 
+export const SetEachListingFeedInclusionSchema = AccountIdSchema.extend({
+  listingId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+
 export const SaveRightmoveWorkspaceBranchesSchema = z.object({
   accountId: z.string().uuid(),
   branches: z
