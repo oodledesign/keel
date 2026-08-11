@@ -6,7 +6,10 @@ import { PageBody } from '@kit/ui/page';
 import { getDefaultAccountPath } from '~/home/[account]/_lib/role-access';
 import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '~/home/[account]/_lib/server/workspace-route-guard';
 import {
   configValuesFromRow,
   loadPresetById,
@@ -26,7 +29,7 @@ export default async function PresetDetailPage({
 }: PresetDetailPageProps) {
   const { account, presetId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   if (!isVideosModuleEnabled(workspace.moduleSettings)) {
     redirect(

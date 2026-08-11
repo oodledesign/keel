@@ -3,17 +3,20 @@ import { notFound } from 'next/navigation';
 
 import { PageBody } from '@kit/ui/page';
 
-import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import {
   ModuleDataSection,
   ModuleEmptyState,
 } from '../../../_components/module-data-section';
+import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import {
   loadClientForTeam,
   loadFeedflowSocialAccountsForClient,
 } from '../../../_lib/server/feedflow-account-data';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
 
 type FeedflowClientReviewsPageProps = {
@@ -28,7 +31,7 @@ export default async function FeedflowClientReviewsPage({
 }: FeedflowClientReviewsPageProps) {
   const { account, clientId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const accountId = workspace.account.id as string;
   const [client, social] = await Promise.all([
@@ -54,7 +57,7 @@ export default async function FeedflowClientReviewsPage({
           ) : (
             <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)]">
               <table className="w-full min-w-[28rem] text-left text-sm">
-                <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs uppercase tracking-wide text-muted-foreground">
+                <thead className="text-muted-foreground border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs tracking-wide uppercase">
                   <tr>
                     <th className="px-4 py-3">Platform</th>
                     <th className="px-4 py-3">External id</th>
@@ -73,7 +76,7 @@ export default async function FeedflowClientReviewsPage({
                       <td className="px-4 py-3 font-mono text-xs">
                         {row.external_account_id}
                       </td>
-                      <td className="px-4 py-3 text-muted-foreground">
+                      <td className="text-muted-foreground px-4 py-3">
                         {row.token_status ?? '—'}
                       </td>
                     </tr>

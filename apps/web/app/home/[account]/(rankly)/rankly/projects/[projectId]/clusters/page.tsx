@@ -7,7 +7,10 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 import { loadRanklyProjectForTeam } from '../../../../../_lib/server/rankly-account-data';
 import { loadClusterJobsForProject } from '../../../../../_lib/server/rankly-cluster-data';
 import { loadTeamWorkspace } from '../../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../../../_lib/server/workspace-route-guard';
 import { ClusterForm } from '../../../../_components/clusters/cluster-form';
 import { RanklyProjectSectionHeader } from '../../../../_components/rankly-project-section-header';
 
@@ -47,7 +50,7 @@ export default async function RanklyProjectClustersPage({
 }: RanklyProjectClustersPageProps) {
   const { account, projectId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const user = await requireUserInServerComponent();
   const accountId = workspace.account.id as string;

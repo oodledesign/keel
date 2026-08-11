@@ -7,7 +7,10 @@ import {
 
 import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../../../../_lib/server/workspace-route-guard';
 import { PagespeedPageDetail } from '../../../../../_components/pagespeed/pagespeed-page-detail';
 import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 import { ranklyProjectPaths } from '../../../../../_lib/rankly-project-paths';
@@ -25,7 +28,7 @@ export default async function RanklyProjectPagespeedPageDetail({
 }: RanklyProjectPagespeedPageDetailProps) {
   const { account, projectId, pageId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const accountId = workspace.account.id as string;
   const project = await loadRanklyProjectForTeam(projectId, accountId);

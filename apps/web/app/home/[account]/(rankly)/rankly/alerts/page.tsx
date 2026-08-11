@@ -9,7 +9,10 @@ import {
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { loadRanklyAlertsForTeam } from '../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
 
 type RanklyAlertsPageProps = {
@@ -23,7 +26,7 @@ export default async function RanklyAlertsPage({
 }: RanklyAlertsPageProps) {
   const { account } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const alerts = await loadRanklyAlertsForTeam(workspace.account.id as string);
 

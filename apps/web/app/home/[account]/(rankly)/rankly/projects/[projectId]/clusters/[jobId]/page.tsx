@@ -2,15 +2,18 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
+import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
+import { loadClusterJobBundleForUser } from '../../../../../../_lib/server/rankly-cluster-data';
+import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../../../../_lib/server/workspace-route-guard';
 import { ClusterJobPoller } from '../../../../../_components/clusters/cluster-job-poller';
 import { ClusterPlanView } from '../../../../../_components/clusters/cluster-plan-view';
 import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
-import { loadClusterJobBundleForUser } from '../../../../../../_lib/server/rankly-cluster-data';
-import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
-import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 type RanklyClusterJobPageProps = {
   params: Promise<{
@@ -31,7 +34,7 @@ export default async function RanklyClusterJobPage({
 }: RanklyClusterJobPageProps) {
   const { account, projectId, jobId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const user = await requireUserInServerComponent();
   const accountId = workspace.account.id as string;
@@ -79,7 +82,7 @@ export default async function RanklyClusterJobPage({
 
       <Link
         href={clustersPath(account, projectId)}
-        className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+        className="text-primary inline-block text-sm underline-offset-4 hover:underline"
       >
         ← Back to cluster plans
       </Link>

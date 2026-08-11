@@ -6,7 +6,10 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '~/home/[account]/_lib/server/workspace-route-guard';
 import { getSignaturesSupabaseClient } from '~/lib/signatures/graph';
 import {
   createMinimalSignatureDocument,
@@ -188,7 +191,7 @@ function signaturesClient(client = publicClient()) {
 
 export async function loadSignaturesWorkspace(accountSlug: string) {
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, ADDON_APPS_SPACE_TYPES);
 
   return workspace;
 }

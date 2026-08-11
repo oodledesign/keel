@@ -24,7 +24,10 @@ import {
   loadRanklyProjectForTeam,
 } from '../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../../../_lib/server/workspace-route-guard';
 import { RankTrackingPanel } from '../../../../_components/rank-tracking/rank-tracking-panel';
 import { RanklyGscSyncPanel } from '../../../../_components/rank-tracking/rankly-gsc-sync-panel';
 import { RanklyProjectSectionHeader } from '../../../../_components/rankly-project-section-header';
@@ -41,7 +44,7 @@ export default async function RanklyProjectKeywordsPage({
 }: RanklyProjectKeywordsPageProps) {
   const { account, projectId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const accountId = workspace.account.id as string;
   const project = await loadRanklyProjectForTeam(projectId, accountId);

@@ -5,7 +5,10 @@ import { notFound, redirect } from 'next/navigation';
 import { getDefaultAccountPath } from '~/home/[account]/_lib/role-access';
 import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '~/home/[account]/_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '~/home/[account]/_lib/server/workspace-route-guard';
 import {
   type VideoTranscriptWord,
   createDefaultTimeline,
@@ -19,7 +22,7 @@ export async function loadVideoEditorPage(
   videoId: string,
 ) {
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, ADDON_APPS_SPACE_TYPES);
 
   if (!isVideosModuleEnabled(workspace.moduleSettings)) {
     redirect(

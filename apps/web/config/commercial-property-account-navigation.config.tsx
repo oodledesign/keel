@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
+import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
 import { COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER } from '~/config/workspace-module-order';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
 import { isAccountModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
@@ -159,6 +160,11 @@ export function buildCommercialPropertySpaceNavChildren(
     const item = factory();
     if (item) items.push(item);
   }
+
+  // Entitled Business Lite / add-on apps (Signatures, Rankly, etc.) stay available
+  // after Commercial Property conversion.
+  items.push(...buildWorkAppLinks(account, ms));
+
   return items;
 }
 

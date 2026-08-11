@@ -148,6 +148,8 @@ export async function syncWorkspaceStateAfterAdminGrant(
     case 'workspace_commercial_property':
       await convertAccountToCommercialProperty(admin, accountId);
       await ensureCommercialPropertyPlanLimits(admin, accountId);
+      // Preserve Business Lite / paid add-ons (e.g. Signatures) after conversion.
+      await syncAddonModulesFromEntitlements(admin, accountId);
       break;
     default:
       await syncAddonModulesFromEntitlements(admin, accountId);
@@ -170,6 +172,7 @@ export async function syncWorkspaceStateAfterAdminPlan(
   } else if (plan.family === 'commercial_property') {
     await convertAccountToCommercialProperty(admin, accountId);
     await ensureCommercialPropertyPlanLimits(admin, accountId, plan);
+    await syncAddonModulesFromEntitlements(admin, accountId);
   } else {
     await syncAddonModulesFromEntitlements(admin, accountId);
   }

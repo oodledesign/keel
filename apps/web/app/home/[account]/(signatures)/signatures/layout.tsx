@@ -12,7 +12,10 @@ import { isSignaturesUxPreviewEnabled } from '~/lib/signatures/ux-preview';
 import { TeamAccountLayoutPageHeader } from '../../_components/team-account-layout-page-header';
 import { isSignaturesModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../_lib/server/workspace-route-guard';
 import { SignaturesConnectionGate } from '../_components/signatures-connection-gate';
 import { SignaturesModuleDisabled } from '../_components/signatures-module-disabled';
 import { SignaturesNav } from '../_components/signatures-nav';
@@ -29,7 +32,7 @@ export default async function SignaturesLayout({
 }: SignaturesLayoutProps) {
   const { account } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   await redirectIfAddonNotAllowed(
     account,

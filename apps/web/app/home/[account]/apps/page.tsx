@@ -21,7 +21,10 @@ import {
   isWorkNavModuleEnabled,
 } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../_lib/server/workspace-route-guard';
 import { OzerAppsMarketplace } from './_components/ozer-apps-marketplace';
 
 interface WorkspaceAppsPageProps {
@@ -35,7 +38,7 @@ export const generateMetadata = async () => ({
 async function WorkspaceAppsPage({ params }: WorkspaceAppsPageProps) {
   const accountSlug = (await params).account;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, ADDON_APPS_SPACE_TYPES);
 
   const access = getTeamAccountAccess(
     workspace.account as {

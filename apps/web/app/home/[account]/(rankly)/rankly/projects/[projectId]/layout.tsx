@@ -6,7 +6,10 @@ import { PageBody } from '@kit/ui/page';
 import { TeamAccountLayoutPageHeader } from '../../../../_components/team-account-layout-page-header';
 import { loadRanklyProjectForTeam } from '../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../../_lib/work-account-path';
 import { RanklyProjectNav } from '../../../_components/rankly-project-nav';
 
@@ -24,7 +27,7 @@ export default async function RanklyProjectLayout({
 }: RanklyProjectLayoutProps) {
   const { account, projectId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const accountId = workspace.account.id as string;
   const project = await loadRanklyProjectForTeam(projectId, accountId);

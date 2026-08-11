@@ -11,7 +11,10 @@ import {
 import { TeamAccountLayoutPageHeader } from '../../../_components/team-account-layout-page-header';
 import { loadFeedflowSocialAccountsForTeam } from '../../../_lib/server/feedflow-account-data';
 import { loadTeamWorkspace } from '../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../_lib/server/workspace-route-guard';
 import { workAccountPath, workPaths } from '../../../_lib/work-account-path';
 import { FeedflowOauthBanner } from '../../_components/feedflow-oauth-banner';
 import { FeedflowSocialPanel } from '../../_components/feedflow-social-panel';
@@ -33,7 +36,7 @@ export default async function FeedflowSocialAccountsPage({
   const { account } = await params;
   const sp = await searchParams;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const accountId = workspace.account.id as string;
   const rows = await loadFeedflowSocialAccountsForTeam(accountId);

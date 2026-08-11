@@ -2,14 +2,17 @@ import Link from 'next/link';
 import { notFound } from 'next/navigation';
 
 import pathsConfig from '~/config/paths.config';
+import { loadBriefForUser } from '~/lib/briefs/db';
+import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
-import { BriefView } from '../../../../../_components/briefs/brief-view';
-import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
-import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import { loadBriefForUser } from '~/lib/briefs/db';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../../../../_lib/server/workspace-route-guard';
+import { BriefView } from '../../../../../_components/briefs/brief-view';
+import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 
 type RanklyBriefDetailPageProps = {
   params: Promise<{ account: string; projectId: string; briefId: string }>;
@@ -26,7 +29,7 @@ export default async function RanklyBriefDetailPage({
 }: RanklyBriefDetailPageProps) {
   const { account, projectId, briefId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const user = await requireUserInServerComponent();
   const accountId = workspace.account.id as string;
@@ -47,7 +50,7 @@ export default async function RanklyBriefDetailPage({
 
       <Link
         href={briefsPath(account, projectId)}
-        className="inline-block text-sm text-primary underline-offset-4 hover:underline"
+        className="text-primary inline-block text-sm underline-offset-4 hover:underline"
       >
         ← Back to briefs
       </Link>

@@ -9,7 +9,10 @@ import {
   loadRanklyProjectForTeam,
 } from '../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../../_lib/server/workspace-route-guard';
 import { RanklyProjectDashboard } from '../../../_components/rankly-project-dashboard';
 
 type RanklyProjectDashboardPageProps = {
@@ -24,7 +27,7 @@ export default async function RanklyProjectDashboardPage({
 }: RanklyProjectDashboardPageProps) {
   const { account, projectId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const accountId = workspace.account.id as string;
   const project = await loadRanklyProjectForTeam(projectId, accountId);

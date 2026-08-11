@@ -7,7 +7,10 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 
 import { loadRanklyProjectForTeam } from '../../../../../../_lib/server/rankly-account-data';
 import { loadTeamWorkspace } from '../../../../../../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../../../../../../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../../../../../../_lib/server/workspace-route-guard';
 import { AuditReportView } from '../../../../../_components/ai-audit/audit-report-view';
 import { RanklyProjectSectionHeader } from '../../../../../_components/rankly-project-section-header';
 import { SeoReportSharePanel } from '../../../../../_components/seo-report-share-panel';
@@ -27,7 +30,7 @@ export default async function RanklyAiAuditReportPage({
 }: RanklyAiAuditReportPageProps) {
   const { account, projectId, reportId } = await params;
   const workspace = await loadTeamWorkspace(account);
-  redirectIfSpaceNotIn(workspace, account, ['work']);
+  redirectIfSpaceNotIn(workspace, account, ADDON_APPS_SPACE_TYPES);
 
   const user = await requireUserInServerComponent();
   const accountId = workspace.account.id as string;

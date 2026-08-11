@@ -30,8 +30,8 @@ function isEntitlementActive(row: {
 }
 
 /**
- * Sync add-on modules from `account_entitlements` (work_design only).
- * Apps nav toggles for signatures/rankly/feedflow/videos; Site Studio is Websites-only.
+ * Sync add-on modules from `account_entitlements` for workspaces that host Apps.
+ * Covers Business (`work_design`) and Commercial Property (post-conversion add-ons).
  */
 export async function syncAddonModulesFromEntitlements(
   admin: SupabaseClient,
@@ -62,7 +62,7 @@ export async function syncAddonModulesFromEntitlements(
     business_type: (business as { type?: string | null } | null)?.type,
   });
 
-  if (profile !== 'work_design') {
+  if (profile !== 'work_design' && profile !== 'commercial_property') {
     return;
   }
 

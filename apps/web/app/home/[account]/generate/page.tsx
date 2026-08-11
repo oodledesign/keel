@@ -8,7 +8,10 @@ import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { isMediaGenerateModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
-import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
+import {
+  ADDON_APPS_SPACE_TYPES,
+  redirectIfSpaceNotIn,
+} from '../_lib/server/workspace-route-guard';
 
 interface GeneratePageProps {
   params: Promise<{ account: string }>;
@@ -21,7 +24,7 @@ export const generateMetadata = async () => ({
 async function GeneratePage({ params }: GeneratePageProps) {
   const { account: accountSlug } = await params;
   const workspace = await loadTeamWorkspace(accountSlug);
-  redirectIfSpaceNotIn(workspace, accountSlug, ['work']);
+  redirectIfSpaceNotIn(workspace, accountSlug, ADDON_APPS_SPACE_TYPES);
 
   if (!isMediaGenerateModuleEnabled(workspace.moduleSettings)) {
     notFound();

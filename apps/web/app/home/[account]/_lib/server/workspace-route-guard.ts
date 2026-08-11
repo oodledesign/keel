@@ -19,6 +19,15 @@ export const COMMERCIAL_PROPERTY_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
   'commercial-property',
 ];
 
+/**
+ * Paid / granted Apps (Signatures, Rankly, Feedflow, Videos, Generate, Apps hub).
+ * Commercial Property agencies can keep Business Lite add-ons after conversion.
+ */
+export const ADDON_APPS_SPACE_TYPES: WorkspaceSpaceType[] = [
+  'work',
+  'commercial-property',
+];
+
 export const GROUP_WORKSPACE_SPACE_TYPES: WorkspaceSpaceType[] = [
   'family',
   'community',
