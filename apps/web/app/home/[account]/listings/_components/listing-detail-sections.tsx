@@ -1194,12 +1194,20 @@ export function ListingManagementSection({
               disabled={brochurePending}
               onCheckedChange={(enabled) => {
                 startBrochureTransition(async () => {
-                  const updated = await setBrochureShare({
-                    listingId: listing.id,
-                    accountId,
-                    enabled,
-                  });
-                  setListing(updated);
+                  try {
+                    const updated = await setBrochureShare({
+                      listingId: listing.id,
+                      accountId,
+                      enabled,
+                    });
+                    setListing(updated);
+                  } catch (error) {
+                    toast.error(
+                      error instanceof Error
+                        ? error.message
+                        : 'Could not update brochure share',
+                    );
+                  }
                 });
               }}
             />
