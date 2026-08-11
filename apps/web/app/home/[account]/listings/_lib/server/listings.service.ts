@@ -151,6 +151,8 @@ export type CommercialListing = {
   offMarketAt: string | null;
   landlordShareToken: string | null;
   landlordShareEnabled: boolean;
+  brochureShareToken: string | null;
+  brochureShareEnabled: boolean;
   notes: string | null;
   externalId: string | null;
   paUserId: string | null;
@@ -420,6 +422,8 @@ function mapListing(row: ListingRow): CommercialListing {
     offMarketAt: (row.off_market_at as string | null) ?? null,
     landlordShareToken: (row.landlord_share_token as string | null) ?? null,
     landlordShareEnabled: Boolean(row.landlord_share_enabled),
+    brochureShareToken: (row.brochure_share_token as string | null) ?? null,
+    brochureShareEnabled: Boolean(row.brochure_share_enabled),
     notes: (row.notes as string | null) ?? null,
     externalId: (row.external_id as string | null) ?? null,
     paUserId: (row.pa_user_id as string | null) ?? null,
@@ -1586,6 +1590,39 @@ export function createListingsService(client: SupabaseClient) {
 
       if (error || !data) {
         throw new Error(error?.message ?? 'Failed to update landlord share');
+      }
+
+      return mapListing(data as ListingRow);
+    },
+
+    async setBrochureShare(input: {
+      listingId: string;
+      accountId: string;
+      enabled: boolean;
+    }): Promise<CommercialListing> {
+      const existing = await this.getListing(input.listingId, input.accountId);
+      if (!existing) {
+        throw new Error('Listing not found');
+      }
+
+      const token =
+        input.enabled && !existing.brochureShareToken
+          ? generateShareToken()
+          : existing.brochureShareToken;
+
+      const { data, error } = await fromTable(client, 'commercial_listings')
+        .update({
+          brochure_share_enabled: input.enabled,
+          brochure_share_token: token,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', input.listingId)
+        .eq('account_id', input.accountId)
+        .select('*')
+        .single();
+
+      if (error || !data) {
+        throw new Error(error?.message ?? 'Failed to update brochure share');
       }
 
       return mapListing(data as ListingRow);

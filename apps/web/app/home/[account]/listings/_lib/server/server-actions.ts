@@ -25,6 +25,7 @@ import {
   RemoveListingPartySchema,
   SearchCoAgentClientsSchema,
   SearchListingPartyClientsSchema,
+  SetBrochureShareSchema,
   SetLandlordShareSchema,
   SetListingMediaCoverSchema,
   UpdateListingAssignmentSchema,
@@ -113,6 +114,19 @@ export const setLandlordShare = enhanceAction(
     return getService().setLandlordShare(input);
   },
   { schema: SetLandlordShareSchema },
+);
+
+export const setBrochureShare = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
+    return getService().setBrochureShare(input);
+  },
+  { schema: SetBrochureShareSchema },
 );
 
 export const createListingUnit = enhanceAction(

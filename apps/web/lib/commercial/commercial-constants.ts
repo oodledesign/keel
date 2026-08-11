@@ -316,6 +316,7 @@ export const ENQUIRY_SOURCES = [
   'rightmove',
   'each',
   'other',
+  'brochure',
 ] as const;
 
 export type EnquirySource = (typeof ENQUIRY_SOURCES)[number];
@@ -326,6 +327,7 @@ export const ENQUIRY_SOURCE_LABELS: Record<EnquirySource, string> = {
   rightmove: 'Rightmove',
   each: 'EACH',
   other: 'Other',
+  brochure: 'Brochure',
 };
 
 /** Requirement pipeline stages (commercial_requirements.stage). */

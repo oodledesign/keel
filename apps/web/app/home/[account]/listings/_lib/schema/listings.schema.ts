@@ -141,6 +141,12 @@ export const SetLandlordShareSchema = z.object({
   enabled: z.boolean(),
 });
 
+export const SetBrochureShareSchema = z.object({
+  listingId: z.string().uuid(),
+  accountId: z.string().uuid(),
+  enabled: z.boolean(),
+});
+
 export const MEDIA_TYPES = [
   'image',
   'brochure',
@@ -218,7 +224,7 @@ export const CreateListingEnquirySchema = z.object({
   contactPhone: z.string().optional().nullable(),
   message: z.string().optional().nullable(),
   source: z
-    .enum(['manual', 'website', 'rightmove', 'each', 'other'])
+    .enum(['manual', 'website', 'rightmove', 'each', 'other', 'brochure'])
     .optional(),
   status: z.enum(['unactioned', 'on_schedule', 'archived']).optional(),
 });
@@ -232,7 +238,7 @@ export const UpdateListingEnquirySchema = z.object({
   contactPhone: z.string().optional().nullable(),
   message: z.string().optional().nullable(),
   source: z
-    .enum(['manual', 'website', 'rightmove', 'each', 'other'])
+    .enum(['manual', 'website', 'rightmove', 'each', 'other', 'brochure'])
     .optional(),
   requirementId: z.string().uuid().optional().nullable(),
 });

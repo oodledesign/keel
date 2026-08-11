@@ -47,6 +47,7 @@ import type {
 import {
   createListingEnquiry,
   deleteListingUnit,
+  setBrochureShare,
   setLandlordShare,
   updateListingEnquiry,
 } from '../_lib/server/server-actions';
@@ -1056,7 +1057,9 @@ export function ListingManagementSection({
 }) {
   const { listing, setListing } = useListingState(initial);
   const [sharePending, startShareTransition] = useTransition();
+  const [brochurePending, startBrochureTransition] = useTransition();
   const [copied, setCopied] = useState(false);
+  const [brochureCopied, setBrochureCopied] = useState(false);
 
   const sharePath = listing.landlordShareToken
     ? pathsConfig.app.landlordShareListing.replace(
@@ -1068,6 +1071,17 @@ export function ListingManagementSection({
     typeof window !== 'undefined' && sharePath
       ? `${window.location.origin}${sharePath}`
       : sharePath;
+
+  const brochurePath = listing.brochureShareToken
+    ? pathsConfig.app.brochureShare.replace(
+        '[token]',
+        listing.brochureShareToken,
+      )
+    : null;
+  const brochureUrl =
+    typeof window !== 'undefined' && brochurePath
+      ? `${window.location.origin}${brochurePath}`
+      : brochurePath;
 
   const otherPublications = publications.filter((pub) => pub.portal !== 'each');
 
@@ -1157,6 +1171,69 @@ export function ListingManagementSection({
               >
                 <Copy className="h-3.5 w-3.5" />
                 {copied ? 'Copied' : 'Copy'}
+              </Button>
+            </div>
+          ) : null}
+        </CardContent>
+      </Card>
+
+      <Card className={`${workspacePanelCard} md:col-span-2`}>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base text-[var(--workspace-shell-text)]">
+            <Link2 className="h-4 w-4" />
+            Brochure share
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-sm text-[var(--workspace-shell-text)]/60">
+              Share a client-facing photo brochure.
+            </p>
+            <Switch
+              checked={listing.brochureShareEnabled}
+              disabled={brochurePending}
+              onCheckedChange={(enabled) => {
+                startBrochureTransition(async () => {
+                  const updated = await setBrochureShare({
+                    listingId: listing.id,
+                    accountId,
+                    enabled,
+                  });
+                  setListing(updated);
+                });
+              }}
+            />
+          </div>
+          {listing.brochureShareEnabled && brochurePath ? (
+            <div className="flex items-center gap-2">
+              <code className="flex-1 truncate rounded-md bg-[var(--workspace-shell-sidebar-accent)] px-2 py-1.5 text-xs text-[var(--workspace-shell-text)]/70">
+                {brochureUrl ?? brochurePath}
+              </code>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={async () => {
+                  if (!brochureUrl) return;
+                  await navigator.clipboard.writeText(brochureUrl);
+                  setBrochureCopied(true);
+                  setTimeout(() => setBrochureCopied(false), 2000);
+                }}
+                className="shrink-0 gap-1.5"
+              >
+                <Copy className="h-3.5 w-3.5" />
+                {brochureCopied ? 'Copied' : 'Copy'}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                asChild
+                className="shrink-0"
+              >
+                <a href={brochurePath} target="_blank" rel="noreferrer">
+                  Open
+                </a>
               </Button>
             </div>
           ) : null}
