@@ -4,67 +4,30 @@ import { cache } from 'react';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import {
-  DISPOSAL_TYPE_LABELS,
-  type DisposalType,
-  disposalIncludesForSale,
-  disposalIncludesToLet,
-} from '~/lib/commercial/commercial-constants';
+import type { DisposalType } from '~/lib/commercial/commercial-constants';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
+import type {
+  BrochureAgent,
+  BrochureListing,
+  BrochureMediaItem,
+  PublicBrochureData,
+} from '~/lib/commercial/public-brochure.shared';
 
-export type BrochureMediaItem = {
-  id: string;
-  mediaType: 'image' | 'floorplan';
-  url: string;
-  fileName: string | null;
-  isCover: boolean;
-};
+export type {
+  BrochureAgent,
+  BrochureListing,
+  BrochureMediaItem,
+  PublicBrochureData,
+} from '~/lib/commercial/public-brochure.shared';
 
-export type BrochureAgent = {
-  userId: string;
-  name: string;
-  email: string | null;
-  phone: string | null;
-  pictureUrl: string | null;
-};
-
-export type BrochureListing = {
-  id: string;
-  accountId: string;
-  name: string;
-  addressLine1: string | null;
-  addressLine2: string | null;
-  town: string | null;
-  county: string | null;
-  postcode: string | null;
-  disposalType: DisposalType;
-  tenure: string | null;
-  useClass: string | null;
-  askingRentPence: number | null;
-  askingRentToPence: number | null;
-  askingPricePence: number | null;
-  rentFrequency: string | null;
-  hideRentFromMarketing: boolean;
-  hidePriceFromMarketing: boolean;
-  sizeMinSqft: number | null;
-  sizeMaxSqft: number | null;
-  epcBand: string | null;
-  epcRating: number | null;
-  availableFrom: string | null;
-  summary: string | null;
-  description: string | null;
-  locationCopy: string | null;
-  keyPoints: string[];
-};
-
-export type PublicBrochureData = {
-  token: string;
-  listing: BrochureListing;
-  accountName: string | null;
-  agents: BrochureAgent[];
-  images: BrochureMediaItem[];
-  floorplans: BrochureMediaItem[];
-};
+export {
+  formatBrochureAddress,
+  formatBrochureMoney,
+  formatBrochurePrice,
+  formatBrochureRent,
+  formatBrochureSize,
+  formatDisposalLabel,
+} from '~/lib/commercial/public-brochure.shared';
 
 function mapKeyPoints(value: unknown): string[] {
   if (!Array.isArray(value)) return [];
@@ -112,71 +75,6 @@ async function signMediaUrl(
     storageSignedUrl,
     externalUrl,
   });
-}
-
-export function formatBrochureAddress(listing: BrochureListing): string {
-  return [
-    listing.addressLine1,
-    listing.addressLine2,
-    listing.town,
-    listing.county,
-    listing.postcode,
-  ]
-    .filter(Boolean)
-    .join(', ');
-}
-
-export function formatBrochureMoney(pence: number | null): string | null {
-  if (pence == null) return null;
-  return new Intl.NumberFormat('en-GB', {
-    style: 'currency',
-    currency: 'GBP',
-    maximumFractionDigits: 0,
-  }).format(pence / 100);
-}
-
-export function formatBrochureRent(listing: BrochureListing): string | null {
-  if (listing.hideRentFromMarketing) return 'POA';
-  if (!disposalIncludesToLet(listing.disposalType)) return null;
-
-  const from = formatBrochureMoney(listing.askingRentPence);
-  const to = formatBrochureMoney(listing.askingRentToPence);
-  if (!from && !to) return 'POA';
-
-  const range =
-    from && to && from !== to ? `${from} – ${to}` : (from ?? to ?? 'POA');
-  const freq = listing.rentFrequency?.trim();
-  if (!freq || freq === 'pa' || freq === 'per_annum') {
-    return `${range} pa`;
-  }
-  if (freq === 'pcm' || freq === 'per_month') {
-    return `${range} pcm`;
-  }
-  return `${range} ${freq}`;
-}
-
-export function formatBrochurePrice(listing: BrochureListing): string | null {
-  if (!disposalIncludesForSale(listing.disposalType)) return null;
-  if (listing.hidePriceFromMarketing) return 'POA';
-  return formatBrochureMoney(listing.askingPricePence) ?? 'POA';
-}
-
-export function formatBrochureSize(listing: BrochureListing): string | null {
-  const min = listing.sizeMinSqft;
-  const max = listing.sizeMaxSqft;
-  if (min == null && max == null) return null;
-
-  const fmt = (n: number) =>
-    new Intl.NumberFormat('en-GB', { maximumFractionDigits: 0 }).format(n);
-
-  if (min != null && max != null && min !== max) {
-    return `${fmt(min)} – ${fmt(max)} sq ft`;
-  }
-  return `${fmt(min ?? max!)} sq ft`;
-}
-
-export function formatDisposalLabel(type: DisposalType): string {
-  return DISPOSAL_TYPE_LABELS[type] ?? type;
 }
 
 async function loadPublicBrochureByTokenUncached(

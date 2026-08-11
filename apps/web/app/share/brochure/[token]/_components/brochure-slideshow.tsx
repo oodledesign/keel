@@ -5,8 +5,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
-import type { PublicBrochureData } from '~/lib/commercial/public-brochure.loader';
-import { formatBrochureAddress } from '~/lib/commercial/public-brochure.loader';
+import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared';
+import { formatBrochureAddress } from '~/lib/commercial/public-brochure.shared';
 import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
 
 import {

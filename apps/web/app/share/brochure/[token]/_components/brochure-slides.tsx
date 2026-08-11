@@ -10,14 +10,14 @@ import type {
   BrochureListing,
   BrochureMediaItem,
   PublicBrochureData,
-} from '~/lib/commercial/public-brochure.loader';
+} from '~/lib/commercial/public-brochure.shared';
 import {
   formatBrochureAddress,
   formatBrochurePrice,
   formatBrochureRent,
   formatBrochureSize,
   formatDisposalLabel,
-} from '~/lib/commercial/public-brochure.loader';
+} from '~/lib/commercial/public-brochure.shared';
 import { marketingHeroEase } from '~/lib/marketing/marketing-ui';
 
 import { BrochureEnquireForm } from './brochure-enquire-form';
