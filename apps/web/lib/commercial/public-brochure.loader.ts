@@ -4,6 +4,12 @@ import { cache } from 'react';
 
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
+import {
+  DEFAULT_BRAND_ACCENT,
+  DEFAULT_BRAND_PRIMARY,
+  DEFAULT_BRAND_SECONDARY,
+  loadAccountBrandResolved,
+} from '~/lib/brand/account-brand';
 import type { DisposalType } from '~/lib/commercial/commercial-constants';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import type {
@@ -273,11 +279,34 @@ async function loadPublicBrochureByTokenUncached(
     (item): item is BrochureMediaItem => item != null,
   );
 
+  let brand: PublicBrochureData['brand'] = {
+    logoUrl: null,
+    primaryColor: DEFAULT_BRAND_PRIMARY,
+    secondaryColor: DEFAULT_BRAND_SECONDARY,
+    accentColor: DEFAULT_BRAND_ACCENT,
+  };
+
+  try {
+    const resolved = await loadAccountBrandResolved(listing.accountId);
+    brand = {
+      logoUrl: resolved.logo_url,
+      primaryColor: resolved.primary_color,
+      secondaryColor: resolved.secondary_color,
+      accentColor: resolved.accent_color,
+    };
+  } catch (err) {
+    console.error(
+      '[brochure] brand load error:',
+      err instanceof Error ? err.message : err,
+    );
+  }
+
   return {
     token,
     listing,
     accountName:
       (accountRow?.name as string | null | undefined)?.trim() || null,
+    brand,
     agents,
     images: media.filter((m) => m.mediaType === 'image'),
     floorplans: media.filter((m) => m.mediaType === 'floorplan'),

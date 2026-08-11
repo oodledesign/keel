@@ -54,6 +54,12 @@ export type PublicBrochureData = {
   token: string;
   listing: BrochureListing;
   accountName: string | null;
+  brand: {
+    logoUrl: string | null;
+    primaryColor: string;
+    secondaryColor: string;
+    accentColor: string;
+  };
   agents: BrochureAgent[];
   images: BrochureMediaItem[];
   floorplans: BrochureMediaItem[];

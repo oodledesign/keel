@@ -149,7 +149,7 @@ export function BrochureEnquireForm({
       <Button
         type="submit"
         disabled={pending}
-        className="h-11 w-full rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)] sm:w-auto sm:px-8"
+        className="h-11 w-full rounded-full bg-[var(--brochure-accent)] text-[var(--brochure-primary)] hover:opacity-90 sm:w-auto sm:px-8"
       >
         {pending ? 'Sending…' : 'Send enquiry'}
       </Button>

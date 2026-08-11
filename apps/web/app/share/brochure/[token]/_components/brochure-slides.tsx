@@ -95,9 +95,13 @@ function fadeProps(reduced: boolean, delay = 0) {
 function CoverSlide({
   listing,
   coverUrl,
+  logoUrl,
+  accountName,
 }: {
   listing: BrochureListing;
   coverUrl: string | null;
+  logoUrl: string | null;
+  accountName: string | null;
 }) {
   const reduced = useReducedMotion() ?? false;
   const address = formatBrochureAddress(listing);
@@ -124,13 +128,27 @@ function CoverSlide({
           />
         </motion.div>
       ) : (
-        <div className="absolute inset-0 bg-[var(--ozer-plum-950)]" />
+        <div className="absolute inset-0 bg-[var(--brochure-primary)]" />
       )}
-      <div className="absolute inset-0 bg-gradient-to-t from-[var(--ozer-plum-950)] via-[var(--ozer-plum-900)]/55 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/35 to-black/10" />
+
+      {logoUrl ? (
+        <div className="absolute top-[max(1.25rem,env(safe-area-inset-top))] left-6 z-10 sm:left-10 md:left-16">
+          <Image
+            src={logoUrl}
+            alt={accountName ?? 'Agency'}
+            width={160}
+            height={48}
+            unoptimized
+            priority
+            className="h-10 w-auto max-w-[180px] object-contain drop-shadow-md sm:h-12"
+          />
+        </div>
+      ) : null}
 
       <div className="relative z-10 w-full px-6 pt-10 pb-24 sm:px-10 sm:pb-28 md:px-16">
         <motion.p
-          className="text-xs font-medium tracking-[0.18em] text-[var(--ozer-accent)] uppercase"
+          className="text-xs font-medium tracking-[0.18em] text-[var(--brochure-accent)] uppercase"
           {...fadeProps(reduced, 0.05)}
         >
           {formatDisposalLabel(listing.disposalType)}
@@ -193,10 +211,10 @@ function FactsSlide({ listing }: { listing: BrochureListing }) {
   }
 
   return (
-    <div className="flex h-full w-full items-center justify-center px-6 py-20 sm:px-10 md:px-16">
+    <div className="flex h-full w-full items-center justify-center bg-[var(--brochure-primary)] px-6 py-20 sm:px-10 md:px-16">
       <div className="w-full max-w-4xl">
         <motion.p
-          className="text-xs font-medium tracking-[0.18em] text-[var(--ozer-accent)] uppercase"
+          className="text-xs font-medium tracking-[0.18em] text-[var(--brochure-accent)] uppercase"
           {...fadeProps(reduced)}
         >
           Key facts
@@ -251,7 +269,7 @@ function PhotoSlide({
   label?: string;
 }) {
   return (
-    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[var(--ozer-plum-950)]">
+    <div className="relative flex h-full w-full items-center justify-center overflow-hidden bg-[var(--brochure-primary)]">
       <Image
         src={media.url}
         alt={media.fileName ?? label ?? 'Property photo'}
@@ -284,10 +302,10 @@ function CopySlide({
   const reduced = useReducedMotion() ?? false;
 
   return (
-    <div className="flex h-full w-full items-center justify-center px-6 py-20 sm:px-10 md:px-16">
+    <div className="flex h-full w-full items-center justify-center bg-[var(--brochure-primary)] px-6 py-20 sm:px-10 md:px-16">
       <div className="w-full max-w-3xl">
         <motion.p
-          className="text-xs font-medium tracking-[0.18em] text-[var(--ozer-accent)] uppercase"
+          className="text-xs font-medium tracking-[0.18em] text-[var(--brochure-accent)] uppercase"
           {...fadeProps(reduced)}
         >
           {eyebrow}
@@ -313,7 +331,7 @@ function CopySlide({
                 key={`${i}-${point.slice(0, 24)}`}
                 className="flex gap-3 text-base text-[var(--ozer-text-on-dark)] sm:text-lg"
               >
-                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--ozer-accent)]" />
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-[var(--brochure-accent)]" />
                 <span>{point}</span>
               </li>
             ))}
@@ -326,7 +344,7 @@ function CopySlide({
 
 function AgentCard({ agent }: { agent: BrochureAgent }) {
   return (
-    <div className="flex items-center gap-4 rounded-2xl border border-[var(--ozer-border-on-dark)]/40 bg-[var(--ozer-plum-950)]/50 p-4">
+    <div className="flex items-center gap-4 rounded-2xl border border-white/15 bg-black/25 p-4">
       <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-full bg-[var(--ozer-plum-800)]">
         {agent.pictureUrl ? (
           <Image
@@ -351,7 +369,7 @@ function AgentCard({ agent }: { agent: BrochureAgent }) {
           {agent.email ? (
             <a
               href={`mailto:${agent.email}`}
-              className="inline-flex items-center gap-1.5 hover:text-[var(--ozer-accent)]"
+              className="inline-flex items-center gap-1.5 hover:text-[var(--brochure-accent)]"
             >
               <Mail className="h-3.5 w-3.5" />
               {agent.email}
@@ -360,7 +378,7 @@ function AgentCard({ agent }: { agent: BrochureAgent }) {
           {agent.phone ? (
             <a
               href={`tel:${agent.phone}`}
-              className="inline-flex items-center gap-1.5 hover:text-[var(--ozer-accent)]"
+              className="inline-flex items-center gap-1.5 hover:text-[var(--brochure-accent)]"
             >
               <Phone className="h-3.5 w-3.5" />
               {agent.phone}
@@ -376,18 +394,30 @@ function ContactSlide({ data }: { data: PublicBrochureData }) {
   const reduced = useReducedMotion() ?? false;
 
   return (
-    <div className="h-full w-full overflow-y-auto px-6 py-16 sm:px-10 md:px-16">
+    <div className="h-full w-full overflow-y-auto bg-[var(--brochure-primary)] px-6 py-16 sm:px-10 md:px-16">
       <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-2 lg:items-start">
         <div>
+          {data.brand.logoUrl ? (
+            <motion.div className="mb-6" {...fadeProps(reduced)}>
+              <Image
+                src={data.brand.logoUrl}
+                alt={data.accountName ?? 'Agency'}
+                width={180}
+                height={56}
+                unoptimized
+                className="h-12 w-auto max-w-[200px] object-contain"
+              />
+            </motion.div>
+          ) : null}
           <motion.p
-            className="text-xs font-medium tracking-[0.18em] text-[var(--ozer-accent)] uppercase"
-            {...fadeProps(reduced)}
+            className="text-xs font-medium tracking-[0.18em] text-[var(--brochure-accent)] uppercase"
+            {...fadeProps(reduced, 0.04)}
           >
             Get in touch
           </motion.p>
           <motion.h2
             className="font-heading mt-3 text-3xl font-bold text-[var(--ozer-text-on-dark)] sm:text-4xl"
-            {...fadeProps(reduced, 0.06)}
+            {...fadeProps(reduced, 0.08)}
           >
             Interested in this property?
           </motion.h2>
@@ -414,7 +444,7 @@ function ContactSlide({ data }: { data: PublicBrochureData }) {
         </div>
 
         <motion.div
-          className="rounded-2xl border border-[var(--ozer-border-on-dark)]/40 bg-[var(--ozer-plum-950)]/40 p-5 sm:p-6"
+          className="rounded-2xl border border-white/15 bg-black/25 p-5 sm:p-6"
           {...fadeProps(reduced, 0.12)}
         >
           <p className="font-heading text-lg font-bold text-[var(--ozer-text-on-dark)]">
@@ -439,7 +469,14 @@ export function BrochureSlideView({ data, slide }: SlideProps) {
 
   switch (slide.kind) {
     case 'cover':
-      return <CoverSlide listing={data.listing} coverUrl={coverUrl} />;
+      return (
+        <CoverSlide
+          listing={data.listing}
+          coverUrl={coverUrl}
+          logoUrl={data.brand.logoUrl}
+          accountName={data.accountName}
+        />
+      );
     case 'facts':
       return <FactsSlide listing={data.listing} />;
     case 'photo':

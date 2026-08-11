@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import type { CSSProperties } from 'react';
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -23,7 +24,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
   const reduced = useReducedMotion() ?? false;
   const slides = useMemo(() => buildBrochureSlides(data), [data]);
   const [index, setIndex] = useState(0);
-  const [chromeVisible, setChromeVisible] = useState(true);
+  const [chromeVisible, setChromeVisible] = useState(false);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const touchStartX = useRef<number | null>(null);
 
@@ -33,13 +34,13 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
     current?.kind === 'floorplan' ||
     current?.kind === 'cover';
   const isContact = current?.kind === 'contact';
+  // Chrome always on text/contact slides; on photo slides only after mouse move.
+  const showChrome = chromeVisible || !isPhotoLike;
 
   const go = useCallback(
     (next: number) => {
+      // Navigate without revealing chrome — keeps photo slides immersive.
       setIndex(((next % slides.length) + slides.length) % slides.length);
-      setChromeVisible(true);
-      if (hideTimer.current) clearTimeout(hideTimer.current);
-      hideTimer.current = setTimeout(() => setChromeVisible(false), 2800);
     },
     [slides.length],
   );
@@ -89,14 +90,19 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
   }, [go, next, prev, slides.length]);
 
   const address = formatBrochureAddress(data.listing);
+  const brandStyle = {
+    '--brochure-primary': data.brand.primaryColor,
+    '--brochure-secondary': data.brand.secondaryColor,
+    '--brochure-accent': data.brand.accentColor,
+  } as CSSProperties;
 
   return (
     <div
-      className="relative h-[100dvh] w-full overflow-hidden bg-[var(--ozer-plum-900)] text-[var(--ozer-text-on-dark)]"
+      className="relative h-[100dvh] w-full overflow-hidden bg-[var(--brochure-primary)] text-[var(--ozer-text-on-dark)]"
+      style={brandStyle}
       onMouseMove={revealChrome}
       onTouchStart={(event) => {
         touchStartX.current = event.touches[0]?.clientX ?? null;
-        revealChrome();
       }}
       onTouchEnd={(event) => {
         const start = touchStartX.current;
@@ -149,8 +155,8 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
 
       {/* Top chrome */}
       <div
-        className={`pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-4 bg-gradient-to-b from-[var(--ozer-plum-950)]/80 to-transparent px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-10 transition-opacity duration-300 sm:px-6 ${
-          chromeVisible || !isPhotoLike ? 'opacity-100' : 'opacity-0'
+        className={`pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-4 bg-gradient-to-b from-black/55 to-transparent px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-10 transition-opacity duration-300 sm:px-6 ${
+          showChrome ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <div className="min-w-0">
@@ -163,15 +169,15 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
             </p>
           ) : null}
         </div>
-        <p className="shrink-0 rounded-full border border-[var(--ozer-border-on-dark)]/40 bg-[var(--ozer-plum-950)]/50 px-3 py-1 text-xs text-[var(--ozer-text-on-dark-muted)] tabular-nums">
+        <p className="shrink-0 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs text-[var(--ozer-text-on-dark-muted)] tabular-nums">
           {index + 1} / {slides.length}
         </p>
       </div>
 
       {/* Bottom controls */}
       <div
-        className={`absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-[var(--ozer-plum-950)]/90 to-transparent px-4 pt-12 pb-[max(1rem,env(safe-area-inset-bottom))] transition-opacity duration-300 sm:px-6 ${
-          chromeVisible || !isPhotoLike ? 'opacity-100' : 'opacity-0'
+        className={`absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/70 to-transparent px-4 pt-12 pb-[max(1rem,env(safe-area-inset-bottom))] transition-opacity duration-300 sm:px-6 ${
+          showChrome ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
@@ -179,7 +185,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
             type="button"
             onClick={prev}
             aria-label="Previous"
-            className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--ozer-border-on-dark)]/50 bg-[var(--ozer-plum-950)]/70 text-[var(--ozer-text-on-dark)] transition hover:border-[var(--ozer-accent)]/50 hover:text-[var(--ozer-accent)]"
+            className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/50 text-[var(--ozer-text-on-dark)] transition hover:border-[var(--brochure-accent)]/60 hover:text-[var(--brochure-accent)]"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
@@ -194,7 +200,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
                 onClick={() => go(i)}
                 className={`h-1.5 rounded-full transition-all ${
                   i === index
-                    ? 'w-6 bg-[var(--ozer-accent)]'
+                    ? 'w-6 bg-[var(--brochure-accent)]'
                     : 'w-1.5 bg-[var(--ozer-text-on-dark)]/35 hover:bg-[var(--ozer-text-on-dark)]/60'
                 }`}
               />
@@ -205,7 +211,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
             type="button"
             onClick={next}
             aria-label="Next"
-            className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-[var(--ozer-border-on-dark)]/50 bg-[var(--ozer-plum-950)]/70 text-[var(--ozer-text-on-dark)] transition hover:border-[var(--ozer-accent)]/50 hover:text-[var(--ozer-accent)]"
+            className="pointer-events-auto inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/25 bg-black/50 text-[var(--ozer-text-on-dark)] transition hover:border-[var(--brochure-accent)]/60 hover:text-[var(--brochure-accent)]"
           >
             <ChevronRight className="h-5 w-5" />
           </button>
