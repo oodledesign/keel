@@ -131,3 +131,18 @@ export function formatBrochureSize(listing: BrochureListing): string | null {
 export function formatDisposalLabel(type: DisposalType): string {
   return DISPOSAL_TYPE_LABELS[type] ?? type;
 }
+
+/** Last path segment of a public brochure URL (`/share/brochure/:token`). */
+export function extractBrochureShareToken(
+  url: string | undefined | null,
+): string | null {
+  if (!url?.trim()) return null;
+
+  try {
+    const parsed = new URL(url, 'https://app.ozer.so');
+    const token = parsed.pathname.split('/').filter(Boolean).at(-1);
+    return token && token.length >= 16 ? token : null;
+  } catch {
+    return null;
+  }
+}

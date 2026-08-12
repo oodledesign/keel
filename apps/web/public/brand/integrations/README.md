@@ -1,7 +1,8 @@
-Drop official partner logo files here (replace the placeholder SVGs):
+Official partner logos for the commercial landing page:
 
-- rightmove.svg (or .png / .webp)
-- each.svg
-- property-hive.svg
+- rightmove.jpg
+- each.png
+- property-hive.png
 
-Prefer SVG or transparent PNG. Keep files reasonably small for marketing pages.
+Placeholder SVGs (`*.svg`) remain as fallbacks. Prefer transparent PNG or SVG;
+white-on-black marks (Property Hive) sit on a dark plate in the portals section.

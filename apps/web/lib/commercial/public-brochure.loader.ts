@@ -27,6 +27,7 @@ export type {
 } from '~/lib/commercial/public-brochure.shared';
 
 export {
+  extractBrochureShareToken,
   formatBrochureAddress,
   formatBrochureMoney,
   formatBrochurePrice,

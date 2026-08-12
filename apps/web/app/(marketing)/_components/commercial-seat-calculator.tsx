@@ -55,7 +55,7 @@ export function CommercialSeatCalculator({
         className,
       )}
     >
-      <div className="grid gap-6 md:grid-cols-2 md:items-start">
+      <div className="grid gap-6 md:grid-cols-2 md:items-start md:gap-14 lg:gap-20">
         <div className="space-y-5">
           <div className="space-y-2">
             <h3 className="font-heading text-xl font-semibold text-[var(--ozer-text-on-dark)] md:text-2xl">
@@ -124,7 +124,7 @@ export function CommercialSeatCalculator({
         </div>
 
         <div className="flex flex-col space-y-4 rounded-xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] p-5 text-[var(--ozer-plum-950)]">
-          <p className="text-sm tracking-[0.08em] text-[var(--ozer-plum-600)] uppercase">
+          <p className="text-sm font-bold tracking-[0.08em] text-[var(--ozer-plum-600)] uppercase">
             Estimated monthly total
           </p>
 
@@ -150,7 +150,7 @@ export function CommercialSeatCalculator({
               </div>
             ))}
             <div className="flex items-baseline justify-between gap-4 border-t border-[color:var(--workspace-shell-border)] pt-3">
-              <dt className="font-semibold text-[var(--ozer-plum-950)]">
+              <dt className="font-bold text-[var(--ozer-plum-950)]">
                 Estimated monthly total
               </dt>
               <dd className="text-2xl font-bold tracking-tight tabular-nums text-[var(--ozer-plum-950)]">

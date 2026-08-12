@@ -80,8 +80,10 @@ export type SegmentTestimonial = {
 export type SegmentIntegration = {
   name: string;
   description: string;
-  /** Path under /public, e.g. /brand/integrations/rightmove.svg */
+  /** Path under /public, e.g. /brand/integrations/rightmove.png */
   logoSrc?: string;
+  /** Light plate for dark wordmarks; dark plate for white-on-black logos. */
+  logoSurface?: 'light' | 'dark';
 };
 
 export type SegmentLandingConfig = {
@@ -545,9 +547,9 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         },
         {
           icon: Activity,
-          title: 'AI that speeds up writing',
+          title: 'AI on the commercial desk',
           description:
-            'Draft requirements from an enquiry, or generate marketing copy — always review before anything is saved.',
+            'Marketing copy, requirement drafts, match explanations, triage, and outreach — always review before anything is saved.',
         },
         {
           icon: FileText,
@@ -589,19 +591,22 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
           name: 'Rightmove',
           description:
             'Publish commercial stock via the Commercial Listings API.',
-          logoSrc: '/brand/integrations/rightmove.svg',
+          logoSrc: '/brand/integrations/rightmove.jpg',
+          logoSurface: 'light',
         },
         {
           name: 'EACH',
           description:
             'Dedicated XML feed for EACH — stock can diverge from your website.',
-          logoSrc: '/brand/integrations/each.svg',
+          logoSrc: '/brand/integrations/each.png',
+          logoSurface: 'light',
         },
         {
           name: 'Property Hive',
           description:
             'WordPress import via XML so your agency site stays in sync.',
-          logoSrc: '/brand/integrations/property-hive.svg',
+          logoSrc: '/brand/integrations/property-hive.png',
+          logoSurface: 'dark',
         },
       ],
       testimonials: [
@@ -631,29 +636,52 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           question: 'What is the Commercial Property workspace?',
           answer:
-            'A workspace built for UK commercial agency desks: disposals and marketing, pipeline (instructions and requirements), interest matching, online brochures, AI drafts, and portal publishing — with transparent seat pricing.',
+            'A workspace for UK commercial agency desks — not a landlord portfolio tool. Disposals and marketing, a pipeline for instructions and requirements, interest matching, online brochures, AI drafts, and portal publishing sit on one desk, with published seat pricing.',
         },
         {
           question: 'How does graduated pricing work?',
           answer: (() => {
             const [seat1, seats2to7, seats8plus] = COMMERCIAL_GRADUATED_TIERS;
-            return `One Price for every agency: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to7!.unitGbp)} for seats 2–7, then ${formatGbp(seats8plus!.unitGbp)} for seats 8+. Adding a seat can only raise the total. Solo / Team / Scale cards explain those bands — not separate products.`;
+            const fourSeatTotal = formatGbp(
+              estimateMonthlyBreakdownGbp(4).totalGbp,
+            );
+            return `One price for every agency: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to7!.unitGbp)} for seats 2–7, then ${formatGbp(seats8plus!.unitGbp)} for seats 8+. Solo / Team / Scale describe those bands — not separate products. Four billable seats is ${formatGbp(seat1!.unitGbp)} + 3 × ${formatGbp(seats2to7!.unitGbp)} = ${fourSeatTotal}/mo. Use the calculator on this page; there is no demo gate to hear the number.`;
           })(),
+        },
+        {
+          question: 'Can I add seats later?',
+          answer:
+            'Yes. You stay on the same graduated price. Adding a billable seat can only raise the monthly total — you do not switch products. Support-seat allowance also steps up with headcount (none on Solo, 2 from the second billable seat, 4 from the eighth).',
+        },
+        {
+          question: 'Is there a free trial?',
+          answer:
+            'Yes. Commercial Property includes a 14-day trial on your first paid workspace — no credit card required to start. Cancel from account settings; you keep access through the period you have already paid for.',
         },
         {
           question: 'What are support seats?',
           answer:
-            'Free seats for admin and finance: they can view records, add notes, and log activity, but cannot move pipeline stages, edit disposals, or publish to portals. Team-sized desks get 2; Scale-sized get 4.',
+            'Free seats for admin and finance: they can view records, add notes, and log activity, but cannot move pipeline stages, edit disposals, or publish to portals. Solo (1 billable seat) has none; desks with 2–7 billable seats get 2; 8+ billable seats get 4.',
         },
         {
           question: 'Which portals are included?',
           answer:
-            'Rightmove Commercial, EACH, and Property Hive WordPress — included from Commercial Solo (seat 1).',
+            'Rightmove Commercial, EACH, and Property Hive WordPress — included from seat 1. Publish commercial stock via Rightmove’s Commercial Listings API, a dedicated EACH XML feed, and a Property Hive XML import so the agency site stays in sync.',
         },
         {
-          question: 'Why publish price when others hide it?',
+          question: 'What does AI do on the desk?',
           answer:
-            'Many competitor commercial CRMs are quote-only. A calculable public price is deliberate — you should know the number before a sales call.',
+            'It drafts where the desk loses time: disposal marketing copy, requirement briefs from an enquiry or pasted email, match explanations, add/skip/review triage, and a first outreach email. Every draft stays reviewable — nothing is saved, published, or sent until you confirm.',
+        },
+        {
+          question: 'How do online brochures work?',
+          answer:
+            'Each disposal can share a branded slideshow — photos, key facts, floorplans, location, and an enquire form — instead of emailing another static PDF. Agency colours and logo come through automatically, and enquiries route back to the acting agents.',
+        },
+        {
+          question: 'How does interest matching work?',
+          answer:
+            'The desk scores disposals against requirements (size, location, tenure, sector) and suggests pairs on the interest schedule. You can add a match in one click, and AI can explain why a pair fits or triage the shortlist — still with a human confirm before anything is saved.',
         },
       ],
       relatedSegments: [],

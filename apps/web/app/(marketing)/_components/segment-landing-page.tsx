@@ -1,7 +1,17 @@
 import Image from 'next/image';
 import Link from 'next/link';
 
-import { ArrowRight, Check, FileText, Sparkles } from 'lucide-react';
+import {
+  ArrowLeftRight,
+  ArrowRight,
+  Check,
+  ClipboardList,
+  FileText,
+  ListFilter,
+  Mail,
+  PenLine,
+  Sparkles,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
@@ -11,6 +21,8 @@ import {
   buildPricingSignupUrl,
   formatGbp,
 } from '~/lib/billing/pricing-marketing';
+import { loadPublicBrochureByToken } from '~/lib/commercial/public-brochure.loader';
+import { extractBrochureShareToken } from '~/lib/commercial/public-brochure.shared';
 import {
   marketingBodyText,
   marketingBtnGradient,
@@ -75,7 +87,9 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 <div className="space-y-4">
                   <h1 className="font-heading text-4xl leading-[1.08] font-bold tracking-tight text-[var(--ozer-text-on-dark)] md:text-5xl lg:text-6xl">
                     {config.hero.title}
-                    <span className={cn(marketingHeadlineGradient, 'mt-1 block')}>
+                    <span
+                      className={cn(marketingHeadlineGradient, 'mt-1 block')}
+                    >
                       {config.hero.titleAccent}.
                     </span>
                   </h1>
@@ -260,10 +274,18 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         )}
         aria-labelledby="features-heading"
       >
-        <div className={cn('mb-10 max-w-2xl', isCommercial && 'mx-auto text-center')}>
+        <div
+          className={cn(
+            'mb-10 max-w-2xl',
+            isCommercial && 'mx-auto text-center',
+          )}
+        >
           <h2
             id="features-heading"
-            className={cn(marketingSectionHeading, 'text-[var(--workspace-shell-text)]')}
+            className={cn(
+              marketingSectionHeading,
+              'text-[var(--workspace-shell-text)]',
+            )}
           >
             {isCommercial
               ? 'Built for the commercial workspace'
@@ -310,7 +332,10 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
           <div className="mx-auto w-full max-w-7xl px-6">
             <h2
               id="how-it-works-heading"
-              className={cn(marketingSectionHeading, 'text-[var(--workspace-shell-text)]')}
+              className={cn(
+                marketingSectionHeading,
+                'text-[var(--workspace-shell-text)]',
+              )}
             >
               How it works
             </h2>
@@ -347,7 +372,10 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         <div className="mb-10 text-center">
           <h2
             id="pricing-heading"
-            className={cn(marketingSectionHeading, 'text-[var(--workspace-shell-text)]')}
+            className={cn(
+              marketingSectionHeading,
+              'text-[var(--workspace-shell-text)]',
+            )}
           >
             {isPersonal
               ? 'Completely free for personal & family'
@@ -512,9 +540,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             <p
               className={cn(
                 'mt-4 text-xs',
-                isCommercial
-                  ? marketingSectionDarkMuted
-                  : marketingMutedText,
+                isCommercial ? marketingSectionDarkMuted : marketingMutedText,
               )}
             >
               Already have an account?{' '}
@@ -598,12 +624,17 @@ function SegmentPricingPlanCard({
           'Free'
         ) : unit === 'then_band' ? (
           <>
-            <span className={`mr-2 text-base font-medium ${marketingMutedText}`}>
+            <span
+              className={`mr-2 text-base font-medium ${marketingMutedText}`}
+            >
               then
             </span>
             {formatGbp(plan.priceGbp)}
             <span
-              className={cn('mt-1 block text-sm font-normal', marketingMutedText)}
+              className={cn(
+                'mt-1 block text-sm font-normal',
+                marketingMutedText,
+              )}
             >
               {unitLabel}
             </span>
@@ -665,9 +696,7 @@ function CommercialPricingGrid({
 }: {
   plans: SegmentLandingConfig['pricingPlans'];
 }) {
-  const ordered = (
-    ['solo', 'team', 'scale'] as const
-  )
+  const ordered = (['solo', 'team', 'scale'] as const)
     .map((id) => plans.find((plan) => plan.id === id))
     .filter((plan): plan is NonNullable<typeof plan> => Boolean(plan));
 
@@ -690,7 +719,40 @@ function CommercialPricingGrid({
   );
 }
 
-function CommercialSpotlightSections({
+const COMMERCIAL_AI_USES = [
+  {
+    icon: PenLine,
+    title: 'Marketing copy',
+    description:
+      'First-pass disposal wording from the listing — headline, summary, and particulars.',
+  },
+  {
+    icon: ClipboardList,
+    title: 'Requirement drafts',
+    description:
+      'Turn an enquiry or pasted email into a structured brief, ready to review.',
+  },
+  {
+    icon: ArrowLeftRight,
+    title: 'Match explanations',
+    description:
+      'Why a requirement fits a disposal, in plain English, on the interest schedule.',
+  },
+  {
+    icon: ListFilter,
+    title: 'Interest triage',
+    description:
+      'Suggested add, skip, or review on each pair so the desk works the shortlist first.',
+  },
+  {
+    icon: Mail,
+    title: 'Outreach drafts',
+    description:
+      'A first email to a matched party — edit and send, never auto-published.',
+  },
+] as const;
+
+async function CommercialSpotlightSections({
   config,
 }: {
   config: SegmentLandingConfig;
@@ -698,6 +760,16 @@ function CommercialSpotlightSections({
   const integrations = config.integrations ?? [];
   const testimonials = config.testimonials ?? [];
   const brochureUrl = config.brochureExampleUrl?.trim();
+  const brochureToken = extractBrochureShareToken(brochureUrl);
+  let brochureData = null;
+
+  if (brochureToken) {
+    try {
+      brochureData = await loadPublicBrochureByToken(brochureToken);
+    } catch {
+      brochureData = null;
+    }
+  }
 
   return (
     <>
@@ -707,48 +779,57 @@ function CommercialSpotlightSections({
           className="marketing-section-plum py-20"
           aria-labelledby="integrations-heading"
         >
-          <div className="relative mx-auto w-full max-w-7xl px-6">
-            <div className="mx-auto mb-10 max-w-2xl text-center">
+          <div className="relative mx-auto grid w-full max-w-7xl items-center gap-10 px-6 lg:grid-cols-2 lg:gap-14">
+            <div>
               <h2
                 id="integrations-heading"
-                className={cn(marketingSectionHeading, 'text-[var(--ozer-text-on-dark)]')}
+                className={cn(
+                  marketingSectionHeading,
+                  'text-[var(--ozer-text-on-dark)]',
+                )}
               >
                 Portals & website sync
               </h2>
-              <p className={`mt-3 ${marketingSectionDarkMuted}`}>
-                Publish from Commercial Solo — Rightmove, EACH, and Property Hive
-                WordPress included.
+              <p className={`mt-4 ${marketingSectionDarkMuted}`}>
+                Publish from Commercial Solo — Rightmove, EACH, and Property
+                Hive WordPress included. Stock goes out from the same disposal
+                record the desk already maintains.
               </p>
             </div>
-            <div className="grid gap-5 md:grid-cols-3">
+            <ul className="flex flex-col gap-4">
               {integrations.map((integration) => (
-                <article
-                  key={integration.name}
-                  className="marketing-feature-card flex flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] p-6"
-                >
-                  <div className="flex h-12 items-center">
-                    {integration.logoSrc ? (
-                      <Image
-                        src={integration.logoSrc}
-                        alt={`${integration.name} logo`}
-                        width={160}
-                        height={40}
-                        className="h-10 w-auto max-w-[160px] object-contain object-left"
-                      />
-                    ) : (
-                      <p className="font-heading text-lg font-bold text-[var(--workspace-shell-text)]">
-                        {integration.name}
-                      </p>
-                    )}
-                  </div>
-                  <p
-                    className={`mt-4 text-sm leading-relaxed ${marketingMutedText}`}
-                  >
-                    {integration.description}
-                  </p>
-                </article>
+                <li key={integration.name}>
+                  <article className="flex items-center gap-4 rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-08)] px-4 py-3 sm:px-5 sm:py-4">
+                    <div
+                      className={cn(
+                        'flex h-16 w-[11.5rem] shrink-0 items-center justify-center rounded-xl px-3',
+                        integration.logoSurface === 'dark'
+                          ? 'bg-black'
+                          : 'bg-[var(--ozer-cream-50)]',
+                      )}
+                    >
+                      {integration.logoSrc ? (
+                        <Image
+                          src={integration.logoSrc}
+                          alt={`${integration.name} logo`}
+                          width={180}
+                          height={48}
+                          unoptimized
+                          className="h-10 max-h-12 w-auto max-w-[10.5rem] object-contain"
+                        />
+                      ) : (
+                        <p className="font-heading text-sm font-bold text-[var(--ozer-plum-950)]">
+                          {integration.name}
+                        </p>
+                      )}
+                    </div>
+                    <p className="text-sm leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
+                      {integration.description}
+                    </p>
+                  </article>
+                </li>
               ))}
-            </div>
+            </ul>
           </div>
         </section>
       ) : null}
@@ -763,7 +844,10 @@ function CommercialSpotlightSections({
             <span className={marketingEyebrow}>Pipeline</span>
             <h2
               id="pipeline-heading"
-              className={cn(marketingSectionHeading, 'mt-4 text-[var(--workspace-shell-text)]')}
+              className={cn(
+                marketingSectionHeading,
+                'mt-4 text-[var(--workspace-shell-text)]',
+              )}
             >
               One board for instructions and requirements
             </h2>
@@ -829,7 +913,10 @@ function CommercialSpotlightSections({
             <span className={marketingEyebrow}>Insights</span>
             <h2
               id="insights-heading"
-              className={cn(marketingSectionHeading, 'mt-4 text-[var(--workspace-shell-text)]')}
+              className={cn(
+                marketingSectionHeading,
+                'mt-4 text-[var(--workspace-shell-text)]',
+              )}
             >
               Agency insights, period by period
             </h2>
@@ -859,36 +946,47 @@ function CommercialSpotlightSections({
         className="marketing-section-plum py-20"
         aria-labelledby="ai-writing-heading"
       >
-        <div className="relative mx-auto grid w-full max-w-7xl items-center gap-10 px-6 lg:grid-cols-2">
-          <div
-            className={cn(
-              'rounded-3xl border border-[color:var(--workspace-shell-border)] p-6',
-              marketingFeatureCard,
-            )}
-          >
-            <Sparkles className="h-5 w-5 text-[var(--ozer-accent)]" />
-            <p className="font-heading mt-4 text-xl font-semibold text-[var(--workspace-shell-text)]">
-              Draft faster, stay in control
-            </p>
-            <p className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}>
-              Paste an enquiry to sketch a requirement, or generate disposal
-              copy. Every draft stays reviewable — nothing publishes until you
-              say so.
-            </p>
-          </div>
+        <div className="relative mx-auto grid w-full max-w-7xl items-start gap-10 px-6 lg:grid-cols-2 lg:gap-14">
           <div>
+            <span className={marketingEyebrowOnDark}>
+              <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
+              AI
+            </span>
             <h2
               id="ai-writing-heading"
-              className={cn(marketingSectionHeading, 'text-[var(--ozer-text-on-dark)]')}
+              className={cn(
+                marketingSectionHeading,
+                'mt-4 text-[var(--ozer-text-on-dark)]',
+              )}
             >
-              AI that speeds up writing
+              AI that speeds up the desk
             </h2>
             <p className={`mt-4 ${marketingSectionDarkMuted}`}>
-              Use AI where commercial desks lose time: first-pass marketing
-              wording, requirement extraction from emails, and tidy summaries —
-              with human confirmation before anything is saved.
+              Use AI where commercial desks lose time — writing, matching, and
+              first-touch outreach. Every draft stays reviewable. Nothing
+              publishes or emails until you say so.
             </p>
           </div>
+          <ul className="space-y-3">
+            {COMMERCIAL_AI_USES.map((item) => (
+              <li key={item.title}>
+                <article className="flex gap-3 rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-08)] p-4">
+                  <item.icon
+                    className="mt-0.5 h-5 w-5 shrink-0 text-[var(--ozer-accent)]"
+                    aria-hidden
+                  />
+                  <div>
+                    <p className="font-heading text-base font-semibold text-[var(--ozer-text-on-dark)]">
+                      {item.title}
+                    </p>
+                    <p className="mt-1 text-sm leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
+                      {item.description}
+                    </p>
+                  </div>
+                </article>
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
 
@@ -901,7 +999,10 @@ function CommercialSpotlightSections({
           <div>
             <h2
               id="brochures-heading"
-              className={cn(marketingSectionHeading, 'text-[var(--workspace-shell-text)]')}
+              className={cn(
+                marketingSectionHeading,
+                'text-[var(--workspace-shell-text)]',
+              )}
             >
               Online brochures & branded presentations
             </h2>
@@ -924,7 +1025,7 @@ function CommercialSpotlightSections({
               ))}
             </ul>
             {brochureUrl ? (
-              <div className="mt-6 lg:hidden">
+              <div className="mt-6">
                 <Button asChild className={marketingBtnGradient}>
                   <Link href={brochureUrl} target="_blank" rel="noreferrer">
                     View live version
@@ -935,7 +1036,7 @@ function CommercialSpotlightSections({
             ) : null}
           </div>
           {brochureUrl ? (
-            <CommercialBrochurePreview liveUrl={brochureUrl} />
+            <CommercialBrochurePreview data={brochureData} />
           ) : (
             <div
               className={cn(
@@ -965,13 +1066,16 @@ function CommercialSpotlightSections({
             <div className="mx-auto mb-10 max-w-2xl text-center">
               <h2
                 id="testimonials-heading"
-                className={cn(marketingSectionHeading, 'text-[var(--ozer-text-on-dark)]')}
+                className={cn(
+                  marketingSectionHeading,
+                  'text-[var(--ozer-text-on-dark)]',
+                )}
               >
                 What agencies say
               </h2>
               <p className={`mt-3 text-sm ${marketingSectionDarkMuted}`}>
-                Sample quotes for layout — these are fabricated placeholders, not
-                real customer testimonials.
+                Sample quotes for layout — these are fabricated placeholders,
+                not real customer testimonials.
               </p>
             </div>
             <div className="grid gap-5 md:grid-cols-3">
