@@ -30,6 +30,8 @@ export type BrochureListing = {
   town: string | null;
   county: string | null;
   postcode: string | null;
+  latitude: number | null;
+  longitude: number | null;
   disposalType: DisposalType;
   tenure: string | null;
   useClass: string | null;

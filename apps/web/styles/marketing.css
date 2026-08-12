@@ -1,7 +1,8 @@
 /*
- * Marketing site shell — flat colour-blocked cream (light) or Cassis/plum (dark).
+ * Marketing site shell — cream (light) or Cassis/plum (dark) colour blocks.
  * Uses Ozer tokens from ozer-tokens.css; follows html.dark from next-themes.
- * No glassmorphism, frosted blur, or decorative gradients.
+ * Avoid glassmorphism / frosted blur. Prefer flat bands; hero may use a
+ * subtle same-family gradient for atmosphere (see .marketing-section-plum-hero).
  */
 
 @layer utilities {
@@ -80,6 +81,71 @@
   .dark .marketing-section-muted {
     border-color: var(--ozer-border-on-dark);
     background: var(--ozer-plum-950);
+  }
+
+  /** Full-bleed plum band for marketing pages (e.g. commercial landing). */
+  .marketing-section-plum {
+    @apply border-y;
+    border-color: var(--ozer-border-on-dark-strong);
+    background: var(--ozer-plum-950);
+    color: var(--ozer-text-on-dark);
+  }
+
+  /**
+   * Hero atmosphere: same-hue plum depth + a soft coral bloom.
+   * Keep contrast for --ozer-text-on-dark; no purple/indigo blends.
+   */
+  .marketing-section-plum-hero {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-top: 0;
+    background:
+      radial-gradient(
+        120% 90% at 85% 10%,
+        color-mix(in srgb, var(--ozer-coral-500) 18%, transparent) 0%,
+        transparent 55%
+      ),
+      radial-gradient(
+        90% 70% at 0% 100%,
+        color-mix(in srgb, var(--ozer-plum-800) 70%, transparent) 0%,
+        transparent 60%
+      ),
+      linear-gradient(
+        165deg,
+        var(--ozer-plum-900) 0%,
+        var(--ozer-plum-950) 48%,
+        color-mix(in srgb, var(--ozer-plum-950) 82%, black) 100%
+      );
+  }
+
+  .marketing-section-plum-hero::after {
+    content: '';
+    position: absolute;
+    inset: auto 0 0;
+    height: 4.5rem;
+    z-index: 0;
+    pointer-events: none;
+    background: linear-gradient(
+      to bottom,
+      transparent,
+      color-mix(in srgb, var(--ozer-cream-50) 8%, transparent)
+    );
+  }
+
+  .marketing-section-plum-hero > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  /**
+   * Feature cards on a fixed plum band stay cream/white even in .dark,
+   * otherwise they collapse into the same --ozer-plum-950 fill.
+   */
+  .marketing-section-plum .marketing-feature-card {
+    border-color: var(--ozer-border-on-light);
+    color: var(--ozer-text-on-light);
+    background: var(--ozer-cream-50);
   }
 
   .marketing-feature-card {

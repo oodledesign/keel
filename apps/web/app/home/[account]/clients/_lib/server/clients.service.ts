@@ -235,7 +235,7 @@ class ClientsService {
     let query = readDb
       .from('clients')
       .select(
-        'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type, archived_at',
+        'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type, commercial_role, archived_at',
         { count: 'exact' },
       )
       .eq('account_id', params.accountId)
@@ -265,7 +265,7 @@ class ClientsService {
         let legacyQuery = readDb
           .from('clients')
           .select(
-            'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type',
+            'id, display_name, company_name, email, phone, city, picture_url, created_at, updated_at, first_name, last_name, client_type, commercial_role',
             { count: 'exact' },
           )
           .eq('account_id', params.accountId)
@@ -298,9 +298,15 @@ class ClientsService {
         picture_url?: string | null;
       }>;
       accountSlug?: string;
+      variant?: 'work' | 'commercial';
     },
   ) {
-    const { members: providedMembers, accountSlug, ...listParams } = params;
+    const {
+      members: providedMembers,
+      accountSlug,
+      variant = 'work',
+      ...listParams
+    } = params;
     const readDb = await this.dbForClientReads(params.accountId);
 
     const membersPromise = (async () => {
@@ -344,6 +350,7 @@ class ClientsService {
     const overview = await buildClientsOverview({
       db: readDb,
       accountId: params.accountId,
+      variant,
       clients: (data ?? []) as Array<{
         id: string;
         display_name: string | null;
@@ -357,6 +364,7 @@ class ClientsService {
         first_name?: string | null;
         last_name?: string | null;
         client_type?: string | null;
+        commercial_role?: string | null;
       }>,
       members,
     });

@@ -1,8 +1,10 @@
+'use client';
+
 import { Check } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
-import type { SignupContext } from '~/lib/auth/signup-context';
+import type { SignupContext } from '~/lib/auth/signup-context-commercial';
 
 /** Highlights for the light orb brand panel (dark text on cream). */
 export function SignupContextPanel({

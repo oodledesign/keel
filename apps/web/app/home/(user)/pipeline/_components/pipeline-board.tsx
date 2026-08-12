@@ -250,6 +250,8 @@ type Props = {
   customizePhasesSlot?: ReactNode;
   boardName?: string;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
+  /** Prefer the team page header for title/description. */
+  hideBoardTitle?: boolean;
 };
 
 export function PipelineBoard({
@@ -264,6 +266,7 @@ export function PipelineBoard({
   customizePhasesSlot,
   boardName = 'WIP',
   onRequestCreateDisposal,
+  hideBoardTitle = false,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -502,12 +505,16 @@ export function PipelineBoard({
   );
 
   return (
-    <div className="flex min-h-[calc(100svh-3.5rem)] w-full flex-col gap-6 px-4 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
-      {/* Header */}
+    <div
+      className={`flex min-h-[calc(100svh-3.5rem)] w-full min-w-0 flex-col pb-12 text-[var(--workspace-shell-text)] ${
+        hideBoardTitle ? 'gap-3 pt-2' : 'gap-6 pt-6'
+      }`}
+    >
+      {/* Toolbar */}
       <div
-        className={`flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between ${isCommercial ? 'sm:justify-end' : ''}`}
+        className={`flex flex-col gap-3 px-4 sm:flex-row sm:items-end sm:justify-between md:px-6 lg:px-8 ${isCommercial ? 'sm:justify-end' : ''}`}
       >
-        {!isCommercial ? (
+        {!hideBoardTitle && !isCommercial ? (
           <div>
             <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
               Pipeline
@@ -658,7 +665,7 @@ export function PipelineBoard({
         }
       />
 
-      {/* Kanban */}
+      {/* Kanban — full-bleed scrollport so columns aren't clipped by page padding */}
       <DndContext
         sensors={sensors}
         collisionDetection={closestCorners}
@@ -667,24 +674,26 @@ export function PipelineBoard({
       >
         <div
           ref={kanbanScrollRef}
-          className="flex min-h-0 flex-1 gap-4 overflow-x-auto overscroll-x-contain pb-4"
+          className="min-h-0 w-full min-w-0 flex-1 overflow-x-auto overscroll-x-contain pb-4"
         >
-          {STAGES.map((stage) => {
-            const stageDeals = dealsByStage.get(stage.key) ?? [];
-            const stageValue = stageDeals.reduce((s, d) => s + d.value, 0);
-            return (
-              <StageColumn
-                key={stage.key}
-                stageKey={stage.key}
-                label={stage.label}
-                deals={stageDeals}
-                value={stageValue}
-                onEditDeal={handleEditDeal}
-                listingById={listingById}
-                commercial={isCommercial}
-              />
-            );
-          })}
+          <div className="flex w-max min-w-full gap-4 px-4 md:px-6 lg:px-8">
+            {STAGES.map((stage) => {
+              const stageDeals = dealsByStage.get(stage.key) ?? [];
+              const stageValue = stageDeals.reduce((s, d) => s + d.value, 0);
+              return (
+                <StageColumn
+                  key={stage.key}
+                  stageKey={stage.key}
+                  label={stage.label}
+                  deals={stageDeals}
+                  value={stageValue}
+                  onEditDeal={handleEditDeal}
+                  listingById={listingById}
+                  commercial={isCommercial}
+                />
+              );
+            })}
+          </div>
         </div>
 
         <DragOverlay dropAnimation={null}>
@@ -735,7 +744,7 @@ function StageColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-w-[260px] flex-1 flex-col transition-colors ${
+      className={`flex w-[280px] shrink-0 flex-col transition-colors ${
         isOver ? 'rounded-2xl bg-[var(--workspace-shell-sidebar-accent)]' : ''
       }`}
     >

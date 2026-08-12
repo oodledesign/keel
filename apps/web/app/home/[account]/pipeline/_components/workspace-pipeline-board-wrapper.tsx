@@ -33,6 +33,10 @@ import type { CommercialRequirement } from '~/home/[account]/requirements/_lib/s
 import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-constants';
 import type { PipelineStageConfigItem } from '~/lib/commercial/pipeline-stage-config';
 
+import { instructionTitle } from '../_lib/instruction-title';
+import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
+import { CompleteInstructionRegisterDialog } from './complete-instruction-register-dialog';
+
 const PipelineBoard = dynamic(
   () =>
     import('~/home/(user)/pipeline/_components/pipeline-board').then(
@@ -56,16 +60,10 @@ type Props = {
   stageConfig?: PipelineStageConfigItem[];
   boardName?: string;
   initialRequirements?: CommercialRequirement[];
+  attentionDigest?: WipAttentionDigest | null;
+  /** When true, rely on the page header for title/description. */
+  hideBoardTitle?: boolean;
 };
-
-function instructionTitle(deal: PipelineDeal) {
-  return (
-    deal.companyName?.trim() ||
-    deal.contactName?.trim() ||
-    deal.clientName?.trim() ||
-    'Untitled instruction'
-  );
-}
 
 export function WorkspacePipelineBoardWrapper({
   initialData,
@@ -77,21 +75,24 @@ export function WorkspacePipelineBoardWrapper({
   stageConfig,
   boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
   initialRequirements = [],
+  attentionDigest = null,
+  hideBoardTitle = false,
 }: Props) {
   const router = useRouter();
   const [promptDeal, setPromptDeal] = useState<PipelineDeal | null>(null);
+  const [newInstructionDeal, setNewInstructionDeal] =
+    useState<PipelineDeal | null>(null);
   const [disposalDeal, setDisposalDeal] = useState<PipelineDeal | null>(null);
 
   const openDisposalForm = useCallback((deal: PipelineDeal) => {
     setPromptDeal(null);
+    setNewInstructionDeal(null);
     setDisposalDeal(deal);
   }, []);
 
   const handleDealWon = async (deal: PipelineDeal) => {
     if (variant === 'commercial') {
-      if (!deal.commercialListingId) {
-        setPromptDeal(deal);
-      }
+      setPromptDeal(deal);
       return;
     }
 
@@ -140,8 +141,11 @@ export function WorkspacePipelineBoardWrapper({
           listings={listings}
           stageConfig={stageConfig}
           boardName={boardName}
+          attentionDigest={attentionDigest}
           onDealWon={handleDealWon}
           onRequestCreateDisposal={openDisposalForm}
+          onInstructionCreated={(deal) => setNewInstructionDeal(deal)}
+          hideBoardTitle={hideBoardTitle}
         />
       ) : (
         <PipelineBoard
@@ -151,21 +155,35 @@ export function WorkspacePipelineBoardWrapper({
           workspaceAccountId={accountId}
           initialClients={initialClients}
           variant="work"
+          hideBoardTitle={hideBoardTitle}
         />
       )}
 
-      <AlertDialog
+      <CompleteInstructionRegisterDialog
         open={Boolean(promptDeal)}
+        deal={promptDeal}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        onClose={() => setPromptDeal(null)}
+        onRecorded={() => router.refresh()}
+        onCreateDisposal={(deal) => {
+          setPromptDeal(null);
+          openDisposalForm(deal);
+        }}
+      />
+
+      <AlertDialog
+        open={Boolean(newInstructionDeal)}
         onOpenChange={(open) => {
-          if (!open) setPromptDeal(null);
+          if (!open) setNewInstructionDeal(null);
         }}
       >
         <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <AlertDialogHeader>
-            <AlertDialogTitle>Add as disposal?</AlertDialogTitle>
+            <AlertDialogTitle>Create a disposal?</AlertDialogTitle>
             <AlertDialogDescription className="text-[var(--workspace-shell-text-muted)]">
-              {promptDeal
-                ? `“${instructionTitle(promptDeal)}” is Completed / Exchanged. Create a linked disposal now, or skip and do it later from the card menu.`
+              {newInstructionDeal
+                ? `Link “${instructionTitle(newInstructionDeal)}” to a disposal now so marketing, viewings and the register stay connected.`
                 : null}
             </AlertDialogDescription>
           </AlertDialogHeader>
@@ -173,7 +191,7 @@ export function WorkspacePipelineBoardWrapper({
             <AlertDialogCancel>Not now</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
-                if (promptDeal) openDisposalForm(promptDeal);
+                if (newInstructionDeal) openDisposalForm(newInstructionDeal);
               }}
             >
               Create disposal

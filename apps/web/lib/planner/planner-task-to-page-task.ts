@@ -25,9 +25,13 @@ export function plannerTaskToPageTask(task: PlannerTask): TasksPageTask {
     workspaceName: task.workspace,
     workspaceSlug: task.workspaceSlug,
     workspaceColor: task.workspaceColor,
+    accountId: null,
     parentTaskId: task.parentTaskId,
     notes: task.notes,
+    noteRefs: [],
     calendarScheduleStatus: task.calendarScheduleStatus,
     recurringSeriesId: null,
+    source: 'manual',
+    sourceContext: null,
   };
 }

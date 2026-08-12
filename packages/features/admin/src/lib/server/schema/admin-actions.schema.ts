@@ -10,7 +10,10 @@ const UserIdSchema = ConfirmationSchema.extend({
 
 export const BanUserSchema = UserIdSchema;
 export const ReactivateUserSchema = UserIdSchema;
-export const ImpersonateUserSchema = UserIdSchema;
+export const ImpersonateUserSchema = UserIdSchema.extend({
+  reason: z.string().trim().min(3).max(500),
+  supportTicketId: z.string().uuid().optional().nullable(),
+});
 export const DeleteUserSchema = UserIdSchema;
 
 export const DeleteAccountSchema = ConfirmationSchema.extend({

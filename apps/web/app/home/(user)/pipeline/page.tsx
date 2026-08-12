@@ -9,7 +9,7 @@ export const metadata = { title: 'Pipeline' };
 
 export default function PipelinePage() {
   return (
-    <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0">
+    <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0 lg:px-0">
       <Suspense fallback={<PipelineSkeleton />}>
         <PipelineContent />
       </Suspense>

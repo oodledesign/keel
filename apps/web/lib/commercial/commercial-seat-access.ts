@@ -100,7 +100,7 @@ export async function assertCommercialPortalPublishingAllowed(params: {
 
   if (!portalPublishingAllowed(billable)) {
     throw new Error(
-      'Portal publishing requires at least 2 billable seats. Add a billable seat to unlock Rightmove / EG publishing.',
+      'Portal publishing is not available on this subscription. Check your commercial plan seats.',
     );
   }
 }

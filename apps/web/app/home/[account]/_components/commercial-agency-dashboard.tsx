@@ -7,6 +7,7 @@ import {
   CalendarDays,
   ClipboardList,
   Inbox,
+  Sparkles,
   Tag,
 } from 'lucide-react';
 
@@ -103,9 +104,10 @@ export function CommercialAgencyDashboard({
   accountSlug,
   metrics,
   recentListings,
+  matchDigest,
 }: Pick<
   CommercialDashboardData,
-  'accountSlug' | 'metrics' | 'recentListings'
+  'accountSlug' | 'metrics' | 'recentListings' | 'matchDigest'
 >) {
   const listingsHref = accountPath(
     accountSlug,
@@ -130,7 +132,7 @@ export function CommercialAgencyDashboard({
 
   return (
     <div className="min-w-0 space-y-6 p-4 pb-[calc(5.5rem+max(1.5rem,env(safe-area-inset-bottom)))] lg:p-6 lg:pb-6">
-      <section className="grid grid-cols-3 gap-2 sm:gap-3 xl:grid-cols-4">
+      <section className="grid grid-cols-3 gap-2 sm:gap-3 xl:grid-cols-5">
         <ActionCard
           href={listingsHref}
           label="Unactioned enquiries"
@@ -171,7 +173,76 @@ export function CommercialAgencyDashboard({
           hint="Across the deals board"
           icon={Tag}
         />
+        <ActionCard
+          href={`${listingsHref}`}
+          label="Match opportunities"
+          shortLabel="Matches"
+          value={matchDigest.count}
+          hint={
+            matchDigest.count > 0
+              ? 'New requirement ↔ stock fits'
+              : 'No strong fits right now'
+          }
+          icon={Sparkles}
+          emphasize
+        />
       </section>
+
+      {matchDigest.suggestions.length > 0 ? (
+        <section>
+          <Card className={`${workspacePanelCard} min-w-0 overflow-hidden`}>
+            <CardContent className="p-4 sm:p-5">
+              <div className="mb-3 flex items-start justify-between gap-3">
+                <div className="min-w-0">
+                  <h3 className="text-base font-semibold text-[var(--workspace-shell-text)]">
+                    Desk digest — suggested fits
+                  </h3>
+                  <p className={`text-sm ${workspaceTextMuted}`}>
+                    Recent requirements scored against live stock
+                  </p>
+                </div>
+              </div>
+              <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
+                {matchDigest.suggestions.map((item) => (
+                  <li
+                    key={`${item.listingId}:${item.requirementId}`}
+                    className="flex min-w-0 flex-wrap items-center justify-between gap-2 py-3"
+                  >
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {item.requirementLabel}
+                        <span className={`font-normal ${workspaceTextMuted}`}>
+                          {' '}
+                          → {item.listingName}
+                        </span>
+                      </p>
+                      <p className={`truncate text-xs ${workspaceTextMuted}`}>
+                        {item.reasons.slice(0, 2).join(' · ') ||
+                          `${item.score}% fit`}
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)] tabular-nums">
+                        {item.score}%
+                      </span>
+                      <Button asChild size="sm" variant="outline">
+                        <Link
+                          href={accountPath(
+                            accountSlug,
+                            pathsConfig.app.accountListingDetail,
+                          ).replace('[id]', item.listingId)}
+                        >
+                          Open
+                        </Link>
+                      </Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </CardContent>
+          </Card>
+        </section>
+      ) : null}
 
       <section className="grid min-w-0 gap-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
         <Card className={`${workspacePanelCard} min-w-0 overflow-hidden`}>

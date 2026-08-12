@@ -8,6 +8,7 @@ import { ColumnDef } from '@tanstack/react-table';
 import { useForm, useWatch } from 'react-hook-form';
 import { z } from 'zod';
 
+import { AdminImpersonateUserDialog } from '@kit/admin/components/admin-impersonate-user-dialog';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import { DataTable } from '@kit/ui/enhanced-data-table';
@@ -150,6 +151,8 @@ const columns: ColumnDef<AdminUserRow>[] = [
     header: '',
     cell: ({ row }) => {
       const accountId = row.original.personalAccountId;
+      const userId = row.original.id;
+      const canImpersonate = !row.original.isSuperAdmin && !row.original.banned;
 
       if (!accountId) {
         return (
@@ -158,9 +161,18 @@ const columns: ColumnDef<AdminUserRow>[] = [
       }
 
       return (
-        <Button asChild variant="outline" size="sm">
-          <Link href={`/admin/accounts/${accountId}`}>View account</Link>
-        </Button>
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/admin/accounts/${accountId}`}>View account</Link>
+          </Button>
+          {canImpersonate ? (
+            <AdminImpersonateUserDialog userId={userId}>
+              <Button variant="secondary" size="sm">
+                Impersonate
+              </Button>
+            </AdminImpersonateUserDialog>
+          ) : null}
+        </div>
       );
     },
   },

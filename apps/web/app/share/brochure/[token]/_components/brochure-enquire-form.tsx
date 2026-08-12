@@ -14,6 +14,9 @@ type BrochureEnquireFormProps = {
   listingName: string;
 };
 
+const enquireFieldClassName =
+  'border-white/20 bg-white/10 text-[var(--ozer-text-on-dark)] placeholder:text-white/40 focus-visible:border-[var(--brochure-accent)]/50 focus-visible:ring-[var(--brochure-accent)]/30';
+
 export function BrochureEnquireForm({
   token,
   listingName,
@@ -24,7 +27,7 @@ export function BrochureEnquireForm({
 
   if (sent) {
     return (
-      <div className="rounded-2xl border border-[var(--ozer-border-on-dark)]/40 bg-[var(--ozer-plum-950)]/60 p-6 text-center">
+      <div className="rounded-2xl border border-white/15 bg-white/5 p-6 text-center">
         <p className="font-heading text-lg font-bold text-[var(--ozer-text-on-dark)]">
           Thank you
         </p>
@@ -88,7 +91,7 @@ export function BrochureEnquireForm({
             name="contactName"
             required
             disabled={pending}
-            className="border-[var(--ozer-border-on-dark)]/50 bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]"
+            className={enquireFieldClassName}
           />
         </div>
         <div className="space-y-1.5">
@@ -104,7 +107,7 @@ export function BrochureEnquireForm({
             type="email"
             required
             disabled={pending}
-            className="border-[var(--ozer-border-on-dark)]/50 bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]"
+            className={enquireFieldClassName}
           />
         </div>
       </div>
@@ -121,7 +124,7 @@ export function BrochureEnquireForm({
           name="contactPhone"
           type="tel"
           disabled={pending}
-          className="border-[var(--ozer-border-on-dark)]/50 bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]"
+          className={enquireFieldClassName}
         />
       </div>
 
@@ -138,7 +141,7 @@ export function BrochureEnquireForm({
           rows={3}
           disabled={pending}
           placeholder="Tell us what you’re looking for…"
-          className="border-[var(--ozer-border-on-dark)]/50 bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]"
+          className={enquireFieldClassName}
         />
       </div>
 

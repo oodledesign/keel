@@ -42,6 +42,11 @@ export function buildPersonalSettingsNav(): PersonalSettingsNavItem[] {
       href: pathsConfig.app.personalAccountShortcutsSettings,
     },
     {
+      id: 'vision',
+      label: 'Personal Vision',
+      href: pathsConfig.app.personalAccountVisionSettings,
+    },
+    {
       id: 'dictation',
       label: 'Dictation history',
       href: pathsConfig.app.personalAccountDictationHistory,

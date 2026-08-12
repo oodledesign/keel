@@ -884,6 +884,24 @@ export function createListingsService(client: SupabaseClient) {
       return attachCoAgents(client, accountId, withAgents);
     },
 
+    async listCompletedDisposals(
+      accountId: string,
+    ): Promise<CommercialListing[]> {
+      const { data, error } = await client
+        .from('commercial_listings')
+        .select('*')
+        .eq('account_id', accountId)
+        .in('status', ['sold', 'let'])
+        .order('updated_at', { ascending: false });
+
+      if (error) {
+        console.error('[listings] listCompletedDisposals error:', error.message);
+        return [];
+      }
+
+      return ((data ?? []) as ListingRow[]).map(mapListing);
+    },
+
     async getListing(
       listingId: string,
       accountId: string,
@@ -1521,7 +1539,24 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to update enquiry');
       }
 
-      return mapEnquiry(data as EnquiryRow);
+      const enquiry = mapEnquiry(data as EnquiryRow);
+
+      if (enquiry.listingId && enquiry.requirementId) {
+        try {
+          const { createMatchesService } = await import('./matches.service');
+          await createMatchesService(client).ensureMatch({
+            accountId,
+            listingId: enquiry.listingId,
+            requirementId: enquiry.requirementId,
+            status: 'new',
+            notes: 'Auto-linked from enquiry',
+          });
+        } catch (err) {
+          console.error('[listings] ensureMatch from enquiry failed:', err);
+        }
+      }
+
+      return enquiry;
     },
 
     async getInterestSummary(listingId: string): Promise<{

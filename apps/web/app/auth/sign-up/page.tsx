@@ -13,6 +13,7 @@ import {
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { AuthSplitShell } from '../_components/auth-split-shell';
+import { CommercialSignUpFlow } from './_components/commercial-sign-up-flow';
 import { SignupContextPanel } from './_components/signup-context-panel';
 
 interface SignUpPageProps {
@@ -34,6 +35,17 @@ async function SignUpPage({ searchParams }: SignUpPageProps) {
   const { next } = await searchParams;
   const context = resolveSignupContext(next);
 
+  if (context.showPlanConfirm) {
+    return (
+      <CommercialSignUpFlow
+        initialContext={context}
+        captchaSiteKey={authConfig.captchaTokenSiteKey}
+        displayTermsCheckbox={authConfig.displayTermsCheckbox}
+        providers={getSignUpAuthProviders()}
+      />
+    );
+  }
+
   const paths = {
     callback: pathsConfig.auth.callback,
     appHome: getSafeRedirectPath(next, pathsConfig.app.home),
@@ -41,10 +53,11 @@ async function SignUpPage({ searchParams }: SignUpPageProps) {
 
   return (
     <AuthSplitShell
-      brandHeadline="Get access to your personal hub for clarity and productivity."
+      brandEyebrow={context.brandEyebrow}
+      brandHeadline={context.brandHeadline}
       brandFooter={<SignupContextPanel context={context} />}
-      formTitle="Create an account"
-      formSubtitle="Access your tasks, notes, and projects anytime — and keep everything flowing in one place."
+      formTitle={context.formTitle}
+      formSubtitle={context.formSubtitle}
     >
       <SignUpMethodsContainer
         providers={getSignUpAuthProviders()}

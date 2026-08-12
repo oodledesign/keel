@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 import { ArrowRight, Link2 } from 'lucide-react';
 
@@ -367,25 +368,30 @@ function BentoVisual({
 
   if (kind === 'activity') {
     return (
-      <div aria-hidden className="relative flex h-24 w-full items-center px-2">
-        <svg viewBox="0 0 220 80" className="h-full w-full" fill="none">
-          <path
-            d="M4 58 C 30 58, 36 22, 58 22 S 90 62, 112 48 S 150 12, 170 28 S 200 54, 216 40"
-            stroke={bar}
-            strokeWidth="3"
-            strokeLinecap="round"
-            className="drop-shadow-[0_0_10px_var(--ozer-coral-alpha-45)]"
-          />
-          <circle cx="170" cy="28" r="6" fill={bar} />
-          <circle
-            cx="170"
-            cy="28"
-            r="12"
-            stroke={soft}
-            strokeWidth="2"
-            fill="none"
-          />
-        </svg>
+      <div className="relative -mx-1 flex h-28 w-full items-center justify-center overflow-hidden rounded-xl">
+        <Image
+          src="/brand/marketing/activity-on-your-mac.png"
+          alt=""
+          width={440}
+          height={214}
+          className="h-full w-auto max-w-none object-contain object-left"
+          sizes="(max-width: 768px) 90vw, 360px"
+        />
+      </div>
+    );
+  }
+
+  if (kind === 'dictation') {
+    return (
+      <div className="relative flex h-20 w-full items-center justify-center overflow-hidden px-1">
+        <Image
+          src="/brand/marketing/dictation-listening.png"
+          alt=""
+          width={614}
+          height={180}
+          className="h-14 w-auto max-w-full object-contain"
+          sizes="(max-width: 768px) 80vw, 280px"
+        />
       </div>
     );
   }

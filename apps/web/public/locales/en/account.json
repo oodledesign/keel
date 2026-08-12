@@ -155,5 +155,8 @@
   "clientsSelectTeam": "Clients are managed per team. Select a team from the menu above to view and add clients.",
   "clientsNeedTeam": "Clients are tied to a shared space for your crew or business. Create or join one to manage clients, then open it from Home.",
   "goSelectTeam": "Go to Home",
-  "goToHome": "Go to Home"
+  "goToHome": "Go to Home",
+  "visionSettingsTitle": "Personal Vision",
+  "visionSettingsDescription": "Build a daily practice deck that reminds you why the work matters. Empty stages are skipped when you play the slideshow.",
+  "visionPlayerTitle": "Personal Vision"
 }

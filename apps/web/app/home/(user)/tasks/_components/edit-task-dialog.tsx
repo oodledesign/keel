@@ -27,7 +27,6 @@ import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -298,6 +297,7 @@ export function EditTaskDialog({
   const [subtasksExpanded, setSubtasksExpanded] = useState(true);
   const [subtasksLoading, setSubtasksLoading] = useState(false);
   const [repeat, setRepeat] = useState(false);
+  const [repeatOpen, setRepeatOpen] = useState(false);
   const [frequency, setFrequency] = useState<RecurrenceFrequency>('monthly');
   const [firstCreateDate, setFirstCreateDate] = useState(() =>
     new Date().toISOString().slice(0, 10),
@@ -314,6 +314,12 @@ export function EditTaskDialog({
     Array<{ id: string; title: string; preview: string }>
   >([]);
   const [creatingNote, setCreatingNote] = useState(false);
+  const [source, setSource] = useState(task.source ?? 'manual');
+  const [sourceContext, setSourceContext] = useState(
+    task.sourceContext ?? null,
+  );
+  const [sourceExpanded, setSourceExpanded] = useState(false);
+  const [sourceLoading, setSourceLoading] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
   const isWorkspaceMode = Boolean(workspaceAccountId);
@@ -380,12 +386,16 @@ export function EditTaskDialog({
       setDeleteDialogOpen(false);
       setNewSubtaskTitle('');
       setRepeat(false);
+      setRepeatOpen(false);
       setPickerOpen(false);
       setPickerQuery('');
       setFirstCreateDate(new Date().toISOString().slice(0, 10));
       setDayOfMonth(String(new Date().getUTCDate()));
       setDueDays('0');
       setFrequency('monthly');
+      setSource(task.source ?? 'manual');
+      setSourceContext(task.sourceContext ?? null);
+      setSourceExpanded(false);
     }
     // Reset from the opened task snapshot; listing every nested field would still miss props.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- open + task.id gate the form reset
@@ -401,7 +411,32 @@ export function EditTaskDialog({
     task.projectId,
     task.clientId,
     task.areaId,
+    task.source,
+    task.sourceContext,
   ]);
+
+  useEffect(() => {
+    if (!open) return;
+
+    let cancelled = false;
+    setSourceLoading(true);
+    void loadTaskForEdit(task.id, workspaceAccountId)
+      .then((fresh) => {
+        if (cancelled || !fresh) return;
+        setSource(fresh.source ?? 'manual');
+        setSourceContext(fresh.sourceContext ?? null);
+        if (fresh.subtasks) {
+          setSubtasks(fresh.subtasks);
+        }
+      })
+      .finally(() => {
+        if (!cancelled) setSourceLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, task.id, workspaceAccountId]);
 
   useEffect(() => {
     if (!open || !pickerOpen || !notesAccountId) return;
@@ -570,20 +605,77 @@ export function EditTaskDialog({
         <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Edit task</DialogTitle>
-            <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-              <strong className="font-medium text-[var(--workspace-shell-text-muted)]">
-                Work
-              </strong>{' '}
-              means linked to a team workspace project or CRM client (your
-              business workspace).{' '}
-              <strong className="font-medium text-[var(--workspace-shell-text-muted)]">
-                Life
-              </strong>{' '}
-              is a personal area or no link — separate from team workspaces.
-            </DialogDescription>
           </DialogHeader>
 
           <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-1.5">
+              <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                Source
+              </p>
+              {sourceLoading && !sourceContext && source === 'manual' ? (
+                <p className="flex items-center gap-1.5 text-sm text-[var(--workspace-shell-text-muted)]">
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  Loading…
+                </p>
+              ) : source === 'manual' ? (
+                <p className="text-sm text-[var(--workspace-shell-text)]">
+                  Manual
+                </p>
+              ) : (
+                <div className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm text-[var(--workspace-shell-text)]"
+                    onClick={() => setSourceExpanded((v) => !v)}
+                    aria-expanded={sourceExpanded}
+                  >
+                    <span className="font-medium">
+                      {source === 'meeting' ? 'Meeting' : 'Email'}
+                      {sourceContext?.title ? ` · ${sourceContext.title}` : ''}
+                    </span>
+                    {sourceExpanded ? (
+                      <ChevronDown className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+                    ) : (
+                      <ChevronRight className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+                    )}
+                  </button>
+                  {sourceExpanded ? (
+                    <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] px-3 py-2.5">
+                      {sourceLoading ? (
+                        <p className="flex items-center gap-1.5 text-xs text-[var(--workspace-shell-text-muted)]">
+                          <Loader2 className="h-3 w-3 animate-spin" />
+                          Loading context…
+                        </p>
+                      ) : (
+                        <>
+                          {sourceContext?.excerpt ? (
+                            <blockquote className="border-l-2 border-[var(--ozer-accent)]/60 pl-3 text-sm text-[var(--workspace-shell-text-muted)] italic">
+                              {sourceContext.excerpt}
+                            </blockquote>
+                          ) : (
+                            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                              No excerpt available for this{' '}
+                              {source === 'meeting' ? 'meeting' : 'email'}.
+                            </p>
+                          )}
+                          {sourceContext?.href ? (
+                            <a
+                              href={sourceContext.href}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex text-xs font-medium text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+                            >
+                              Open {source === 'meeting' ? 'meeting' : 'email'}
+                            </a>
+                          ) : null}
+                        </>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
+
             {task.recurringSeriesId ? (
               <div className="flex flex-col gap-2 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
                 <p className="text-sm text-[var(--workspace-shell-text)]">
@@ -638,7 +730,57 @@ export function EditTaskDialog({
                   </Button>
                 </div>
               </div>
-            ) : (
+            ) : null}
+
+            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+              <div className="space-y-2">
+                <Label
+                  htmlFor="edit-title"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Title *
+                </Label>
+                <Input
+                  id="edit-title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+              </div>
+              <div className="space-y-2 sm:w-[11rem]">
+                <Label
+                  htmlFor="edit-due"
+                  className="text-[var(--workspace-shell-text-muted)]"
+                >
+                  Due date
+                </Label>
+                <Input
+                  id="edit-due"
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
+                />
+                {!task.recurringSeriesId ? (
+                  <button
+                    type="button"
+                    className="text-xs font-medium text-[var(--ozer-accent)] underline-offset-2 hover:underline"
+                    onClick={() => {
+                      setRepeatOpen((open) => {
+                        const next = !open;
+                        if (!next) setRepeat(false);
+                        return next;
+                      });
+                    }}
+                  >
+                    {repeatOpen ? 'Hide recurring' : 'Make recurring'}
+                  </button>
+                ) : null}
+              </div>
+            </div>
+
+            {!task.recurringSeriesId && repeatOpen ? (
               <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/50 p-3">
                 <div className="flex items-center justify-between gap-3">
                   <div>
@@ -734,40 +876,7 @@ export function EditTaskDialog({
                   </div>
                 ) : null}
               </div>
-            )}
-
-            <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
-              <div className="space-y-2">
-                <Label
-                  htmlFor="edit-title"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Title *
-                </Label>
-                <Input
-                  id="edit-title"
-                  value={title}
-                  onChange={(e) => setTitle(e.target.value)}
-                  required
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-              </div>
-              <div className="space-y-2 sm:w-[11rem]">
-                <Label
-                  htmlFor="edit-due"
-                  className="text-[var(--workspace-shell-text-muted)]"
-                >
-                  Due date
-                </Label>
-                <Input
-                  id="edit-due"
-                  type="date"
-                  value={dueDate}
-                  onChange={(e) => setDueDate(e.target.value)}
-                  className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)]"
-                />
-              </div>
-            </div>
+            ) : null}
 
             <div className="space-y-2">
               <Label

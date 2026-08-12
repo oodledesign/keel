@@ -154,8 +154,9 @@ async function loadClientDetailPageDataImpl(
     defaultLink = workspaceContentResult.defaultLink;
   }
 
-  const [ranklyProject, ranklyImportSeed, ranklyClientImportOptions] =
+  const [ranklyProject, ranklyImportSeed, ranklyClientImportOptionsRaw] =
     ranklyResult;
+  const ranklyClientImportOptions = [...(ranklyClientImportOptionsRaw ?? [])];
 
   const overviewSeed: ClientDetailOverviewSeed = {
     jobs: Array.isArray(jobsResult)
@@ -202,6 +203,9 @@ async function loadClientDetailPageDataImpl(
       )
     : null;
 
+  const variant: 'work' | 'commercial' =
+    workspaceProfile === 'commercial_property' ? 'commercial' : 'work';
+
   const clientRecord = clientRow as {
     display_name?: string | null;
     first_name?: string | null;
@@ -213,7 +217,7 @@ async function loadClientDetailPageDataImpl(
       .filter(Boolean)
       .join(' ')
       .trim() ||
-    'Client';
+    (variant === 'commercial' ? 'Contact' : 'Client');
 
   return {
     accountId,
@@ -233,11 +237,13 @@ async function loadClientDetailPageDataImpl(
     defaultLink,
     notesVariant: notesVariantFromProfile(workspaceProfile),
     showCommercialRole: workspaceProfile === 'commercial_property',
-    ranklyEnabled,
-    ranklyProject,
-    ranklyImportSeed,
-    ranklyClientImportOptions,
+    variant,
+    ranklyEnabled: variant === 'commercial' ? false : ranklyEnabled,
+    ranklyProject: variant === 'commercial' ? null : ranklyProject,
+    ranklyImportSeed: variant === 'commercial' ? null : ranklyImportSeed,
+    ranklyClientImportOptions:
+      variant === 'commercial' ? [] : ranklyClientImportOptions,
     overviewSeed,
-    supportEnabled,
+    supportEnabled: variant === 'commercial' ? false : supportEnabled,
   };
 }

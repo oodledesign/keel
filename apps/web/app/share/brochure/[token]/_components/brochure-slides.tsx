@@ -59,7 +59,11 @@ export function buildBrochureSlides(data: PublicBrochureData): BrochureSlide[] {
   if (data.listing.description?.trim()) {
     slides.push({ kind: 'description' });
   }
-  if (data.listing.locationCopy?.trim()) {
+  const hasLocationSlide =
+    Boolean(data.listing.locationCopy?.trim()) ||
+    (data.listing.latitude != null && data.listing.longitude != null) ||
+    Boolean(formatBrochureAddress(data.listing));
+  if (hasLocationSlide) {
     slides.push({ kind: 'location' });
   }
 
@@ -148,7 +152,7 @@ function CoverSlide({
 
       <div className="relative z-10 w-full px-6 pt-10 pb-24 sm:px-10 sm:pb-28 md:px-16">
         <motion.p
-          className="text-xs font-medium tracking-[0.18em] text-[var(--brochure-accent)] uppercase"
+          className="inline-flex rounded-full bg-[var(--brochure-accent)] px-3.5 py-1.5 text-xs font-semibold tracking-[0.16em] text-[var(--brochure-primary)] uppercase shadow-[0_2px_12px_rgba(0,0,0,0.35)] ring-1 ring-black/25"
           {...fadeProps(reduced, 0.05)}
         >
           {formatDisposalLabel(listing.disposalType)}
@@ -390,74 +394,149 @@ function AgentCard({ agent }: { agent: BrochureAgent }) {
   );
 }
 
+function LocationSlide({ listing }: { listing: BrochureListing }) {
+  const reduced = useReducedMotion() ?? false;
+  const address = formatBrochureAddress(listing);
+  const mapQuery =
+    listing.latitude != null && listing.longitude != null
+      ? `${listing.latitude},${listing.longitude}`
+      : address;
+  const embedSrc = mapQuery
+    ? `https://maps.google.com/maps?q=${encodeURIComponent(mapQuery)}&z=15&output=embed`
+    : null;
+
+  return (
+    <div className="flex h-full w-full items-center justify-center bg-[var(--brochure-primary)] px-6 py-20 sm:px-10 md:px-12 lg:px-16">
+      <div className="grid w-full max-w-6xl gap-8 lg:grid-cols-2 lg:items-center lg:gap-12">
+        <div>
+          <motion.p
+            className="text-xs font-medium tracking-[0.18em] text-[var(--brochure-accent)] uppercase"
+            {...fadeProps(reduced)}
+          >
+            Location
+          </motion.p>
+          <motion.h2
+            className="font-heading mt-3 text-3xl font-bold text-[var(--ozer-text-on-dark)] sm:text-4xl"
+            {...fadeProps(reduced, 0.06)}
+          >
+            The area
+          </motion.h2>
+          {address ? (
+            <motion.p
+              className="mt-3 text-sm text-[var(--ozer-text-on-dark-muted)] sm:text-base"
+              {...fadeProps(reduced, 0.1)}
+            >
+              {address}
+            </motion.p>
+          ) : null}
+          {listing.locationCopy?.trim() ? (
+            <motion.p
+              className="mt-6 text-base leading-relaxed whitespace-pre-line text-[var(--ozer-text-on-dark-muted)] sm:text-lg"
+              {...fadeProps(reduced, 0.12)}
+            >
+              {listing.locationCopy}
+            </motion.p>
+          ) : null}
+        </div>
+
+        <motion.div
+          className="overflow-hidden rounded-2xl border border-white/15 bg-black/20 shadow-lg"
+          {...fadeProps(reduced, 0.14)}
+        >
+          {embedSrc ? (
+            <iframe
+              title="Property location map"
+              src={embedSrc}
+              className="h-[min(48vh,28rem)] w-full border-0 lg:h-[min(56vh,32rem)]"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+              sandbox="allow-scripts allow-same-origin allow-popups allow-forms"
+              allowFullScreen
+            />
+          ) : (
+            <div className="flex h-64 items-center justify-center px-6 text-center text-sm text-[var(--ozer-text-on-dark-muted)]">
+              Map unavailable for this property.
+            </div>
+          )}
+        </motion.div>
+      </div>
+    </div>
+  );
+}
+
 function ContactSlide({ data }: { data: PublicBrochureData }) {
   const reduced = useReducedMotion() ?? false;
 
   return (
-    <div className="h-full w-full overflow-y-auto bg-[var(--brochure-primary)] px-6 py-16 sm:px-10 md:px-16">
-      <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-2 lg:items-start">
-        <div>
-          {data.brand.logoUrl ? (
-            <motion.div className="mb-6" {...fadeProps(reduced)}>
-              <Image
-                src={data.brand.logoUrl}
-                alt={data.accountName ?? 'Agency'}
-                width={180}
-                height={56}
-                unoptimized
-                className="h-12 w-auto max-w-[200px] object-contain"
-              />
-            </motion.div>
-          ) : null}
-          <motion.p
-            className="text-xs font-medium tracking-[0.18em] text-[var(--brochure-accent)] uppercase"
-            {...fadeProps(reduced, 0.04)}
-          >
-            Get in touch
-          </motion.p>
-          <motion.h2
-            className="font-heading mt-3 text-3xl font-bold text-[var(--ozer-text-on-dark)] sm:text-4xl"
-            {...fadeProps(reduced, 0.08)}
-          >
-            Interested in this property?
-          </motion.h2>
-          {data.accountName ? (
+    <div className="h-full w-full overflow-y-auto bg-[var(--brochure-primary)]">
+      <div className="flex min-h-full items-center justify-center px-6 py-20 sm:px-10 md:px-16">
+        <div className="mx-auto grid w-full max-w-5xl gap-10 lg:grid-cols-2 lg:items-center">
+          <div>
+            {data.brand.logoUrl ? (
+              <motion.div className="mb-6" {...fadeProps(reduced)}>
+                <Image
+                  src={data.brand.logoUrl}
+                  alt={data.accountName ?? 'Agency'}
+                  width={180}
+                  height={56}
+                  unoptimized
+                  className="h-12 w-auto max-w-[200px] object-contain"
+                />
+              </motion.div>
+            ) : null}
             <motion.p
-              className="mt-3 text-[var(--ozer-text-on-dark-muted)]"
-              {...fadeProps(reduced, 0.1)}
+              className="text-xs font-medium tracking-[0.18em] text-[var(--brochure-accent)] uppercase"
+              {...fadeProps(reduced, 0.04)}
             >
-              {data.accountName}
+              Get in touch
             </motion.p>
-          ) : null}
+            <motion.h2
+              className="font-heading mt-3 text-3xl font-bold text-[var(--ozer-text-on-dark)] sm:text-4xl"
+              {...fadeProps(reduced, 0.08)}
+            >
+              Interested in this property?
+            </motion.h2>
+            {data.accountName ? (
+              <motion.p
+                className="mt-3 text-[var(--ozer-text-on-dark-muted)]"
+                {...fadeProps(reduced, 0.1)}
+              >
+                {data.accountName}
+              </motion.p>
+            ) : null}
 
-          <motion.div className="mt-8 space-y-3" {...fadeProps(reduced, 0.14)}>
-            {data.agents.length === 0 ? (
-              <p className="text-sm text-[var(--ozer-text-on-dark-muted)]">
-                Send an enquiry and the team will respond.
-              </p>
-            ) : (
-              data.agents.map((agent) => (
-                <AgentCard key={agent.userId} agent={agent} />
-              ))
-            )}
+            <motion.div
+              className="mt-8 space-y-3"
+              {...fadeProps(reduced, 0.14)}
+            >
+              {data.agents.length === 0 ? (
+                <p className="text-sm text-[var(--ozer-text-on-dark-muted)]">
+                  Send an enquiry and the team will respond.
+                </p>
+              ) : (
+                data.agents.map((agent) => (
+                  <AgentCard key={agent.userId} agent={agent} />
+                ))
+              )}
+            </motion.div>
+          </div>
+
+          <motion.div
+            className="rounded-2xl border border-white/15 bg-black/25 p-5 sm:p-6"
+            {...fadeProps(reduced, 0.12)}
+          >
+            <p className="font-heading text-lg font-bold text-[var(--ozer-text-on-dark)]">
+              Enquire
+            </p>
+            <p className="mt-1 mb-5 text-sm text-[var(--ozer-text-on-dark-muted)]">
+              We’ll pass your details to the acting agent.
+            </p>
+            <BrochureEnquireForm
+              token={data.token}
+              listingName={data.listing.name}
+            />
           </motion.div>
         </div>
-
-        <motion.div
-          className="rounded-2xl border border-white/15 bg-black/25 p-5 sm:p-6"
-          {...fadeProps(reduced, 0.12)}
-        >
-          <p className="font-heading text-lg font-bold text-[var(--ozer-text-on-dark)]">
-            Enquire
-          </p>
-          <p className="mt-1 mb-5 text-sm text-[var(--ozer-text-on-dark-muted)]">
-            We’ll pass your details to the acting agent.
-          </p>
-          <BrochureEnquireForm
-            token={data.token}
-            listingName={data.listing.name}
-          />
-        </motion.div>
       </div>
     </div>
   );
@@ -512,13 +591,7 @@ export function BrochureSlideView({ data, slide }: SlideProps) {
         />
       );
     case 'location':
-      return (
-        <CopySlide
-          eyebrow="Location"
-          title="The area"
-          body={data.listing.locationCopy}
-        />
-      );
+      return <LocationSlide listing={data.listing} />;
     case 'floorplan':
       return (
         <PhotoSlide

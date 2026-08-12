@@ -31,13 +31,22 @@ import {
 import { If } from '@kit/ui/if';
 import { Input } from '@kit/ui/input';
 import { LoadingOverlay } from '@kit/ui/loading-overlay';
+import { Textarea } from '@kit/ui/textarea';
 
 import { impersonateUserAction } from '../lib/server/admin-server-actions';
 import { ImpersonateUserSchema } from '../lib/server/schema/admin-actions.schema';
 
+type SessionTokens = {
+  accessToken: string;
+  refreshToken: string;
+  nonce: string;
+};
+
 export function AdminImpersonateUserDialog(
   props: React.PropsWithChildren<{
     userId: string;
+    reason?: string;
+    supportTicketId?: string | null;
   }>,
 ) {
   const form = useForm({
@@ -45,16 +54,14 @@ export function AdminImpersonateUserDialog(
     defaultValues: {
       userId: props.userId,
       confirmation: '',
+      reason: props.reason ?? '',
+      supportTicketId: props.supportTicketId ?? null,
     },
   });
 
-  const [tokens, setTokens] = useState<{
-    accessToken: string;
-    refreshToken: string;
-  }>();
-
+  const [tokens, setTokens] = useState<SessionTokens>();
   const [isPending, startTransition] = useTransition();
-  const [error, setError] = useState<boolean | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   if (tokens) {
     return (
@@ -76,8 +83,9 @@ export function AdminImpersonateUserDialog(
 
           <AlertDialogDescription className={'flex flex-col space-y-1'}>
             <span>
-              Are you sure you want to impersonate this user? You will be logged
-              in as this user. To stop impersonating, log out.
+              You will be signed in as this user to diagnose support issues. Use
+              the floating <b>Back to admin</b> control on the right to restore
+              your super-admin session.
             </span>
 
             <span>
@@ -96,23 +104,55 @@ export function AdminImpersonateUserDialog(
                 try {
                   const result = await impersonateUserAction(data);
 
-                  setTokens(result);
-                } catch {
-                  setError(true);
+                  setTokens({
+                    ...result,
+                    nonce: crypto.randomUUID(),
+                  });
+                } catch (err) {
+                  setError(
+                    err instanceof Error
+                      ? err.message
+                      : 'Failed to impersonate user',
+                  );
                 }
               });
             })}
           >
-            <If condition={error}>
+            <If condition={Boolean(error)}>
               <Alert variant={'destructive'}>
                 <AlertTitle>Error</AlertTitle>
 
                 <AlertDescription>
-                  Failed to impersonate user. Please check the logs to
-                  understand what went wrong.
+                  {error ??
+                    'Failed to impersonate user. Please check the logs to understand what went wrong.'}
                 </AlertDescription>
               </Alert>
             </If>
+
+            <FormField
+              name={'reason'}
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Reason</FormLabel>
+
+                  <FormControl>
+                    <Textarea
+                      required
+                      minLength={3}
+                      maxLength={500}
+                      placeholder={'Support ticket / what you need to verify'}
+                      {...field}
+                    />
+                  </FormControl>
+
+                  <FormDescription>
+                    Logged in the admin audit trail. Minimum 3 characters.
+                  </FormDescription>
+
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
 
             <FormField
               name={'confirmation'}
@@ -154,27 +194,21 @@ export function AdminImpersonateUserDialog(
   );
 }
 
-function ImpersonateUserAuthSetter({
-  tokens,
-}: React.PropsWithChildren<{
-  tokens: {
-    accessToken: string;
-    refreshToken: string;
-  };
-}>) {
-  useSetSession(tokens);
+function ImpersonateUserAuthSetter(props: { tokens: SessionTokens }) {
+  useSetSession(props.tokens);
 
   return <LoadingOverlay>Setting up your session...</LoadingOverlay>;
 }
 
-function useSetSession(tokens: { accessToken: string; refreshToken: string }) {
+function useSetSession(tokens: SessionTokens) {
   const supabase = useSupabase();
 
   return useQuery({
-    queryKey: ['impersonate-user', tokens.accessToken, tokens.refreshToken],
+    // Opaque nonce only — never put bearer tokens in the query cache key.
+    queryKey: ['impersonate-user', tokens.nonce],
     gcTime: 0,
     queryFn: async () => {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut({ scope: 'local' });
 
       await supabase.auth.setSession({
         refresh_token: tokens.refreshToken,

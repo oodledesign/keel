@@ -129,7 +129,27 @@ export function createViewingsService(client: SupabaseClient) {
       if (error || !data) {
         throw new Error(error?.message ?? 'Failed to create viewing');
       }
-      return mapViewing(data as Row);
+
+      const viewing = mapViewing(data as Row);
+      if (viewing.listingId && viewing.requirementId) {
+        try {
+          const { createMatchesService } =
+            await import('../../../listings/_lib/server/matches.service');
+          await createMatchesService(client).ensureMatch({
+            accountId: input.accountId,
+            listingId: viewing.listingId,
+            requirementId: viewing.requirementId,
+            status: 'viewing_arranged',
+            promoteStatus: 'viewing_arranged',
+            notes: 'Auto-linked from viewing',
+            createdBy: input.createdBy ?? null,
+          });
+        } catch (err) {
+          console.error('[viewings] ensureMatch on create failed:', err);
+        }
+      }
+
+      return viewing;
     },
 
     async updateViewing(
@@ -171,7 +191,25 @@ export function createViewingsService(client: SupabaseClient) {
       if (error || !data) {
         throw new Error(error?.message ?? 'Failed to update viewing');
       }
-      return mapViewing(data as Row);
+
+      const viewing = mapViewing(data as Row);
+      if (viewing.listingId && viewing.requirementId) {
+        try {
+          const { createMatchesService } =
+            await import('../../../listings/_lib/server/matches.service');
+          await createMatchesService(client).ensureMatch({
+            accountId,
+            listingId: viewing.listingId,
+            requirementId: viewing.requirementId,
+            promoteStatus: 'viewing_arranged',
+            notes: 'Auto-linked from viewing',
+          });
+        } catch (err) {
+          console.error('[viewings] ensureMatch on update failed:', err);
+        }
+      }
+
+      return viewing;
     },
 
     async deleteViewing(viewingId: string, accountId: string): Promise<void> {

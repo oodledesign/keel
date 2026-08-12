@@ -7,16 +7,38 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { indexAccount } from '~/lib/brain/indexer';
+import { indexAccountBatch } from '~/lib/brain/indexer';
 import { isVoyageConfigured } from '~/lib/brain/voyage';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
 
 export const runtime = 'nodejs';
-export const maxDuration = 300;
+export const maxDuration = 60;
+
+const REINDEX_BATCH_SIZE = 4;
+
+const SourceRefSchema = z.object({
+  sourceType: z.enum([
+    'note',
+    'doc',
+    'job',
+    'job_note',
+    'phase',
+    'transcript',
+    'proposal',
+    'task',
+    'email_thread',
+  ]),
+  sourceId: z.string().uuid(),
+  title: z.string(),
+});
 
 const BodySchema = z.object({
   accountId: z.string().uuid(),
-  accountSlug: z.string().min(1),
+  accountSlug: z.string().min(1).optional(),
+  offset: z.number().int().min(0).optional().default(0),
+  limit: z.number().int().min(1).max(20).optional(),
+  sources: z.array(SourceRefSchema).max(20).optional(),
+  total: z.number().int().min(0).optional(),
 });
 
 export const POST = enhanceRouteHandler(
@@ -49,16 +71,28 @@ export const POST = enhanceRouteHandler(
     }
 
     const admin = getSupabaseServerAdminClient();
-    const result = await indexAccount(admin, parsed.data.accountId, {
+    const result = await indexAccountBatch(admin, parsed.data.accountId, {
       force: true,
+      offset: parsed.data.offset,
+      limit: parsed.data.limit ?? REINDEX_BATCH_SIZE,
+      sources: parsed.data.sources,
+      total: parsed.data.total,
     });
 
-    revalidatePath(
-      pathsConfig.app.accountBrainKnowledge.replace(
-        '[account]',
-        parsed.data.accountSlug,
-      ),
-    );
+    if (result.done) {
+      const { data: account } = await admin
+        .from('accounts')
+        .select('slug')
+        .eq('id', parsed.data.accountId)
+        .maybeSingle();
+
+      const slug = (account?.slug as string | undefined)?.trim();
+      if (slug) {
+        revalidatePath(
+          pathsConfig.app.accountBrainKnowledge.replace('[account]', slug),
+        );
+      }
+    }
 
     return Response.json(result);
   },

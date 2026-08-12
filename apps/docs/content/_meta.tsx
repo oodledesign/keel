@@ -1,6 +1,6 @@
 import type { MetaRecord } from 'nextra';
 
-import { WorkspaceSidebarHeader } from '../../components/workspace-sidebar-header';
+import { WorkspaceSidebarHeader } from '../components/workspace-sidebar-header';
 
 /**
  * Root meta: introduction + workspace picker.

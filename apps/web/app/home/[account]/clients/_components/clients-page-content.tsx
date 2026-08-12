@@ -44,7 +44,7 @@ import { ClientCreateDialog } from './client-create-dialog';
 import { ClientOverviewCard } from './client-overview-card';
 
 type ViewMode = 'cards' | 'list';
-type SortKey = 'name-asc' | 'name-desc' | 'recent' | 'projects';
+type SortKey = 'name-asc' | 'name-desc' | 'recent' | 'projects' | 'disposals';
 
 const panelToolbarClass =
   'border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -85,6 +85,13 @@ function sortClients(items: ClientOverviewItem[], sort: SortKey) {
         a.displayName.localeCompare(b.displayName)
       );
     }
+    if (sort === 'disposals') {
+      return (
+        b.disposalCount - a.disposalCount ||
+        b.requirementCount - a.requirementCount ||
+        a.displayName.localeCompare(b.displayName)
+      );
+    }
     if (sort === 'recent') {
       return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime();
     }
@@ -118,8 +125,10 @@ function clientMatchesSearch(
     client.email,
     client.city,
     client.tagline,
+    client.commercialRole,
     client.phone,
     ...client.projects.map((project) => project.title),
+    ...client.highlights.map((item) => item.title),
   ]
     .filter(Boolean)
     .join(' ')
@@ -136,6 +145,7 @@ export function ClientsPageContent({
   isContractorView,
   initialOverview = [],
   initialTotal = 0,
+  variant = 'work',
   pageTitle = 'Clients',
   addClientLabel = 'Add client',
   showCommercialRole = false,
@@ -148,11 +158,13 @@ export function ClientsPageContent({
   isContractorView: boolean;
   initialOverview?: ClientOverviewItem[];
   initialTotal?: number;
+  variant?: 'work' | 'commercial';
   pageTitle?: string;
   addClientLabel?: string;
   showCommercialRole?: boolean;
   showLinkedInImport?: boolean;
 }) {
+  const isCommercial = variant === 'commercial';
   const pathname = usePathname();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -233,6 +245,7 @@ export function ClientsPageContent({
           page: pageNum,
           pageSize,
           members,
+          variant,
         });
         const list = Array.isArray((result as { data?: unknown })?.data)
           ? ((result as { data: ClientOverviewItem[] }).data ?? [])
@@ -250,7 +263,7 @@ export function ClientsPageContent({
         setLoadingPage(false);
       }
     },
-    [accountId, pageSize, members],
+    [accountId, pageSize, members, variant],
   );
 
   const refreshClients = useCallback(async () => {
@@ -294,6 +307,7 @@ export function ClientsPageContent({
             page: nextPage,
             pageSize,
             members,
+            variant,
           });
           const list = Array.isArray((result as { data?: unknown })?.data)
             ? ((result as { data: ClientOverviewItem[] }).data ?? [])
@@ -331,7 +345,7 @@ export function ClientsPageContent({
     return () => {
       cancelled = true;
     };
-  }, [accountId, searchDebounced, pageSize, members]);
+  }, [accountId, searchDebounced, pageSize, members, variant]);
 
   useEffect(() => {
     const t = setTimeout(() => setSearchDebounced(search), 300);
@@ -420,7 +434,13 @@ export function ClientsPageContent({
   }
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
+    <div
+      className={cn(
+        'flex h-full min-h-0 w-full flex-1 flex-col overflow-hidden',
+        !isCommercial &&
+          'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40',
+      )}
+    >
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5">
         <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
           {pageTitle}
@@ -480,7 +500,11 @@ export function ClientsPageContent({
         <div className="relative min-w-[220px] flex-1">
           <Search className="absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
           <Input
-            placeholder="Search clients or projects..."
+            placeholder={
+              isCommercial
+                ? 'Search contacts...'
+                : 'Search clients or projects...'
+            }
             value={search}
             onChange={(e) => {
               setSearch(e.target.value);
@@ -530,7 +554,11 @@ export function ClientsPageContent({
             <SelectItem value="name-asc">Sort: A–Z</SelectItem>
             <SelectItem value="name-desc">Sort: Z–A</SelectItem>
             <SelectItem value="recent">Recently updated</SelectItem>
-            <SelectItem value="projects">Most projects</SelectItem>
+            {isCommercial ? (
+              <SelectItem value="disposals">Most disposals</SelectItem>
+            ) : (
+              <SelectItem value="projects">Most projects</SelectItem>
+            )}
           </SelectContent>
         </Select>
 
@@ -580,8 +608,12 @@ export function ClientsPageContent({
         ) : displayedClients.length === 0 ? (
           <div className="py-12 text-center text-sm text-[var(--workspace-shell-text-muted)]">
             {isSearching
-              ? 'No clients match your search.'
-              : 'No clients yet. Add your first client to get started.'}
+              ? isCommercial
+                ? 'No contacts match your search.'
+                : 'No clients match your search.'
+              : isCommercial
+                ? 'No contacts yet. Add your first contact to get started.'
+                : 'No clients yet. Add your first client to get started.'}
           </div>
         ) : viewMode === 'cards' ? (
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
@@ -590,6 +622,7 @@ export function ClientsPageContent({
                 key={client.id}
                 client={client}
                 accountSlug={accountSlug}
+                variant={variant}
                 isFavorite={favorites.has(client.id)}
                 onToggleFavorite={() => toggleFavorite(client.id)}
               />
@@ -598,8 +631,8 @@ export function ClientsPageContent({
         ) : (
           <div className="overflow-x-auto rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/40">
             <table className="w-full table-fixed border-collapse text-sm">
-              <ClientListTableColGroup />
-              <ClientListTableHeader />
+              <ClientListTableColGroup variant={variant} />
+              <ClientListTableHeader variant={variant} />
               <tbody>
                 {displayedClients.map((client) => (
                   <ClientCard
@@ -607,13 +640,25 @@ export function ClientsPageContent({
                     id={client.id}
                     display_name={client.displayName}
                     company_name={client.companyName}
-                    tagline={client.tagline}
+                    tagline={
+                      isCommercial
+                        ? [client.commercialRole, client.city]
+                            .filter(Boolean)
+                            .join(' · ') || client.tagline
+                        : client.tagline
+                    }
                     email={client.email}
                     city={client.city}
                     picture_url={client.pictureUrl}
                     updated_at={client.updatedAt}
                     projectCount={client.projectCount}
                     dueTaskCount={client.dueTaskCount}
+                    disposalCount={client.disposalCount}
+                    requirementCount={client.requirementCount}
+                    viewingCount={client.viewingCount}
+                    leaseCount={client.leaseCount}
+                    clientType={client.clientType}
+                    variant={variant}
                     selected={false}
                     onSelect={() => openClient(client.id)}
                     detailHref={`${clientsBasePath}/${client.id}`}
@@ -644,7 +689,8 @@ export function ClientsPageContent({
         {!showArchived && !isSearching && totalPages > 1 && (
           <div className="mt-6 flex items-center justify-between text-sm text-[var(--workspace-shell-text-muted)]">
             <span>
-              Page {page} of {totalPages} ({total} clients)
+              Page {page} of {totalPages} ({total}{' '}
+              {isCommercial ? 'contacts' : 'clients'})
             </span>
             <div className="flex gap-2">
               <Button

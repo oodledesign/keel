@@ -52,6 +52,7 @@ import pathsConfig from '~/config/paths.config';
 import { ClientSubscriptionStatusList } from '~/home/[account]/_components/client-subscription-status-list';
 import { websiteHref } from '~/lib/clients/client-logo-domain';
 import { inviteAllContactsToPortalAction } from '~/lib/clients/client-portal-invites-actions';
+import type { CommercialClientRole } from '~/lib/commercial/commercial-constants';
 import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
 import { formatWorkspaceMoney } from '~/lib/currency/workspace-currency';
 
@@ -78,10 +79,20 @@ import {
   deleteClient,
   getClient,
   getJobHistory,
+  listClientDisposals,
+  listClientRequirements,
+  listClientViewings,
   listContacts,
   listNotes,
 } from '../_lib/server/server-actions';
 import { AttachRetainerPlanButton } from './attach-retainer-plan-button';
+import {
+  ClientDisposalsBlock,
+  ClientLeasesBlock,
+  ClientRequirementsBlock,
+  ClientSalesBlock,
+  ClientViewingsBlock,
+} from './client-commercial-blocks';
 import { ClientContactsBlock } from './client-contacts-block';
 import { ClientFinancePanel } from './client-finance-panel';
 import { ClientForm } from './client-form';
@@ -113,6 +124,7 @@ type Client = {
   postcode: string | null;
   country: string | null;
   picture_url: string | null;
+  commercial_role?: CommercialClientRole | null;
   created_at: string;
   updated_at: string;
 };
@@ -126,7 +138,12 @@ type DetailTab =
   | 'meetings'
   | 'notes'
   | 'tasks'
-  | 'support';
+  | 'support'
+  | 'disposals'
+  | 'requirements'
+  | 'viewings'
+  | 'leases'
+  | 'sales';
 
 type ClientJobSummary = {
   id: string;
@@ -260,6 +277,7 @@ export function ClientDetailSidebar({
   defaultLink,
   notesVariant = 'work',
   showCommercialRole = false,
+  variant = 'work',
   ranklyEnabled = false,
   ranklyProject = null,
   ranklyImportSeed = null,
@@ -286,6 +304,7 @@ export function ClientDetailSidebar({
   defaultLink?: LinkValue;
   notesVariant?: WorkspaceNotesVariant;
   showCommercialRole?: boolean;
+  variant?: 'work' | 'commercial';
   ranklyEnabled?: boolean;
   ranklyProject?: RanklyProjectRow | null;
   ranklyImportSeed?: RanklyClientImportOption | null;
@@ -294,6 +313,7 @@ export function ClientDetailSidebar({
   overviewSeed?: ClientDetailOverviewSeed;
   supportEnabled?: boolean;
 }) {
+  const isCommercial = variant === 'commercial';
   const workspaceCurrency = useWorkspaceCurrency();
   const formatMoney = (pence: number) =>
     formatWorkspaceMoney(pence, workspaceCurrency);
@@ -319,6 +339,40 @@ export function ClientDetailSidebar({
   const [resolvedClientOrgId, setResolvedClientOrgId] = useState<string | null>(
     initialClient?.client_org_id ?? null,
   );
+  const [commercialMetrics, setCommercialMetrics] = useState({
+    disposals: 0,
+    requirements: 0,
+    viewings: 0,
+  });
+
+  useEffect(() => {
+    if (!isCommercial) return;
+
+    let cancelled = false;
+
+    void Promise.all([
+      listClientDisposals({ accountId, clientId }),
+      listClientRequirements({ accountId, clientId }),
+      listClientViewings({ accountId, clientId }),
+    ])
+      .then(([disposals, requirements, viewings]) => {
+        if (cancelled) return;
+        setCommercialMetrics({
+          disposals: disposals?.length ?? 0,
+          requirements: requirements?.length ?? 0,
+          viewings: viewings?.length ?? 0,
+        });
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setCommercialMetrics({ disposals: 0, requirements: 0, viewings: 0 });
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, clientId, isCommercial]);
 
   useEffect(() => {
     if (!supportEnabled && !canEditClients) return;
@@ -473,6 +527,28 @@ export function ClientDetailSidebar({
       return [] as Array<{ key: DetailTab; label: string; meta?: string }>;
     }
 
+    if (isCommercial) {
+      return (
+        [
+          ['overview', 'Details'],
+          ...(client.client_type === 'business'
+            ? [['contacts', 'Contacts']]
+            : []),
+          ['tasks', 'Tasks'],
+          ['notes', 'Comments'],
+          ['disposals', 'Disposals'],
+          ['requirements', 'Requirements'],
+          ['viewings', 'Viewings'],
+          ['leases', 'Leases'],
+          ['sales', 'Sales'],
+        ] as Array<[DetailTab, string]>
+      ).map(([key, label]) => ({
+        key,
+        label,
+        meta: undefined as string | undefined,
+      }));
+    }
+
     return (
       [
         ['overview', 'Overview'],
@@ -492,7 +568,7 @@ export function ClientDetailSidebar({
       label,
       meta: key === 'projects' ? String(jobsCount) : undefined,
     }));
-  }, [client, isContractorView, jobsCount, supportEnabled]);
+  }, [client, isCommercial, isContractorView, jobsCount, supportEnabled]);
 
   const handleArchive = async () => {
     setArchiving(true);
@@ -623,7 +699,11 @@ export function ClientDetailSidebar({
     (client.display_name ??
       [client.first_name, client.last_name].filter(Boolean).join(' ').trim()) ||
     'Unnamed client';
-  const subtitle = client.company_name ?? client.city ?? null;
+  const subtitle = isCommercial
+    ? [client.commercial_role, client.company_name ?? client.city]
+        .filter(Boolean)
+        .join(' · ') || null
+    : (client.company_name ?? client.city ?? null);
   const address = [
     client.address_line_1,
     client.address_line_2,
@@ -643,6 +723,114 @@ export function ClientDetailSidebar({
           canEdit={false}
           onNoteAdded={fetchClient}
         />
+      );
+    }
+
+    if (activeTab === 'overview' && isCommercial) {
+      return (
+        <div className="space-y-6">
+          <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
+            {canEditClients ? (
+              <ClientImageUploader
+                accountId={accountId}
+                clientId={client.id}
+                displayName={displayName}
+                pictureUrl={client.picture_url}
+                email={client.email}
+                website={client.website}
+                onUpdated={fetchClient}
+              />
+            ) : (
+              <ProfileAvatar
+                displayName={displayName}
+                pictureUrl={client.picture_url}
+                className="mx-0 h-24 w-24 shrink-0 rounded-xl md:h-28 md:w-28"
+                fallbackClassName="rounded-xl bg-[var(--workspace-shell-panel-hover)] text-2xl text-[var(--workspace-shell-text)]"
+              />
+            )}
+
+            <div className="min-w-0 flex-1 space-y-3">
+              {client.commercial_role ? (
+                <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+                  {client.commercial_role}
+                </p>
+              ) : null}
+
+              <div className="grid gap-3 sm:grid-cols-3">
+                <OverviewMetric
+                  icon={Building2}
+                  label="Disposals"
+                  value={String(commercialMetrics.disposals)}
+                />
+                <OverviewMetric
+                  icon={Building2}
+                  label="Requirements"
+                  value={String(commercialMetrics.requirements)}
+                />
+                <OverviewMetric
+                  icon={Calendar}
+                  label="Viewings"
+                  value={String(commercialMetrics.viewings)}
+                />
+              </div>
+
+              <dl className="grid gap-3 sm:grid-cols-2">
+                {client.email ? (
+                  <div>
+                    <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Email
+                    </dt>
+                    <dd className="text-sm text-[var(--workspace-shell-text)]">
+                      {client.email}
+                    </dd>
+                  </div>
+                ) : null}
+                {client.phone ? (
+                  <div>
+                    <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Phone
+                    </dt>
+                    <dd className="text-sm text-[var(--workspace-shell-text)]">
+                      {client.phone}
+                    </dd>
+                  </div>
+                ) : null}
+                {address ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Address
+                    </dt>
+                    <dd className="text-sm text-[var(--workspace-shell-text)]">
+                      {address}
+                    </dd>
+                  </div>
+                ) : null}
+                {client.website ? (
+                  <div className="sm:col-span-2">
+                    <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+                      Website
+                    </dt>
+                    <dd className="text-sm text-[var(--workspace-shell-text)]">
+                      <a
+                        href={websiteHref(client.website) ?? '#'}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-[var(--ozer-info)] hover:text-[var(--ozer-accent-muted)]"
+                      >
+                        {client.website}
+                      </a>
+                    </dd>
+                  </div>
+                ) : null}
+              </dl>
+
+              <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                Contact since {formatCreatedDate(client.created_at)} ·{' '}
+                {formatLastUpdated(client.updated_at)}
+              </p>
+            </div>
+          </div>
+        </div>
       );
     }
 
@@ -1086,6 +1274,61 @@ export function ClientDetailSidebar({
       );
     }
 
+    if (isCommercial && activeTab === 'disposals') {
+      return (
+        <ClientDisposalsBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientId={client.id}
+          canEdit={canEditClients}
+        />
+      );
+    }
+
+    if (isCommercial && activeTab === 'requirements') {
+      return (
+        <ClientRequirementsBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientId={client.id}
+          canEdit={canEditClients}
+        />
+      );
+    }
+
+    if (isCommercial && activeTab === 'viewings') {
+      return (
+        <ClientViewingsBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientId={client.id}
+          canEdit={canEditClients}
+        />
+      );
+    }
+
+    if (isCommercial && activeTab === 'leases') {
+      return (
+        <ClientLeasesBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientId={client.id}
+          canEdit={canEditClients}
+        />
+      );
+    }
+
+    if (isCommercial && activeTab === 'sales') {
+      return (
+        <ClientSalesBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientId={client.id}
+          canEdit={canEditClients}
+        />
+      );
+    }
+
     return null;
   };
 
@@ -1195,14 +1438,16 @@ export function ClientDetailSidebar({
                         <Archive className="mr-2 h-4 w-4" />
                         Archive
                       </DropdownMenuItem>
-                      <DropdownMenuItem
-                        className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
-                        onClick={handleViewAsClient}
-                      >
-                        <ExternalLink className="mr-2 h-4 w-4" />
-                        View as client
-                      </DropdownMenuItem>
-                      {canEditClients ? (
+                      {!isCommercial ? (
+                        <DropdownMenuItem
+                          className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                          onClick={handleViewAsClient}
+                        >
+                          <ExternalLink className="mr-2 h-4 w-4" />
+                          View as client
+                        </DropdownMenuItem>
+                      ) : null}
+                      {!isCommercial && canEditClients ? (
                         <>
                           <DropdownMenuSeparator className="bg-[var(--workspace-shell-sidebar-accent)]" />
                           <DropdownMenuItem
@@ -1224,13 +1469,12 @@ export function ClientDetailSidebar({
                     <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                       <AlertDialogHeader>
                         <AlertDialogTitle>
-                          Archive this client?
+                          Archive this {isCommercial ? 'contact' : 'client'}?
                         </AlertDialogTitle>
                         <AlertDialogDescription>
-                          They will be hidden from your client list, but all of
-                          their projects, invoices, notes and contacts are kept.
-                          You can restore them anytime from the Archived view on
-                          the Clients page.
+                          {isCommercial
+                            ? 'They will be hidden from your contacts list, but linked disposals, requirements, viewings and notes are kept. You can restore them anytime from the Archived view.'
+                            : 'They will be hidden from your client list, but all of their projects, invoices, notes and contacts are kept. You can restore them anytime from the Archived view on the Clients page.'}
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter className="gap-2 sm:gap-0">
@@ -1242,7 +1486,11 @@ export function ClientDetailSidebar({
                           disabled={archiving}
                           onClick={handleArchive}
                         >
-                          {archiving ? 'Archiving...' : 'Archive client'}
+                          {archiving
+                            ? 'Archiving...'
+                            : isCommercial
+                              ? 'Archive contact'
+                              : 'Archive client'}
                         </Button>
                       </AlertDialogFooter>
                     </AlertDialogContent>

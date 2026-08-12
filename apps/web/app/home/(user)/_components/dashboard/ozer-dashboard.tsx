@@ -1,5 +1,7 @@
 'use client';
 
+'use client';
+
 import { useMemo } from 'react';
 
 import Link from 'next/link';
@@ -9,6 +11,7 @@ import {
   Cake,
   CalendarClock,
   MessageSquare,
+  Sparkles,
   StickyNote,
   Users,
 } from 'lucide-react';
@@ -67,14 +70,24 @@ export function OzerDashboard({ data }: Props) {
             {data.dateLabel}
           </p>
         </div>
-        {data.brainWorkspaceSlug ? (
-          <Button asChild className="ozer-gradient-btn w-full sm:w-auto">
-            <Link href={buildBrainChatUrl(data.brainWorkspaceSlug)}>
-              <MessageSquare className="mr-2 h-4 w-4" />
-              Ask Second Brain
-            </Link>
-          </Button>
-        ) : null}
+        <div className="flex flex-wrap gap-2">
+          {data.showPersonalVisionLaunch ? (
+            <Button asChild className="ozer-gradient-btn w-full sm:w-auto">
+              <Link href={pathsConfig.app.personalVision}>
+                <Sparkles className="mr-2 h-4 w-4" />
+                Personal Vision
+              </Link>
+            </Button>
+          ) : null}
+          {data.brainWorkspaceSlug ? (
+            <Button asChild variant="outline" className="w-full sm:w-auto">
+              <Link href={buildBrainChatUrl(data.brainWorkspaceSlug)}>
+                <MessageSquare className="mr-2 h-4 w-4" />
+                Ask Second Brain
+              </Link>
+            </Button>
+          ) : null}
+        </div>
       </header>
 
       <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">

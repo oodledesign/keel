@@ -8,6 +8,8 @@ import { Button } from '@kit/ui/button';
 import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import { cn } from '@kit/ui/utils';
 
+import type { ClientsWorkspaceVariant } from '../_lib/clients-overview.types';
+
 type ClientCardProps = {
   id: string;
   display_name: string | null;
@@ -19,6 +21,12 @@ type ClientCardProps = {
   updated_at: string;
   projectCount?: number;
   dueTaskCount?: number;
+  disposalCount?: number;
+  requirementCount?: number;
+  viewingCount?: number;
+  leaseCount?: number;
+  clientType?: 'business' | 'individual' | null;
+  variant?: ClientsWorkspaceVariant;
   selected: boolean;
   onSelect: () => void;
   detailHref?: string;
@@ -40,7 +48,24 @@ function formatLastActivity(updatedAt: string): string {
   return `${Math.floor(diffDays / 30)}mo ago`;
 }
 
-export function ClientListTableColGroup() {
+export function ClientListTableColGroup({
+  variant = 'work',
+}: {
+  variant?: ClientsWorkspaceVariant;
+}) {
+  if (variant === 'commercial') {
+    return (
+      <colgroup>
+        <col />
+        <col className="w-28" />
+        <col className="w-20" />
+        <col className="w-24" />
+        <col className="w-20" />
+        <col className="w-24" />
+      </colgroup>
+    );
+  }
+
   return (
     <colgroup>
       <col />
@@ -52,7 +77,30 @@ export function ClientListTableColGroup() {
   );
 }
 
-export function ClientListTableHeader() {
+export function ClientListTableHeader({
+  variant = 'work',
+}: {
+  variant?: ClientsWorkspaceVariant;
+}) {
+  if (variant === 'commercial') {
+    return (
+      <thead>
+        <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+          <th className="px-3 py-2 font-medium md:px-4">Contact</th>
+          <th className="hidden w-28 px-2 py-2 font-medium sm:table-cell">
+            Last activity
+          </th>
+          <th className="w-20 px-2 py-2 text-right font-medium">Disposals</th>
+          <th className="w-24 px-2 py-2 text-right font-medium">
+            Requirements
+          </th>
+          <th className="w-20 px-2 py-2 text-right font-medium">Viewings</th>
+          <th className="w-24 px-2 py-2 md:pr-4" aria-label="Actions" />
+        </tr>
+      </thead>
+    );
+  }
+
   return (
     <thead>
       <tr className="border-b border-[color:var(--workspace-shell-border)] text-left text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
@@ -77,6 +125,10 @@ export function ClientCard({
   updated_at,
   projectCount,
   dueTaskCount,
+  disposalCount,
+  requirementCount,
+  viewingCount,
+  variant = 'work',
   selected,
   onSelect,
   detailHref,
@@ -84,6 +136,7 @@ export function ClientCard({
   onEmail,
   onCall,
 }: ClientCardProps) {
+  const isCommercial = variant === 'commercial';
   const subtitle =
     tagline?.trim() || [company_name, city].filter(Boolean).join(' · ');
 
@@ -186,16 +239,34 @@ export function ClientCard({
       <td className="hidden px-2 py-1.5 text-sm text-[var(--workspace-shell-text-muted)] sm:table-cell">
         {formatLastActivity(updated_at)}
       </td>
-      <td className="px-2 py-1.5 text-right text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
-        {projectCount ?? 0}
-      </td>
-      <td className="px-2 py-1.5 text-right text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
-        {(dueTaskCount ?? 0) > 0 ? (
-          <span className="text-amber-300/90">{dueTaskCount}</span>
-        ) : (
-          <span className="text-[var(--workspace-shell-text-muted)]">0</span>
-        )}
-      </td>
+      {isCommercial ? (
+        <>
+          <td className="px-2 py-1.5 text-right text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
+            {disposalCount ?? 0}
+          </td>
+          <td className="px-2 py-1.5 text-right text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
+            {requirementCount ?? 0}
+          </td>
+          <td className="px-2 py-1.5 text-right text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
+            {viewingCount ?? 0}
+          </td>
+        </>
+      ) : (
+        <>
+          <td className="px-2 py-1.5 text-right text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
+            {projectCount ?? 0}
+          </td>
+          <td className="px-2 py-1.5 text-right text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
+            {(dueTaskCount ?? 0) > 0 ? (
+              <span className="text-amber-300/90">{dueTaskCount}</span>
+            ) : (
+              <span className="text-[var(--workspace-shell-text-muted)]">
+                0
+              </span>
+            )}
+          </td>
+        </>
+      )}
       <td className="px-2 py-1.5 md:pr-4">{actions}</td>
     </tr>
   );

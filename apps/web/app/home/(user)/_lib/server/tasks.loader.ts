@@ -22,13 +22,21 @@ const ACTIVE_TASK_STATUSES = ['todo', 'in_progress', 'client_review'] as const;
 
 /** List rows omit notes — loaded on edit via loadTaskById. */
 const TASK_LIST_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status, recurring_series_id, note_refs';
+  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status, recurring_series_id, note_refs, source';
 
 const TASK_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status, recurring_series_id, note_refs';
+  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status, recurring_series_id, note_refs, source';
 
 /** Same as TASK_SELECT; kept for call sites that try series first. */
 const TASK_SELECT_WITH_SERIES = TASK_SELECT;
+
+export type TaskSourceKind = 'manual' | 'meeting' | 'email';
+
+export type TaskSourceContext = {
+  title: string | null;
+  excerpt: string | null;
+  href: string | null;
+};
 
 type TaskQueryRow = {
   id: string;
@@ -45,6 +53,7 @@ type TaskQueryRow = {
   calendar_schedule_status?: string | null;
   recurring_series_id?: string | null;
   note_refs?: unknown;
+  source?: string | null;
 };
 
 type BusinessEnrichment = {
@@ -129,9 +138,20 @@ export type TasksPageTask = {
   calendarScheduleStatus: 'scheduled' | 'failed' | null;
   /** Present when this task was spawned from a recurring series. */
   recurringSeriesId: string | null;
+  /** How the task was created — manual, meeting extract, or email extract. */
+  source: TaskSourceKind;
+  /** Populated on edit load for meeting/email sources. */
+  sourceContext: TaskSourceContext | null;
   /** Populated for root tasks only (see `nestTaskTree`). */
   subtasks?: TasksPageTask[];
 };
+
+function normalizeTaskSource(value: string | null | undefined): TaskSourceKind {
+  if (value === 'meeting' || value === 'email') {
+    return value;
+  }
+  return 'manual';
+}
 
 function workspaceFromAccountId(
   accountId: string | null | undefined,
@@ -396,6 +416,8 @@ function taskRowToPageTask(
         ? row.calendar_schedule_status
         : null,
     recurringSeriesId: row.recurring_series_id ?? null,
+    source: normalizeTaskSource(row.source),
+    sourceContext: null,
   };
 }
 
@@ -425,11 +447,13 @@ function nestTaskTree(flat: TasksPageTask[]): TasksPageTask[] {
 }
 
 async function enrichTaskRows(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: SupabaseClient<any>,
   rows: TaskQueryRow[],
   contextOverride?: 'work' | 'life',
   /** Use for project/client names when session RLS hides rows (e.g. team workspace). */
-  enrichmentClient?: SupabaseClient,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  enrichmentClient?: SupabaseClient<any>,
   nest = true,
   workspaceFallback?: { name: string; slug: string | null },
 ): Promise<TasksPageTask[]> {
@@ -528,6 +552,139 @@ async function enrichTaskRows(
   return nest ? nestTaskTree(flat) : flat;
 }
 
+async function loadTaskSourceContext(
+  // PostgREST client — keep loose to match enrichTaskRows / list loaders.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  client: SupabaseClient<any>,
+  task: TasksPageTask,
+): Promise<{
+  source: TaskSourceKind;
+  sourceContext: TaskSourceContext | null;
+}> {
+  let source = task.source;
+
+  if (source === 'manual') {
+    const [{ data: meetingLink }, { data: emailLink }] = await Promise.all([
+      client
+        .from('meeting_action_items')
+        .select('id')
+        .eq('planner_task_id', task.id)
+        .limit(1)
+        .maybeSingle(),
+      client
+        .from('email_action_items')
+        .select('id')
+        .eq('task_id', task.id)
+        .limit(1)
+        .maybeSingle(),
+    ]);
+
+    if (meetingLink) {
+      source = 'meeting';
+    } else if (emailLink) {
+      source = 'email';
+    }
+  }
+
+  if (source === 'meeting') {
+    const { data } = await client
+      .from('meeting_action_items')
+      .select(
+        `
+        source_excerpt,
+        meeting_transcript_id,
+        meeting_transcripts:meeting_transcript_id (
+          id,
+          title,
+          account_id
+        )
+      `,
+      )
+      .eq('planner_task_id', task.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!data) {
+      return { source, sourceContext: null };
+    }
+
+    const transcriptRaw = data.meeting_transcripts as
+      | { id: string; title: string | null; account_id: string }
+      | { id: string; title: string | null; account_id: string }[]
+      | null;
+    const transcript = Array.isArray(transcriptRaw)
+      ? (transcriptRaw[0] ?? null)
+      : transcriptRaw;
+
+    const href =
+      task.workspaceSlug && transcript?.id
+        ? `/app/${task.workspaceSlug}/meetings/${transcript.id}`
+        : null;
+
+    return {
+      source,
+      sourceContext: {
+        title: transcript?.title?.trim() || null,
+        excerpt: data.source_excerpt?.trim() || null,
+        href,
+      },
+    };
+  }
+
+  if (source === 'email') {
+    const { data } = await client
+      .from('email_action_items')
+      .select(
+        `
+        source_excerpt,
+        detail,
+        thread_id,
+        email_threads:thread_id (
+          id,
+          subject,
+          snippet
+        )
+      `,
+      )
+      .eq('task_id', task.id)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (!data) {
+      return { source, sourceContext: null };
+    }
+
+    const threadRaw = data.email_threads as
+      | { id: string; subject: string | null; snippet: string | null }
+      | { id: string; subject: string | null; snippet: string | null }[]
+      | null;
+    const thread = Array.isArray(threadRaw)
+      ? (threadRaw[0] ?? null)
+      : threadRaw;
+
+    const href = task.workspaceSlug
+      ? `/app/${task.workspaceSlug}/email`
+      : '/app/email';
+
+    return {
+      source,
+      sourceContext: {
+        title: thread?.subject?.trim() || null,
+        excerpt:
+          data.source_excerpt?.trim() ||
+          data.detail?.trim() ||
+          thread?.snippet?.trim() ||
+          null,
+        href,
+      },
+    };
+  }
+
+  return { source: 'manual', sourceContext: null };
+}
+
 /** Load a single task for the edit dialog (dashboard quick-open, etc.). */
 export async function loadTaskById(
   taskId: string,
@@ -546,24 +703,29 @@ export async function loadTaskById(
 
   if (
     withSeries.error?.message?.includes('recurring_series_id') ||
+    withSeries.error?.message?.includes('source') ||
     withSeries.error?.code === '42703'
   ) {
+    const fallbackSelect = withSeries.error?.message?.includes('source')
+      ? TASK_SELECT.replace(', source', '')
+      : TASK_SELECT;
     const fallback = await client
       .from('tasks')
-      .select(TASK_SELECT)
+      .select(fallbackSelect)
       .eq('id', taskId)
       .maybeSingle();
     if (fallback.error || !fallback.data) {
       return null;
     }
-    data = fallback.data as TaskQueryRow;
+    data = fallback.data as unknown as TaskQueryRow;
   } else if (withSeries.error || !withSeries.data) {
     return null;
   } else {
     data = withSeries.data as TaskQueryRow;
   }
 
-  let enrichmentClient: SupabaseClient | undefined;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  let enrichmentClient: SupabaseClient<any> | undefined;
 
   if (options?.workspaceAccountId) {
     try {
@@ -585,9 +747,20 @@ export async function loadTaskById(
     false,
   );
 
-  const task = tasks[0] ?? null;
+  let task = tasks[0] ?? null;
 
-  if (!task || task.parentTaskId) {
+  if (!task) {
+    return null;
+  }
+
+  const sourceMeta = await loadTaskSourceContext(client, task);
+  task = {
+    ...task,
+    source: sourceMeta.source,
+    sourceContext: sourceMeta.sourceContext,
+  };
+
+  if (task.parentTaskId) {
     return task;
   }
 
@@ -596,15 +769,34 @@ export async function loadTaskById(
     .select(TASK_SELECT)
     .eq('user_id', user.id)
     .eq('parent_task_id', taskId)
-    .order('due_date', { ascending: true, nullsLast: true });
+    .order('due_date', { ascending: true, nullsFirst: false });
 
-  if (childError || !childRows?.length) {
+  let resolvedChildren = childRows as TaskQueryRow[] | null;
+
+  if (
+    childError &&
+    (childError.message?.includes('source') || childError.code === '42703')
+  ) {
+    const fallback = await client
+      .from('tasks')
+      .select(
+        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status, recurring_series_id, note_refs',
+      )
+      .eq('user_id', user.id)
+      .eq('parent_task_id', taskId)
+      .order('due_date', { ascending: true, nullsFirst: false });
+    resolvedChildren = (fallback.data ?? null) as TaskQueryRow[] | null;
+  } else if (childError) {
+    return { ...task, subtasks: [] };
+  }
+
+  if (!resolvedChildren?.length) {
     return { ...task, subtasks: [] };
   }
 
   const subtasks = await enrichTaskRows(
     client,
-    childRows as TaskQueryRow[],
+    resolvedChildren,
     options?.workspaceAccountId ? 'work' : undefined,
     enrichmentClient,
     false,
@@ -651,7 +843,7 @@ async function fetchActiveThenCompletedTaskRows(
 
   if (
     activeError &&
-    /note_refs|recurring_series_id/i.test(`${activeError.message ?? ''}`)
+    /note_refs|recurring_series_id|source/i.test(`${activeError.message ?? ''}`)
   ) {
     const fallbackSelect =
       'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status';

@@ -17,7 +17,7 @@ interface LeasesPageProps {
   params: Promise<{ account: string }>;
 }
 
-export const generateMetadata = async () => ({ title: 'Sales register' });
+export const generateMetadata = async () => ({ title: 'Sales & lettings' });
 
 async function LeasesPage({ params }: LeasesPageProps) {
   const { account: slug } = await params;
@@ -30,23 +30,26 @@ async function LeasesPage({ params }: LeasesPageProps) {
 
   const accountId = workspace.account.id as string;
   const client = getSupabaseServerClient();
-  const [leases, listings] = await Promise.all([
+  const [leases, listings, completedDisposals] = await Promise.all([
     createLeasesService(client).listLeases(accountId),
     createListingsService(client).listListings(accountId),
+    createListingsService(client).listCompletedDisposals(accountId),
   ]);
 
   return (
     <>
       <TeamAccountLayoutPageHeader
         account={slug}
-        title="Sales register"
-        description="Completed lettings and lease records for the agency."
+        title="Sales & lettings"
+        description="Completed sales and lettings for the agency."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
         <LeasesList
           accountId={accountId}
+          accountSlug={slug}
           initialLeases={leases}
           listings={listings}
+          completedDisposals={completedDisposals}
         />
       </PageBody>
     </>

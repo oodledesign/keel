@@ -18,6 +18,7 @@ export default async function ClientDetailPage({ params }: Props) {
         accountHomeHref={data.accountHomeHref}
         clientsListHref={data.clientsListHref}
         clientDisplayName={data.clientDisplayName}
+        listLabel={data.variant === 'commercial' ? 'Contacts' : 'Clients'}
       />
       <div className="mt-4 flex min-h-0 flex-1 flex-col">
         <ClientDetailPageContent
@@ -36,6 +37,7 @@ export default async function ClientDetailPage({ params }: Props) {
           defaultLink={data.defaultLink}
           notesVariant={data.notesVariant}
           showCommercialRole={data.showCommercialRole}
+          variant={data.variant}
           ranklyEnabled={data.ranklyEnabled}
           ranklyProject={data.ranklyProject}
           ranklyImportSeed={data.ranklyImportSeed}

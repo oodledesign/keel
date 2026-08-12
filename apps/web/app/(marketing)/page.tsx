@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import Image from 'next/image';
 
 import {
   Activity,
@@ -47,6 +48,7 @@ import {
 import { MarketingFaqsSection } from './_components/marketing-faqs';
 import { MarketingFinalCta } from './_components/marketing-final-cta';
 import { MarketingHomeHero } from './_components/marketing-home-hero';
+import { OzerVsOthersSection } from './_components/ozer-vs-others-section';
 
 export const metadata = buildMarketingMetadata({
   title: 'Workspace OS for studios — Ozer',
@@ -141,6 +143,8 @@ async function Home() {
 
       <InterconnectedWorkspacesSection tone="light" />
 
+      <OzerVsOthersSection />
+
       <section className="relative mx-auto w-full max-w-7xl px-6 pt-16 pb-24 md:pt-24">
         <div className="mb-8 max-w-2xl">
           <h2 className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)] md:text-4xl">
@@ -157,6 +161,8 @@ async function Home() {
         <MarketingBentoGrid>
           {lifeFeatures.map((feature) => {
             const Icon = feature.icon;
+            const isActivity = feature.title === 'Activity on your Mac';
+
             return (
               <MarketingBentoTile
                 key={feature.title}
@@ -164,11 +170,24 @@ async function Home() {
                 variant={feature.span === 'wide' ? 'cream' : 'muted'}
                 href={'href' in feature ? feature.href : undefined}
                 visual={
-                  <div className="flex w-full justify-start">
-                    <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--ozer-accent)]">
-                      <Icon className="size-5" aria-hidden />
-                    </span>
-                  </div>
+                  isActivity ? (
+                    <div className="relative -mx-1 flex h-28 w-full items-center justify-center overflow-hidden rounded-xl">
+                      <Image
+                        src="/brand/marketing/activity-on-your-mac.png"
+                        alt=""
+                        width={440}
+                        height={214}
+                        className="h-full w-auto max-w-none object-contain object-left"
+                        sizes="(max-width: 768px) 90vw, 420px"
+                      />
+                    </div>
+                  ) : (
+                    <div className="flex w-full justify-start">
+                      <span className="inline-flex size-11 items-center justify-center rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--ozer-accent)]">
+                        <Icon className="size-5" aria-hidden />
+                      </span>
+                    </div>
+                  )
                 }
               >
                 <h3 className="font-heading text-xl font-semibold text-[var(--workspace-shell-text)]">

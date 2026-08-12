@@ -21,6 +21,7 @@ import {
   getTeamAccountAccess,
 } from '../_lib/role-access';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+import { CommercialNavModulesSettingsForm } from './_components/commercial-nav-modules-settings-form';
 import { WorkspaceContactSettingsForm } from './_components/workspace-contact-settings-form';
 import { WorkspaceCurrencySettingsForm } from './_components/workspace-currency-settings-form';
 import { WorkspaceDashboardShortcutsSection } from './_components/workspace-dashboard-shortcuts-section';
@@ -101,6 +102,13 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
 
   return (
     <div className="flex flex-col gap-6">
+      {!isClient && workspace.workspaceProfile === 'commercial_property' ? (
+        <CommercialNavModulesSettingsForm
+          accountId={account.id}
+          initialSettings={workspace.moduleSettings}
+          canEdit={canEditContact}
+        />
+      ) : null}
       {!isClient ? (
         <WorkspaceCurrencySettingsForm
           accountId={account.id}

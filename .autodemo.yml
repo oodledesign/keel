@@ -1,0 +1,75 @@
+# AutoDemo spike — marketing captures from the running web app.
+# Docs: https://github.com/praveen-palanisamy/autodemo
+project:
+  name: ozer
+  baseUrl: http://localhost:3000
+
+output:
+  # Spike artifacts (gitignored). Promote selected stills into apps/web/public later.
+  dir: .autodemo/out
+  clean: true
+  branding: false
+
+browser:
+  headless: true
+  viewport: { width: 1600, height: 900 }
+  recordVideo: true
+  cursor:
+    showCursor: true
+    style: arrow
+    pointerColor: '#1B6B4A'
+    clickColor: '#1B6B4A'
+    highlightClicks: true
+    clickRadius: 24
+  transitions:
+    transitionMs: 700
+    endPauseMs: 1000
+  capture:
+    hideDevOverlays: true
+  video:
+    trimStartBeforeMs: 500
+
+auth:
+  # For authenticated Scale demos later — keep files ignored.
+  statePath: .autodemo/state/local.json
+  saveState: false
+
+scenarios:
+  commercial-landing:
+    description: 'Commercial Property marketing page — hero, features, pricing'
+    videoStartStep: 1
+    steps:
+      - type: goto
+        url: /commercial-property
+      - type: narrate
+        text: 'Ozer Commercial Property — the desk in one workspace'
+        ms: 1800
+      - type: waitFor
+        text: 'Run the commercial desk'
+      - type: screenshot
+        name: commercial-hero
+        note: 'Hero for marketing and sales decks'
+      - type: scrollTo
+        y: 900
+        behavior: smooth
+        durationMs: 800
+      - type: waitFor
+        text: 'Built for the commercial workspace'
+      - type: narrate
+        text: 'Disposals, pipeline, interest, portals, brochures'
+        ms: 1600
+      - type: screenshot
+        name: commercial-features
+        note: 'Feature strip still'
+      - type: click
+        selector: 'a[href="#pricing"]'
+      - type: sleep
+        ms: 900
+      - type: waitFor
+        text: 'pricing'
+      - type: narrate
+        text: 'Transparent seat pricing — no demo gate'
+        ms: 1600
+      - type: screenshot
+        name: commercial-pricing
+        note: 'Pricing section capture'

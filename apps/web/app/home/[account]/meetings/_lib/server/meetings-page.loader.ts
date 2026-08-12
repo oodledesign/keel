@@ -44,6 +44,7 @@ export type MeetingTranscriptListRow = {
   createdAt: string;
   clientId: string | null;
   clientName: string | null;
+  clientPictureUrl: string | null;
   dealTitle: string | null;
   participants: MeetingParticipant[];
 };
@@ -123,6 +124,10 @@ function mapTranscriptListRow(
   clients: MeetingClientOption[],
   contacts: MeetingContactOption[],
 ): MeetingTranscriptListRow {
+  const linkedClient = transcript.clientId
+    ? clients.find((client) => client.id === transcript.clientId)
+    : undefined;
+
   return {
     id: transcript.id,
     title: transcript.title,
@@ -132,6 +137,7 @@ function mapTranscriptListRow(
     createdAt: transcript.createdAt,
     clientId: transcript.clientId,
     clientName: transcript.clientName,
+    clientPictureUrl: linkedClient?.pictureUrl ?? null,
     dealTitle: transcript.dealTitle,
     participants: resolveMeetingParticipants(
       transcript.speakerMappings,

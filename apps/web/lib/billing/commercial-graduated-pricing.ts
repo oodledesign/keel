@@ -9,9 +9,9 @@ export const COMMERCIAL_GRADUATED_PRODUCT_ID = 'ozer-commercial-property';
 export const COMMERCIAL_GRADUATED_PLAN_ID = 'commercial-property-monthly';
 
 export const COMMERCIAL_GRADUATED_TIERS = [
-  { upTo: 1, unitGbp: 89 },
-  { upTo: 7, unitGbp: 55 },
-  { upTo: Infinity, unitGbp: 39 },
+  { upTo: 1, unitGbp: 89, bandLabel: 'Seat 1' },
+  { upTo: 7, unitGbp: 55, bandLabel: 'Seats 2–7' },
+  { upTo: Infinity, unitGbp: 39, bandLabel: 'Seats 8+' },
 ] as const;
 
 /** Illustrative marketing card seat counts (wrappers around the same Price). */
@@ -22,6 +22,7 @@ export const COMMERCIAL_ILLUSTRATIVE_TIERS = [
     billableSeats: 1,
     description: 'Sole practitioner / micro agency',
     seatRangeLabel: '1 billable seat',
+    bandTitle: 'Seat 1',
     highlighted: false,
   },
   {
@@ -30,6 +31,7 @@ export const COMMERCIAL_ILLUSTRATIVE_TIERS = [
     billableSeats: 4,
     description: 'Typical regional commercial desk',
     seatRangeLabel: '2–7 billable seats',
+    bandTitle: 'Seats 2–7',
     highlighted: true,
   },
   {
@@ -38,6 +40,7 @@ export const COMMERCIAL_ILLUSTRATIVE_TIERS = [
     billableSeats: 10,
     description: 'Multi-negotiator / multi-branch',
     seatRangeLabel: '8+ billable seats',
+    bandTitle: 'Seats 8+',
     highlighted: false,
   },
 ] as const;
@@ -49,26 +52,83 @@ export function clampBillableSeats(seats: number): number {
   return Math.max(1, Math.min(200, Math.floor(seats)));
 }
 
+export type GraduatedPricingBreakdownLine = {
+  bandLabel: string;
+  seatsInBand: number;
+  unitGbp: number;
+  subtotalGbp: number;
+};
+
 /**
- * Graduated monthly estimate in GBP for N billable seats.
- * Mirrors Stripe graduated cumulative bands via COMMERCIAL_GRADUATED_TIERS.
+ * Itemised graduated bands for N billable seats (same maths as Stripe).
  */
-export function estimateMonthlyGbp(billableSeats: number): number {
+export function estimateMonthlyBreakdownGbp(billableSeats: number): {
+  lines: GraduatedPricingBreakdownLine[];
+  totalGbp: number;
+} {
   const seats = clampBillableSeats(billableSeats);
-  let total = 0;
+  const lines: GraduatedPricingBreakdownLine[] = [];
   let previousUpTo = 0;
 
   for (const tier of COMMERCIAL_GRADUATED_TIERS) {
     const tierCap = tier.upTo === Infinity ? seats : tier.upTo;
     const seatsInBand = Math.min(seats, tierCap) - previousUpTo;
     if (seatsInBand > 0) {
-      total += seatsInBand * tier.unitGbp;
+      lines.push({
+        bandLabel: tier.bandLabel,
+        seatsInBand,
+        unitGbp: tier.unitGbp,
+        subtotalGbp: seatsInBand * tier.unitGbp,
+      });
     }
     previousUpTo = tierCap;
     if (seats <= previousUpTo) break;
   }
 
-  return total;
+  return {
+    lines,
+    totalGbp: lines.reduce((sum, line) => sum + line.subtotalGbp, 0),
+  };
+}
+
+/**
+ * Graduated monthly estimate in GBP for N billable seats.
+ * Mirrors Stripe graduated cumulative bands via COMMERCIAL_GRADUATED_TIERS.
+ */
+export function estimateMonthlyGbp(billableSeats: number): number {
+  return estimateMonthlyBreakdownGbp(billableSeats).totalGbp;
+}
+
+/**
+ * Human-readable worked total for marketing cards, driven by estimateMonthlyBreakdownGbp.
+ * e.g. "e.g. 4 seats = £89 + 3 × £55 = £254/mo"
+ */
+export function formatGraduatedWorkedExample(
+  billableSeats: number,
+  formatMoney: (gbp: number) => string,
+): string {
+  const seats = clampBillableSeats(billableSeats);
+  const { lines, totalGbp } = estimateMonthlyBreakdownGbp(seats);
+
+  if (lines.length === 0) {
+    return `${formatMoney(0)}/mo`;
+  }
+
+  if (lines.length === 1) {
+    const [only] = lines;
+    return `e.g. ${seats} seat${seats === 1 ? '' : 's'} = ${formatMoney(only.subtotalGbp)}/mo`;
+  }
+
+  const expression = lines
+    .map((line, index) => {
+      if (index === 0 && line.seatsInBand === 1) {
+        return formatMoney(line.unitGbp);
+      }
+      return `${line.seatsInBand} × ${formatMoney(line.unitGbp)}`;
+    })
+    .join(' + ');
+
+  return `e.g. ${seats} seats = ${expression} = ${formatMoney(totalGbp)}/mo`;
 }
 
 /**
@@ -88,9 +148,9 @@ export function maxMembersForBillableSeats(billableSeats: number): number {
   return seats + freeSupportSeats(seats);
 }
 
-/** Portal publishing (Rightmove / EG) requires 2+ billable seats. */
+/** Portal publishing (Rightmove / EACH / Property Hive) is included from seat 1. */
 export function portalPublishingAllowed(billableSeats: number): boolean {
-  return clampBillableSeats(billableSeats) >= 2;
+  return clampBillableSeats(billableSeats) >= 1;
 }
 
 export function illustrativeTierForSeats(billableSeats: number): {

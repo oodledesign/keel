@@ -75,6 +75,7 @@ export type InterconnectedBentoVisual =
   | 'team'
   | 'spark'
   | 'activity'
+  | 'dictation'
   | 'support'
   | 'none';
 
@@ -198,8 +199,8 @@ export const INTERCONNECTED_WORKSPACES_MARKETING = {
       icon: Keyboard,
       href: '/features/dictation',
       span: 'sm',
-      variant: 'cream',
-      visual: 'none',
+      variant: 'visual',
+      visual: 'dictation',
     },
     {
       id: 'mobile',

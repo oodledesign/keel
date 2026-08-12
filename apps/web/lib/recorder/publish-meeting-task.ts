@@ -5,6 +5,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { schedulePublishedTaskIfEnabled } from '~/lib/recorder/schedule-published-task';
+import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 import { snapDueDateYmd } from '~/lib/workspace-focus';
 import { loadWorkspaceSchedulingSettingsForUser } from '~/lib/workspace-focus/load-workspace-focus-settings';
 
@@ -68,12 +69,11 @@ function buildTaskNotes(
   description: string | null,
   sourceExcerpt: string | null,
 ): string | null {
-  const parts = [
-    description?.trim() || null,
-    sourceExcerpt?.trim() ? `Meeting excerpt: "${sourceExcerpt.trim()}"` : null,
-  ].filter(Boolean);
-
-  return parts.length > 0 ? parts.join('\n\n') : null;
+  return buildTaskNotesFromSource({
+    description,
+    sourceExcerpt,
+    sourceLabel: 'Meeting',
+  });
 }
 
 export async function publishMeetingTaskToPlanner(

@@ -29,17 +29,11 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
   const touchStartX = useRef<number | null>(null);
 
   const current = slides[index] as BrochureSlide;
-  const isPhotoLike =
-    current?.kind === 'photo' ||
-    current?.kind === 'floorplan' ||
-    current?.kind === 'cover';
   const isContact = current?.kind === 'contact';
-  // Chrome always on text/contact slides; on photo slides only after mouse move.
-  const showChrome = chromeVisible || !isPhotoLike;
 
   const go = useCallback(
     (next: number) => {
-      // Navigate without revealing chrome — keeps photo slides immersive.
+      // Navigate without revealing chrome — keeps the deck immersive.
       setIndex(((next % slides.length) + slides.length) % slides.length);
     },
     [slides.length],
@@ -51,15 +45,35 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
   const revealChrome = useCallback(() => {
     setChromeVisible(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    if (!isPhotoLike || isContact) return;
     hideTimer.current = setTimeout(() => setChromeVisible(false), 2800);
-  }, [isContact, isPhotoLike]);
+  }, []);
 
   useEffect(() => {
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
   }, []);
+
+  // Warm the browser cache so photos/floorplans paint immediately when swiping.
+  useEffect(() => {
+    const urls = [
+      ...data.images.map((item) => item.url),
+      ...data.floorplans.map((item) => item.url),
+    ].filter(Boolean);
+
+    const loaders = urls.map((url) => {
+      const img = new window.Image();
+      img.decoding = 'async';
+      img.src = url;
+      return img;
+    });
+
+    return () => {
+      for (const img of loaders) {
+        img.src = '';
+      }
+    };
+  }, [data.floorplans, data.images]);
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -102,6 +116,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
       style={brandStyle}
       onMouseMove={revealChrome}
       onTouchStart={(event) => {
+        revealChrome();
         touchStartX.current = event.touches[0]?.clientX ?? null;
       }}
       onTouchEnd={(event) => {
@@ -156,7 +171,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
       {/* Top chrome */}
       <div
         className={`pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-4 bg-gradient-to-b from-black/55 to-transparent px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-10 transition-opacity duration-300 sm:px-6 ${
-          showChrome ? 'opacity-100' : 'opacity-0'
+          chromeVisible ? 'opacity-100' : 'opacity-0'
         }`}
       >
         <div className="min-w-0">
@@ -177,7 +192,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
       {/* Bottom controls */}
       <div
         className={`absolute inset-x-0 bottom-0 z-30 bg-gradient-to-t from-black/70 to-transparent px-4 pt-12 pb-[max(1rem,env(safe-area-inset-bottom))] transition-opacity duration-300 sm:px-6 ${
-          showChrome ? 'opacity-100' : 'pointer-events-none opacity-0'
+          chromeVisible ? 'opacity-100' : 'pointer-events-none opacity-0'
         }`}
       >
         <div className="mx-auto flex max-w-5xl items-center justify-between gap-3">
@@ -196,7 +211,7 @@ export function BrochureSlideshow({ data }: BrochureSlideshowProps) {
                 key={`${slide.kind}-${i}`}
                 type="button"
                 aria-label={`Go to slide ${i + 1}`}
-                aria-current={i === index}
+                aria-current={i === index ? true : undefined}
                 onClick={() => go(i)}
                 className={`h-1.5 rounded-full transition-all ${
                   i === index

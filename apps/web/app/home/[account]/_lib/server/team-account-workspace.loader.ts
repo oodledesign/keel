@@ -62,8 +62,7 @@ async function workspaceLoader(accountSlug: string) {
     client
       .from('account_module_settings')
       .select('module_key, enabled')
-      .eq('account_id', accountId)
-      .eq('enabled', true),
+      .eq('account_id', accountId),
     getWorkspaceCurrencyWithClient(client, accountId),
   ]);
 
@@ -78,7 +77,7 @@ async function workspaceLoader(accountSlug: string) {
   }
 
   const moduleSettings = Object.fromEntries(
-    (moduleSettingsRows ?? []).map((row) => [row.module_key, true]),
+    (moduleSettingsRows ?? []).map((row) => [row.module_key, row.enabled]),
   ) as Record<string, boolean>;
 
   let businessType: string | null = null;

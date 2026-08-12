@@ -13,7 +13,8 @@ export function useUser(initialData?: JWTUserData | null) {
     const response = await requireUser(client);
 
     if (response.error) {
-      return undefined;
+      // react-query forbids undefined — use null for signed-out / failed auth
+      return null;
     }
 
     return response.data;

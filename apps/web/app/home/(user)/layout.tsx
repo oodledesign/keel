@@ -7,6 +7,7 @@ import { redirect } from 'next/navigation';
 import { z } from 'zod';
 
 import { UserWorkspaceContextProvider } from '@kit/accounts/components';
+import { AdminImpersonationExitHost } from '@kit/admin/components/admin-impersonation-exit-host';
 import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
@@ -58,10 +59,20 @@ function UserHomeLayout({ children }: React.PropsWithChildren) {
   const state = use(getLayoutState());
 
   if (state.style === 'sidebar') {
-    return <SidebarLayout layoutState={state}>{children}</SidebarLayout>;
+    return (
+      <>
+        <AdminImpersonationExitHost />
+        <SidebarLayout layoutState={state}>{children}</SidebarLayout>
+      </>
+    );
   }
 
-  return <HeaderLayout>{children}</HeaderLayout>;
+  return (
+    <>
+      <AdminImpersonationExitHost />
+      <HeaderLayout>{children}</HeaderLayout>
+    </>
+  );
 }
 
 export default withI18n(UserHomeLayout);

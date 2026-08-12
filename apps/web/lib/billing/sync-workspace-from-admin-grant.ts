@@ -94,7 +94,12 @@ export async function convertAccountToCommercialProperty(
   }
 
   for (const moduleKey of COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER) {
-    await setModuleEnabled(admin, accountId, moduleKey, true);
+    await setModuleEnabled(
+      admin,
+      accountId,
+      moduleKey,
+      moduleKey !== 'proposals',
+    );
   }
 }
 

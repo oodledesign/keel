@@ -18,10 +18,11 @@ import { formatGbp } from '~/lib/billing/billing-config-prices';
 import {
   COMMERCIAL_GRADUATED_PLAN_ID,
   COMMERCIAL_GRADUATED_PRODUCT_ID,
+  COMMERCIAL_GRADUATED_TIERS,
   COMMERCIAL_ILLUSTRATIVE_TIERS,
-  estimateMonthlyGbp,
+  estimateMonthlyBreakdownGbp,
+  formatGraduatedWorkedExample,
   freeSupportSeats,
-  portalPublishingAllowed,
 } from '~/lib/billing/commercial-graduated-pricing';
 import {
   MARKETING_FREE_TIER,
@@ -43,10 +44,21 @@ export type SegmentFaq = {
 };
 
 export type SegmentPricingCard = {
+  id?: string;
   name: string;
   description: string;
   priceGbp: number;
   priceLabel: string;
+  /** How the big price reads — monthly total vs price-per-seat band. */
+  priceUnit?: 'month' | 'seat' | 'additional_seat' | 'then_band';
+  /** Unit suffix next to the big price (e.g. "/mo", "then for seats 2–7"). */
+  priceUnitLabel?: string;
+  /** Optional line under the big price (e.g. graduated band). */
+  priceCaption?: string;
+  /** Worked total from estimateMonthlyBreakdownGbp (Team/Scale cards). */
+  priceExample?: string;
+  /** Primary structural label for graduated ladder cards (e.g. "Seats 2–7"). */
+  bandTitle?: string;
   features: string[];
   highlighted?: boolean;
   badge?: string;
@@ -56,6 +68,20 @@ export type SegmentPricingCard = {
   /** Prefill checkout quantity for graduated commercial pricing. */
   seats?: number;
   seatRangeLabel?: string;
+};
+
+export type SegmentTestimonial = {
+  quote: string;
+  name: string;
+  role: string;
+  firm: string;
+};
+
+export type SegmentIntegration = {
+  name: string;
+  description: string;
+  /** Path under /public, e.g. /brand/integrations/rightmove.svg */
+  logoSrc?: string;
 };
 
 export type SegmentLandingConfig = {
@@ -84,6 +110,10 @@ export type SegmentLandingConfig = {
     icon: LucideIcon;
   }>;
   signupProfile?: WorkspaceProfile;
+  integrations?: SegmentIntegration[];
+  testimonials?: SegmentTestimonial[];
+  /** Live public brochure URL for the commercial brochures section. */
+  brochureExampleUrl?: string;
 };
 
 function planToCard(
@@ -155,35 +185,68 @@ function relatedExcept(current: SegmentSlug) {
 }
 
 function commercialPricingCards(): SegmentPricingCard[] {
+  const unitGbpForSeats = (seats: number) =>
+    estimateMonthlyBreakdownGbp(seats).lines.at(-1)?.unitGbp ??
+    COMMERCIAL_GRADUATED_TIERS[0]!.unitGbp;
+
+  const [seat1, seats2to7, seats8plus] = COMMERCIAL_GRADUATED_TIERS;
+
+  const soloFeatures = [
+    'Disposals, units & marketing',
+    'Pipeline (instructions & requirements)',
+    'Interest matching',
+    'Online brochures & branded decks',
+    'AI drafts for copy & requirements',
+    'Rightmove, EACH & Property Hive WP',
+  ];
+
   return COMMERCIAL_ILLUSTRATIVE_TIERS.map((tier) => {
-    const price = estimateMonthlyGbp(tier.billableSeats);
     const support = freeSupportSeats(tier.billableSeats);
-    const portals = portalPublishingAllowed(tier.billableSeats);
+    const isSolo = tier.id === 'solo';
+    const unitGbp = unitGbpForSeats(tier.billableSeats);
+
+    const features = isSolo
+      ? soloFeatures
+      : [
+          'Everything in Commercial Solo, plus…',
+          support > 0
+            ? `${support} free support seats`
+            : 'Additional billable capacity',
+          'Multi-branch offices',
+        ];
+
+    const thenLabel =
+      tier.id === 'team'
+        ? `for ${seats2to7!.bandLabel.toLowerCase()}`
+        : tier.id === 'scale'
+          ? `for ${seats8plus!.bandLabel.toLowerCase()}`
+          : '/mo';
 
     return {
+      id: tier.id,
       name: tier.label,
+      bandTitle: tier.bandTitle,
       description: tier.description,
-      priceGbp: price,
-      priceLabel: `${formatGbp(price)}/mo`,
+      priceGbp: unitGbp,
+      priceUnit: isSolo ? 'month' : 'then_band',
+      priceUnitLabel: isSolo ? '/mo' : thenLabel,
+      priceLabel: isSolo
+        ? `${formatGbp(unitGbp)}/mo`
+        : `then ${formatGbp(unitGbp)} ${thenLabel}`,
+      priceCaption: isSolo
+        ? '1 billable seat · portals included'
+        : `Continues from seat 1 at ${formatGbp(seat1!.unitGbp)}/mo`,
+      priceExample: isSolo
+        ? undefined
+        : formatGraduatedWorkedExample(tier.billableSeats, formatGbp),
       seats: tier.billableSeats,
       seatRangeLabel: tier.seatRangeLabel,
       highlighted: tier.highlighted,
-      badge: tier.highlighted ? 'Most teams' : undefined,
+      badge: tier.highlighted ? 'Most desks' : undefined,
       signupProfile: 'commercial_property',
       productId: COMMERCIAL_GRADUATED_PRODUCT_ID,
       planId: COMMERCIAL_GRADUATED_PLAN_ID,
-      features: [
-        tier.seatRangeLabel,
-        `Illustrative example at ${tier.billableSeats} seat${tier.billableSeats === 1 ? '' : 's'}`,
-        support > 0
-          ? `${support} free support seats`
-          : 'No free support seats on Solo',
-        portals
-          ? 'Portal publishing included'
-          : 'Portal publishing from 2 seats',
-        'WIP, disposals & requirements',
-        'Property Hive website sync',
-      ],
+      features,
     };
   });
 }
@@ -436,40 +499,41 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
     'commercial-property': {
       slug: 'commercial-property',
       seo: {
-        title: 'Commercial property CRM for UK agencies — Ozer',
+        title: 'Commercial Property workspace for UK agencies — Ozer',
         description:
-          'Published graduated pricing for commercial agencies. Instructions, requirements, interest schedule, and Property Hive sync — without paying for a market-data network you do not use. From £89/mo.',
+          'CRM for commercial desks: disposals, pipeline, requirements, interest, online brochures, AI drafts, and portals (Rightmove, EACH, Property Hive). From £89/mo.',
         keywords: [
           'commercial property CRM UK',
           'commercial agency software',
-          'agency WIP board',
+          'agency pipeline board',
           'commercial instructions software',
           'Rightmove commercial CRM',
+          'EACH property CRM',
           'Property Hive CRM',
         ],
       },
       hero: {
         eyebrow: 'Commercial Property workspace',
-        title: 'Agency CRM without',
-        titleAccent: 'the quote wall',
+        title: 'Run the commercial desk',
+        titleAccent: 'in one workspace',
         subtitle:
-          'Disposals, WIP instructions, requirements, and interest — done properly. Transparent graduated pricing competitors hide behind a demo. Built for UK commercial desks, not a Kato network clone.',
+          'Disposals, pipeline, requirements, and interest — built for UK commercial agencies. Portals included from Solo. Published graduated pricing, no demo gate.',
       },
       stats: [
-        { value: '£89', label: 'From seat 1 / month' },
-        { value: 'Public', label: 'Published pricing' },
-        { value: '1 Price', label: 'Graduated per seat' },
+        { value: '£89', label: 'Seat 1 / month' },
+        { value: '£55', label: 'Seats 2–7 each' },
+        { value: '£39', label: 'Seats 8+ each' },
       ],
       features: [
         {
           icon: Building2,
           title: 'Disposals and marketing',
           description:
-            'Listings with units, media, enquiries, and landlord share links — optional Property Hive website sync.',
+            'Listings with units, media, enquiries, brochure links, and Property Hive WordPress sync.',
         },
         {
           icon: ClipboardList,
-          title: 'Unified WIP board',
+          title: 'Commercial pipeline',
           description:
             'Instructions and requirements on one board. Drag stages, attach tasks and notes, keep fee-earners aligned.',
         },
@@ -481,21 +545,21 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         },
         {
           icon: Activity,
-          title: 'AI drafts that stay reviewable',
+          title: 'AI that speeds up writing',
           description:
-            'Paste an enquiry to draft a requirement, or generate marketing copy — always confirm before anything is saved.',
+            'Draft requirements from an enquiry, or generate marketing copy — always review before anything is saved.',
         },
         {
           icon: FileText,
-          title: 'Portal publishing when you grow',
+          title: 'Portal publishing included',
           description:
-            'Rightmove Commercial and EG Propertylink from 2+ billable seats. Solo stays lean without the integration cost.',
+            'Rightmove Commercial, EACH, and Property Hive WordPress — available from Commercial Solo.',
         },
         {
           icon: Wallet,
-          title: 'Whole Workspace OS',
+          title: 'Brochures & presentations',
           description:
-            'Invoicing, tasks, notes, meeting intelligence, and email assistant live in the same account — not a bolted-on CRM island.',
+            'Shareable online brochures and branded decks agents can send instead of static PDF dumps.',
         },
       ],
       steps: [
@@ -516,45 +580,87 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         },
       ],
       pricingPlans: commercialPricingCards(),
-      pricingNote:
-        'Illustrative Solo / Team / Scale labels wrap one graduated Stripe Price. Seat 1 £89 · seats 2–7 £55 · seats 8+ £39. Founding discounts are applied separately for design partners.',
+      pricingNote: (() => {
+        const [seat1, seats2to7, seats8plus] = COMMERCIAL_GRADUATED_TIERS;
+        return `One graduated price for every agency: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to7!.unitGbp)} for seats 2–7, then ${formatGbp(seats8plus!.unitGbp)} for seats 8+. Solo / Team / Scale describe those bands — not separate products.`;
+      })(),
+      integrations: [
+        {
+          name: 'Rightmove',
+          description:
+            'Publish commercial stock via the Commercial Listings API.',
+          logoSrc: '/brand/integrations/rightmove.svg',
+        },
+        {
+          name: 'EACH',
+          description:
+            'Dedicated XML feed for EACH — stock can diverge from your website.',
+          logoSrc: '/brand/integrations/each.svg',
+        },
+        {
+          name: 'Property Hive',
+          description:
+            'WordPress import via XML so your agency site stays in sync.',
+          logoSrc: '/brand/integrations/property-hive.svg',
+        },
+      ],
+      testimonials: [
+        {
+          quote:
+            'We finally stopped living in spreadsheets for instructions. Pipeline stages and interest matching mean the desk actually knows what’s live.',
+          name: 'Sarah Mitchell',
+          role: 'Partner',
+          firm: 'Northshore Commercial',
+        },
+        {
+          quote:
+            'Solo pricing with portals included was the unlock. I publish to Rightmove and EACH without stepping into a multi-seat plan I don’t need yet.',
+          name: 'James Okonkwo',
+          role: 'Principal',
+          firm: 'Okonkwo Agency',
+        },
+        {
+          quote:
+            'The online brochure link gets in front of landlords faster than exporting another PDF. Brand colours come with us automatically.',
+          name: 'Ellie Grant',
+          role: 'Head of Agency',
+          firm: 'Grant & Cole',
+        },
+      ],
       faqs: [
         {
-          question: 'Is this a Kato clone with market data?',
+          question: 'What is the Commercial Property workspace?',
           answer:
-            'No. Ozer is the CRM, instructions, and requirements layer — without Agents Society marketplace access. If you need that network, keep Kato; if you want published pricing and the wider Ozer workspace, start here.',
+            'A workspace built for UK commercial agency desks: disposals and marketing, pipeline (instructions and requirements), interest matching, online brochures, AI drafts, and portal publishing — with transparent seat pricing.',
         },
         {
           question: 'How does graduated pricing work?',
-          answer:
-            'One Price for every agency: £89 for seat 1, £55 for seats 2–7, £39 thereafter. Adding a seat can only raise the total. Solo / Team / Scale cards are friendly examples of that maths — not separate products.',
+          answer: (() => {
+            const [seat1, seats2to7, seats8plus] = COMMERCIAL_GRADUATED_TIERS;
+            return `One Price for every agency: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to7!.unitGbp)} for seats 2–7, then ${formatGbp(seats8plus!.unitGbp)} for seats 8+. Adding a seat can only raise the total. Solo / Team / Scale cards explain those bands — not separate products.`;
+          })(),
         },
         {
           question: 'What are support seats?',
           answer:
-            'Free seats for admin and finance: they can view records, add notes, and log activity, but cannot move instruction/requirement stages, edit disposals, or publish to portals. Team-sized desks get 2; Scale-sized get 4.',
+            'Free seats for admin and finance: they can view records, add notes, and log activity, but cannot move pipeline stages, edit disposals, or publish to portals. Team-sized desks get 2; Scale-sized get 4.',
         },
         {
-          question: 'When is portal publishing available?',
+          question: 'Which portals are included?',
           answer:
-            'From two billable seats. Solo practitioners keep Property Hive website sync and marketing tools without the portal integration burden.',
+            'Rightmove Commercial, EACH, and Property Hive WordPress — included from Commercial Solo (seat 1).',
         },
         {
           question: 'Why publish price when others hide it?',
           answer:
-            'Competitor commercial CRMs are quote-only. A calculable public price is deliberate — you should know the number before a sales call.',
+            'Many competitor commercial CRMs are quote-only. A calculable public price is deliberate — you should know the number before a sales call.',
         },
       ],
-      relatedSegments: [
-        {
-          slug: 'work',
-          label: 'Business workspace',
-          description:
-            'Need design-studio CRM instead? Flat team pricing for clients, jobs, and invoices.',
-          icon: Briefcase,
-        },
-      ],
+      relatedSegments: [],
       signupProfile: 'commercial_property',
+      // Live public brochure example for the brochures section.
+      brochureExampleUrl:
+        'https://app.ozer.so/share/brochure/fd02546873794bdf06b70864efdc7ba91c9d34243a50d07d',
     },
   };
 

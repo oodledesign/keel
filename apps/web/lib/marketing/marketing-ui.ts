@@ -23,8 +23,11 @@ export const marketingBtnGradient = marketingBtnPrimary;
 
 export const marketingBtnOutline = `h-11 rounded-full border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-6 text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-panel-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ozer-cream-50)] dark:focus-visible:ring-offset-[var(--ozer-plum-900)] ${marketingBtnPress}`;
 
+/** Outline CTA on fixed plum bands (commercial hero, etc.). */
+export const marketingBtnOutlineOnDark = `h-11 rounded-full border border-[color:var(--ozer-border-on-dark-strong)] bg-transparent px-6 text-[var(--ozer-text-on-dark)] hover:bg-[var(--ozer-on-dark-alpha-08)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ozer-plum-950)] ${marketingBtnPress}`;
+
 export const marketingEyebrow =
-  'inline-flex items-center rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-coral-600)]';
+  'inline-flex w-fit max-w-full items-center self-start rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-coral-600)]';
 
 /** Accent phrase in headlines — solid Orange Topaze, not a gradient fill. */
 export const marketingHeadlineGradient =
@@ -56,6 +59,10 @@ export const marketingPlanBadge =
 export const marketingMutedText = 'text-[var(--workspace-shell-text-muted)]';
 
 export const marketingBodyText = 'text-[var(--workspace-shell-text-muted)]';
+
+/** Section H2 — ~10% larger than text-3xl / md:text-4xl */
+export const marketingSectionHeading =
+  'font-heading text-[2.0625rem] font-semibold tracking-tight md:text-[2.475rem]';
 
 /** Nav pill in marketing header */
 export const marketingNavPill =
@@ -89,7 +96,7 @@ export const marketingSectionDark = 'bg-[var(--ozer-plum-950)] text-[var(--ozer-
 export const marketingSectionDarkMuted = 'text-[var(--ozer-text-on-dark-muted)]';
 
 export const marketingEyebrowOnDark =
-  'inline-flex items-center rounded-full border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ozer-coral-400)]';
+  'inline-flex w-fit max-w-full items-center self-start rounded-full border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ozer-coral-400)]';
 
 /** Strong ease-out curve for hero entrance (matches marketingBtnPress) */
 export const marketingHeroEase = [0.23, 1, 0.32, 1] as const;

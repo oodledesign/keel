@@ -4,6 +4,7 @@ import { useTransition } from 'react';
 
 import Link from 'next/link';
 
+import { AdminImpersonateUserDialog } from '@kit/admin/components/admin-impersonate-user-dialog';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import { PageBody, PageHeader } from '@kit/ui/page';
@@ -57,6 +58,15 @@ export function AdminPlatformSupportTicketDetail(props: {
           {ticket.accountName ? (
             <Badge variant="outline">Workspace: {ticket.accountName}</Badge>
           ) : null}
+          <AdminImpersonateUserDialog
+            userId={ticket.userId}
+            supportTicketId={ticket.id}
+            reason={`Support ticket #${ticket.ticketNumber}: ${ticket.subject}`}
+          >
+            <Button variant="secondary" size="sm">
+              Impersonate user
+            </Button>
+          </AdminImpersonateUserDialog>
         </div>
 
         <PlatformSupportTicketThread

@@ -7,6 +7,7 @@ import { htmlToMarkdown } from '~/lib/markdown';
 import { brainChunksNeedRefresh } from './brain-index-refresh';
 import { splitIntoChunks } from './chunking';
 import {
+  listEmailThreadIndexableRefs,
   loadEmailThreadIndexables,
   mapEmailThreadToIndexable,
 } from './email-thread-index';
@@ -38,6 +39,12 @@ export type IndexableRecord = {
   clientId?: string | null;
   phaseJobId?: string | null;
   meetingDate?: string | null;
+};
+
+export type IndexableRef = {
+  sourceType: BrainSourceType;
+  sourceId: string;
+  title: string;
 };
 
 async function loadAccountSlug(admin: AdminClient, accountId: string) {
@@ -366,6 +373,237 @@ export async function loadAccountIndexables(
   return dedupeIndexablesBySourceId(records);
 }
 
+function preferLongerIndexable(
+  left: IndexableRecord | null,
+  right: IndexableRecord | null,
+): IndexableRecord | null {
+  if (!left) return right;
+  if (!right) return left;
+
+  const preferred = right.text.length >= left.text.length ? right : left;
+  const mergedUpdatedAt =
+    right.updatedAt > left.updatedAt ? right.updatedAt : left.updatedAt;
+
+  return {
+    ...preferred,
+    text: right.text.length > left.text.length ? right.text : left.text,
+    updatedAt: mergedUpdatedAt,
+  };
+}
+
+async function loadDocIndexable(
+  admin: AdminClient,
+  accountId: string,
+  accountSlug: string,
+  sourceId: string,
+): Promise<IndexableRecord | null> {
+  const { data: row } = await admin
+    .from('docs')
+    .select(
+      'id, title, content, updated_at, job_id, client_id, phase_id, kind, doc_type',
+    )
+    .eq('account_id', accountId)
+    .eq('id', sourceId)
+    .eq('kind', 'written')
+    .maybeSingle();
+
+  if (!row) return null;
+
+  const content = (row.content as string)?.trim();
+  if (!content) return null;
+
+  const phaseId = row.phase_id as string | null;
+  const jobId = row.job_id as string | null;
+
+  if (phaseId && row.doc_type === 'phase_page') {
+    return {
+      sourceType: 'phase',
+      sourceId: phaseId,
+      accountId,
+      accountSlug,
+      title: `${((row.title as string) || 'Phase page').trim()} (phase page)`,
+      text: content,
+      updatedAt: row.updated_at as string,
+      jobId,
+      clientId: (row.client_id as string | null) ?? null,
+      phaseJobId: jobId,
+    };
+  }
+
+  return {
+    sourceType: 'doc',
+    sourceId: row.id as string,
+    accountId,
+    accountSlug,
+    title: ((row.title as string) || 'Document').trim(),
+    text: content,
+    updatedAt: row.updated_at as string,
+    jobId,
+    clientId: (row.client_id as string | null) ?? null,
+  };
+}
+
+async function loadJobIndexable(
+  admin: AdminClient,
+  accountId: string,
+  accountSlug: string,
+  sourceId: string,
+): Promise<IndexableRecord | null> {
+  const { data: row } = await admin
+    .from('projects')
+    .select('id, title, description, updated_at, client_id')
+    .eq('account_id', accountId)
+    .eq('id', sourceId)
+    .eq('project_type', 'delivery')
+    .maybeSingle();
+
+  if (!row) return null;
+
+  const title = (row.title as string)?.trim() || 'Job';
+  const description = (row.description as string | null)?.trim() ?? '';
+  const text = description ? `# ${title}\n\n${description}` : title;
+
+  return {
+    sourceType: 'job',
+    sourceId: row.id as string,
+    accountId,
+    accountSlug,
+    title,
+    text,
+    updatedAt: row.updated_at as string,
+    jobId: row.id as string,
+    clientId: (row.client_id as string | null) ?? null,
+  };
+}
+
+async function loadJobNoteIndexable(
+  admin: AdminClient,
+  accountId: string,
+  accountSlug: string,
+  sourceId: string,
+): Promise<IndexableRecord | null> {
+  const { data: row } = await admin
+    .from('project_delivery_notes')
+    .select('id, note, updated_at, project_id, projects(title, client_id)')
+    .eq('account_id', accountId)
+    .eq('id', sourceId)
+    .maybeSingle();
+
+  if (!row) return null;
+
+  const note = (row.note as string)?.trim();
+  if (!note) return null;
+
+  const project = row.projects as
+    | { title?: string | null; client_id?: string | null }
+    | { title?: string | null; client_id?: string | null }[]
+    | null;
+  const projectRow = Array.isArray(project) ? project[0] : project;
+  const projectTitle = projectRow?.title?.trim() || 'Project';
+
+  return {
+    sourceType: 'job_note',
+    sourceId: row.id as string,
+    accountId,
+    accountSlug,
+    title: `Note on: ${projectTitle}`,
+    text: note,
+    updatedAt: row.updated_at as string,
+    jobId: row.project_id as string,
+    clientId: projectRow?.client_id ?? null,
+  };
+}
+
+async function loadPhaseIndexable(
+  admin: AdminClient,
+  accountId: string,
+  accountSlug: string,
+  sourceId: string,
+): Promise<IndexableRecord | null> {
+  const [{ data: phase }, { data: page }] = await Promise.all([
+    admin
+      .from('project_phases')
+      .select('id, name, description, updated_at, project_id')
+      .eq('account_id', accountId)
+      .eq('id', sourceId)
+      .maybeSingle(),
+    admin
+      .from('docs')
+      .select(
+        'id, title, content, updated_at, job_id, client_id, phase_id, kind, doc_type',
+      )
+      .eq('account_id', accountId)
+      .eq('phase_id', sourceId)
+      .eq('kind', 'written')
+      .eq('doc_type', 'phase_page')
+      .maybeSingle(),
+  ]);
+
+  const fromPhase: IndexableRecord | null =
+    phase && (phase.description as string | null)?.trim()
+      ? {
+          sourceType: 'phase',
+          sourceId: phase.id as string,
+          accountId,
+          accountSlug,
+          title: `${(phase.name as string).trim()} (phase)`,
+          text: (phase.description as string).trim(),
+          updatedAt: phase.updated_at as string,
+          jobId: phase.project_id as string,
+          phaseJobId: phase.project_id as string,
+        }
+      : null;
+
+  const pageContent = (page?.content as string | null)?.trim();
+  const fromPage: IndexableRecord | null =
+    page && pageContent
+      ? {
+          sourceType: 'phase',
+          sourceId: sourceId,
+          accountId,
+          accountSlug,
+          title: `${((page.title as string) || 'Phase page').trim()} (phase page)`,
+          text: pageContent,
+          updatedAt: page.updated_at as string,
+          jobId: (page.job_id as string | null) ?? null,
+          clientId: (page.client_id as string | null) ?? null,
+          phaseJobId: (page.job_id as string | null) ?? null,
+        }
+      : null;
+
+  return preferLongerIndexable(fromPhase, fromPage);
+}
+
+async function loadProposalIndexable(
+  admin: AdminClient,
+  accountId: string,
+  accountSlug: string,
+  sourceId: string,
+): Promise<IndexableRecord | null> {
+  const { data: row } = await admin
+    .from('proposals')
+    .select('id, title, content_html, updated_at, client_id')
+    .eq('account_id', accountId)
+    .eq('id', sourceId)
+    .maybeSingle();
+
+  if (!row) return null;
+
+  const html = (row.content_html as string | null)?.trim();
+  if (!html) return null;
+
+  return {
+    sourceType: 'proposal',
+    sourceId: row.id as string,
+    accountId,
+    accountSlug,
+    title: ((row.title as string) || 'Proposal').trim(),
+    text: htmlToMarkdown(html),
+    updatedAt: row.updated_at as string,
+    clientId: (row.client_id as string | null) ?? null,
+  };
+}
+
 export async function loadIndexableSource(
   admin: AdminClient,
   accountId: string,
@@ -374,46 +612,51 @@ export async function loadIndexableSource(
 ): Promise<IndexableRecord | null> {
   const accountSlug = await loadAccountSlug(admin, accountId);
 
-  if (sourceType === 'note') {
-    const { data: row } = await admin
-      .from('notes')
-      .select('id, title, content, updated_at, job_id, client_id')
-      .eq('account_id', accountId)
-      .eq('id', sourceId)
-      .maybeSingle();
+  switch (sourceType) {
+    case 'note': {
+      const { data: row } = await admin
+        .from('notes')
+        .select('id, title, content, updated_at, job_id, client_id')
+        .eq('account_id', accountId)
+        .eq('id', sourceId)
+        .maybeSingle();
 
-    if (!row) return null;
+      if (!row) return null;
 
-    const content = (row.content as string)?.trim();
-    if (!content) return null;
+      const content = (row.content as string)?.trim();
+      if (!content) return null;
 
-    return {
-      sourceType: 'note',
-      sourceId: row.id as string,
-      accountId,
-      accountSlug,
-      title: ((row.title as string) || 'Note').trim(),
-      text: content,
-      updatedAt: row.updated_at as string,
-      jobId: (row.job_id as string | null) ?? null,
-      clientId: (row.client_id as string | null) ?? null,
-    };
+      return {
+        sourceType: 'note',
+        sourceId: row.id as string,
+        accountId,
+        accountSlug,
+        title: ((row.title as string) || 'Note').trim(),
+        text: content,
+        updatedAt: row.updated_at as string,
+        jobId: (row.job_id as string | null) ?? null,
+        clientId: (row.client_id as string | null) ?? null,
+      };
+    }
+    case 'doc':
+      return loadDocIndexable(admin, accountId, accountSlug, sourceId);
+    case 'job':
+      return loadJobIndexable(admin, accountId, accountSlug, sourceId);
+    case 'job_note':
+      return loadJobNoteIndexable(admin, accountId, accountSlug, sourceId);
+    case 'phase':
+      return loadPhaseIndexable(admin, accountId, accountSlug, sourceId);
+    case 'transcript':
+      return loadTranscriptIndexable(admin, accountId, accountSlug, sourceId);
+    case 'proposal':
+      return loadProposalIndexable(admin, accountId, accountSlug, sourceId);
+    case 'email_thread':
+      return mapEmailThreadToIndexable(admin, accountId, accountSlug, sourceId);
+    case 'task':
+      return null;
+    default:
+      return null;
   }
-
-  if (sourceType === 'transcript') {
-    return loadTranscriptIndexable(admin, accountId, accountSlug, sourceId);
-  }
-
-  if (sourceType === 'email_thread') {
-    return mapEmailThreadToIndexable(admin, accountId, accountSlug, sourceId);
-  }
-
-  const records = await loadAccountIndexables(admin, accountId);
-  return (
-    records.find(
-      (row) => row.sourceType === sourceType && row.sourceId === sourceId,
-    ) ?? null
-  );
 }
 
 /** `brain_chunks` is unique on (source_id, chunk_index) only — merge duplicate sources. */
@@ -448,6 +691,198 @@ function dedupeIndexablesBySourceId(
   return [...bySourceId.values()];
 }
 
+function dedupeIndexableRefs(refs: IndexableRef[]): IndexableRef[] {
+  const seen = new Set<string>();
+  const unique: IndexableRef[] = [];
+
+  for (const ref of refs) {
+    if (seen.has(ref.sourceId)) continue;
+    seen.add(ref.sourceId);
+    unique.push(ref);
+  }
+
+  return unique;
+}
+
+export async function listAccountIndexableRefs(
+  admin: AdminClient,
+  accountId: string,
+): Promise<IndexableRef[]> {
+  const refs: IndexableRef[] = [];
+
+  const { data: notes } = await admin
+    .from('notes')
+    .select('id, title')
+    .eq('account_id', accountId)
+    .not('content', 'is', null);
+
+  for (const row of notes ?? []) {
+    refs.push({
+      sourceType: 'note',
+      sourceId: row.id as string,
+      title: ((row.title as string) || 'Note').trim(),
+    });
+  }
+
+  const { data: docs } = await admin
+    .from('docs')
+    .select('id, title, phase_id, doc_type')
+    .eq('account_id', accountId)
+    .eq('kind', 'written')
+    .not('content', 'is', null);
+
+  for (const row of docs ?? []) {
+    const phaseId = row.phase_id as string | null;
+    if (phaseId && row.doc_type === 'phase_page') {
+      refs.push({
+        sourceType: 'phase',
+        sourceId: phaseId,
+        title: `${((row.title as string) || 'Phase page').trim()} (phase page)`,
+      });
+      continue;
+    }
+
+    refs.push({
+      sourceType: 'doc',
+      sourceId: row.id as string,
+      title: ((row.title as string) || 'Document').trim(),
+    });
+  }
+
+  const { data: projects } = await admin
+    .from('projects')
+    .select('id, title')
+    .eq('account_id', accountId)
+    .eq('project_type', 'delivery');
+
+  for (const row of projects ?? []) {
+    refs.push({
+      sourceType: 'job',
+      sourceId: row.id as string,
+      title: (row.title as string)?.trim() || 'Job',
+    });
+  }
+
+  const { data: deliveryNotes } = await admin
+    .from('project_delivery_notes')
+    .select('id, projects(title)')
+    .eq('account_id', accountId)
+    .not('note', 'is', null);
+
+  for (const row of deliveryNotes ?? []) {
+    const project = row.projects as
+      | { title?: string | null }
+      | { title?: string | null }[]
+      | null;
+    const projectRow = Array.isArray(project) ? project[0] : project;
+    refs.push({
+      sourceType: 'job_note',
+      sourceId: row.id as string,
+      title: `Note on: ${projectRow?.title?.trim() || 'Project'}`,
+    });
+  }
+
+  const { data: phases } = await admin
+    .from('project_phases')
+    .select('id, name')
+    .eq('account_id', accountId)
+    .not('description', 'is', null);
+
+  for (const row of phases ?? []) {
+    refs.push({
+      sourceType: 'phase',
+      sourceId: row.id as string,
+      title: `${(row.name as string).trim()} (phase)`,
+    });
+  }
+
+  const { data: transcripts, error: transcriptsError } = await admin
+    .from('meeting_transcripts')
+    .select('id, title')
+    .eq('account_id', accountId);
+
+  if (transcriptsError) {
+    throw new Error(`meeting_transcripts: ${transcriptsError.message}`);
+  }
+
+  for (const row of transcripts ?? []) {
+    refs.push({
+      sourceType: 'transcript',
+      sourceId: row.id as string,
+      title: ((row.title as string) || 'Meeting transcript').trim(),
+    });
+  }
+
+  const { data: proposals } = await admin
+    .from('proposals')
+    .select('id, title')
+    .eq('account_id', accountId)
+    .not('content_html', 'is', null);
+
+  for (const row of proposals ?? []) {
+    refs.push({
+      sourceType: 'proposal',
+      sourceId: row.id as string,
+      title: ((row.title as string) || 'Proposal').trim(),
+    });
+  }
+
+  const emailRefs = await listEmailThreadIndexableRefs(admin, accountId);
+  for (const row of emailRefs) {
+    refs.push({
+      sourceType: 'email_thread',
+      sourceId: row.sourceId,
+      title: row.title,
+    });
+  }
+
+  return dedupeIndexableRefs(refs);
+}
+
+async function indexRefs(
+  admin: AdminClient,
+  accountId: string,
+  refs: IndexableRef[],
+  forceReindex: boolean,
+) {
+  let chunkTotal = 0;
+  let indexed = 0;
+  const errors: string[] = [];
+
+  for (const ref of refs) {
+    try {
+      const record = await loadIndexableSource(
+        admin,
+        accountId,
+        ref.sourceType,
+        ref.sourceId,
+      );
+
+      if (!record) {
+        await deleteSourceChunks(admin, ref.sourceId, accountId);
+        indexed += 1;
+        continue;
+      }
+
+      chunkTotal += await upsertRecordChunks(admin, record, forceReindex, true);
+      indexed += 1;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      const label = `${ref.sourceType}:${ref.title}`;
+      console.error('[brain] index source failed', {
+        accountId,
+        sourceType: ref.sourceType,
+        sourceId: ref.sourceId,
+        title: ref.title,
+        error: message,
+      });
+      errors.push(`${label}: failed to index`);
+    }
+  }
+
+  return { chunkTotal, indexed, errors };
+}
+
 function buildMetadata(record: IndexableRecord): BrainChunkMetadata {
   const sourceUrl =
     record.sourceType === 'phase' && record.phaseJobId
@@ -477,23 +912,26 @@ async function upsertRecordChunks(
   admin: AdminClient,
   record: IndexableRecord,
   forceReindex = false,
+  alreadyLoaded = false,
 ) {
-  const fresh = await loadIndexableSource(
-    admin,
-    record.accountId,
-    record.sourceType,
-    record.sourceId,
-  );
+  const fresh = alreadyLoaded
+    ? record
+    : await loadIndexableSource(
+        admin,
+        record.accountId,
+        record.sourceType,
+        record.sourceId,
+      );
 
   if (!fresh) {
-    await admin.from('brain_chunks').delete().eq('source_id', record.sourceId);
+    await deleteSourceChunks(admin, record.sourceId, record.accountId);
     return 0;
   }
 
   record = fresh;
   const chunks = splitIntoChunks(record.text);
   if (chunks.length === 0) {
-    await admin.from('brain_chunks').delete().eq('source_id', record.sourceId);
+    await deleteSourceChunks(admin, record.sourceId, record.accountId);
     return 0;
   }
 
@@ -546,14 +984,23 @@ async function upsertRecordChunks(
   await admin
     .from('brain_chunks')
     .delete()
+    .eq('account_id', record.accountId)
     .eq('source_id', record.sourceId)
     .gte('chunk_index', chunks.length);
 
   return chunks.length;
 }
 
-export async function deleteSourceChunks(admin: AdminClient, sourceId: string) {
-  await admin.from('brain_chunks').delete().eq('source_id', sourceId);
+export async function deleteSourceChunks(
+  admin: AdminClient,
+  sourceId: string,
+  accountId?: string,
+) {
+  let query = admin.from('brain_chunks').delete().eq('source_id', sourceId);
+  if (accountId) {
+    query = query.eq('account_id', accountId);
+  }
+  await query;
 }
 
 export async function indexSource(
@@ -598,39 +1045,22 @@ export async function indexAccount(
     };
   }
 
-  const records = await loadAccountIndexables(admin, accountId);
-  let chunkTotal = 0;
-  let indexed = 0;
-  const errors: string[] = [];
-
-  console.log(
-    `[brain] indexing account ${accountId}: ${records.length} sources`,
-  );
-
+  const refs = await listAccountIndexableRefs(admin, accountId);
   const forceReindex = options?.force ?? false;
 
-  for (const record of records) {
-    try {
-      chunkTotal += await upsertRecordChunks(admin, record, forceReindex);
-      indexed += 1;
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      const label = `${record.sourceType}:${record.title}`;
-      console.error('[brain] index source failed', {
-        accountId,
-        sourceType: record.sourceType,
-        sourceId: record.sourceId,
-        title: record.title,
-        error: message,
-      });
-      errors.push(`${label}: ${message}`);
-    }
-  }
+  console.log(`[brain] indexing account ${accountId}: ${refs.length} sources`);
+
+  const { chunkTotal, indexed, errors } = await indexRefs(
+    admin,
+    accountId,
+    refs,
+    forceReindex,
+  );
 
   const stats = await getBrainIndexStats(admin, accountId);
 
   console.log(
-    `[brain] indexed account ${accountId}: ${indexed}/${records.length} sources, ${stats.totalChunks} chunks in db (${chunkTotal} written this run), ${errors.length} errors`,
+    `[brain] indexed account ${accountId}: ${indexed}/${refs.length} sources, ${stats.totalChunks} chunks in db (${chunkTotal} written this run), ${errors.length} errors`,
   );
 
   if (indexed === 0 && errors.length > 0) {
@@ -646,6 +1076,79 @@ export async function indexAccount(
     totalChunks: stats.totalChunks,
     byType: stats.byType,
     errors,
+  };
+}
+
+export async function indexAccountBatch(
+  admin: AdminClient,
+  accountId: string,
+  options: {
+    force?: boolean;
+    offset: number;
+    limit: number;
+    sources?: IndexableRef[];
+    total?: number;
+  },
+) {
+  if (!isVoyageConfigured()) {
+    return {
+      indexed: 0,
+      processed: 0,
+      total: 0,
+      nextOffset: 0,
+      done: true,
+      chunks: 0,
+      totalChunks: 0,
+      byType: {},
+      skipped: true as const,
+      errors: [] as string[],
+      sources: [] as IndexableRef[],
+    };
+  }
+
+  const offset = Math.max(0, options.offset);
+  const limit = Math.max(1, options.limit);
+  const forceReindex = options.force ?? false;
+
+  let slice: IndexableRef[];
+  let total: number;
+  let catalog: IndexableRef[] | undefined;
+
+  if (options.sources) {
+    slice = options.sources.slice(0, limit);
+    total = options.total ?? offset + slice.length;
+  } else {
+    catalog = await listAccountIndexableRefs(admin, accountId);
+    slice = catalog.slice(offset, offset + limit);
+    total = catalog.length;
+  }
+
+  console.log(
+    `[brain] indexing account ${accountId} batch ${offset}-${offset + slice.length} of ${total}`,
+  );
+
+  const { indexed, errors } = await indexRefs(
+    admin,
+    accountId,
+    slice,
+    forceReindex,
+  );
+
+  const nextOffset = offset + slice.length;
+  const done = nextOffset >= total;
+  const stats = done ? await getBrainIndexStats(admin, accountId) : null;
+
+  return {
+    indexed,
+    processed: nextOffset,
+    total,
+    nextOffset,
+    done,
+    chunks: stats?.totalChunks ?? 0,
+    totalChunks: stats?.totalChunks ?? 0,
+    byType: stats?.byType ?? {},
+    errors,
+    sources: catalog,
   };
 }
 

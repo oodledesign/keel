@@ -18,9 +18,12 @@ enum ConsentStatus {
   Unknown = 'unknown',
 }
 
-export const CookieBanner = dynamic(async () => CookieBannerComponent, {
-  ssr: false,
-});
+export const CookieBanner = dynamic(
+  () => Promise.resolve({ default: CookieBannerComponent }),
+  {
+    ssr: false,
+  },
+);
 
 export function CookieBannerComponent() {
   const { status, accept, reject } = useCookieConsent();

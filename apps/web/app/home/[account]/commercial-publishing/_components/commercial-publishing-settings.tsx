@@ -40,7 +40,7 @@ interface CommercialPublishingSettingsProps {
   accountId: string;
   initialSettings: CommercialPublishingSettings;
   listings: CommercialListing[];
-  /** Rightmove requires 2+ billable seats. */
+  /** Portal publishing is available from Commercial Solo (1 seat). */
   portalPublishingUnlocked?: boolean;
 }
 
@@ -452,16 +452,16 @@ export function CommercialPublishingSettings({
         <CardContent className="space-y-8">
           {!portalPublishingUnlocked ? (
             <p className="rounded-xl border border-amber-500/30 bg-amber-500/10 px-4 py-3 text-sm text-[var(--workspace-shell-text)]">
-              Rightmove publishing unlocks from 2 billable seats. Property Hive
-              and EACH use the listing XML feed and remain available on Solo.
+              Portal publishing is locked on this subscription. Contact support
+              if you expect Rightmove, EACH, or Property Hive to be available.
             </p>
           ) : null}
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
             Rightmove Commercial Listings uses platform OAuth (env). Rightmove
             Branch IDs live on each workspace office under Brand settings →
-            Branches, and disposals pick an office on Management. EACH has its
-            own XML feed URL (separate from Property Hive) so stock can diverge
-            later.
+            Branches, and disposals pick an office on Management. EACH and
+            Property Hive WordPress use Kato-compatible XML feed URLs (EACH has
+            its own token so stock can diverge later).
           </p>
 
           <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">

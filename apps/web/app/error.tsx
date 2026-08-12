@@ -40,7 +40,7 @@ const ErrorPage = ({
 
   return (
     <div className={'flex h-screen flex-1 flex-col'}>
-      <SiteHeader user={user.data} />
+      <SiteHeader user={user.data ?? null} />
 
       <ErrorPageContent
         statusCode={'common:errorPageHeading'}

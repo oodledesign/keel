@@ -29,9 +29,14 @@ function baseTask(overrides: Partial<TasksPageTask> = {}): TasksPageTask {
     workspaceName: 'Oodle',
     workspaceSlug: 'oodle',
     workspaceColor: null,
+    accountId: null,
     parentTaskId: null,
     notes: null,
+    noteRefs: [],
     calendarScheduleStatus: null,
+    recurringSeriesId: null,
+    source: 'manual',
+    sourceContext: null,
     ...overrides,
   };
 }

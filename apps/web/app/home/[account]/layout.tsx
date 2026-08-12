@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 
 import { z } from 'zod';
 
+import { AdminImpersonationExitHost } from '@kit/admin/components/admin-impersonation-exit-host';
 import { TeamAccountWorkspaceContextProvider } from '@kit/team-accounts/components';
 import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
@@ -76,16 +77,22 @@ function TeamWorkspaceLayout({ children, params }: TeamWorkspaceLayoutProps) {
 
   if (state.style === 'sidebar') {
     return (
-      <SidebarLayout account={account} layoutState={state}>
-        {children}
-      </SidebarLayout>
+      <>
+        <AdminImpersonationExitHost />
+        <SidebarLayout account={account} layoutState={state}>
+          {children}
+        </SidebarLayout>
+      </>
     );
   }
 
   return (
-    <HeaderLayout account={account} layoutState={state}>
-      {children}
-    </HeaderLayout>
+    <>
+      <AdminImpersonationExitHost />
+      <HeaderLayout account={account} layoutState={state}>
+        {children}
+      </HeaderLayout>
+    </>
   );
 }
 

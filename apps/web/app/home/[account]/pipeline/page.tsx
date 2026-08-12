@@ -20,6 +20,7 @@ import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader'
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { WorkspacePipelineBoardWrapper } from './_components/workspace-pipeline-board-wrapper';
 import { loadPipelineBoardSettings } from './_lib/server/pipeline-stage-settings.loader';
+import { loadWipAttentionDigest } from './_lib/server/wip-attention.loader';
 
 interface TeamAccountPipelinePageProps {
   params: Promise<{ account: string }>;
@@ -85,30 +86,40 @@ async function TeamAccountPipelinePage({
   let stageConfig = undefined;
   let boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME;
   let requirements: CommercialRequirement[] = [];
+  let attentionDigest = null as Awaited<
+    ReturnType<typeof loadWipAttentionDigest>
+  > | null;
 
   if (isCommercial) {
     // commercial_* tables may lag generated Database types
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const db = client as any;
-    const [listingResult, boardSettings, agentResult, requirementsList] =
-      await Promise.all([
-        db
-          .from('commercial_listings')
-          .select(
-            'id, name, disposal_type, asking_rent_pence, asking_price_pence',
-          )
-          .eq('account_id', accountId)
-          .order('name', { ascending: true }),
-        loadPipelineBoardSettings(accountId),
-        db
-          .from('commercial_listing_agents')
-          .select('listing_id, user_id, sort_order')
-          .eq('account_id', accountId)
-          .order('sort_order', { ascending: true }),
-        createRequirementsService(client).listRequirements(accountId),
-      ]);
+    const [
+      listingResult,
+      boardSettings,
+      agentResult,
+      requirementsList,
+      attention,
+    ] = await Promise.all([
+      db
+        .from('commercial_listings')
+        .select(
+          'id, name, disposal_type, asking_rent_pence, asking_price_pence',
+        )
+        .eq('account_id', accountId)
+        .order('name', { ascending: true }),
+      loadPipelineBoardSettings(accountId),
+      db
+        .from('commercial_listing_agents')
+        .select('listing_id, user_id, sort_order')
+        .eq('account_id', accountId)
+        .order('sort_order', { ascending: true }),
+      createRequirementsService(client).listRequirements(accountId),
+      loadWipAttentionDigest(client, accountId),
+    ]);
 
     requirements = requirementsList;
+    attentionDigest = attention;
 
     const agentRows = (agentResult.data ?? []) as Array<{
       listing_id: string;
@@ -178,10 +189,8 @@ async function TeamAccountPipelinePage({
   });
   const totalValue = activeDeals.reduce((sum, d) => sum + (d.value || 0), 0);
   const headerTitle = isCommercial ? boardName : 'Pipeline';
-  const instructionWord =
-    activeDeals.length === 1 ? 'instruction' : 'instructions';
   const headerDescription = isCommercial
-    ? `${activeDeals.length} active ${instructionWord} · ${requirements.length} requirements · ${formatCurrency(totalValue)} total value`
+    ? undefined
     : `${activeDeals.length} active leads · ${formatCurrency(totalValue)} total value`;
 
   return (
@@ -190,8 +199,11 @@ async function TeamAccountPipelinePage({
         account={accountSlug}
         title={headerTitle}
         description={headerDescription}
+        className={
+          isCommercial ? 'flex px-4 py-1.5 lg:px-8' : 'flex px-4 py-3 lg:px-8'
+        }
       />
-      <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0">
+      <PageBody className="flex min-h-0 flex-1 flex-col bg-[var(--workspace-shell-canvas)] p-0 lg:px-0">
         <WorkspacePipelineBoardWrapper
           initialData={data}
           accountSlug={accountSlug}
@@ -202,6 +214,8 @@ async function TeamAccountPipelinePage({
           stageConfig={stageConfig}
           boardName={boardName}
           initialRequirements={requirements}
+          attentionDigest={attentionDigest}
+          hideBoardTitle
         />
       </PageBody>
     </>

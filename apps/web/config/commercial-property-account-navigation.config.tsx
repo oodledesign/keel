@@ -35,8 +35,8 @@ function isEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,
   key: string,
 ) {
-  // Treat missing keys as enabled so new modules show before settings backfill
-  if (!moduleSettings || !(key in moduleSettings)) return true;
+  if (!moduleSettings) return key !== 'proposals';
+  if (!(key in moduleSettings)) return key !== 'proposals';
   return isAccountModuleEnabled(moduleSettings, key);
 }
 
@@ -111,7 +111,7 @@ export function buildCommercialPropertySpaceNavChildren(
     leases: () =>
       access.canViewDashboard && isEnabled(ms, 'leases')
         ? {
-            label: 'Sales register',
+            label: 'Sales & lettings',
             path: createPath(pathsConfig.app.accountLeases, account),
             Icon: <FileText className={iconClasses} />,
           }

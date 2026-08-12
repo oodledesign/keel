@@ -31,7 +31,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { MoreHorizontal, Pencil, Plus } from 'lucide-react';
+import { LayoutGrid, MoreHorizontal, Pencil, Plus, Table2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -79,6 +79,7 @@ import {
 } from '~/lib/commercial/commercial-constants';
 import {
   type PipelineStageConfigItem,
+  isCommercialTerminalStage,
   normalizeCommercialPipelineStage,
   resolveCommercialPipelineBoardStages,
 } from '~/lib/commercial/pipeline-stage-config';
@@ -99,6 +100,10 @@ import {
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
+import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
+import { WipNeedsAttentionStrip } from './wip-needs-attention-strip';
+import { WipSheetView } from './wip-sheet-view';
+
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_1px_2px_rgba(42,23,32,0.04),0_3px_10px_rgba(42,23,32,0.05)]';
 
@@ -107,6 +112,12 @@ const VIEW_OPTIONS: Array<{ key: WipBoardView; label: string }> = [
   { key: 'requirements', label: 'Requirements' },
   { key: 'both', label: 'Both' },
 ];
+
+type WipLayoutMode = 'board' | 'sheet';
+
+function parseWipLayoutMode(raw: string | null): WipLayoutMode {
+  return raw === 'sheet' ? 'sheet' : 'board';
+}
 
 type BoardCard =
   | { kind: 'instruction'; deal: PipelineDeal }
@@ -127,8 +138,11 @@ type Props = {
   listings?: PipelineListingOption[];
   stageConfig?: PipelineStageConfigItem[];
   boardName?: string;
+  attentionDigest?: WipAttentionDigest | null;
   onDealWon?: (deal: PipelineDeal) => void;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
+  onInstructionCreated?: (deal: PipelineDeal) => void;
+  hideBoardTitle?: boolean;
 };
 
 function formatCurrency(value: number) {
@@ -197,16 +211,30 @@ export function CommercialWipBoard({
   listings = [],
   stageConfig,
   boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
+  attentionDigest = null,
   onDealWon,
   onRequestCreateDisposal,
+  onInstructionCreated,
+  hideBoardTitle = false,
 }: Props) {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const view = parseWipBoardView(searchParams.get('view'));
   const createParam = searchParams.get('create');
-  const createInstructionRequested = createParam === 'lead';
+  // Optimistic view: tab highlight + board columns update immediately. URL is
+  // synced with history.replaceState so App Router doesn't refetch the whole
+  // pipeline RSC payload on every tab click (that was the lag).
+  const [view, setViewState] = useState<WipBoardView>(() =>
+    parseWipBoardView(searchParams.get('view')),
+  );
+  const [layout, setLayoutState] = useState<WipLayoutMode>(() =>
+    parseWipLayoutMode(searchParams.get('layout')),
+  );
+  const [createDismissed, setCreateDismissed] = useState(false);
+  const [isViewSwitching, setIsViewSwitching] = useState(false);
+  const viewSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const createInstructionRequested = !createDismissed && createParam === 'lead';
   // `?create=1` (optionally with `view=requirements`) opens the requirement modal
-  const createRequirementRequested = createParam === '1';
+  const createRequirementRequested = !createDismissed && createParam === '1';
 
   const [deals, setDeals] = useState<PipelineDeal[]>(initialData.deals);
   const [requirements, setRequirements] = useState(initialRequirements);
@@ -235,24 +263,90 @@ export function CommercialWipBoard({
     setRequirements(initialRequirements);
   }, [initialRequirements]);
 
-  const clearCreateQuery = useCallback(() => {
-    if (!createParam) return;
+  // Do not sync view from useSearchParams after mount — Next's router URL can
+  // lag behind history.replaceState, and router.refresh() would snap the tab
+  // back to Instructions. Initial state + popstate cover deep links / back.
+
+  useEffect(() => {
+    if (createParam === '1' || createParam === 'lead') {
+      setCreateDismissed(false);
+    }
+  }, [createParam]);
+
+  useEffect(() => {
+    const onPopState = () => {
+      const params = new URLSearchParams(window.location.search);
+      setViewState(parseWipBoardView(params.get('view')));
+      setLayoutState(parseWipLayoutMode(params.get('layout')));
+    };
+    window.addEventListener('popstate', onPopState);
+    return () => window.removeEventListener('popstate', onPopState);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (viewSwitchTimerRef.current) {
+        clearTimeout(viewSwitchTimerRef.current);
+      }
+    };
+  }, []);
+
+  const replaceQueryShallow = useCallback((mutate: (url: URL) => void) => {
     const url = new URL(window.location.href);
-    url.searchParams.delete('create');
-    router.replace(url.pathname + url.search, { scroll: false });
-  }, [createParam, router]);
+    mutate(url);
+    window.history.replaceState(
+      window.history.state,
+      '',
+      url.pathname + url.search,
+    );
+  }, []);
+
+  const clearCreateQuery = useCallback(() => {
+    setCreateDismissed(true);
+    if (!createParam) return;
+    replaceQueryShallow((url) => {
+      url.searchParams.delete('create');
+    });
+  }, [createParam, replaceQueryShallow]);
 
   const setView = useCallback(
     (next: WipBoardView) => {
-      const url = new URL(window.location.href);
-      if (next === 'instructions') {
-        url.searchParams.delete('view');
-      } else {
-        url.searchParams.set('view', next);
+      if (next === view) return;
+
+      setViewState(next);
+      setIsViewSwitching(true);
+      if (viewSwitchTimerRef.current) {
+        clearTimeout(viewSwitchTimerRef.current);
       }
-      router.replace(url.pathname + url.search, { scroll: false });
+      viewSwitchTimerRef.current = setTimeout(() => {
+        setIsViewSwitching(false);
+        viewSwitchTimerRef.current = null;
+      }, 220);
+
+      replaceQueryShallow((url) => {
+        if (next === 'instructions') {
+          url.searchParams.delete('view');
+        } else {
+          url.searchParams.set('view', next);
+        }
+      });
     },
-    [router],
+    [replaceQueryShallow, view],
+  );
+
+  const setLayout = useCallback(
+    (next: WipLayoutMode) => {
+      if (next === layout) return;
+      setLayoutState(next);
+      replaceQueryShallow((url) => {
+        if (next === 'board') {
+          url.searchParams.delete('layout');
+        } else {
+          url.searchParams.set('layout', next);
+        }
+      });
+    },
+    [layout, replaceQueryShallow],
   );
 
   const instructionStages = useMemo(
@@ -593,27 +687,99 @@ export function CommercialWipBoard({
 
   const handleSaved = useCallback(() => router.refresh(), [router]);
 
+  const activeInstructions = useMemo(
+    () => deals.filter((deal) => !isCommercialTerminalStage(deal.stage)),
+    [deals],
+  );
+  const instructionCount = activeInstructions.length;
+  const requirementCount = requirements.length;
+  const totalValue = useMemo(
+    () => activeInstructions.reduce((sum, deal) => sum + (deal.value || 0), 0),
+    [activeInstructions],
+  );
+
+  const tabCounts: Record<WipBoardView, number | null> = {
+    instructions: instructionCount,
+    requirements: requirementCount,
+    both: instructionCount + requirementCount,
+  };
+
   return (
-    <div className="flex min-h-[calc(100svh-3.5rem)] w-full flex-col gap-6 px-4 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div
+      className={`flex min-h-[calc(100svh-3.5rem)] w-full min-w-0 flex-col pb-12 text-[var(--workspace-shell-text)] ${
+        hideBoardTitle ? 'gap-2 pt-0' : 'gap-6 pt-6'
+      }`}
+    >
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-1 md:px-6 lg:px-8">
         <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
-          {VIEW_OPTIONS.map((option) => (
+          {VIEW_OPTIONS.map((option) => {
+            const count = tabCounts[option.key];
+            return (
+              <button
+                key={option.key}
+                type="button"
+                aria-pressed={view === option.key}
+                onClick={() => setView(option.key)}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
+                  view === option.key
+                    ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
+                }`}
+              >
+                <span>{option.label}</span>
+                {count != null ? (
+                  <span
+                    className={`tabular-nums ${
+                      view === option.key
+                        ? 'text-[var(--workspace-shell-text)]/70'
+                        : 'text-[var(--workspace-shell-text-muted)]'
+                    }`}
+                  >
+                    {count}
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className="text-sm text-[var(--workspace-shell-text-muted)] tabular-nums">
+          {formatCurrency(totalValue)}
+          <span className="ml-1.5 text-[var(--workspace-shell-text-muted)]/80">
+            total value
+          </span>
+        </p>
+
+        <div className="ml-auto flex flex-wrap items-center gap-2">
+          <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
             <button
-              key={option.key}
               type="button"
-              onClick={() => setView(option.key)}
-              className={`rounded-lg px-3 py-1.5 font-medium transition-colors ${
-                view === option.key
+              aria-pressed={layout === 'board'}
+              onClick={() => setLayout('board')}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-colors ${
+                layout === 'board'
                   ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
               }`}
             >
-              {option.label}
+              <LayoutGrid className="h-3.5 w-3.5" />
+              Board
             </button>
-          ))}
-        </div>
+            <button
+              type="button"
+              aria-pressed={layout === 'sheet'}
+              onClick={() => setLayout('sheet')}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-colors ${
+                layout === 'sheet'
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
+              }`}
+            >
+              <Table2 className="h-3.5 w-3.5" />
+              Sheet
+            </button>
+          </div>
 
-        <div className="flex flex-wrap items-center gap-2">
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button
@@ -680,6 +846,13 @@ export function CommercialWipBoard({
         </div>
       </div>
 
+      {attentionDigest ? (
+        <WipNeedsAttentionStrip
+          accountSlug={accountSlug}
+          digest={attentionDigest}
+        />
+      ) : null}
+
       <CustomizePipelinePhasesDialog
         accountId={accountId}
         accountSlug={accountSlug}
@@ -692,7 +865,12 @@ export function CommercialWipBoard({
 
       <AddDealDialog
         businesses={initialData.businesses}
-        onDealCreated={(deal) => setDeals((prev) => [deal, ...prev])}
+        onDealCreated={(deal) => {
+          setDeals((prev) => [deal, ...prev]);
+          if (!deal.commercialListingId) {
+            onInstructionCreated?.(deal);
+          }
+        }}
         accountSlug={accountSlug}
         accountId={accountId}
         initialClients={initialClients}
@@ -767,62 +945,91 @@ export function CommercialWipBoard({
         }}
       />
 
-      <DndContext
-        sensors={sensors}
-        collisionDetection={closestCorners}
-        onDragStart={onDragStart}
-        onDragEnd={onDragEnd}
-      >
-        <div
-          ref={kanbanScrollRef}
-          className="flex min-h-0 flex-1 gap-4 overflow-x-auto overscroll-x-contain pb-4"
+      {layout === 'sheet' ? (
+        <WipSheetView
+          accountId={accountId}
+          accountSlug={accountSlug}
+          view={view}
+          deals={deals}
+          requirements={requirements}
+          instructionStages={selectableInstructionStages}
+          listings={listings}
+          onDealsChange={setDeals}
+          onRequirementsChange={setRequirements}
+          onEditRequirement={(requirement) => {
+            setEditingRequirement(requirement);
+            setRequirementDraft(null);
+            setOpenRequirementPaste(false);
+            setRequirementModalOpen(true);
+          }}
+          onEditInstruction={(deal) => {
+            setDealToEdit(deal);
+            setEditDealOpen(true);
+          }}
+        />
+      ) : (
+        <DndContext
+          sensors={sensors}
+          collisionDetection={closestCorners}
+          onDragStart={onDragStart}
+          onDragEnd={onDragEnd}
         >
-          {columns.map((column) => {
-            const cards = cardsByStage.get(column.key) ?? [];
-            return (
-              <StageColumn
-                key={column.key}
-                stageKey={column.key}
-                label={column.label}
-                cards={cards}
-                listingById={listingById}
-                onEditInstruction={(deal) => {
-                  setDealToEdit(deal);
-                  setEditDealOpen(true);
-                }}
-                onEditRequirement={(requirement) => {
-                  setEditingRequirement(requirement);
-                  setRequirementDraft(null);
-                  setRequirementModalOpen(true);
-                }}
-              />
-            );
-          })}
-        </div>
+          <div
+            ref={kanbanScrollRef}
+            className={`min-h-0 w-full min-w-0 flex-1 overflow-x-auto overscroll-x-contain pb-4 transition-opacity duration-150 ease-out ${
+              isViewSwitching ? 'opacity-55' : 'opacity-100'
+            }`}
+            aria-busy={isViewSwitching}
+          >
+            <div className="flex w-max min-w-full gap-4 px-4 md:px-6 lg:px-8">
+              {columns.map((column) => {
+                const cards = cardsByStage.get(column.key) ?? [];
+                return (
+                  <StageColumn
+                    key={`${view}-${column.key}`}
+                    stageKey={column.key}
+                    label={column.label}
+                    cards={cards}
+                    listingById={listingById}
+                    onEditInstruction={(deal) => {
+                      setDealToEdit(deal);
+                      setEditDealOpen(true);
+                    }}
+                    onEditRequirement={(requirement) => {
+                      setEditingRequirement(requirement);
+                      setRequirementDraft(null);
+                      setRequirementModalOpen(true);
+                    }}
+                  />
+                );
+              })}
+            </div>
+          </div>
 
-        <DragOverlay dropAnimation={null}>
-          {activeCard?.kind === 'instruction' ? (
-            <InstructionCard
-              deal={activeCard.deal}
-              listing={
-                activeCard.deal.commercialListingId
-                  ? (listingById.get(activeCard.deal.commercialListingId) ??
-                    null)
-                  : null
-              }
-              onEdit={() => {}}
-              overlay
-            />
-          ) : null}
-          {activeCard?.kind === 'requirement' ? (
-            <RequirementCard
-              requirement={activeCard.requirement}
-              onEdit={() => {}}
-              overlay
-            />
-          ) : null}
-        </DragOverlay>
-      </DndContext>
+          <DragOverlay dropAnimation={null}>
+            {activeCard?.kind === 'instruction' ? (
+              <InstructionCard
+                deal={activeCard.deal}
+                listing={
+                  activeCard.deal.commercialListingId
+                    ? (listingById.get(activeCard.deal.commercialListingId) ??
+                      null)
+                    : null
+                }
+                onEdit={() => {}}
+                overlay
+              />
+            ) : null}
+            {activeCard?.kind === 'requirement' ? (
+              <RequirementCard
+                requirement={activeCard.requirement}
+                onEdit={() => {}}
+                overlay
+              />
+            ) : null}
+          </DragOverlay>
+        </DndContext>
+      )}
 
       <AlertDialog
         open={pendingClosed != null}
@@ -920,7 +1127,7 @@ function StageColumn({
   return (
     <div
       ref={setNodeRef}
-      className={`flex min-w-[260px] flex-1 flex-col transition-colors ${
+      className={`flex w-[280px] shrink-0 flex-col transition-colors ${
         isOver ? 'rounded-2xl bg-[var(--workspace-shell-sidebar-accent)]' : ''
       }`}
     >

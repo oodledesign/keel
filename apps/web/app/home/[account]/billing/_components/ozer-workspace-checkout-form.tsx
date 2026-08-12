@@ -25,7 +25,6 @@ import {
   clampBillableSeats,
   estimateMonthlyGbp,
   freeSupportSeats,
-  portalPublishingAllowed,
 } from '~/lib/billing/commercial-graduated-pricing';
 import { productIdsForWorkspaceProfile } from '~/lib/billing/ozer-plan-catalog';
 import { formatGbp } from '~/lib/billing/pricing-marketing';
@@ -70,7 +69,6 @@ export function OzerWorkspaceCheckoutForm(params: {
   const isCommercial = params.workspaceProfile === 'commercial_property';
   const monthlyEstimate = estimateMonthlyGbp(billableSeats);
   const supportSeats = freeSupportSeats(billableSeats);
-  const portalsOk = portalPublishingAllowed(billableSeats);
 
   const filteredConfig = useMemo(() => {
     const allowedProductIds = new Set(
@@ -170,9 +168,7 @@ export function OzerWorkspaceCheckoutForm(params: {
                   : 'No free support seats on a single billable seat'}
               </li>
               <li>
-                {portalsOk
-                  ? 'Portal publishing included at this headcount'
-                  : 'Portal publishing unlocks from 2 billable seats'}
+                Portal publishing included (Rightmove, EACH, Property Hive)
               </li>
             </ul>
           </div>

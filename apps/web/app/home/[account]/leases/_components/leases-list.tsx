@@ -1,7 +1,8 @@
 'use client';
 
-import { useCallback, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import { FileText, Pencil, Plus, Trash2 } from 'lucide-react';
@@ -26,8 +27,11 @@ import {
 } from '@kit/ui/select';
 import { Textarea } from '@kit/ui/textarea';
 
+import pathsConfig from '~/config/paths.config';
 import {
+  DISPOSAL_TYPE_LABELS,
   LEASE_STATUSES,
+  LISTING_STATUS_LABELS,
   type LeaseStatus,
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
@@ -53,19 +57,44 @@ function isoToDateInput(iso: string | null) {
   return iso.slice(0, 10);
 }
 
+function formatDate(value: string | null) {
+  return value
+    ? new Date(value).toLocaleDateString('en-GB', { dateStyle: 'medium' })
+    : '—';
+}
+
+type RegisterKind = 'all' | 'sales' | 'lettings';
+
+type RegisterRow = {
+  id: string;
+  kind: 'sale' | 'letting';
+  title: string;
+  party: string;
+  meta: string;
+  status: string;
+  updatedAt: string;
+  href?: string;
+  lease?: CommercialLease;
+};
+
 interface LeasesListProps {
   accountId: string;
+  accountSlug: string;
   initialLeases: CommercialLease[];
   listings: CommercialListing[];
+  completedDisposals: CommercialListing[];
 }
 
 export function LeasesList({
   accountId,
+  accountSlug,
   initialLeases,
   listings,
+  completedDisposals,
 }: LeasesListProps) {
   const router = useRouter();
   const [items, setItems] = useState(initialLeases);
+  const [filter, setFilter] = useState<RegisterKind>('all');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialLease | null>(null);
   const [listingId, setListingId] = useState(NONE_LISTING);
@@ -82,6 +111,10 @@ export function LeasesList({
   const [isPending, startTransition] = useTransition();
 
   const handleSaved = useCallback(() => router.refresh(), [router]);
+  const listingDetailBase = pathsConfig.app.accountListingDetail.replace(
+    '[account]',
+    accountSlug,
+  );
 
   const resetForm = () => {
     setEditing(null);
@@ -164,41 +197,114 @@ export function LeasesList({
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Delete this lease?')) return;
+    if (!confirm('Delete this letting?')) return;
     startTransition(async () => {
       await deleteLease({ leaseId: id, accountId });
       setItems((prev) => prev.filter((l) => l.id !== id));
     });
   };
 
-  const formatDate = (value: string | null) =>
-    value
-      ? new Date(value).toLocaleDateString('en-GB', { dateStyle: 'medium' })
-      : '—';
+  const rows = useMemo<RegisterRow[]>(() => {
+    const leaseListingIds = new Set(
+      items.map((lease) => lease.listingId).filter(Boolean),
+    );
+
+    const fromDisposals: RegisterRow[] = completedDisposals
+      .filter((listing) => {
+        if (listing.status === 'sold') return true;
+        return listing.status === 'let' && !leaseListingIds.has(listing.id);
+      })
+      .map((listing) => ({
+        id: listing.id,
+        kind: listing.status === 'sold' ? 'sale' : 'letting',
+        title: listing.name,
+        party: DISPOSAL_TYPE_LABELS[listing.disposalType],
+        meta: [listing.town, listing.postcode].filter(Boolean).join(' · '),
+        status: LISTING_STATUS_LABELS[listing.status],
+        updatedAt: listing.offMarketAt ?? listing.updatedAt,
+        href: listingDetailBase.replace('[id]', listing.id),
+      }));
+
+    const lettings: RegisterRow[] = items.map((lease) => ({
+      id: lease.id,
+      kind: 'letting',
+      title: lease.propertyLabel,
+      party: lease.tenantName || '—',
+      meta: [lease.town, lease.postcode].filter(Boolean).join(' · '),
+      status: STATUS_LABELS[lease.status],
+      updatedAt: lease.leaseStart ?? lease.updatedAt,
+      lease,
+    }));
+
+    return [...fromDisposals, ...lettings].sort((a, b) =>
+      b.updatedAt.localeCompare(a.updatedAt),
+    );
+  }, [completedDisposals, items, listingDetailBase]);
+
+  const visibleRows = rows.filter((row) => {
+    if (filter === 'all') return true;
+    if (filter === 'sales') return row.kind === 'sale';
+    return row.kind === 'letting';
+  });
+
+  const saleCount = rows.filter((row) => row.kind === 'sale').length;
+  const lettingCount = rows.filter((row) => row.kind === 'letting').length;
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-            Sales register
+            Sales & lettings
           </h2>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {items.length} recorded
+            {saleCount} sale{saleCount === 1 ? '' : 's'} · {lettingCount}{' '}
+            letting{lettingCount === 1 ? '' : 's'}
           </p>
         </div>
-        <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
-          <Plus className="h-4 w-4" />
-          Add lease
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1">
+            {(
+              [
+                ['all', 'All'],
+                ['sales', 'Sales'],
+                ['lettings', 'Lettings'],
+              ] as const
+            ).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => setFilter(key)}
+                className={
+                  filter === key
+                    ? 'rounded-md bg-[var(--ozer-plum-950)] px-3 py-1.5 text-xs font-medium text-[var(--ozer-text-on-dark)]'
+                    : 'rounded-md px-3 py-1.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]'
+                }
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+          <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
+            <Plus className="h-4 w-4" />
+            Add letting
+          </Button>
+        </div>
       </div>
 
-      {items.length === 0 ? (
+      {visibleRows.length === 0 ? (
         <Card className={workspacePanelCard}>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <FileText className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
             <p className="font-medium text-[var(--workspace-shell-text)]">
-              No leases yet
+              {filter === 'sales'
+                ? 'No completed sales yet'
+                : filter === 'lettings'
+                  ? 'No lettings yet'
+                  : 'No completed sales or lettings yet'}
+            </p>
+            <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
+              Completing a WIP instruction can add a record here.
             </p>
           </CardContent>
         </Card>
@@ -207,70 +313,82 @@ export function LeasesList({
           <table className="w-full text-left text-sm">
             <thead className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
               <tr>
+                <th className="px-4 py-3 font-medium">Type</th>
                 <th className="px-4 py-3 font-medium">Property</th>
-                <th className="px-4 py-3 font-medium">Tenant</th>
+                <th className="px-4 py-3 font-medium">Party</th>
                 <th className="hidden px-4 py-3 font-medium md:table-cell">
-                  Term
-                </th>
-                <th className="hidden px-4 py-3 font-medium lg:table-cell">
-                  Rent PSF
+                  Detail
                 </th>
                 <th className="px-4 py-3 font-medium">Status</th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
             </thead>
             <tbody>
-              {items.map((lease) => (
+              {visibleRows.map((row) => (
                 <tr
-                  key={lease.id}
+                  key={`${row.kind}-${row.id}`}
                   className="border-b border-[color:var(--workspace-shell-border)] last:border-0"
                 >
                   <td className="px-4 py-3">
-                    <p className="font-medium text-[var(--workspace-shell-text)]">
-                      {lease.propertyLabel}
-                    </p>
-                    {lease.listingName ? (
+                    <span className="inline-flex rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)]">
+                      {row.kind === 'sale' ? 'Sale' : 'Letting'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    {row.href ? (
+                      <Link
+                        href={row.href}
+                        className="font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent-muted)]"
+                      >
+                        {row.title}
+                      </Link>
+                    ) : (
+                      <p className="font-medium text-[var(--workspace-shell-text)]">
+                        {row.title}
+                      </p>
+                    )}
+                    {row.meta ? (
                       <p className="text-xs text-[var(--workspace-shell-text)]/50">
-                        {lease.listingName}
+                        {row.meta}
                       </p>
                     ) : null}
                   </td>
                   <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
-                    {lease.tenantName || '—'}
+                    {row.party}
                   </td>
                   <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 md:table-cell">
-                    {formatDate(lease.leaseStart)} –{' '}
-                    {formatDate(lease.leaseEnd)}
+                    {row.lease
+                      ? `${formatDate(row.lease.leaseStart)} – ${formatDate(row.lease.leaseEnd)}`
+                      : formatDate(row.updatedAt)}
                   </td>
-                  <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 lg:table-cell">
-                    {lease.headlineRentPsf != null
-                      ? `£${lease.headlineRentPsf.toLocaleString('en-GB')}`
-                      : '—'}
-                  </td>
-                  <td className="px-4 py-3">
-                    <span className="inline-flex rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)]">
-                      {STATUS_LABELS[lease.status]}
-                    </span>
+                  <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
+                    {row.status}
                   </td>
                   <td className="px-4 py-3 text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-[var(--workspace-shell-text)]/60"
-                        onClick={() => openEdit(lease)}
-                      >
-                        <Pencil className="h-3.5 w-3.5" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 text-rose-400"
-                        onClick={() => handleDelete(lease.id)}
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
-                    </div>
+                    {row.lease ? (
+                      <div className="flex items-center justify-end gap-1">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-[var(--workspace-shell-text)]/60"
+                          onClick={() => {
+                            if (row.lease) openEdit(row.lease);
+                          }}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-7 w-7 text-rose-400"
+                          onClick={() => {
+                            if (row.lease) handleDelete(row.lease.id);
+                          }}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    ) : null}
                   </td>
                 </tr>
               ))}
@@ -288,7 +406,9 @@ export function LeasesList({
       >
         <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <DialogHeader>
-            <DialogTitle>{editing ? 'Edit lease' : 'Add lease'}</DialogTitle>
+            <DialogTitle>
+              {editing ? 'Edit letting' : 'Add letting'}
+            </DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4 pt-2">
             <div className="space-y-1.5">
@@ -407,7 +527,11 @@ export function LeasesList({
                 disabled={isPending}
                 className={workspaceBtnPrimaryMd}
               >
-                {isPending ? 'Saving…' : editing ? 'Save changes' : 'Add lease'}
+                {isPending
+                  ? 'Saving…'
+                  : editing
+                    ? 'Save changes'
+                    : 'Add letting'}
               </Button>
             </DialogFooter>
           </form>

@@ -8,6 +8,10 @@ import {
   type CommercialReportsMetrics,
   createCommercialReportsService,
 } from '../../commercial-reports/_lib/server/commercial-reports.service';
+import {
+  type MatchSuggestion,
+  createMatchSuggestionsService,
+} from '../../listings/_lib/server/match-suggestions.service';
 import { loadTeamWorkspace } from './team-account-workspace.loader';
 
 export type CommercialDashboardListing = {
@@ -25,6 +29,10 @@ export type CommercialDashboardData = {
   accountId: string;
   metrics: CommercialReportsMetrics;
   recentListings: CommercialDashboardListing[];
+  matchDigest: {
+    count: number;
+    suggestions: MatchSuggestion[];
+  };
 };
 
 export async function loadCommercialDashboardData(
@@ -35,7 +43,7 @@ export async function loadCommercialDashboardData(
   // Untyped until `pnpm supabase:web:typegen` includes commercial_* tables.
   const client = getSupabaseServerClient() as unknown as SupabaseClient;
 
-  const [metrics, listingsResult] = await Promise.all([
+  const [metrics, listingsResult, matchDigest] = await Promise.all([
     createCommercialReportsService(client).getMetrics(accountId),
     client
       .from('commercial_listings')
@@ -43,6 +51,11 @@ export async function loadCommercialDashboardData(
       .eq('account_id', accountId)
       .order('updated_at', { ascending: false })
       .limit(6),
+    createMatchSuggestionsService(client).deskDigest({
+      accountId,
+      limit: 5,
+      requirementDays: 45,
+    }),
   ]);
 
   if (listingsResult.error) {
@@ -69,5 +82,6 @@ export async function loadCommercialDashboardData(
     accountId,
     metrics,
     recentListings,
+    matchDigest,
   };
 }

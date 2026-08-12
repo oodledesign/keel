@@ -34,11 +34,46 @@ import {
   UpdateContactLinkSchema,
   UpdateContactSchema,
 } from '../schema/clients.schema';
+import { createClientCommercialService } from './client-commercial.service';
 import { createClientsService } from './clients.service';
 
 function getService() {
   return createClientsService(getSupabaseServerClient());
 }
+
+function getCommercialService() {
+  return createClientCommercialService(getSupabaseServerClient());
+}
+
+const ClientScopedListSchema = z.object({
+  accountId: z.string().uuid(),
+  clientId: z.string().uuid(),
+});
+
+export const listClientDisposals = enhanceAction(
+  async (input) => getCommercialService().listDisposals(input),
+  { schema: ClientScopedListSchema },
+);
+
+export const listClientRequirements = enhanceAction(
+  async (input) => getCommercialService().listRequirements(input),
+  { schema: ClientScopedListSchema },
+);
+
+export const listClientViewings = enhanceAction(
+  async (input) => getCommercialService().listViewings(input),
+  { schema: ClientScopedListSchema },
+);
+
+export const listClientLeases = enhanceAction(
+  async (input) => getCommercialService().listLeases(input),
+  { schema: ClientScopedListSchema },
+);
+
+export const listClientSales = enhanceAction(
+  async (input) => getCommercialService().listSales(input),
+  { schema: ClientScopedListSchema },
+);
 
 export const listClients = enhanceAction(
   async (input) => {
@@ -64,6 +99,7 @@ export const listClientsOverview = enhanceAction(
           }),
         )
         .optional(),
+      variant: z.enum(['work', 'commercial']).optional(),
     }),
   },
 );

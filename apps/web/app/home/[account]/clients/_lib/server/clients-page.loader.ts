@@ -20,7 +20,10 @@ import { createClientsService } from './clients.service';
 
 export const loadClientsPageData = cache(loadClientsPageDataImpl);
 
-async function loadClientsPageDataImpl(accountSlug: string) {
+async function loadClientsPageDataImpl(
+  accountSlug: string,
+  options?: { variant?: 'work' | 'commercial' },
+) {
   const workspace = await loadTeamWorkspace(accountSlug);
 
   if (!workspace?.account) {
@@ -41,6 +44,7 @@ async function loadClientsPageDataImpl(accountSlug: string) {
     access.canViewClients &&
     isWorkModuleEnabled(workspace.moduleSettings, 'clients');
   const canEditClients = access.canEditClients;
+  const variant = options?.variant ?? 'work';
 
   let initialOverview: ClientOverviewItem[] = [];
   let initialTotal = 0;
@@ -54,6 +58,7 @@ async function loadClientsPageDataImpl(accountSlug: string) {
         accountSlug: account.slug ?? accountSlug,
         page: 1,
         pageSize: 20,
+        variant,
       });
       initialOverview = result.data;
       initialTotal = result.total ?? 0;
@@ -71,5 +76,6 @@ async function loadClientsPageDataImpl(accountSlug: string) {
     isContractorView: access.isContractor,
     initialOverview,
     initialTotal,
+    variant,
   };
 }

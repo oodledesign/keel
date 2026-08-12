@@ -3,9 +3,14 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import {
+  INTEREST_STATUSES,
   type InterestStatus,
   normalizeInterestStatus,
 } from '~/lib/commercial/commercial-constants';
+
+const INTEREST_STATUS_RANK: Record<InterestStatus, number> = Object.fromEntries(
+  INTEREST_STATUSES.map((status, index) => [status, index]),
+) as Record<InterestStatus, number>;
 
 export type CommercialInterestMatch = {
   id: string;
@@ -119,6 +124,116 @@ export function createMatchesService(client: SupabaseClient) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const db = client as any;
 
+  /**
+   * Create interest if missing; optionally promote status (e.g. viewing).
+   * Safe for auto-link from viewings/enquiries (idempotent).
+   */
+  async function ensureMatch(input: {
+    accountId: string;
+    listingId: string;
+    requirementId: string;
+    status?: InterestStatus;
+    notes?: string | null;
+    createdBy?: string | null;
+    /** When existing match is earlier in the funnel, promote to this status. */
+    promoteStatus?: InterestStatus;
+  }): Promise<{ match: CommercialInterestMatch; created: boolean }> {
+    const [{ data: listing }, { data: requirement }, { data: existing }] =
+      await Promise.all([
+        db
+          .from('commercial_listings')
+          .select('id')
+          .eq('id', input.listingId)
+          .eq('account_id', input.accountId)
+          .maybeSingle(),
+        db
+          .from('commercial_requirements')
+          .select('id')
+          .eq('id', input.requirementId)
+          .eq('account_id', input.accountId)
+          .maybeSingle(),
+        db
+          .from('commercial_matches')
+          .select(MATCH_SELECT)
+          .eq('account_id', input.accountId)
+          .eq('listing_id', input.listingId)
+          .eq('requirement_id', input.requirementId)
+          .maybeSingle(),
+      ]);
+
+    if (!listing || !requirement) {
+      throw new Error('Listing and requirement must belong to this account');
+    }
+
+    if (existing) {
+      const current = mapMatch(existing as Row);
+      const promote = input.promoteStatus ?? input.status;
+      if (
+        promote &&
+        INTEREST_STATUS_RANK[promote] > INTEREST_STATUS_RANK[current.status]
+      ) {
+        const { data, error } = await db
+          .from('commercial_matches')
+          .update({
+            status: promote,
+            updated_at: new Date().toISOString(),
+            last_activity_at: new Date().toISOString(),
+          })
+          .eq('id', current.id)
+          .eq('account_id', input.accountId)
+          .select(MATCH_SELECT)
+          .single();
+        if (error || !data) {
+          throw new Error(error?.message ?? 'Failed to update interest');
+        }
+        return { match: mapMatch(data as Row), created: false };
+      }
+      return { match: current, created: false };
+    }
+
+    const now = new Date().toISOString();
+    const { data, error } = await db
+      .from('commercial_matches')
+      .insert({
+        account_id: input.accountId,
+        listing_id: input.listingId,
+        requirement_id: input.requirementId,
+        status: input.status ?? input.promoteStatus ?? 'new',
+        notes: input.notes?.trim() || null,
+        created_by: input.createdBy ?? null,
+        last_activity_at: now,
+        updated_at: now,
+      })
+      .select(MATCH_SELECT)
+      .single();
+
+    if (error) {
+      // Unique race: fetch existing
+      if (
+        String(error.message ?? '').includes('duplicate') ||
+        error.code === '23505'
+      ) {
+        const { data: raced } = await db
+          .from('commercial_matches')
+          .select(MATCH_SELECT)
+          .eq('account_id', input.accountId)
+          .eq('listing_id', input.listingId)
+          .eq('requirement_id', input.requirementId)
+          .maybeSingle();
+        if (raced) {
+          return { match: mapMatch(raced as Row), created: false };
+        }
+      }
+      throw new Error(error.message ?? 'Failed to create interest');
+    }
+
+    if (!data) {
+      throw new Error('Failed to create interest');
+    }
+
+    return { match: mapMatch(data as Row), created: true };
+  }
+
   return {
     async listForListing(input: {
       accountId: string;
@@ -184,47 +299,11 @@ export function createMatchesService(client: SupabaseClient) {
       notes?: string | null;
       createdBy?: string | null;
     }): Promise<CommercialInterestMatch> {
-      const [{ data: listing }, { data: requirement }] = await Promise.all([
-        db
-          .from('commercial_listings')
-          .select('id')
-          .eq('id', input.listingId)
-          .eq('account_id', input.accountId)
-          .maybeSingle(),
-        db
-          .from('commercial_requirements')
-          .select('id')
-          .eq('id', input.requirementId)
-          .eq('account_id', input.accountId)
-          .maybeSingle(),
-      ]);
-
-      if (!listing || !requirement) {
-        throw new Error('Listing and requirement must belong to this account');
-      }
-
-      const now = new Date().toISOString();
-      const { data, error } = await db
-        .from('commercial_matches')
-        .insert({
-          account_id: input.accountId,
-          listing_id: input.listingId,
-          requirement_id: input.requirementId,
-          status: input.status ?? 'new',
-          notes: input.notes?.trim() || null,
-          created_by: input.createdBy ?? null,
-          last_activity_at: now,
-          updated_at: now,
-        })
-        .select(MATCH_SELECT)
-        .single();
-
-      if (error || !data) {
-        throw new Error(error?.message ?? 'Failed to create interest');
-      }
-
-      return mapMatch(data as Row);
+      const ensured = await ensureMatch(input);
+      return ensured.match;
     },
+
+    ensureMatch,
 
     async updateMatch(input: {
       accountId: string;

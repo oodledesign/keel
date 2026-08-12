@@ -13,6 +13,7 @@ import {
   removeIgnoredEmailRule,
 } from '~/lib/email-assistant/ignored-senders';
 import { markEmailThreadNeedsReply } from '~/lib/email-assistant/mark-thread-needs-reply';
+import { buildTaskNotesFromSource } from '~/lib/tasks/build-task-notes-from-source';
 
 const IgnoreEmailNeedsReplySchema = z.object({
   threadId: z.string().uuid(),
@@ -96,7 +97,7 @@ export const acceptSuggestedEmailTaskAction = enhanceAction(
     const { data: actionItem, error: actionError } = await client
       .from('email_action_items')
       .select(
-        'id, title, detail, suggested_due_date, client_id, project_id, status, account_id',
+        'id, title, detail, source_excerpt, suggested_due_date, client_id, project_id, status, account_id',
       )
       .eq('id', data.actionItemId)
       .eq('user_id', user.id)
@@ -113,7 +114,11 @@ export const acceptSuggestedEmailTaskAction = enhanceAction(
     const insertRow: Record<string, unknown> = {
       user_id: user.id,
       title: actionItem.title,
-      notes: actionItem.detail,
+      notes: buildTaskNotesFromSource({
+        description: actionItem.detail,
+        sourceExcerpt: actionItem.source_excerpt,
+        sourceLabel: 'Email',
+      }),
       due_date: actionItem.suggested_due_date,
       project_id: actionItem.project_id ?? null,
       client_id: actionItem.client_id ?? null,

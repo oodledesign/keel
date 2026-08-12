@@ -354,10 +354,10 @@ export default createBillingSchema({
       ],
       features: [
         'Graduated per-seat pricing (from £89/mo)',
-        'Listings, WIP pipeline & requirements',
+        'Listings, pipeline & requirements',
         'Free support seats on Team and Scale sizes',
-        'Portal publishing from 2+ billable seats',
-        'Property Hive website sync',
+        'Portal publishing (Rightmove, EACH, Property Hive)',
+        'Online brochures & branded presentations',
       ],
     },
     {

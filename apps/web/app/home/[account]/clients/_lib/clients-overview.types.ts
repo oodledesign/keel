@@ -1,5 +1,7 @@
 export type ClientProjectHealth = 'on_track' | 'at_risk' | 'behind';
 
+export type ClientsWorkspaceVariant = 'work' | 'commercial';
+
 export type ClientOverviewProject = {
   id: string;
   title: string;
@@ -13,6 +15,14 @@ export type ClientOverviewTeamMember = {
   pictureUrl: string | null;
 };
 
+export type ClientOverviewHighlight = {
+  id: string;
+  title: string;
+  kind: 'disposal' | 'requirement' | 'viewing' | 'lease';
+  href?: string;
+  meta?: string | null;
+};
+
 export type ClientOverviewItem = {
   id: string;
   displayName: string;
@@ -23,11 +33,19 @@ export type ClientOverviewItem = {
   pictureUrl: string | null;
   tagline: string;
   updatedAt: string;
+  clientType: 'business' | 'individual' | null;
+  commercialRole: string | null;
   projectCount: number;
   teamMemberCount: number;
   dueTaskCount: number;
   projects: ClientOverviewProject[];
   teamMembers: ClientOverviewTeamMember[];
+  /** Commercial Contacts metrics */
+  disposalCount: number;
+  requirementCount: number;
+  viewingCount: number;
+  leaseCount: number;
+  highlights: ClientOverviewHighlight[];
 };
 
 export type ClientRow = {
@@ -37,6 +55,7 @@ export type ClientRow = {
   first_name?: string | null;
   last_name?: string | null;
   client_type?: string | null;
+  commercial_role?: string | null;
   email: string | null;
   phone: string | null;
   city: string | null;

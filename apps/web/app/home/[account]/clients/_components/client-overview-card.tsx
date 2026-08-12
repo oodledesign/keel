@@ -10,8 +10,10 @@ import { cn } from '@kit/ui/utils';
 import pathsConfig from '~/config/paths.config';
 
 import type {
+  ClientOverviewHighlight,
   ClientOverviewItem,
   ClientProjectHealth,
+  ClientsWorkspaceVariant,
 } from '../_lib/clients-overview.types';
 
 const HEALTH_STYLES: Record<
@@ -35,9 +37,17 @@ const HEALTH_STYLES: Record<
   },
 };
 
+const HIGHLIGHT_KIND_LABEL: Record<ClientOverviewHighlight['kind'], string> = {
+  disposal: 'Disposal',
+  requirement: 'Requirement',
+  viewing: 'Viewing',
+  lease: 'Lease',
+};
+
 type ClientOverviewCardProps = {
   client: ClientOverviewItem;
   accountSlug: string;
+  variant?: ClientsWorkspaceVariant;
   isFavorite: boolean;
   onToggleFavorite: () => void;
 };
@@ -45,9 +55,12 @@ type ClientOverviewCardProps = {
 export function ClientOverviewCard({
   client,
   accountSlug,
+  variant = 'work',
   isFavorite,
   onToggleFavorite,
 }: ClientOverviewCardProps) {
+  const isCommercial = variant === 'commercial';
+  const isCompany = client.clientType === 'business';
   const detailHref = `${pathsConfig.app.accountClients.replace('[account]', accountSlug)}/${client.id}`;
   const jobsHref = pathsConfig.app.accountJobs.replace(
     '[account]',
@@ -57,6 +70,28 @@ export function ClientOverviewCard({
     0,
     client.projectCount - client.projects.length,
   );
+
+  const commercialSubtitle = [client.commercialRole, client.city]
+    .filter(Boolean)
+    .join(' · ');
+
+  const metrics = isCommercial
+    ? isCompany
+      ? [
+          { value: client.disposalCount, label: 'Disposals' },
+          { value: client.requirementCount, label: 'Requirements' },
+          { value: client.viewingCount, label: 'Viewings' },
+        ]
+      : [
+          { value: client.requirementCount, label: 'Requirements' },
+          { value: client.viewingCount, label: 'Viewings' },
+          { value: client.leaseCount, label: 'Leases' },
+        ]
+    : [
+        { value: client.projectCount, label: 'Projects' },
+        { value: client.teamMemberCount, label: 'Team Members' },
+        { value: client.dueTaskCount, label: 'Due Tasks' },
+      ];
 
   return (
     <article className="flex h-full flex-col rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5 shadow-sm transition hover:border-[color:var(--workspace-shell-border)] hover:bg-[var(--workspace-shell-panel-hover)]">
@@ -97,100 +132,147 @@ export function ClientOverviewCard({
             </button>
           </div>
           <p className="mt-1 line-clamp-2 text-sm text-[var(--workspace-shell-text-muted)]">
-            {client.tagline}
+            {isCommercial
+              ? commercialSubtitle || client.tagline
+              : client.tagline}
           </p>
         </div>
       </div>
 
       <dl className="mt-5 grid grid-cols-3 gap-3 border-y border-[color:var(--workspace-shell-border)] py-4">
-        <div>
-          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">
-            {client.projectCount}
-          </dd>
-          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Projects
-          </dt>
-        </div>
-        <div>
-          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">
-            {client.teamMemberCount}
-          </dd>
-          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Team Members
-          </dt>
-        </div>
-        <div>
-          <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">
-            {client.dueTaskCount}
-          </dd>
-          <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Due Tasks
-          </dt>
-        </div>
+        {metrics.map((metric) => (
+          <div key={metric.label}>
+            <dd className="text-xl font-semibold text-[var(--workspace-shell-text)]">
+              {metric.value}
+            </dd>
+            <dt className="text-xs text-[var(--workspace-shell-text-muted)]">
+              {metric.label}
+            </dt>
+          </div>
+        ))}
       </dl>
 
-      <div className="mt-4 flex-1">
-        <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
-          Projects
-        </p>
-
-        {client.projects.length === 0 ? (
-          <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
-            No active projects yet.
+      {isCommercial ? (
+        <div className="mt-4 flex-1">
+          <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+            Activity
           </p>
-        ) : (
-          <ul className="mt-3 space-y-3">
-            {client.projects.map((project) => {
-              const health = HEALTH_STYLES[project.health];
-              const projectHref = pathsConfig.app.accountJobDetail
-                .replace('[account]', accountSlug)
-                .replace('[id]', project.id);
 
-              return (
-                <li key={project.id}>
-                  <Link
-                    href={projectHref}
-                    className="block rounded-lg hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                  >
+          {client.highlights.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+              No live disposals or requirements yet.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {client.highlights.map((item) => {
+                const content = (
+                  <>
                     <div className="flex items-center gap-2">
+                      <span className="min-w-0 flex-1 truncate text-sm text-[var(--workspace-shell-text)]">
+                        {item.title}
+                      </span>
+                      <span className="shrink-0 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                        {HIGHLIGHT_KIND_LABEL[item.kind]}
+                      </span>
+                    </div>
+                    {item.meta ? (
+                      <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                        {item.meta}
+                      </p>
+                    ) : null}
+                  </>
+                );
+
+                return (
+                  <li key={item.id}>
+                    {item.href ? (
+                      <Link
+                        href={item.href}
+                        className="block rounded-lg hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                      >
+                        {content}
+                      </Link>
+                    ) : (
+                      <div>{content}</div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      ) : (
+        <div className="mt-4 flex-1">
+          <p className="text-[11px] font-semibold tracking-[0.12em] text-[var(--workspace-shell-text-muted)] uppercase">
+            Projects
+          </p>
+
+          {client.projects.length === 0 ? (
+            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
+              No active projects yet.
+            </p>
+          ) : (
+            <ul className="mt-3 space-y-3">
+              {client.projects.map((project) => {
+                const health = HEALTH_STYLES[project.health];
+                const projectHref = pathsConfig.app.accountJobDetail
+                  .replace('[account]', accountSlug)
+                  .replace('[id]', project.id);
+
+                return (
+                  <li key={project.id}>
+                    <Link
+                      href={projectHref}
+                      className="block rounded-lg hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span
+                          className={cn(
+                            'h-2 w-2 shrink-0 rounded-full',
+                            health.dot,
+                          )}
+                          aria-hidden
+                        />
+                        <span className="min-w-0 flex-1 truncate text-sm text-[var(--workspace-shell-text)]">
+                          {project.title}
+                        </span>
+                        <span className="text-xs text-[var(--workspace-shell-text-muted)]">
+                          {project.progress}%
+                        </span>
+                      </div>
+                      <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
+                        <div
+                          className="h-full rounded-full bg-[var(--ozer-info)]"
+                          style={{ width: `${project.progress}%` }}
+                        />
+                      </div>
                       <span
                         className={cn(
-                          'h-2 w-2 shrink-0 rounded-full',
-                          health.dot,
+                          'mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium',
+                          health.badge,
                         )}
-                        aria-hidden
-                      />
-                      <span className="min-w-0 flex-1 truncate text-sm text-[var(--workspace-shell-text)]">
-                        {project.title}
+                      >
+                        {health.label}
                       </span>
-                      <span className="text-xs text-[var(--workspace-shell-text-muted)]">
-                        {project.progress}%
-                      </span>
-                    </div>
-                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-white/[0.08]">
-                      <div
-                        className="h-full rounded-full bg-[var(--ozer-info)]"
-                        style={{ width: `${project.progress}%` }}
-                      />
-                    </div>
-                    <span
-                      className={cn(
-                        'mt-1.5 inline-flex rounded-full px-2 py-0.5 text-[11px] font-medium',
-                        health.badge,
-                      )}
-                    >
-                      {health.label}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </div>
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
+      )}
 
       <div className="mt-5 flex items-center justify-between gap-3">
-        {remainingProjects > 0 ? (
+        {isCommercial ? (
+          <Link
+            href={detailHref}
+            className="inline-flex items-center gap-1 text-sm font-medium text-[var(--ozer-info)] hover:text-[var(--ozer-accent-muted)]"
+          >
+            View contact
+            <ArrowRight className="h-3.5 w-3.5" />
+          </Link>
+        ) : remainingProjects > 0 ? (
           <Link
             href={jobsHref}
             className="inline-flex items-center gap-1 text-sm font-medium text-[var(--ozer-info)] hover:text-[var(--ozer-accent-muted)]"
@@ -210,7 +292,7 @@ export function ClientOverviewCard({
           <span />
         )}
 
-        {client.teamMembers.length > 0 ? (
+        {!isCommercial && client.teamMembers.length > 0 ? (
           <div className="flex items-center -space-x-2">
             {client.teamMembers.map((member) => (
               <ProfileAvatar

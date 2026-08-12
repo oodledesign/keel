@@ -52,6 +52,7 @@ type Props = {
   defaultLink: LinkValue;
   notesVariant: WorkspaceNotesVariant;
   showCommercialRole?: boolean;
+  variant?: 'work' | 'commercial';
   ranklyEnabled?: boolean;
   ranklyProject?: RanklyProjectRow | null;
   ranklyImportSeed?: RanklyClientImportOption | null;
@@ -77,6 +78,7 @@ export function ClientDetailPageContent({
   defaultLink,
   notesVariant,
   showCommercialRole = false,
+  variant = 'work',
   ranklyEnabled = false,
   ranklyProject = null,
   ranklyImportSeed = null,
@@ -112,6 +114,7 @@ export function ClientDetailPageContent({
       defaultLink={defaultLink}
       notesVariant={notesVariant}
       showCommercialRole={showCommercialRole}
+      variant={variant}
       ranklyEnabled={ranklyEnabled}
       ranklyProject={ranklyProject}
       ranklyImportSeed={ranklyImportSeed}

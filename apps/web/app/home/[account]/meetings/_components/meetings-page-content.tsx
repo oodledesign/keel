@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -415,6 +416,20 @@ export function MeetingsPageContent({
                     'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--ozer-accent)]/30',
                   )}
                 >
+                  {row.clientId ? (
+                    <Link
+                      href={clientPath(row.clientId)}
+                      className="mt-0.5 shrink-0"
+                      title={row.clientName ?? 'Client'}
+                    >
+                      <ProfileAvatar
+                        displayName={row.clientName ?? 'Client'}
+                        pictureUrl={row.clientPictureUrl}
+                        className="mx-0 h-8 w-8"
+                        fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-xs text-[var(--workspace-shell-text)]"
+                      />
+                    </Link>
+                  ) : null}
                   <div className="min-w-0 flex-1">
                     <Link
                       href={meetingDetailPath(row.id)}
@@ -509,17 +524,27 @@ export function MeetingsPageContent({
                   <li key={row.id}>
                     <Link
                       href={meetingDetailPath(row.id)}
-                      className="block rounded-lg px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                      className="flex items-start gap-2 rounded-lg px-1 py-0.5 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
                     >
-                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                        {row.title}
-                      </p>
-                      <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                        {meetingDisplayDate(row.meetingDate, row.createdAt)}
-                      </p>
-                      <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
-                        {contextLabel(row)}
-                      </p>
+                      {row.clientId ? (
+                        <ProfileAvatar
+                          displayName={row.clientName ?? 'Client'}
+                          pictureUrl={row.clientPictureUrl}
+                          className="mx-0 mt-0.5 h-7 w-7 shrink-0"
+                          fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-[10px] text-[var(--workspace-shell-text)]"
+                        />
+                      ) : null}
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                          {row.title}
+                        </p>
+                        <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                          {meetingDisplayDate(row.meetingDate, row.createdAt)}
+                        </p>
+                        <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
+                          {contextLabel(row)}
+                        </p>
+                      </div>
                     </Link>
                   </li>
                 ))}

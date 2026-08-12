@@ -8,6 +8,8 @@ import {
 } from '@kit/ui/accordion';
 import { cn } from '@kit/ui/utils';
 
+import { marketingSectionHeading } from '~/lib/marketing/marketing-ui';
+
 export type MarketingFaqItem = {
   question: string;
   answer: string;
@@ -85,6 +87,7 @@ export function MarketingFaqsSection({
   className,
   sectionClassName,
   headingId = 'marketing-faq-heading',
+  headingAlign = 'start',
 }: {
   faqs: MarketingFaqItem[];
   tone?: MarketingFaqTone;
@@ -92,6 +95,7 @@ export function MarketingFaqsSection({
   className?: string;
   sectionClassName?: string;
   headingId?: string;
+  headingAlign?: 'start' | 'center';
 }) {
   const styles = toneStyles[tone];
 
@@ -101,14 +105,16 @@ export function MarketingFaqsSection({
 
   return (
     <section
-      className={cn('relative py-16', sectionClassName)}
+      className={cn('relative py-20', sectionClassName)}
       aria-labelledby={headingId}
     >
       <div className={cn('mx-auto w-full max-w-3xl px-6', className)}>
         <h2
           id={headingId}
           className={cn(
-            'font-heading mb-8 text-3xl font-semibold tracking-tight md:text-4xl',
+            marketingSectionHeading,
+            'mb-8',
+            headingAlign === 'center' && 'text-center',
             styles.heading,
           )}
         >

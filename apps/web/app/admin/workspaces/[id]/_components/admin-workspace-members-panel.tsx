@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useForm } from 'react-hook-form';
 
+import { AdminImpersonateUserDialog } from '@kit/admin/components/admin-impersonate-user-dialog';
 import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 import {
@@ -190,6 +191,14 @@ export function AdminWorkspaceMembersPanel(props: {
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
+                  <AdminImpersonateUserDialog
+                    userId={member.userId}
+                    reason={`Workspace member support (${props.accountId})`}
+                  >
+                    <Button type="button" variant="secondary" size="sm">
+                      Impersonate
+                    </Button>
+                  </AdminImpersonateUserDialog>
                   <Select
                     value={member.role}
                     disabled={

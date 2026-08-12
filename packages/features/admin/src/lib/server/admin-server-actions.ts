@@ -3,6 +3,8 @@
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
 
+import { z } from 'zod';
+
 import { enhanceAction } from '@kit/next/actions';
 import { getLogger } from '@kit/shared/logger';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
@@ -20,6 +22,11 @@ import { ResetPasswordSchema } from './schema/reset-password.schema';
 import { createAdminAccountsService } from './services/admin-accounts.service';
 import { createAdminAuthUserService } from './services/admin-auth-user.service';
 import { adminAction } from './utils/admin-action';
+import {
+  consumeImpersonationRestoreSession,
+  createImpersonationRestoreSession,
+  readImpersonationSessionIdFromCookie,
+} from './utils/impersonation-session';
 
 /**
  * @name banUserAction
@@ -91,18 +98,138 @@ export const reactivateUserAction = adminAction(
  */
 export const impersonateUserAction = adminAction(
   enhanceAction(
-    async ({ userId }) => {
-      const service = getAdminAuthService();
+    async ({ userId, reason, supportTicketId }, adminUser) => {
+      const client = getSupabaseServerClient();
+      const adminClient = getSupabaseServerAdminClient();
+      const service = createAdminAuthUserService(client, adminClient);
       const logger = await getLogger();
 
-      logger.info({ userId }, `Super Admin is impersonating user...`);
+      logger.info(
+        { userId, reason, supportTicketId },
+        `Super Admin is impersonating user...`,
+      );
 
-      return await service.impersonateUser(userId);
+      const {
+        data: { session: adminSession },
+      } = await client.auth.getSession();
+
+      if (!adminSession?.access_token || !adminSession.refresh_token) {
+        throw new Error('Admin session missing; cannot start impersonation');
+      }
+
+      const targetTokens = await service.impersonateUser(userId);
+
+      const { sessionId, expiresAt } = await createImpersonationRestoreSession({
+        adminClient,
+        actorUserId: adminUser.id,
+        targetUserId: userId,
+        adminTokens: {
+          accessToken: adminSession.access_token,
+          refreshToken: adminSession.refresh_token,
+        },
+        reason,
+        supportTicketId,
+      });
+
+      const { error: auditError } = await adminClient
+        .from('admin_action_log')
+        .insert({
+          actor_user_id: adminUser.id,
+          action: 'impersonate_user_start',
+          target_account_id: null,
+          metadata: {
+            targetUserId: userId,
+            reason,
+            supportTicketId: supportTicketId ?? null,
+            impersonationSessionId: sessionId,
+            expiresAt,
+          },
+        });
+
+      if (auditError) {
+        logger.error(
+          { error: auditError, userId },
+          'Failed to audit impersonation start',
+        );
+      }
+
+      logger.info(
+        { userId, impersonationSessionId: sessionId },
+        `Super Admin has started impersonating user`,
+      );
+
+      return targetTokens;
     },
     {
       schema: ImpersonateUserSchema,
     },
   ),
+);
+
+/**
+ * @name endImpersonationAction
+ * @description Restore the stashed super-admin session after impersonation.
+ * Not wrapped in adminAction — the current JWT is the target user.
+ */
+export const endImpersonationAction = enhanceAction(
+  async (_data, user) => {
+    const adminClient = getSupabaseServerAdminClient();
+    const logger = await getLogger();
+    const sessionId = await readImpersonationSessionIdFromCookie();
+
+    if (!sessionId) {
+      throw new Error('No active impersonation session');
+    }
+
+    const restored = await consumeImpersonationRestoreSession({
+      adminClient,
+      sessionId,
+      targetUserId: user.id,
+    });
+
+    if (!restored) {
+      throw new Error('Impersonation session is invalid or expired');
+    }
+
+    const { error: auditError } = await adminClient
+      .from('admin_action_log')
+      .insert({
+        actor_user_id: restored.actorUserId,
+        action: 'impersonate_user_end',
+        target_account_id: null,
+        metadata: {
+          targetUserId: user.id,
+          reason: restored.reason,
+          supportTicketId: restored.supportTicketId,
+          impersonationSessionId: sessionId,
+        },
+      });
+
+    if (auditError) {
+      logger.error(
+        { error: auditError, sessionId },
+        'Failed to audit impersonation end',
+      );
+    }
+
+    logger.info(
+      {
+        actorUserId: restored.actorUserId,
+        targetUserId: user.id,
+        impersonationSessionId: sessionId,
+      },
+      'Super Admin ended impersonation',
+    );
+
+    return {
+      accessToken: restored.tokens.accessToken,
+      refreshToken: restored.tokens.refreshToken,
+    };
+  },
+  {
+    auth: true,
+    schema: z.object({}),
+  },
 );
 
 /**

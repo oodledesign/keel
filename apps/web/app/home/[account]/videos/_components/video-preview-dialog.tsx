@@ -39,8 +39,8 @@ export function VideoPreviewDialog(props: {
 
         {video?.status !== 'ready' ? (
           <p className="text-muted-foreground text-sm">
-            This video is still {video?.status ?? 'loading'}. Preview is available
-            once encoding finishes.
+            This video is still {video?.status ?? 'loading'}. Preview is
+            available once encoding finishes.
           </p>
         ) : embedSrc ? (
           <div className="overflow-hidden rounded-lg border border-[color:var(--workspace-shell-border)] bg-black">

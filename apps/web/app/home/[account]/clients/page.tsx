@@ -48,6 +48,10 @@ async function ClientsPage({ params }: ClientsPageProps) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
   }
 
+  const isProperty = spaceType === 'property';
+  const isCommercial = spaceType === 'commercial-property';
+  const variant = isCommercial ? 'commercial' : 'work';
+
   const {
     accountId,
     canViewClients,
@@ -55,10 +59,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
     isContractorView,
     initialOverview,
     initialTotal,
-  } = await loadClientsPageData(accountSlug);
-
-  const isProperty = spaceType === 'property';
-  const isCommercial = spaceType === 'commercial-property';
+  } = await loadClientsPageData(accountSlug, { variant });
 
   return (
     <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
@@ -70,6 +71,7 @@ async function ClientsPage({ params }: ClientsPageProps) {
         isContractorView={isContractorView}
         initialOverview={initialOverview}
         initialTotal={initialTotal}
+        variant={variant}
         pageTitle={
           isProperty ? 'Tenants' : isCommercial ? 'Contacts' : 'Clients'
         }

@@ -2,10 +2,16 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Plus, Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@kit/ui/dialog';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -17,11 +23,15 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import type { MatchSuggestion } from '~/home/[account]/listings/_lib/server/match-suggestions.service';
 import {
   createInterestMatch,
   deleteInterestMatch,
+  draftInterestOutreach,
+  explainInterestSuggestions,
   listMatchesForListing,
   listMatchesForRequirement,
+  suggestInterestMatches,
   updateInterestMatch,
 } from '~/home/[account]/listings/_lib/server/matches-actions';
 import type { CommercialInterestMatch } from '~/home/[account]/listings/_lib/server/matches.service';
@@ -34,6 +44,9 @@ import {
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
+function suggestionKey(s: MatchSuggestion) {
+  return `${s.listingId}:${s.requirementId}`;
+}
 type Mode =
   | { kind: 'listing'; listingId: string }
   | { kind: 'requirement'; requirementId: string };
@@ -67,7 +80,9 @@ export function CommercialInterestPanel({
   compact = false,
 }: Props) {
   const [matches, setMatches] = useState<CommercialInterestMatch[]>([]);
+  const [suggestions, setSuggestions] = useState<MatchSuggestion[]>([]);
   const [loading, setLoading] = useState(true);
+  const [suggestionsLoading, setSuggestionsLoading] = useState(false);
   const [pending, startTransition] = useTransition();
   const [addOpen, setAddOpen] = useState(false);
   const [pickId, setPickId] = useState('');
@@ -75,6 +90,10 @@ export function CommercialInterestPanel({
   const [options, setOptions] = useState<Array<{ id: string; label: string }>>(
     [],
   );
+  const [outreach, setOutreach] = useState<{
+    subject: string;
+    body: string;
+  } | null>(null);
 
   const [sector, setSector] = useState('');
   const [sizeMin, setSizeMin] = useState('');
@@ -85,6 +104,24 @@ export function CommercialInterestPanel({
     mode.kind === 'listing'
       ? 'Interested requirements'
       : 'Interested disposals';
+
+  const loadSuggestions = async () => {
+    setSuggestionsLoading(true);
+    try {
+      const next = await suggestInterestMatches({
+        accountId,
+        listingId: mode.kind === 'listing' ? mode.listingId : undefined,
+        requirementId:
+          mode.kind === 'requirement' ? mode.requirementId : undefined,
+        limit: compact ? 5 : 8,
+      });
+      setSuggestions(next);
+    } catch (error) {
+      console.error('[interest-panel] suggestions failed', error);
+    } finally {
+      setSuggestionsLoading(false);
+    }
+  };
 
   const load = async () => {
     setLoading(true);
@@ -107,6 +144,7 @@ export function CommercialInterestPanel({
               lastDays: Number.isFinite(lastDaysNum) ? lastDaysNum : undefined,
             });
       setMatches(next);
+      void loadSuggestions();
     } catch (error) {
       console.error('[interest-panel] load failed', error);
       toast.error('Could not load interests');
@@ -220,6 +258,7 @@ export function CommercialInterestPanel({
         await deleteInterestMatch({ accountId, matchId });
         setMatches((prev) => prev.filter((m) => m.id !== matchId));
         toast.success('Interest removed');
+        void loadSuggestions();
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not remove',
@@ -227,6 +266,225 @@ export function CommercialInterestPanel({
       }
     });
   };
+
+  const onAddSuggestion = (suggestion: MatchSuggestion) => {
+    startTransition(async () => {
+      try {
+        await createInterestMatch({
+          accountId,
+          listingId: suggestion.listingId,
+          requirementId: suggestion.requirementId,
+          notes: suggestion.reasons.slice(0, 2).join(' · ') || null,
+          status: 'new',
+        });
+        toast.success('Interest added');
+        setSuggestions((prev) =>
+          prev.filter((s) => suggestionKey(s) !== suggestionKey(suggestion)),
+        );
+        await load();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not add interest',
+        );
+      }
+    });
+  };
+
+  const onExplainSuggestions = (triage: boolean) => {
+    startTransition(async () => {
+      try {
+        const next = await explainInterestSuggestions({
+          accountId,
+          listingId: mode.kind === 'listing' ? mode.listingId : undefined,
+          requirementId:
+            mode.kind === 'requirement' ? mode.requirementId : undefined,
+          mode: triage ? 'triage' : 'explain',
+          limit: 8,
+        });
+        setSuggestions(next);
+        toast.success(triage ? 'AI triage ready' : 'AI explanations ready');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'AI explain failed',
+        );
+      }
+    });
+  };
+
+  const onDraftOutreach = (suggestion: MatchSuggestion) => {
+    startTransition(async () => {
+      try {
+        const draft = await draftInterestOutreach({
+          accountId,
+          listingId: suggestion.listingId,
+          requirementId: suggestion.requirementId,
+          score: suggestion.score,
+          reasons: suggestion.reasons,
+          listingName: suggestion.listingName,
+          listingSector: suggestion.listingSector,
+          listingTown: suggestion.listingTown,
+          listingDisposalType: suggestion.listingDisposalType,
+          listingSizeMinSqft: suggestion.listingSizeMinSqft,
+          listingSizeMaxSqft: suggestion.listingSizeMaxSqft,
+          requirementLabel: suggestion.requirementLabel,
+          requirementSector: suggestion.requirementSector,
+          requirementLocationText: suggestion.requirementLocationText,
+          requirementTenure: suggestion.requirementTenure,
+          requirementSizeMinSqft: suggestion.requirementSizeMinSqft,
+          requirementSizeMaxSqft: suggestion.requirementSizeMaxSqft,
+          aiWhyFit: suggestion.aiWhyFit ?? null,
+        });
+        setOutreach(draft);
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not draft outreach',
+        );
+      }
+    });
+  };
+
+  const suggestionsBlock = (
+    <div className="mb-5 space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <div>
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            Suggested fits
+          </p>
+          <p className="text-xs text-[var(--workspace-shell-text)]/45">
+            Rule-scored from sector, size, location, tenure and budget
+          </p>
+        </div>
+        {!compact ? (
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending || suggestionsLoading}
+              onClick={() => onExplainSuggestions(false)}
+            >
+              <Sparkles className="h-3.5 w-3.5" />
+              Why these fit
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              disabled={pending || suggestionsLoading}
+              onClick={() => onExplainSuggestions(true)}
+            >
+              AI triage
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      {suggestionsLoading ? (
+        <div className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/50">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          Finding fits…
+        </div>
+      ) : suggestions.length === 0 ? (
+        <p className="text-xs text-[var(--workspace-shell-text)]/45">
+          No strong suggestions yet — add more brief detail or stock to improve
+          matches.
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {suggestions.map((suggestion) => {
+            const primary =
+              mode.kind === 'listing'
+                ? suggestion.requirementLabel
+                : suggestion.listingName;
+            const secondary =
+              mode.kind === 'listing'
+                ? [
+                    suggestion.requirementSector,
+                    suggestion.requirementLocationText,
+                    formatSize(
+                      suggestion.requirementSizeMinSqft,
+                      suggestion.requirementSizeMaxSqft,
+                    ),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')
+                : [
+                    suggestion.listingDisposalType,
+                    suggestion.listingSector,
+                    suggestion.listingTown,
+                    formatSize(
+                      suggestion.listingSizeMinSqft,
+                      suggestion.listingSizeMaxSqft,
+                    ),
+                  ]
+                    .filter(Boolean)
+                    .join(' · ');
+
+            return (
+              <li
+                key={suggestionKey(suggestion)}
+                className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-3 py-2.5"
+              >
+                <div className="flex flex-wrap items-start justify-between gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {primary}
+                      </span>
+                      <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)] tabular-nums">
+                        {suggestion.score}% fit
+                      </span>
+                      {suggestion.aiRecommendation ? (
+                        <span className="text-[11px] text-[var(--workspace-shell-text)]/50">
+                          AI: {suggestion.aiRecommendation}
+                        </span>
+                      ) : null}
+                    </div>
+                    {secondary ? (
+                      <div className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text)]/50">
+                        {secondary}
+                      </div>
+                    ) : null}
+                    {suggestion.aiWhyFit ? (
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/70">
+                        {suggestion.aiWhyFit}
+                      </p>
+                    ) : suggestion.reasons.length > 0 ? (
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/55">
+                        {suggestion.reasons.join(' · ')}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    {!compact ? (
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={pending}
+                        onClick={() => onDraftOutreach(suggestion)}
+                      >
+                        Draft email
+                      </Button>
+                    ) : null}
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={pending}
+                      className={workspaceBtnPrimaryMd}
+                      onClick={() => onAddSuggestion(suggestion)}
+                    >
+                      Add interest
+                    </Button>
+                  </div>
+                </div>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </div>
+  );
 
   const panel = (
     <>
@@ -299,6 +557,8 @@ export function CommercialInterestPanel({
         </p>
       ) : null}
 
+      {suggestionsBlock}
+
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/50">
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -308,7 +568,7 @@ export function CommercialInterestPanel({
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
           No interests yet. Link a{' '}
           {mode.kind === 'listing' ? 'requirement' : 'disposal'} to track
-          progress.
+          progress, or add from suggestions above.
         </p>
       ) : (
         <ul className="space-y-2">
@@ -456,6 +716,47 @@ export function CommercialInterestPanel({
           </div>
         </div>
       ) : null}
+
+      <Dialog open={Boolean(outreach)} onOpenChange={() => setOutreach(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Draft outreach</DialogTitle>
+          </DialogHeader>
+          {outreach ? (
+            <div className="space-y-3">
+              <div>
+                <Label className="text-xs">Subject</Label>
+                <p className="mt-1 text-sm text-[var(--workspace-shell-text)]">
+                  {outreach.subject}
+                </p>
+              </div>
+              <div>
+                <Label className="text-xs">Body</Label>
+                <pre className="mt-1 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/20 p-3 text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]">
+                  {outreach.body}
+                </pre>
+              </div>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                onClick={async () => {
+                  try {
+                    await navigator.clipboard.writeText(
+                      `${outreach.subject}\n\n${outreach.body}`,
+                    );
+                    toast.success('Copied');
+                  } catch {
+                    toast.error('Could not copy');
+                  }
+                }}
+              >
+                Copy
+              </Button>
+            </div>
+          ) : null}
+        </DialogContent>
+      </Dialog>
     </>
   );
 
@@ -489,8 +790,8 @@ export function CommercialInterestPanel({
             {title}
           </CardTitle>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-            Interest Schedule — link requirements to this disposal and track
-            status through to agreed.
+            Interest Schedule — suggestions, one-click add, and status through
+            to agreed.
           </p>
         </div>
         <Button

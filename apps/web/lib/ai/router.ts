@@ -62,6 +62,9 @@ export const OzerAIFeature = {
   admin_email_marketing: 'admin_email_marketing',
   commercial_requirement_draft: 'commercial_requirement_draft',
   commercial_listing_marketing_copy: 'commercial_listing_marketing_copy',
+  commercial_match_explain: 'commercial_match_explain',
+  commercial_match_triage: 'commercial_match_triage',
+  commercial_match_outreach: 'commercial_match_outreach',
 } as const;
 
 export type OzerAIFeatureKey =
@@ -445,6 +448,30 @@ export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
     credits: 3,
     batchable: false,
     maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  commercial_match_explain: {
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 2,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  commercial_match_triage: {
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 3,
+    batchable: false,
+    maxOutputTokens: 2048,
+    structuredOutput: true,
+  },
+  commercial_match_outreach: {
+    provider: 'anthropic',
+    model: HAIKU_MODEL,
+    credits: 2,
+    batchable: false,
+    maxOutputTokens: 1024,
     structuredOutput: true,
   },
 };

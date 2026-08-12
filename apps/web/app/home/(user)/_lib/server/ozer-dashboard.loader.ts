@@ -25,6 +25,7 @@ import {
 } from '~/home/_lib/server/workspace-scope';
 import { loadPersonalDashboardShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
+import { createPersonalVisionService } from '~/lib/personal-vision/personal-vision.service';
 import { getPersonalAccountId } from '~/lib/recorder/personal-account';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
@@ -94,6 +95,7 @@ export type OzerDashboardData = {
   workspaces: PersonalNavWorkspace[];
   dashboardShortcuts: import('~/lib/dashboard-shortcuts/types').ResolvedShortcut[];
   includeWorkspaceTasks: boolean;
+  showPersonalVisionLaunch: boolean;
   todaysFocus: PersonalDashboardTask[];
   upcoming: PersonalDashboardTask[];
   myDayEvents: PersonalCalendarEvent[];
@@ -766,14 +768,19 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     ReturnType<typeof loadPersonalDashboardShortcuts>
   > = [];
   let includeWorkspaceTasks = true;
+  let showPersonalVisionLaunch = false;
   try {
-    [dashboardShortcuts, includeWorkspaceTasks] = await Promise.all([
-      loadPersonalDashboardShortcuts(client, userId),
-      loadPersonalIncludeWorkspaceTasks(client, userId),
-    ]);
+    const visionService = createPersonalVisionService(client);
+    [dashboardShortcuts, includeWorkspaceTasks, showPersonalVisionLaunch] =
+      await Promise.all([
+        loadPersonalDashboardShortcuts(client, userId),
+        loadPersonalIncludeWorkspaceTasks(client, userId),
+        visionService.isDashboardEnabled(userId),
+      ]);
   } catch {
     dashboardShortcuts = [];
     includeWorkspaceTasks = true;
+    showPersonalVisionLaunch = false;
   }
 
   const filterPersonalOnly = (tasks: PersonalDashboardTask[]) =>
@@ -801,6 +808,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     workspaces,
     dashboardShortcuts,
     includeWorkspaceTasks,
+    showPersonalVisionLaunch,
     todaysFocus: filterPersonalOnly(todaysFocus),
     upcoming: filterPersonalOnly(upcoming),
     myDayEvents,

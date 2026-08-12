@@ -310,15 +310,14 @@ export async function mapEmailThreadToIndexable(
   };
 }
 
-export async function loadEmailThreadIndexables(
+export async function listEmailThreadIndexableRefs(
   admin: AdminClient,
   accountId: string,
-  accountSlug: string,
-): Promise<IndexableRecord[]> {
+): Promise<Array<{ sourceId: string; title: string }>> {
   const { data: threads, error } = await admin
     .from('email_threads')
     .select(
-      'id, account_id, subject, snippet, participants, assistant_category, assistant_category_reason, client_id, project_id, last_message_at, updated_at',
+      'id, subject, account_id, assistant_category, client_id, project_id',
     )
     .eq('account_id', accountId)
     .or(
@@ -329,14 +328,28 @@ export async function loadEmailThreadIndexables(
     throw new Error(`email_threads: ${error.message}`);
   }
 
+  return (threads ?? [])
+    .filter((row) => shouldIndexEmailThreadForBrain(row))
+    .map((row) => ({
+      sourceId: row.id as string,
+      title: (row.subject as string | null)?.trim() || 'Email thread',
+    }));
+}
+
+export async function loadEmailThreadIndexables(
+  admin: AdminClient,
+  accountId: string,
+  accountSlug: string,
+): Promise<IndexableRecord[]> {
+  const refs = await listEmailThreadIndexableRefs(admin, accountId);
   const records: IndexableRecord[] = [];
 
-  for (const row of threads ?? []) {
+  for (const ref of refs) {
     const mapped = await mapEmailThreadToIndexable(
       admin,
       accountId,
       accountSlug,
-      row.id as string,
+      ref.sourceId,
     );
 
     if (mapped) {

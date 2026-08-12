@@ -130,8 +130,9 @@ export function getSpaceTypeFromAccount(
 }
 
 /**
- * Per-account module toggles (`account_module_settings`, enabled=true only in loader).
- * When settings are loaded, keys absent from the map are treated as disabled.
+ * Per-account module toggles (`account_module_settings`).
+ * When settings are loaded, keys absent from the map are treated as disabled
+ * (except an empty map, which means nothing has been configured yet).
  */
 export function isAccountModuleEnabled(
   moduleSettings: Record<string, boolean> | null | undefined,

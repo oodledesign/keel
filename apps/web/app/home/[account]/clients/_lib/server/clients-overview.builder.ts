@@ -17,11 +17,13 @@ import {
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
 import type {
+  ClientOverviewHighlight,
   ClientOverviewItem,
   ClientOverviewProject,
   ClientOverviewTeamMember,
   ClientProjectHealth,
   ClientRow,
+  ClientsWorkspaceVariant,
 } from '../clients-overview.types';
 
 type JobRow = {
@@ -329,10 +331,15 @@ export async function buildClientsOverview(params: {
   accountId: string;
   clients: ClientRow[];
   members: MemberPreview[];
+  variant?: ClientsWorkspaceVariant;
 }): Promise<ClientOverviewItem[]> {
-  const { db, accountId, clients, members } = params;
+  const { db, accountId, clients, members, variant = 'work' } = params;
   if (clients.length === 0) {
     return [];
+  }
+
+  if (variant === 'commercial') {
+    return buildCommercialClientsOverview({ db, accountId, clients });
   }
 
   const clientIds = clients.map((c) => c.id);
@@ -459,11 +466,259 @@ export async function buildClientsOverview(params: {
       pictureUrl: client.picture_url ?? null,
       tagline: resolveClientListTagline(client),
       updatedAt: client.updated_at,
+      clientType:
+        client.client_type === 'individual' || client.client_type === 'business'
+          ? client.client_type
+          : null,
+      commercialRole: client.commercial_role ?? null,
       projectCount,
       teamMemberCount,
       dueTaskCount,
       projects,
       teamMembers,
+      disposalCount: 0,
+      requirementCount: 0,
+      viewingCount: 0,
+      leaseCount: 0,
+      highlights: [],
+    };
+  });
+}
+
+async function buildCommercialClientsOverview(params: {
+  db: any;
+  accountId: string;
+  clients: ClientRow[];
+}): Promise<ClientOverviewItem[]> {
+  const { db, accountId, clients } = params;
+  const clientIds = clients.map((c) => c.id);
+
+  const [
+    instructingResult,
+    partiesResult,
+    requirementsResult,
+    viewingsResult,
+    leasesResult,
+  ] = await Promise.all([
+    db
+      .from('commercial_listings')
+      .select('id, name, status, instructing_client_id, updated_at')
+      .eq('account_id', accountId)
+      .in('instructing_client_id', clientIds),
+    db
+      .from('commercial_listing_parties')
+      .select(
+        'client_id, listing_id, commercial_listings(id, name, status, updated_at)',
+      )
+      .eq('account_id', accountId)
+      .in('client_id', clientIds),
+    db
+      .from('commercial_requirements')
+      .select('id, company_name, contact_name, stage, client_id, updated_at')
+      .eq('account_id', accountId)
+      .in('client_id', clientIds),
+    db
+      .from('commercial_viewings')
+      .select('id, status, scheduled_at, client_id, listing_id')
+      .eq('account_id', accountId)
+      .in('client_id', clientIds),
+    db
+      .from('commercial_leases')
+      .select('id, status, client_id, listing_id, updated_at')
+      .eq('account_id', accountId)
+      .in('client_id', clientIds),
+  ]);
+
+  for (const result of [
+    instructingResult,
+    partiesResult,
+    requirementsResult,
+    viewingsResult,
+    leasesResult,
+  ]) {
+    if (result.error && !isMissingRelationError(result.error)) {
+      throw result.error;
+    }
+    if (result.error) {
+      logMissingRelation('clients-overview.commercial', result.error);
+    }
+  }
+
+  type ListingRef = {
+    id: string;
+    name: string | null;
+    status: string | null;
+    updated_at?: string | null;
+  };
+
+  const disposalsByClient = new Map<
+    string,
+    Map<
+      string,
+      { id: string; title: string; status: string | null; updatedAt: string }
+    >
+  >();
+
+  const addDisposal = (
+    clientId: string,
+    listing: ListingRef | null | undefined,
+  ) => {
+    if (!clientId || !listing?.id) return;
+    const map = disposalsByClient.get(clientId) ?? new Map();
+    map.set(listing.id, {
+      id: listing.id,
+      title: listing.name?.trim() || 'Untitled disposal',
+      status: listing.status,
+      updatedAt: listing.updated_at ?? '',
+    });
+    disposalsByClient.set(clientId, map);
+  };
+
+  for (const row of (instructingResult.data ?? []) as Array<{
+    id: string;
+    name: string | null;
+    status: string | null;
+    instructing_client_id: string | null;
+    updated_at: string | null;
+  }>) {
+    if (!row.instructing_client_id) continue;
+    addDisposal(row.instructing_client_id, row);
+  }
+
+  for (const row of (partiesResult.data ?? []) as Array<{
+    client_id: string;
+    commercial_listings: ListingRef | ListingRef[] | null;
+  }>) {
+    const listing = Array.isArray(row.commercial_listings)
+      ? row.commercial_listings[0]
+      : row.commercial_listings;
+    addDisposal(row.client_id, listing);
+  }
+
+  const requirementsByClient = new Map<
+    string,
+    Array<{
+      id: string;
+      title: string;
+      stage: string | null;
+      updatedAt: string;
+    }>
+  >();
+  for (const row of (requirementsResult.data ?? []) as Array<{
+    id: string;
+    company_name: string | null;
+    contact_name: string | null;
+    stage: string | null;
+    client_id: string;
+    updated_at: string | null;
+  }>) {
+    const list = requirementsByClient.get(row.client_id) ?? [];
+    list.push({
+      id: row.id,
+      title:
+        row.company_name?.trim() ||
+        row.contact_name?.trim() ||
+        'Untitled requirement',
+      stage: row.stage,
+      updatedAt: row.updated_at ?? '',
+    });
+    requirementsByClient.set(row.client_id, list);
+  }
+
+  const viewingsByClient = new Map<string, number>();
+  for (const row of (viewingsResult.data ?? []) as Array<{
+    client_id: string | null;
+  }>) {
+    if (!row.client_id) continue;
+    viewingsByClient.set(
+      row.client_id,
+      (viewingsByClient.get(row.client_id) ?? 0) + 1,
+    );
+  }
+
+  const leasesByClient = new Map<string, number>();
+  for (const row of (leasesResult.data ?? []) as Array<{
+    client_id: string | null;
+  }>) {
+    if (!row.client_id) continue;
+    leasesByClient.set(
+      row.client_id,
+      (leasesByClient.get(row.client_id) ?? 0) + 1,
+    );
+  }
+
+  return clients.map((client) => {
+    const disposals = [...(disposalsByClient.get(client.id)?.values() ?? [])];
+    const requirements = requirementsByClient.get(client.id) ?? [];
+    const isPerson = client.client_type === 'individual';
+
+    const highlights: ClientOverviewHighlight[] = [];
+    if (isPerson) {
+      for (const req of requirements
+        .slice()
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .slice(0, 3)) {
+        highlights.push({
+          id: req.id,
+          title: req.title,
+          kind: 'requirement',
+          meta: req.stage,
+        });
+      }
+    } else {
+      const mixed = [
+        ...disposals.map((d) => ({
+          id: d.id,
+          title: d.title,
+          kind: 'disposal' as const,
+          meta: d.status,
+          updatedAt: d.updatedAt,
+        })),
+        ...requirements.map((r) => ({
+          id: r.id,
+          title: r.title,
+          kind: 'requirement' as const,
+          meta: r.stage,
+          updatedAt: r.updatedAt,
+        })),
+      ]
+        .sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))
+        .slice(0, 3);
+      for (const item of mixed) {
+        highlights.push({
+          id: item.id,
+          title: item.title,
+          kind: item.kind,
+          meta: item.meta,
+        });
+      }
+    }
+
+    return {
+      id: client.id,
+      displayName: resolveClientListTitle(client),
+      companyName: client.company_name,
+      email: client.email,
+      phone: client.phone,
+      city: client.city,
+      pictureUrl: client.picture_url ?? null,
+      tagline: resolveClientListTagline(client),
+      updatedAt: client.updated_at,
+      clientType:
+        client.client_type === 'individual' || client.client_type === 'business'
+          ? client.client_type
+          : null,
+      commercialRole: client.commercial_role ?? null,
+      projectCount: 0,
+      teamMemberCount: 0,
+      dueTaskCount: 0,
+      projects: [],
+      teamMembers: [],
+      disposalCount: disposals.length,
+      requirementCount: requirements.length,
+      viewingCount: viewingsByClient.get(client.id) ?? 0,
+      leaseCount: leasesByClient.get(client.id) ?? 0,
+      highlights,
     };
   });
 }

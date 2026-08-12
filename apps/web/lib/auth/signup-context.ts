@@ -11,13 +11,18 @@ import {
   parseSetupIntent,
 } from '~/lib/billing/pricing-marketing';
 
-export type SignupContext = {
-  heading: string;
-  subheading: string;
-  badge?: string;
-  highlights: string[];
-  intent: SetupIntent | null;
-};
+import {
+  type SignupContext,
+  buildCommercialSignupContext,
+  isCommercialSignupIntent,
+} from './signup-context-commercial';
+
+export type { SignupContext } from './signup-context-commercial';
+export {
+  buildAuthLinkWithNext,
+  buildCommercialSignupContext,
+  isCommercialSignupIntent,
+} from './signup-context-commercial';
 
 const PERSONAL_FIRST_HIGHLIGHTS = [
   'Free personal hub — tasks, people, notes & planner',
@@ -64,24 +69,59 @@ function isPaidBusinessProduct(productId: string | undefined) {
   );
 }
 
+function withPersonalDefaults(
+  partial: Omit<SignupContext, 'brandEyebrow' | 'brandHeadline' | 'formTitle' | 'formSubtitle' | 'showPlanConfirm'> &
+    Partial<
+      Pick<
+        SignupContext,
+        | 'brandEyebrow'
+        | 'brandHeadline'
+        | 'formTitle'
+        | 'formSubtitle'
+        | 'showPlanConfirm'
+      >
+    >,
+): SignupContext {
+  return {
+    brandEyebrow: partial.brandEyebrow ?? 'You can easily',
+    brandHeadline:
+      partial.brandHeadline ??
+      'Get access to your personal hub for clarity and productivity.',
+    formTitle: partial.formTitle ?? 'Create an account',
+    formSubtitle:
+      partial.formSubtitle ??
+      'Access your tasks, notes, and projects anytime — and keep everything flowing in one place.',
+    showPlanConfirm: partial.showPlanConfirm ?? false,
+    heading: partial.heading,
+    subheading: partial.subheading,
+    badge: partial.badge,
+    highlights: partial.highlights,
+    intent: partial.intent,
+  };
+}
+
 /** Resolve marketing copy for the sign-up page from the post-auth `next` path. */
 export function resolveSignupContext(next: string | undefined): SignupContext {
   const intent = parseIntentFromNext(next);
 
   if (!intent) {
-    return {
+    return withPersonalDefaults({
       heading: 'Create your free personal account',
       subheading:
         'Your personal hub is free forever. After signup you can add a business, family, or community workspace — or explore personal-only first.',
       badge: 'Free forever · no card to start',
       highlights: [...PERSONAL_FIRST_HIGHLIGHTS],
       intent: null,
-    };
+    });
+  }
+
+  if (isCommercialSignupIntent(intent)) {
+    return buildCommercialSignupContext(intent);
   }
 
   // Empty setup path = personal-only intent from /start
   if (!intent.profile && !intent.productId && !intent.planId) {
-    return {
+    return withPersonalDefaults({
       heading: 'Create your free personal account',
       subheading:
         'No workspace required yet — start with personal tasks, people, notes, and planner. Add Solo, Team, or family when you need them.',
@@ -92,7 +132,7 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
         'Add a business workspace anytime',
       ],
       intent,
-    };
+    });
   }
 
   const product = intent.productId
@@ -103,7 +143,7 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
     intent.productId === 'ozer-business-lite' ||
     intent.planId === 'business-lite-free'
   ) {
-    return {
+    return withPersonalDefaults({
       heading: 'Create your free personal account',
       subheading:
         'Your personal hub comes first. Next you’ll add a free Business Lite workspace to install apps like Signatures.',
@@ -114,7 +154,9 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
         'Upgrade to Solo or Team when you need CRM',
       ],
       intent,
-    };
+      brandHeadline:
+        'Get access to your personal hub — then add Business Lite for apps.',
+    });
   }
 
   if (isPaidBusinessProduct(intent.productId) && product) {
@@ -124,7 +166,7 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
     const planName = product.productName;
     const intervalLabel = intent.interval === 'year' ? 'year' : 'month';
 
-    return {
+    return withPersonalDefaults({
       heading: 'Create your free personal account',
       subheading: isTeam
         ? `Ozer starts with your personal hub. After signup, add a ${planName} workspace for the studio — 14-day trial, then £${product.monthlyPriceGbp}/${intervalLabel}.`
@@ -138,12 +180,13 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
         ]).slice(0, 2),
       ],
       intent,
-    };
+      brandHeadline: `Get access to your personal hub, then start ${planName}.`,
+    });
   }
 
   if (product && product.monthlyPriceGbp > 0) {
     const intervalLabel = intent.interval === 'year' ? 'year' : 'month';
-    return {
+    return withPersonalDefaults({
       heading: 'Create your free personal account',
       subheading: `Your personal hub comes first. After signup you’ll set up ${product.productName} (14-day trial, then £${product.monthlyPriceGbp}/${intervalLabel}).`,
       badge: 'Personal free · trial on paid plans',
@@ -151,46 +194,39 @@ export function resolveSignupContext(next: string | undefined): SignupContext {
         ...PERSONAL_FIRST_HIGHLIGHTS,
       ]),
       intent,
-    };
+      brandHeadline: `Get access to your personal hub, then set up ${product.productName}.`,
+    });
   }
 
   if (intent.profile === 'family' || intent.profile === 'community') {
     const label = PROFILE_LABEL[intent.profile];
-    return {
+    return withPersonalDefaults({
       heading: 'Create your free personal account',
       subheading: `Your personal hub is included. Next you’ll add a ${label} workspace. ${MARKETING_FREE_TIER.description}`,
       badge: 'No credit card',
       highlights: [...MARKETING_FREE_TIER.features],
       intent,
-    };
+      brandHeadline: `Get access to your personal hub — then add a ${label} workspace.`,
+    });
   }
 
   if (intent.profile === 'work_design' || intent.profile === 'work_property') {
-    return {
+    return withPersonalDefaults({
       heading: 'Create your free personal account',
       subheading:
         'Ozer starts with you. After signup, add a business workspace — most freelancers pick Solo; small studios pick Team.',
       badge: 'Free personal · business when ready',
       highlights: [...PERSONAL_FIRST_HIGHLIGHTS],
       intent,
-    };
+    });
   }
 
-  return {
+  return withPersonalDefaults({
     heading: 'Create your free personal account',
     subheading:
       'After you sign up, add workspaces for business, family, or community. Most studios start with Business Solo or Team.',
     badge: 'Free to start',
     highlights: [...PERSONAL_FIRST_HIGHLIGHTS],
     intent,
-  };
-}
-
-export function buildAuthLinkWithNext(
-  basePath: string,
-  next: string | undefined,
-) {
-  if (!next?.trim()) return basePath;
-  const safe = getSafeRedirectPath(next, pathsConfig.app.home);
-  return `${basePath}?next=${encodeURIComponent(safe)}`;
+  });
 }

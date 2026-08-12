@@ -14,6 +14,40 @@ type KnowledgeStats = {
   byType: Record<string, { count: number; lastIndexedAt: string | null }>;
 };
 
+type ReindexSourceRef = {
+  sourceType: string;
+  sourceId: string;
+  title: string;
+};
+
+type ReindexBatchResult = {
+  indexed?: number;
+  processed?: number;
+  total?: number;
+  nextOffset?: number;
+  done?: boolean;
+  chunks?: number;
+  totalChunks?: number;
+  byType?: KnowledgeStats['byType'];
+  errors?: string[];
+  error?: string;
+  sources?: ReindexSourceRef[];
+};
+
+async function readReindexResponse(res: Response): Promise<ReindexBatchResult> {
+  const text = await res.text();
+
+  try {
+    return JSON.parse(text) as ReindexBatchResult;
+  } catch {
+    throw new Error(
+      res.ok
+        ? 'Re-index returned an invalid response'
+        : `Re-index failed (${res.status})`,
+    );
+  }
+}
+
 export function KnowledgeBaseSettings({
   accountId,
   accountSlug,
@@ -25,37 +59,78 @@ export function KnowledgeBaseSettings({
 }) {
   const [stats, setStats] = useState<KnowledgeStats>(initialStats);
   const [isReindexing, setIsReindexing] = useState(false);
+  const [progress, setProgress] = useState<{
+    processed: number;
+    total: number;
+  } | null>(null);
   const [lastErrors, setLastErrors] = useState<string[]>([]);
 
   const handleReindex = async () => {
     setIsReindexing(true);
     setLastErrors([]);
+    setProgress({ processed: 0, total: 0 });
 
     try {
-      const res = await fetch('/api/brain/reindex', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ accountId, accountSlug }),
-      });
+      let offset = 0;
+      let indexed = 0;
+      const errors: string[] = [];
+      let last: ReindexBatchResult | null = null;
+      let catalog: ReindexSourceRef[] | null = null;
 
-      const result = (await res.json()) as {
-        indexed?: number;
-        chunks?: number;
-        totalChunks?: number;
-        errors?: string[];
-        error?: string;
-      };
+      do {
+        const res = await fetch('/api/brain/reindex', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({
+            accountId,
+            offset,
+            ...(catalog
+              ? {
+                  sources: catalog.slice(offset, offset + 4),
+                  total: catalog.length,
+                }
+              : {}),
+          }),
+        });
 
-      if (!res.ok) {
-        throw new Error(result.error ?? 'Re-index failed');
-      }
+        const result = await readReindexResponse(res);
 
-      const errorCount = result.errors?.length ?? 0;
-      const totalChunks = result.totalChunks ?? result.chunks ?? 0;
-      const indexed = result.indexed ?? 0;
+        if (!res.ok) {
+          throw new Error(result.error ?? 'Re-index failed');
+        }
+
+        last = result;
+        indexed += result.indexed ?? 0;
+        errors.push(...(result.errors ?? []));
+
+        if (result.sources?.length) {
+          catalog = result.sources;
+        }
+
+        const nextOffset = result.nextOffset ?? offset;
+        if (!result.done && nextOffset <= offset) {
+          throw new Error('Re-index did not advance');
+        }
+
+        offset = nextOffset;
+        setProgress({
+          processed: result.processed ?? offset,
+          total: result.total ?? 0,
+        });
+
+        if (result.totalChunks != null || result.byType) {
+          setStats({
+            totalChunks: result.totalChunks ?? result.chunks ?? 0,
+            byType: result.byType ?? {},
+          });
+        }
+      } while (last && !last.done);
+
+      const errorCount = errors.length;
+      const totalChunks = last?.totalChunks ?? last?.chunks ?? 0;
 
       if (errorCount > 0) {
-        setLastErrors(result.errors ?? []);
+        setLastErrors(errors);
         toast.warning(
           `Indexed ${indexed} sources — ${totalChunks} chunk${totalChunks === 1 ? '' : 's'} in knowledge base. ${errorCount} source${errorCount === 1 ? '' : 's'} failed.`,
         );
@@ -71,6 +146,7 @@ export function KnowledgeBaseSettings({
       toast.error(err instanceof Error ? err.message : 'Re-index failed');
     } finally {
       setIsReindexing(false);
+      setProgress(null);
     }
   };
 
@@ -84,6 +160,12 @@ export function KnowledgeBaseSettings({
           <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
             Semantic index for Second Brain chat and search.
           </p>
+          {progress ? (
+            <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
+              Re-indexing {progress.processed} of {progress.total || '…'}{' '}
+              sources…
+            </p>
+          ) : null}
         </div>
         <Button
           type="button"
@@ -105,8 +187,8 @@ export function KnowledgeBaseSettings({
         <div className="mt-4 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-sm text-amber-100">
           <p className="font-medium">Sources that failed to index</p>
           <ul className="mt-2 list-disc space-y-1 pl-5 text-amber-50/90">
-            {lastErrors.map((error) => (
-              <li key={error}>{error}</li>
+            {lastErrors.map((error, index) => (
+              <li key={`${index}:${error}`}>{error}</li>
             ))}
           </ul>
         </div>
@@ -139,7 +221,7 @@ export function KnowledgeBaseSettings({
                 className="border-t border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
               >
                 <td className="py-2 pr-4 capitalize">
-                  {type.replace('_', ' ')}
+                  {type.replaceAll('_', ' ')}
                 </td>
                 <td className="py-2 pr-4">{row.count}</td>
                 <td className="py-2">

@@ -8,10 +8,12 @@ export function ClientDetailPageNav({
   accountHomeHref,
   clientsListHref,
   clientDisplayName,
+  listLabel = 'Clients',
 }: {
   accountHomeHref: string;
   clientsListHref: string;
   clientDisplayName: string;
+  listLabel?: string;
 }) {
   return (
     <nav
@@ -33,7 +35,7 @@ export function ClientDetailPageNav({
         href={clientsListHref}
         className="transition hover:text-[var(--workspace-shell-text)]"
       >
-        Clients
+        {listLabel}
       </Link>
       <ChevronRight
         className="h-3.5 w-3.5 shrink-0 text-[var(--workspace-shell-text-muted)]"
