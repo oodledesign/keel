@@ -77,7 +77,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
     <main className="marketing-shell relative overflow-hidden">
       {/* Hero */}
       {isCommercial ? (
-        <section className="marketing-section-plum marketing-section-plum-hero">
+        <section className="marketing-section-plum marketing-section-plum-hero -mb-4">
           <div className="relative mx-auto w-full max-w-7xl px-6 pt-24 pb-16 md:pt-28 md:pb-20">
             <div className="grid items-center gap-12 lg:grid-cols-[0.95fr,1.05fr] lg:gap-14">
               <div className="flex flex-col gap-7">
@@ -129,12 +129,11 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
 
               <div className="relative overflow-hidden rounded-3xl border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-900)] shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
                 <Image
-                  src="/brand/marketing/commercial-agency-home.png"
+                  src="/brand/marketing/commercial-agency-home.jpg"
                   alt="Commercial Property agency home — unactioned enquiries, stock on market, recent disposals, and quick links"
-                  width={1024}
-                  height={531}
+                  width={2880}
+                  height={1340}
                   priority
-                  unoptimized
                   className="h-auto w-full object-contain object-left-top"
                   sizes="(max-width: 1024px) 100vw, 52vw"
                 />
@@ -269,11 +268,18 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
       <section
         id="features"
         className={cn(
-          'relative mx-auto w-full max-w-7xl px-6 pb-20',
-          isCommercial ? 'pt-20' : 'pt-4',
+          'relative pb-20',
+          isCommercial
+            ? 'z-10 bg-[var(--workspace-shell-bg)] pt-20'
+            : 'mx-auto w-full max-w-7xl px-6 pt-4',
         )}
         aria-labelledby="features-heading"
       >
+        <div
+          className={cn(
+            isCommercial && 'mx-auto w-full max-w-7xl px-6',
+          )}
+        >
         <div
           className={cn(
             'mb-10 max-w-2xl',
@@ -319,6 +325,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
               </p>
             </article>
           ))}
+        </div>
         </div>
       </section>
 
