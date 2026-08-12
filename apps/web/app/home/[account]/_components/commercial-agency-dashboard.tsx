@@ -62,7 +62,7 @@ function ActionCard({
       >
         <CardContent className="flex flex-col gap-2 p-3 sm:flex-row sm:items-start sm:gap-3 sm:p-4">
           <div
-            className={`${workspaceIconChip} hidden sm:flex ${
+            className={`${workspaceIconChip} hidden h-10 w-10 shrink-0 items-center justify-center rounded-xl sm:flex ${
               emphasize && value > 0
                 ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
                 : ''
@@ -294,8 +294,22 @@ export function CommercialAgencyDashboard({
                           accountSlug,
                           pathsConfig.app.accountListingDetail,
                         ).replace('[id]', listing.id)}
-                        className="flex min-w-0 items-start gap-2 py-3 transition-colors hover:text-[var(--ozer-accent)] sm:items-center sm:gap-3"
+                        className="flex min-w-0 items-center gap-3 py-3 transition-colors hover:text-[var(--ozer-accent)]"
                       >
+                        <span className="flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-lg bg-[var(--workspace-shell-sidebar-accent)]">
+                          {listing.coverUrl ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img
+                              src={listing.coverUrl}
+                              alt=""
+                              className="h-full w-full object-cover"
+                            />
+                          ) : (
+                            <Building2
+                              className={`h-4 w-4 ${workspaceTextMuted}`}
+                            />
+                          )}
+                        </span>
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
                             {listing.name}
@@ -332,7 +346,7 @@ export function CommercialAgencyDashboard({
             <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
               Jump into the core agency modules
             </p>
-            <div className="mt-4 space-y-2">
+            <div className="mt-4 grid grid-cols-4 gap-2">
               {[
                 {
                   href: requirementsHref,
@@ -346,12 +360,14 @@ export function CommercialAgencyDashboard({
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="flex min-w-0 items-center gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2.5 text-sm text-[var(--workspace-shell-text)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  className="flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl border border-[color:var(--workspace-shell-border)] px-1.5 py-3 text-center text-[var(--workspace-shell-text)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)] sm:px-2"
                 >
                   <item.icon
-                    className={`h-4 w-4 shrink-0 ${workspaceTextMuted}`}
+                    className={`h-5 w-5 shrink-0 ${workspaceTextMuted}`}
                   />
-                  <span className="truncate">{item.label}</span>
+                  <span className="w-full truncate text-[11px] font-medium sm:text-xs">
+                    {item.label}
+                  </span>
                 </Link>
               ))}
             </div>

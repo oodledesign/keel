@@ -6,6 +6,7 @@ import { z } from 'zod';
 
 import {
   normalizeAiExtractedDueDateYmd,
+  toIsoDateString,
   todayLocalYmd,
 } from '~/home/_lib/due-date-ymd';
 import { callAI } from '~/lib/ai/router';
@@ -53,7 +54,73 @@ export type WorkspaceContextForExtract = {
   clients: Array<{ id: string; name: string }>;
   /** When set, the source is a meeting linked to this client. */
   meetingClient?: { id: string; name: string } | null;
+  /**
+   * Calendar day of the call/meeting (YYYY-MM-DD). Used as the reference
+   * “today” for relative deadlines mentioned in the transcript.
+   */
+  meetingDateYmd?: string | null;
 };
+
+function pad2(n: number) {
+  return String(n).padStart(2, '0');
+}
+
+function ymdFromLocalDate(date: Date): string {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;
+}
+
+function parseYmdToLocalDate(ymd: string): Date | null {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd.trim());
+  if (!m) return null;
+  const y = Number(m[1]);
+  const mo = Number(m[2]);
+  const d = Number(m[3]);
+  const date = new Date(y, mo - 1, d, 12, 0, 0, 0);
+  if (
+    date.getFullYear() !== y ||
+    date.getMonth() !== mo - 1 ||
+    date.getDate() !== d
+  ) {
+    return null;
+  }
+  return date;
+}
+
+/** Next weekday after `startYmd` by `businessDays` (Mon–Fri). */
+export function addBusinessDaysYmd(
+  startYmd: string,
+  businessDays: number,
+): string | null {
+  const start = parseYmdToLocalDate(startYmd);
+  if (!start || businessDays < 0) return null;
+  const cursor = new Date(start);
+  let remaining = businessDays;
+  while (remaining > 0) {
+    cursor.setDate(cursor.getDate() + 1);
+    const day = cursor.getDay();
+    if (day !== 0 && day !== 6) remaining -= 1;
+  }
+  return ymdFromLocalDate(cursor);
+}
+
+/**
+ * Prefer an AI-inferred deadline; otherwise default to two business days
+ * after the meeting (or after today when no meeting date is available).
+ */
+export function resolveExtractedDueDate(input: {
+  aiDueDate: string | null;
+  meetingDateYmd?: string | null;
+  now?: Date;
+}): string | null {
+  const now = input.now ?? new Date();
+  const reference = toIsoDateString(input.meetingDateYmd) ?? todayLocalYmd(now);
+  const refDate = parseYmdToLocalDate(reference) ?? now;
+
+  const normalized = normalizeAiExtractedDueDateYmd(input.aiDueDate, refDate);
+  if (normalized) return normalized;
+
+  return addBusinessDaysYmd(reference, 2);
+}
 
 function normalizePriority(
   v: string | undefined,
@@ -96,8 +163,10 @@ export async function extractWorkspaceTasksWithAnthropic(
     ? `\nMeeting context: this transcript is for client "${context.meetingClient.name}" (id: ${context.meetingClient.id}). Link all extracted tasks to this client unless the text clearly concerns a different client or project.\n`
     : '';
 
-  const todayLocal = todayLocalYmd();
-  const currentYearStr = todayLocal.slice(0, 4);
+  const meetingDateYmd =
+    toIsoDateString(context.meetingDateYmd) ?? todayLocalYmd();
+  const meetingRefDate = parseYmdToLocalDate(meetingDateYmd) ?? new Date();
+  const currentYearStr = meetingDateYmd.slice(0, 4);
   const nextYearStr = String(Number(currentYearStr) + 1);
 
   const system = `You extract actionable tasks from business emails or meeting transcripts.
@@ -107,7 +176,7 @@ Return ONLY valid JSON matching this shape (no markdown fences):
     {
       "title": "string",
       "notes": "string or null — context from the source for this parent task",
-      "due_date": "YYYY-MM-DD or null — infer reasonable deadlines from dates mentioned; use null if unknown",
+      "due_date": "YYYY-MM-DD or null — infer deadlines from dates spoken in the call; use null only when no deadline is implied",
       "priority": "low" | "medium" | "high" | "urgent",
       "suggested_project_name": "string or null — best matching name from the project list, or null",
       "suggested_client_name": "string or null — best matching name from the client list, or null",
@@ -122,9 +191,10 @@ Rules:
 - Each parent should have a clear title; subtasks are smaller steps.
 - Prefer project OR client suggestion when the text clearly references one; use null when unclear.
 - Dates: only ISO strings YYYY-MM-DD or null.
-- Calendar context: today is ${todayLocal} (local). For actionable due dates, use year ${currentYearStr} or a later year when the source implies a future deadline. If the text gives month/day (or "June 20", "20/6") without a year, assume the next occurrence on or after today — almost always ${currentYearStr} or ${nextYearStr}. Do not use 2023, 2024, or other past years unless the source explicitly names that year for a historical reference (then prefer null for due_date if it is not an actionable deadline).`;
+- Calendar context: the call/meeting took place on ${meetingDateYmd} (local). Treat that day as “today” for relative phrases in the transcript (“tomorrow”, “Friday”, “next week”, “end of week”, “in two days”). Prefer concrete deadlines mentioned in the conversation over inventing dates.
+- For actionable due dates, use year ${currentYearStr} or a later year when the source implies a future deadline. If the text gives month/day (or "June 20", "20/6") without a year, assume the next occurrence on or after ${meetingDateYmd} — almost always ${currentYearStr} or ${nextYearStr}. Do not use past years unless the source explicitly names that year for a historical reference (then prefer null for due_date if it is not an actionable deadline).`;
 
-  const userContent = `Today (for interpreting relative deadlines): ${todayLocal}
+  const userContent = `Meeting / reference date (for interpreting relative deadlines): ${meetingDateYmd}
 ${meetingClientLine}${formatExtractInstructionsBlock(instructions)}
 Workspace projects (choose names that best match the text; we map to ids server-side):\n${projectLines || '(none)'}\n\nWorkspace clients:\n${clientLines || '(none)'}\n\n---\nSOURCE TEXT:\n${rawText}\n---\nRespond with JSON only.`;
 
@@ -157,14 +227,22 @@ Workspace projects (choose names that best match the text; we map to ids server-
   return parsed.items.map((item) => ({
     title: item.title.trim(),
     notes: item.notes?.trim() || null,
-    dueDate: normalizeAiExtractedDueDateYmd(item.due_date?.trim() || null),
+    dueDate: resolveExtractedDueDate({
+      aiDueDate: item.due_date?.trim() || null,
+      meetingDateYmd,
+      now: meetingRefDate,
+    }),
     priority: normalizePriority(item.priority),
     suggestedProjectName: item.suggested_project_name?.trim() || null,
     suggestedClientName: item.suggested_client_name?.trim() || null,
     subtasks: (item.subtasks ?? []).map((s) => ({
       title: s.title.trim(),
       notes: s.notes?.trim() || null,
-      dueDate: normalizeAiExtractedDueDateYmd(s.due_date?.trim() || null),
+      dueDate: resolveExtractedDueDate({
+        aiDueDate: s.due_date?.trim() || null,
+        meetingDateYmd,
+        now: meetingRefDate,
+      }),
       priority: normalizePriority(s.priority),
     })),
   }));

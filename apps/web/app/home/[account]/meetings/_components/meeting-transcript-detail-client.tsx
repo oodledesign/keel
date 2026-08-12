@@ -1074,7 +1074,7 @@ export function MeetingTranscriptDetailClient({
       </Dialog>
 
       <Dialog open={extractOpen} onOpenChange={setExtractOpen}>
-        <DialogContent className="flex h-[min(90vh,900px)] max-h-[min(90vh,900px)] max-w-6xl flex-col gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
+        <DialogContent className="flex h-[min(90vh,900px)] max-h-[min(90vh,900px)] w-[min(96vw,112rem)] max-w-[min(96vw,112rem)] flex-col gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
           <DialogHeader className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-6 py-4">
             <DialogTitle>Extract tasks</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
@@ -1092,6 +1092,7 @@ export function MeetingTranscriptDetailClient({
                 initialRawText={displayContent}
                 defaultClientId={clientId || transcript.clientId}
                 meetingTranscriptId={transcript.id}
+                meetingDateYmd={meetingDate || null}
                 successRedirectHref={tasksPath}
               />
             ) : null}

@@ -629,9 +629,19 @@ function DesktopConnectionMap({
       : {};
 
   return (
-    <div className="mx-auto w-full max-w-[71.5rem]" aria-hidden>
+    <div className="relative mx-auto w-full max-w-[71.5rem]" aria-hidden>
+      {/* Glow behind connector + screen — must not share the screen's z-10
+          stacking context or blur paints over the SVG lines above. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute left-1/2 z-0 h-[min(120%,56rem)] w-[min(140%,64rem)] -translate-x-1/2 -translate-y-[42%]"
+        style={{ top: REGION_H }}
+      >
+        <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--ozer-coral-400)_58%,transparent)_0%,color-mix(in_srgb,var(--ozer-coral-500)_32%,transparent)_38%,transparent_72%)] blur-3xl" />
+      </div>
+
       {/* Connector region — launch capabilities + lines above the screen */}
-      <div className="relative" style={{ height: REGION_H }}>
+      <div className="relative z-10" style={{ height: REGION_H }}>
         <ConnectionLines animate={animate} live={live} />
 
         {/* Feature chips — two staggered sub-rows */}
@@ -649,7 +659,7 @@ function DesktopConnectionMap({
         ))}
       </div>
 
-      {/* Dashboard screen — one large orb behind the mockup */}
+      {/* Dashboard screen */}
       <motion.div
         className="relative z-10 mx-auto w-full"
         initial={{ opacity: 0, y: 24 }}
@@ -660,12 +670,6 @@ function DesktopConnectionMap({
             : { duration: 0, delay: 0 }
         }
       >
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[min(120%,56rem)] w-[min(140%,64rem)] -translate-x-1/2 -translate-y-[42%]"
-        >
-          <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--ozer-coral-400)_58%,transparent)_0%,color-mix(in_srgb,var(--ozer-coral-500)_32%,transparent)_38%,transparent_72%)] blur-3xl" />
-        </div>
         <DashboardScreen animate={animate} live={live} viewer={viewer} />
       </motion.div>
     </div>
@@ -717,22 +721,28 @@ function MobileConnectionMap({
   viewer: MarketingViewerContext;
 }) {
   return (
-    <div>
-      <div className="flex flex-wrap justify-center gap-1.5" aria-hidden>
+    <div className="relative">
+      <div
+        aria-hidden
+        className="pointer-events-none absolute top-16 left-1/2 z-0 h-[min(110%,36rem)] w-[min(130%,40rem)] -translate-x-1/2 -translate-y-[45%]"
+      >
+        <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--ozer-coral-400)_55%,transparent)_0%,color-mix(in_srgb,var(--ozer-coral-500)_28%,transparent)_40%,transparent_72%)] blur-3xl" />
+      </div>
+
+      <div
+        className="relative z-10 flex flex-wrap justify-center gap-1.5"
+        aria-hidden
+      >
         {FEATURE_NODES.map((node) => (
           <FeatureNodeChip key={node.id} node={node} />
         ))}
       </div>
 
-      <MobileConnector live={live} />
+      <div className="relative z-10">
+        <MobileConnector live={live} />
+      </div>
 
-      <div className="relative">
-        <div
-          aria-hidden
-          className="pointer-events-none absolute top-1/2 left-1/2 -z-10 h-[min(110%,36rem)] w-[min(130%,40rem)] -translate-x-1/2 -translate-y-[45%]"
-        >
-          <div className="h-full w-full rounded-full bg-[radial-gradient(circle_at_center,color-mix(in_srgb,var(--ozer-coral-400)_55%,transparent)_0%,color-mix(in_srgb,var(--ozer-coral-500)_28%,transparent)_40%,transparent_72%)] blur-3xl" />
-        </div>
+      <div className="relative z-10">
         <DashboardScreen animate={animate} live={live} viewer={viewer} />
       </div>
     </div>

@@ -63,7 +63,7 @@ export default createBillingSchema({
       id: 'ozer-business-lite',
       name: 'Business Lite',
       description:
-        'Free apps workspace — install Signatures and future add-ons',
+        'Free workspace with Meeting Assistant (2 hrs/mo) and apps — install Signatures, Site Studio, Media Generate, and more',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
       plans: [
@@ -85,6 +85,9 @@ export default createBillingSchema({
       features: [
         'Apps marketplace access',
         'Team & brand settings',
+        'Up to 3 team members',
+        '500 AI credits / month',
+        'Meeting Assistant — 2 hrs/mo',
         'Pay only for the apps you use',
       ],
     },
@@ -133,6 +136,7 @@ export default createBillingSchema({
         '1 team member (you)',
         '2,000 AI credits / month',
         'Docs, finances & pipeline',
+        'Meeting Assistant — unlimited',
       ],
     },
     {

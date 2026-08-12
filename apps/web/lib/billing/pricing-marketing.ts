@@ -73,7 +73,11 @@ export const MARKETING_WORKSPACE_PLANS: MarketingWorkspacePlan[] =
     badge: plan.badge,
   }));
 
-const ADDON_PRODUCT_IDS = ['ozer-addon-signatures'] as const;
+const ADDON_PRODUCT_IDS = [
+  'ozer-addon-signatures',
+  'ozer-addon-site-studio',
+  'ozer-addon-media-starter',
+] as const;
 
 const PRODUCT_URL_ALIASES = {
   'ozer-business-lite': 'business-lite',
@@ -81,6 +85,8 @@ const PRODUCT_URL_ALIASES = {
   'ozer-business-team': 'business-team',
   'ozer-business-scale': 'business-scale',
   'ozer-addon-signatures': 'signatures',
+  'ozer-addon-site-studio': 'site-studio',
+  'ozer-addon-media-starter': 'media-generate',
 } as const;
 
 const PRODUCT_ID_BY_URL_ALIAS = new Map<string, string>(

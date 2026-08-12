@@ -49,6 +49,11 @@ const extractSchema = z.object({
   preferredClientId: z.string().uuid().optional(),
   /** Optional guidance for how the AI should group or phrase extracted tasks. */
   instructions: z.string().max(MAX_EXTRACT_INSTRUCTIONS_LENGTH).optional(),
+  /** Meeting / call calendar day (YYYY-MM-DD) for relative deadline interpretation. */
+  meetingDateYmd: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
 });
 
 export type ExtractedTaskReviewRow = {
@@ -110,6 +115,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       projects,
       clients,
       meetingClient: preferredClient,
+      meetingDateYmd: input.meetingDateYmd ?? null,
     };
     const drafts = await extractWorkspaceTasksWithAnthropic(
       input.rawText,

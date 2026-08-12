@@ -70,22 +70,37 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Team members included',
             hint: 'Seats in this workspace. On Scale, request more users anytime.',
-            values: v('3', '1', '5', '15'),
+            values: v(
+              'Up to 3',
+              '1',
+              'Up to 5',
+              'Up to 15 (request more)',
+            ),
           },
           {
             feature: '14-day free trial',
+            hint: 'On your first paid workspace — no card required.',
             values: v(false, true, true, true),
           },
           {
             feature: 'Apps marketplace',
-            hint: 'Install Signatures and other workspace apps on any business plan.',
+            hint: 'Install Signatures, Site Studio, Media Generate, and future apps.',
             href: '/apps',
+            values: v(true, true, true, true),
+          },
+          {
+            feature: 'Team & brand settings',
             values: v(true, true, true, true),
           },
           {
             feature: 'Monthly AI credits',
             hint: 'Shared workspace pool for AI drafts, summaries, and assistants. Buy more packs anytime from Billing.',
             values: v('500', '2,000', '5,000', '12,000'),
+          },
+          {
+            feature: 'Shared client & project work',
+            hint: 'Multi-member collaboration on the same clients and jobs.',
+            values: v(false, false, true, true),
           },
         ],
       },
@@ -108,6 +123,11 @@ function workComparison(): SegmentPricingComparison {
             feature: 'Tasks & planner',
             hint: 'Day planning and a shared today view across workspaces.',
             href: '/features/planner',
+            values: v(false, true, true, true),
+          },
+          {
+            feature: 'Scheduling',
+            hint: 'Schedule module for delivery and bookings.',
             values: v(false, true, true, true),
           },
           {
@@ -153,6 +173,17 @@ function workComparison(): SegmentPricingComparison {
             feature: 'Support tickets',
             values: v(false, true, true, true),
           },
+          {
+            feature: 'Websites',
+            hint: 'Core websites module on Solo and above.',
+            values: v(false, true, true, true),
+          },
+          {
+            feature: 'Second Brain',
+            hint: 'Search meetings, email, notes, and projects with citations.',
+            href: '/features/second-brain',
+            values: v(false, true, true, true),
+          },
         ],
       },
       {
@@ -160,15 +191,15 @@ function workComparison(): SegmentPricingComparison {
         rows: [
           {
             feature: 'Meeting Assistant',
-            hint: 'Mac: record calls, extract tasks, sync to the right workspace.',
+            hint: 'Mac: record calls, extract tasks, sync to the right workspace. 2 hrs/mo on Lite; unlimited on Solo+.',
             href: '/features/desktop-assistant',
-            values: v('add-on', 'add-on', 'add-on', 'add-on'),
+            values: v('2 hrs/mo', true, true, true),
           },
           {
             feature: 'Dictation',
-            hint: 'Press fn on Mac — punctuated text in any app. Included with Meeting Assistant.',
+            hint: 'Press fn on Mac — punctuated text in any app. Bundled with Meeting Assistant.',
             href: '/features/dictation',
-            values: v('add-on', 'add-on', 'add-on', 'add-on'),
+            values: v(true, true, true, true),
           },
           {
             feature: 'Email Assistant',
@@ -193,6 +224,18 @@ function workComparison(): SegmentPricingComparison {
             href: '/apps/signatures',
             values: v('add-on', 'add-on', 'add-on', 'add-on'),
           },
+          {
+            feature: 'Site Studio',
+            hint: 'AI website planning and export packs from £19/mo.',
+            href: '/apps',
+            values: v('add-on', 'add-on', 'add-on', 'add-on'),
+          },
+          {
+            feature: 'Media Generate',
+            hint: 'AI image and video generation in media units from £5/mo — separate from text AI credits.',
+            href: '/apps',
+            values: v('add-on', 'add-on', 'add-on', 'add-on'),
+          },
         ],
       },
       {
@@ -201,6 +244,10 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Priority support',
             values: v(false, false, false, true),
+          },
+          {
+            feature: 'Ozer subscription transaction fees',
+            values: v('None', 'None', 'None', 'None'),
           },
         ],
       },
@@ -246,15 +293,15 @@ function personalComparison(): SegmentPricingComparison {
         rows: [
           {
             feature: 'Meeting Assistant',
-            hint: 'Mac meetings → tasks in the right workspace.',
+            hint: 'Mac meetings → tasks. Personal/Lite: 2 hrs/mo. Solo+: unlimited.',
             href: '/features/desktop-assistant',
-            values: v('add-on', 'add-on'),
+            values: v('2 hrs/mo', true),
           },
           {
             feature: 'Dictation',
-            hint: 'Included with Meeting Assistant for Mac.',
+            hint: 'Bundled with Meeting Assistant for Mac.',
             href: '/features/dictation',
-            values: v('add-on', 'add-on'),
+            values: v(true, true),
           },
           {
             feature: 'Email Assistant',

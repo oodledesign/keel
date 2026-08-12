@@ -20,6 +20,7 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { DueDateInput } from '~/components/due-date-input';
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
 
@@ -39,6 +40,8 @@ type Props = {
   successRedirectHref?: string;
   /** When extracting from a meeting, link accepted tasks for public share. */
   meetingTranscriptId?: string | null;
+  /** Call / meeting calendar day (YYYY-MM-DD) for due-date inference. */
+  meetingDateYmd?: string | null;
 };
 
 function assignValue(
@@ -103,6 +106,7 @@ export function ExtractWorkspaceTasksClient({
   defaultClientId = null,
   successRedirectHref,
   meetingTranscriptId = null,
+  meetingDateYmd = null,
 }: Props) {
   const [rawText, setRawText] = useState(initialRawText);
   const [instructions, setInstructions] = useState('');
@@ -137,6 +141,7 @@ export function ExtractWorkspaceTasksClient({
           rawText,
           preferredClientId: defaultClientId ?? undefined,
           instructions: instructions.trim() || undefined,
+          meetingDateYmd: meetingDateYmd ?? undefined,
         });
         setRows(
           fillMissingParentAssignments(
@@ -460,23 +465,24 @@ export function ExtractWorkspaceTasksClient({
                           <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                             Due date
                           </Label>
-                          <Input
-                            type="date"
-                            value={row.dueDate ?? ''}
-                            onChange={(e) =>
+                          <DueDateInput
+                            value={row.dueDate}
+                            referenceYmd={meetingDateYmd}
+                            onChange={(next) =>
                               setRows(
                                 (prev) =>
                                   prev?.map((r) =>
                                     r.id === row.id
                                       ? {
                                           ...r,
-                                          dueDate: e.target.value || null,
+                                          dueDate: next,
                                         }
                                       : r,
                                   ) ?? null,
                               )
                             }
-                            className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
+                            className="mt-1"
+                            inputClassName="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]"
                           />
                         </div>
                         <div>
@@ -602,10 +608,10 @@ export function ExtractWorkspaceTasksClient({
                               className="min-h-[56px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
                             />
                             <div className="flex flex-wrap gap-2">
-                              <Input
-                                type="date"
-                                value={st.dueDate ?? ''}
-                                onChange={(e) =>
+                              <DueDateInput
+                                value={st.dueDate}
+                                referenceYmd={meetingDateYmd}
+                                onChange={(next) =>
                                   setRows(
                                     (prev) =>
                                       prev?.map((r) =>
@@ -616,8 +622,7 @@ export function ExtractWorkspaceTasksClient({
                                                 s.id === st.id
                                                   ? {
                                                       ...s,
-                                                      dueDate:
-                                                        e.target.value || null,
+                                                      dueDate: next,
                                                     }
                                                   : s,
                                               ),
@@ -626,7 +631,8 @@ export function ExtractWorkspaceTasksClient({
                                       ) ?? null,
                                   )
                                 }
-                                className="w-40 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
+                                className="w-full max-w-xs"
+                                inputClassName="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-xs text-[var(--workspace-shell-text)]"
                               />
                               <Select
                                 value={st.priority}
