@@ -62,17 +62,31 @@ import {
 } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
-import { deleteListing } from '../_lib/server/server-actions';
+import { deleteListing, listListings } from '../_lib/server/server-actions';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
+
+const PAGE_SIZE = 20;
 
 interface ListingsListProps {
   accountId: string;
   accountSlug: string;
   initialListings: CommercialListing[];
+  initialTotal: number;
 }
 
 type ViewMode = 'cards' | 'table';
+
+function mergeListings(
+  current: CommercialListing[],
+  incoming: CommercialListing[],
+) {
+  const byId = new Map(current.map((item) => [item.id, item]));
+  for (const item of incoming) byId.set(item.id, item);
+  return Array.from(byId.values()).sort((a, b) =>
+    b.updatedAt.localeCompare(a.updatedAt),
+  );
+}
 
 function formatMoney(pence: number | null) {
   if (pence == null) return null;
@@ -111,12 +125,17 @@ export function ListingsList({
   accountId,
   accountSlug,
   initialListings,
+  initialTotal,
 }: ListingsListProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const createRequested = searchParams.get('create') === '1';
-  const [listings, setListings] = useState(initialListings);
+  const [pageListings, setPageListings] = useState(initialListings);
+  const [cachedListings, setCachedListings] = useState(initialListings);
+  const [total, setTotal] = useState(initialTotal);
+  const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchDebounced, setSearchDebounced] = useState('');
   const [statusFilter, setStatusFilter] = useState<ListingStatus | 'all'>(
     'all',
   );
@@ -126,11 +145,21 @@ export function ListingsList({
   const [deleteTarget, setDeleteTarget] = useState<CommercialListing | null>(
     null,
   );
+  const [loadingPage, setLoadingPage] = useState(false);
+  const [enrichingSearch, setEnrichingSearch] = useState(false);
   const [isDeleting, startDeleteTransition] = useTransition();
 
   useEffect(() => {
-    setListings(initialListings);
-  }, [initialListings]);
+    setPageListings(initialListings);
+    setCachedListings(initialListings);
+    setTotal(initialTotal);
+    setPage(1);
+  }, [initialListings, initialTotal]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setSearchDebounced(searchQuery), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
 
   const clearCreateQuery = useCallback(() => {
     if (!createRequested) return;
@@ -139,11 +168,118 @@ export function ListingsList({
     router.replace(url.pathname + url.search, { scroll: false });
   }, [createRequested, router]);
 
-  const filtered = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
-    return listings.filter((l) => {
+  const fetchPage = useCallback(
+    async (pageNum: number, opts?: { search?: string; status?: ListingStatus | 'all' }) => {
+      setLoadingPage(true);
+      try {
+        const status =
+          (opts?.status ?? statusFilter) === 'all'
+            ? undefined
+            : ((opts?.status ?? statusFilter) as ListingStatus);
+        const result = await listListings({
+          accountId,
+          page: pageNum,
+          pageSize: PAGE_SIZE,
+          search: opts?.search?.trim() || undefined,
+          status,
+        });
+        const list = Array.isArray(result?.data) ? result.data : [];
+        const count = typeof result?.total === 'number' ? result.total : 0;
+        setPageListings(list);
+        setCachedListings((current) => mergeListings(current, list));
+        setTotal(count);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoadingPage(false);
+      }
+    },
+    [accountId, statusFilter],
+  );
+
+  useEffect(() => {
+    if (searchDebounced.trim()) return;
+
+    const isDefaultFirstPage =
+      page === 1 && statusFilter === 'all' && initialListings.length > 0;
+    if (isDefaultFirstPage) return;
+
+    void fetchPage(page);
+  }, [
+    page,
+    searchDebounced,
+    statusFilter,
+    fetchPage,
+    initialListings.length,
+  ]);
+
+  useEffect(() => {
+    const query = searchDebounced.trim();
+    if (!query) {
+      setEnrichingSearch(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const enrichFromServer = async () => {
+      setEnrichingSearch(true);
+      setPage(1);
+      try {
+        let nextPage = 1;
+        let serverTotal = 0;
+        const status = statusFilter === 'all' ? undefined : statusFilter;
+
+        while (!cancelled) {
+          const result = await listListings({
+            accountId,
+            search: query,
+            page: nextPage,
+            pageSize: PAGE_SIZE,
+            status,
+          });
+          const list = Array.isArray(result?.data) ? result.data : [];
+          serverTotal =
+            typeof result?.total === 'number' ? result.total : list.length;
+
+          if (!cancelled && list.length > 0) {
+            setCachedListings((current) =>
+              nextPage === 1 ? list : mergeListings(current, list),
+            );
+            if (nextPage === 1) setPageListings(list);
+          }
+
+          if (list.length < PAGE_SIZE || nextPage * PAGE_SIZE >= serverTotal) {
+            break;
+          }
+          nextPage += 1;
+        }
+
+        if (!cancelled) setTotal(serverTotal);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setEnrichingSearch(false);
+      }
+    };
+
+    void enrichFromServer();
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, searchDebounced, statusFilter]);
+
+  useEffect(() => {
+    setPage(1);
+  }, [statusFilter]);
+
+  const isSearching = searchDebounced.trim().length > 0;
+
+  const visibleListings = useMemo(() => {
+    if (!isSearching) return pageListings;
+    const q = searchDebounced.trim().toLowerCase();
+    return cachedListings.filter((l) => {
       if (statusFilter !== 'all' && l.status !== statusFilter) return false;
-      if (!q) return true;
       const haystack = [
         l.name,
         l.addressLine1,
@@ -159,7 +295,16 @@ export function ListingsList({
         .toLowerCase();
       return haystack.includes(q);
     });
-  }, [listings, searchQuery, statusFilter]);
+  }, [
+    cachedListings,
+    isSearching,
+    pageListings,
+    searchDebounced,
+    statusFilter,
+  ]);
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const displayCount = isSearching ? visibleListings.length : total;
 
   const openCreate = () => {
     setEditing(null);
@@ -173,7 +318,12 @@ export function ListingsList({
 
   const handleSaved = useCallback(
     (saved: CommercialListing) => {
-      setListings((prev) => {
+      let wasNew = false;
+      setCachedListings((prev) => {
+        wasNew = !prev.some((l) => l.id === saved.id);
+        return mergeListings(prev, [saved]);
+      });
+      setPageListings((prev) => {
         const idx = prev.findIndex((l) => l.id === saved.id);
         if (idx >= 0) {
           const next = [...prev];
@@ -182,6 +332,7 @@ export function ListingsList({
         }
         return [saved, ...prev];
       });
+      setTotal((prev) => (wasNew ? prev + 1 : prev));
       router.refresh();
     },
     [router],
@@ -193,7 +344,9 @@ export function ListingsList({
     startDeleteTransition(async () => {
       try {
         await deleteListing({ listingId, accountId });
-        setListings((prev) => prev.filter((l) => l.id !== listingId));
+        setPageListings((prev) => prev.filter((l) => l.id !== listingId));
+        setCachedListings((prev) => prev.filter((l) => l.id !== listingId));
+        setTotal((prev) => Math.max(0, prev - 1));
         setDeleteTarget(null);
         router.refresh();
       } catch (err) {
@@ -210,7 +363,10 @@ export function ListingsList({
             Disposals
           </h2>
           <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {filtered.length} {filtered.length === 1 ? 'disposal' : 'disposals'}
+            {displayCount} {displayCount === 1 ? 'disposal' : 'disposals'}
+            {!isSearching && total > PAGE_SIZE
+              ? ` · page ${page} of ${totalPages}`
+              : null}
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -287,7 +443,13 @@ export function ListingsList({
         ))}
       </div>
 
-      {filtered.length === 0 ? (
+      {isSearching && enrichingSearch ? (
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Searching all disposals…
+        </p>
+      ) : null}
+
+      {visibleListings.length === 0 && !loadingPage && !enrichingSearch ? (
         <Card className={workspacePanelCard}>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
@@ -325,7 +487,7 @@ export function ListingsList({
         </Card>
       ) : viewMode === 'cards' ? (
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-          {filtered.map((listing) => (
+          {visibleListings.map((listing) => (
             <ListingCard
               key={listing.id}
               listing={listing}
@@ -355,7 +517,7 @@ export function ListingsList({
               </tr>
             </thead>
             <tbody>
-              {filtered.map((listing) => {
+              {visibleListings.map((listing) => {
                 const href = listingHref(accountSlug, listing.id);
                 const rent = formatMoney(listing.askingRentPence);
                 const price = formatMoney(listing.askingPricePence);
@@ -430,6 +592,37 @@ export function ListingsList({
           </table>
         </div>
       )}
+
+      {!isSearching && totalPages > 1 ? (
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Showing {(page - 1) * PAGE_SIZE + 1}–
+            {Math.min(page * PAGE_SIZE, total)} of {total}
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page <= 1 || loadingPage}
+              onClick={() => setPage((p) => Math.max(1, p - 1))}
+              className="border-[color:var(--workspace-shell-border)]"
+            >
+              Previous
+            </Button>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              disabled={page >= totalPages || loadingPage}
+              onClick={() => setPage((p) => p + 1)}
+              className="border-[color:var(--workspace-shell-border)]"
+            >
+              Next
+            </Button>
+          </div>
+        </div>
+      ) : null}
 
       <ListingFormModal
         open={modalOpen || createRequested}

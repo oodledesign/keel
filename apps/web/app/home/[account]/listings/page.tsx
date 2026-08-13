@@ -33,7 +33,11 @@ async function ListingsPage({ params }: ListingsPageProps) {
 
   const accountId = workspace.account.id as string;
   const service = createListingsService(getSupabaseServerClient());
-  const listings = await service.listListings(accountId);
+  const { data: listings, total } = await service.listListingsPage({
+    accountId,
+    page: 1,
+    pageSize: 20,
+  });
 
   return (
     <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
@@ -41,6 +45,7 @@ async function ListingsPage({ params }: ListingsPageProps) {
         accountId={accountId}
         accountSlug={slug}
         initialListings={listings}
+        initialTotal={total}
       />
     </PageBody>
   );

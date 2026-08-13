@@ -884,6 +884,66 @@ export function createListingsService(client: SupabaseClient) {
       return attachCoAgents(client, accountId, withAgents);
     },
 
+    async listListingsPage(input: {
+      accountId: string;
+      status?: ListingStatus;
+      search?: string | null;
+      page?: number;
+      pageSize?: number;
+    }): Promise<{ data: CommercialListing[]; total: number }> {
+      const page = Math.max(1, input.page ?? 1);
+      const pageSize = Math.min(100, Math.max(1, input.pageSize ?? 20));
+      const from = (page - 1) * pageSize;
+      const to = from + pageSize - 1;
+
+      let query = client
+        .from('commercial_listings')
+        .select('*', { count: 'exact' })
+        .eq('account_id', input.accountId)
+        .order('updated_at', { ascending: false })
+        .range(from, to);
+
+      if (input.status) {
+        query = query.eq('status', input.status);
+      }
+
+      const search = input.search?.trim();
+      if (search) {
+        const likePattern = `%${search.replace(/[%_\\]/g, '\\$&')}%`;
+        // Quote for PostgREST so spaces/commas in the term don't break .or().
+        const quotedLike = `"${likePattern.replace(/"/g, '')}"`;
+        query = query.or(
+          [
+            `name.ilike.${quotedLike}`,
+            `address_line_1.ilike.${quotedLike}`,
+            `address_line_2.ilike.${quotedLike}`,
+            `town.ilike.${quotedLike}`,
+            `postcode.ilike.${quotedLike}`,
+            `county.ilike.${quotedLike}`,
+            `sector.ilike.${quotedLike}`,
+            `external_id.ilike.${quotedLike}`,
+          ].join(','),
+        );
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) {
+        console.error('[listings] listListingsPage error:', error.message);
+        return { data: [], total: 0 };
+      }
+
+      const listings = ((data ?? []) as ListingRow[]).map(mapListing);
+      const withCovers = await attachCoverUrls(client, listings);
+      const withAgents = await attachActingAgents(
+        client,
+        input.accountId,
+        withCovers,
+      );
+      const enriched = await attachCoAgents(client, input.accountId, withAgents);
+      return { data: enriched, total: count ?? 0 };
+    },
+
     async listCompletedDisposals(
       accountId: string,
     ): Promise<CommercialListing[]> {

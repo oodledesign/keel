@@ -43,7 +43,13 @@ function getService() {
 
 export const listListings = enhanceAction(
   async (input) => {
-    return getService().listListings(input.accountId, input.status);
+    return getService().listListingsPage({
+      accountId: input.accountId,
+      status: input.status,
+      search: input.search,
+      page: input.page ?? 1,
+      pageSize: input.pageSize ?? 20,
+    });
   },
   { schema: ListListingsSchema },
 );

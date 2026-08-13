@@ -13,6 +13,9 @@ import {
 export const ListListingsSchema = z.object({
   accountId: z.string().uuid(),
   status: z.enum(LISTING_STATUSES).optional(),
+  search: z.string().trim().max(200).optional(),
+  page: z.number().int().min(1).optional(),
+  pageSize: z.number().int().min(1).max(100).optional(),
 });
 
 export const GetListingSchema = z.object({

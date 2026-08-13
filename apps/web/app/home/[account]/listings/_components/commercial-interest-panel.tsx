@@ -179,10 +179,24 @@ export function CommercialInterestPanel({
               })),
           );
         } else {
-          const listings = await listListings({ accountId });
+          const collected: Awaited<
+            ReturnType<typeof listListings>
+          >['data'] = [];
+          let page = 1;
+          let total = 0;
+          do {
+            const result = await listListings({
+              accountId,
+              page,
+              pageSize: 100,
+            });
+            collected.push(...(result.data ?? []));
+            total = result.total ?? collected.length;
+            page += 1;
+          } while (collected.length < total && page <= 50);
           const linked = new Set(matches.map((m) => m.listingId));
           setOptions(
-            listings
+            collected
               .filter((l) => !linked.has(l.id))
               .map((l) => ({
                 id: l.id,

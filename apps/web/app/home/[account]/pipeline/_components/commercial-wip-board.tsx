@@ -247,9 +247,18 @@ export function CommercialWipBoard({
   // Optimistic view: tab highlight + board columns update immediately. URL is
   // synced with history.replaceState so App Router doesn't refetch the whole
   // pipeline RSC payload on every tab click (that was the lag).
-  const [view, setViewState] = useState<WipBoardView>(() =>
-    parseWipBoardView(searchParams.get('view')),
-  );
+  const [view, setViewState] = useState<WipBoardView>(() => {
+    const initialLayout = parseWipLayoutMode(searchParams.get('layout'));
+    const initialView = parseWipBoardView(searchParams.get('view'));
+    if (
+      (initialLayout === 'sheet' || initialLayout === 'ladder') &&
+      initialView === 'both'
+    ) {
+      return 'instructions';
+    }
+    if (initialLayout === 'ladder') return 'instructions';
+    return initialView;
+  });
   const [layout, setLayoutState] = useState<WipLayoutMode>(() =>
     parseWipLayoutMode(searchParams.get('layout')),
   );
@@ -357,6 +366,12 @@ export function CommercialWipBoard({
   const setView = useCallback(
     (next: WipBoardView) => {
       if (next === view) return;
+      if (next === 'both' && (layout === 'sheet' || layout === 'ladder')) {
+        return;
+      }
+      if (next === 'requirements' && layout === 'ladder') {
+        return;
+      }
 
       setViewState(next);
       setIsViewSwitching(true);
@@ -376,22 +391,49 @@ export function CommercialWipBoard({
         }
       });
     },
-    [replaceQueryShallow, view],
+    [layout, replaceQueryShallow, view],
   );
 
   const setLayout = useCallback(
     (next: WipLayoutMode) => {
       if (next === layout) return;
+
+      const forceSingleStream = next === 'sheet' || next === 'ladder';
+      // Ladder is instruction-chase; sheet can keep requirements if already set.
+      const nextView: WipBoardView =
+        next === 'ladder'
+          ? 'instructions'
+          : forceSingleStream && view === 'both'
+            ? 'instructions'
+            : view;
+
       setLayoutState(next);
+      if (nextView !== view) {
+        setViewState(nextView);
+        setIsViewSwitching(true);
+        if (viewSwitchTimerRef.current) {
+          clearTimeout(viewSwitchTimerRef.current);
+        }
+        viewSwitchTimerRef.current = setTimeout(() => {
+          setIsViewSwitching(false);
+          viewSwitchTimerRef.current = null;
+        }, 220);
+      }
+
       replaceQueryShallow((url) => {
         if (next === 'board') {
           url.searchParams.delete('layout');
         } else {
           url.searchParams.set('layout', next);
         }
+        if (nextView === 'instructions') {
+          url.searchParams.delete('view');
+        } else {
+          url.searchParams.set('view', nextView);
+        }
       });
     },
-    [layout, replaceQueryShallow],
+    [layout, replaceQueryShallow, view],
   );
 
   const instructionStages = useMemo(
@@ -767,25 +809,43 @@ export function CommercialWipBoard({
         <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
           {VIEW_OPTIONS.map((option) => {
             const count = tabCounts[option.key];
+            const bothDisabled =
+              option.key === 'both' &&
+              (layout === 'sheet' || layout === 'ladder');
+            const requirementsOnLadder =
+              option.key === 'requirements' && layout === 'ladder';
+            const disabled = bothDisabled || requirementsOnLadder;
             return (
               <button
                 key={option.key}
                 type="button"
                 aria-pressed={view === option.key}
+                disabled={disabled}
+                title={
+                  bothDisabled
+                    ? 'Sheet and ladder show one stream at a time'
+                    : requirementsOnLadder
+                      ? 'Ladder is for instructions — use Sheet for requirements'
+                      : undefined
+                }
                 onClick={() => setView(option.key)}
                 className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition-colors ${
-                  view === option.key
-                    ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
-                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
+                  disabled
+                    ? 'cursor-not-allowed text-[var(--workspace-shell-text-muted)]/40'
+                    : view === option.key
+                      ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
                 }`}
               >
                 <span>{option.label}</span>
                 {count != null ? (
                   <span
                     className={`tabular-nums ${
-                      view === option.key
-                        ? 'text-[var(--workspace-shell-text)]/70'
-                        : 'text-[var(--workspace-shell-text-muted)]'
+                      disabled
+                        ? 'text-[var(--workspace-shell-text-muted)]/40'
+                        : view === option.key
+                          ? 'text-[var(--workspace-shell-text)]/70'
+                          : 'text-[var(--workspace-shell-text-muted)]'
                     }`}
                   >
                     {count}

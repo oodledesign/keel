@@ -97,7 +97,7 @@ export function WipLadderView({
   onDealWon,
   onActivityChanged,
 }: Props) {
-  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [expandedIds, setExpandedIds] = useState<Set<string>>(() => new Set());
   const [, startTransition] = useTransition();
 
   const listingById = useMemo(() => {
@@ -128,6 +128,27 @@ export function WipLadderView({
     }
     return map;
   }, [deals, stages]);
+
+  const allDealIds = useMemo(() => deals.map((deal) => deal.id), [deals]);
+  const allExpanded =
+    allDealIds.length > 0 && allDealIds.every((id) => expandedIds.has(id));
+
+  const toggleExpanded = (dealId: string) => {
+    setExpandedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(dealId)) next.delete(dealId);
+      else next.add(dealId);
+      return next;
+    });
+  };
+
+  const expandAll = () => {
+    setExpandedIds(new Set(allDealIds));
+  };
+
+  const collapseAll = () => {
+    setExpandedIds(new Set());
+  };
 
   const changeStage = (deal: PipelineDeal, nextStage: string) => {
     if (nextStage === deal.stage) return;
@@ -172,6 +193,18 @@ export function WipLadderView({
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 md:px-6 lg:px-8">
+      <div className="flex items-center justify-end gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs"
+          disabled={allDealIds.length === 0}
+          onClick={allExpanded ? collapseAll : expandAll}
+        >
+          {allExpanded ? 'Collapse all' : 'Expand all'}
+        </Button>
+      </div>
       {ladderStages.map((stage) => {
         const stageDeals = dealsByStage.get(stage.key) ?? [];
         const colour = wipStageColour(stage.key);
@@ -216,7 +249,7 @@ export function WipLadderView({
                   <span />
                 </li>
                 {stageDeals.map((deal) => {
-                  const open = expandedId === deal.id;
+                  const open = expandedIds.has(deal.id);
                   const latest = latestByDeal.get(deal.id);
                   const oneLiner =
                     previewText(latest?.content ?? '') ||
@@ -232,11 +265,7 @@ export function WipLadderView({
                         <button
                           type="button"
                           className="flex min-w-0 items-start gap-2 text-left"
-                          onClick={() =>
-                            setExpandedId((id) =>
-                              id === deal.id ? null : deal.id,
-                            )
-                          }
+                          onClick={() => toggleExpanded(deal.id)}
                           aria-expanded={open}
                           aria-label={
                             open
