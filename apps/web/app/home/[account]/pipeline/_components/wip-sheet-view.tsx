@@ -22,6 +22,8 @@ import {
   normalizeCommercialPipelineStage,
 } from '~/lib/commercial/pipeline-stage-config';
 import type { WipBoardView } from '~/lib/commercial/wip-board-mapping';
+import { normalizeRequirementUseClass } from '~/lib/commercial/requirement-use-class';
+import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import { workspaceTextMuted } from '~/lib/workspace-ui';
 
 type Props = {
@@ -234,11 +236,12 @@ export function WipSheetView({
                   <th className={thClass}>Contact</th>
                   <th className={thClass}>Tel</th>
                   <th className={thClass}>Email</th>
-                  <th className={thClass}>Use / sector</th>
-                  <th className={thClass}>Tenure</th>
+                  <th className={thClass}>Use</th>
+                  <th className={thClass}>FH / LH</th>
                   <th className={thClass}>Size min</th>
                   <th className={thClass}>Size max</th>
                   <th className={thClass}>Location</th>
+                  <th className={thClass}>Details sent</th>
                   <th className={thClass}>Stage</th>
                   <th className={`${thClass} min-w-[16rem]`}>Notes</th>
                 </tr>
@@ -247,17 +250,22 @@ export function WipSheetView({
                 {sortedRequirements.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={12}
+                      colSpan={13}
                       className={`px-3 py-8 text-center text-sm ${workspaceTextMuted}`}
                     >
                       No requirements yet — add one to start tracking briefs.
                     </td>
                   </tr>
                 ) : (
-                  sortedRequirements.map((row) => (
+                  sortedRequirements.map((row) => {
+                    const stageColour = wipStageColour(row.stage);
+                    return (
                     <tr
                       key={row.id}
                       className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
+                      style={{
+                        boxShadow: `inset 3px 0 0 ${stageColour.bar}`,
+                      }}
                     >
                       <td className={`${tdClass} px-2`}>
                         <button
@@ -328,15 +336,18 @@ export function WipSheetView({
                       <td className={tdClass}>
                         <SheetTextCell
                           value={row.sector ?? ''}
-                          placeholder="Class E / Industrial…"
+                          placeholder="Gym, office…"
                           className="min-w-[8rem]"
-                          onCommit={(next) =>
+                          onCommit={(next) => {
+                            const sector = next.trim() || null;
+                            const useClass =
+                              normalizeRequirementUseClass(sector);
                             patchRequirement(
                               row.id,
-                              { sector: next.trim() || null },
-                              { sector: next.trim() || null },
-                            )
-                          }
+                              { sector, useClass },
+                              { sector, useClass },
+                            );
+                          }}
                         />
                       </td>
                       <td className={tdClass}>
@@ -353,9 +364,9 @@ export function WipSheetView({
                           }}
                         >
                           <option value="">—</option>
-                          <option value="rent">LH / Rent</option>
-                          <option value="buy">FH / Buy</option>
-                          <option value="both">Either</option>
+                          <option value="buy">FH</option>
+                          <option value="rent">LH</option>
+                          <option value="both">FH / LH</option>
                         </select>
                       </td>
                       <td className={tdClass}>
@@ -411,8 +422,29 @@ export function WipSheetView({
                         />
                       </td>
                       <td className={tdClass}>
+                        <input
+                          type="checkbox"
+                          className="mx-auto block h-4 w-4 accent-[var(--workspace-shell-accent)]"
+                          checked={row.detailsSent}
+                          title={row.detailsNote ?? undefined}
+                          onChange={(e) => {
+                            const detailsSent = e.target.checked;
+                            patchRequirement(
+                              row.id,
+                              { detailsSent },
+                              { detailsSent },
+                            );
+                          }}
+                        />
+                      </td>
+                      <td className={tdClass}>
                         <select
                           className={selectClass}
+                          style={{
+                            color: stageColour.label,
+                            borderColor: stageColour.bar,
+                            background: stageColour.tint,
+                          }}
                           value={row.stage}
                           onChange={(e) => {
                             const stage = e.target.value as RequirementStatus;
@@ -441,7 +473,8 @@ export function WipSheetView({
                         />
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>
@@ -494,10 +527,14 @@ export function WipSheetView({
                     const listing = deal.commercialListingId
                       ? listingById.get(deal.commercialListingId)
                       : null;
+                    const stageColour = wipStageColour(deal.stage);
                     return (
                     <tr
                       key={deal.id}
                       className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
+                      style={{
+                        boxShadow: `inset 3px 0 0 ${stageColour.bar}`,
+                      }}
                     >
                       <td className={tdClass}>
                         <SheetTextCell
@@ -572,6 +609,11 @@ export function WipSheetView({
                       <td className={tdClass}>
                         <select
                           className={selectClass}
+                          style={{
+                            color: stageColour.label,
+                            borderColor: stageColour.bar,
+                            background: stageColour.tint,
+                          }}
                           value={normalizeCommercialPipelineStage(deal.stage)}
                           onChange={(e) => {
                             const stage = e.target.value;

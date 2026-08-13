@@ -113,7 +113,9 @@ import {
   REQUIREMENT_USE_CLASS_LABELS,
   REQUIREMENT_USE_CLASS_STYLES,
   normalizeRequirementUseClass,
+  requirementTenureLabel,
 } from '~/lib/commercial/requirement-use-class';
+import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -205,13 +207,6 @@ function budgetLabel(req: CommercialRequirement) {
       : null;
   if (min && max) return `${min}–${max}`;
   return min ?? max;
-}
-
-function tenureLabel(tenure: CommercialRequirement['tenure']) {
-  if (tenure === 'rent') return 'Rent';
-  if (tenure === 'buy') return 'Buy';
-  if (tenure === 'both') return 'Rent or buy';
-  return null;
 }
 
 function isWonInstructionStage(stage: string) {
@@ -758,7 +753,7 @@ export function CommercialWipBoard({
     <div
       className={
         fullscreen
-          ? 'fixed inset-0 z-[80] flex w-full min-w-0 flex-col overflow-hidden bg-[var(--workspace-shell-canvas,var(--ozer-surface-canvas))] text-[var(--workspace-shell-text)]'
+          ? 'fixed inset-0 z-40 flex w-full min-w-0 flex-col overflow-hidden bg-[var(--workspace-shell-canvas,var(--ozer-surface-canvas))] text-[var(--workspace-shell-text)]'
           : `flex min-h-0 w-full min-w-0 flex-1 flex-col pb-4 text-[var(--workspace-shell-text)] ${
               hideBoardTitle ? 'gap-2 pt-0' : 'gap-6 pt-6'
             }`
@@ -882,7 +877,7 @@ export function CommercialWipBoard({
                 <span className="sr-only">More actions</span>
               </Button>
             </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
+            <DropdownMenuContent align="end" className="z-[100]">
               <DropdownMenuItem onSelect={() => setCustomizeOpen(true)}>
                 Customize board
               </DropdownMenuItem>
@@ -936,23 +931,25 @@ export function CommercialWipBoard({
         </div>
       </div>
 
-      {attentionDigest ? (
-        <WipNeedsAttentionStrip
-          accountSlug={accountSlug}
-          digest={attentionDigest}
-        />
+      {!fullscreen ? (
+        <div className="shrink-0 space-y-2">
+          {attentionDigest ? (
+            <WipNeedsAttentionStrip
+              accountSlug={accountSlug}
+              digest={attentionDigest}
+            />
+          ) : null}
+          <WipRecentUpdatesStrip
+            items={deskActivity}
+            onOpenInstruction={(pipelineDealId) => {
+              const deal = deals.find((item) => item.id === pipelineDealId);
+              if (!deal) return;
+              setDealToEdit(deal);
+              setEditDealOpen(true);
+            }}
+          />
+        </div>
       ) : null}
-
-      <WipRecentUpdatesStrip
-        items={deskActivity}
-        onOpenInstruction={(pipelineDealId) => {
-          const deal = deals.find((item) => item.id === pipelineDealId);
-          if (!deal) return;
-          setDealToEdit(deal);
-          setEditDealOpen(true);
-        }}
-      />
-
       <CustomizePipelinePhasesDialog
         accountId={accountId}
         accountSlug={accountSlug}
@@ -1158,7 +1155,7 @@ export function CommercialWipBoard({
           if (!open) setPendingClosed(null);
         }}
       >
-        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+        <AlertDialogContent className="z-[100] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
           <AlertDialogHeader>
             <AlertDialogTitle>
               {pendingClosed?.kind === 'requirement'
@@ -1246,20 +1243,37 @@ function StageColumn({
       ? cardCompositeId('instruction', card.deal.id)
       : cardCompositeId('requirement', card.requirement.id),
   );
+  const colour = wipStageColour(stageKey);
 
   return (
     <div
       ref={setNodeRef}
-      className={`flex w-[280px] shrink-0 flex-col transition-colors ${
-        isOver ? 'rounded-2xl bg-[var(--workspace-shell-sidebar-accent)]' : ''
+      className={`flex w-[280px] shrink-0 flex-col overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] transition-colors ${
+        isOver ? 'ring-2 ring-[var(--ozer-accent)]/40' : ''
       }`}
+      style={{
+        borderTopWidth: 3,
+        borderTopColor: colour.bar,
+      }}
     >
-      <div className="mb-3 flex items-center justify-between">
+      <div
+        className="mb-0 flex items-center justify-between px-3 py-2.5"
+        style={{ background: colour.tint }}
+      >
         <div className="flex items-center gap-2">
-          <span className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+          <span
+            className="text-sm font-semibold tracking-wide"
+            style={{ color: colour.label }}
+          >
             {label}
           </span>
-          <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+          <span
+            className="rounded-full px-2 py-0.5 text-xs tabular-nums"
+            style={{
+              background: 'rgba(255,255,255,0.55)',
+              color: colour.label,
+            }}
+          >
             {cards.length}
           </span>
         </div>
@@ -1269,7 +1283,7 @@ function StageColumn({
         items={sortableIds}
         strategy={verticalListSortingStrategy}
       >
-        <div className="flex flex-1 flex-col gap-2">
+        <div className="flex flex-1 flex-col gap-2 p-2">
           {cards.length === 0 ? (
             <div className="flex flex-1 items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center text-xs text-[var(--workspace-shell-text-muted)]">
               Drop here
@@ -1562,7 +1576,7 @@ const RequirementCardBody = ({
 }) => {
   const size = sizeLabel(requirement);
   const budget = budgetLabel(requirement);
-  const tenure = tenureLabel(requirement.tenure);
+  const tenure = requirementTenureLabel(requirement.tenure);
   const useClassKey = normalizeRequirementUseClass(requirement.useClass);
   const useClassStyle = useClassKey
     ? REQUIREMENT_USE_CLASS_STYLES[useClassKey]

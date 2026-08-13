@@ -1,13 +1,21 @@
 /**
- * Ladder / board stage colour accents for commercial instructions.
+ * Ladder / board / sheet stage colour accents for commercial WIP.
  */
 
-import type { CommercialPipelineStage } from './commercial-constants';
-
-export const WIP_STAGE_COLOURS: Record<
+import type {
   CommercialPipelineStage,
-  { bar: string; tint: string; label: string }
-> = {
+  RequirementStatus,
+} from './commercial-constants';
+
+type StageColour = { bar: string; tint: string; label: string };
+
+const FALLBACK_STAGE_COLOUR: StageColour = {
+  bar: '#8A7A82',
+  tint: 'rgba(138, 122, 130, 0.1)',
+  label: '#5C4F55',
+};
+
+export const WIP_STAGE_COLOURS: Record<CommercialPipelineStage, StageColour> = {
   potential: {
     bar: '#41606F',
     tint: 'rgba(65, 96, 111, 0.12)',
@@ -35,12 +43,20 @@ export const WIP_STAGE_COLOURS: Record<
   },
 };
 
-export function wipStageColour(stageKey: string) {
+/** Requirement stages — aligned with instruction palette by funnel position. */
+export const REQUIREMENT_STAGE_COLOURS: Record<RequirementStatus, StageColour> =
+  {
+    new: WIP_STAGE_COLOURS.potential,
+    actively_searching: WIP_STAGE_COLOURS.current,
+    under_offer_negotiating: WIP_STAGE_COLOURS.under_offer_negotiating,
+    fulfilled: WIP_STAGE_COLOURS.completed_exchanged,
+    withdrawn: WIP_STAGE_COLOURS.fallen_through,
+  };
+
+export function wipStageColour(stageKey: string): StageColour {
   return (
-    WIP_STAGE_COLOURS[stageKey as CommercialPipelineStage] ?? {
-      bar: '#8A7A82',
-      tint: 'rgba(138, 122, 130, 0.1)',
-      label: '#5C4F55',
-    }
+    WIP_STAGE_COLOURS[stageKey as CommercialPipelineStage] ??
+    REQUIREMENT_STAGE_COLOURS[stageKey as RequirementStatus] ??
+    FALLBACK_STAGE_COLOUR
   );
 }

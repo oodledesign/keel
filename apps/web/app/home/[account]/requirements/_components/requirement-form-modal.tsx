@@ -5,6 +5,7 @@ import { useState, useTransition } from 'react';
 import { Loader2, Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -31,6 +32,7 @@ import {
   REQUIREMENT_STATUS_LABELS,
   type RequirementStatus,
 } from '~/lib/commercial/commercial-constants';
+import { normalizeRequirementUseClass } from '~/lib/commercial/requirement-use-class';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import {
@@ -70,6 +72,8 @@ type BriefForm = {
   budgetMin: string;
   budgetMax: string;
   stage: RequirementStatus;
+  detailsSent: boolean;
+  detailsNote: string;
   notes: string;
   source: string;
 };
@@ -113,6 +117,8 @@ function briefFromDraft(draft?: RequirementDraftPrefill | null): BriefForm {
       budgetMin: '',
       budgetMax: '',
       stage: 'new',
+      detailsSent: false,
+      detailsNote: '',
       notes: '',
       source: '',
     };
@@ -129,6 +135,8 @@ function briefFromDraft(draft?: RequirementDraftPrefill | null): BriefForm {
     budgetMax:
       draft.budgetMaxPence != null ? String(draft.budgetMaxPence / 100) : '',
     stage: 'new',
+    detailsSent: false,
+    detailsNote: '',
     notes: draft.notes ?? '',
     source: draft.source ?? '',
   };
@@ -158,6 +166,8 @@ function briefFromRequirement(
         ? String(requirement.budgetMaxPence / 100)
         : '',
     stage: requirement.stage,
+    detailsSent: requirement.detailsSent,
+    detailsNote: requirement.detailsNote ?? '',
     notes: requirement.notes ?? '',
     source: requirement.source ?? '',
   };
@@ -203,7 +213,7 @@ function RequirementFormFields({
   );
   const [linkedEnquiryId] = useState(sourceEnquiryId ?? null);
 
-  const field = (key: keyof BriefForm, value: string) =>
+  const field = <K extends keyof BriefForm>(key: K, value: BriefForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
 
   const applyDraft = (draft: RequirementDraftPrefill) => {
@@ -265,6 +275,7 @@ function RequirementFormFields({
           contactPhone: party.contactPhone.trim() || null,
           locationText: form.locationText.trim() || null,
           sector: form.sector.trim() || null,
+          useClass: normalizeRequirementUseClass(form.sector.trim() || null),
           tenure: form.tenure || null,
           sizeMinSqft: form.sizeMinSqft ? parseFloat(form.sizeMinSqft) : null,
           sizeMaxSqft: form.sizeMaxSqft ? parseFloat(form.sizeMaxSqft) : null,
@@ -275,6 +286,8 @@ function RequirementFormFields({
             ? Math.round(parseFloat(form.budgetMax) * 100)
             : null,
           stage: form.stage,
+          detailsSent: form.detailsSent,
+          detailsNote: form.detailsNote.trim() || null,
           notes: form.notes.trim() || null,
           source: form.source.trim() || null,
         };
@@ -386,22 +399,30 @@ function RequirementFormFields({
           <Label>Tenure</Label>
           <Select
             value={form.tenure || 'unset'}
-            onValueChange={(v) => field('tenure', v === 'unset' ? '' : v)}
+            onValueChange={(v) =>
+              field(
+                'tenure',
+                v === 'unset' ? '' : (v as BriefForm['tenure']),
+              )
+            }
           >
             <SelectTrigger className={inputClass}>
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="unset">—</SelectItem>
-              <SelectItem value="rent">Rent</SelectItem>
-              <SelectItem value="buy">Buy</SelectItem>
-              <SelectItem value="both">Both</SelectItem>
+              <SelectItem value="buy">FH</SelectItem>
+              <SelectItem value="rent">LH</SelectItem>
+              <SelectItem value="both">FH / LH</SelectItem>
             </SelectContent>
           </Select>
         </div>
         <div className="space-y-1.5">
           <Label>Stage</Label>
-          <Select value={form.stage} onValueChange={(v) => field('stage', v)}>
+          <Select
+            value={form.stage}
+            onValueChange={(v) => field('stage', v as RequirementStatus)}
+          >
             <SelectTrigger className={inputClass}>
               <SelectValue />
             </SelectTrigger>
@@ -460,12 +481,35 @@ function RequirementFormFields({
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label>Sector</Label>
+        <Label>Use</Label>
         <Input
           value={form.sector}
           onChange={(e) => field('sector', e.target.value)}
+          placeholder="Gym, office, industrial…"
           className={inputClass}
         />
+      </div>
+      <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-3">
+        <div className="flex items-center gap-2">
+          <Checkbox
+            id="requirement-details-sent"
+            checked={form.detailsSent}
+            onCheckedChange={(checked) =>
+              field('detailsSent', checked === true)
+            }
+          />
+          <Label htmlFor="requirement-details-sent" className="font-normal">
+            Details sent
+          </Label>
+        </div>
+        {form.detailsSent ? (
+          <Input
+            value={form.detailsNote}
+            onChange={(e) => field('detailsNote', e.target.value)}
+            placeholder="What was sent (optional)"
+            className={inputClass}
+          />
+        ) : null}
       </div>
       <div className="space-y-1.5">
         <Label>Notes</Label>

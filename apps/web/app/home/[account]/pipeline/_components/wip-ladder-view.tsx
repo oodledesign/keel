@@ -205,6 +205,16 @@ export function WipLadderView({
               </p>
             ) : (
               <ul className="divide-y divide-[color:var(--workspace-shell-border)]/70">
+                <li
+                  className={`hidden border-b border-[color:var(--workspace-shell-border)]/50 px-3 py-1.5 text-[10px] font-medium tracking-wide uppercase sm:grid sm:grid-cols-[minmax(0,1fr)_6.5rem_5.5rem_9.5rem_auto] sm:gap-3 ${workspaceTextMuted}`}
+                  aria-hidden
+                >
+                  <span className="pl-6">Instruction</span>
+                  <span>Last activity</span>
+                  <span className="text-right">Value</span>
+                  <span>Stage</span>
+                  <span />
+                </li>
                 {stageDeals.map((deal) => {
                   const open = expandedId === deal.id;
                   const latest = latestByDeal.get(deal.id);
@@ -214,13 +224,14 @@ export function WipLadderView({
                   const listing = deal.commercialListingId
                     ? listingById.get(deal.commercialListingId)
                     : null;
+                  const lastActivityIso = latest?.createdAt ?? null;
 
                   return (
                     <li key={deal.id}>
-                      <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3">
+                      <div className="grid grid-cols-1 items-center gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_6.5rem_5.5rem_9.5rem_auto] sm:gap-3">
                         <button
                           type="button"
-                          className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                          className="flex min-w-0 items-start gap-2 text-left"
                           onClick={() =>
                             setExpandedId((id) =>
                               id === deal.id ? null : deal.id,
@@ -271,12 +282,6 @@ export function WipLadderView({
                             >
                               {oneLiner ? (
                                 <>
-                                  {latest ? (
-                                    <span className="tabular-nums">
-                                      {formatTimelineDate(latest.createdAt)}
-                                      {' · '}
-                                    </span>
-                                  ) : null}
                                   {oneLiner}
                                   {latest?.assignedTo ? (
                                     <span>
@@ -292,18 +297,29 @@ export function WipLadderView({
                           </span>
                         </button>
 
-                        <div className="flex shrink-0 flex-wrap items-center gap-2 pl-6 sm:pl-0">
-                          <span className="text-sm text-[var(--workspace-shell-text)] tabular-nums">
-                            {formatCurrency(deal.value || 0)}
-                          </span>
+                        <div
+                          className={`pl-6 text-xs tabular-nums sm:pl-0 ${workspaceTextMuted}`}
+                          title="Last activity"
+                        >
+                          <span className="sm:hidden">Last activity · </span>
+                          {lastActivityIso
+                            ? formatTimelineDate(lastActivityIso)
+                            : '—'}
+                        </div>
+
+                        <span className="pl-6 text-sm text-[var(--workspace-shell-text)] tabular-nums sm:pl-0 sm:text-right">
+                          {formatCurrency(deal.value || 0)}
+                        </span>
+
+                        <div className="pl-6 sm:pl-0">
                           <Select
                             value={normalizeCommercialPipelineStage(deal.stage)}
                             onValueChange={(next) => changeStage(deal, next)}
                           >
-                            <SelectTrigger className="h-8 w-[9.5rem] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
+                            <SelectTrigger className="h-8 w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
                               <SelectValue />
                             </SelectTrigger>
-                            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+                            <SelectContent className="z-[100] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
                               {stages.map((option) => (
                                 <SelectItem key={option.key} value={option.key}>
                                   {option.label}
@@ -311,6 +327,9 @@ export function WipLadderView({
                               ))}
                             </SelectContent>
                           </Select>
+                        </div>
+
+                        <div className="pl-6 sm:pl-0">
                           <Button
                             type="button"
                             variant="ghost"
@@ -331,6 +350,7 @@ export function WipLadderView({
                             accountSlug={accountSlug}
                             pipelineDealId={deal.id}
                             activityOnly
+                            previewCount={3}
                             onActivityChanged={onActivityChanged}
                           />
                           <div className="mt-3">

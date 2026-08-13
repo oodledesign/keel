@@ -215,7 +215,8 @@ export function parseBrackettsRequirementsCsv(
 }
 
 export function requirementSectorLabel(row: ParsedRequirementRow) {
-  return sectorFromUseClass(row.useClass) ?? row.useRaw;
+  // Prefer the raw Use column for display; fall back to class label.
+  return row.useRaw?.trim() || sectorFromUseClass(row.useClass);
 }
 
 /** Minimal CSV parser supporting quoted newlines. */

@@ -90,3 +90,24 @@ export function requirementUseClassStyle(
   if (!key) return null;
   return REQUIREMENT_USE_CLASS_STYLES[key];
 }
+
+/** Map stored tenure to Bracketts FH / LH labels. */
+export function requirementTenureLabel(
+  tenure: 'rent' | 'buy' | 'both' | null | undefined,
+): string | null {
+  if (tenure === 'buy') return 'FH';
+  if (tenure === 'rent') return 'LH';
+  if (tenure === 'both') return 'FH / LH';
+  return null;
+}
+
+export function parseDetailsSent(raw: string | null | undefined): {
+  sent: boolean;
+  note: string | null;
+} {
+  const t = (raw ?? '').trim();
+  if (!t) return { sent: false, note: null };
+  if (/^(no|n|false|0)$/i.test(t)) return { sent: false, note: null };
+  if (/^(yes|y|true|1|sent)$/i.test(t)) return { sent: true, note: null };
+  return { sent: true, note: t };
+}

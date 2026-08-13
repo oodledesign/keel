@@ -34,6 +34,8 @@ type Props = {
   commercialRequirementId?: string | null;
   /** Compact mode for ladder row expand (activity only). */
   activityOnly?: boolean;
+  /** When activityOnly, how many notes to show before "View all". */
+  previewCount?: number;
   onActivityChanged?: () => void;
 };
 
@@ -72,6 +74,7 @@ export function WipAttachmentsStrip({
   pipelineDealId,
   commercialRequirementId,
   activityOnly = false,
+  previewCount = 3,
   onActivityChanged,
 }: Props) {
   const [tasks, setTasks] = useState<WipAttachmentTask[]>([]);
@@ -91,6 +94,8 @@ export function WipAttachmentsStrip({
   const [editAssignee, setEditAssignee] = useState<string>('__none__');
   const [loading, setLoading] = useState(true);
   const [pending, startTransition] = useTransition();
+  const [composerOpen, setComposerOpen] = useState(!activityOnly);
+  const [showAllNotes, setShowAllNotes] = useState(!activityOnly);
 
   const scope = {
     accountId,
@@ -130,6 +135,11 @@ export function WipAttachmentsStrip({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [accountId, pipelineDealId, commercialRequirementId]);
 
+  useEffect(() => {
+    setComposerOpen(!activityOnly);
+    setShowAllNotes(!activityOnly);
+  }, [activityOnly, pipelineDealId, commercialRequirementId]);
+
   const addTask = () => {
     const title = taskTitle.trim();
     if (!title) return;
@@ -167,6 +177,7 @@ export function WipAttachmentsStrip({
         setNoteBody('');
         setAssignedToUserId('__none__');
         setNoteDate(new Date().toISOString().slice(0, 10));
+        if (activityOnly) setComposerOpen(false);
         await refresh();
         onActivityChanged?.();
         toast.success('Update logged');
@@ -213,6 +224,13 @@ export function WipAttachmentsStrip({
   if (!pipelineDealId && !commercialRequirementId) {
     return null;
   }
+
+  const visibleNotes =
+    activityOnly && !showAllNotes ? notes.slice(0, previewCount) : notes;
+  const hiddenCount =
+    activityOnly && !showAllNotes
+      ? Math.max(0, notes.length - previewCount)
+      : 0;
 
   return (
     <div
@@ -291,11 +309,11 @@ export function WipAttachmentsStrip({
         </div>
         {notes.length === 0 ? (
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            No updates yet — log what happened and what’s next.
+            No updates yet
           </p>
         ) : (
           <ol className="relative space-y-0 border-l border-[color:var(--workspace-shell-border)] pl-3">
-            {notes.map((note) => (
+            {visibleNotes.map((note) => (
               <li key={note.id} className="relative pb-3 last:pb-0">
                 <span
                   className="absolute top-1.5 -left-[0.97rem] h-2 w-2 rounded-full bg-[var(--ozer-accent)]"
@@ -324,7 +342,7 @@ export function WipAttachmentsStrip({
                         <SelectTrigger className="h-8 w-[min(100%,12rem)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
                           <SelectValue placeholder="Assignee…" />
                         </SelectTrigger>
-                        <SelectContent>
+                        <SelectContent className="z-[100]">
                           <SelectItem value="__none__">No assignee</SelectItem>
                           {members.map((member) => (
                             <SelectItem key={member.id} value={member.id}>
@@ -387,50 +405,99 @@ export function WipAttachmentsStrip({
             ))}
           </ol>
         )}
-        <Textarea
-          value={noteBody}
-          onChange={(event) => setNoteBody(event.target.value)}
-          rows={2}
-          placeholder="What happened / what’s next…"
-          className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm"
-        />
-        <div className="flex flex-wrap items-center gap-2">
-          <Input
-            type="date"
-            value={noteDate}
-            onChange={(event) => setNoteDate(event.target.value)}
-            className="h-8 w-[9.5rem] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs"
-            aria-label="Update date"
-          />
-          <Select
-            value={assignedToUserId}
-            onValueChange={setAssignedToUserId}
-            disabled={pending}
+        {hiddenCount > 0 ? (
+          <button
+            type="button"
+            className="text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
+            onClick={() => setShowAllNotes(true)}
           >
-            <SelectTrigger className="h-8 w-[min(100%,14rem)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
-              <SelectValue placeholder="Assign next chase…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="__none__">No assignee</SelectItem>
-              {members.map((member) => (
-                <SelectItem key={member.id} value={member.id}>
-                  {member.label}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            View all ({notes.length})
+          </button>
+        ) : null}
+        {activityOnly && showAllNotes && notes.length > previewCount ? (
+          <button
+            type="button"
+            className="text-xs font-medium text-[var(--workspace-shell-text-muted)] underline-offset-2 hover:underline"
+            onClick={() => setShowAllNotes(false)}
+          >
+            Show less
+          </button>
+        ) : null}
+
+        {activityOnly && !composerOpen ? (
           <Button
             type="button"
             size="sm"
             variant="outline"
-            disabled={pending || !noteBody.trim()}
-            onClick={addNote}
+            onClick={() => setComposerOpen(true)}
             className="border-[color:var(--workspace-shell-border)]"
           >
             <Plus className="mr-1 h-3.5 w-3.5" />
-            Log update
+            Add update
           </Button>
-        </div>
+        ) : (
+          <>
+            <Textarea
+              value={noteBody}
+              onChange={(event) => setNoteBody(event.target.value)}
+              rows={2}
+              placeholder="What happened / what’s next…"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm"
+            />
+            <div className="flex flex-wrap items-center gap-2">
+              <Input
+                type="date"
+                value={noteDate}
+                onChange={(event) => setNoteDate(event.target.value)}
+                className="h-8 w-[9.5rem] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs"
+                aria-label="Update date"
+              />
+              <Select
+                value={assignedToUserId}
+                onValueChange={setAssignedToUserId}
+                disabled={pending}
+              >
+                <SelectTrigger className="h-8 w-[min(100%,14rem)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
+                  <SelectValue placeholder="Assign next chase…" />
+                </SelectTrigger>
+                <SelectContent className="z-[100]">
+                  <SelectItem value="__none__">No assignee</SelectItem>
+                  {members.map((member) => (
+                    <SelectItem key={member.id} value={member.id}>
+                      {member.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={pending || !noteBody.trim()}
+                onClick={addNote}
+                className="border-[color:var(--workspace-shell-border)]"
+              >
+                <Plus className="mr-1 h-3.5 w-3.5" />
+                Log update
+              </Button>
+              {activityOnly ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  disabled={pending}
+                  onClick={() => {
+                    setComposerOpen(false);
+                    setNoteBody('');
+                  }}
+                  className="h-8"
+                >
+                  Cancel
+                </Button>
+              ) : null}
+            </div>
+          </>
+        )}
       </section>
     </div>
   );

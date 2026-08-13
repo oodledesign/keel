@@ -444,9 +444,94 @@ async function main() {
     return;
   }
 
+  const { data: existingClients } = await admin
+    .from('clients')
+    .select('id, company_name, display_name')
+    .eq('account_id', account.id)
+    .is('archived_at', null);
+
+  const clientsByName = new Map<string, string>();
+  for (const client of existingClients ?? []) {
+    for (const raw of [client.company_name, client.display_name]) {
+      const key = raw?.trim().toLowerCase();
+      if (key && !clientsByName.has(key)) clientsByName.set(key, client.id);
+    }
+  }
+
   let created = 0;
   let notesCreated = 0;
   let skipped = 0;
+  let createdClients = 0;
+  let createdContacts = 0;
+
+  async function ensureLandlordClient(label: string): Promise<string | null> {
+    const nameKey = label.toLowerCase();
+    const existing = clientsByName.get(nameKey);
+    if (existing) return existing;
+
+    const { data, error } = await admin
+      .from('clients')
+      .insert({
+        account_id: account.id,
+        client_type: 'business',
+        company_name: label,
+        display_name: label,
+        commercial_role: 'landlord',
+      })
+      .select('id')
+      .single();
+    if (error || !data) {
+      console.error(`Client failed ${label}:`, error?.message);
+      return null;
+    }
+    clientsByName.set(nameKey, data.id);
+    createdClients += 1;
+    return data.id as string;
+  }
+
+  async function ensureLandlordContact(
+    label: string,
+    dealId: string,
+    clientId: string | null,
+  ): Promise<void> {
+    const importKey = `${BRACKETTS_WIP_IMPORT_SOURCE}:deal:${dealId}`;
+    const { data: existing } = await admin
+      .from('contacts')
+      .select('id')
+      .eq('account_id', account.id)
+      .ilike('notes', `%[import_key:${importKey}]%`)
+      .maybeSingle();
+
+    let contactId = existing?.id as string | undefined;
+    if (!contactId) {
+      const { data, error } = await admin
+        .from('contacts')
+        .insert({
+          account_id: account.id,
+          full_name: label,
+          notes: `[import_key:${importKey}]\nLandlord / instructing party from WIP instruction`,
+        })
+        .select('id')
+        .single();
+      if (error || !data) {
+        console.error(`Contact failed ${label}:`, error?.message);
+        return;
+      }
+      contactId = data.id as string;
+      createdContacts += 1;
+    }
+
+    if (clientId && contactId) {
+      await admin.from('client_contacts').upsert(
+        {
+          client_id: clientId,
+          contact_id: contactId,
+          is_primary: true,
+        },
+        { onConflict: 'client_id,contact_id' },
+      );
+    }
+  }
 
   for (const instr of instructions) {
     const existingDealId = existingByImportKey.get(instr.importKey);
@@ -471,13 +556,17 @@ async function main() {
       .filter(Boolean)
       .join('\n');
 
+    const landlordLabel = instr.title.trim();
+    const clientId = await ensureLandlordClient(landlordLabel);
+
     const { data: deal, error: insertError } = await admin
       .from('pipeline_deals')
       .insert({
         account_id: account.id,
         name: instr.title,
-        company_name: instr.title,
-        contact_name: '',
+        company_name: landlordLabel,
+        contact_name: landlordLabel,
+        client_id: clientId,
         value: instr.feeGbp ?? 0,
         stage: instr.stage,
         work_type: instr.workType,
@@ -500,6 +589,7 @@ async function main() {
     created += 1;
     const dealId = deal.id as string;
     existingByImportKey.set(instr.importKey, dealId);
+    await ensureLandlordContact(landlordLabel, dealId, clientId);
 
     // Child labels as activity notes (one each) when no chase text
     const childNotes = instr.childLabels.map((label, index) => ({
@@ -546,7 +636,7 @@ async function main() {
   }
 
   console.log(
-    `Write complete: deals_created=${created} skipped=${skipped} notes_created=${notesCreated}`,
+    `Write complete: deals_created=${created} skipped=${skipped} notes_created=${notesCreated} clients=${createdClients} contacts=${createdContacts}`,
   );
 }
 

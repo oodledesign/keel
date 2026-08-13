@@ -19,6 +19,7 @@ import {
   requirementSectorLabel,
   type ParsedRequirementRow,
 } from '../lib/commercial/bracketts-requirements-import.ts';
+import { parseDetailsSent } from '../lib/commercial/requirement-use-class.ts';
 
 function loadEnvFiles() {
   const root = resolve(process.cwd());
@@ -165,15 +166,16 @@ async function main() {
 
   const { data: existingReqs } = await admin
     .from('commercial_requirements')
-    .select('id, notes, source')
+    .select('external_key')
     .eq('account_id', account.id)
-    .eq('source', BRACKETTS_REQUIREMENTS_IMPORT_SOURCE);
+    .eq('source', BRACKETTS_REQUIREMENTS_IMPORT_SOURCE)
+    .not('external_key', 'is', null);
 
-  const existingKeys = new Set<string>();
-  for (const req of existingReqs ?? []) {
-    const match = String(req.notes ?? '').match(/\[import_key:([^\]]+)\]/);
-    if (match?.[1]) existingKeys.add(match[1]);
-  }
+  const existingKeys = new Set<string>(
+    (existingReqs ?? [])
+      .map((req) => (req.external_key as string | null)?.trim())
+      .filter((key): key is string => Boolean(key)),
+  );
 
   const { data: existingClients } = await admin
     .from('clients')
@@ -344,15 +346,8 @@ async function main() {
     const clientId = await ensureClient(row);
     const contactId = await ensureContact(row, clientId);
 
-    const noteBits = [
-      `[import_key:${row.importKey}]`,
-      row.useRaw ? `Use: ${row.useRaw}` : null,
-      row.detailsSent ? `Details sent: ${row.detailsSent}` : null,
-      row.sizeRaw ? `Size: ${row.sizeRaw}` : null,
-      row.notes,
-    ]
-      .filter(Boolean)
-      .join('\n');
+    const noteBits = row.notes?.trim() || null;
+    const details = parseDetailsSent(row.detailsSent);
 
     const { error } = await admin.from('commercial_requirements').insert({
       account_id: account.id,
@@ -364,6 +359,9 @@ async function main() {
       company_name: row.companyName,
       sector: requirementSectorLabel(row),
       use_class: row.useClass,
+      details_sent: details.sent,
+      details_note: details.note,
+      external_key: row.importKey,
       tenure: row.tenure,
       location_text: row.locationText,
       size_min_sqft: row.sizeMinSqft,
