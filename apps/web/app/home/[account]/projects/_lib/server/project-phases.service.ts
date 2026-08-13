@@ -98,7 +98,7 @@ const TASK_STATUSES = [
 ] as const;
 
 const JOB_BOARD_TASK_SELECT =
-  'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, notes, links, note_refs' as const;
+  'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, assignee_contact_id, notes, links, note_refs' as const;
 
 function normalizeTaskLinks(
   value: unknown,
@@ -144,6 +144,7 @@ function mapJobBoardTask(row: Record<string, unknown>): JobBoardTask {
     phase_id: (row.phase_id as string | null) ?? null,
     job_id: (row.project_id as string | null) ?? null,
     user_id: (row.user_id as string | null) ?? null,
+    assignee_contact_id: (row.assignee_contact_id as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     links: normalizeTaskLinks(row.links),
     note_refs: normalizeTaskNoteRefs(row.note_refs),
@@ -1048,6 +1049,21 @@ class ProjectPhasesService {
     if (input.priority !== undefined) payload.priority = input.priority;
     if (input.assigneeUserId !== undefined) {
       payload.user_id = input.assigneeUserId;
+    }
+    if (input.assigneeContactId !== undefined) {
+      if (input.assigneeContactId) {
+        const { data: contact, error: contactErr } = await this.db
+          .from('contacts')
+          .select('id')
+          .eq('id', input.assigneeContactId)
+          .eq('account_id', input.accountId)
+          .maybeSingle();
+        if (contactErr) this.throwErr(contactErr);
+        if (!contact) {
+          throw new Error('Contact not found in this workspace');
+        }
+      }
+      payload.assignee_contact_id = input.assigneeContactId;
     }
     if (input.dueDate !== undefined) {
       payload.due_date = input.dueDate

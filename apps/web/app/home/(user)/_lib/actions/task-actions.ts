@@ -90,6 +90,10 @@ export type CreateTaskInput = {
   notes?: string | null;
   /** Team workspace when creating from a business context without project/client. */
   accountId?: string;
+  /** Team member assignee (defaults to current user). */
+  assigneeUserId?: string | null;
+  /** CRM contact responsible (portal My tasks). */
+  assigneeContactId?: string | null;
   /** When set, creates a recurring series (and usually the first task). */
   recurrence?: {
     frequency: 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
@@ -159,6 +163,8 @@ export async function createTask(input: CreateTaskInput) {
     parentTaskContext: input.parentTaskContext,
     accountId: input.accountId,
     notes: input.notes,
+    assigneeUserId: input.assigneeUserId,
+    assigneeContactId: input.assigneeContactId,
   });
 
   if (!result.success) {

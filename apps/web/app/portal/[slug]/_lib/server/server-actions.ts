@@ -11,6 +11,7 @@ import {
 import {
   AddPortalTaskCommentSchema,
   AddPortalTicketMessageSchema,
+  CompletePortalMyTaskSchema,
   CreatePortalTicketSchema,
   GetPortalTicketSchema,
   ListPortalProjectsSchema,
@@ -70,6 +71,12 @@ export const addPortalTaskComment = enhanceAction(
       input.body,
     ),
   { schema: AddPortalTaskCommentSchema },
+);
+
+export const completePortalMyTask = enhanceAction(
+  async (input) =>
+    getService().completePortalMyTask(input.clientOrgId, input.taskId),
+  { schema: CompletePortalMyTaskSchema },
 );
 
 export const sendPortalMessage = enhanceAction(

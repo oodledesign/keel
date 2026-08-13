@@ -2,10 +2,14 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { z } from 'zod';
+
 import { enhanceAction } from '@kit/next/actions';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee';
 
 import { createCalendarService } from './calendar.service';
 import { createJobEventsService } from './job-events.service';
@@ -411,6 +415,47 @@ export const updateJobTask = enhanceAction(
     return task;
   },
   { schema: UpdateJobTaskSchema },
+);
+
+export const loadJobTaskPersonAssignees = enhanceAction(
+  async (input) => {
+    const admin = getSupabaseServerAdminClient();
+    const client = getSupabaseServerClient();
+    const {
+      data: { user },
+    } = await client.auth.getUser();
+    if (!user) throw new Error('Not authenticated');
+
+    const { data: membership } = await client
+      .from('accounts_memberships')
+      .select('account_id')
+      .eq('account_id', input.accountId)
+      .eq('user_id', user.id)
+      .maybeSingle();
+    if (!membership) throw new Error('Not a workspace member');
+
+    let clientId: string | null = null;
+    if (input.jobId) {
+      const { data: job } = await admin
+        .from('projects')
+        .select('client_id')
+        .eq('id', input.jobId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+      clientId =
+        (job as { client_id?: string | null } | null)?.client_id ?? null;
+    }
+
+    return loadTaskPersonAssigneeOptions(admin, input.accountId, {
+      clientId,
+    });
+  },
+  {
+    schema: z.object({
+      accountId: z.string().uuid(),
+      jobId: z.string().uuid().optional(),
+    }),
+  },
 );
 
 export const savePhasePageDoc = enhanceAction(

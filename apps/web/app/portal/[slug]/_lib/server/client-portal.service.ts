@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { requireUser } from '@kit/supabase/require-user';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { resolveClientOrgAccountId } from '~/lib/support/resolve-client-org-account';
 import {
@@ -113,6 +114,17 @@ export type PortalProjectTask = {
   priority: string | null;
   dueDate: string | null;
   phaseId: string | null;
+};
+
+export type PortalMyTask = {
+  id: string;
+  title: string;
+  status: string;
+  priority: string | null;
+  dueDate: string | null;
+  notes: string | null;
+  projectId: string | null;
+  projectName: string | null;
 };
 
 export type PortalTaskComment = {
@@ -715,6 +727,183 @@ class ClientPortalService {
       dueDate: row.due_date,
       phaseId: row.phase_id ?? null,
     }));
+  }
+
+  /**
+   * Tasks assigned to the portal user's matched CRM contact
+   * (`assignee_contact_id` + email match).
+   */
+  async listPortalMyTasks(clientOrgId: string): Promise<PortalMyTask[]> {
+    const user = await this.ensureMember(clientOrgId);
+    const contactId = await this.resolvePortalContactId(
+      clientOrgId,
+      user.email ?? null,
+    );
+    if (!contactId) return [];
+
+    const { data, error } = await this.db
+      .from('tasks')
+      .select('id, title, status, priority, due_date, notes, project_id')
+      .eq('assignee_contact_id', contactId)
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      console.error('[client-portal] listPortalMyTasks:', error.message);
+      return [];
+    }
+
+    const rows = (data ?? []) as Array<{
+      id: string;
+      title: string;
+      status: string;
+      priority: string | null;
+      due_date: string | null;
+      notes: string | null;
+      project_id: string | null;
+    }>;
+
+    const projectIds = [
+      ...new Set(
+        rows
+          .map((r) => r.project_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const projectNameById = new Map<string, string>();
+    if (projectIds.length > 0) {
+      const { data: projects } = await this.db
+        .from('projects')
+        .select('id, name')
+        .in('id', projectIds);
+      for (const p of (projects ?? []) as Array<{
+        id: string;
+        name?: string | null;
+      }>) {
+        if (p.name) projectNameById.set(p.id, p.name);
+      }
+    }
+
+    return rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      status: row.status ?? 'todo',
+      priority: row.priority,
+      dueDate: row.due_date,
+      notes: row.notes,
+      projectId: row.project_id,
+      projectName: row.project_id
+        ? (projectNameById.get(row.project_id) ?? null)
+        : null,
+    }));
+  }
+
+  async completePortalMyTask(
+    clientOrgId: string,
+    taskId: string,
+  ): Promise<PortalMyTask | null> {
+    const user = await this.ensureMember(clientOrgId);
+    const contactId = await this.resolvePortalContactId(
+      clientOrgId,
+      user.email ?? null,
+    );
+    if (!contactId) {
+      throw new Error('No contact profile matched for this portal user');
+    }
+
+    const now = new Date().toISOString();
+    const { data, error } = await this.db
+      .from('tasks')
+      .update({
+        status: 'done',
+        completed_at: now,
+        updated_at: now,
+      })
+      .eq('id', taskId)
+      .eq('assignee_contact_id', contactId)
+      .select('id, title, status, priority, due_date, notes, project_id')
+      .maybeSingle();
+
+    if (error) {
+      this.throwErr(error, 'Could not update task');
+    }
+    if (!data) return null;
+
+    const row = data as {
+      id: string;
+      title: string;
+      status: string;
+      priority: string | null;
+      due_date: string | null;
+      notes: string | null;
+      project_id: string | null;
+    };
+
+    let projectName: string | null = null;
+    if (row.project_id) {
+      const { data: project } = await this.db
+        .from('projects')
+        .select('name')
+        .eq('id', row.project_id)
+        .maybeSingle();
+      projectName =
+        (project as { name?: string | null } | null)?.name ?? null;
+    }
+
+    return {
+      id: row.id,
+      title: row.title,
+      status: row.status ?? 'done',
+      priority: row.priority,
+      dueDate: row.due_date,
+      notes: row.notes,
+      projectId: row.project_id,
+      projectName,
+    };
+  }
+
+  private async resolvePortalContactId(
+    clientOrgId: string,
+    userEmail: string | null,
+  ): Promise<string | null> {
+    if (!userEmail?.trim()) return null;
+    const targetEmail = userEmail.trim().toLowerCase();
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: orgClientRows } = await admin
+      .from('clients')
+      .select('id')
+      .eq('client_org_id', clientOrgId);
+
+    const orgClientIds = ((orgClientRows ?? []) as Array<{ id: string }>).map(
+      (row) => row.id,
+    );
+    if (orgClientIds.length === 0) return null;
+
+    const { data: links } = await admin
+      .from('client_contacts')
+      .select('contact_id')
+      .in('client_id', orgClientIds);
+
+    const contactIds = [
+      ...new Set(
+        ((links ?? []) as Array<{ contact_id: string }>).map(
+          (row) => row.contact_id,
+        ),
+      ),
+    ];
+    if (contactIds.length === 0) return null;
+
+    const { data: candidates } = await admin
+      .from('contacts')
+      .select('id, email')
+      .in('id', contactIds);
+
+    const match = (
+      (candidates ?? []) as Array<{ id: string; email?: string | null }>
+    ).find((row) => row.email?.trim().toLowerCase() === targetEmail);
+
+    return match?.id ?? null;
   }
 
   async listPortalTaskComments(

@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache';
 import { z } from 'zod';
 
 import { enhanceAction } from '@kit/next/actions';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
@@ -19,7 +20,12 @@ import {
   extractWorkspaceTasksWithAnthropic,
   resolveDraftAssignment,
 } from '~/lib/ai/workspace-task-extract';
-
+import {
+  loadTaskPersonAssigneeOptions,
+  parsePersonAssigneeSelectValue,
+  personAssigneeSelectValue,
+  resolvePersonAssigneeFromSuggestion,
+} from '~/lib/tasks/task-person-assignee';
 function revalidateWorkspaceTaskPages(accountSlug: string) {
   const slug = accountSlug.trim();
   if (!slug) return;
@@ -54,6 +60,8 @@ const extractSchema = z.object({
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
+  /** When set, load calendar attendees for assignee suggestions. */
+  meetingTranscriptId: z.string().uuid().optional(),
 });
 
 export type ExtractedTaskReviewRow = {
@@ -65,6 +73,8 @@ export type ExtractedTaskReviewRow = {
   projectId: string | null;
   clientId: string | null;
   included: boolean;
+  /** Select value: m:<userId> | c:<contactId> | __none__ */
+  personAssignee: string;
   subtasks: Array<{
     id: string;
     title: string;
@@ -111,11 +121,47 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       ? (clients.find((c) => c.id === input.preferredClientId) ?? null)
       : null;
 
+    const admin = getSupabaseServerAdminClient();
+    const personOptions = await loadTaskPersonAssigneeOptions(
+      admin,
+      input.accountId,
+      { clientId: preferredClient?.id ?? input.preferredClientId ?? null },
+    );
+
+    let attendees: Array<{ name: string | null; email: string | null }> = [];
+    if (input.meetingTranscriptId) {
+      const { data: transcript } = await admin
+        .from('meeting_transcripts')
+        .select('calendar_attendees')
+        .eq('id', input.meetingTranscriptId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+      const raw = (transcript as { calendar_attendees?: unknown } | null)
+        ?.calendar_attendees;
+      if (Array.isArray(raw)) {
+        attendees = raw.map((row) => {
+          const r = row as { name?: unknown; email?: unknown };
+          return {
+            name: typeof r.name === 'string' ? r.name : null,
+            email: typeof r.email === 'string' ? r.email : null,
+          };
+        });
+      }
+    }
+
     const context: WorkspaceContextForExtract = {
       projects,
       clients,
       meetingClient: preferredClient,
       meetingDateYmd: input.meetingDateYmd ?? null,
+      attendees,
+      members: personOptions
+        .filter((o) => o.kind === 'member')
+        .map((o) => ({ name: o.label, email: o.email ?? '' }))
+        .filter((o) => o.email),
+      contacts: personOptions
+        .filter((o) => o.kind === 'contact')
+        .map((o) => ({ name: o.label, email: o.email })),
     };
     const drafts = await extractWorkspaceTasksWithAnthropic(
       input.rawText,
@@ -126,6 +172,22 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
 
     const rows: ExtractedTaskReviewRow[] = drafts.map((d) => {
       const { projectId, clientId } = resolveDraftAssignment(d, context);
+      const matched = resolvePersonAssigneeFromSuggestion(
+        {
+          email: d.suggestedAssigneeEmail,
+          name: d.suggestedAssigneeName,
+          kind: d.suggestedAssigneeKind,
+        },
+        personOptions,
+      );
+      const personAssignee = matched
+        ? personAssigneeSelectValue(
+            matched.kind === 'member'
+              ? { kind: 'member', userId: matched.id }
+              : { kind: 'contact', contactId: matched.id },
+          )
+        : '__none__';
+
       return {
         id: randomId(),
         title: d.title,
@@ -135,6 +197,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
         projectId,
         clientId: preferredClient?.id ?? clientId,
         included: true,
+        personAssignee,
         subtasks: d.subtasks.map((s) => ({
           id: randomId(),
           title: s.title,
@@ -146,7 +209,7 @@ export const extractWorkspaceTasksFromTranscript = enhanceAction(
       };
     });
 
-    return { rows };
+    return { rows, personAssigneeOptions: personOptions };
   },
   { schema: extractSchema },
 );
@@ -169,6 +232,7 @@ const commitItemSchema = z.object({
   projectId: z.string().uuid().nullable(),
   clientId: z.string().uuid().nullable(),
   included: z.boolean(),
+  personAssignee: z.string().optional(),
   subtasks: z.array(subCommitSchema),
 });
 
@@ -243,6 +307,39 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
         clientId = lastValidClientId;
       }
 
+      const person = parsePersonAssigneeSelectValue(
+        item.personAssignee ?? '__none__',
+      );
+
+      let assigneeUserId =
+        person.kind === 'member' ? person.id : undefined;
+      let assigneeContactId =
+        person.kind === 'contact' ? person.id : null;
+
+      if (person.kind === 'member' && person.id) {
+        const { data: membership } = await client
+          .from('accounts_memberships')
+          .select('user_id')
+          .eq('account_id', input.accountId)
+          .eq('user_id', person.id)
+          .maybeSingle();
+        if (!membership) {
+          assigneeUserId = undefined;
+        }
+      }
+
+      if (person.kind === 'contact' && person.id) {
+        const { data: contact } = await client
+          .from('contacts')
+          .select('id')
+          .eq('id', person.id)
+          .eq('account_id', input.accountId)
+          .maybeSingle();
+        if (!contact) {
+          assigneeContactId = null;
+        }
+      }
+
       const parentResult = await createTask({
         title: item.title,
         priority: item.priority,
@@ -251,6 +348,8 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
         clientId: clientId ?? undefined,
         accountId: input.accountId,
         notes: item.notes ?? undefined,
+        assigneeUserId,
+        assigneeContactId,
       });
 
       if (!parentResult.success || !parentResult.id) {

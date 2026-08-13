@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation';
 
 import {
   Briefcase,
+  CheckSquare,
   Coins,
   CreditCard,
   Globe,
@@ -42,6 +43,12 @@ const navItems = [
     pathKey: 'clientPortalProjects' as const,
     icon: <Briefcase className={iconClasses} />,
     showKey: 'showProjectsNav' as const,
+  },
+  {
+    key: 'tasks',
+    label: 'My tasks',
+    pathKey: 'clientPortalMyTasks' as const,
+    icon: <CheckSquare className={iconClasses} />,
   },
   {
     key: 'messages',

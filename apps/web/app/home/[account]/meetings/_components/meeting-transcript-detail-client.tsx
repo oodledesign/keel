@@ -1074,7 +1074,7 @@ export function MeetingTranscriptDetailClient({
       </Dialog>
 
       <Dialog open={extractOpen} onOpenChange={setExtractOpen}>
-        <DialogContent className="flex h-[min(90vh,900px)] max-h-[min(90vh,900px)] w-[min(96vw,112rem)] max-w-[min(96vw,112rem)] flex-col gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)]">
+        <DialogContent className="flex max-h-[min(90dvh,calc(100dvh-2rem))] w-[min(96vw,52rem)] max-w-[min(96vw,52rem)] flex-col gap-0 overflow-hidden border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] sm:max-w-[min(96vw,52rem)]">
           <DialogHeader className="shrink-0 border-b border-[color:var(--workspace-shell-border)] px-6 py-4">
             <DialogTitle>Extract tasks</DialogTitle>
             <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
@@ -1082,7 +1082,7 @@ export function MeetingTranscriptDetailClient({
               tasks. Review and edit before adding them to the workspace.
             </DialogDescription>
           </DialogHeader>
-          <div className="min-h-0 flex-1 overflow-hidden px-6 py-5">
+          <div className="overflow-y-auto px-6 py-5">
             {extractOpen ? (
               <ExtractWorkspaceTasksClient
                 accountId={accountId}

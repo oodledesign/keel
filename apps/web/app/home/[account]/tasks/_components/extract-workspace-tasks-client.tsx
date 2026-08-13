@@ -21,8 +21,10 @@ import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
 import { DueDateInput } from '~/components/due-date-input';
+import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
 import pathsConfig from '~/config/paths.config';
 import type { TaskAssignmentOption } from '~/home/(user)/_lib/actions/task-actions';
+import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
 
 import {
   type ExtractedTaskReviewRow,
@@ -111,6 +113,9 @@ export function ExtractWorkspaceTasksClient({
   const [rawText, setRawText] = useState(initialRawText);
   const [instructions, setInstructions] = useState('');
   const [rows, setRows] = useState<ExtractedTaskReviewRow[] | null>(null);
+  const [personAssigneeOptions, setPersonAssigneeOptions] = useState<
+    TaskPersonAssigneeOption[]
+  >([]);
   const [extracting, setExtracting] = useState(false);
   const [committing, setCommitting] = useState(false);
   const [, startTransition] = useTransition();
@@ -142,7 +147,9 @@ export function ExtractWorkspaceTasksClient({
           preferredClientId: defaultClientId ?? undefined,
           instructions: instructions.trim() || undefined,
           meetingDateYmd: meetingDateYmd ?? undefined,
+          meetingTranscriptId: meetingTranscriptId ?? undefined,
         });
+        setPersonAssigneeOptions(result.personAssigneeOptions ?? []);
         setRows(
           fillMissingParentAssignments(
             applyMeetingClientDefault(result.rows, defaultClientId),
@@ -197,6 +204,7 @@ export function ExtractWorkspaceTasksClient({
             projectId: r.projectId,
             clientId: r.clientId,
             included: r.included,
+            personAssignee: r.personAssignee,
             subtasks: r.subtasks.map((s) => ({
               id: s.id,
               title: s.title,
@@ -222,7 +230,7 @@ export function ExtractWorkspaceTasksClient({
     <div
       className={
         embedded
-          ? 'flex h-full min-h-0 flex-col'
+          ? 'flex flex-col'
           : 'mx-auto max-w-4xl space-y-8 px-4 pt-6 pb-16 text-[var(--workspace-shell-text)] md:px-6'
       }
     >
@@ -249,7 +257,7 @@ export function ExtractWorkspaceTasksClient({
       <div
         className={
           embedded
-            ? 'min-h-0 flex-1 space-y-6 overflow-y-auto py-1'
+            ? 'space-y-6 py-1'
             : 'space-y-6'
         }
       >
@@ -423,7 +431,7 @@ export function ExtractWorkspaceTasksClient({
                           className="mt-1 min-h-[72px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-sm text-[var(--workspace-shell-text)]"
                         />
                       </div>
-                      <div className="grid gap-3 sm:grid-cols-3">
+                      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                         <div>
                           <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                             Link to
@@ -461,6 +469,20 @@ export function ExtractWorkspaceTasksClient({
                             </SelectContent>
                           </Select>
                         </div>
+                        <TaskPersonAssigneeSelect
+                          options={personAssigneeOptions}
+                          value={row.personAssignee || '__none__'}
+                          onChange={(v) =>
+                            setRows(
+                              (prev) =>
+                                prev?.map((r) =>
+                                  r.id === row.id
+                                    ? { ...r, personAssignee: v }
+                                    : r,
+                                ) ?? null,
+                            )
+                          }
+                        />
                         <div>
                           <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                             Due date

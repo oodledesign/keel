@@ -27,6 +27,9 @@ const AnthropicParentSchema = z.object({
   priority: z.enum(['low', 'medium', 'high', 'urgent']).optional(),
   suggested_project_name: z.string().nullable().optional(),
   suggested_client_name: z.string().nullable().optional(),
+  suggested_assignee_kind: z.enum(['member', 'contact']).nullable().optional(),
+  suggested_assignee_email: z.string().nullable().optional(),
+  suggested_assignee_name: z.string().nullable().optional(),
   subtasks: z.array(AnthropicSubtaskSchema).default([]),
 });
 
@@ -41,6 +44,9 @@ export type ExtractedWorkspaceTaskDraft = {
   priority: 'low' | 'medium' | 'high' | 'urgent';
   suggestedProjectName: string | null;
   suggestedClientName: string | null;
+  suggestedAssigneeKind: 'member' | 'contact' | null;
+  suggestedAssigneeEmail: string | null;
+  suggestedAssigneeName: string | null;
   subtasks: Array<{
     title: string;
     notes: string | null;
@@ -59,6 +65,12 @@ export type WorkspaceContextForExtract = {
    * “today” for relative deadlines mentioned in the transcript.
    */
   meetingDateYmd?: string | null;
+  /** Calendar attendees from the meeting invite. */
+  attendees?: Array<{ name: string | null; email: string | null }>;
+  /** Workspace team members who can be assignees. */
+  members?: Array<{ name: string | null; email: string }>;
+  /** CRM contacts who can be assignees (often for the meeting client). */
+  contacts?: Array<{ name: string; email: string | null }>;
 };
 
 function pad2(n: number) {
@@ -163,6 +175,23 @@ export async function extractWorkspaceTasksWithAnthropic(
     ? `\nMeeting context: this transcript is for client "${context.meetingClient.name}" (id: ${context.meetingClient.id}). Link all extracted tasks to this client unless the text clearly concerns a different client or project.\n`
     : '';
 
+  const attendeeLines = (context.attendees ?? [])
+    .map((a) => {
+      const name = a.name?.trim() || '(no name)';
+      const email = a.email?.trim() || '(no email)';
+      return `- ${name} <${email}>`;
+    })
+    .join('\n');
+  const memberLines = (context.members ?? [])
+    .map((m) => `- ${m.name?.trim() || m.email} <${m.email}> [member]`)
+    .join('\n');
+  const contactLines = (context.contacts ?? [])
+    .map(
+      (c) =>
+        `- ${c.name}${c.email ? ` <${c.email}>` : ''} [contact]`,
+    )
+    .join('\n');
+
   const meetingDateYmd =
     toIsoDateString(context.meetingDateYmd) ?? todayLocalYmd();
   const meetingRefDate = parseYmdToLocalDate(meetingDateYmd) ?? new Date();
@@ -180,6 +209,9 @@ Return ONLY valid JSON matching this shape (no markdown fences):
       "priority": "low" | "medium" | "high" | "urgent",
       "suggested_project_name": "string or null — best matching name from the project list, or null",
       "suggested_client_name": "string or null — best matching name from the client list, or null",
+      "suggested_assignee_kind": "member" | "contact" | null,
+      "suggested_assignee_email": "string or null — email from the people lists when known",
+      "suggested_assignee_name": "string or null — display name from the people lists",
       "subtasks": [
         { "title": "string", "notes": "string or null", "due_date": "YYYY-MM-DD or null", "priority": "low"|"medium"|"high"|"urgent" }
       ]
@@ -187,16 +219,19 @@ Return ONLY valid JSON matching this shape (no markdown fences):
   ]
 }
 Rules:
-- Group related actions: one parent task with concrete subtasks when the source implies a checklist or phases.
-- Each parent should have a clear title; subtasks are smaller steps.
+- Default to flat tasks with an empty "subtasks" array. Prefer one clear parent task with notes over a checklist of subtasks.
+- Only add subtasks when the source clearly requires distinct sequential steps that would be incomplete if left as a single task (e.g. “draft → review → send”, or separate owners/deadlines per step). Do not invent phases or break a simple action into subtasks.
+- Never create a subtask that merely restates the parent. Cap at 3 subtasks on a parent when they are warranted; otherwise use [].
+- Each parent should have a clear title; put supporting context in notes, not as subtasks.
 - Prefer project OR client suggestion when the text clearly references one; use null when unclear.
+- Assignee: only set suggested_assignee_* when the source clearly makes someone responsible (e.g. “Sarah will send…”, “Can you pick this up, Dan?”). Prefer matching calendar attendees and the people lists. Use kind "member" for team, "contact" for client contacts. Never invent people; use nulls when unclear.
 - Dates: only ISO strings YYYY-MM-DD or null.
 - Calendar context: the call/meeting took place on ${meetingDateYmd} (local). Treat that day as “today” for relative phrases in the transcript (“tomorrow”, “Friday”, “next week”, “end of week”, “in two days”). Prefer concrete deadlines mentioned in the conversation over inventing dates.
 - For actionable due dates, use year ${currentYearStr} or a later year when the source implies a future deadline. If the text gives month/day (or "June 20", "20/6") without a year, assume the next occurrence on or after ${meetingDateYmd} — almost always ${currentYearStr} or ${nextYearStr}. Do not use past years unless the source explicitly names that year for a historical reference (then prefer null for due_date if it is not an actionable deadline).`;
 
   const userContent = `Meeting / reference date (for interpreting relative deadlines): ${meetingDateYmd}
 ${meetingClientLine}${formatExtractInstructionsBlock(instructions)}
-Workspace projects (choose names that best match the text; we map to ids server-side):\n${projectLines || '(none)'}\n\nWorkspace clients:\n${clientLines || '(none)'}\n\n---\nSOURCE TEXT:\n${rawText}\n---\nRespond with JSON only.`;
+Workspace projects (choose names that best match the text; we map to ids server-side):\n${projectLines || '(none)'}\n\nWorkspace clients:\n${clientLines || '(none)'}\n\nCalendar attendees:\n${attendeeLines || '(none)'}\n\nTeam members (assignees):\n${memberLines || '(none)'}\n\nClient contacts (assignees):\n${contactLines || '(none)'}\n\n---\nSOURCE TEXT:\n${rawText}\n---\nRespond with JSON only.`;
 
   const raw = await callAI({
     feature: 'workspace_task_extract',
@@ -235,6 +270,9 @@ Workspace projects (choose names that best match the text; we map to ids server-
     priority: normalizePriority(item.priority),
     suggestedProjectName: item.suggested_project_name?.trim() || null,
     suggestedClientName: item.suggested_client_name?.trim() || null,
+    suggestedAssigneeKind: item.suggested_assignee_kind ?? null,
+    suggestedAssigneeEmail: item.suggested_assignee_email?.trim() || null,
+    suggestedAssigneeName: item.suggested_assignee_name?.trim() || null,
     subtasks: (item.subtasks ?? []).map((s) => ({
       title: s.title.trim(),
       notes: s.notes?.trim() || null,

@@ -85,6 +85,11 @@ export const AddPortalTaskCommentSchema = z.object({
   body: z.string().min(1, 'Comment is required'),
 });
 
+export const CompletePortalMyTaskSchema = z.object({
+  clientOrgId: z.string().uuid(),
+  taskId: z.string().uuid(),
+});
+
 export const SendPortalMessageSchema = z.object({
   clientOrgId: z.string().uuid(),
   threadId: z.string().uuid(),

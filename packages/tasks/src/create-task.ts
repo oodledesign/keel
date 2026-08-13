@@ -35,6 +35,13 @@ export type CreateTaskInput = {
   pipelineDealId?: string;
   /** Commercial requirement brief. */
   commercialRequirementId?: string;
+  /**
+   * Team member assignee. Defaults to the creating user when omitted.
+   * Cleared when `assigneeContactId` is set (contact is the responsible party).
+   */
+  assigneeUserId?: string | null;
+  /** CRM contact responsible for the task (portal My tasks). */
+  assigneeContactId?: string | null;
   /** When set, inherits project/client/area from parent if those are omitted. */
   parentTaskContext?: {
     projectId?: string | null;
@@ -195,6 +202,13 @@ export async function createTaskForUser(
       jobId: input.jobId,
     }));
 
+  const assigneeContactId = input.assigneeContactId?.trim() || null;
+  // Contact is the responsible party; keep creator as internal owner (user_id).
+  // Team assignee overrides creator when no contact is set.
+  const assigneeUserId = assigneeContactId
+    ? userId
+    : (input.assigneeUserId?.trim() || userId);
+
   const insertRow = {
     title,
     priority,
@@ -204,7 +218,8 @@ export async function createTaskForUser(
     area_id: areaId,
     client_id: clientId,
     account_id: accountId,
-    user_id: userId,
+    user_id: assigneeUserId,
+    ...(assigneeContactId ? { assignee_contact_id: assigneeContactId } : {}),
     ...(input.parentTaskId ? { parent_task_id: input.parentTaskId } : {}),
     ...(input.phaseId ? { phase_id: input.phaseId } : {}),
     ...(input.groupId ? { group_id: input.groupId } : {}),

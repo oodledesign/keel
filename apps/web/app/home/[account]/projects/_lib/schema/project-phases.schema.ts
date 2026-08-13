@@ -124,6 +124,7 @@ export const UpdateJobTaskSchema = z.object({
   status: taskStatus.optional(),
   priority: taskPriority.optional(),
   assigneeUserId: z.string().uuid().nullable().optional(),
+  assigneeContactId: z.string().uuid().nullable().optional(),
   dueDate: optionalNullableDate,
   notes: z.string().max(20000).nullable().optional(),
   links: z.array(TaskLinkSchema).max(20).optional(),
@@ -273,6 +274,7 @@ export type JobBoardTask = {
   phase_id: string | null;
   job_id: string | null;
   user_id: string | null;
+  assignee_contact_id: string | null;
   notes: string | null;
   links: Array<{ url: string; label?: string | null }>;
   note_refs: Array<{ id: string; title: string }>;

@@ -26,12 +26,21 @@ import {
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
+import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
 import pathsConfig from '~/config/paths.config';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
+import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
+import {
+  parsePersonAssigneeSelectValue,
+  personAssigneeSelectValue,
+} from '~/lib/tasks/task-person-assignee';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
-import { updateJobTask } from '../../_lib/server/server-actions';
+import {
+  loadJobTaskPersonAssignees,
+  updateJobTask,
+} from '../../_lib/server/server-actions';
 
 type TaskLinkDraft = { url: string; label: string };
 type NoteRefDraft = { id: string; title: string };
@@ -68,6 +77,10 @@ export function JobProjectTaskSheet({
   const [priority, setPriority] = useState('medium');
   const [dueDate, setDueDate] = useState('');
   const [notes, setNotes] = useState('');
+  const [personAssignee, setPersonAssignee] = useState('__none__');
+  const [personOptions, setPersonOptions] = useState<
+    TaskPersonAssigneeOption[]
+  >([]);
   const [links, setLinks] = useState<TaskLinkDraft[]>([]);
   const [noteRefs, setNoteRefs] = useState<NoteRefDraft[]>([]);
   const [pickerNotes, setPickerNotes] = useState<PickerNote[]>([]);
@@ -83,6 +96,19 @@ export function JobProjectTaskSheet({
     setPriority(task.priority || 'medium');
     setDueDate(task.due_date ?? '');
     setNotes(task.notes ?? '');
+    setPersonAssignee(
+      task.assignee_contact_id
+        ? personAssigneeSelectValue({
+            kind: 'contact',
+            contactId: task.assignee_contact_id,
+          })
+        : task.user_id
+          ? personAssigneeSelectValue({
+              kind: 'member',
+              userId: task.user_id,
+            })
+          : '__none__',
+    );
     setLinks(
       (task.links ?? []).map((link) => ({
         url: link.url,
@@ -98,6 +124,21 @@ export function JobProjectTaskSheet({
     setPickerQuery('');
     setPickerOpen(false);
   }, [open, task]);
+
+  useEffect(() => {
+    if (!open || !accountId) return;
+    let cancelled = false;
+    void loadJobTaskPersonAssignees({ accountId, jobId })
+      .then((options) => {
+        if (!cancelled) setPersonOptions(options);
+      })
+      .catch(() => {
+        if (!cancelled) setPersonOptions([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, jobId, open]);
 
   useEffect(() => {
     if (!open || !pickerOpen || !accountId) return;
@@ -169,6 +210,7 @@ export function JobProjectTaskSheet({
 
     startTransition(async () => {
       try {
+        const person = parsePersonAssigneeSelectValue(personAssignee);
         const updated = await updateJobTask({
           accountId,
           accountSlug,
@@ -186,6 +228,18 @@ export function JobProjectTaskSheet({
           notes: notes.trim() || null,
           links: nextLinks,
           noteRefs,
+          assigneeUserId:
+            person.kind === 'member'
+              ? person.id
+              : person.kind === 'none'
+                ? null
+                : undefined,
+          assigneeContactId:
+            person.kind === 'contact'
+              ? person.id
+              : person.kind === 'member' || person.kind === 'none'
+                ? null
+                : undefined,
         });
         onUpdated(updated as JobBoardTask);
         toast.success('Task updated');
@@ -224,6 +278,13 @@ export function JobProjectTaskSheet({
               className="mt-1 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]"
             />
           </div>
+
+          <TaskPersonAssigneeSelect
+            options={personOptions}
+            value={personAssignee}
+            onChange={setPersonAssignee}
+            disabled={!canEditJobs || pending}
+          />
 
           <div className="grid grid-cols-2 gap-3">
             <div>
