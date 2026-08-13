@@ -85,6 +85,10 @@ interface ClientContactPickerProps {
   onError?: (message: string | null) => void;
   showSummary?: boolean;
   allowNone?: boolean;
+  /**
+   * Commercial workspaces label CRM records as contacts (not clients).
+   */
+  terminology?: 'default' | 'commercial';
 }
 
 export function ClientContactPicker({
@@ -95,7 +99,14 @@ export function ClientContactPicker({
   onError,
   showSummary = false,
   allowNone = true,
+  terminology = 'default',
 }: ClientContactPickerProps) {
+  const isCommercial = terminology === 'commercial';
+  const orgLabel = isCommercial ? 'Contact' : 'Client';
+  const orgLabelLower = isCommercial ? 'contact' : 'client';
+  const newOrgLabel = isCommercial ? 'New contact' : 'New client';
+  const personLabel = isCommercial ? 'Person' : 'Contact';
+  const newPersonLabel = isCommercial ? 'New person' : 'New contact';
   const [clients, setClients] = useState<ClientContactPickerClient[]>([]);
   const [clientsLoading, setClientsLoading] = useState(false);
   const [contacts, setContacts] = useState<ClientContactPickerContact[]>([]);
@@ -348,7 +359,11 @@ export function ClientContactPicker({
       onChange(client ? applyClientDetails(client, next) : next);
       resetCreatePanels();
     } catch (err) {
-      onError?.(err instanceof Error ? err.message : 'Could not create client');
+      onError?.(
+        err instanceof Error
+          ? err.message
+          : `Could not create ${orgLabelLower}`,
+      );
     } finally {
       setCreatingClient(false);
     }
@@ -356,7 +371,7 @@ export function ClientContactPicker({
 
   const handleCreateContact = async () => {
     if (!value.clientId) {
-      onError?.('Select a client first');
+      onError?.(`Select a ${orgLabelLower} first`);
       return;
     }
     if (!newContactFirstName.trim()) {
@@ -419,7 +434,7 @@ export function ClientContactPicker({
     <div className="space-y-4">
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label>Client</Label>
+          <Label>{orgLabel}</Label>
           <button
             type="button"
             onClick={() => {
@@ -429,7 +444,7 @@ export function ClientContactPicker({
             className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ozer-accent)] hover:underline"
           >
             <Plus className="h-3 w-3" />
-            {showNewClient ? 'Cancel' : 'New client'}
+            {showNewClient ? 'Cancel' : newOrgLabel}
           </button>
         </div>
         <ClientCombobox
@@ -440,8 +455,12 @@ export function ClientContactPicker({
           value={value.clientId}
           onValueChange={handleClientChange}
           loading={clientsLoading}
-          placeholder={allowNone ? 'Select client (optional)' : 'Select client'}
-          emptyMessage="No clients yet. Create one below."
+          placeholder={
+            allowNone
+              ? `Select ${orgLabelLower} (optional)`
+              : `Select ${orgLabelLower}`
+          }
+          emptyMessage={`No ${orgLabelLower}s yet. Create one below.`}
         />
         {showNewClient ? (
           <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-3">
@@ -547,7 +566,7 @@ export function ClientContactPicker({
               onClick={() => void handleCreateClient()}
               className={workspaceBtnPrimaryMd}
             >
-              {creatingClient ? 'Creating…' : 'Create client'}
+              {creatingClient ? 'Creating…' : `Create ${orgLabelLower}`}
             </Button>
           </div>
         ) : null}
@@ -555,7 +574,7 @@ export function ClientContactPicker({
 
       <div className="space-y-2">
         <div className="flex items-center justify-between gap-2">
-          <Label>Contact</Label>
+          <Label>{personLabel}</Label>
           <button
             type="button"
             disabled={!value.clientId}
@@ -566,7 +585,7 @@ export function ClientContactPicker({
             className="inline-flex items-center gap-1 text-xs font-medium text-[var(--ozer-accent)] hover:underline disabled:opacity-40"
           >
             <Plus className="h-3 w-3" />
-            {showNewContact ? 'Cancel' : 'New contact'}
+            {showNewContact ? 'Cancel' : newPersonLabel}
           </button>
         </div>
         <Select
@@ -578,10 +597,10 @@ export function ClientContactPicker({
             <SelectValue
               placeholder={
                 !value.clientId
-                  ? 'Select a client first'
+                  ? `Select a ${orgLabelLower} first`
                   : contactsLoading
                     ? 'Loading…'
-                    : 'Select contact'
+                    : `Select ${personLabel.toLowerCase()}`
               }
             />
           </SelectTrigger>
@@ -597,7 +616,8 @@ export function ClientContactPicker({
         </Select>
         {value.clientId && !contactsLoading && contacts.length === 0 ? (
           <p className="text-xs text-[var(--workspace-shell-text)]/50">
-            No contacts on this client yet. Create one above.
+            No {personLabel.toLowerCase()}s on this {orgLabelLower} yet. Create
+            one above.
           </p>
         ) : null}
         {showNewContact ? (

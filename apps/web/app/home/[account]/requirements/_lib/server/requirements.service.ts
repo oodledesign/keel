@@ -20,6 +20,7 @@ export type CommercialRequirement = {
   contactPhone: string | null;
   companyName: string | null;
   sector: string | null;
+  useClass: string | null;
   tenure: 'rent' | 'buy' | 'both' | null;
   locationText: string | null;
   sizeMinSqft: number | null;
@@ -58,6 +59,7 @@ function mapRequirement(row: Row): CommercialRequirement {
     contactPhone: (row.contact_phone as string | null) ?? null,
     companyName: (row.company_name as string | null) ?? null,
     sector: (row.sector as string | null) ?? null,
+    useClass: (row.use_class as string | null) ?? null,
     tenure: (row.tenure as CommercialRequirement['tenure']) ?? null,
     locationText: (row.location_text as string | null) ?? null,
     sizeMinSqft: num(row.size_min_sqft),
@@ -109,6 +111,7 @@ export function createRequirementsService(client: SupabaseClient) {
           contact_phone: input.contactPhone ?? null,
           company_name: input.companyName ?? null,
           sector: input.sector ?? null,
+          use_class: input.useClass ?? null,
           tenure: input.tenure ?? null,
           location_text: input.locationText ?? null,
           size_min_sqft: input.sizeMinSqft ?? null,
@@ -152,6 +155,7 @@ export function createRequirementsService(client: SupabaseClient) {
             company_name: input.companyName,
           }),
           ...(input.sector !== undefined && { sector: input.sector }),
+          ...(input.useClass !== undefined && { use_class: input.useClass }),
           ...(input.tenure !== undefined && { tenure: input.tenure }),
           ...(input.locationText !== undefined && {
             location_text: input.locationText,

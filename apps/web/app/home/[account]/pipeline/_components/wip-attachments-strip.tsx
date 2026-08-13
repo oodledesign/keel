@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
-import { Loader2, Plus } from 'lucide-react';
+import { Loader2, Pencil, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -24,6 +24,7 @@ import {
   listWipAttachmentNotes,
   listWipAttachmentTasks,
   listWipTeamMembers,
+  updateWipAttachmentNote,
 } from '../_lib/server/wip-attachments.actions';
 
 type Props = {
@@ -48,6 +49,23 @@ function formatTimelineDate(iso: string) {
   }
 }
 
+function toDateInputValue(iso: string) {
+  try {
+    const d = new Date(iso);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toISOString().slice(0, 10);
+  } catch {
+    return '';
+  }
+}
+
+function dateInputToIso(dateValue: string) {
+  const trimmed = dateValue.trim();
+  if (!trimmed) return null;
+  // Noon UTC avoids timezone day-shift for date-only picks.
+  return new Date(`${trimmed}T12:00:00.000Z`).toISOString();
+}
+
 export function WipAttachmentsStrip({
   accountId,
   accountSlug,
@@ -63,7 +81,14 @@ export function WipAttachmentsStrip({
   );
   const [taskTitle, setTaskTitle] = useState('');
   const [noteBody, setNoteBody] = useState('');
+  const [noteDate, setNoteDate] = useState(() =>
+    new Date().toISOString().slice(0, 10),
+  );
   const [assignedToUserId, setAssignedToUserId] = useState<string>('__none__');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState('');
+  const [editDate, setEditDate] = useState('');
+  const [editAssignee, setEditAssignee] = useState<string>('__none__');
   const [loading, setLoading] = useState(true);
   const [pending, startTransition] = useTransition();
 
@@ -137,15 +162,49 @@ export function WipAttachmentsStrip({
           title: null,
           assignedToUserId:
             assignedToUserId === '__none__' ? null : assignedToUserId,
+          occurredAt: dateInputToIso(noteDate),
         });
         setNoteBody('');
         setAssignedToUserId('__none__');
+        setNoteDate(new Date().toISOString().slice(0, 10));
         await refresh();
         onActivityChanged?.();
         toast.success('Update logged');
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'Could not add update',
+        );
+      }
+    });
+  };
+
+  const startEdit = (note: WipAttachmentNote) => {
+    setEditingId(note.id);
+    setEditBody(note.content);
+    setEditDate(toDateInputValue(note.createdAt));
+    setEditAssignee(note.assignedTo?.id ?? '__none__');
+  };
+
+  const saveEdit = () => {
+    if (!editingId || !editBody.trim()) return;
+    startTransition(async () => {
+      try {
+        await updateWipAttachmentNote({
+          accountId,
+          accountSlug,
+          noteId: editingId,
+          content: editBody.trim(),
+          assignedToUserId:
+            editAssignee === '__none__' ? null : editAssignee,
+          occurredAt: dateInputToIso(editDate),
+        });
+        setEditingId(null);
+        await refresh();
+        onActivityChanged?.();
+        toast.success('Update saved');
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save update',
         );
       }
     });
@@ -242,22 +301,88 @@ export function WipAttachmentsStrip({
                   className="absolute top-1.5 -left-[0.97rem] h-2 w-2 rounded-full bg-[var(--ozer-accent)]"
                   aria-hidden
                 />
-                <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
-                  <time dateTime={note.createdAt}>
-                    {formatTimelineDate(note.createdAt)}
-                  </time>
-                  {note.createdBy ? (
-                    <span className="font-medium text-[var(--workspace-shell-text)]">
-                      {note.createdBy.name}
-                    </span>
-                  ) : null}
-                  {note.assignedTo ? (
-                    <span>→ {note.assignedTo.name}</span>
-                  ) : null}
-                </div>
-                <p className="mt-0.5 text-xs leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text)]">
-                  {note.content}
-                </p>
+                {editingId === note.id ? (
+                  <div className="space-y-2">
+                    <Textarea
+                      value={editBody}
+                      onChange={(event) => setEditBody(event.target.value)}
+                      rows={2}
+                      className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm"
+                    />
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Input
+                        type="date"
+                        value={editDate}
+                        onChange={(event) => setEditDate(event.target.value)}
+                        className="h-8 w-[9.5rem] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs"
+                      />
+                      <Select
+                        value={editAssignee}
+                        onValueChange={setEditAssignee}
+                        disabled={pending}
+                      >
+                        <SelectTrigger className="h-8 w-[min(100%,12rem)] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
+                          <SelectValue placeholder="Assignee…" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__none__">No assignee</SelectItem>
+                          {members.map((member) => (
+                            <SelectItem key={member.id} value={member.id}>
+                              {member.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Button
+                        type="button"
+                        size="sm"
+                        disabled={pending || !editBody.trim()}
+                        onClick={saveEdit}
+                        className="h-8"
+                      >
+                        Save
+                      </Button>
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="ghost"
+                        disabled={pending}
+                        onClick={() => setEditingId(null)}
+                        className="h-8"
+                      >
+                        Cancel
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <div className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-[11px] text-[var(--workspace-shell-text-muted)]">
+                      <time dateTime={note.createdAt}>
+                        {formatTimelineDate(note.createdAt)}
+                      </time>
+                      {note.createdBy ? (
+                        <span className="font-medium text-[var(--workspace-shell-text)]">
+                          {note.createdBy.name}
+                        </span>
+                      ) : null}
+                      {note.assignedTo ? (
+                        <span>→ {note.assignedTo.name}</span>
+                      ) : null}
+                      <button
+                        type="button"
+                        className="ml-auto inline-flex items-center gap-1 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                        onClick={() => startEdit(note)}
+                        aria-label="Edit update"
+                      >
+                        <Pencil className="h-3 w-3" />
+                        Edit
+                      </button>
+                    </div>
+                    <p className="mt-0.5 text-xs leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text)]">
+                      {note.content}
+                    </p>
+                  </>
+                )}
               </li>
             ))}
           </ol>
@@ -270,6 +395,13 @@ export function WipAttachmentsStrip({
           className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm"
         />
         <div className="flex flex-wrap items-center gap-2">
+          <Input
+            type="date"
+            value={noteDate}
+            onChange={(event) => setNoteDate(event.target.value)}
+            className="h-8 w-[9.5rem] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs"
+            aria-label="Update date"
+          />
           <Select
             value={assignedToUserId}
             onValueChange={setAssignedToUserId}

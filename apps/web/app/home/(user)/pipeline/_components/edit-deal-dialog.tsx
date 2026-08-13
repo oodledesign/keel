@@ -348,7 +348,7 @@ export function EditDealDialog({
           </DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
             {commercial
-              ? 'Update the landlord/contact, disposal link, value, stage, and next action.'
+              ? 'Update the contact, disposal link, value, stage, and next action.'
               : 'Update the client or contact, value, stage, and next action.'}
           </DialogDescription>
         </DialogHeader>
@@ -365,7 +365,7 @@ export function EditDealDialog({
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
-              New lead
+              {commercial ? 'New contact' : 'New lead'}
             </button>
             <button
               type="button"
@@ -377,7 +377,7 @@ export function EditDealDialog({
                   : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
               )}
             >
-              Existing client
+              {commercial ? 'Existing contact' : 'Existing client'}
             </button>
           </div>
         ) : null}
@@ -387,14 +387,18 @@ export function EditDealDialog({
             <>
               <div className="space-y-2">
                 <Label className="text-[var(--workspace-shell-text-muted)]">
-                  Client *
+                  {commercial ? 'Contact *' : 'Client *'}
                 </Label>
                 <ClientCombobox
                   clients={clients}
                   value={clientId}
                   onValueChange={setClientId}
                   loading={clientsLoading}
-                  placeholder="Select an existing client"
+                  placeholder={
+                    commercial
+                      ? 'Select an existing contact'
+                      : 'Select an existing client'
+                  }
                   loadError={clientsError}
                   addClientHref={
                     accountSlug

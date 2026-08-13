@@ -2,8 +2,11 @@
 
 import { type KeyboardEvent, useMemo, useState, useTransition } from 'react';
 
+import Link from 'next/link';
+
 import { toast } from '@kit/ui/sonner';
 
+import pathsConfig from '~/config/paths.config';
 import type { PipelineDeal } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
 import { updateDeal } from '~/home/(user)/pipeline/actions';
@@ -115,12 +118,19 @@ export function WipSheetView({
   deals,
   requirements,
   instructionStages,
+  listings = [],
   onDealsChange,
   onRequirementsChange,
   onEditRequirement,
   onEditInstruction,
 }: Props) {
   const [, startTransition] = useTransition();
+
+  const listingById = useMemo(() => {
+    const map = new Map<string, PipelineListingOption>();
+    for (const listing of listings) map.set(listing.id, listing);
+    return map;
+  }, [listings]);
 
   const activeDeals = useMemo(
     () =>
@@ -197,8 +207,12 @@ export function WipSheetView({
   return (
     <div className="flex min-h-0 w-full min-w-0 flex-1 flex-col gap-4 px-4 pb-4 md:px-6 lg:px-8">
       {showRequirements ? (
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-          <div className="flex items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
+        <section
+          className={`flex min-h-0 min-w-0 flex-col overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] ${
+            showInstructions ? 'max-h-[45vh] shrink-0' : 'flex-1'
+          }`}
+        >
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
             <div>
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Requirements sheet
@@ -211,7 +225,7 @@ export function WipSheetView({
               {sortedRequirements.length}
             </span>
           </div>
-          <div className="max-h-[min(70vh,720px)] overflow-auto">
+          <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-max min-w-full border-collapse text-sm">
               <thead>
                 <tr>
@@ -436,8 +450,8 @@ export function WipSheetView({
       ) : null}
 
       {showInstructions ? (
-        <section className="min-w-0 overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-          <div className="flex items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
+        <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-2">
             <div>
               <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
                 Instructions sheet
@@ -450,13 +464,14 @@ export function WipSheetView({
               {activeDeals.length}
             </span>
           </div>
-          <div className="max-h-[min(70vh,720px)] overflow-auto">
+          <div className="min-h-0 flex-1 overflow-auto">
             <table className="w-max min-w-full border-collapse text-sm">
               <thead>
                 <tr>
                   <th className={thClass}>Title</th>
                   <th className={thClass}>Company</th>
                   <th className={thClass}>Contact</th>
+                  <th className={thClass}>Disposal</th>
                   <th className={thClass}>Value</th>
                   <th className={thClass}>Stage</th>
                   <th className={thClass}>Next action</th>
@@ -468,14 +483,18 @@ export function WipSheetView({
                 {activeDeals.length === 0 ? (
                   <tr>
                     <td
-                      colSpan={8}
+                      colSpan={9}
                       className={`px-3 py-8 text-center text-sm ${workspaceTextMuted}`}
                     >
                       No active instructions.
                     </td>
                   </tr>
                 ) : (
-                  activeDeals.map((deal) => (
+                  activeDeals.map((deal) => {
+                    const listing = deal.commercialListingId
+                      ? listingById.get(deal.commercialListingId)
+                      : null;
+                    return (
                     <tr
                       key={deal.id}
                       className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
@@ -521,6 +540,23 @@ export function WipSheetView({
                             )
                           }
                         />
+                      </td>
+                      <td className={`${tdClass} px-2`}>
+                        {deal.commercialListingId ? (
+                          <Link
+                            href={pathsConfig.app.accountListingDetail
+                              .replace('[account]', accountSlug)
+                              .replace('[id]', deal.commercialListingId)}
+                            className="block max-w-[12rem] truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
+                            title="Open disposal"
+                          >
+                            {listing?.name?.trim() || 'Open disposal'}
+                          </Link>
+                        ) : (
+                          <span className={`text-xs ${workspaceTextMuted}`}>
+                            —
+                          </span>
+                        )}
                       </td>
                       <td className={tdClass}>
                         <SheetTextCell
@@ -606,7 +642,8 @@ export function WipSheetView({
                         </div>
                       </td>
                     </tr>
-                  ))
+                    );
+                  })
                 )}
               </tbody>
             </table>

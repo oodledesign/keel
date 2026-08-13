@@ -250,7 +250,7 @@ function RequirementFormFields({
     setError(null);
 
     if (!party.clientId) {
-      setError('Link a client, or create one below.');
+      setError('Link a contact, or create one below.');
       return;
     }
 
@@ -369,6 +369,7 @@ function RequirementFormFields({
         onError={setError}
         showSummary
         allowNone={false}
+        terminology="commercial"
       />
 
       <div className="space-y-1.5">

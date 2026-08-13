@@ -14,6 +14,8 @@ import {
 
 import { useRouter, useSearchParams } from 'next/navigation';
 
+import Link from 'next/link';
+
 import {
   DndContext,
   type DragEndEvent,
@@ -34,6 +36,8 @@ import { CSS } from '@dnd-kit/utilities';
 import {
   LayoutGrid,
   ListTree,
+  Maximize2,
+  Minimize2,
   MoreHorizontal,
   Pencil,
   Plus,
@@ -58,6 +62,7 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { toast } from '@kit/ui/sonner';
 
+import pathsConfig from '~/config/paths.config';
 import type {
   PipelineData,
   PipelineDeal,
@@ -104,6 +109,11 @@ import {
   sharedBoardStages,
   toSharedStatus,
 } from '~/lib/commercial/wip-board-mapping';
+import {
+  REQUIREMENT_USE_CLASS_LABELS,
+  REQUIREMENT_USE_CLASS_STYLES,
+  normalizeRequirementUseClass,
+} from '~/lib/commercial/requirement-use-class';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -214,6 +224,12 @@ function isWonInstructionStage(stage: string) {
   );
 }
 
+function listingDetailHref(accountSlug: string, listingId: string) {
+  return pathsConfig.app.accountListingDetail
+    .replace('[account]', accountSlug)
+    .replace('[id]', listingId);
+}
+
 export function CommercialWipBoard({
   initialData,
   initialRequirements,
@@ -269,6 +285,21 @@ export function CommercialWipBoard({
   );
   const [, startTransition] = useTransition();
   const kanbanScrollRef = useRef<HTMLDivElement>(null);
+  const [fullscreen, setFullscreen] = useState(false);
+
+  useEffect(() => {
+    if (!fullscreen) return;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setFullscreen(false);
+    };
+    window.addEventListener('keydown', onKey);
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = previousOverflow;
+    };
+  }, [fullscreen]);
 
   useEffect(() => {
     setDeals(initialData.deals);
@@ -725,11 +756,19 @@ export function CommercialWipBoard({
 
   return (
     <div
-      className={`flex min-h-[calc(100svh-3.5rem)] w-full min-w-0 flex-col pb-12 text-[var(--workspace-shell-text)] ${
-        hideBoardTitle ? 'gap-2 pt-0' : 'gap-6 pt-6'
-      }`}
+      className={
+        fullscreen
+          ? 'fixed inset-0 z-[80] flex w-full min-w-0 flex-col overflow-hidden bg-[var(--workspace-shell-canvas,var(--ozer-surface-canvas))] text-[var(--workspace-shell-text)]'
+          : `flex min-h-0 w-full min-w-0 flex-1 flex-col pb-4 text-[var(--workspace-shell-text)] ${
+              hideBoardTitle ? 'gap-2 pt-0' : 'gap-6 pt-6'
+            }`
+      }
     >
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-1 md:px-6 lg:px-8">
+      <div
+        className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-1 md:px-6 lg:px-8 ${
+          fullscreen ? 'shrink-0 border-b border-[color:var(--workspace-shell-border)] py-3' : ''
+        }`}
+      >
         <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
           {VIEW_OPTIONS.map((option) => {
             const count = tabCounts[option.key];
@@ -811,6 +850,25 @@ export function CommercialWipBoard({
               Ladder
             </button>
           </div>
+
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]/80"
+            onClick={() => setFullscreen((value) => !value)}
+            aria-pressed={fullscreen}
+            title={fullscreen ? 'Exit full screen (Esc)' : 'Full screen'}
+          >
+            {fullscreen ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
+            <span className="sr-only">
+              {fullscreen ? 'Exit full screen' : 'Full screen'}
+            </span>
+          </Button>
 
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -1019,6 +1077,7 @@ export function CommercialWipBoard({
             label: stage.label,
           }))}
           deskActivity={deskActivity}
+          listings={listings}
           onDealsChange={setDeals}
           onEditInstruction={(deal) => {
             setDealToEdit(deal);
@@ -1050,6 +1109,7 @@ export function CommercialWipBoard({
                     stageKey={column.key}
                     label={column.label}
                     cards={cards}
+                    accountSlug={accountSlug}
                     listingById={listingById}
                     onEditInstruction={(deal) => {
                       setDealToEdit(deal);
@@ -1070,6 +1130,7 @@ export function CommercialWipBoard({
             {activeCard?.kind === 'instruction' ? (
               <InstructionCard
                 deal={activeCard.deal}
+                accountSlug={accountSlug}
                 listing={
                   activeCard.deal.commercialListingId
                     ? (listingById.get(activeCard.deal.commercialListingId) ??
@@ -1162,6 +1223,7 @@ function StageColumn({
   stageKey,
   label,
   cards,
+  accountSlug,
   listingById,
   onEditInstruction,
   onEditRequirement,
@@ -1169,6 +1231,7 @@ function StageColumn({
   stageKey: string;
   label: string;
   cards: BoardCard[];
+  accountSlug: string;
   listingById: Map<string, PipelineListingOption>;
   onEditInstruction: (deal: PipelineDeal) => void;
   onEditRequirement: (requirement: CommercialRequirement) => void;
@@ -1217,6 +1280,7 @@ function StageColumn({
                 <InstructionCard
                   key={cardCompositeId('instruction', card.deal.id)}
                   deal={card.deal}
+                  accountSlug={accountSlug}
                   listing={
                     card.deal.commercialListingId
                       ? (listingById.get(card.deal.commercialListingId) ?? null)
@@ -1241,11 +1305,13 @@ function StageColumn({
 
 function InstructionCard({
   deal,
+  accountSlug,
   listing,
   onEdit,
   overlay = false,
 }: {
   deal: PipelineDeal;
+  accountSlug: string;
   listing?: PipelineListingOption | null;
   onEdit: () => void;
   overlay?: boolean;
@@ -1256,6 +1322,7 @@ function InstructionCard({
     return (
       <InstructionCardBody
         deal={deal}
+        accountSlug={accountSlug}
         listing={listing}
         onEdit={onEdit}
         overlay
@@ -1264,16 +1331,23 @@ function InstructionCard({
   }
 
   return (
-    <SortableInstructionCard deal={deal} listing={listing} onEdit={onEdit} />
+    <SortableInstructionCard
+      deal={deal}
+      accountSlug={accountSlug}
+      listing={listing}
+      onEdit={onEdit}
+    />
   );
 }
 
 function SortableInstructionCard({
   deal,
+  accountSlug,
   listing,
   onEdit,
 }: {
   deal: PipelineDeal;
+  accountSlug: string;
   listing?: PipelineListingOption | null;
   onEdit: () => void;
 }) {
@@ -1290,6 +1364,7 @@ function SortableInstructionCard({
   return (
     <InstructionCardBody
       deal={deal}
+      accountSlug={accountSlug}
       listing={listing}
       onEdit={onEdit}
       ref={setNodeRef}
@@ -1305,6 +1380,7 @@ function SortableInstructionCard({
 
 const InstructionCardBody = ({
   deal,
+  accountSlug,
   listing,
   onEdit,
   overlay = false,
@@ -1313,6 +1389,7 @@ const InstructionCardBody = ({
   dragHandleProps,
 }: {
   deal: PipelineDeal;
+  accountSlug: string;
   listing?: PipelineListingOption | null;
   onEdit: () => void;
   overlay?: boolean;
@@ -1325,6 +1402,7 @@ const InstructionCardBody = ({
     : deal.contactName || deal.clientName;
   const clientLabel = deal.clientName || deal.contactName || '';
   const listingName = listing?.name?.trim() || null;
+  const listingId = deal.commercialListingId;
   const companySubtitle =
     deal.companyName &&
     deal.companyName !== clientLabel &&
@@ -1367,7 +1445,19 @@ const InstructionCardBody = ({
               {companySubtitle}
             </p>
           ) : null}
-          {listingName ? (
+          {listingId && listingName ? (
+            <Link
+              href={listingDetailHref(accountSlug, listingId)}
+              onClick={(event) => event.stopPropagation()}
+              onPointerDown={(event) => event.stopPropagation()}
+              className="mt-0.5 inline-flex max-w-full items-center gap-1 truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
+            >
+              {listingName}
+              <span className="shrink-0 text-[10px] font-normal opacity-80">
+                Open disposal
+              </span>
+            </Link>
+          ) : listingName ? (
             <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
               {listingName}
             </p>
@@ -1473,11 +1563,24 @@ const RequirementCardBody = ({
   const size = sizeLabel(requirement);
   const budget = budgetLabel(requirement);
   const tenure = tenureLabel(requirement.tenure);
+  const useClassKey = normalizeRequirementUseClass(requirement.useClass);
+  const useClassStyle = useClassKey
+    ? REQUIREMENT_USE_CLASS_STYLES[useClassKey]
+    : null;
 
   return (
     <div
       ref={ref}
-      style={style}
+      style={{
+        ...style,
+        ...(useClassStyle
+          ? {
+              backgroundColor: useClassStyle.background,
+              color: useClassStyle.color,
+              borderColor: 'transparent',
+            }
+          : null),
+      }}
       className={`${panelClass} cursor-grab p-4 active:cursor-grabbing ${
         overlay
           ? 'scale-105 rotate-2 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)]'
@@ -1487,18 +1590,36 @@ const RequirementCardBody = ({
     >
       <div className="mb-2 flex items-start justify-between gap-2">
         <div className="min-w-0">
-          <span className="mb-1 inline-flex rounded-full bg-sky-500/15 px-2 py-0.5 text-[10px] font-medium text-sky-700 dark:text-sky-300">
-            Requirement
+          <span
+            className="mb-1 inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium"
+            style={
+              useClassStyle
+                ? {
+                    backgroundColor: 'rgba(0,0,0,0.08)',
+                    color: useClassStyle.color,
+                  }
+                : undefined
+            }
+          >
+            {useClassKey
+              ? REQUIREMENT_USE_CLASS_LABELS[useClassKey]
+              : 'Requirement'}
           </span>
-          <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+          <p
+            className={`truncate text-sm font-medium ${useClassStyle ? '' : 'text-[var(--workspace-shell-text)]'}`}
+          >
             {applicantLabel(requirement)}
           </p>
           {requirement.locationText ? (
-            <p className="mt-0.5 truncate text-xs text-[var(--workspace-shell-text-muted)]">
+            <p
+              className={`mt-0.5 truncate text-xs ${useClassStyle ? 'opacity-80' : 'text-[var(--workspace-shell-text-muted)]'}`}
+            >
               {requirement.locationText}
             </p>
           ) : null}
-          <div className="mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+          <div
+            className={`mt-1.5 flex flex-wrap gap-x-2 gap-y-0.5 text-xs ${useClassStyle ? 'opacity-80' : 'text-[var(--workspace-shell-text-muted)]'}`}
+          >
             {size ? <span>{size}</span> : null}
             {tenure ? <span>{tenure}</span> : null}
             {budget ? <span>{budget}</span> : null}
@@ -1506,7 +1627,7 @@ const RequirementCardBody = ({
         </div>
         <button
           type="button"
-          className="shrink-0 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+          className={`shrink-0 ${useClassStyle ? 'opacity-70 hover:opacity-100' : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'}`}
           onClick={(e) => {
             e.stopPropagation();
             onEdit();

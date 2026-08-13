@@ -1,11 +1,11 @@
 {
-  "generatedAt": "2026-08-13T13:54:42.541Z",
+  "generatedAt": "2026-08-13T14:30:55.720Z",
   "account": {
     "id": "c4e7c6b1-e4f0-43ee-a768-6b3782e50d62",
     "slug": "bracketts",
     "name": "Bracketts"
   },
-  "mode": "dry-run",
+  "mode": "write",
   "minMatch": 0.95,
   "totals": {
     "instructions": 156,

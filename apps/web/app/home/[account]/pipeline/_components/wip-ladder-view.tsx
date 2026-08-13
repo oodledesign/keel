@@ -2,6 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
+import Link from 'next/link';
 import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
@@ -14,10 +15,13 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import pathsConfig from '~/config/paths.config';
 import type { PipelineDeal } from '~/home/(user)/_lib/server/pipeline.loader';
+import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
 import { moveDealToStage } from '~/home/(user)/pipeline/actions';
 import { COMMERCIAL_PIPELINE_WON_STAGE } from '~/lib/commercial/commercial-constants';
 import { normalizeCommercialPipelineStage } from '~/lib/commercial/pipeline-stage-config';
+import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import {
   WIP_WORK_TYPE_LABELS,
   normalizeWipWorkType,
@@ -36,6 +40,7 @@ type Props = {
   deals: PipelineDeal[];
   stages: StageColumn[];
   deskActivity: WipDeskActivityItem[];
+  listings?: PipelineListingOption[];
   onDealsChange: (
     next: PipelineDeal[] | ((prev: PipelineDeal[]) => PipelineDeal[]),
   ) => void;
@@ -86,6 +91,7 @@ export function WipLadderView({
   deals,
   stages,
   deskActivity,
+  listings = [],
   onDealsChange,
   onEditInstruction,
   onDealWon,
@@ -93,6 +99,12 @@ export function WipLadderView({
 }: Props) {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [, startTransition] = useTransition();
+
+  const listingById = useMemo(() => {
+    const map = new Map<string, PipelineListingOption>();
+    for (const listing of listings) map.set(listing.id, listing);
+    return map;
+  }, [listings]);
 
   const latestByDeal = useMemo(() => {
     const map = new Map<string, WipDeskActivityItem>();
@@ -155,14 +167,31 @@ export function WipLadderView({
     });
   };
 
+  // Ladder climbs upward: completed / exchanged at the top.
+  const ladderStages = useMemo(() => [...stages].reverse(), [stages]);
+
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 md:px-6 lg:px-8">
-      {stages.map((stage) => {
+      {ladderStages.map((stage) => {
         const stageDeals = dealsByStage.get(stage.key) ?? [];
+        const colour = wipStageColour(stage.key);
         return (
-          <section key={stage.key} className={workspacePanelCard}>
-            <header className="flex items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-              <h3 className="text-sm font-semibold tracking-wide text-[var(--workspace-shell-text)]">
+          <section
+            key={stage.key}
+            className={workspacePanelCard}
+            style={{
+              borderLeftWidth: 4,
+              borderLeftColor: colour.bar,
+            }}
+          >
+            <header
+              className="flex items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3"
+              style={{ background: colour.tint }}
+            >
+              <h3
+                className="text-sm font-semibold tracking-wide"
+                style={{ color: colour.label }}
+              >
                 {stage.label}
               </h3>
               <span className={`text-xs tabular-nums ${workspaceTextMuted}`}>
@@ -182,6 +211,9 @@ export function WipLadderView({
                   const oneLiner =
                     previewText(latest?.content ?? '') ||
                     (deal.nextAction?.trim() ? deal.nextAction.trim() : null);
+                  const listing = deal.commercialListingId
+                    ? listingById.get(deal.commercialListingId)
+                    : null;
 
                   return (
                     <li key={deal.id}>
@@ -223,6 +255,17 @@ export function WipLadderView({
                                 </span>
                               ) : null}
                             </span>
+                            {deal.commercialListingId && listing?.name ? (
+                              <Link
+                                href={pathsConfig.app.accountListingDetail
+                                  .replace('[account]', accountSlug)
+                                  .replace('[id]', deal.commercialListingId)}
+                                onClick={(event) => event.stopPropagation()}
+                                className="mt-0.5 inline-flex max-w-full truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
+                              >
+                                {listing.name}
+                              </Link>
+                            ) : null}
                             <span
                               className={`mt-0.5 block text-xs ${workspaceTextMuted}`}
                             >

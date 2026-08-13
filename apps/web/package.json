@@ -23,6 +23,7 @@
     "test:unit": "vitest run",
     "stripe:setup-catalog": "node scripts/stripe-setup-catalog.mjs",
     "import:bracketts-wip": "tsx scripts/import-bracketts-wip.mts",
+    "import:bracketts-requirements": "tsx scripts/import-bracketts-requirements.mts",
     "typecheck": "tsc --noEmit",
     "supabase": "supabase",
     "supabase:start": "supabase status || supabase start --exclude realtime",

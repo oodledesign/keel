@@ -16,6 +16,7 @@ export const CreateRequirementSchema = z.object({
   contactPhone: z.string().optional().nullable(),
   companyName: z.string().optional().nullable(),
   sector: z.string().optional().nullable(),
+  useClass: z.string().optional().nullable(),
   tenure: z.enum(['rent', 'buy', 'both']).optional().nullable(),
   locationText: z.string().optional().nullable(),
   sizeMinSqft: z.number().min(0).optional().nullable(),

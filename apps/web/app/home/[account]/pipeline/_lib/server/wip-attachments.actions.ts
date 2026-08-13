@@ -324,6 +324,8 @@ const CreateNoteSchema = withWipScope(
     content: z.string().trim().min(1).max(5000),
     title: z.string().trim().max(200).optional().nullable(),
     assignedToUserId: z.string().uuid().optional().nullable(),
+    /** ISO date or datetime — when the update happened (defaults to now). */
+    occurredAt: z.string().datetime().optional().nullable(),
   }),
 );
 
@@ -347,6 +349,8 @@ export const createWipAttachmentNote = enhanceAction(
       }
     }
 
+    const occurredAt = input.occurredAt?.trim() || new Date().toISOString();
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (client as any)
       .from('notes')
@@ -360,6 +364,8 @@ export const createWipAttachmentNote = enhanceAction(
         assigned_to: input.assignedToUserId || null,
         pipeline_deal_id: input.pipelineDealId || null,
         commercial_requirement_id: input.commercialRequirementId || null,
+        created_at: occurredAt,
+        updated_at: occurredAt,
       })
       .select('id')
       .single();
@@ -376,6 +382,68 @@ export const createWipAttachmentNote = enhanceAction(
     return { id: data.id as string };
   },
   { schema: CreateNoteSchema },
+);
+
+const UpdateNoteSchema = z.object({
+  accountId: z.string().uuid(),
+  accountSlug: z.string().min(1).max(200).optional().nullable(),
+  noteId: z.string().uuid(),
+  content: z.string().trim().min(1).max(5000),
+  assignedToUserId: z.string().uuid().optional().nullable(),
+  occurredAt: z.string().datetime().optional().nullable(),
+});
+
+export const updateWipAttachmentNote = enhanceAction(
+  async (input) => {
+    const client = getSupabaseServerClient();
+
+    if (input.assignedToUserId) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { count, error: membershipError } = await (client as any)
+        .from('accounts_memberships')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_id', input.accountId)
+        .eq('user_id', input.assignedToUserId);
+
+      if (membershipError) {
+        throw new Error(membershipError.message);
+      }
+      if (!count) {
+        throw new Error('Assignee is not a member of this account');
+      }
+    }
+
+    const payload: Record<string, unknown> = {
+      content: input.content.trim(),
+      assigned_to:
+        input.assignedToUserId === undefined
+          ? undefined
+          : input.assignedToUserId || null,
+    };
+
+    if (input.occurredAt?.trim()) {
+      payload.created_at = input.occurredAt.trim();
+    }
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (client as any)
+      .from('notes')
+      .update(payload)
+      .eq('id', input.noteId)
+      .eq('account_id', input.accountId);
+
+    if (error) throw new Error(error.message);
+
+    const slug = input.accountSlug?.trim();
+    if (slug) {
+      revalidatePath(
+        pathsConfig.app.accountPipeline.replace('[account]', slug),
+      );
+    }
+
+    return { id: input.noteId };
+  },
+  { schema: UpdateNoteSchema },
 );
 
 const ListMembersSchema = z.object({
