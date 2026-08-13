@@ -144,7 +144,7 @@ export function CommercialSeatCalculator({
                     ({line.seatsInBand} × {formatGbp(line.unitGbp)})
                   </span>
                 </dt>
-                <dd className="shrink-0 font-medium tabular-nums text-[var(--ozer-plum-950)]">
+                <dd className="shrink-0 font-medium text-[var(--ozer-plum-950)] tabular-nums">
                   {formatGbp(line.subtotalGbp)}
                 </dd>
               </div>
@@ -153,7 +153,7 @@ export function CommercialSeatCalculator({
               <dt className="font-bold text-[var(--ozer-plum-950)]">
                 Estimated monthly total
               </dt>
-              <dd className="text-2xl font-bold tracking-tight tabular-nums text-[var(--ozer-plum-950)]">
+              <dd className="text-2xl font-bold tracking-tight text-[var(--ozer-plum-950)] tabular-nums">
                 {formatGbp(totalGbp)}
                 <span className="text-base font-normal text-[var(--ozer-plum-600)]">
                   /mo

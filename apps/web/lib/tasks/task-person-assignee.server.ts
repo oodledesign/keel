@@ -11,12 +11,7 @@ function displayNameFromParts(
   email: string | null | undefined,
 ): string {
   const composed = [firstName, lastName].filter(Boolean).join(' ').trim();
-  return (
-    fullName?.trim() ||
-    composed ||
-    email?.trim() ||
-    'Unknown'
-  );
+  return fullName?.trim() || composed || email?.trim() || 'Unknown';
 }
 
 /**

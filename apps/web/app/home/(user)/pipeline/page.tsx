@@ -24,7 +24,7 @@ async function PipelineContent() {
 
 function PipelineSkeleton() {
   return (
-    <div className="flex min-h-full w-full flex-col gap-6 px-4 pb-12 pt-6 md:px-6 lg:px-8">
+    <div className="flex min-h-full w-full flex-col gap-6 px-4 pt-6 pb-12 md:px-6 lg:px-8">
       <div className="h-10 w-48 animate-pulse rounded-xl bg-[var(--workspace-shell-sidebar-accent)]" />
       <div className="flex gap-4 overflow-x-auto">
         {Array.from({ length: 7 }).map((_, i) => (

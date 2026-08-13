@@ -9096,6 +9096,7 @@ export type Database = {
         Row: {
           account_id: string | null
           area_id: string | null
+          assigned_to: string | null
           category: string
           client_id: string | null
           client_org_id: string | null
@@ -9123,6 +9124,7 @@ export type Database = {
         Insert: {
           account_id?: string | null
           area_id?: string | null
+          assigned_to?: string | null
           category?: string
           client_id?: string | null
           client_org_id?: string | null
@@ -9150,6 +9152,7 @@ export type Database = {
         Update: {
           account_id?: string | null
           area_id?: string | null
+          assigned_to?: string | null
           category?: string
           client_id?: string | null
           client_org_id?: string | null
@@ -9846,6 +9849,7 @@ export type Database = {
           probability: number | null
           source: string | null
           stage: string | null
+          work_type: string | null
           updated_at: string | null
           value: number | null
           won_at: string | null
@@ -9881,6 +9885,7 @@ export type Database = {
           probability?: number | null
           source?: string | null
           stage?: string | null
+          work_type?: string | null
           updated_at?: string | null
           value?: number | null
           won_at?: string | null
@@ -9916,6 +9921,7 @@ export type Database = {
           probability?: number | null
           source?: string | null
           stage?: string | null
+          work_type?: string | null
           updated_at?: string | null
           value?: number | null
           won_at?: string | null

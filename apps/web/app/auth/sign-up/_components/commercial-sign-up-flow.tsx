@@ -5,9 +5,9 @@ import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
-import { SignUpMethodsContainer } from '@kit/auth/sign-up';
 import { ArrowRight } from 'lucide-react';
 
+import { SignUpMethodsContainer } from '@kit/auth/sign-up';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
@@ -68,10 +68,7 @@ export function CommercialSignUpFlow({
     callback: pathsConfig.auth.callback,
     appHome: nextPath,
   };
-  const signInHref = buildAuthLinkWithNext(
-    pathsConfig.auth.signIn,
-    nextPath,
-  );
+  const signInHref = buildAuthLinkWithNext(pathsConfig.auth.signIn, nextPath);
 
   const billable = clampBillableSeats(seats);
   const monthly = estimateMonthlyGbp(billable);
@@ -83,9 +80,7 @@ export function CommercialSignUpFlow({
       brandEyebrow={context.brandEyebrow}
       brandHeadline={context.brandHeadline}
       brandFooter={<SignupContextPanel context={context} />}
-      formTitle={
-        step === 'plan' ? 'Confirm your plan' : context.formTitle
-      }
+      formTitle={step === 'plan' ? 'Confirm your plan' : context.formTitle}
       formSubtitle={
         step === 'plan'
           ? 'Seats carry through from the pricing calculator — adjust if you need to, then create your account.'

@@ -49,9 +49,7 @@ export function buildCommercialSignupContext(
   intent: SetupIntent,
   seatsOverride?: number,
 ): SignupContext {
-  const seats = clampBillableSeats(
-    seatsOverride ?? intent.seats ?? 4,
-  );
+  const seats = clampBillableSeats(seatsOverride ?? intent.seats ?? 4);
   const tier = illustrativeTierForSeats(seats);
   const monthly = estimateMonthlyGbp(seats);
   const support = freeSupportSeats(seats);
@@ -72,7 +70,8 @@ export function buildCommercialSignupContext(
     formTitle: 'Create an account',
     formSubtitle:
       'Set up your agency workspace — listings, requirements, and portals in one place.',
-    badge: `${tier.label} · ${seats} seat${seats === 1 ? '' : 's'} · trial on paid plans`.toUpperCase(),
+    badge:
+      `${tier.label} · ${seats} seat${seats === 1 ? '' : 's'} · trial on paid plans`.toUpperCase(),
     highlights: [
       `Graduated per-seat pricing (${formatGbp(monthly)}/mo for ${seats} seat${seats === 1 ? '' : 's'})`,
       'Listings, pipeline & requirements',

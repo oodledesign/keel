@@ -67,14 +67,14 @@ class ClientCommercialService {
         .eq('account_id', input.accountId)
         .eq('instructing_client_id', input.clientId)
         .order('updated_at', { ascending: false }),
-        this.client
-          .from('commercial_listing_parties')
-          .select(
-            'listing_id, commercial_listings!inner(id, name, status, updated_at, account_id)',
-          )
-          .eq('account_id', input.accountId)
-          .eq('client_id', input.clientId)
-          .eq('commercial_listings.account_id', input.accountId),
+      this.client
+        .from('commercial_listing_parties')
+        .select(
+          'listing_id, commercial_listings!inner(id, name, status, updated_at, account_id)',
+        )
+        .eq('account_id', input.accountId)
+        .eq('client_id', input.clientId)
+        .eq('commercial_listings.account_id', input.accountId),
     ]);
 
     if (instructingError) throw instructingError;

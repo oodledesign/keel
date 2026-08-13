@@ -275,57 +275,53 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         )}
         aria-labelledby="features-heading"
       >
-        <div
-          className={cn(
-            isCommercial && 'mx-auto w-full max-w-7xl px-6',
-          )}
-        >
-        <div
-          className={cn(
-            'mb-10 max-w-2xl',
-            isCommercial && 'mx-auto text-center',
-          )}
-        >
-          <h2
-            id="features-heading"
+        <div className={cn(isCommercial && 'mx-auto w-full max-w-7xl px-6')}>
+          <div
             className={cn(
-              marketingSectionHeading,
-              'text-[var(--workspace-shell-text)]',
+              'mb-10 max-w-2xl',
+              isCommercial && 'mx-auto text-center',
             )}
           >
-            {isCommercial
-              ? 'Built for the commercial workspace'
-              : `Everything you need for ${config.hero.eyebrow.toLowerCase()}`}
-          </h2>
-          <p className={`mt-3 ${marketingBodyText}`}>
-            {config.slug === 'personal'
-              ? 'Modules connect through your personal home — tasks, planner, and shortcuts span every workspace you add.'
-              : config.slug === 'work'
-                ? 'Your business workspace runs inside your Ozer account — clients, jobs, and invoices link back to one home, not a separate silo.'
-                : 'Everything fee-earners need on one commercial desk: disposals, pipeline, requirements, interest, and publishing.'}
-          </p>
-        </div>
-        <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
-          {config.features.map((feature) => (
-            <article
-              key={feature.title}
-              className="marketing-feature-card rounded-2xl border border-[color:var(--workspace-shell-border)] p-6"
+            <h2
+              id="features-heading"
+              className={cn(
+                marketingSectionHeading,
+                'text-[var(--workspace-shell-text)]',
+              )}
             >
-              <feature.icon
-                className="h-5 w-5 text-[var(--ozer-accent)]"
-                aria-hidden
-              />
-              <h3 className="font-heading mt-4 text-xl font-semibold text-[var(--workspace-shell-text)]">
-                {feature.title}
-              </h3>
-              <p
-                className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
+              {isCommercial
+                ? 'Built for the commercial workspace'
+                : `Everything you need for ${config.hero.eyebrow.toLowerCase()}`}
+            </h2>
+            <p className={`mt-3 ${marketingBodyText}`}>
+              {config.slug === 'personal'
+                ? 'Modules connect through your personal home — tasks, planner, and shortcuts span every workspace you add.'
+                : config.slug === 'work'
+                  ? 'Your business workspace runs inside your Ozer account — clients, jobs, and invoices link back to one home, not a separate silo.'
+                  : 'Everything fee-earners need on one commercial desk: disposals, pipeline, requirements, interest, and publishing.'}
+            </p>
+          </div>
+          <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3">
+            {config.features.map((feature) => (
+              <article
+                key={feature.title}
+                className="marketing-feature-card rounded-2xl border border-[color:var(--workspace-shell-border)] p-6"
               >
-                {feature.description}
-              </p>
-            </article>
-          ))}
-        </div>
+                <feature.icon
+                  className="h-5 w-5 text-[var(--ozer-accent)]"
+                  aria-hidden
+                />
+                <h3 className="font-heading mt-4 text-xl font-semibold text-[var(--workspace-shell-text)]">
+                  {feature.title}
+                </h3>
+                <p
+                  className={`mt-2 text-sm leading-relaxed ${marketingMutedText}`}
+                >
+                  {feature.description}
+                </p>
+              </article>
+            ))}
+          </div>
         </div>
       </section>
 
@@ -803,37 +799,23 @@ async function CommercialSpotlightSections({
                 record the desk already maintains.
               </p>
             </div>
-            <ul className="flex flex-col gap-4">
+            <ul className="flex flex-col items-start justify-center gap-8 sm:gap-10 lg:items-end">
               {integrations.map((integration) => (
                 <li key={integration.name}>
-                  <article className="flex items-center gap-4 rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-08)] px-4 py-3 sm:px-5 sm:py-4">
-                    <div
-                      className={cn(
-                        'flex h-16 w-[11.5rem] shrink-0 items-center justify-center rounded-xl px-3',
-                        integration.logoSurface === 'dark'
-                          ? 'bg-black'
-                          : 'bg-[var(--ozer-cream-50)]',
-                      )}
-                    >
-                      {integration.logoSrc ? (
-                        <Image
-                          src={integration.logoSrc}
-                          alt={`${integration.name} logo`}
-                          width={180}
-                          height={48}
-                          unoptimized
-                          className="h-10 max-h-12 w-auto max-w-[10.5rem] object-contain"
-                        />
-                      ) : (
-                        <p className="font-heading text-sm font-bold text-[var(--ozer-plum-950)]">
-                          {integration.name}
-                        </p>
-                      )}
-                    </div>
-                    <p className="text-sm leading-relaxed text-[var(--ozer-text-on-dark-muted)]">
-                      {integration.description}
+                  {integration.logoSrc ? (
+                    <Image
+                      src={integration.logoSrc}
+                      alt={`${integration.name} logo`}
+                      width={220}
+                      height={56}
+                      unoptimized
+                      className="h-12 w-auto max-w-[14rem] object-contain sm:h-14 sm:max-w-[16rem]"
+                    />
+                  ) : (
+                    <p className="font-heading text-lg font-bold text-[var(--ozer-text-on-dark)]">
+                      {integration.name}
                     </p>
-                  </article>
+                  )}
                 </li>
               ))}
             </ul>

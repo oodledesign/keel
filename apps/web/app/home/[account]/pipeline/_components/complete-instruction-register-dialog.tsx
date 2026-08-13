@@ -21,8 +21,9 @@ import {
   createListing,
   updateListing,
 } from '~/home/[account]/listings/_lib/server/server-actions';
-import { instructionTitle } from '../_lib/instruction-title';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
+
+import { instructionTitle } from '../_lib/instruction-title';
 
 type Outcome = 'sale' | 'letting';
 

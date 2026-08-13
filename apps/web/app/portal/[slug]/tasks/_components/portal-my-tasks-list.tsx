@@ -32,9 +32,7 @@ export function PortalMyTasksList({
       try {
         const updated = await completePortalMyTask({ clientOrgId, taskId });
         if (updated) {
-          setTasks((prev) =>
-            prev.map((t) => (t.id === taskId ? updated : t)),
-          );
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
           toast.success('Marked complete');
         } else {
           toast.error('Could not update task');
@@ -115,7 +113,7 @@ export function PortalMyTasksList({
           {doneTasks.map((task) => (
             <Card key={task.id} className="opacity-70">
               <CardHeader className="pb-2">
-                <CardTitle className="text-base line-through text-[var(--ozer-text-on-light)]">
+                <CardTitle className="text-base text-[var(--ozer-text-on-light)] line-through">
                   {task.title}
                 </CardTitle>
               </CardHeader>

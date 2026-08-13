@@ -22,6 +22,7 @@
     "start:test": "NODE_ENV=test next start",
     "test:unit": "vitest run",
     "stripe:setup-catalog": "node scripts/stripe-setup-catalog.mjs",
+    "import:bracketts-wip": "tsx scripts/import-bracketts-wip.mts",
     "typecheck": "tsc --noEmit",
     "supabase": "supabase",
     "supabase:start": "supabase status || supabase start --exclude realtime",

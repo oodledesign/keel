@@ -207,7 +207,7 @@ export async function createTaskForUser(
   // Team assignee overrides creator when no contact is set.
   const assigneeUserId = assigneeContactId
     ? userId
-    : (input.assigneeUserId?.trim() || userId);
+    : input.assigneeUserId?.trim() || userId;
 
   const insertRow = {
     title,

@@ -765,9 +765,7 @@ class ClientPortalService {
 
     const projectIds = [
       ...new Set(
-        rows
-          .map((r) => r.project_id)
-          .filter((id): id is string => Boolean(id)),
+        rows.map((r) => r.project_id).filter((id): id is string => Boolean(id)),
       ),
     ];
     const projectNameById = new Map<string, string>();
@@ -846,8 +844,7 @@ class ClientPortalService {
         .select('name')
         .eq('id', row.project_id)
         .maybeSingle();
-      projectName =
-        (project as { name?: string | null } | null)?.name ?? null;
+      projectName = (project as { name?: string | null } | null)?.name ?? null;
     }
 
     return {

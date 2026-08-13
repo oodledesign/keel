@@ -13,8 +13,7 @@ export const marketingFeatureCard = 'marketing-feature-card';
 
 export const marketingSectionMuted = 'marketing-section-muted';
 
-export const marketingBtnPress =
-  `transition-[transform,background-color,opacity,border-color] duration-[160ms] ${easeOut} active:scale-[0.97]`;
+export const marketingBtnPress = `transition-[transform,background-color,opacity,border-color] duration-[160ms] ${easeOut} active:scale-[0.97]`;
 
 export const marketingBtnPrimary = `h-11 rounded-full bg-[var(--ozer-accent)] px-6 text-[var(--ozer-plum-950)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--ozer-cream-50)] dark:focus-visible:ring-offset-[var(--ozer-plum-900)] ${marketingBtnPress}`;
 
@@ -30,8 +29,7 @@ export const marketingEyebrow =
   'inline-flex w-fit max-w-full items-center self-start rounded-full border border-[var(--ozer-accent)]/30 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-medium uppercase tracking-[0.14em] text-[var(--ozer-coral-600)]';
 
 /** Accent phrase in headlines — solid Orange Topaze, not a gradient fill. */
-export const marketingHeadlineGradient =
-  'text-[var(--ozer-accent)]';
+export const marketingHeadlineGradient = 'text-[var(--ozer-accent)]';
 
 export const marketingCard =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -91,9 +89,11 @@ export const marketingNavPanel =
   'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/98 text-[var(--workspace-shell-text)]';
 
 /** Fixed plum sections (hero bands, pricing) — always use on-dark text */
-export const marketingSectionDark = 'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]';
+export const marketingSectionDark =
+  'bg-[var(--ozer-plum-950)] text-[var(--ozer-text-on-dark)]';
 
-export const marketingSectionDarkMuted = 'text-[var(--ozer-text-on-dark-muted)]';
+export const marketingSectionDarkMuted =
+  'text-[var(--ozer-text-on-dark-muted)]';
 
 export const marketingEyebrowOnDark =
   'inline-flex w-fit max-w-full items-center self-start rounded-full border border-[var(--ozer-accent)]/35 bg-[var(--ozer-accent-subtle)] px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] text-[var(--ozer-coral-400)]';

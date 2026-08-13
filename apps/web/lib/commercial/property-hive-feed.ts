@@ -231,7 +231,9 @@ async function createSignedUrlMap(
   client: SupabaseClient,
   storagePaths: string[],
 ): Promise<Map<string, string>> {
-  const unique = [...new Set(storagePaths.map((p) => p.trim()).filter(Boolean))];
+  const unique = [
+    ...new Set(storagePaths.map((p) => p.trim()).filter(Boolean)),
+  ];
   const signedByPath = new Map<string, string>();
   const CHUNK = 100;
 

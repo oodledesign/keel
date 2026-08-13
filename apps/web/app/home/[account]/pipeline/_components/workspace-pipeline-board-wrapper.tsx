@@ -34,6 +34,7 @@ import { DEFAULT_COMMERCIAL_WIP_BOARD_NAME } from '~/lib/commercial/commercial-c
 import type { PipelineStageConfigItem } from '~/lib/commercial/pipeline-stage-config';
 
 import { instructionTitle } from '../_lib/instruction-title';
+import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
 import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
 import { CompleteInstructionRegisterDialog } from './complete-instruction-register-dialog';
 
@@ -61,6 +62,7 @@ type Props = {
   boardName?: string;
   initialRequirements?: CommercialRequirement[];
   attentionDigest?: WipAttentionDigest | null;
+  deskActivity?: WipDeskActivityItem[];
   /** When true, rely on the page header for title/description. */
   hideBoardTitle?: boolean;
 };
@@ -76,6 +78,7 @@ export function WorkspacePipelineBoardWrapper({
   boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
   initialRequirements = [],
   attentionDigest = null,
+  deskActivity = [],
   hideBoardTitle = false,
 }: Props) {
   const router = useRouter();
@@ -142,6 +145,7 @@ export function WorkspacePipelineBoardWrapper({
           stageConfig={stageConfig}
           boardName={boardName}
           attentionDigest={attentionDigest}
+          deskActivity={deskActivity}
           onDealWon={handleDealWon}
           onRequestCreateDisposal={openDisposalForm}
           onInstructionCreated={(deal) => setNewInstructionDeal(deal)}

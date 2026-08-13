@@ -43,8 +43,7 @@ export const PERSONAL_ASSISTANTS_MARKETING: PersonalAssistantMarketing[] = [
       'Record, transcribe, and extract tasks from meetings — synced to the right workspace',
     icon: Mic,
     billing: 'included',
-    addonTooltip:
-      'Included — 2 hrs/mo on Personal & Lite; unlimited on Solo+',
+    addonTooltip: 'Included — 2 hrs/mo on Personal & Lite; unlimited on Solo+',
   },
   {
     id: 'planner',

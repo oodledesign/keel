@@ -24,6 +24,8 @@ export type PipelineDeal = {
   description: string | null;
   value: number;
   stage: string;
+  /** Commercial instruction kind (agency / professional / management). */
+  workType: string | null;
   nextAction: string;
   nextActionDate: string | null;
   businessId: string;
@@ -71,6 +73,7 @@ type PipelineDealRow = {
   accounts?: { name?: string | null } | null;
   clients?: { display_name?: string | null } | null;
   commercial_listing_id?: string | null;
+  work_type?: string | null;
   hots_rent_psf?: number | null;
   hots_size_sqft?: number | null;
   hots_lease_years?: number | null;
@@ -120,6 +123,7 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
     description: row.notes?.trim() || null,
     value: row.value ?? 0,
     stage: row.stage ?? 'lead',
+    workType: row.work_type ?? null,
     nextAction: row.next_action ?? '',
     nextActionDate: row.next_action_date ?? null,
     businessId: syntheticBizId,
@@ -144,7 +148,7 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
 export { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 
 const DEAL_SELECT =
-  'id, name, contact_name, company_name, notes, value, stage, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, businesses(name, colour), accounts(name), clients(display_name)';
+  'id, name, contact_name, company_name, notes, value, stage, work_type, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, businesses(name, colour), accounts(name), clients(display_name)';
 
 // ─── Loader ──────────────────────────────────────────────────────────
 

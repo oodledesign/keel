@@ -54,9 +54,7 @@ export function resolvePersonAssigneeFromSuggestion(
     : options;
 
   if (email) {
-    const byEmail = pool.find(
-      (o) => o.email?.trim().toLowerCase() === email,
-    );
+    const byEmail = pool.find((o) => o.email?.trim().toLowerCase() === email);
     if (byEmail) return byEmail;
   }
 
@@ -81,7 +79,5 @@ export function matchAssigneeOptionByEmail(
 ): TaskPersonAssigneeOption | null {
   const target = email?.trim().toLowerCase();
   if (!target) return null;
-  return (
-    options.find((o) => o.email?.trim().toLowerCase() === target) ?? null
-  );
+  return options.find((o) => o.email?.trim().toLowerCase() === target) ?? null;
 }

@@ -186,10 +186,7 @@ export async function extractWorkspaceTasksWithAnthropic(
     .map((m) => `- ${m.name?.trim() || m.email} <${m.email}> [member]`)
     .join('\n');
   const contactLines = (context.contacts ?? [])
-    .map(
-      (c) =>
-        `- ${c.name}${c.email ? ` <${c.email}>` : ''} [contact]`,
-    )
+    .map((c) => `- ${c.name}${c.email ? ` <${c.email}>` : ''} [contact]`)
     .join('\n');
 
   const meetingDateYmd =

@@ -140,7 +140,7 @@ export function OzerVsOthersSection() {
                       <span className="relative inline-flex items-center justify-center px-2 py-1">
                         <span
                           aria-hidden
-                          className="pointer-events-none absolute inset-[-0.35rem_-0.55rem] rounded-[999px] border-[1.5px] border-[var(--ozer-accent)] opacity-90 [transform:rotate(-2deg)]"
+                          className="pointer-events-none absolute inset-[-0.35rem_-0.55rem] [transform:rotate(-2deg)] rounded-[999px] border-[1.5px] border-[var(--ozer-accent)] opacity-90"
                         />
                         <span className="relative text-sm font-bold text-[var(--ozer-accent)]">
                           {column.price}
@@ -229,9 +229,7 @@ function FeatureRow({ row }: { row: CompetitorMatrixRow }) {
         >
           {row.feature}
         </span>
-        {row.hint ? (
-          <span className="sr-only">{row.hint}</span>
-        ) : null}
+        {row.hint ? <span className="sr-only">{row.hint}</span> : null}
       </th>
       {COMPETITOR_MATRIX_COLUMNS.map((column) => (
         <td

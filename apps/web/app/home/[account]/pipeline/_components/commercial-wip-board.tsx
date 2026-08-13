@@ -31,7 +31,14 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { LayoutGrid, MoreHorizontal, Pencil, Plus, Table2 } from 'lucide-react';
+import {
+  LayoutGrid,
+  ListTree,
+  MoreHorizontal,
+  Pencil,
+  Plus,
+  Table2,
+} from 'lucide-react';
 
 import {
   AlertDialog,
@@ -100,8 +107,11 @@ import {
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
+import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
 import type { WipAttentionDigest } from '../_lib/server/wip-attention.loader';
+import { WipLadderView } from './wip-ladder-view';
 import { WipNeedsAttentionStrip } from './wip-needs-attention-strip';
+import { WipRecentUpdatesStrip } from './wip-recent-updates-strip';
 import { WipSheetView } from './wip-sheet-view';
 
 const panelClass =
@@ -113,10 +123,11 @@ const VIEW_OPTIONS: Array<{ key: WipBoardView; label: string }> = [
   { key: 'both', label: 'Both' },
 ];
 
-type WipLayoutMode = 'board' | 'sheet';
+type WipLayoutMode = 'board' | 'sheet' | 'ladder';
 
 function parseWipLayoutMode(raw: string | null): WipLayoutMode {
-  return raw === 'sheet' ? 'sheet' : 'board';
+  if (raw === 'sheet' || raw === 'ladder') return raw;
+  return 'board';
 }
 
 type BoardCard =
@@ -139,6 +150,7 @@ type Props = {
   stageConfig?: PipelineStageConfigItem[];
   boardName?: string;
   attentionDigest?: WipAttentionDigest | null;
+  deskActivity?: WipDeskActivityItem[];
   onDealWon?: (deal: PipelineDeal) => void;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
   onInstructionCreated?: (deal: PipelineDeal) => void;
@@ -212,6 +224,7 @@ export function CommercialWipBoard({
   stageConfig,
   boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
   attentionDigest = null,
+  deskActivity: initialDeskActivity = [],
   onDealWon,
   onRequestCreateDisposal,
   onInstructionCreated,
@@ -229,6 +242,8 @@ export function CommercialWipBoard({
   const [layout, setLayoutState] = useState<WipLayoutMode>(() =>
     parseWipLayoutMode(searchParams.get('layout')),
   );
+  const [deskActivity, setDeskActivity] =
+    useState<WipDeskActivityItem[]>(initialDeskActivity);
   const [createDismissed, setCreateDismissed] = useState(false);
   const [isViewSwitching, setIsViewSwitching] = useState(false);
   const viewSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -262,6 +277,10 @@ export function CommercialWipBoard({
   useEffect(() => {
     setRequirements(initialRequirements);
   }, [initialRequirements]);
+
+  useEffect(() => {
+    setDeskActivity(initialDeskActivity);
+  }, [initialDeskActivity]);
 
   // Do not sync view from useSearchParams after mount — Next's router URL can
   // lag behind history.replaceState, and router.refresh() would snap the tab
@@ -778,6 +797,19 @@ export function CommercialWipBoard({
               <Table2 className="h-3.5 w-3.5" />
               Sheet
             </button>
+            <button
+              type="button"
+              aria-pressed={layout === 'ladder'}
+              onClick={() => setLayout('ladder')}
+              className={`inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 font-medium transition-colors ${
+                layout === 'ladder'
+                  ? 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]'
+                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]'
+              }`}
+            >
+              <ListTree className="h-3.5 w-3.5" />
+              Ladder
+            </button>
           </div>
 
           <DropdownMenu>
@@ -852,6 +884,16 @@ export function CommercialWipBoard({
           digest={attentionDigest}
         />
       ) : null}
+
+      <WipRecentUpdatesStrip
+        items={deskActivity}
+        onOpenInstruction={(pipelineDealId) => {
+          const deal = deals.find((item) => item.id === pipelineDealId);
+          if (!deal) return;
+          setDealToEdit(deal);
+          setEditDealOpen(true);
+        }}
+      />
 
       <CustomizePipelinePhasesDialog
         accountId={accountId}
@@ -966,6 +1008,24 @@ export function CommercialWipBoard({
             setDealToEdit(deal);
             setEditDealOpen(true);
           }}
+        />
+      ) : layout === 'ladder' ? (
+        <WipLadderView
+          accountId={accountId}
+          accountSlug={accountSlug}
+          deals={deals}
+          stages={instructionStages.map((stage) => ({
+            key: stage.key,
+            label: stage.label,
+          }))}
+          deskActivity={deskActivity}
+          onDealsChange={setDeals}
+          onEditInstruction={(deal) => {
+            setDealToEdit(deal);
+            setEditDealOpen(true);
+          }}
+          onDealWon={onDealWon}
+          onActivityChanged={() => router.refresh()}
         />
       ) : (
         <DndContext

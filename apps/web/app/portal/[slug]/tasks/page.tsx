@@ -2,7 +2,6 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
 import { createClientPortalService } from '../_lib/server/client-portal.service';
-
 import { PortalMyTasksList } from './_components/portal-my-tasks-list';
 
 interface PortalMyTasksPageProps {
@@ -30,10 +29,7 @@ export default async function PortalMyTasksPage({
         </p>
       </div>
 
-      <PortalMyTasksList
-        clientOrgId={ctx.clientOrgId}
-        initialTasks={tasks}
-      />
+      <PortalMyTasksList clientOrgId={ctx.clientOrgId} initialTasks={tasks} />
     </div>
   );
 }

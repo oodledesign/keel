@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
-import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +35,7 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import { ProfileAvatar } from '@kit/ui/profile-avatar';
 import {
   Select,
   SelectContent,

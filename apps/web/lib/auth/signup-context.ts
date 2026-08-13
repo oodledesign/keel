@@ -70,7 +70,14 @@ function isPaidBusinessProduct(productId: string | undefined) {
 }
 
 function withPersonalDefaults(
-  partial: Omit<SignupContext, 'brandEyebrow' | 'brandHeadline' | 'formTitle' | 'formSubtitle' | 'showPlanConfirm'> &
+  partial: Omit<
+    SignupContext,
+    | 'brandEyebrow'
+    | 'brandHeadline'
+    | 'formTitle'
+    | 'formSubtitle'
+    | 'showPlanConfirm'
+  > &
     Partial<
       Pick<
         SignupContext,

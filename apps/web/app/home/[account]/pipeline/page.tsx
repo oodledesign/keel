@@ -21,6 +21,7 @@ import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { WorkspacePipelineBoardWrapper } from './_components/workspace-pipeline-board-wrapper';
 import { loadPipelineBoardSettings } from './_lib/server/pipeline-stage-settings.loader';
 import { loadWipAttentionDigest } from './_lib/server/wip-attention.loader';
+import { loadWipDeskActivity } from './_lib/server/wip-desk-activity.loader';
 
 interface TeamAccountPipelinePageProps {
   params: Promise<{ account: string }>;
@@ -89,6 +90,7 @@ async function TeamAccountPipelinePage({
   let attentionDigest = null as Awaited<
     ReturnType<typeof loadWipAttentionDigest>
   > | null;
+  let deskActivity = [] as Awaited<ReturnType<typeof loadWipDeskActivity>>;
 
   if (isCommercial) {
     // commercial_* tables may lag generated Database types
@@ -100,6 +102,7 @@ async function TeamAccountPipelinePage({
       agentResult,
       requirementsList,
       attention,
+      activity,
     ] = await Promise.all([
       db
         .from('commercial_listings')
@@ -116,10 +119,12 @@ async function TeamAccountPipelinePage({
         .order('sort_order', { ascending: true }),
       createRequirementsService(client).listRequirements(accountId),
       loadWipAttentionDigest(client, accountId),
+      loadWipDeskActivity(client, accountId),
     ]);
 
     requirements = requirementsList;
     attentionDigest = attention;
+    deskActivity = activity;
 
     const agentRows = (agentResult.data ?? []) as Array<{
       listing_id: string;
@@ -215,6 +220,7 @@ async function TeamAccountPipelinePage({
           boardName={boardName}
           initialRequirements={requirements}
           attentionDigest={attentionDigest}
+          deskActivity={deskActivity}
           hideBoardTitle
         />
       </PageBody>

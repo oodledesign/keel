@@ -895,7 +895,10 @@ export function createListingsService(client: SupabaseClient) {
         .order('updated_at', { ascending: false });
 
       if (error) {
-        console.error('[listings] listCompletedDisposals error:', error.message);
+        console.error(
+          '[listings] listCompletedDisposals error:',
+          error.message,
+        );
         return [];
       }
 

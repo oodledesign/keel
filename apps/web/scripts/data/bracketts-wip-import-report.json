@@ -1,0 +1,2812 @@
+{
+  "generatedAt": "2026-08-13T13:54:42.541Z",
+  "account": {
+    "id": "c4e7c6b1-e4f0-43ee-a768-6b3782e50d62",
+    "slug": "bracketts",
+    "name": "Bracketts"
+  },
+  "mode": "dry-run",
+  "minMatch": 0.95,
+  "totals": {
+    "instructions": 156,
+    "create": 156,
+    "skipExisting": 0,
+    "autoLinked": 8,
+    "needsReview": 31,
+    "withCandidates": 47,
+    "chaseNotes": 1213
+  },
+  "authorResolution": {
+    "DT": "8e8cf7a6-9fdb-4773-8817-96ac0fbfdabc",
+    "AM": null,
+    "DB": null,
+    "JOB": null
+  },
+  "rows": [
+    {
+      "importKey": "bracketts_wip_csv_202605:row:3:billed",
+      "title": "billed",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Unsectioned",
+      "feeGbp": 110904,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:4:u-o",
+      "title": "U/O",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Unsectioned",
+      "feeGbp": 115076,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:8:8-high-street-hitw",
+      "title": "8 High Street - HiTW",
+      "stage": "completed_exchanged",
+      "workType": "professional",
+      "section": "PROFESSIONAL & MI BILLED",
+      "feeGbp": 1540,
+      "chaseNoteCount": 23,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:9:2-lyons-valuation",
+      "title": "2 Lyons Valuation",
+      "stage": "completed_exchanged",
+      "workType": "professional",
+      "section": "PROFESSIONAL & MI BILLED",
+      "feeGbp": 750,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:10:riverbank-house",
+      "title": "Riverbank House",
+      "stage": "completed_exchanged",
+      "workType": "professional",
+      "section": "PROFESSIONAL & MI BILLED",
+      "feeGbp": 1750,
+      "chaseNoteCount": 22,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:11:staplehurst",
+      "title": "Staplehurst",
+      "stage": "completed_exchanged",
+      "workType": "professional",
+      "section": "PROFESSIONAL & MI BILLED",
+      "feeGbp": 1250,
+      "chaseNoteCount": 4,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:12:rock-road-borough-green",
+      "title": "Rock Road Borough Green",
+      "stage": "completed_exchanged",
+      "workType": "professional",
+      "section": "PROFESSIONAL & MI BILLED",
+      "feeGbp": 1250,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:13:bon-marche",
+      "title": "Bon Marche",
+      "stage": "completed_exchanged",
+      "workType": "professional",
+      "section": "PROFESSIONAL & MI BILLED",
+      "feeGbp": 495,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:16:47-hs-val",
+      "title": "47 HS Val",
+      "stage": "current",
+      "workType": "professional",
+      "section": "PROFESSIONAL",
+      "feeGbp": 850,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:17:96-high-street",
+      "title": "96 High Street",
+      "stage": "current",
+      "workType": "professional",
+      "section": "PROFESSIONAL",
+      "feeGbp": 1750,
+      "chaseNoteCount": 21,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:18:costa-coffee-23-high-street-tonbridge",
+      "title": "Costa Coffee 23 High Street Tonbridge",
+      "stage": "current",
+      "workType": "professional",
+      "section": "PROFESSIONAL",
+      "feeGbp": 1750,
+      "chaseNoteCount": 22,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:19:84-high-street-tonbridge-cook",
+      "title": "84 High Street Tonbridge (Cook)",
+      "stage": "current",
+      "workType": "professional",
+      "section": "PROFESSIONAL",
+      "feeGbp": 1750,
+      "chaseNoteCount": 6,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:20:one-stop-hildenborough",
+      "title": "One Stop Hildenborough",
+      "stage": "current",
+      "workType": "professional",
+      "section": "PROFESSIONAL",
+      "feeGbp": 1750,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:21:27-high-street-tonbridge-eden-valley",
+      "title": "27 High Street Tonbridge Eden Valley",
+      "stage": "current",
+      "workType": "professional",
+      "section": "PROFESSIONAL",
+      "feeGbp": null,
+      "chaseNoteCount": 9,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:22:paris-farm",
+      "title": "Paris Farm",
+      "stage": "current",
+      "workType": "professional",
+      "section": "PROFESSIONAL",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:23:8-high-street-otford",
+      "title": "8 High Street Otford",
+      "stage": "current",
+      "workType": "professional",
+      "section": "PROFESSIONAL",
+      "feeGbp": 1250,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:26:poundland-high-street-tonbridge-poudland",
+      "title": "Poundland High Street Tonbridge (Poudland)",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 11135,
+      "chaseNoteCount": 34,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "327a87af-86b1-4941-8bf1-4d03bcfe6751",
+        "name": "150-152 High Street, Tonbridge",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "327a87af-86b1-4941-8bf1-4d03bcfe6751",
+          "name": "150-152 High Street, Tonbridge",
+          "score": 0.75
+        },
+        {
+          "id": "404861fb-6e7d-4030-8c26-d03a3dbe681b",
+          "name": "89 High Street, Tonbridge",
+          "score": 0.75
+        },
+        {
+          "id": "54609cd9-a397-41af-8119-159f3b460bde",
+          "name": "77-81 High Street, Tonbridge",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:27:158-high-street-rpc",
+      "title": "158 High Street (RPC)",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 2060,
+      "chaseNoteCount": 11,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:28:downs-court-yalding-6",
+      "title": "Downs Court Yalding 6",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 1750,
+      "chaseNoteCount": 15,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:29:unit-1b-munday-works",
+      "title": "Unit 1B Munday Works",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 5300,
+      "chaseNoteCount": 21,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:30:st-eanswythes-mission-hall-58-priory",
+      "title": "St Eanswythes Mission Hall - 58 Priory",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 1750,
+      "chaseNoteCount": 23,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:31:unit-13-eldon-way",
+      "title": "Unit 13 Eldon Way",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 4125,
+      "chaseNoteCount": 11,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:32:seal-crown",
+      "title": "Seal Crown",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 450,
+      "chaseNoteCount": 4,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "41de3166-5a70-49dc-9133-f1f2258771d0",
+        "name": "The Crown",
+        "score": 0.5,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "41de3166-5a70-49dc-9133-f1f2258771d0",
+          "name": "The Crown",
+          "score": 0.5
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:33:riverside-house",
+      "title": "Riverside House",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 352,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "8b68e7ed-fe5d-4616-9af9-1b1ebea44907",
+        "name": "Riverside House, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "8b68e7ed-fe5d-4616-9af9-1b1ebea44907",
+          "name": "Riverside House, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:34:maid-of-kent",
+      "title": "Maid of Kent",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 2600,
+      "chaseNoteCount": 15,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:35:coach-house-bordyke-fyi-19k-for-18k-aim-code-8785",
+      "title": "COACH HOUSE BORDYKE FYI £19k for £18k aim CODE 8785",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 1900,
+      "chaseNoteCount": 36,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:36:tatlingbury-oast",
+      "title": "Tatlingbury oast",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 11500,
+      "chaseNoteCount": 23,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:37:western-ave-borough-green",
+      "title": "Western Ave Borough Green",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 6225,
+      "chaseNoteCount": 6,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:38:18-east-street",
+      "title": "18 East Street",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 1412,
+      "chaseNoteCount": 38,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:39:cob-tree",
+      "title": "Cob Tree",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 8750,
+      "chaseNoteCount": 25,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:40:paddock-wood-9-ranjan",
+      "title": "paddock Wood 9 Ranjan",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 260,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:41:shoreham-arch-co",
+      "title": "Shoreham Arch Co",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 3800,
+      "chaseNoteCount": 6,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:42:the-brooder-house",
+      "title": "The Brooder House",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 4200,
+      "chaseNoteCount": 18,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:43:105-109-high-street-barclays",
+      "title": "105-109 High Street (Barclays)",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 3300,
+      "chaseNoteCount": 40,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "63941c8a-544d-4dbf-ac09-347cf26e9c51",
+        "name": "First Floor & Second Floor 105-109 High Street, Tonbridge",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "63941c8a-544d-4dbf-ac09-347cf26e9c51",
+          "name": "First Floor & Second Floor 105-109 High Street, Tonbridge",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:44:yalding-enterprise-park-yep-units-b1-2-padel-studio",
+      "title": "Yalding Enterprise Park (YEP) Units B1&2 - padel studio",
+      "stage": "completed_exchanged",
+      "workType": "agency",
+      "section": "AGENCY BILLED",
+      "feeGbp": 33000,
+      "chaseNoteCount": 18,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "e448b912-28b5-436b-aaf4-c05b6db3cd44",
+        "name": "Unit B1, Yalding Enterprise Park, Yalding",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "e448b912-28b5-436b-aaf4-c05b6db3cd44",
+          "name": "Unit B1, Yalding Enterprise Park, Yalding",
+          "score": 0.75
+        },
+        {
+          "id": "59f9b5fe-7cc7-4078-b334-09ee9155491d",
+          "name": "Unit B5, Yalding Enterprise Park, Yalding",
+          "score": 0.75
+        },
+        {
+          "id": "c27dd57c-b953-4c68-a323-e09c3cd156c9",
+          "name": "Unit B4, Yalding Enterprise Park, Yalding",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:47:unit-8-deacon-ind-est-hitw-aml-tenant-done-cannot-do-on-ll-as-jersey-based",
+      "title": "Unit 8 Deacon Ind Est HITW - AML tenant done - cannot do on LL as jersey based",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 15897,
+      "chaseNoteCount": 51,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:48:dartford-priory-centre-32",
+      "title": "Dartford Priory Centre 32",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 750,
+      "chaseNoteCount": 6,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "268781ba-7cea-43b8-8cfe-9e191d23caea",
+        "name": "Priory Shopping Centre, Dartford",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "268781ba-7cea-43b8-8cfe-9e191d23caea",
+          "name": "Priory Shopping Centre, Dartford",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:49:railway-approach-unit-2",
+      "title": "Railway Approach - unit 2",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 1700,
+      "chaseNoteCount": 9,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "0389a727-3ce7-4859-9a61-3a112678687a",
+        "name": "2 Railway Approach, Tonbridge",
+        "score": 0.6,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "0389a727-3ce7-4859-9a61-3a112678687a",
+          "name": "2 Railway Approach, Tonbridge",
+          "score": 0.6
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:50:31-commercial-road-paddock-wood",
+      "title": "31 Commercial Road PAddock Wood",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 6750,
+      "chaseNoteCount": 28,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "1fccf0b5-ff19-4e83-9857-d6f365e7bfd1",
+        "name": "31 Commercial Road, Paddock Wood",
+        "score": 1,
+        "autoLink": true
+      },
+      "listingCandidates": [
+        {
+          "id": "1fccf0b5-ff19-4e83-9857-d6f365e7bfd1",
+          "name": "31 Commercial Road, Paddock Wood",
+          "score": 1
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:51:119-high-street",
+      "title": "119 High STreet",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 2200,
+      "chaseNoteCount": 28,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "9295f6f1-f30e-4357-b548-9d8ca8a2796b",
+        "name": "119 High Street, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "9295f6f1-f30e-4357-b548-9d8ca8a2796b",
+          "name": "119 High Street, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:52:weald-court",
+      "title": "Weald Court",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 3000,
+      "chaseNoteCount": 20,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "f4f84de8-798a-4a2c-8131-67bcfee408a6",
+        "name": "Weald Court, Tonbridge",
+        "score": 0.667,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "f4f84de8-798a-4a2c-8131-67bcfee408a6",
+          "name": "Weald Court, Tonbridge",
+          "score": 0.667
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:53:124-high-street-tonbridge",
+      "title": "124 High Street Tonbridge",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 5000,
+      "chaseNoteCount": 5,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "2b1a3c06-814c-4a53-bde9-6e4bd87e7b7d",
+        "name": "124 High Street, Tonbridge",
+        "score": 1,
+        "autoLink": true
+      },
+      "listingCandidates": [
+        {
+          "id": "2b1a3c06-814c-4a53-bde9-6e4bd87e7b7d",
+          "name": "124 High Street, Tonbridge",
+          "score": 1
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:54:the-hop-pole",
+      "title": "The Hop Pole",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 7000,
+      "chaseNoteCount": 20,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "7ea354e9-53fb-48c8-8bed-8db869081bac",
+        "name": "The Hop Pole",
+        "score": 1,
+        "autoLink": true
+      },
+      "listingCandidates": [
+        {
+          "id": "7ea354e9-53fb-48c8-8bed-8db869081bac",
+          "name": "The Hop Pole",
+          "score": 1
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:55:177-high-street",
+      "title": "177 High Street",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 4810,
+      "chaseNoteCount": 26,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "07ce93f6-139f-4894-8382-dec7c45f88e2",
+        "name": "177 High Street, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "07ce93f6-139f-4894-8382-dec7c45f88e2",
+          "name": "177 High Street, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:56:1-quarry-hill",
+      "title": "1 Quarry Hill",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 1750,
+      "chaseNoteCount": 11,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "0a42c2a6-b1e8-41ab-8750-0ed171d63089",
+        "name": "1 Quarry Hill Road, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "0a42c2a6-b1e8-41ab-8750-0ed171d63089",
+          "name": "1 Quarry Hill Road, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:57:james-millard",
+      "title": "James Millard",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 9010,
+      "chaseNoteCount": 16,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:58:kcc-depot",
+      "title": "KCC DEPOT",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 4800,
+      "chaseNoteCount": 23,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:59:2-archers-paddock-wood-deal-via-joint-agent",
+      "title": "2 Archers Paddock Wood (deal via joint agent)",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 3183,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:60:38-eldon-way-paddock-wood",
+      "title": "38 Eldon Way Paddock Wood",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 4976,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "527bbf03-a38a-4445-91e1-fe726a21b2f6",
+        "name": "38 Eldon Way, Paddock Wood",
+        "score": 1,
+        "autoLink": true
+      },
+      "listingCandidates": [
+        {
+          "id": "527bbf03-a38a-4445-91e1-fe726a21b2f6",
+          "name": "38 Eldon Way, Paddock Wood",
+          "score": 1
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:61:141-151-london-road-southborough",
+      "title": "141 & 151 London Road, Southborough",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 12500,
+      "chaseNoteCount": 34,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "c9b7658f-43c3-4f26-8528-a2bcf57e5cbf",
+        "name": "141 & 151 London Road, Tunbridge Wells",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "c9b7658f-43c3-4f26-8528-a2bcf57e5cbf",
+          "name": "141 & 151 London Road, Tunbridge Wells",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:62:belvedere-station-archo-da17-6jj",
+      "title": "Belvedere - Station - Archo - DA17 6JJ",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 5000,
+      "chaseNoteCount": 21,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:63:quest-yep-7-04",
+      "title": "Quest YEP 7.04",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 15000,
+      "chaseNoteCount": 39,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:64:trench-license",
+      "title": "TRENCH LICENSE",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2026-2027 UNDER OFFER",
+      "feeGbp": 3500,
+      "chaseNoteCount": 9,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:67:douglas-house",
+      "title": "Douglas House",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "2027/2028",
+      "feeGbp": 18000,
+      "chaseNoteCount": 6,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "8cb5c1d7-3ddf-41fc-b984-f8ea97fda9bd",
+        "name": "Douglas House, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "8cb5c1d7-3ddf-41fc-b984-f8ea97fda9bd",
+          "name": "Douglas House, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:69:3-orchard-bp-tunbrridge",
+      "title": "3 Orchard BP Tunbrridge",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:70:plot-6-pembury",
+      "title": "Plot 6 Pembury",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 10,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "2ab78c72-994f-4a2d-ad58-722b643f30ae",
+        "name": "Plot 6",
+        "score": 0.5,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "2ab78c72-994f-4a2d-ad58-722b643f30ae",
+          "name": "Plot 6",
+          "score": 0.5
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:71:larchwood",
+      "title": "Larchwood",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 5,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "9436fa76-48ea-4a63-b8ab-30fa30f03b81",
+        "name": "Larchwood, Sevenoaks",
+        "score": 0.5,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "9436fa76-48ea-4a63-b8ab-30fa30f03b81",
+          "name": "Larchwood, Sevenoaks",
+          "score": 0.5
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:72:unti-z-land-next-to-lenco-transfesa",
+      "title": "Unti Z & land next to LENCO Transfesa",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 27,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:73:bordeykle-house",
+      "title": "Bordeykle House",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 9,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:74:stafford-house",
+      "title": "Stafford House",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 13,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "09780ea4-8952-42c9-8060-4b58b211fdfe",
+        "name": "Stafford House, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "09780ea4-8952-42c9-8060-4b58b211fdfe",
+          "name": "Stafford House, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:75:larchwood",
+      "title": "Larchwood",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "9436fa76-48ea-4a63-b8ab-30fa30f03b81",
+        "name": "Larchwood, Sevenoaks",
+        "score": 0.5,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "9436fa76-48ea-4a63-b8ab-30fa30f03b81",
+          "name": "Larchwood, Sevenoaks",
+          "score": 0.5
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:76:edenbridge-church-street",
+      "title": "Edenbridge Church Street",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 11,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "f661e6d0-798d-4284-873c-a0b2b9a6d664",
+        "name": "3 Church Street, Edenbridge",
+        "score": 1,
+        "autoLink": true
+      },
+      "listingCandidates": [
+        {
+          "id": "f661e6d0-798d-4284-873c-a0b2b9a6d664",
+          "name": "3 Church Street, Edenbridge",
+          "score": 1
+        },
+        {
+          "id": "39996779-7242-40b4-93b3-e04376bc2206",
+          "name": "3 & 5, Church Street, Edenbridge, TN8 5BD",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:77:havet-high-street",
+      "title": "Havet High Street",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "f2439de0-da05-4b8f-a6a3-0ab44d90be7d",
+        "name": "3,4,5,6 High Street, Hadlow",
+        "score": 0.6,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "f2439de0-da05-4b8f-a6a3-0ab44d90be7d",
+          "name": "3,4,5,6 High Street, Hadlow",
+          "score": 0.6
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:78:verdi-gris",
+      "title": "VErdi Gris",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:79:unit-20-yep",
+      "title": "Unit 20 YEP",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:80:modus-yep",
+      "title": "Modus YEP",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:81:4-commercial-road",
+      "title": "4 Commercial Road",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": 2300,
+      "chaseNoteCount": 32,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "0833e354-e6cb-4cd0-a9fa-d9035a936e0f",
+        "name": "4 Commercial Road, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "0833e354-e6cb-4cd0-a9fa-d9035a936e0f",
+          "name": "4 Commercial Road, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:82:39-halifax",
+      "title": "39 Halifax",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 4,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:83:dartford-priory-centre-unit-12",
+      "title": "Dartford Priory Centre Unit 12",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "offer received (5)",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "268781ba-7cea-43b8-8cfe-9e191d23caea",
+        "name": "Priory Shopping Centre, Dartford",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "268781ba-7cea-43b8-8cfe-9e191d23caea",
+          "name": "Priory Shopping Centre, Dartford",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:85:castons-angel-walk",
+      "title": "Castons Angel Walk",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "in negotations / viewed",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "75ee073d-0ecb-4491-80a9-6c7560a2e60a",
+        "name": "5 Angel Walk, Tonbridge",
+        "score": 0.6,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "75ee073d-0ecb-4491-80a9-6c7560a2e60a",
+          "name": "5 Angel Walk, Tonbridge",
+          "score": 0.6
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:86:unit-12-ttp-tunap",
+      "title": "Unit 12 TTP Tunap",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "in negotations / viewed",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:87:cinnamon-strike-price-1-2m",
+      "title": "Cinnamon - strike price £1.2m",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "in negotations / viewed",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:88:carlton-road-tunbridge-wells",
+      "title": "Carlton Road Tunbridge Wells",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "in negotations / viewed",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "f4e867a4-e4f4-4c7e-aac2-89df369ce675",
+        "name": "60 Mount Pleasant Road, Tunbridge Wells",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "f4e867a4-e4f4-4c7e-aac2-89df369ce675",
+          "name": "60 Mount Pleasant Road, Tunbridge Wells",
+          "score": 0.75
+        },
+        {
+          "id": "f485dc59-fd09-4e32-8a17-0b61cbe83fc5",
+          "name": "71 Calverley Road, Tunbridge Wells",
+          "score": 0.75
+        },
+        {
+          "id": "ef92dc33-f632-4bf6-9f58-d7a810721d91",
+          "name": "82 London Road, Tunbridge Wells",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:89:158-first-floor",
+      "title": "158 FIRST FLOOR",
+      "stage": "under_offer_negotiating",
+      "workType": "agency",
+      "section": "in negotations / viewed",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "2e76b4b9-6f30-4f5b-82df-a33908efea35",
+        "name": "First Floor",
+        "score": 0.667,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "2e76b4b9-6f30-4f5b-82df-a33908efea35",
+          "name": "First Floor",
+          "score": 0.667
+        },
+        {
+          "id": "8985a319-a966-4a2e-940f-6333bff9db65",
+          "name": "First Floor Offices",
+          "score": 0.6
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:portfolio:91:nazeing-overall",
+      "title": "Nazeing - Overall",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management › Nazeing - Overall",
+      "feeGbp": null,
+      "chaseNoteCount": 24,
+      "childLabels": [
+        "Asbestos",
+        "EICR",
+        "Measured Survey",
+        "EPC",
+        "Rates",
+        "FRA",
+        "Utilities",
+        "Service Charge"
+      ],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:100:robert-bestwarick-portfolio",
+      "title": "ROBERT BESTWARICK PORTFOLIO",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:101:iceland-and-barclays-inspections",
+      "title": "ICELAND AND BARCLAYS INSPECTIONS",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:portfolio:102:88a-shipbourne",
+      "title": "88a Shipbourne",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management › 88a Shipbourne",
+      "feeGbp": null,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:103:27-high-street-holland-and-barrett-inc-upstairs-flat",
+      "title": "27 High Street Holland and Barrett inc upstairs flat",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:104:18-high-street-sankeys-and-rear-comm-parts-to-flats",
+      "title": "18 High Street, Sankeys and rear comm parts to flats",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:105:66-high-street-heart-of-kent",
+      "title": "66 High Street Heart of Kent",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 9,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:106:12b-ian-dorrington",
+      "title": "12b Ian Dorrington",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 21,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:107:20-east-street",
+      "title": "20 East Street",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": 1300,
+      "chaseNoteCount": 5,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:108:barclays-bank",
+      "title": "Barclays bank",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": 500,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:109:southborugh-insurance-inspection",
+      "title": "Southborugh insurance inspection",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": 800,
+      "chaseNoteCount": 16,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:110:stafford-house",
+      "title": "Stafford House",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 5,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "09780ea4-8952-42c9-8060-4b58b211fdfe",
+        "name": "Stafford House, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "09780ea4-8952-42c9-8060-4b58b211fdfe",
+          "name": "Stafford House, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:111:hadlow",
+      "title": "Hadlow",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 9,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:112:31-mount-ephriam-boorowd-funerals",
+      "title": "31 Mount Ephriam (Boorowd funerals)",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:113:7-high-street",
+      "title": "7 High Street",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:114:24-london-road",
+      "title": "24 London Road",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 18,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:115:unit-6-archers-park-east-peckham",
+      "title": "Unit 6, Archers Park, East Peckham",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 4,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:116:bordyeke",
+      "title": "Bordyeke",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 10,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:117:93-95-ellis-and-co-gf",
+      "title": "93-95 Ellis and Co GF",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 4,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:portfolio:118:128-high-street-hairdresser",
+      "title": "128 High Street Hairdresser",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management › 128 High Street Hairdresser",
+      "feeGbp": null,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:119:93-95",
+      "title": "93-95",
+      "stage": "current",
+      "workType": "management",
+      "section": "Management",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:121:1-riding-lane",
+      "title": "1 Riding Lane",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "06ece422-1579-497c-ae59-ebb05df16ad0",
+        "name": "1 Riding Lane, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "06ece422-1579-497c-ae59-ebb05df16ad0",
+          "name": "1 Riding Lane, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:122:3-orchard-tonbridge",
+      "title": "3 Orchard Tonbridge",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 4,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:123:havet",
+      "title": "Havet",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:124:chequers-barn-bough-beech",
+      "title": "Chequers Barn Bough Beech",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:125:verdi-gris",
+      "title": "Verdi Gris",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:126:unit-2-archers",
+      "title": "Unit 2 Archers",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "e7b7132a-5e6d-48a3-a887-315638c54aaa",
+        "name": "Unit 2",
+        "score": 0.5,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "e7b7132a-5e6d-48a3-a887-315638c54aaa",
+          "name": "Unit 2",
+          "score": 0.5
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:127:hop-house-studio",
+      "title": "Hop House (Studio)",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:128:2-railway-approach-arch-co",
+      "title": "2 Railway approach Arch Co",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:129:biggin-hill-norheads",
+      "title": "BIGGIN HILL NORHEADS",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:130:wedding-centre-hop-farm",
+      "title": "Wedding Centre Hop Farm",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:131:136b-commercial-road-paddock-wood",
+      "title": "136B Commercial Road Paddock Wood",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:132:10-munday-works",
+      "title": "10 Munday Works",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:133:market-hall-dartford",
+      "title": "Market Hall Dartford",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:134:offices-weald-court-hildenborough",
+      "title": "Offices Weald Court Hildenborough",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:135:3-4-5-the-broadway-hadlow-guiding-975-000",
+      "title": "3,4,5 The Broadway, Hadlow Guiding £975,000",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 18,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:136:unit-9-ttp-2001",
+      "title": "Unit 9 TTP (2001)",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:137:15-eldon-way-12-50-psf-so-58-362-pax",
+      "title": "15 Eldon Way £12.50 psf so £58,362 pax.",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:138:38-eldon-way-12-50-psf-so-58-362-pax",
+      "title": "38 Eldon Way £12.50 psf so £58,362 pax.",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "527bbf03-a38a-4445-91e1-fe726a21b2f6",
+        "name": "38 Eldon Way, Paddock Wood",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "527bbf03-a38a-4445-91e1-fe726a21b2f6",
+          "name": "38 Eldon Way, Paddock Wood",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:139:14-16-eldon-way",
+      "title": "14-16 Eldon Way",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "260c919d-048c-4a80-b87a-eaa39ff272ab",
+        "name": "14-16 Eldon Way, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "260c919d-048c-4a80-b87a-eaa39ff272ab",
+          "name": "14-16 Eldon Way, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:140:192-high-street-tonbridge-gf",
+      "title": "192 High Street Tonbridge GF",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "e7034629-7863-4997-8e21-f54947209e1d",
+        "name": "192 High Street, Tonbridge",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "e7034629-7863-4997-8e21-f54947209e1d",
+          "name": "192 High Street, Tonbridge",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:141:court-lane-yard-only-remaining-56k-pa",
+      "title": "Court Lane YARD ONLY REMAINING £56k pa",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:142:unit-19-obc-tonbridge",
+      "title": "Unit 19 OBC Tonbridge",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "d595dc50-e643-43fe-b5d3-325b7c8f7d7c",
+        "name": "Unit 19, Tonbridge",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "d595dc50-e643-43fe-b5d3-325b7c8f7d7c",
+          "name": "Unit 19, Tonbridge",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:143:unit-2-obc-tonbrigde-c-17kpa",
+      "title": "UNIT 2 OBC Tonbrigde c £17kpa",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:144:15-commercial-road-paddock-wood-ranjan",
+      "title": "15 Commercial Road Paddock Wood ranjan",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 16,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:145:bridge-house",
+      "title": "Bridge House",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:146:4b-vally-cuckoo",
+      "title": "4B Vally CUCKOO",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:147:2b-vally-cuckoo",
+      "title": "2B Vally CUCKOO",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:148:3-5-church-street-edenbridge-480k",
+      "title": "3& 5 Church Street edenbridge £480K",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 5,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "39996779-7242-40b4-93b3-e04376bc2206",
+        "name": "3 & 5, Church Street, Edenbridge, TN8 5BD",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "39996779-7242-40b4-93b3-e04376bc2206",
+          "name": "3 & 5, Church Street, Edenbridge, TN8 5BD",
+          "score": 0.75
+        },
+        {
+          "id": "f661e6d0-798d-4284-873c-a0b2b9a6d664",
+          "name": "3 Church Street, Edenbridge",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:149:194-high-street-tonbridge",
+      "title": "194 High street Tonbridge",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "45476cce-8e5c-4c41-8c10-8948b0f99642",
+        "name": "194 High Street, Tonbridge",
+        "score": 1,
+        "autoLink": true
+      },
+      "listingCandidates": [
+        {
+          "id": "45476cce-8e5c-4c41-8c10-8948b0f99642",
+          "name": "194 High Street, Tonbridge",
+          "score": 1
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:150:shoreham-station-shoreham",
+      "title": "Shoreham Station Shoreham",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:151:riverside-house-tonbridge",
+      "title": "Riverside House, Tonbridge",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "8b68e7ed-fe5d-4616-9af9-1b1ebea44907",
+        "name": "Riverside House, Tonbridge",
+        "score": 1,
+        "autoLink": true
+      },
+      "listingCandidates": [
+        {
+          "id": "8b68e7ed-fe5d-4616-9af9-1b1ebea44907",
+          "name": "Riverside House, Tonbridge",
+          "score": 1
+        },
+        {
+          "id": "09780ea4-8952-42c9-8060-4b58b211fdfe",
+          "name": "Stafford House, Tonbridge",
+          "score": 0.6
+        },
+        {
+          "id": "8cb5c1d7-3ddf-41fc-b984-f8ea97fda9bd",
+          "name": "Douglas House, Tonbridge",
+          "score": 0.6
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:152:tonbridge-trade-park",
+      "title": "Tonbridge Trade Park",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:153:yalding-enterprise-park",
+      "title": "Yalding Enterprise Park",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "e448b912-28b5-436b-aaf4-c05b6db3cd44",
+        "name": "Unit B1, Yalding Enterprise Park, Yalding",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "e448b912-28b5-436b-aaf4-c05b6db3cd44",
+          "name": "Unit B1, Yalding Enterprise Park, Yalding",
+          "score": 0.9
+        },
+        {
+          "id": "59f9b5fe-7cc7-4078-b334-09ee9155491d",
+          "name": "Unit B5, Yalding Enterprise Park, Yalding",
+          "score": 0.9
+        },
+        {
+          "id": "c27dd57c-b953-4c68-a323-e09c3cd156c9",
+          "name": "Unit B4, Yalding Enterprise Park, Yalding",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:154:lodge-road-staplehurst",
+      "title": "Lodge Road Staplehurst",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "cc08561b-14ea-4a7b-bde5-e26ee34196ed",
+        "name": "Lodge Road, Staplehurst",
+        "score": 1,
+        "autoLink": true
+      },
+      "listingCandidates": [
+        {
+          "id": "cc08561b-14ea-4a7b-bde5-e26ee34196ed",
+          "name": "Lodge Road, Staplehurst",
+          "score": 1
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:155:former-taxi-office-station-approach-borough-green",
+      "title": "Former Taxi Office, Station Approach, BOROUGH GREEN",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:156:crown-seal",
+      "title": "Crown SEAL",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "41de3166-5a70-49dc-9133-f1f2258771d0",
+        "name": "The Crown",
+        "score": 0.5,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "41de3166-5a70-49dc-9133-f1f2258771d0",
+          "name": "The Crown",
+          "score": 0.5
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:157:crown-otford",
+      "title": "Crown OTFORD",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "41de3166-5a70-49dc-9133-f1f2258771d0",
+        "name": "The Crown",
+        "score": 0.5,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "41de3166-5a70-49dc-9133-f1f2258771d0",
+          "name": "The Crown",
+          "score": 0.5
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:158:south-lodge-bullen-court-business-centre",
+      "title": "South Lodge, Bullen Court Business Centre",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "b9065962-3800-45f9-87a3-210518ce3a36",
+        "name": "South Lodge, Bullen Court Business Centre, East Peckham",
+        "score": 0.9,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "b9065962-3800-45f9-87a3-210518ce3a36",
+          "name": "South Lodge, Bullen Court Business Centre, East Peckham",
+          "score": 0.9
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:159:coblands-tonbridge-land-hardstanding-only",
+      "title": "Coblands Tonbridge land HARDSTANDING ONLY",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 4,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:160:carpetgiant",
+      "title": "CARPETGIANT",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:162:riding-house-lane",
+      "title": "Riding house Lane",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructed go live",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "06ece422-1579-497c-ae59-ebb05df16ad0",
+        "name": "1 Riding Lane, Tonbridge",
+        "score": 0.6,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "06ece422-1579-497c-ae59-ebb05df16ad0",
+          "name": "1 Riding Lane, Tonbridge",
+          "score": 0.6
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:163:former-honda-garage-avevury",
+      "title": "Former Honda Garage Avevury",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructed go live",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:165:angel-walk-hairdressers",
+      "title": "Angel Walk Hairdressers",
+      "stage": "current",
+      "workType": "agency",
+      "section": "Instructed draft details",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "75ee073d-0ecb-4491-80a9-6c7560a2e60a",
+        "name": "5 Angel Walk, Tonbridge",
+        "score": 0.6,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "75ee073d-0ecb-4491-80a9-6c7560a2e60a",
+          "name": "5 Angel Walk, Tonbridge",
+          "score": 0.6
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:167:croydon",
+      "title": "Croydon",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "REPORTED - Awaiting client instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:168:paddock-wood-upper-fowle-truemans-oast",
+      "title": "Paddock Wood Upper Fowle Truemans oast",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "REPORTED - Awaiting client instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:169:calm-gentle-high-street-tonbridge",
+      "title": "Calm & Gentle High Street Tonbridge",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "REPORTED - Awaiting client instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "327a87af-86b1-4941-8bf1-4d03bcfe6751",
+        "name": "150-152 High Street, Tonbridge",
+        "score": 0.75,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "327a87af-86b1-4941-8bf1-4d03bcfe6751",
+          "name": "150-152 High Street, Tonbridge",
+          "score": 0.75
+        },
+        {
+          "id": "404861fb-6e7d-4030-8c26-d03a3dbe681b",
+          "name": "89 High Street, Tonbridge",
+          "score": 0.75
+        },
+        {
+          "id": "54609cd9-a397-41af-8119-159f3b460bde",
+          "name": "77-81 High Street, Tonbridge",
+          "score": 0.75
+        }
+      ],
+      "listingNeedsReview": true,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:170:west-kingsdown-blue-chalet",
+      "title": "West kingsdown Blue Chalet",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "REPORTED - Awaiting client instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:172:edembridge-fircroft-business-centre",
+      "title": "Edembridge Fircroft business centre",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "Potential  instructions  to report",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:173:southbourogh-eye-centrre",
+      "title": "Southbourogh Eye centrre",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "Potential  instructions  to report",
+      "feeGbp": null,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:174:8-9-angel-walk-grace-shop-j-bacon",
+      "title": "8-9 Angel Walk Grace Shop - J BACON",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "Potential  instructions  to report",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:176:santander-pavillion",
+      "title": "Santander Pavillion",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "Potential  instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:177:st-marys-cray-garry-property",
+      "title": "St Marys Cray - Garry property",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "Potential  instructions",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:180:bromley-wesmorland-garage",
+      "title": "Bromley Wesmorland Garage",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "On Hold",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:181:22-high-street-greggs",
+      "title": "22 High Street - Greggs",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "On Hold",
+      "feeGbp": null,
+      "chaseNoteCount": 0,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:182:43-priory-road",
+      "title": "43 Priory Road",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "On Hold",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:183:paddock-wood-castle-refrig",
+      "title": "Paddock Wood Castle Refrig",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "On Hold",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:185:unit-2-morley",
+      "title": "Unit 2 Morley",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "No /  No feedback",
+      "feeGbp": null,
+      "chaseNoteCount": 3,
+      "childLabels": [],
+      "listingMatch": {
+        "id": "e7b7132a-5e6d-48a3-a887-315638c54aaa",
+        "name": "Unit 2",
+        "score": 0.5,
+        "autoLink": false
+      },
+      "listingCandidates": [
+        {
+          "id": "e7b7132a-5e6d-48a3-a887-315638c54aaa",
+          "name": "Unit 2",
+          "score": 0.5
+        }
+      ],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:186:tubbs-hill",
+      "title": "tubbs Hill",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "No /  No feedback",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:187:east-peckham-wine-bar",
+      "title": "East Peckham - Wine bar",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "No /  No feedback",
+      "feeGbp": null,
+      "chaseNoteCount": 1,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:188:tonbridge-unit-morley-5",
+      "title": "Tonbridge Unit Morley 5",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "No /  No feedback",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    },
+    {
+      "importKey": "bracketts_wip_csv_202605:row:189:mr-ps",
+      "title": "Mr Ps",
+      "stage": "potential",
+      "workType": "agency",
+      "section": "No /  No feedback",
+      "feeGbp": null,
+      "chaseNoteCount": 2,
+      "childLabels": [],
+      "listingMatch": null,
+      "listingCandidates": [],
+      "listingNeedsReview": false,
+      "action": "create"
+    }
+  ]
+}

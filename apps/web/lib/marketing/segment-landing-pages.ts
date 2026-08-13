@@ -79,11 +79,10 @@ export type SegmentTestimonial = {
 
 export type SegmentIntegration = {
   name: string;
-  description: string;
+  /** Optional; landing UI shows logos only. */
+  description?: string;
   /** Path under /public, e.g. /brand/integrations/rightmove.png */
   logoSrc?: string;
-  /** Light plate for dark wordmarks; dark plate for white-on-black logos. */
-  logoSurface?: 'light' | 'dark';
 };
 
 export type SegmentLandingConfig = {
@@ -589,24 +588,15 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
       integrations: [
         {
           name: 'Rightmove',
-          description:
-            'Publish commercial stock via the Commercial Listings API.',
           logoSrc: '/brand/integrations/rightmove.jpg',
-          logoSurface: 'light',
         },
         {
           name: 'EACH',
-          description:
-            'Dedicated XML feed for EACH — stock can diverge from your website.',
           logoSrc: '/brand/integrations/each.png',
-          logoSurface: 'light',
         },
         {
           name: 'Property Hive',
-          description:
-            'WordPress import via XML so your agency site stays in sync.',
           logoSrc: '/brand/integrations/property-hive.png',
-          logoSurface: 'dark',
         },
       ],
       testimonials: [

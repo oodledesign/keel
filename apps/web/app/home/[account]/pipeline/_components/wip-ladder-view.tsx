@@ -1,0 +1,316 @@
+'use client';
+
+import { useMemo, useState, useTransition } from 'react';
+
+import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+
+import { Button } from '@kit/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
+
+import type { PipelineDeal } from '~/home/(user)/_lib/server/pipeline.loader';
+import { moveDealToStage } from '~/home/(user)/pipeline/actions';
+import { COMMERCIAL_PIPELINE_WON_STAGE } from '~/lib/commercial/commercial-constants';
+import { normalizeCommercialPipelineStage } from '~/lib/commercial/pipeline-stage-config';
+import {
+  WIP_WORK_TYPE_LABELS,
+  normalizeWipWorkType,
+} from '~/lib/commercial/wip-work-type';
+import { workspacePanelCard, workspaceTextMuted } from '~/lib/workspace-ui';
+
+import { instructionTitle } from '../_lib/instruction-title';
+import type { WipDeskActivityItem } from '../_lib/server/wip-attachments.actions';
+import { WipAttachmentsStrip } from './wip-attachments-strip';
+
+type StageColumn = { key: string; label: string };
+
+type Props = {
+  accountId: string;
+  accountSlug: string;
+  deals: PipelineDeal[];
+  stages: StageColumn[];
+  deskActivity: WipDeskActivityItem[];
+  onDealsChange: (
+    next: PipelineDeal[] | ((prev: PipelineDeal[]) => PipelineDeal[]),
+  ) => void;
+  onEditInstruction: (deal: PipelineDeal) => void;
+  onDealWon?: (deal: PipelineDeal) => void;
+  onActivityChanged?: () => void;
+};
+
+function formatCurrency(value: number) {
+  return new Intl.NumberFormat('en-GB', {
+    style: 'currency',
+    currency: 'GBP',
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
+function formatTimelineDate(iso: string) {
+  try {
+    return new Date(iso).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'short',
+    });
+  } catch {
+    return '';
+  }
+}
+
+function previewText(content: string, max = 90) {
+  const trimmed = content.trim().replace(/\s+/g, ' ');
+  if (!trimmed) return null;
+  if (trimmed.length <= max) return trimmed;
+  return `${trimmed.slice(0, max - 1)}…`;
+}
+
+function isWonStage(stage: string) {
+  return (
+    stage === COMMERCIAL_PIPELINE_WON_STAGE ||
+    stage === 'completed_exchanged' ||
+    stage === 'won' ||
+    stage === 'signed' ||
+    stage === 'completed'
+  );
+}
+
+export function WipLadderView({
+  accountId,
+  accountSlug,
+  deals,
+  stages,
+  deskActivity,
+  onDealsChange,
+  onEditInstruction,
+  onDealWon,
+  onActivityChanged,
+}: Props) {
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [, startTransition] = useTransition();
+
+  const latestByDeal = useMemo(() => {
+    const map = new Map<string, WipDeskActivityItem>();
+    for (const item of deskActivity) {
+      if (!item.pipelineDealId || map.has(item.pipelineDealId)) continue;
+      map.set(item.pipelineDealId, item);
+    }
+    return map;
+  }, [deskActivity]);
+
+  const dealsByStage = useMemo(() => {
+    const map = new Map<string, PipelineDeal[]>();
+    for (const stage of stages) {
+      map.set(stage.key, []);
+    }
+    for (const deal of deals) {
+      const key = normalizeCommercialPipelineStage(deal.stage);
+      const list = map.get(key);
+      if (list) list.push(deal);
+      else map.set(key, [deal]);
+    }
+    return map;
+  }, [deals, stages]);
+
+  const changeStage = (deal: PipelineDeal, nextStage: string) => {
+    if (nextStage === deal.stage) return;
+    const previousStage = deal.stage;
+    const updated = { ...deal, stage: nextStage };
+    onDealsChange((prev) =>
+      prev.map((item) => (item.id === deal.id ? updated : item)),
+    );
+
+    startTransition(async () => {
+      try {
+        const result = await moveDealToStage(deal.id, nextStage, {
+          accountSlug,
+        });
+        if (!result.success) {
+          onDealsChange((prev) =>
+            prev.map((item) =>
+              item.id === deal.id ? { ...item, stage: previousStage } : item,
+            ),
+          );
+          toast.error(result.error ?? 'Could not update stage');
+          return;
+        }
+        if (isWonStage(nextStage)) {
+          onDealWon?.(updated);
+        }
+      } catch (error) {
+        onDealsChange((prev) =>
+          prev.map((item) =>
+            item.id === deal.id ? { ...item, stage: previousStage } : item,
+          ),
+        );
+        toast.error(
+          error instanceof Error ? error.message : 'Could not update stage',
+        );
+      }
+    });
+  };
+
+  return (
+    <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 md:px-6 lg:px-8">
+      {stages.map((stage) => {
+        const stageDeals = dealsByStage.get(stage.key) ?? [];
+        return (
+          <section key={stage.key} className={workspacePanelCard}>
+            <header className="flex items-center justify-between gap-3 border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
+              <h3 className="text-sm font-semibold tracking-wide text-[var(--workspace-shell-text)]">
+                {stage.label}
+              </h3>
+              <span className={`text-xs tabular-nums ${workspaceTextMuted}`}>
+                {stageDeals.length}
+              </span>
+            </header>
+
+            {stageDeals.length === 0 ? (
+              <p className={`px-4 py-3 text-sm ${workspaceTextMuted}`}>
+                No instructions in this stage
+              </p>
+            ) : (
+              <ul className="divide-y divide-[color:var(--workspace-shell-border)]/70">
+                {stageDeals.map((deal) => {
+                  const open = expandedId === deal.id;
+                  const latest = latestByDeal.get(deal.id);
+                  const oneLiner =
+                    previewText(latest?.content ?? '') ||
+                    (deal.nextAction?.trim() ? deal.nextAction.trim() : null);
+
+                  return (
+                    <li key={deal.id}>
+                      <div className="flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3">
+                        <button
+                          type="button"
+                          className="flex min-w-0 flex-1 items-start gap-2 text-left"
+                          onClick={() =>
+                            setExpandedId((id) =>
+                              id === deal.id ? null : deal.id,
+                            )
+                          }
+                          aria-expanded={open}
+                          aria-label={
+                            open
+                              ? `Collapse ${instructionTitle(deal)}`
+                              : `Expand ${instructionTitle(deal)}`
+                          }
+                        >
+                          {open ? (
+                            <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+                          ) : (
+                            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+                          )}
+                          <span className="min-w-0">
+                            <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
+                              {instructionTitle(deal)}
+                              {normalizeWipWorkType(deal.workType) &&
+                              normalizeWipWorkType(deal.workType) !==
+                                'agency' ? (
+                                <span
+                                  className={`ml-2 text-[11px] font-normal ${workspaceTextMuted}`}
+                                >
+                                  {
+                                    WIP_WORK_TYPE_LABELS[
+                                      normalizeWipWorkType(deal.workType)!
+                                    ]
+                                  }
+                                </span>
+                              ) : null}
+                            </span>
+                            <span
+                              className={`mt-0.5 block text-xs ${workspaceTextMuted}`}
+                            >
+                              {oneLiner ? (
+                                <>
+                                  {latest ? (
+                                    <span className="tabular-nums">
+                                      {formatTimelineDate(latest.createdAt)}
+                                      {' · '}
+                                    </span>
+                                  ) : null}
+                                  {oneLiner}
+                                  {latest?.assignedTo ? (
+                                    <span>
+                                      {' → '}
+                                      {latest.assignedTo.name}
+                                    </span>
+                                  ) : null}
+                                </>
+                              ) : (
+                                'No chase update yet'
+                              )}
+                            </span>
+                          </span>
+                        </button>
+
+                        <div className="flex shrink-0 flex-wrap items-center gap-2 pl-6 sm:pl-0">
+                          <span className="text-sm text-[var(--workspace-shell-text)] tabular-nums">
+                            {formatCurrency(deal.value || 0)}
+                          </span>
+                          <Select
+                            value={normalizeCommercialPipelineStage(deal.stage)}
+                            onValueChange={(next) => changeStage(deal, next)}
+                          >
+                            <SelectTrigger className="h-8 w-[9.5rem] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+                              {stages.map((option) => (
+                                <SelectItem key={option.key} value={option.key}>
+                                  {option.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-8 gap-1 text-xs text-[var(--workspace-shell-text-muted)]"
+                            onClick={() => onEditInstruction(deal)}
+                          >
+                            Open
+                            <ExternalLink className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
+                      </div>
+
+                      {open ? (
+                        <div className="border-t border-[color:var(--workspace-shell-border)]/60 bg-[var(--workspace-shell-sidebar-accent)]/25 px-4 py-3">
+                          <WipAttachmentsStrip
+                            accountId={accountId}
+                            accountSlug={accountSlug}
+                            pipelineDealId={deal.id}
+                            activityOnly
+                            onActivityChanged={onActivityChanged}
+                          />
+                          <div className="mt-3">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              className="border-[color:var(--workspace-shell-border)]"
+                              onClick={() => onEditInstruction(deal)}
+                            >
+                              Full instruction
+                            </Button>
+                          </div>
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </section>
+        );
+      })}
+    </div>
+  );
+}

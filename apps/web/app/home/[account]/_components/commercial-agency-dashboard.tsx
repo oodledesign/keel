@@ -13,11 +13,13 @@ import {
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
   DISPOSAL_TYPE_LABELS,
   type DisposalType,
+  LISTING_STATUS_BADGE_CLASS,
   LISTING_STATUS_LABELS,
   type ListingStatus,
 } from '~/lib/commercial/commercial-constants';
@@ -283,9 +285,12 @@ export function CommercialAgencyDashboard({
             ) : (
               <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
                 {recentListings.map((listing) => {
+                  const status = listing.status as ListingStatus;
                   const statusLabel =
-                    LISTING_STATUS_LABELS[listing.status as ListingStatus] ??
-                    listing.status;
+                    LISTING_STATUS_LABELS[status] ?? listing.status;
+                  const statusClass =
+                    LISTING_STATUS_BADGE_CLASS[status] ??
+                    'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70';
 
                   return (
                     <li key={listing.id} className="min-w-0">
@@ -325,7 +330,10 @@ export function CommercialAgencyDashboard({
                         </div>
                         <span
                           title={statusLabel}
-                          className="mt-0.5 max-w-[7.5rem] shrink-0 truncate rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[10px] font-medium text-[var(--workspace-shell-text)]/70 sm:mt-0 sm:max-w-[9rem] sm:px-2.5 sm:text-[11px]"
+                          className={cn(
+                            'mt-0.5 max-w-[7.5rem] shrink-0 truncate rounded-full px-2 py-0.5 text-[10px] font-medium sm:mt-0 sm:max-w-[9rem] sm:px-2.5 sm:text-[11px]',
+                            statusClass,
+                          )}
                         >
                           {statusLabel}
                         </span>

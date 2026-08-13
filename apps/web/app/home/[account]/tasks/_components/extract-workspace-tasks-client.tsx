@@ -254,13 +254,7 @@ export function ExtractWorkspaceTasksClient({
         </div>
       ) : null}
 
-      <div
-        className={
-          embedded
-            ? 'space-y-6 py-1'
-            : 'space-y-6'
-        }
-      >
+      <div className={embedded ? 'space-y-6 py-1' : 'space-y-6'}>
         {!rows ? (
           <div
             className={

@@ -26,6 +26,7 @@ import {
   resolvePersonAssigneeFromSuggestion,
 } from '~/lib/tasks/task-person-assignee';
 import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
+
 function revalidateWorkspaceTaskPages(accountSlug: string) {
   const slug = accountSlug.trim();
   if (!slug) return;
@@ -311,10 +312,8 @@ export const commitWorkspaceExtractedTasks = enhanceAction(
         item.personAssignee ?? '__none__',
       );
 
-      let assigneeUserId =
-        person.kind === 'member' ? person.id : undefined;
-      let assigneeContactId =
-        person.kind === 'contact' ? person.id : null;
+      let assigneeUserId = person.kind === 'member' ? person.id : undefined;
+      let assigneeContactId = person.kind === 'contact' ? person.id : null;
 
       if (person.kind === 'member' && person.id) {
         const { data: membership } = await client

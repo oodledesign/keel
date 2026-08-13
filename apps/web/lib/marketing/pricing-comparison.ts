@@ -70,12 +70,7 @@ function workComparison(): SegmentPricingComparison {
           {
             feature: 'Team members included',
             hint: 'Seats in this workspace. On Scale, request more users anytime.',
-            values: v(
-              'Up to 3',
-              '1',
-              'Up to 5',
-              'Up to 15 (request more)',
-            ),
+            values: v('Up to 3', '1', 'Up to 5', 'Up to 15 (request more)'),
           },
           {
             feature: '14-day free trial',
