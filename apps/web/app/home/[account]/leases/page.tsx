@@ -41,9 +41,8 @@ async function LeasesPage({ params }: LeasesPageProps) {
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Sales & lettings"
-        description="Completed sales and lettings for the agency."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 pt-2 pb-6 lg:px-6">
         <LeasesList
           accountId={accountId}
           accountSlug={slug}

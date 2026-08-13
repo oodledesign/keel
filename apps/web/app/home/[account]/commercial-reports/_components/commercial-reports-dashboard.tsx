@@ -50,15 +50,6 @@ const INSIGHT_TABS: Array<{ key: InsightsTab; label: string }> = [
   { key: 'transactions', label: 'Transactions' },
 ];
 
-const TAB_BLURBS: Record<InsightsTab, string> = {
-  disposals: 'Real-time disposal performance with period comparison.',
-  viewings: 'Viewing volume and feedback sentiment with period comparison.',
-  requirements: 'Active briefs, qualification mix, and conversion funnel.',
-  inbound: 'Enquiry intake, triage speed, and stale unactioned stock.',
-  sources: 'Lead count and size volume by enquiry source / portal.',
-  transactions: 'Completed lettings and sales outcomes.',
-};
-
 const DISPOSAL_FILTERS = [
   { key: 'to_let', label: 'Lettings' },
   { key: 'for_sale', label: 'Sales' },
@@ -115,7 +106,7 @@ function FilterLink({
     <Link
       href={href}
       className={cn(
-        'rounded-lg px-3 py-1.5 text-sm font-medium transition-colors',
+        'rounded-lg px-3 py-1.5 text-[0.8rem] font-medium transition-colors',
         active
           ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
           : 'text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
@@ -175,15 +166,18 @@ export function CommercialReportsDashboard({
   };
 
   return (
-    <div className="space-y-8">
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-            Agency Insights
-          </h2>
-          <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {TAB_BLURBS[activeTab]}
-          </p>
+    <div className="space-y-6">
+      <div className="flex flex-col gap-3 border-b border-[color:var(--workspace-shell-border)] pb-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-wrap gap-2">
+          {INSIGHT_TABS.map((tab) => (
+            <FilterLink
+              key={tab.key}
+              href={buildHref({ tab: tab.key })}
+              active={activeTab === tab.key}
+            >
+              {tab.label}
+            </FilterLink>
+          ))}
         </div>
         <div className="flex flex-wrap gap-2">
           {PERIODS.map((item) => (
@@ -196,18 +190,6 @@ export function CommercialReportsDashboard({
             </FilterLink>
           ))}
         </div>
-      </div>
-
-      <div className="flex flex-wrap gap-2 border-b border-[color:var(--workspace-shell-border)] pb-3">
-        {INSIGHT_TABS.map((tab) => (
-          <FilterLink
-            key={tab.key}
-            href={buildHref({ tab: tab.key })}
-            active={activeTab === tab.key}
-          >
-            {tab.label}
-          </FilterLink>
-        ))}
       </div>
 
       {activeTab === 'viewings' ? (
@@ -341,7 +323,7 @@ function DisposalsInsightsPanel({
                   }}
                 />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
                 <Bar
                   dataKey="current"
                   name="This period"
@@ -389,7 +371,7 @@ function DisposalsInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -425,7 +407,7 @@ function DisposalsInsightsPanel({
                 }}
               />
               <Tooltip />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
               <Bar
                 dataKey="current"
                 name="This period"
@@ -594,7 +576,7 @@ function ViewingsInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -631,7 +613,7 @@ function ViewingsInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -667,7 +649,7 @@ function ViewingsInsightsPanel({
                 }}
               />
               <Tooltip />
-              <Legend />
+              <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
               <Bar
                 dataKey="current"
                 name="This period"
@@ -768,7 +750,9 @@ function SnapshotStat({ label, value }: { label: string; value: number }) {
       <p className="text-lg font-semibold text-[var(--workspace-shell-text)] tabular-nums">
         {value}
       </p>
-      <p className="text-xs text-[var(--workspace-shell-text)]/50">{label}</p>
+      <p className="text-[0.6rem] text-[var(--workspace-shell-text)]/50">
+        {label}
+      </p>
     </div>
   );
 }
@@ -907,7 +891,7 @@ function InboundInsightsPanel({
                   }}
                 />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
                 <Bar
                   dataKey="current"
                   name="This period"
@@ -986,7 +970,7 @@ function RequirementInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -1126,7 +1110,7 @@ function SourceInsightsPanel({
                   }}
                 />
                 <Tooltip />
-                <Legend />
+                <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
                 <Bar
                   dataKey="current"
                   name="This period"
@@ -1274,7 +1258,7 @@ function TransactionInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend />
+                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
                 </PieChart>
               </ResponsiveContainer>
             )}

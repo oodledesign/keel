@@ -126,9 +126,8 @@ async function CommercialReportsPage({
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Insights"
-        description="Agency performance across disposals, enquiries, and deals."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 pt-2 pb-6 lg:px-6">
         <Suspense fallback={null}>
           <CommercialReportsDashboard
             overview={overview}

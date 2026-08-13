@@ -252,44 +252,34 @@ export function LeasesList({
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-            Sales & lettings
-          </h2>
-          <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {saleCount} sale{saleCount === 1 ? '' : 's'} · {lettingCount}{' '}
-            letting{lettingCount === 1 ? '' : 's'}
-          </p>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <div className="mr-auto inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1">
+          {(
+            [
+              ['all', 'All', rows.length],
+              ['sales', 'Sales', saleCount],
+              ['lettings', 'Lettings', lettingCount],
+            ] as const
+          ).map(([key, label, count]) => (
+            <button
+              key={key}
+              type="button"
+              onClick={() => setFilter(key)}
+              className={
+                filter === key
+                  ? 'inline-flex items-center gap-1.5 rounded-md bg-[var(--ozer-plum-950)] px-3 py-1.5 text-xs font-medium text-[var(--ozer-text-on-dark)]'
+                  : 'inline-flex items-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]'
+              }
+            >
+              {label}
+              <span className="tabular-nums opacity-80">{count}</span>
+            </button>
+          ))}
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1">
-            {(
-              [
-                ['all', 'All'],
-                ['sales', 'Sales'],
-                ['lettings', 'Lettings'],
-              ] as const
-            ).map(([key, label]) => (
-              <button
-                key={key}
-                type="button"
-                onClick={() => setFilter(key)}
-                className={
-                  filter === key
-                    ? 'rounded-md bg-[var(--ozer-plum-950)] px-3 py-1.5 text-xs font-medium text-[var(--ozer-text-on-dark)]'
-                    : 'rounded-md px-3 py-1.5 text-xs font-medium text-[var(--workspace-shell-text-muted)]'
-                }
-              >
-                {label}
-              </button>
-            ))}
-          </div>
-          <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
-            <Plus className="h-4 w-4" />
-            Add letting
-          </Button>
-        </div>
+        <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
+          <Plus className="h-4 w-4" />
+          Add letting
+        </Button>
       </div>
 
       {visibleRows.length === 0 ? (

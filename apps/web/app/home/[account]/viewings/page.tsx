@@ -40,9 +40,8 @@ async function ViewingsPage({ params }: ViewingsPageProps) {
       <TeamAccountLayoutPageHeader
         account={slug}
         title="Viewings"
-        description="Schedule and feedback for commercial inspections."
       />
-      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
+      <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 pt-2 pb-6 lg:px-6">
         <ViewingsList
           accountId={accountId}
           initialViewings={viewings}

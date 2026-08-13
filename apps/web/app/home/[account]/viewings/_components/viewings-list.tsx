@@ -192,15 +192,7 @@ export function ViewingsList({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-            Viewings
-          </h2>
-          <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {items.length} scheduled
-          </p>
-        </div>
+      <div className="flex items-center justify-end">
         <Button
           onClick={openCreate}
           disabled={listings.length === 0}

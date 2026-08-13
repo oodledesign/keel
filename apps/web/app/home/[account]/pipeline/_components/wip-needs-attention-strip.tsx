@@ -67,7 +67,7 @@ export function WipNeedsAttentionStrip({ accountSlug, digest }: Props) {
   if (digest.total === 0 || digest.buckets.length === 0) {
     return (
       <div
-        className={`${workspacePanelCard} mx-4 flex items-center gap-2 px-3 py-2.5 md:mx-6 lg:mx-8`}
+        className={`${workspacePanelCard} mx-4 mb-4 flex items-center gap-2 px-3 py-2.5 md:mx-6 md:mb-5 lg:mx-8`}
       >
         <CircleAlert className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text)]/35" />
         <p className={`text-sm ${workspaceTextMuted}`}>
@@ -78,7 +78,7 @@ export function WipNeedsAttentionStrip({ accountSlug, digest }: Props) {
   }
 
   return (
-    <div className="mx-4 space-y-2 md:mx-6 lg:mx-8">
+    <div className="mx-4 mb-4 space-y-2 md:mx-6 md:mb-5 lg:mx-8">
       <div
         className={`${workspacePanelCard} flex flex-col gap-2 px-3 py-2.5 sm:flex-row sm:items-center sm:gap-3`}
       >

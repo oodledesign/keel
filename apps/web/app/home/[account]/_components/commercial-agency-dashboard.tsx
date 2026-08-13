@@ -76,7 +76,7 @@ function ActionCard({
             <p className="text-xl font-semibold text-[var(--workspace-shell-text)] tabular-nums sm:text-2xl">
               {value}
             </p>
-            <p className="mt-0.5 text-[11px] leading-snug font-medium text-[var(--workspace-shell-text)] sm:text-sm">
+            <p className="mt-0.5 text-[0.7rem] leading-snug font-medium text-[var(--workspace-shell-text)] sm:text-[0.8rem]">
               {shortLabel ? (
                 <>
                   <span className="sm:hidden">{shortLabel}</span>
@@ -260,7 +260,7 @@ export function CommercialAgencyDashboard({
               </div>
               <Link
                 href={listingsHref}
-                className={`${workspaceLinkAccent} shrink-0 whitespace-nowrap`}
+                className={`${workspaceLinkAccent} shrink-0 whitespace-nowrap text-[0.8rem]`}
               >
                 View all
               </Link>
