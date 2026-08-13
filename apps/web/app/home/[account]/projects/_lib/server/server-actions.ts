@@ -9,7 +9,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
-import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee';
+import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
 
 import { createCalendarService } from './calendar.service';
 import { createJobEventsService } from './job-events.service';

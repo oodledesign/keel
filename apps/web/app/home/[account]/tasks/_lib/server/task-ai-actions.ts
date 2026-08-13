@@ -21,11 +21,11 @@ import {
   resolveDraftAssignment,
 } from '~/lib/ai/workspace-task-extract';
 import {
-  loadTaskPersonAssigneeOptions,
   parsePersonAssigneeSelectValue,
   personAssigneeSelectValue,
   resolvePersonAssigneeFromSuggestion,
 } from '~/lib/tasks/task-person-assignee';
+import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
 function revalidateWorkspaceTaskPages(accountSlug: string) {
   const slug = accountSlug.trim();
   if (!slug) return;
