@@ -31,6 +31,8 @@ import { toast } from '@kit/ui/sonner';
 import {
   addAdminWorkspaceMemberAction,
   removeAdminWorkspaceMemberAction,
+  resendAdminWorkspaceInviteAction,
+  resendAllAdminWorkspaceInvitesAction,
   updateAdminWorkspaceMemberRoleAction,
 } from '~/lib/admin/admin-workspace.actions';
 import {
@@ -50,6 +52,8 @@ export type AdminWorkspaceMember = {
 
 export type AdminWorkspaceInvitation = {
   id: string;
+  /** Numeric invitations.id for workspace member invites (null for project guests). */
+  invitationId: number | null;
   email: string;
   role: string;
   kind: 'member' | 'project_guest';
@@ -65,6 +69,7 @@ export function AdminWorkspaceMembersPanel(props: {
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  const [resendPending, startResendTransition] = useTransition();
   const [rolePendingUserId, setRolePendingUserId] = useState<string | null>(
     null,
   );
@@ -276,14 +281,50 @@ export function AdminWorkspaceMembersPanel(props: {
 
       {props.invitations.length > 0 ? (
         <div className="rounded-lg border">
-          <div className="border-b px-4 py-3">
-            <h3 className="text-sm font-semibold">Pending invitations</h3>
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b px-4 py-3">
+            <div>
+              <h3 className="text-sm font-semibold">Pending invitations</h3>
+              <p className="text-muted-foreground text-xs">
+                Resend workspace invite emails (extends expiry by 7 days)
+              </p>
+            </div>
+            {props.invitations.some((invite) => invite.invitationId != null) ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={resendPending}
+                onClick={() => {
+                  startResendTransition(async () => {
+                    try {
+                      const result = await resendAllAdminWorkspaceInvitesAction({
+                        accountId: props.accountId,
+                      });
+                      toast.success(
+                        result.failed > 0
+                          ? `Sent ${result.sent}, failed ${result.failed}`
+                          : `Sent ${result.sent} invite${result.sent === 1 ? '' : 's'}`,
+                      );
+                      router.refresh();
+                    } catch (error) {
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : 'Could not send invites',
+                      );
+                    }
+                  });
+                }}
+              >
+                {resendPending ? 'Sending…' : 'Send all invite emails'}
+              </Button>
+            ) : null}
           </div>
           <ul className="divide-y">
             {props.invitations.map((invite) => (
               <li
                 key={invite.id}
-                className="flex items-center justify-between gap-3 px-4 py-3"
+                className="flex flex-col gap-3 px-4 py-3 sm:flex-row sm:items-center sm:justify-between"
               >
                 <div className="min-w-0">
                   <div className="flex flex-wrap items-center gap-2">
@@ -304,6 +345,37 @@ export function AdminWorkspaceMembersPanel(props: {
                     · {new Date(invite.createdAt).toLocaleDateString('en-GB')}
                   </p>
                 </div>
+                {invite.invitationId != null ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={resendPending}
+                    onClick={() => {
+                      const invitationId = invite.invitationId;
+                      if (invitationId == null) return;
+
+                      startResendTransition(async () => {
+                        try {
+                          await resendAdminWorkspaceInviteAction({
+                            accountId: props.accountId,
+                            invitationId,
+                          });
+                          toast.success(`Invite sent to ${invite.email}`);
+                          router.refresh();
+                        } catch (error) {
+                          toast.error(
+                            error instanceof Error
+                              ? error.message
+                              : 'Could not send invite',
+                          );
+                        }
+                      });
+                    }}
+                  >
+                    Resend email
+                  </Button>
+                ) : null}
               </li>
             ))}
           </ul>

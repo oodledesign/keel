@@ -29,6 +29,8 @@ import {
   AddAdminWorkspaceMemberSchema,
   type AdminWorkspaceProfile,
   CreateAdminWorkspaceSchema,
+  ResendAdminWorkspaceInviteSchema,
+  ResendAllAdminWorkspaceInvitesSchema,
   UpdateAdminWorkspaceMemberRoleSchema,
 } from './admin-workspace.schema';
 
@@ -465,4 +467,104 @@ export const removeAdminWorkspaceMemberAction = enhanceAction(
       userId: z.string().uuid(),
     }),
   },
+);
+
+export const resendAdminWorkspaceInviteAction = enhanceAction(
+  async (input) => {
+    const { user } = await requireSuperAdmin();
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: invitation, error } = await admin
+      .from('invitations')
+      .select('id, email, account_id')
+      .eq('id', input.invitationId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (error) throw new Error(error.message);
+    if (!invitation) {
+      throw new Error('Invitation not found for this workspace');
+    }
+
+    const invitations = createAccountInvitationsService(
+      admin as unknown as Parameters<typeof createAccountInvitationsService>[0],
+    );
+    const result = await invitations.resendInvitation(input.invitationId);
+
+    await logAdminAction(admin, {
+      actorUserId: user.id,
+      action: 'resend_workspace_invite',
+      targetAccountId: input.accountId,
+      metadata: {
+        invitationId: input.invitationId,
+        email: invitation.email,
+      },
+    });
+
+    revalidateWorkspacePaths(input.accountId);
+    return { success: true as const, email: result.email };
+  },
+  { schema: ResendAdminWorkspaceInviteSchema },
+);
+
+export const resendAllAdminWorkspaceInvitesAction = enhanceAction(
+  async (input) => {
+    const { user } = await requireSuperAdmin();
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: pending, error } = await admin
+      .from('invitations')
+      .select('id, email')
+      .eq('account_id', input.accountId)
+      .order('created_at', { ascending: false });
+
+    if (error) throw new Error(error.message);
+
+    const invitations = createAccountInvitationsService(
+      admin as unknown as Parameters<typeof createAccountInvitationsService>[0],
+    );
+
+    let sent = 0;
+    const failures: Array<{ email: string; error: string }> = [];
+
+    for (const row of pending ?? []) {
+      try {
+        await invitations.resendInvitation(row.id as number);
+        sent += 1;
+      } catch (err) {
+        failures.push({
+          email: String(row.email),
+          error: err instanceof Error ? err.message : 'Send failed',
+        });
+      }
+    }
+
+    await logAdminAction(admin, {
+      actorUserId: user.id,
+      action: 'resend_all_workspace_invites',
+      targetAccountId: input.accountId,
+      metadata: {
+        attempted: pending?.length ?? 0,
+        sent,
+        failed: failures.length,
+        failures,
+      },
+    });
+
+    revalidateWorkspacePaths(input.accountId);
+
+    if (sent === 0 && (pending?.length ?? 0) > 0) {
+      throw new Error(
+        failures[0]?.error ?? 'Could not send any invitation emails',
+      );
+    }
+
+    return {
+      success: true as const,
+      sent,
+      failed: failures.length,
+      failures,
+    };
+  },
+  { schema: ResendAllAdminWorkspaceInvitesSchema },
 );

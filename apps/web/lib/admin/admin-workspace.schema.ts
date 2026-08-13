@@ -51,3 +51,20 @@ export const UpdateAdminWorkspaceMemberRoleSchema = z.object({
 export type UpdateAdminWorkspaceMemberRoleInput = z.infer<
   typeof UpdateAdminWorkspaceMemberRoleSchema
 >;
+
+export const ResendAdminWorkspaceInviteSchema = z.object({
+  accountId: z.string().uuid(),
+  invitationId: z.number().int().positive(),
+});
+
+export type ResendAdminWorkspaceInviteInput = z.infer<
+  typeof ResendAdminWorkspaceInviteSchema
+>;
+
+export const ResendAllAdminWorkspaceInvitesSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
+export type ResendAllAdminWorkspaceInvitesInput = z.infer<
+  typeof ResendAllAdminWorkspaceInvitesSchema
+>;

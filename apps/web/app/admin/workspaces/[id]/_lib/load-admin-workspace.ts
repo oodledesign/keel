@@ -145,6 +145,7 @@ export const loadAdminWorkspaceDetail = cache(
       invitations.data ?? []
     ).map((row) => ({
       id: `member:${row.id as number}`,
+      invitationId: row.id as number,
       email: String(row.email),
       role: String(row.role),
       kind: 'member' as const,
@@ -159,6 +160,7 @@ export const loadAdminWorkspaceDetail = cache(
       const projectId = row.project_id as string;
       return {
         id: `guest:${row.id as string}`,
+        invitationId: null,
         email: String(row.invited_email),
         role: 'project guest',
         kind: 'project_guest' as const,

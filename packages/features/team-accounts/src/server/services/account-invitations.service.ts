@@ -422,6 +422,65 @@ class AccountInvitationsService {
   }
 
   /**
+   * @name resendInvitation
+   * @description Extends expiry and re-sends the invitation email.
+   */
+  async resendInvitation(invitationId: number) {
+    const logger = await getLogger();
+
+    const ctx = {
+      invitationId,
+      name: this.namespace,
+    };
+
+    logger.info(ctx, 'Resending invitation email...');
+
+    const { data: invitation, error } = await this.client
+      .from('invitations')
+      .select('*')
+      .eq('id', invitationId)
+      .maybeSingle();
+
+    if (error) {
+      logger.error({ ...ctx, error }, 'Failed to load invitation for resend');
+      throw error;
+    }
+
+    if (!invitation) {
+      throw new Error('Invitation not found');
+    }
+
+    if (!invitation.invite_token) {
+      throw new Error('Invitation is missing an invite token');
+    }
+
+    // Keep the invite usable after a late resend.
+    await this.renewInvitation(invitationId);
+
+    const dispatcher = createAccountInvitationsDispatchService(this.client);
+    const link = dispatcher.getAcceptInvitationLink(invitation.invite_token);
+    const result = await dispatcher.sendInvitationEmail({
+      invitation,
+      link,
+    });
+
+    if (!result.success) {
+      logger.error(
+        { ...ctx, error: result.error },
+        'Failed to resend invitation email',
+      );
+      throw new Error('Failed to send invitation email');
+    }
+
+    logger.info(
+      { ...ctx, accountId: invitation.account_id, email: invitation.email },
+      'Invitation email resent',
+    );
+
+    return { success: true as const, email: invitation.email };
+  }
+
+  /**
    * @name dispatchInvitationEmails
    * @description Dispatches invitation emails to the invited users.
    * @param ctx
