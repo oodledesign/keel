@@ -33,6 +33,9 @@ class CreateTeamAccountService {
       account_slug: params.slug ?? null,
       account_space_type: params.spaceType ?? 'work',
       account_business_type: params.businessType ?? null,
+      // Must be passed explicitly: a 5-arg + 6-arg overload pair makes PostgREST
+      // return HTTP 300 (PGRST203) when only the shared params are sent.
+      account_complete_onboarding: false,
     });
 
     if (error) {
