@@ -2,12 +2,13 @@ import Link from 'next/link';
 
 import { Lock, Sparkles } from 'lucide-react';
 
+import { Badge } from '@kit/ui/badge';
 import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
 
 /**
- * Site Studio add-on upsell — subscribe from Billing (£19/mo · £190/yr).
+ * Site Studio is in development — no subscribe CTA.
  */
 export function SiteStudioUpsell({
   accountSlug,
@@ -17,10 +18,10 @@ export function SiteStudioUpsell({
   /** Optional tab name when this card is shown inside a locked tab. */
   lockedTabLabel?: string;
 }) {
-  const billingHref = `${pathsConfig.app.accountBilling.replace(
+  const addonsHref = pathsConfig.app.accountAddonsSettings.replace(
     '[account]',
     accountSlug,
-  )}?addon=site_studio#addons`;
+  );
 
   return (
     <div className="rounded-xl border border-[var(--ozer-accent)]/25 bg-[var(--ozer-accent-subtle)]/30 p-5">
@@ -29,9 +30,10 @@ export function SiteStudioUpsell({
           <Lock className="h-4 w-4 text-[var(--ozer-accent)]" aria-hidden />
         </div>
         <div className="max-w-xl space-y-3">
-          <p className="flex items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
+          <p className="flex flex-wrap items-center gap-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
             <Sparkles className="h-4 w-4 text-[var(--ozer-accent)]" />
             Site Studio
+            <Badge variant="secondary">Coming soon</Badge>
             {lockedTabLabel ? (
               <span className="font-normal text-[var(--workspace-shell-text-muted)]">
                 · {lockedTabLabel} locked
@@ -44,11 +46,11 @@ export function SiteStudioUpsell({
             (Client-First), Astro, Next.js, and Cursor prompts.
           </p>
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            From £19/mo or £190/yr. Unlock Brief, Design, Search, Export, and
-            Build for this workspace.
+            Site Studio isn’t available to subscribe yet. See the apps catalog
+            for what’s live and what’s on the roadmap.
           </p>
-          <Button asChild size="sm">
-            <Link href={billingHref}>Subscribe to Site Studio</Link>
+          <Button asChild size="sm" variant="outline">
+            <Link href={addonsHref}>View apps & add-ons</Link>
           </Button>
         </div>
       </div>

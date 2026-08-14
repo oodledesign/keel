@@ -16,6 +16,8 @@ import {
 import { detectAspectRatio } from '../player-config-types';
 import { buildPublicVideoWatchUrl } from '../public-share';
 import type { VideoRow } from '../types';
+import { normalizeVideoChapters } from './generate-video-chapters';
+import { normalizeVideoSummary } from './generate-video-summary';
 import {
   configValuesFromRow,
   loadAccountPresets,
@@ -84,16 +86,22 @@ export async function loadVideoPlayerConfigPage(
   ]);
 
   const bunny = createBunnyStreamClient();
-  const [captionsResult, bunnyVideoResult] = await Promise.allSettled([
-    bunny.listCaptions(
-      String(video.bunny_library_id),
-      String(video.bunny_video_id),
-    ),
-    bunny.getVideo(
-      String(video.bunny_library_id),
-      String(video.bunny_video_id),
-    ),
-  ]);
+  const [captionsResult, bunnyVideoResult, transcriptResult] =
+    await Promise.allSettled([
+      bunny.listCaptions(
+        String(video.bunny_library_id),
+        String(video.bunny_video_id),
+      ),
+      bunny.getVideo(
+        String(video.bunny_library_id),
+        String(video.bunny_video_id),
+      ),
+      access.client
+        .from('video_transcripts')
+        .select('plain_text, status')
+        .eq('video_id', videoId)
+        .maybeSingle(),
+    ]);
   const captions =
     captionsResult.status === 'fulfilled' ? captionsResult.value : [];
   const detectedAspectRatio =
@@ -103,6 +111,14 @@ export async function loadVideoPlayerConfigPage(
           bunnyVideoResult.value.height,
         )
       : '16:9';
+  const transcriptRow =
+    transcriptResult.status === 'fulfilled'
+      ? transcriptResult.value.data
+      : null;
+  const transcriptPlainText =
+    transcriptRow?.status === 'ready'
+      ? String(transcriptRow.plain_text ?? '').trim() || null
+      : null;
   const config = configRow
     ? configValuesFromRow(configRow)
     : resolved.source === 'default'
@@ -128,7 +144,14 @@ export async function loadVideoPlayerConfigPage(
         video.public_share_enabled && video.public_share_token
           ? buildPublicVideoWatchUrl(String(video.public_share_token))
           : null,
+      publishedAt:
+        (video.published_at as string | null | undefined) ??
+        (video.created_at as string | null) ??
+        null,
+      chapters: normalizeVideoChapters(video.chapters),
+      summary: normalizeVideoSummary(video.summary),
     },
+    transcriptPlainText,
     config,
     detectedAspectRatio,
     configSource: configRow ? 'video' : resolved.source,

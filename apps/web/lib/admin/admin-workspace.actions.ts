@@ -29,6 +29,7 @@ import {
   AddAdminWorkspaceMemberSchema,
   type AdminWorkspaceProfile,
   CreateAdminWorkspaceSchema,
+  DeleteAdminWorkspaceInviteSchema,
   ResendAdminWorkspaceInviteSchema,
   ResendAllAdminWorkspaceInvitesSchema,
   UpdateAdminWorkspaceMemberRoleSchema,
@@ -516,6 +517,44 @@ export const resendAdminWorkspaceInviteAction = enhanceAction(
     return { success: true as const, email: result.email };
   },
   { schema: ResendAdminWorkspaceInviteSchema },
+);
+
+export const deleteAdminWorkspaceInviteAction = enhanceAction(
+  async (input) => {
+    const { user } = await requireSuperAdmin();
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: invitation, error: lookupError } = await admin
+      .from('invitations')
+      .select('id, email, account_id')
+      .eq('id', input.invitationId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (lookupError) throw new Error(lookupError.message);
+    if (!invitation) {
+      throw new Error('Invitation not found for this workspace');
+    }
+
+    const invitations = createAccountInvitationsService(
+      admin as unknown as Parameters<typeof createAccountInvitationsService>[0],
+    );
+    await invitations.deleteInvitation({ invitationId: input.invitationId });
+
+    await logAdminAction(admin, {
+      actorUserId: user.id,
+      action: 'delete_workspace_invite',
+      targetAccountId: input.accountId,
+      metadata: {
+        invitationId: input.invitationId,
+        email: invitation.email,
+      },
+    });
+
+    revalidateWorkspacePaths(input.accountId);
+    return { success: true as const, email: invitation.email };
+  },
+  { schema: DeleteAdminWorkspaceInviteSchema },
 );
 
 export const resendAllAdminWorkspaceInvitesAction = enhanceAction(

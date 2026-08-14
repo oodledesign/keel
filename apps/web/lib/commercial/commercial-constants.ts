@@ -158,6 +158,81 @@ export const DISPOSAL_TYPE_BADGE_CLASS: Record<DisposalType, string> = {
     'bg-cyan-100 text-cyan-900 ring-1 ring-inset ring-cyan-200/80 dark:bg-cyan-500/15 dark:text-cyan-100 dark:ring-cyan-500/30',
 };
 
+/** Normalised sector keys for colour-coded pills. */
+export type CommercialSectorKey =
+  | 'office'
+  | 'industrial'
+  | 'retail'
+  | 'leisure'
+  | 'land'
+  | 'residential'
+  | 'investment'
+  | 'development'
+  | 'other';
+
+export const SECTOR_BADGE_CLASS: Record<CommercialSectorKey, string> = {
+  office:
+    'bg-sky-100 text-sky-900 ring-1 ring-inset ring-sky-200/80 dark:bg-sky-500/15 dark:text-sky-100 dark:ring-sky-500/30',
+  industrial:
+    'bg-slate-200/80 text-slate-800 ring-1 ring-inset ring-slate-300/80 dark:bg-slate-500/20 dark:text-slate-100 dark:ring-slate-500/35',
+  retail:
+    'bg-rose-100 text-rose-900 ring-1 ring-inset ring-rose-200/80 dark:bg-rose-500/15 dark:text-rose-100 dark:ring-rose-500/30',
+  leisure:
+    'bg-orange-100 text-orange-900 ring-1 ring-inset ring-orange-200/80 dark:bg-orange-500/15 dark:text-orange-100 dark:ring-orange-500/30',
+  land: 'bg-lime-100 text-lime-900 ring-1 ring-inset ring-lime-200/80 dark:bg-lime-500/15 dark:text-lime-100 dark:ring-lime-500/30',
+  residential:
+    'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
+  investment:
+    'bg-amber-100 text-amber-900 ring-1 ring-inset ring-amber-200/80 dark:bg-amber-500/15 dark:text-amber-100 dark:ring-amber-500/30',
+  development:
+    'bg-cyan-100 text-cyan-900 ring-1 ring-inset ring-cyan-200/80 dark:bg-cyan-500/15 dark:text-cyan-100 dark:ring-cyan-500/30',
+  other:
+    'bg-zinc-100 text-zinc-700 ring-1 ring-inset ring-zinc-200/80 dark:bg-zinc-500/15 dark:text-zinc-200 dark:ring-zinc-500/30',
+};
+
+/** Split multi-value sector strings like "Office, Retail". */
+export function splitSectorLabels(
+  sector: string | null | undefined,
+): string[] {
+  if (!sector?.trim()) return [];
+  return sector
+    .split(/[,;/|]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
+
+export function resolveSectorKey(raw: string): CommercialSectorKey {
+  const value = raw.trim().toLowerCase();
+  if (!value) return 'other';
+  if (value.includes('office') || value.includes('serviced')) return 'office';
+  if (
+    value.includes('industrial') ||
+    value.includes('logistics') ||
+    value.includes('warehouse') ||
+    value.includes('storage') ||
+    value.includes('trade')
+  ) {
+    return 'industrial';
+  }
+  if (value.includes('retail') || value.includes('shop')) return 'retail';
+  if (value.includes('leisure') || value.includes('hospitality')) {
+    return 'leisure';
+  }
+  if (value.includes('land') || value.includes('agricultural')) return 'land';
+  if (value.includes('residential') || value.includes('housing')) {
+    return 'residential';
+  }
+  if (value.includes('investment')) return 'investment';
+  if (value.includes('development') || value.includes('site')) {
+    return 'development';
+  }
+  return 'other';
+}
+
+export function sectorBadgeClass(sector: string): string {
+  return SECTOR_BADGE_CLASS[resolveSectorKey(sector)];
+}
+
 /** Semantic badge classes for listing status pills. */
 export const LISTING_STATUS_BADGE_CLASS: Record<ListingStatus, string> = {
   draft:
@@ -433,6 +508,11 @@ export const VIEWING_OUTCOME_LABELS: Record<ViewingOutcome, string> = {
   negative: 'Negative',
 };
 
-export const LEASE_STATUSES = ['active', 'expired', 'terminated'] as const;
+export const LEASE_STATUSES = [
+  'active',
+  'expired',
+  'terminated',
+  'completed',
+] as const;
 
 export type LeaseStatus = (typeof LEASE_STATUSES)[number];

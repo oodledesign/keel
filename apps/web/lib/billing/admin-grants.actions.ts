@@ -100,15 +100,55 @@ export const adminRevokeEntitlementAction = enhanceAction(
     const { user } = await requireSuperAdmin();
     const admin = getSupabaseServerAdminClient();
 
+    // Allow revoking admin/onboard grants. Stripe-managed rows stay until
+    // the subscription webhook clears them.
+    const { data: existing, error: lookupError } = await admin
+      .from('account_entitlements')
+      .select('source')
+      .eq('account_id', input.accountId)
+      .eq('entitlement_key', input.entitlementKey)
+      .maybeSingle();
+
+    if (lookupError) {
+      throw new Error(lookupError.message);
+    }
+
+    if (!existing) {
+      throw new Error('Entitlement not found');
+    }
+
+    if (existing.source === 'stripe') {
+      throw new Error(
+        'This entitlement is managed by Stripe. Cancel or change the subscription instead.',
+      );
+    }
+
     const { error } = await admin
       .from('account_entitlements')
       .delete()
       .eq('account_id', input.accountId)
       .eq('entitlement_key', input.entitlementKey)
-      .eq('source', 'admin_grant');
+      .neq('source', 'stripe');
 
     if (error) {
       throw new Error(error.message);
+    }
+
+    if (input.entitlementKey === 'workspace_business_lite') {
+      await admin
+        .from('businesses')
+        .update({ type: 'other' })
+        .eq('account_id', input.accountId)
+        .eq('type', 'lite');
+
+      await admin.from('account_module_settings').upsert(
+        {
+          account_id: input.accountId,
+          module_key: 'apps',
+          enabled: false,
+        },
+        { onConflict: 'account_id,module_key' },
+      );
     }
 
     await syncAddonModulesFromEntitlements(admin, input.accountId);
@@ -117,7 +157,10 @@ export const adminRevokeEntitlementAction = enhanceAction(
       actorUserId: user.id,
       action: 'revoke_entitlement',
       targetAccountId: input.accountId,
-      metadata: { entitlementKey: input.entitlementKey },
+      metadata: {
+        entitlementKey: input.entitlementKey,
+        previousSource: existing.source,
+      },
     });
 
     revalidatePath(`/admin/accounts/${input.accountId}`);

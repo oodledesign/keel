@@ -83,8 +83,11 @@ export function OzerAddonCheckoutSection({
 
   const availableAddons = launchedWorkspaceAddons();
 
+  const highlighted = addonKeyFromHighlight(highlightAddon);
   const initialKey =
-    addonKeyFromHighlight(highlightAddon) ??
+    (highlighted && availableAddons.some((a) => a.key === highlighted)
+      ? highlighted
+      : null) ??
     availableAddons.find((addon) => !activeAddons[addon.key])?.key ??
     availableAddons[0]?.key ??
     'addon_signatures';

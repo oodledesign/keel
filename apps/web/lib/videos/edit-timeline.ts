@@ -234,6 +234,23 @@ export function sourceMsToEditedMs(
   return null;
 }
 
+/** Inverse of sourceMsToEditedMs for seeking the master file from playback time. */
+export function editedMsToSourceMs(
+  keepRanges: VideoKeepRange[],
+  editedMs: number,
+): number | null {
+  let remaining = Math.max(0, editedMs);
+  for (const range of keepRanges) {
+    const len = range.endMs - range.startMs;
+    if (remaining <= len) {
+      return range.startMs + remaining;
+    }
+    remaining -= len;
+  }
+  const last = keepRanges[keepRanges.length - 1];
+  return last ? last.endMs : null;
+}
+
 export function editedDurationMs(keepRanges: VideoKeepRange[]) {
   return keepRanges.reduce((sum, r) => sum + (r.endMs - r.startMs), 0);
 }

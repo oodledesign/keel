@@ -298,17 +298,19 @@ function EntitlementGroup({
                   </p>
                 ) : null}
               </div>
-              {active && row?.source === 'admin_grant' ? (
+              {active && row?.source !== 'stripe' ? (
                 <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="secondary"
-                    disabled={pending}
-                    onClick={() => onGrant(item.key)}
-                  >
-                    Re-sync modules
-                  </Button>
+                  {row?.source === 'admin_grant' ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="secondary"
+                      disabled={pending}
+                      onClick={() => onGrant(item.key)}
+                    >
+                      Re-sync modules
+                    </Button>
+                  ) : null}
                   <Button
                     type="button"
                     size="sm"
@@ -316,12 +318,15 @@ function EntitlementGroup({
                     disabled={pending}
                     onClick={() => onRevoke(item.key)}
                   >
-                    Revoke grant
+                    Revoke
+                    {row?.source && row.source !== 'admin_grant'
+                      ? ` (${row.source})`
+                      : ' grant'}
                   </Button>
                 </div>
               ) : active ? (
                 <span className="text-muted-foreground text-xs">
-                  Active (Stripe)
+                  Active (Stripe — manage via subscription)
                 </span>
               ) : (
                 <Button

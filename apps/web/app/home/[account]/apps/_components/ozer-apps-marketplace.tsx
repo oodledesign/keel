@@ -7,6 +7,7 @@ import pathsConfig from '~/config/paths.config';
 import type { NavChild } from '~/config/work-account-navigation.config';
 import {
   type OzerAddonKey,
+  inDevelopmentWorkspaceAddons,
   launchedWorkspaceAddons,
 } from '~/lib/billing/ozer-plan-catalog';
 
@@ -16,6 +17,7 @@ const ADDON_OPEN_PATH: Partial<Record<OzerAddonKey, string>> = {
   addon_rankly: pathsConfig.app.accountRanklyDashboard,
   addon_videos: pathsConfig.app.accountVideos,
   addon_feedflow: pathsConfig.app.accountFeedflowReviews,
+  addon_media_generate: pathsConfig.app.accountMedia,
 };
 
 type OzerAppsMarketplaceProps = {
@@ -35,6 +37,11 @@ export function OzerAppsMarketplace({
     '[account]',
     accountSlug,
   );
+  const addonsPath = pathsConfig.app.accountAddonsSettings.replace(
+    '[account]',
+    accountSlug,
+  );
+  const comingSoon = inDevelopmentWorkspaceAddons();
 
   return (
     <div className="space-y-8">
@@ -128,7 +135,7 @@ export function OzerAppsMarketplace({
                   </div>
                 ) : workspacePaid ? (
                   <Button asChild size="sm">
-                    <Link href={`${billingPath}?addon=${addonSlug}#addons`}>
+                    <Link href={`${addonsPath}?addon=${addonSlug}#addons`}>
                       Subscribe
                     </Link>
                   </Button>
@@ -142,6 +149,33 @@ export function OzerAppsMarketplace({
           })}
         </div>
       </section>
+
+      {comingSoon.length > 0 ? (
+        <section className="space-y-3">
+          <div>
+            <h2 className="text-lg font-semibold">In development</h2>
+            <p className="text-muted-foreground text-sm">
+              On the roadmap — not available to subscribe yet.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+            {comingSoon.map((addon) => (
+              <div
+                key={addon.key}
+                className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-black/10 p-4 opacity-90"
+              >
+                <div className="mb-2 flex items-start justify-between gap-2">
+                  <h3 className="font-semibold">{addon.name}</h3>
+                  <Badge variant="secondary">Coming soon</Badge>
+                </div>
+                <p className="text-muted-foreground text-sm">
+                  {addon.description}
+                </p>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

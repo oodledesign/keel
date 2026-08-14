@@ -67,6 +67,11 @@ type Props = {
   accountId: string;
   mode: Mode;
   compact?: boolean;
+  /** Fires when linked interest + suggested fits totals change (for Matches badges). */
+  onMatchTotalsChange?: (totals: {
+    linked: number;
+    suggested: number;
+  }) => void;
 };
 
 function formatSize(min: number | null, max: number | null) {
@@ -90,6 +95,7 @@ export function CommercialInterestPanel({
   accountId,
   mode,
   compact = false,
+  onMatchTotalsChange,
 }: Props) {
   const [matches, setMatches] = useState<CommercialInterestMatch[]>([]);
   const [suggestions, setSuggestions] = useState<MatchSuggestion[]>([]);
@@ -134,7 +140,8 @@ export function CommercialInterestPanel({
         listingId: mode.kind === 'listing' ? mode.listingId : undefined,
         requirementId:
           mode.kind === 'requirement' ? mode.requirementId : undefined,
-        limit: compact ? 5 : 8,
+        // Compact UI shows a short list, but load enough for accurate totals.
+        limit: compact ? 40 : 8,
       });
       setSuggestions(next);
     } catch (error) {
@@ -258,6 +265,18 @@ export function CommercialInterestPanel({
     if (statusFilter === 'all') return matches;
     return matches.filter((match) => match.status === statusFilter);
   }, [matches, statusFilter]);
+
+  const visibleSuggestions = useMemo(
+    () => (compact ? suggestions.slice(0, 5) : suggestions),
+    [compact, suggestions],
+  );
+
+  useEffect(() => {
+    onMatchTotalsChange?.({
+      linked: matches.length,
+      suggested: suggestions.length,
+    });
+  }, [matches.length, suggestions.length, onMatchTotalsChange]);
 
   const showUnifiedEmpty =
     !loading &&
@@ -648,14 +667,14 @@ export function CommercialInterestPanel({
           <Loader2 className="h-4 w-4 animate-spin" />
           Finding fits…
         </div>
-      ) : suggestions.length === 0 && !showUnifiedEmpty ? (
+      ) : visibleSuggestions.length === 0 && !showUnifiedEmpty ? (
         <p className="text-xs text-[var(--workspace-shell-text)]/45">
           No strong suggestions yet — add more brief detail or stock to improve
           matches.
         </p>
-      ) : suggestions.length > 0 ? (
+      ) : visibleSuggestions.length > 0 ? (
         <ul className="space-y-2">
-          {suggestions.map((suggestion) => {
+          {visibleSuggestions.map((suggestion) => {
             const primary =
               mode.kind === 'listing'
                 ? suggestion.requirementLabel

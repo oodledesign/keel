@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { LEASE_STATUSES } from '~/lib/commercial/commercial-constants';
 
+export const TRANSACTION_KINDS = ['letting', 'sale'] as const;
+
 export const ListLeasesSchema = z.object({
   accountId: z.string().uuid(),
 });
@@ -15,9 +17,12 @@ export const CreateLeaseSchema = z.object({
   postcode: z.string().optional().nullable(),
   tenantName: z.string().optional().nullable(),
   headlineRentPsf: z.number().optional().nullable(),
+  headlinePricePence: z.number().int().optional().nullable(),
   leaseStart: z.string().optional().nullable(),
   leaseEnd: z.string().optional().nullable(),
   status: z.enum(LEASE_STATUSES).default('active'),
+  transactionKind: z.enum(TRANSACTION_KINDS).optional(),
+  externalId: z.string().optional().nullable(),
   notes: z.string().optional().nullable(),
 });
 

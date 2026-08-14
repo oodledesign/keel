@@ -13365,6 +13365,7 @@ export type Database = {
           baked_revision: number
           bunny_library_id: string
           bunny_video_id: string
+          chapters: Json
           created_at: string
           description: string | null
           duration_seconds: number | null
@@ -13377,10 +13378,12 @@ export type Database = {
           public_share_enabled: boolean
           public_share_token: string | null
           published_revision: number
+          published_at: string | null
           published_timeline: Json | null
           recorded_at: string | null
           source: string
           status: string
+          summary: string | null
           tags: string[]
           thumbnail_url: string | null
           title: string
@@ -13391,6 +13394,7 @@ export type Database = {
           baked_revision?: number
           bunny_library_id: string
           bunny_video_id: string
+          chapters?: Json
           created_at?: string
           description?: string | null
           duration_seconds?: number | null
@@ -13403,10 +13407,12 @@ export type Database = {
           public_share_enabled?: boolean
           public_share_token?: string | null
           published_revision?: number
+          published_at?: string | null
           published_timeline?: Json | null
           recorded_at?: string | null
           source?: string
           status?: string
+          summary?: string | null
           tags?: string[]
           thumbnail_url?: string | null
           title: string
@@ -13417,6 +13423,7 @@ export type Database = {
           baked_revision?: number
           bunny_library_id?: string
           bunny_video_id?: string
+          chapters?: Json
           created_at?: string
           description?: string | null
           duration_seconds?: number | null
@@ -13429,10 +13436,12 @@ export type Database = {
           public_share_enabled?: boolean
           public_share_token?: string | null
           published_revision?: number
+          published_at?: string | null
           published_timeline?: Json | null
           recorded_at?: string | null
           source?: string
           status?: string
+          summary?: string | null
           tags?: string[]
           thumbnail_url?: string | null
           title?: string

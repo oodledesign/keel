@@ -4,6 +4,7 @@ import {
   createDefaultTimeline,
   deletedGaps,
   editedDurationMs,
+  editedMsToSourceMs,
   removeRangeFromKeep,
   restoreRangeToKeep,
   sourceMsToEditedMs,
@@ -46,6 +47,16 @@ describe('edit-timeline', () => {
     expect(sourceMsToEditedMs(keep, 500)).toBe(500);
     expect(sourceMsToEditedMs(keep, 2_000)).toBeNull();
     expect(sourceMsToEditedMs(keep, 3_500)).toBe(1_500);
+  });
+
+  it('maps edited time back to source time across cuts', () => {
+    const keep = [
+      { startMs: 0, endMs: 1_000 },
+      { startMs: 3_000, endMs: 4_000 },
+    ];
+    expect(editedMsToSourceMs(keep, 500)).toBe(500);
+    expect(editedMsToSourceMs(keep, 1_500)).toBe(3_500);
+    expect(editedMsToSourceMs(keep, 2_000)).toBe(4_000);
   });
 
   it('suggests zooms from click clusters', () => {

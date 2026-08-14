@@ -9,7 +9,9 @@ import {
   resolveVideoThumbnailCandidates,
   resolveVideoThumbnailUrl,
 } from '../thumbnail';
-import type { VideoRow } from '../types';
+import type { VideoChapter, VideoRow } from '../types';
+import { normalizeVideoChapters } from './generate-video-chapters';
+import { normalizeVideoSummary } from './generate-video-summary';
 import { resolveEffectivePlayerConfig } from './player-config-data';
 import { syncVideoAnalyticsIfStale } from './sync-video-analytics';
 import { resolveBunnyCdnHostname } from './videos-data';
@@ -19,6 +21,10 @@ export type PublicVideoPageData = {
   config: VideoPlayerConfigValues;
   /** Prefer player-composed master + published timeline (instant edits). */
   useTimelinePlayer: boolean;
+  chapters: VideoChapter[];
+  publishedAt: string | null;
+  transcriptPlainText: string | null;
+  summary: string | null;
 };
 
 export const loadPublicVideoByToken = cache(
@@ -84,6 +90,17 @@ export const loadPublicVideoByToken = cache(
       Number(video.published_revision ?? 0) > 0,
     );
 
+    const { data: transcript } = await admin
+      .from('video_transcripts')
+      .select('plain_text, status')
+      .eq('video_id', video.id)
+      .maybeSingle();
+
+    const transcriptPlainText =
+      transcript?.status === 'ready'
+        ? String(transcript.plain_text ?? '').trim() || null
+        : null;
+
     return {
       video: {
         ...video,
@@ -92,6 +109,13 @@ export const loadPublicVideoByToken = cache(
       },
       config: resolved.config,
       useTimelinePlayer,
+      chapters: normalizeVideoChapters(video.chapters),
+      publishedAt:
+        (video.published_at as string | null | undefined) ??
+        video.created_at ??
+        null,
+      transcriptPlainText,
+      summary: normalizeVideoSummary(video.summary),
     };
   },
 );

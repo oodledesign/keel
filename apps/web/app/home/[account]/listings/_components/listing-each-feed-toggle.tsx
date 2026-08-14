@@ -4,10 +4,21 @@ import { useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import { Info } from 'lucide-react';
+
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
 
 import { setEachListingFeedInclusionAction } from '../../commercial-publishing/_lib/server/server-actions';
+
+const EACH_FEED_HELP =
+  'On by default for Marketing / Under offer. Switch off to exclude this disposal from the EACH XML feed.';
 
 export function ListingEachFeedToggle({
   accountId,
@@ -66,19 +77,32 @@ export function ListingEachFeedToggle({
       }
     >
       <div className="min-w-0">
-        <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-          EACH feed
-        </p>
-        {!compact ? (
-          <p className="text-xs text-[var(--workspace-shell-text)]/55">
-            On by default for Marketing / Under offer. Switch off to exclude
-            this disposal from the EACH XML feed.
+        <div className="flex items-center gap-1.5">
+          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+            EACH feed
           </p>
-        ) : (
+          <TooltipProvider delayDuration={200}>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <button
+                  type="button"
+                  className="inline-flex shrink-0 rounded-full text-[var(--workspace-shell-text-muted)] transition-colors hover:text-[var(--workspace-shell-text)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)] focus-visible:outline-none"
+                  aria-label="About EACH feed"
+                >
+                  <Info className="h-3.5 w-3.5" aria-hidden />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="top" className="max-w-xs text-xs">
+                {EACH_FEED_HELP}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+        {compact ? (
           <p className="text-[11px] text-[var(--workspace-shell-text)]/50">
             {enabled ? 'Included when on-market' : 'Excluded from feed'}
           </p>
-        )}
+        ) : null}
       </div>
       <Switch
         checked={enabled}

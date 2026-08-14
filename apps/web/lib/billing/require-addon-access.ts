@@ -8,7 +8,10 @@ import pathsConfig from '~/config/paths.config';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { canUseAddon } from './entitlements';
-import type { OzerAddonKey } from './ozer-plan-catalog';
+import {
+  IN_DEVELOPMENT_WORKSPACE_ADDON_KEYS,
+  type OzerAddonKey,
+} from './ozer-plan-catalog';
 
 export async function redirectIfAddonNotAllowed(
   accountSlug: string,
@@ -21,10 +24,16 @@ export async function redirectIfAddonNotAllowed(
   const allowed = await canUseAddon(client, user.id, accountId, addonKey);
 
   if (!allowed) {
-    const billingPath = pathsConfig.app.accountBilling.replace(
+    const addonsPath = pathsConfig.app.accountAddonsSettings.replace(
       '[account]',
       accountSlug,
     );
-    redirect(`${billingPath}?addon=${addonKey.replace('addon_', '')}`);
+
+    // In-development add-ons: catalog only (no checkout deep-link).
+    if (IN_DEVELOPMENT_WORKSPACE_ADDON_KEYS.includes(addonKey)) {
+      redirect(addonsPath);
+    }
+
+    redirect(`${addonsPath}?addon=${addonKey.replace('addon_', '')}`);
   }
 }

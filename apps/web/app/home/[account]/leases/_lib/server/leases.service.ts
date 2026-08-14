@@ -3,11 +3,14 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { LeaseStatus } from '~/lib/commercial/commercial-constants';
+import type { KatoTransactionImportRow } from '~/lib/commercial/kato-transactions-import';
 
 import type {
   CreateLeaseInput,
   UpdateLeaseInput,
 } from '../schema/leases.schema';
+
+export type LeaseTransactionKind = 'letting' | 'sale';
 
 export type CommercialLease = {
   id: string;
@@ -20,9 +23,12 @@ export type CommercialLease = {
   postcode: string | null;
   tenantName: string | null;
   headlineRentPsf: number | null;
+  headlinePricePence: number | null;
   leaseStart: string | null;
   leaseEnd: string | null;
   status: LeaseStatus;
+  transactionKind: LeaseTransactionKind;
+  externalId: string | null;
   notes: string | null;
   createdAt: string;
   updatedAt: string;
@@ -50,12 +56,38 @@ function mapLease(row: Row): CommercialLease {
     tenantName: (row.tenant_name as string | null) ?? null,
     headlineRentPsf:
       row.headline_rent_psf != null ? Number(row.headline_rent_psf) : null,
+    headlinePricePence:
+      row.headline_price_pence != null
+        ? Number(row.headline_price_pence)
+        : null,
     leaseStart: (row.lease_start as string | null) ?? null,
     leaseEnd: (row.lease_end as string | null) ?? null,
     status: (row.status as LeaseStatus) ?? 'active',
+    transactionKind:
+      (row.transaction_kind as LeaseTransactionKind) ?? 'letting',
+    externalId: (row.external_id as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
+  };
+}
+
+function toDbRow(accountId: string, row: KatoTransactionImportRow) {
+  return {
+    account_id: accountId,
+    property_label: row.propertyLabel,
+    town: row.town,
+    postcode: row.postcode,
+    tenant_name: row.tenantName,
+    headline_rent_psf: row.headlineRentPsf,
+    headline_price_pence: row.headlinePricePence,
+    lease_start: row.leaseStart,
+    lease_end: row.leaseEnd,
+    status: row.status,
+    transaction_kind: row.transactionKind,
+    external_id: row.externalId,
+    notes: row.notes,
+    updated_at: new Date().toISOString(),
   };
 }
 
@@ -89,9 +121,12 @@ export function createLeasesService(client: SupabaseClient) {
           postcode: input.postcode ?? null,
           tenant_name: input.tenantName ?? null,
           headline_rent_psf: input.headlineRentPsf ?? null,
+          headline_price_pence: input.headlinePricePence ?? null,
           lease_start: input.leaseStart ?? null,
           lease_end: input.leaseEnd ?? null,
           status: input.status ?? 'active',
+          transaction_kind: input.transactionKind ?? 'letting',
+          external_id: input.externalId ?? null,
           notes: input.notes ?? null,
           created_by: input.createdBy ?? null,
         })
@@ -127,11 +162,17 @@ export function createLeasesService(client: SupabaseClient) {
           ...(input.headlineRentPsf !== undefined && {
             headline_rent_psf: input.headlineRentPsf,
           }),
+          ...(input.headlinePricePence !== undefined && {
+            headline_price_pence: input.headlinePricePence,
+          }),
           ...(input.leaseStart !== undefined && {
             lease_start: input.leaseStart,
           }),
           ...(input.leaseEnd !== undefined && { lease_end: input.leaseEnd }),
           ...(input.status !== undefined && { status: input.status }),
+          ...(input.transactionKind !== undefined && {
+            transaction_kind: input.transactionKind,
+          }),
           ...(input.notes !== undefined && { notes: input.notes }),
           updated_at: new Date().toISOString(),
         })
@@ -153,6 +194,74 @@ export function createLeasesService(client: SupabaseClient) {
         .eq('id', leaseId)
         .eq('account_id', accountId);
       if (error) throw new Error(error.message);
+    },
+
+    async upsertImportedTransactions(
+      accountId: string,
+      rows: KatoTransactionImportRow[],
+    ): Promise<{ inserted: number; updated: number; skipped: number }> {
+      if (rows.length === 0) {
+        return { inserted: 0, updated: 0, skipped: 0 };
+      }
+
+      const externalIds = rows.map((r) => r.externalId);
+      const { data: existingRows, error: existingError } = await client
+        .from('commercial_leases')
+        .select('id, external_id')
+        .eq('account_id', accountId)
+        .in('external_id', externalIds);
+
+      if (existingError) {
+        throw new Error(existingError.message);
+      }
+
+      const existingByExternal = new Map(
+        ((existingRows ?? []) as Array<{ id: string; external_id: string }>)
+          .filter((r) => r.external_id)
+          .map((r) => [r.external_id, r.id]),
+      );
+
+      let inserted = 0;
+      let updated = 0;
+      let skipped = 0;
+
+      const toInsert: ReturnType<typeof toDbRow>[] = [];
+      const toUpdate: Array<{ id: string; patch: ReturnType<typeof toDbRow> }> =
+        [];
+
+      for (const row of rows) {
+        if (!row.propertyLabel.trim()) {
+          skipped += 1;
+          continue;
+        }
+        const patch = toDbRow(accountId, row);
+        const existingId = existingByExternal.get(row.externalId);
+        if (existingId) {
+          toUpdate.push({ id: existingId, patch });
+        } else {
+          toInsert.push(patch);
+        }
+      }
+
+      const chunkSize = 50;
+      for (let i = 0; i < toInsert.length; i += chunkSize) {
+        const chunk = toInsert.slice(i, i + chunkSize);
+        const { error } = await client.from('commercial_leases').insert(chunk);
+        if (error) throw new Error(error.message);
+        inserted += chunk.length;
+      }
+
+      for (const item of toUpdate) {
+        const { error } = await client
+          .from('commercial_leases')
+          .update(item.patch)
+          .eq('id', item.id)
+          .eq('account_id', accountId);
+        if (error) throw new Error(error.message);
+        updated += 1;
+      }
+
+      return { inserted, updated, skipped };
     },
   };
 }

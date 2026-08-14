@@ -225,6 +225,7 @@ export async function publishTimelineInstant(input: {
   const patch: Record<string, unknown> = {
     published_timeline: saved.timeline,
     published_revision: saved.revision,
+    published_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
 

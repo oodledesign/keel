@@ -340,9 +340,9 @@ function GmailVacationSyncPanel({
 }) {
   if (state === 'scope_missing') {
     return (
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+      <div className="rounded-xl border border-[color-mix(in_srgb,var(--ozer-coral-500)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-coral-500)_10%,var(--workspace-shell-panel))] p-4 text-sm text-[var(--workspace-shell-text)]">
         <p className="font-medium">Reconnect Google to enable Gmail sync</p>
-        <p className="mt-1 text-xs text-amber-100/80">
+        <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
           Your Google account was connected before vacation replies were
           supported. A quick reconnect adds this permission.
         </p>
@@ -355,7 +355,7 @@ function GmailVacationSyncPanel({
 
   if (state === 'in_sync') {
     return (
-      <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3 text-sm text-emerald-100">
+      <div className="rounded-xl border border-emerald-600/25 bg-emerald-500/10 px-4 py-3 text-sm font-medium text-emerald-900 dark:text-emerald-100">
         ✓ Gmail vacation responder is in sync
       </div>
     );
@@ -363,7 +363,7 @@ function GmailVacationSyncPanel({
 
   if (state === 'gmail_on_ozer_off') {
     return (
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+      <div className="rounded-xl border border-[color-mix(in_srgb,var(--ozer-coral-500)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-coral-500)_10%,var(--workspace-shell-panel))] p-4 text-sm text-[var(--workspace-shell-text)]">
         <p>
           Your Gmail vacation responder is currently on but holiday mode is off
           in Ozer.
@@ -382,7 +382,7 @@ function GmailVacationSyncPanel({
           <Button
             type="button"
             size="sm"
-            variant="secondary"
+            className="ozer-gradient-btn"
             disabled={pending}
             onClick={onTurnOnHolidayMode}
           >
@@ -395,7 +395,7 @@ function GmailVacationSyncPanel({
 
   if (state === 'ozer_on_gmail_off') {
     return (
-      <div className="rounded-xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-100">
+      <div className="rounded-xl border border-[color-mix(in_srgb,var(--ozer-coral-500)_35%,transparent)] bg-[color-mix(in_srgb,var(--ozer-coral-500)_10%,var(--workspace-shell-panel))] p-4 text-sm text-[var(--workspace-shell-text)]">
         <p>
           Holiday mode is on but your Gmail vacation responder isn&apos;t
           active.
@@ -403,7 +403,7 @@ function GmailVacationSyncPanel({
         <Button
           type="button"
           size="sm"
-          className="mt-3"
+          className="ozer-gradient-btn mt-3"
           disabled={pending}
           onClick={onSyncToGmail}
         >

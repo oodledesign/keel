@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
 
 import {
   type VideoEditTimeline,
@@ -11,6 +11,10 @@ import {
   zoomAtTime,
 } from '~/lib/videos/edit-timeline';
 
+export type TimelinePlaybackPlayerHandle = {
+  seekToSourceMs: (ms: number) => void;
+};
+
 type Props = {
   masterUrl: string;
   timeline: VideoEditTimeline;
@@ -19,6 +23,7 @@ type Props = {
   systemUrl?: string | null;
   className?: string;
   autoPlay?: boolean;
+  playerRef?: React.Ref<TimelinePlaybackPlayerHandle>;
 };
 
 /**
@@ -46,6 +51,24 @@ export function TimelinePlaybackPlayer(props: Props) {
 
   const hasDualAudio = Boolean(props.micUrl || props.systemUrl);
   const timeline = props.timeline;
+
+  useImperativeHandle(
+    props.playerRef,
+    () => ({
+      seekToSourceMs: (ms: number) => {
+        const video = videoRef.current;
+        if (!video) return;
+        const clamped = Math.max(0, ms);
+        seekingRef.current = true;
+        video.currentTime = clamped / 1000;
+        setPlayheadMs(clamped);
+        if (micRef.current) micRef.current.currentTime = clamped / 1000;
+        if (systemRef.current) systemRef.current.currentTime = clamped / 1000;
+        void video.play().catch(() => undefined);
+      },
+    }),
+    [],
+  );
 
   const updateFrameBox = useCallback(() => {
     const stage = stageRef.current;

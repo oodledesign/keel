@@ -1,12 +1,17 @@
 import { NextResponse } from 'next/server';
+import { after } from 'next/server';
 
 import { z } from 'zod';
+
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import {
   type VideoEditTimeline,
   normalizeTimeline,
 } from '~/lib/videos/edit-timeline';
 import { buildPublicVideoWatchUrl } from '~/lib/videos/public-share';
+import { maybeGenerateChaptersAfterPublish } from '~/lib/videos/server/generate-video-chapters';
+import { maybeGenerateSummaryAfterPublish } from '~/lib/videos/server/generate-video-summary';
 import { publishTimelineInstant } from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 
@@ -74,15 +79,33 @@ export async function POST(request: Request, context: RouteContext) {
   }
 
   const video = access.video!;
+  if (!video.account_id) {
+    return NextResponse.json({ error: 'Video has no account' }, { status: 500 });
+  }
+  const accountId = video.account_id as string;
   const timeline = normalizeTimeline(parsed.data) as VideoEditTimeline;
 
   try {
     const result = await publishTimelineInstant({
       client: access.client,
       videoId,
-      accountId: video.account_id as string,
+      accountId,
       timeline,
       userId: access.user?.id,
+    });
+
+    after(() => {
+      const admin = getSupabaseServerAdminClient();
+      void maybeGenerateChaptersAfterPublish({
+        client: admin,
+        videoId,
+        accountId,
+      });
+      void maybeGenerateSummaryAfterPublish({
+        client: admin,
+        videoId,
+        accountId,
+      });
     });
 
     return NextResponse.json({

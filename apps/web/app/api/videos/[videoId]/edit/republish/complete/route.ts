@@ -84,6 +84,7 @@ export async function POST(request: Request, context: RouteContext) {
       baked_revision: editRevision,
       duration_seconds: parsed.data.durationSeconds ?? video.duration_seconds,
       thumbnail_url: null,
+      published_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     })
     .eq('id', videoId);

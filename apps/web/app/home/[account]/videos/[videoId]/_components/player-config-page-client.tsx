@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -21,11 +21,13 @@ import {
   DEFAULT_PLAYER_CONFIG,
   type VideoPlayerConfigValues,
 } from '~/lib/videos/player-config-types';
+import type { VideoChapter } from '~/lib/videos/types';
 
 import { EmbedCode } from './embed-code';
 import { PlayerConfigEditor } from './player-config-editor';
-import { PlayerPreview } from './player-preview';
+import { PlayerPreview, type PlayerPreviewHandle } from './player-preview';
 import { PublicSharePanel } from './public-share-panel';
+import { VideoChaptersEditor } from './video-chapters-editor';
 
 export function PlayerConfigPageClient(props: {
   accountSlug: string;
@@ -42,7 +44,11 @@ export function PlayerConfigPageClient(props: {
     publicShareEnabled: boolean;
     publicShareToken: string | null;
     publicShareUrl: string | null;
+    publishedAt: string | null;
+    chapters: VideoChapter[];
+    summary: string | null;
   };
+  transcriptPlainText: string | null;
   initialConfig: VideoPlayerConfigValues;
   initialPresets: Array<{
     id: string;
@@ -54,6 +60,8 @@ export function PlayerConfigPageClient(props: {
   cdnHostname: string;
 }) {
   const router = useRouter();
+  const previewRef = useRef<PlayerPreviewHandle>(null);
+  const previewAnchorRef = useRef<HTMLDivElement>(null);
   const [config, setConfig] = useState(props.initialConfig);
   const [presets, setPresets] = useState(props.initialPresets);
   const [captions, setCaptions] = useState(props.initialCaptions);
@@ -61,6 +69,14 @@ export function PlayerConfigPageClient(props: {
   const [saving, setSaving] = useState(false);
   const [savingTitle, setSavingTitle] = useState(false);
   const [uploadingCaption, setUploadingCaption] = useState(false);
+
+  const handleSeek = useCallback((ms: number) => {
+    previewAnchorRef.current?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'center',
+    });
+    previewRef.current?.seekToPlaybackMs(ms);
+  }, []);
 
   useEffect(() => {
     setTitle(props.video.title);
@@ -323,8 +339,12 @@ export function PlayerConfigPageClient(props: {
         </div>
 
         <aside className="xl:sticky xl:top-6 xl:self-start">
-          <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4">
+          <div
+            ref={previewAnchorRef}
+            className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] p-4"
+          >
             <PlayerPreview
+              ref={previewRef}
               libraryId={props.video.bunny_library_id}
               bunnyVideoId={props.video.bunny_video_id}
               config={config}
@@ -341,6 +361,16 @@ export function PlayerConfigPageClient(props: {
           </div>
         </aside>
       </div>
+
+      <VideoChaptersEditor
+        key={props.video.id}
+        videoId={props.video.id}
+        initialChapters={props.video.chapters}
+        initialSummary={props.video.summary}
+        transcriptPlainText={props.transcriptPlainText}
+        publishedAt={props.video.publishedAt}
+        onSeek={handleSeek}
+      />
     </div>
   );
 }

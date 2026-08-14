@@ -1,3 +1,5 @@
+import Link from 'next/link';
+
 import { ExclamationTriangleIcon } from '@radix-ui/react-icons';
 
 import { resolveProductPlan } from '@kit/billing-gateway';
@@ -12,10 +14,10 @@ import { If } from '@kit/ui/if';
 import { Trans } from '@kit/ui/trans';
 
 import billingConfig from '~/config/billing.config';
+import pathsConfig from '~/config/paths.config';
 import { loadTeamAccountBillingPage } from '~/home/[account]/_lib/server/team-account-billing-page.loader';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { CommercialSeatQuantityCard } from '~/home/[account]/billing/_components/commercial-seat-quantity-card';
-import { OzerAddonCheckoutSection } from '~/home/[account]/billing/_components/ozer-addon-checkout-section';
 import { OzerWorkspaceCheckoutForm } from '~/home/[account]/billing/_components/ozer-workspace-checkout-form';
 import { createBillingPortalSession } from '~/home/[account]/billing/_lib/server/server-actions';
 import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
@@ -28,6 +30,7 @@ import { requireUserInServerComponent } from '~/lib/server/require-user-in-serve
 
 import { PaymentRecoveryCard } from '../../_components/payment-recovery-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
+import { ActiveAddonsBillingCard } from './active-addons-billing-card';
 import { MediaGenerateAppToggle } from './media-generate-app-toggle';
 import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
 import { WorkspaceMediaUnitsBillingCard } from './workspace-media-units-billing-card';
@@ -117,8 +120,6 @@ export async function WorkspaceBillingPanel({
   );
 
   const hasAnyActiveAddon = Object.values(addonState.addons).some(Boolean);
-  const showAddonCheckout =
-    canManageBilling && (hasAnyActiveAddon || Boolean(searchParams.addon));
   const showMediaGenerate =
     canManageBilling && Boolean(addonState.addons.addon_media_generate);
 
@@ -135,8 +136,13 @@ export async function WorkspaceBillingPanel({
   const billingDescription = isCommercial
     ? 'Workspace plan, seats, AI credits, and Stripe billing portal.'
     : hasAnyActiveAddon
-      ? 'Workspace plan, apps, AI credits, and Stripe billing portal.'
+      ? 'Workspace plan, your apps, AI credits, and Stripe billing portal.'
       : 'Workspace plan, AI credits, and Stripe billing portal.';
+
+  const addonsCatalogPath = pathsConfig.app.accountAddonsSettings.replace(
+    '[account]',
+    accountSlug,
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -210,14 +216,22 @@ export async function WorkspaceBillingPanel({
           />
         ) : null}
 
-        <If condition={showAddonCheckout}>
-          <OzerAddonCheckoutSection
-            accountId={accountId}
-            workspacePaid={addonState.workspacePaid}
-            activeAddons={addonState.addons}
-            highlightAddon={searchParams.addon ?? null}
-          />
-        </If>
+        <ActiveAddonsBillingCard
+          accountSlug={accountSlug}
+          activeAddons={addonState.addons}
+        />
+
+        {!hasAnyActiveAddon && canManageBilling ? (
+          <p className="text-muted-foreground text-sm">
+            Need an app?{' '}
+            <Link
+              href={addonsCatalogPath}
+              className="text-[var(--workspace-shell-text)] underline underline-offset-2"
+            >
+              Browse available add-ons
+            </Link>
+          </p>
+        ) : null}
 
         <WorkspaceAiCreditsBillingCard
           accountId={accountId}

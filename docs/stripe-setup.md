@@ -47,6 +47,18 @@ STRIPE_ENABLE_TRIAL_WITHOUT_CC=true
 
 This makes Stripe Checkout use `payment_method_collection: if_required` for plans with a trial. Users can start the 14-day trial without a card; if they still have no payment method at trial end, Stripe **cancels** the subscription (no surprise charge).
 
+### Commercial Property (graduated seats)
+
+The catalog script includes **Ozer Commercial Property** with a tiered monthly price:
+
+- Seat 1 → £89
+- Seats 2–7 → £55 each  
+- Seats 8+ → £39 each
+
+Env key: `STRIPE_PRICE_COMMERCIAL_PROPERTY_MONTHLY` (lookup key `keel.commercial_property.monthly`).
+
+Checkout shows a promo-code field (`enableDiscountField`). For partner deals (e.g. Bracketts), create Stripe **Coupons** + **Promotion codes** in the Dashboard / API — Stripe does not chain “50% for 6 months then 15% forever” in one code; use an intro promo, then apply the lifetime promo when the intro ends.
+
 ---
 
 ## 3. Enable Stripe Connect (invoice payments)

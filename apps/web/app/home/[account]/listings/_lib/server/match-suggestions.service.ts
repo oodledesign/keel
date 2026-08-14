@@ -360,5 +360,74 @@ export function createMatchSuggestionsService(client: SupabaseClient) {
       const top = scored.slice(0, limit);
       return { count: scored.length, suggestions: top };
     },
+
+    /**
+     * Count suggested fits (above min score, not yet linked) per listing.
+     * Used for disposal card / Matches badges.
+     */
+    async countSuggestionsByListingIds(input: {
+      accountId: string;
+      listingIds: string[];
+      minScore?: number;
+    }): Promise<Map<string, number>> {
+      const counts = new Map<string, number>();
+      if (input.listingIds.length === 0) return counts;
+
+      const minScore = input.minScore ?? DEFAULT_MATCH_SUGGESTION_MIN_SCORE;
+
+      const [
+        { data: listingRows, error: listingError },
+        { data: reqRows, error: reqError },
+      ] = await Promise.all([
+        db
+          .from('commercial_listings')
+          .select(LISTING_SELECT)
+          .eq('account_id', input.accountId)
+          .in('id', input.listingIds),
+        db
+          .from('commercial_requirements')
+          .select(REQUIREMENT_SELECT)
+          .eq('account_id', input.accountId)
+          .in('stage', [...ACTIVE_REQUIREMENT_STAGES_FOR_MATCH])
+          .order('updated_at', { ascending: false })
+          .limit(250),
+      ]);
+
+      if (listingError || reqError) {
+        console.error(
+          '[match-suggestions] countByListing',
+          listingError?.message ?? reqError?.message,
+        );
+        return counts;
+      }
+
+      const listings = (
+        (listingRows ?? []) as Array<Record<string, unknown>>
+      ).map(mapListing);
+      const requirements = (
+        (reqRows ?? []) as Array<Record<string, unknown>>
+      ).map(mapRequirement);
+
+      if (listings.length === 0 || requirements.length === 0) {
+        return counts;
+      }
+
+      const existing = await existingPairs(
+        input.accountId,
+        listings.map((l) => l.id),
+      );
+
+      for (const listing of listings) {
+        let count = 0;
+        for (const requirement of requirements) {
+          if (existing.has(`${listing.id}:${requirement.id}`)) continue;
+          const result = scoreListingRequirementMatch(listing, requirement);
+          if (result.score >= minScore) count += 1;
+        }
+        counts.set(listing.id, count);
+      }
+
+      return counts;
+    },
   };
 }

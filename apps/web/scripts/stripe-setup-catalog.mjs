@@ -190,6 +190,25 @@ const CATALOG = [
     ],
   },
   {
+    catalogId: 'ozer-commercial-property',
+    productName: 'Ozer Commercial Property',
+    prices: [
+      {
+        envKey: 'STRIPE_PRICE_COMMERCIAL_PROPERTY_MONTHLY',
+        lookupKey: 'keel.commercial_property.monthly',
+        interval: 'month',
+        /** Graduated per-seat — matches commercial-graduated-pricing.ts */
+        billingScheme: 'tiered',
+        tiersMode: 'graduated',
+        tiers: [
+          { upTo: 1, unitAmount: 8900 },
+          { upTo: 7, unitAmount: 5500 },
+          { upTo: 'inf', unitAmount: 3900 },
+        ],
+      },
+    ],
+  },
+  {
     catalogId: 'ozer-addon-email-assistant',
     productName: 'Ozer Email Assistant',
     prices: [
@@ -448,11 +467,22 @@ async function ensurePrice(productId, priceDef) {
   const params = {
     product: productId,
     currency,
-    unit_amount: priceDef.amount,
     lookup_key: priceDef.lookupKey,
     transfer_lookup_key: true,
     metadata: { keel_env_key: priceDef.envKey },
   };
+
+  if (priceDef.billingScheme === 'tiered') {
+    params.billing_scheme = 'tiered';
+    params.tiers_mode = priceDef.tiersMode ?? 'graduated';
+    params.tiers = (priceDef.tiers ?? []).map((tier) => ({
+      up_to: tier.upTo,
+      unit_amount: tier.unitAmount,
+    }));
+  } else {
+    params.unit_amount = priceDef.amount;
+  }
+
   if (priceDef.interval) {
     params.recurring = { interval: priceDef.interval };
   }

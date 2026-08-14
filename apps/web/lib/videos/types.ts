@@ -1,5 +1,12 @@
 export type VideoStatus = 'uploading' | 'processing' | 'ready' | 'failed';
 
+export type VideoChapter = {
+  id: string;
+  title: string;
+  /** Playback position in milliseconds (edited timeline when cuts exist). */
+  startMs: number;
+};
+
 export type VideoRow = {
   id: string;
   account_id: string;
@@ -23,6 +30,10 @@ export type VideoRow = {
   published_revision?: number;
   baked_revision?: number;
   published_timeline?: unknown | null;
+  chapters?: VideoChapter[];
+  published_at?: string | null;
+  /** Short AI/manual plain-text summary for watch UI. */
+  summary?: string | null;
   view_count?: number;
   watch_time_seconds?: number;
   engagement_score?: number | null;

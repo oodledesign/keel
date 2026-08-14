@@ -1,6 +1,9 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
+
+import { Upload } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -21,6 +24,7 @@ import {
 } from '@kit/ui/select';
 import { Textarea } from '@kit/ui/textarea';
 
+import pathsConfig from '~/config/paths.config';
 import {
   DISPOSAL_TYPES,
   DISPOSAL_TYPE_LABELS,
@@ -81,6 +85,7 @@ interface ListingFormModalProps {
   open: boolean;
   onClose: () => void;
   accountId: string;
+  accountSlug?: string;
   listing?: CommercialListing | null;
   onSaved: (listing: CommercialListing) => void;
   /** Prefill for create-from-instruction flows. */
@@ -99,6 +104,7 @@ export function ListingFormModal({
   open,
   onClose,
   accountId,
+  accountSlug,
   listing,
   onSaved,
   defaults,
@@ -116,6 +122,7 @@ export function ListingFormModal({
         <ListingFormFields
           key={`${listing?.id ?? 'new'}-${open ? 'open' : 'closed'}-${marketingOverrides ? 'ai' : 'base'}`}
           accountId={accountId}
+          accountSlug={accountSlug}
           listing={listing}
           onClose={onClose}
           onSaved={onSaved}
@@ -130,6 +137,7 @@ export function ListingFormModal({
 
 function ListingFormFields({
   accountId,
+  accountSlug,
   listing,
   onClose,
   onSaved,
@@ -138,6 +146,7 @@ function ListingFormFields({
   marketingOverrides,
 }: {
   accountId: string;
+  accountSlug?: string;
   listing?: CommercialListing | null;
   onClose: () => void;
   onSaved: (listing: CommercialListing) => void;
@@ -921,22 +930,44 @@ function ListingFormFields({
         </p>
       ) : null}
 
-      <DialogFooter className="gap-2">
-        <Button
-          type="button"
-          variant="ghost"
-          onClick={onClose}
-          className="text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]"
-        >
-          Cancel
-        </Button>
-        <Button
-          type="submit"
-          disabled={isPending || !form.name.trim()}
-          className={workspaceBtnPrimaryMd}
-        >
-          {isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Add disposal'}
-        </Button>
+      <DialogFooter className="gap-2 sm:justify-between">
+        {!isEdit && accountSlug ? (
+          <Button
+            type="button"
+            variant="ghost"
+            asChild
+            className="justify-start text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]"
+          >
+            <Link
+              href={pathsConfig.app.accountListingsImport.replace(
+                '[account]',
+                accountSlug,
+              )}
+            >
+              <Upload className="h-4 w-4" />
+              Import CSV
+            </Link>
+          </Button>
+        ) : (
+          <span />
+        )}
+        <div className="flex gap-2">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={onClose}
+            className="text-[var(--workspace-shell-text)]/60 hover:text-[var(--workspace-shell-text)]"
+          >
+            Cancel
+          </Button>
+          <Button
+            type="submit"
+            disabled={isPending || !form.name.trim()}
+            className={workspaceBtnPrimaryMd}
+          >
+            {isPending ? 'Saving…' : isEdit ? 'Save changes' : 'Add disposal'}
+          </Button>
+        </div>
       </DialogFooter>
     </form>
   );

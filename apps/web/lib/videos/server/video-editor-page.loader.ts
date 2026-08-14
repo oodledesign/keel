@@ -14,6 +14,8 @@ import {
   createDefaultTimeline,
   normalizeTimeline,
 } from '~/lib/videos/edit-timeline';
+import { normalizeVideoChapters } from '~/lib/videos/server/generate-video-chapters';
+import { normalizeVideoSummary } from '~/lib/videos/server/generate-video-summary';
 import { ensureEditProject } from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 
@@ -80,6 +82,8 @@ export async function loadVideoEditorPage(
       hasMaster: Boolean(video.has_master),
       editRevision: Number(video.edit_revision ?? project.revision ?? 0),
       publishedRevision: Number(video.published_revision ?? 0),
+      hasChapters: normalizeVideoChapters(video.chapters).length > 0,
+      hasSummary: Boolean(normalizeVideoSummary(video.summary)),
     },
     timeline: normalizeTimeline(timeline, Number(durationMs) || 0),
     revision: Number(project.revision ?? 1),

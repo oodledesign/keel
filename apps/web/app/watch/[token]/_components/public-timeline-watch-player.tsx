@@ -1,10 +1,20 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import {
+  forwardRef,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 
-import { TimelinePlaybackPlayer } from '~/components/videos/timeline-playback-player';
+import {
+  TimelinePlaybackPlayer,
+  type TimelinePlaybackPlayerHandle,
+} from '~/components/videos/timeline-playback-player';
 import {
   type VideoEditTimeline,
+  editedMsToSourceMs,
   normalizeTimeline,
 } from '~/lib/videos/edit-timeline';
 
@@ -20,9 +30,31 @@ type Props = {
   aspectRatio: string;
 };
 
-export function PublicTimelineWatchPlayer(props: Props) {
+export type PublicTimelineWatchPlayerHandle = {
+  /** Seek using playback (edited) milliseconds. */
+  seekToPlaybackMs: (ms: number) => void;
+};
+
+export const PublicTimelineWatchPlayer = forwardRef<
+  PublicTimelineWatchPlayerHandle,
+  Props
+>(function PublicTimelineWatchPlayer(props, ref) {
   const [media, setMedia] = useState<MediaPayload | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const playerRef = useRef<TimelinePlaybackPlayerHandle>(null);
+
+  useImperativeHandle(
+    ref,
+    () => ({
+      seekToPlaybackMs: (ms: number) => {
+        if (!media) return;
+        const sourceMs =
+          editedMsToSourceMs(media.timeline.keepRanges, ms) ?? ms;
+        playerRef.current?.seekToSourceMs(sourceMs);
+      },
+    }),
+    [media],
+  );
 
   useEffect(() => {
     const controller = new AbortController();
@@ -73,6 +105,7 @@ export function PublicTimelineWatchPlayer(props: Props) {
   return (
     <div className="relative w-full" style={{ aspectRatio: props.aspectRatio }}>
       <TimelinePlaybackPlayer
+        playerRef={playerRef}
         masterUrl={media.masterUrl}
         micUrl={media.micUrl}
         systemUrl={media.systemUrl}
@@ -81,4 +114,4 @@ export function PublicTimelineWatchPlayer(props: Props) {
       />
     </div>
   );
-}
+});

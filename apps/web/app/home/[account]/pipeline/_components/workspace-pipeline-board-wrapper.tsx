@@ -209,6 +209,7 @@ export function WorkspacePipelineBoardWrapper({
           open
           onClose={() => setDisposalDeal(null)}
           accountId={accountId}
+          accountSlug={accountSlug}
           defaults={{
             name: instructionTitle(disposalDeal),
             askingRent:

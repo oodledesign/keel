@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { FileText, Pencil, Plus, Trash2 } from 'lucide-react';
+import { FileText, Pencil, Plus, Trash2, Upload } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
@@ -25,6 +25,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@kit/ui/select';
+import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
 
 import pathsConfig from '~/config/paths.config';
@@ -43,11 +44,13 @@ import {
   deleteLease,
   updateLease,
 } from '../_lib/server/server-actions';
+import { importKatoHistoricRegister } from '../_lib/server/transaction-import-actions';
 
 const STATUS_LABELS: Record<LeaseStatus, string> = {
   active: 'Active',
   expired: 'Expired',
   terminated: 'Terminated',
+  completed: 'Completed',
 };
 
 const NONE_LISTING = '__none__';
@@ -109,8 +112,38 @@ export function LeasesList({
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const [importing, setImporting] = useState(false);
 
   const handleSaved = useCallback(() => router.refresh(), [router]);
+
+  const handleImportHistoric = () => {
+    if (
+      !confirm(
+        'Import historic Kato sales and lettings into this workspace? Existing imported rows with the same Kato ID will be updated.',
+      )
+    ) {
+      return;
+    }
+    setImporting(true);
+    startTransition(async () => {
+      try {
+        const result = await importKatoHistoricRegister({ accountId });
+        toast.success(
+          `Imported ${result.inserted} new, updated ${result.updated}${
+            result.skipped ? `, skipped ${result.skipped}` : ''
+          }`,
+        );
+        handleSaved();
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Import failed',
+        );
+      } finally {
+        setImporting(false);
+      }
+    });
+  };
+
   const listingDetailBase = pathsConfig.app.accountListingDetail.replace(
     '[account]',
     accountSlug,
@@ -197,10 +230,14 @@ export function LeasesList({
   };
 
   const handleDelete = (id: string) => {
-    if (!confirm('Delete this letting?')) return;
+    if (!confirm('Delete this record?')) return;
     startTransition(async () => {
-      await deleteLease({ leaseId: id, accountId });
-      setItems((prev) => prev.filter((l) => l.id !== id));
+      try {
+        await deleteLease({ leaseId: id, accountId });
+        setItems((prev) => prev.filter((l) => l.id !== id));
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Failed to delete');
+      }
     });
   };
 
@@ -215,7 +252,7 @@ export function LeasesList({
         return listing.status === 'let' && !leaseListingIds.has(listing.id);
       })
       .map((listing) => ({
-        id: listing.id,
+        id: `disposal:${listing.id}`,
         kind: listing.status === 'sold' ? 'sale' : 'letting',
         title: listing.name,
         party: DISPOSAL_TYPE_LABELS[listing.disposalType],
@@ -225,18 +262,46 @@ export function LeasesList({
         href: listingDetailBase.replace('[id]', listing.id),
       }));
 
-    const lettings: RegisterRow[] = items.map((lease) => ({
+    const fromRegister: RegisterRow[] = items.map((lease) => ({
       id: lease.id,
-      kind: 'letting',
+      kind: lease.transactionKind === 'sale' ? 'sale' : 'letting',
       title: lease.propertyLabel,
-      party: lease.tenantName || '—',
-      meta: [lease.town, lease.postcode].filter(Boolean).join(' · '),
+      party:
+        lease.tenantName ||
+        (lease.transactionKind === 'sale' ? 'Purchaser —' : '—'),
+      meta: [
+        lease.town,
+        lease.postcode,
+        lease.headlinePricePence != null
+          ? new Intl.NumberFormat('en-GB', {
+              style: 'currency',
+              currency: 'GBP',
+              maximumFractionDigits: 0,
+            }).format(lease.headlinePricePence / 100)
+          : lease.headlineRentPsf != null
+            ? `£${lease.headlineRentPsf}/sq ft`
+            : null,
+      ]
+        .filter(Boolean)
+        .join(' · '),
       status: STATUS_LABELS[lease.status],
       updatedAt: lease.leaseStart ?? lease.updatedAt,
       lease,
     }));
 
-    return [...fromDisposals, ...lettings].sort((a, b) =>
+    // Prefer imported/register rows over duplicate disposal stubs when labels match.
+    const registerKeys = new Set(
+      fromRegister.map(
+        (row) =>
+          `${row.kind}:${row.title.toLowerCase()}:${(row.meta.split(' · ')[1] ?? '').toLowerCase()}`,
+      ),
+    );
+    const disposalsDeduped = fromDisposals.filter((row) => {
+      const key = `${row.kind}:${row.title.toLowerCase()}:${(row.meta.split(' · ')[1] ?? '').toLowerCase()}`;
+      return !registerKeys.has(key);
+    });
+
+    return [...disposalsDeduped, ...fromRegister].sort((a, b) =>
       b.updatedAt.localeCompare(a.updatedAt),
     );
   }, [completedDisposals, items, listingDetailBase]);
@@ -276,6 +341,16 @@ export function LeasesList({
             </button>
           ))}
         </div>
+        <Button
+          type="button"
+          variant="outline"
+          disabled={importing || isPending}
+          className="border-[color:var(--workspace-shell-border)]"
+          onClick={handleImportHistoric}
+        >
+          <Upload className="h-4 w-4" />
+          {importing ? 'Importing…' : 'Import Kato history'}
+        </Button>
         <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
           <Plus className="h-4 w-4" />
           Add letting

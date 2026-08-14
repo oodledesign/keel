@@ -147,6 +147,7 @@ export function ClientsPageContent({
   initialTotal = 0,
   variant = 'work',
   pageTitle = 'Clients',
+  hidePageTitle = false,
   addClientLabel = 'Add client',
   showCommercialRole = false,
   showLinkedInImport = true,
@@ -160,6 +161,7 @@ export function ClientsPageContent({
   initialTotal?: number;
   variant?: 'work' | 'commercial';
   pageTitle?: string;
+  hidePageTitle?: boolean;
   addClientLabel?: string;
   showCommercialRole?: boolean;
   showLinkedInImport?: boolean;
@@ -442,9 +444,13 @@ export function ClientsPageContent({
       )}
     >
       <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-5">
-        <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
-          {pageTitle}
-        </h1>
+        {hidePageTitle ? (
+          <span className="sr-only">{pageTitle}</span>
+        ) : (
+          <h1 className="text-lg font-bold text-[var(--workspace-shell-text)]">
+            {pageTitle}
+          </h1>
+        )}
         {canEditClients ? (
           <div className="flex flex-wrap items-center gap-2">
             <Button

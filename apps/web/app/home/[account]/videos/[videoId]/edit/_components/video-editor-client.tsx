@@ -25,6 +25,16 @@ import {
 } from 'lucide-react';
 import * as tus from 'tus-js-client';
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
@@ -66,6 +76,8 @@ type Props = {
     plainText: string;
     words: VideoTranscriptWord[];
   } | null;
+  initialHasChapters: boolean;
+  initialHasSummary: boolean;
 };
 
 function formatMs(ms: number) {
@@ -113,6 +125,12 @@ export function VideoEditorClient(props: Props) {
     width: 0,
     height: 0,
   });
+  const [hasChapters, setHasChapters] = useState(props.initialHasChapters);
+  const [hasSummary, setHasSummary] = useState(props.initialHasSummary);
+  const [generatingChapters, setGeneratingChapters] = useState(false);
+  const [generatingSummary, setGeneratingSummary] = useState(false);
+  const [confirmChaptersOpen, setConfirmChaptersOpen] = useState(false);
+  const [confirmSummaryOpen, setConfirmSummaryOpen] = useState(false);
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const micAudioRef = useRef<HTMLAudioElement>(null);
@@ -509,6 +527,45 @@ export function VideoEditorClient(props: Props) {
     toast.success('Removed transcript selection from video');
   }
 
+  async function runGenerateChapters() {
+    setGeneratingChapters(true);
+    try {
+      const res = await fetch(
+        `/api/videos/${props.videoId}/chapters/generate`,
+        { method: 'POST' },
+      );
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? 'Failed to generate chapters');
+      }
+      setHasChapters(true);
+      toast.success('Chapters generated');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setGeneratingChapters(false);
+    }
+  }
+
+  async function runGenerateSummary() {
+    setGeneratingSummary(true);
+    try {
+      const res = await fetch(`/api/videos/${props.videoId}/summary/generate`, {
+        method: 'POST',
+      });
+      const json = await res.json();
+      if (!res.ok || !json.ok) {
+        throw new Error(json.error ?? 'Failed to generate summary');
+      }
+      setHasSummary(true);
+      toast.success('Summary generated');
+    } catch (err) {
+      toast.error(getErrorMessage(err));
+    } finally {
+      setGeneratingSummary(false);
+    }
+  }
+
   async function handlePublish() {
     if (!masterUrl) {
       toast.error('Master not available');
@@ -674,6 +731,56 @@ export function VideoEditorClient(props: Props) {
               Published up to date
             </span>
           )}
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (hasChapters) {
+                setConfirmChaptersOpen(true);
+                return;
+              }
+              void runGenerateChapters();
+            }}
+            disabled={
+              !transcript ||
+              generatingChapters ||
+              generatingSummary ||
+              publishing
+            }
+          >
+            {generatingChapters ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-1.5 h-4 w-4" />
+            )}
+            {hasChapters ? 'Refresh chapters' : 'Generate chapters'}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              if (hasSummary) {
+                setConfirmSummaryOpen(true);
+                return;
+              }
+              void runGenerateSummary();
+            }}
+            disabled={
+              !transcript ||
+              generatingChapters ||
+              generatingSummary ||
+              publishing
+            }
+          >
+            {generatingSummary ? (
+              <Loader2 className="mr-1.5 h-4 w-4 animate-spin" />
+            ) : (
+              <Sparkles className="mr-1.5 h-4 w-4" />
+            )}
+            {hasSummary ? 'Refresh summary' : 'Generate summary'}
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -1316,6 +1423,61 @@ export function VideoEditorClient(props: Props) {
           </div>
         </div>
       </div>
+
+      <AlertDialog
+        open={confirmChaptersOpen}
+        onOpenChange={setConfirmChaptersOpen}
+      >
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace existing chapters?</AlertDialogTitle>
+            <AlertDialogDescription>
+              AI generation will overwrite the current chapter list on this
+              video.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmChaptersOpen(false);
+                void runGenerateChapters();
+              }}
+            >
+              Generate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog
+        open={confirmSummaryOpen}
+        onOpenChange={setConfirmSummaryOpen}
+      >
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Replace existing summary?</AlertDialogTitle>
+            <AlertDialogDescription>
+              AI generation will overwrite the current summary on this video.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                setConfirmSummaryOpen(false);
+                void runGenerateSummary();
+              }}
+            >
+              Generate
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -63,6 +63,14 @@ export type ResendAdminWorkspaceInviteInput = z.infer<
   typeof ResendAdminWorkspaceInviteSchema
 >;
 
+/** Same shape as resend — account-scoped invitation action. */
+export const DeleteAdminWorkspaceInviteSchema =
+  ResendAdminWorkspaceInviteSchema;
+
+export type DeleteAdminWorkspaceInviteInput = z.infer<
+  typeof DeleteAdminWorkspaceInviteSchema
+>;
+
 export const ResendAllAdminWorkspaceInvitesSchema = z.object({
   accountId: z.string().uuid(),
 });

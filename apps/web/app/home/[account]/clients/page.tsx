@@ -4,6 +4,7 @@ import { PageBody } from '@kit/ui/page';
 
 import { withI18n } from '~/lib/i18n/with-i18n';
 
+import { TeamAccountLayoutPageHeader } from '../_components/team-account-layout-page-header';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
@@ -61,31 +62,39 @@ async function ClientsPage({ params }: ClientsPageProps) {
     initialTotal,
   } = await loadClientsPageData(accountSlug, { variant });
 
+  const pageTitle = isProperty
+    ? 'Tenants'
+    : isCommercial
+      ? 'Contacts'
+      : 'Clients';
+
   return (
-    <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 py-3 md:px-4 md:py-4">
-      <ClientsPageContent
-        accountSlug={accountSlug}
-        accountId={accountId}
-        canViewClients={canViewClients}
-        canEditClients={canEditClients}
-        isContractorView={isContractorView}
-        initialOverview={initialOverview}
-        initialTotal={initialTotal}
-        variant={variant}
-        pageTitle={
-          isProperty ? 'Tenants' : isCommercial ? 'Contacts' : 'Clients'
-        }
-        addClientLabel={
-          isProperty
-            ? 'Add tenant'
-            : isCommercial
-              ? 'Add contact'
-              : 'Add client'
-        }
-        showCommercialRole={isCommercial}
-        showLinkedInImport={!isCommercial}
-      />
-    </PageBody>
+    <>
+      <TeamAccountLayoutPageHeader account={accountSlug} title={pageTitle} />
+      <PageBody className="flex min-h-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)] px-3 pt-2 pb-3 md:px-4 md:pb-4">
+        <ClientsPageContent
+          accountSlug={accountSlug}
+          accountId={accountId}
+          canViewClients={canViewClients}
+          canEditClients={canEditClients}
+          isContractorView={isContractorView}
+          initialOverview={initialOverview}
+          initialTotal={initialTotal}
+          variant={variant}
+          pageTitle={pageTitle}
+          hidePageTitle
+          addClientLabel={
+            isProperty
+              ? 'Add tenant'
+              : isCommercial
+                ? 'Add contact'
+                : 'Add client'
+          }
+          showCommercialRole={isCommercial}
+          showLinkedInImport={!isCommercial}
+        />
+      </PageBody>
+    </>
   );
 }
 

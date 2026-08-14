@@ -90,7 +90,7 @@ async function logVideoEvent(input: {
     account_id: input.accountId,
     bunny_video_id: input.bunnyVideoId,
     event_type: input.eventType,
-    payload: input.payload,
+    payload: input.payload as import('@kit/supabase/database').Json,
     ip_address: input.ipAddress,
   });
 }
@@ -213,7 +213,10 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ ok: true });
   }
 
-  const patch: Record<string, unknown> = { status: nextStatus };
+  const patch: {
+    status: string;
+    thumbnail_url?: string;
+  } = { status: nextStatus };
 
   if (nextStatus === 'ready') {
     const libraryId = payload.VideoLibraryId

@@ -30,6 +30,7 @@ import { toast } from '@kit/ui/sonner';
 
 import {
   addAdminWorkspaceMemberAction,
+  deleteAdminWorkspaceInviteAction,
   removeAdminWorkspaceMemberAction,
   resendAdminWorkspaceInviteAction,
   resendAllAdminWorkspaceInvitesAction,
@@ -79,6 +80,9 @@ export function AdminWorkspaceMembersPanel(props: {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [resendPending, startResendTransition] = useTransition();
+  const [deletePending, startDeleteTransition] = useTransition();
+  const [resendPendingId, setResendPendingId] = useState<number | null>(null);
+  const [deletePendingId, setDeletePendingId] = useState<number | null>(null);
   const [rolePendingUserId, setRolePendingUserId] = useState<string | null>(
     null,
   );
@@ -344,7 +348,8 @@ export function AdminWorkspaceMembersPanel(props: {
             <div>
               <h3 className="text-sm font-semibold">Pending invitations</h3>
               <p className="text-muted-foreground text-xs">
-                Resend workspace invite emails (extends expiry by 7 days)
+                Resend or delete workspace invites (resend extends expiry by 7
+                days)
               </p>
             </div>
             {props.invitations.some((invite) => invite.invitationId != null) ? (
@@ -352,7 +357,7 @@ export function AdminWorkspaceMembersPanel(props: {
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={resendPending}
+                disabled={resendPending || deletePending}
                 onClick={() => {
                   startResendTransition(async () => {
                     try {
@@ -410,35 +415,86 @@ export function AdminWorkspaceMembersPanel(props: {
                   </p>
                 </div>
                 {invite.invitationId != null ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    disabled={resendPending}
-                    onClick={() => {
-                      const invitationId = invite.invitationId;
-                      if (invitationId == null) return;
+                  <div className="flex shrink-0 flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        resendPending ||
+                        deletePending ||
+                        resendPendingId === invite.invitationId ||
+                        deletePendingId === invite.invitationId
+                      }
+                      onClick={() => {
+                        const invitationId = invite.invitationId;
+                        if (invitationId == null) return;
 
-                      startResendTransition(async () => {
-                        try {
-                          await resendAdminWorkspaceInviteAction({
-                            accountId: props.accountId,
-                            invitationId,
-                          });
-                          toast.success(`Invite sent to ${invite.email}`);
-                          router.refresh();
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : 'Could not send invite',
-                          );
-                        }
-                      });
-                    }}
-                  >
-                    Resend email
-                  </Button>
+                        setResendPendingId(invitationId);
+                        startResendTransition(async () => {
+                          try {
+                            await resendAdminWorkspaceInviteAction({
+                              accountId: props.accountId,
+                              invitationId,
+                            });
+                            toast.success(`Invite sent to ${invite.email}`);
+                            router.refresh();
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : 'Could not send invite',
+                            );
+                          } finally {
+                            setResendPendingId(null);
+                          }
+                        });
+                      }}
+                    >
+                      {resendPendingId === invite.invitationId
+                        ? 'Sending…'
+                        : 'Resend email'}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      disabled={
+                        resendPending ||
+                        deletePending ||
+                        resendPendingId === invite.invitationId ||
+                        deletePendingId === invite.invitationId
+                      }
+                      onClick={() => {
+                        const invitationId = invite.invitationId;
+                        if (invitationId == null) return;
+
+                        setDeletePendingId(invitationId);
+                        startDeleteTransition(async () => {
+                          try {
+                            await deleteAdminWorkspaceInviteAction({
+                              accountId: props.accountId,
+                              invitationId,
+                            });
+                            toast.success(`Invite deleted for ${invite.email}`);
+                            router.refresh();
+                          } catch (error) {
+                            toast.error(
+                              error instanceof Error
+                                ? error.message
+                                : 'Could not delete invite',
+                            );
+                          } finally {
+                            setDeletePendingId(null);
+                          }
+                        });
+                      }}
+                    >
+                      {deletePendingId === invite.invitationId
+                        ? 'Deleting…'
+                        : 'Delete'}
+                    </Button>
+                  </div>
                 ) : null}
               </li>
             ))}

@@ -22,14 +22,15 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  DISPOSAL_TYPE_BADGE_CLASS,
   DISPOSAL_TYPE_LABELS,
   LISTING_STATUS_LABELS,
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
-import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
+import { ListingSectorPills } from './listing-sector-pills';
 
 const NAV = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, href: '' },
@@ -61,6 +62,17 @@ function listingAddress(listing: CommercialListing) {
   ]
     .filter(Boolean)
     .join(', ');
+}
+
+function formatUpdatedAt(iso: string | null | undefined) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return null;
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 export function ListingDetailShell({
@@ -149,6 +161,7 @@ export function ListingDetailShell({
         open={editOpen}
         onClose={() => setEditOpen(false)}
         accountId={accountId}
+        accountSlug={accountSlug}
         listing={listing}
         onSaved={(saved) => {
           setListing(saved);
@@ -169,6 +182,8 @@ function CompactHeader({
   address: string;
   editButton: React.ReactNode;
 }) {
+  const updatedLabel = formatUpdatedAt(listing.updatedAt);
+
   return (
     <div className="flex items-start justify-between gap-3">
       <div className="min-w-0">
@@ -179,6 +194,11 @@ function CompactHeader({
           <p className="mt-0.5 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text)]/55">
             <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
             <span>{address}</span>
+          </p>
+        ) : null}
+        {updatedLabel ? (
+          <p className="mt-1 text-xs text-[var(--workspace-shell-text)]/45">
+            Updated {updatedLabel}
           </p>
         ) : null}
       </div>
@@ -196,6 +216,8 @@ function OverviewHeader({
   address: string;
   editButton: React.ReactNode;
 }) {
+  const updatedLabel = formatUpdatedAt(listing.updatedAt);
+
   return (
     <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
       <div className="flex flex-col gap-4 p-4 sm:flex-row sm:items-stretch sm:gap-5 sm:p-5">
@@ -228,27 +250,15 @@ function OverviewHeader({
                 <span>{address || 'No address'}</span>
               </p>
             </div>
-            <div className="flex shrink-0 items-start gap-2">
-              {(listing.actingAgents?.length ?? 0) > 0 ? (
-                <div className="pt-0.5">
-                  <ListingAgentAvatarStack
-                    agents={listing.actingAgents ?? []}
-                    size="md"
-                  />
-                </div>
-              ) : null}
-              {editButton}
-            </div>
+            <div className="shrink-0">{editButton}</div>
           </div>
-          <div className="flex flex-wrap gap-2">
-            <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/60">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium ${DISPOSAL_TYPE_BADGE_CLASS[listing.disposalType]}`}
+            >
               {DISPOSAL_TYPE_LABELS[listing.disposalType]}
             </span>
-            {listing.sector ? (
-              <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/60">
-                {listing.sector}
-              </span>
-            ) : null}
+            <ListingSectorPills sector={listing.sector} size="md" />
             {listing.sizeMinSqft != null || listing.sizeMaxSqft != null ? (
               <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/60">
                 {[listing.sizeMinSqft, listing.sizeMaxSqft]
@@ -258,6 +268,11 @@ function OverviewHeader({
               </span>
             ) : null}
           </div>
+          {updatedLabel ? (
+            <p className="text-xs text-[var(--workspace-shell-text)]/45">
+              Updated {updatedLabel}
+            </p>
+          ) : null}
         </div>
       </div>
     </div>

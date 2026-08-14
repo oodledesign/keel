@@ -540,12 +540,23 @@ export const OZER_ADDON_CATALOG: Array<{
 ];
 
 /**
- * Workspace add-ons shown in billing checkout and apps marketplace.
+ * Workspace add-ons available to purchase (billing catalog / apps marketplace).
+ * Site Studio is intentionally not launched yet — see IN_DEVELOPMENT.
  */
 export const LAUNCHED_WORKSPACE_ADDON_KEYS: OzerAddonKey[] = [
   'addon_signatures',
-  'addon_site_studio',
   'addon_media_generate',
+];
+
+/**
+ * Add-ons shown as “coming soon” on the settings add-ons page.
+ */
+export const IN_DEVELOPMENT_WORKSPACE_ADDON_KEYS: OzerAddonKey[] = [
+  'addon_site_studio',
+  'addon_rankly',
+  'addon_feedflow',
+  'addon_videos',
+  'addon_portal_publishing',
 ];
 
 export function launchedWorkspaceAddons() {
@@ -554,8 +565,34 @@ export function launchedWorkspaceAddons() {
   );
 }
 
+export function inDevelopmentWorkspaceAddons() {
+  return OZER_ADDON_CATALOG.filter((addon) =>
+    IN_DEVELOPMENT_WORKSPACE_ADDON_KEYS.includes(addon.key),
+  );
+}
+
 export function launchedAddonProductIds(): string[] {
   return [
     ...new Set(launchedWorkspaceAddons().map((addon) => addon.productId)),
   ];
+}
+
+/**
+ * True when a billing product may be purchased as a workspace add-on.
+ * Non-addon products (workspace plans, AI credits, media top-ups) always pass.
+ * Add-on products must belong to a launched entitlement family (all tiers).
+ */
+export function isPurchasableWorkspaceAddonProduct(productId: string): boolean {
+  if (!productId.startsWith('ozer-addon-')) {
+    return true;
+  }
+
+  const plans = OZER_PLAN_CATALOG.filter((plan) => plan.productId === productId);
+  if (plans.length === 0) {
+    return false;
+  }
+
+  return plans.every((plan) =>
+    LAUNCHED_WORKSPACE_ADDON_KEYS.includes(plan.entitlementKey as OzerAddonKey),
+  );
 }

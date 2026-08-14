@@ -22,7 +22,6 @@ import {
   Plus,
   Search,
   Trash2,
-  Upload,
 } from 'lucide-react';
 
 import {
@@ -45,6 +44,13 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -71,6 +77,7 @@ import {
 } from '../_lib/server/server-actions';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
+import { ListingSectorPills } from './listing-sector-pills';
 import { ListingsMapView } from './listings-map-view';
 
 const PAGE_SIZE = 20;
@@ -84,6 +91,14 @@ interface ListingsListProps {
 }
 
 type ViewMode = 'cards' | 'table' | 'map';
+type ListingSort = 'updated' | 'name' | 'on_market' | 'matches';
+
+const LISTING_SORT_OPTIONS: Array<{ value: ListingSort; label: string }> = [
+  { value: 'updated', label: 'Updated last' },
+  { value: 'name', label: 'Alphabetical' },
+  { value: 'on_market', label: 'On market date' },
+  { value: 'matches', label: 'Most matches' },
+];
 
 function mergeListings(
   current: CommercialListing[],
@@ -91,11 +106,34 @@ function mergeListings(
 ) {
   const byId = new Map(current.map((item) => [item.id, item]));
   for (const item of incoming) byId.set(item.id, item);
-  return sortListingsByUpdated(Array.from(byId.values()));
+  return Array.from(byId.values());
 }
 
-function sortListingsByUpdated(listings: CommercialListing[]) {
+function sortListings(listings: CommercialListing[], sort: ListingSort) {
   return [...listings].sort((a, b) => {
+    if (sort === 'name') {
+      const byName = a.name.localeCompare(b.name, 'en', {
+        sensitivity: 'base',
+      });
+      if (byName !== 0) return byName;
+      return b.updatedAt.localeCompare(a.updatedAt);
+    }
+    if (sort === 'on_market') {
+      const aDate = a.onMarketAt ?? '';
+      const bDate = b.onMarketAt ?? '';
+      if (aDate && bDate) {
+        const byMarket = bDate.localeCompare(aDate);
+        if (byMarket !== 0) return byMarket;
+      } else if (aDate || bDate) {
+        return aDate ? -1 : 1;
+      }
+      return b.updatedAt.localeCompare(a.updatedAt);
+    }
+    if (sort === 'matches') {
+      const byMatches = (b.matchCount ?? 0) - (a.matchCount ?? 0);
+      if (byMatches !== 0) return byMatches;
+      return b.updatedAt.localeCompare(a.updatedAt);
+    }
     const byUpdated = b.updatedAt.localeCompare(a.updatedAt);
     if (byUpdated !== 0) return byUpdated;
     return b.createdAt.localeCompare(a.createdAt);
@@ -166,6 +204,7 @@ export function ListingsList({
   );
   const [needsLocationOnly, setNeedsLocationOnly] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
+  const [sortMode, setSortMode] = useState<ListingSort>('updated');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialListing | null>(null);
   const [deleteTarget, setDeleteTarget] = useState<CommercialListing | null>(
@@ -299,7 +338,7 @@ export function ListingsList({
   }, [statusFilter]);
 
   useEffect(() => {
-    if (viewMode !== 'map' && !needsLocationOnly) {
+    if (viewMode !== 'map' && !needsLocationOnly && sortMode === 'updated') {
       setEnrichingMap(false);
       return;
     }
@@ -356,7 +395,14 @@ export function ListingsList({
     return () => {
       cancelled = true;
     };
-  }, [accountId, viewMode, needsLocationOnly, statusFilter, searchDebounced]);
+  }, [
+    accountId,
+    viewMode,
+    needsLocationOnly,
+    sortMode,
+    statusFilter,
+    searchDebounced,
+  ]);
 
   const isSearching = searchDebounced.trim().length > 0;
 
@@ -366,10 +412,10 @@ export function ListingsList({
         ? items.filter((l) => l.latitude == null || l.longitude == null)
         : items;
 
-    if (viewMode === 'map' || needsLocationOnly) {
+    if (viewMode === 'map' || needsLocationOnly || sortMode !== 'updated') {
       const q = searchDebounced.trim().toLowerCase();
       return applyNeedsLocation(
-        sortListingsByUpdated(
+        sortListings(
           cachedListings.filter((l) => {
             if (statusFilter !== 'all' && l.status !== statusFilter) return false;
             if (!q) return true;
@@ -388,13 +434,14 @@ export function ListingsList({
               .toLowerCase();
             return haystack.includes(q);
           }),
+          sortMode,
         ),
       );
     }
 
-    if (!isSearching) return sortListingsByUpdated(pageListings);
+    if (!isSearching) return sortListings(pageListings, sortMode);
     const q = searchDebounced.trim().toLowerCase();
-    return sortListingsByUpdated(
+    return sortListings(
       cachedListings.filter((l) => {
         if (statusFilter !== 'all' && l.status !== statusFilter) return false;
         const haystack = [
@@ -412,6 +459,7 @@ export function ListingsList({
           .toLowerCase();
         return haystack.includes(q);
       }),
+      sortMode,
     );
   }, [
     cachedListings,
@@ -419,6 +467,7 @@ export function ListingsList({
     needsLocationOnly,
     pageListings,
     searchDebounced,
+    sortMode,
     statusFilter,
     viewMode,
   ]);
@@ -431,10 +480,22 @@ export function ListingsList({
   );
 
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const displayCount =
-    isSearching || viewMode === 'map' || needsLocationOnly
-      ? visibleListings.length
-      : total;
+  const usesFullCache =
+    isSearching ||
+    viewMode === 'map' ||
+    needsLocationOnly ||
+    sortMode !== 'updated';
+  const displayCount = usesFullCache ? visibleListings.length : total;
+  const pagedVisibleListings = useMemo(() => {
+    if (!usesFullCache || viewMode === 'map') return visibleListings;
+    const start = (page - 1) * PAGE_SIZE;
+    return visibleListings.slice(start, start + PAGE_SIZE);
+  }, [page, usesFullCache, viewMode, visibleListings]);
+  const clientTotalPages = Math.max(
+    1,
+    Math.ceil(visibleListings.length / PAGE_SIZE),
+  );
+  const effectiveTotalPages = usesFullCache ? clientTotalPages : totalPages;
 
   const openCreate = () => {
     setEditing(null);
@@ -458,9 +519,9 @@ export function ListingsList({
         if (idx >= 0) {
           const next = [...prev];
           next[idx] = saved;
-          return sortListingsByUpdated(next);
+          return next;
         }
-        return sortListingsByUpdated([saved, ...prev]);
+        return [saved, ...prev];
       });
       setTotal((prev) => (wasNew ? prev + 1 : prev));
       router.refresh();
@@ -488,18 +549,33 @@ export function ListingsList({
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-            Disposals
-          </h2>
-          <p className="text-sm text-[var(--workspace-shell-text)]/50">
-            {displayCount} {displayCount === 1 ? 'disposal' : 'disposals'}
-            {!isSearching && total > PAGE_SIZE
+        <p className="text-sm text-[var(--workspace-shell-text)]/50">
+          {displayCount} {displayCount === 1 ? 'disposal' : 'disposals'}
+          {usesFullCache && viewMode !== 'map' && effectiveTotalPages > 1
+            ? ` · page ${page} of ${effectiveTotalPages}`
+            : !usesFullCache && total > PAGE_SIZE
               ? ` · page ${page} of ${totalPages}`
               : null}
-          </p>
-        </div>
+        </p>
         <div className="flex flex-wrap items-center gap-2">
+          <Select
+            value={sortMode}
+            onValueChange={(value) => {
+              setSortMode(value as ListingSort);
+              setPage(1);
+            }}
+          >
+            <SelectTrigger className="h-9 w-[180px] border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              {LISTING_SORT_OPTIONS.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <div className="flex overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
             <button
               type="button"
@@ -538,17 +614,6 @@ export function ListingsList({
               <MapIcon className="h-4 w-4" />
             </button>
           </div>
-          <Button variant="outline" asChild>
-            <Link
-              href={pathsConfig.app.accountListingsImport.replace(
-                '[account]',
-                accountSlug,
-              )}
-            >
-              <Upload className="h-4 w-4" />
-              Import CSV
-            </Link>
-          </Button>
           <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
             <Plus className="h-4 w-4" />
             Add disposal
@@ -637,11 +702,14 @@ export function ListingsList({
       </div>
 
       {(isSearching && enrichingSearch) ||
-      (viewMode === 'map' && enrichingMap) ? (
+      ((viewMode === 'map' || sortMode !== 'updated' || needsLocationOnly) &&
+        enrichingMap) ? (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
           {viewMode === 'map' && enrichingMap
             ? 'Loading disposals for map…'
-            : 'Searching all disposals…'}
+            : sortMode !== 'updated' && enrichingMap
+              ? 'Loading disposals for sort…'
+              : 'Searching all disposals…'}
         </p>
       ) : null}
 
@@ -692,7 +760,7 @@ export function ListingsList({
         />
       ) : viewMode === 'cards' ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {visibleListings.map((listing) => (
+          {pagedVisibleListings.map((listing) => (
             <ListingCard
               key={listing.id}
               listing={listing}
@@ -728,7 +796,7 @@ export function ListingsList({
               </tr>
             </thead>
             <tbody>
-              {visibleListings.map((listing) => {
+              {pagedVisibleListings.map((listing) => {
                 const href = listingHref(accountSlug, listing.id);
                 const rent = formatMoney(listing.askingRentPence);
                 const price = formatMoney(listing.askingPricePence);
@@ -821,21 +889,22 @@ export function ListingsList({
         </div>
       )}
 
-      {!isSearching &&
-      viewMode !== 'map' &&
-      !needsLocationOnly &&
-      totalPages > 1 ? (
+      {viewMode !== 'map' && effectiveTotalPages > 1 ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             Showing {(page - 1) * PAGE_SIZE + 1}–
-            {Math.min(page * PAGE_SIZE, total)} of {total}
+            {Math.min(
+              page * PAGE_SIZE,
+              usesFullCache ? visibleListings.length : total,
+            )}{' '}
+            of {usesFullCache ? visibleListings.length : total}
           </p>
           <div className="flex items-center gap-2">
             <Button
               type="button"
               variant="outline"
               size="sm"
-              disabled={page <= 1 || loadingPage}
+              disabled={page <= 1 || loadingPage || enrichingMap}
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               className="border-[color:var(--workspace-shell-border)]"
             >
@@ -845,7 +914,9 @@ export function ListingsList({
               type="button"
               variant="outline"
               size="sm"
-              disabled={page >= totalPages || loadingPage}
+              disabled={
+                page >= effectiveTotalPages || loadingPage || enrichingMap
+              }
               onClick={() => setPage((p) => p + 1)}
               className="border-[color:var(--workspace-shell-border)]"
             >
@@ -863,6 +934,7 @@ export function ListingsList({
           clearCreateQuery();
         }}
         accountId={accountId}
+        accountSlug={accountSlug}
         listing={editing}
         onSaved={handleSaved}
       />
@@ -956,7 +1028,7 @@ function ListingCard({
         {(listing.matchCount ?? 0) > 0 ? (
           <span
             className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--ozer-accent)] px-2.5 py-1 text-xs font-semibold text-white shadow-sm"
-            title={`${listing.matchCount} linked interest match${listing.matchCount === 1 ? '' : 'es'}`}
+            title={`${listing.matchCount} match${listing.matchCount === 1 ? '' : 'es'}`}
           >
             <Bell className="h-3.5 w-3.5" />
             <span className="tabular-nums">{listing.matchCount}</span>
@@ -982,11 +1054,29 @@ function ListingCard({
           <ListingActions onEdit={onEdit} onDelete={onDelete} ghostUntilHover />
         </div>
 
-        <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--workspace-shell-text)]/55">
-          {listing.sector ? <span>{listing.sector}</span> : null}
-          {size ? <span>{size}</span> : null}
-          {updatedLabel ? <span>Updated {updatedLabel}</span> : null}
-        </div>
+        {(listing.sector || size) && (
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+            <ListingSectorPills sector={listing.sector} />
+            {size ? (
+              <span className="text-xs text-[var(--workspace-shell-text)]/55">
+                {size}
+              </span>
+            ) : null}
+          </div>
+        )}
+
+        {updatedLabel ? (
+          <p className="text-xs text-[var(--workspace-shell-text)]/45">
+            Updated {updatedLabel}
+          </p>
+        ) : null}
+
+        {(listing.actingAgents?.length ?? 0) > 0 ? (
+          <ListingAgentAvatarStack
+            agents={listing.actingAgents ?? []}
+            size="sm"
+          />
+        ) : null}
 
         {(rent || price) && (
           <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
@@ -998,13 +1088,6 @@ function ListingCard({
             ) : null}
           </p>
         )}
-
-        {(listing.actingAgents?.length ?? 0) > 0 ? (
-          <ListingAgentAvatarStack
-            agents={listing.actingAgents ?? []}
-            size="sm"
-          />
-        ) : null}
 
         {(listing.coAgents?.length ?? 0) > 0 ? (
           <div className="flex flex-wrap gap-1.5">

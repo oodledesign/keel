@@ -33,6 +33,8 @@ async function VideoEditorPage({ params }: Props) {
           initialRevision={data.revision}
           publishedRevision={data.video.publishedRevision}
           initialTranscript={data.transcript}
+          initialHasChapters={data.video.hasChapters}
+          initialHasSummary={data.video.hasSummary}
         />
       </PageBody>
     </>

@@ -54,6 +54,7 @@ import {
   updateListingEnquiry,
 } from '../_lib/server/server-actions';
 import { CommercialInterestPanel } from './commercial-interest-panel';
+import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
@@ -176,6 +177,9 @@ export function ListingOverviewSection({
   };
 }) {
   const { listing } = useListingState(initial);
+  const [matchBadgeCount, setMatchBadgeCount] = useState(
+    () => listing.matchCount ?? 0,
+  );
   const dom = daysOnMarket(listing.onMarketAt);
   const summary = interestSummary ?? {
     active: 0,
@@ -190,7 +194,9 @@ export function ListingOverviewSection({
     .replace('[account]', accountSlug)
     .replace('[id]', listing.id)}/interest`;
 
-  const matchCount = listing.matchCount ?? 0;
+  useEffect(() => {
+    setMatchBadgeCount(listing.matchCount ?? 0);
+  }, [listing.matchCount]);
 
   return (
     <div className="space-y-6">
@@ -203,7 +209,7 @@ export function ListingOverviewSection({
               </CardTitle>
               <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--ozer-accent)] px-2.5 py-1 text-xs font-semibold text-white">
                 <Bell className="h-3.5 w-3.5" />
-                <span className="tabular-nums">{matchCount}</span>
+                <span className="tabular-nums">{matchBadgeCount}</span>
               </span>
             </div>
             <p className="text-sm text-[var(--workspace-shell-text)]/50">
@@ -222,6 +228,9 @@ export function ListingOverviewSection({
             accountId={accountId}
             mode={{ kind: 'listing', listingId: listing.id }}
             compact
+            onMatchTotalsChange={({ linked, suggested }) => {
+              setMatchBadgeCount(linked + suggested);
+            }}
           />
         </CardContent>
       </Card>
@@ -379,6 +388,17 @@ export function ListingOverviewSection({
                 }
               />
             </dl>
+            {(listing.actingAgents?.length ?? 0) > 0 ? (
+              <div className="mt-4 border-t border-[color:var(--workspace-shell-border)] pt-4">
+                <p className="mb-2 text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
+                  Team
+                </p>
+                <ListingAgentAvatarStack
+                  agents={listing.actingAgents ?? []}
+                  size="md"
+                />
+              </div>
+            ) : null}
           </CardContent>
         </Card>
 

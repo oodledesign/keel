@@ -1,6 +1,7 @@
 import { notFound, redirect } from 'next/navigation';
 
 import featureFlagsConfig from '~/config/feature-flags.config';
+import pathsConfig from '~/config/paths.config';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -40,7 +41,7 @@ async function WorkspaceBillingSettingsPage({
   const workspace = await loadTeamWorkspace(accountSlug);
   const access = getTeamAccountAccess(
     workspace.account as {
-      permissions?: string | null;
+      permissions?: string[] | null;
       role?: string | null;
       company_role?: string | null;
     },
@@ -48,6 +49,15 @@ async function WorkspaceBillingSettingsPage({
 
   if (!access.canViewBilling) {
     redirect(getDefaultAccountPath(accountSlug, workspace.account));
+  }
+
+  // Add-on purchase / catalog lives on the hidden settings add-ons page.
+  if (query.addon) {
+    const addonsPath = pathsConfig.app.accountAddonsSettings.replace(
+      '[account]',
+      accountSlug,
+    );
+    redirect(`${addonsPath}?addon=${encodeURIComponent(query.addon)}`);
   }
 
   return (

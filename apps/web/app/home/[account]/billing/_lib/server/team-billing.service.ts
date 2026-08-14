@@ -15,6 +15,7 @@ import appConfig from '~/config/app.config';
 import billingConfig from '~/config/billing.config';
 import pathsConfig from '~/config/paths.config';
 import { getTeamAccountAccess } from '~/home/[account]/_lib/role-access';
+import { isPurchasableWorkspaceAddonProduct } from '~/lib/billing/ozer-plan-catalog';
 import { Database } from '~/lib/database.types';
 
 import { TeamCheckoutSchema } from '../schema/team-billing.schema';
@@ -137,6 +138,12 @@ class TeamBillingService {
       // retrieve the plan from the configuration
       // so we can assign the correct checkout data
       const { plan, product } = getPlanDetails(params.productId, params.planId);
+
+      if (!isPurchasableWorkspaceAddonProduct(params.productId)) {
+        throw new Error(
+          'This add-on is not available for purchase yet. Check Apps & add-ons for what’s live.',
+        );
+      }
 
       // find the customer ID for the account if it exists
       // (eg. if the account has been billed before)

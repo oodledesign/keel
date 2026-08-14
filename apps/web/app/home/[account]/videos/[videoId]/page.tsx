@@ -27,6 +27,7 @@ async function VideoPlayerConfigPage({ params }: VideoPlayerConfigPageProps) {
         <PlayerConfigPageClient
           accountSlug={data.accountSlug}
           video={data.video}
+          transcriptPlainText={data.transcriptPlainText}
           initialConfig={data.config}
           initialPresets={data.presets}
           initialCaptions={data.captions}

@@ -93,6 +93,10 @@ export async function convertAccountToCommercialProperty(
     throw new Error(spaceError.message);
   }
 
+  // Drop leftover Business Lite shell so commercial doesn't keep apps-shell settings.
+  await markBusinessUpgradedFromLite(admin, accountId);
+  await setModuleEnabled(admin, accountId, 'apps', false);
+
   for (const moduleKey of COMMERCIAL_PROPERTY_WORKSPACE_MODULE_ORDER) {
     await setModuleEnabled(
       admin,
@@ -153,7 +157,7 @@ export async function syncWorkspaceStateAfterAdminGrant(
     case 'workspace_commercial_property':
       await convertAccountToCommercialProperty(admin, accountId);
       await ensureCommercialPropertyPlanLimits(admin, accountId);
-      // Preserve Business Lite / paid add-ons (e.g. Signatures) after conversion.
+      // Keep paid add-ons (e.g. Signatures); Business Lite is cleared on convert.
       await syncAddonModulesFromEntitlements(admin, accountId);
       break;
     default:

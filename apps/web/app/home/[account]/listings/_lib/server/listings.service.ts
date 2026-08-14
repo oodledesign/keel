@@ -30,6 +30,7 @@ import type {
   UpdateListingInput,
   UpdateListingUnitInput,
 } from '../schema/listings.schema';
+import { createMatchSuggestionsService } from './match-suggestions.service';
 
 export type { MediaType };
 
@@ -176,7 +177,7 @@ export type CommercialListing = {
   actingAgents?: ListingAgent[];
   /** External co-marketing agents (workspace clients) when loaded. */
   coAgents?: ListingCoAgent[];
-  /** Linked interest matches count when loaded with list match counts. */
+  /** Suggested fits + linked interest count when loaded with list match counts. */
   matchCount?: number;
 };
 
@@ -920,27 +921,36 @@ async function attachMatchCounts(
   if (listings.length === 0) return listings;
 
   const listingIds = listings.map((l) => l.id);
-  const { data, error } = await client
-    .from('commercial_matches')
-    .select('listing_id')
-    .eq('account_id', accountId)
-    .in('listing_id', listingIds);
+  const [{ data, error }, suggestedByListing] = await Promise.all([
+    client
+      .from('commercial_matches')
+      .select('listing_id')
+      .eq('account_id', accountId)
+      .in('listing_id', listingIds),
+    createMatchSuggestionsService(client).countSuggestionsByListingIds({
+      accountId,
+      listingIds,
+    }),
+  ]);
 
   if (error) {
     console.error('[listings] attachMatchCounts:', error.message);
-    return listings.map((listing) => ({ ...listing, matchCount: 0 }));
   }
 
-  const counts = new Map<string, number>();
+  const linkedCounts = new Map<string, number>();
   for (const row of data ?? []) {
     const listingId = row.listing_id as string;
-    counts.set(listingId, (counts.get(listingId) ?? 0) + 1);
+    linkedCounts.set(listingId, (linkedCounts.get(listingId) ?? 0) + 1);
   }
 
-  return listings.map((listing) => ({
-    ...listing,
-    matchCount: counts.get(listing.id) ?? 0,
-  }));
+  return listings.map((listing) => {
+    const linked = error ? 0 : (linkedCounts.get(listing.id) ?? 0);
+    const suggested = suggestedByListing.get(listing.id) ?? 0;
+    return {
+      ...listing,
+      matchCount: linked + suggested,
+    };
+  });
 }
 
 export function createListingsService(client: SupabaseClient) {
