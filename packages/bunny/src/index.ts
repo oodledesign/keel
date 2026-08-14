@@ -53,6 +53,21 @@ export type BunnyListVideosOptions = {
   orderBy?: string;
 };
 
+export type BunnyVideoStatisticsOptions = {
+  videoGuid?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  hourly?: boolean;
+};
+
+export type BunnyVideoStatistics = {
+  viewsChart: Record<string, number>;
+  watchTimeChart: Record<string, number>;
+  countryViewCounts: Record<string, number>;
+  countryWatchTime: Record<string, number>;
+  engagementScore: number | null;
+};
+
 type BunnyCreateVideoResponse = {
   guid: string;
   title?: string;
@@ -106,6 +121,23 @@ function mapBunnyVideo(raw: BunnyVideoRaw): BunnyVideo {
     availableResolutions: raw.availableResolutions ?? null,
     encodeProgress: Number(raw.encodeProgress ?? 0),
   };
+}
+
+function normalizeNumberMap(
+  value: Record<string, number> | null | undefined,
+): Record<string, number> {
+  if (!value || typeof value !== 'object') {
+    return {};
+  }
+
+  const result: Record<string, number> = {};
+  for (const [key, entry] of Object.entries(value)) {
+    const n = Number(entry);
+    if (Number.isFinite(n)) {
+      result[key] = n;
+    }
+  }
+  return result;
 }
 
 export class BunnyStreamClient {
@@ -164,6 +196,43 @@ export class BunnyStreamClient {
 
     return {
       hostname: raw.Hostname?.trim() || raw.hostname?.trim() || null,
+    };
+  }
+
+  /**
+   * Fetch Stream playback statistics for a library or a single video.
+   * @see https://docs.bunny.net/api-reference/stream/manage-videos/get-video-statistics
+   */
+  async getVideoStatistics(
+    libraryId: string,
+    options: BunnyVideoStatisticsOptions = {},
+  ): Promise<BunnyVideoStatistics> {
+    const params = new URLSearchParams();
+
+    if (options.videoGuid) params.set('videoGuid', options.videoGuid);
+    if (options.dateFrom) params.set('dateFrom', options.dateFrom);
+    if (options.dateTo) params.set('dateTo', options.dateTo);
+    if (options.hourly != null) {
+      params.set('hourly', options.hourly ? 'true' : 'false');
+    }
+
+    const query = params.toString();
+    const path = `/library/${libraryId}/statistics${query ? `?${query}` : ''}`;
+    const raw = await this.request<{
+      viewsChart?: Record<string, number> | null;
+      watchTimeChart?: Record<string, number> | null;
+      countryViewCounts?: Record<string, number> | null;
+      countryWatchTime?: Record<string, number> | null;
+      engagementScore?: number | null;
+    }>(path);
+
+    return {
+      viewsChart: normalizeNumberMap(raw.viewsChart),
+      watchTimeChart: normalizeNumberMap(raw.watchTimeChart),
+      countryViewCounts: normalizeNumberMap(raw.countryViewCounts),
+      countryWatchTime: normalizeNumberMap(raw.countryWatchTime),
+      engagementScore:
+        typeof raw.engagementScore === 'number' ? raw.engagementScore : null,
     };
   }
 

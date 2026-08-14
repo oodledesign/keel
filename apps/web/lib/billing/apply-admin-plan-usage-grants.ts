@@ -56,7 +56,9 @@ export async function applyAdminPlanUsageGrants(
   const isAiPlan =
     plan.family === 'business' ||
     plan.family === 'business_lite' ||
-    plan.planId.startsWith('business-');
+    plan.family === 'commercial_property' ||
+    plan.planId.startsWith('business-') ||
+    plan.planId.startsWith('commercial-property');
 
   if (isAiPlan) {
     const synced = await syncAccountCreditLimit(accountId, admin, {

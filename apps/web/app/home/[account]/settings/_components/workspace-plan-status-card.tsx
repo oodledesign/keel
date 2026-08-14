@@ -24,6 +24,7 @@ type WorkspacePlanStatusCardProps = {
   canManageBilling: boolean;
   accountSlug: string;
   billingStatus?: AccountBillingStatus | null;
+  billingExempt?: boolean;
 };
 
 function statusBadge(status: AccountBillingStatus | null | undefined) {
@@ -50,6 +51,7 @@ export function WorkspacePlanStatusCard({
   canManageBilling,
   accountSlug,
   billingStatus,
+  billingExempt = false,
 }: WorkspacePlanStatusCardProps) {
   const billingPath = pathsConfig.app.accountBilling.replace(
     '[account]',
@@ -102,6 +104,32 @@ export function WorkspacePlanStatusCard({
             )}
           </div>
         </CardHeader>
+      </Card>
+    );
+  }
+
+  if (billingExempt && !hasPaidSubscription) {
+    return (
+      <Card>
+        <CardHeader className="pb-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <CardTitle className="text-base">Workspace plan</CardTitle>
+              <CardDescription>
+                Complimentary access is active. Choose a paid plan below — enter
+                your promo code at checkout if you have one.
+              </CardDescription>
+            </div>
+            <Badge variant="outline">Complimentary</Badge>
+          </div>
+        </CardHeader>
+        {canManageBilling ? (
+          <CardContent className="pt-0">
+            <Button asChild variant="outline" size="sm">
+              <Link href={`${billingPath}?billing=1`}>Start paid plan</Link>
+            </Button>
+          </CardContent>
+        ) : null}
       </Card>
     );
   }

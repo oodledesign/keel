@@ -14,19 +14,22 @@ import { Trans } from '@kit/ui/trans';
 import billingConfig from '~/config/billing.config';
 import { loadTeamAccountBillingPage } from '~/home/[account]/_lib/server/team-account-billing-page.loader';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
+import { CommercialSeatQuantityCard } from '~/home/[account]/billing/_components/commercial-seat-quantity-card';
 import { OzerAddonCheckoutSection } from '~/home/[account]/billing/_components/ozer-addon-checkout-section';
 import { OzerWorkspaceCheckoutForm } from '~/home/[account]/billing/_components/ozer-workspace-checkout-form';
 import { createBillingPortalSession } from '~/home/[account]/billing/_lib/server/server-actions';
 import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
 import { hasBusinessLiteEntitlement } from '~/lib/billing/business-lite';
 import { checkAccountAccess } from '~/lib/billing/check-account-access';
+import { loadAccountPlanLimits } from '~/lib/billing/entitlements';
 import { loadWorkspaceAddonState } from '~/lib/billing/workspace-addon-state.loader';
+import { getCommercialSeatBreakdown } from '~/lib/commercial/commercial-seat-access';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import { PaymentRecoveryCard } from '../../_components/payment-recovery-card';
 import { getTeamAccountAccess } from '../../_lib/role-access';
-import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
 import { MediaGenerateAppToggle } from './media-generate-app-toggle';
+import { WorkspaceAiCreditsBillingCard } from './workspace-ai-credits-billing-card';
 import { WorkspaceMediaUnitsBillingCard } from './workspace-media-units-billing-card';
 import { WorkspacePlanStatusCard } from './workspace-plan-status-card';
 
@@ -60,6 +63,7 @@ export async function WorkspaceBillingPanel({
 
   const accountId = workspace.account.id as string;
   const canManageBilling = access.canManageBilling;
+  const isCommercial = workspace.workspaceProfile === 'commercial_property';
 
   const [subscription, order, customerId] =
     await loadTeamAccountBillingPage(accountId);
@@ -112,12 +116,34 @@ export async function WorkspaceBillingPanel({
     !subscriptionProductPlan.product.id.startsWith('ozer-ai-credits-'),
   );
 
+  const hasAnyActiveAddon = Object.values(addonState.addons).some(Boolean);
+  const showAddonCheckout =
+    canManageBilling && (hasAnyActiveAddon || Boolean(searchParams.addon));
+  const showMediaGenerate =
+    canManageBilling && Boolean(addonState.addons.addon_media_generate);
+
+  const commercialBreakdown = isCommercial
+    ? await getCommercialSeatBreakdown(billingClient, accountId)
+    : null;
+  const planLimits = isCommercial
+    ? await loadAccountPlanLimits(billingClient, accountId)
+    : null;
+  const pendingBillableSeats = planLimits?.pending_billable_seats ?? null;
+  const pendingSeatsEffectiveAt =
+    planLimits?.pending_seats_effective_at ?? null;
+
+  const billingDescription = isCommercial
+    ? 'Workspace plan, seats, AI credits, and Stripe billing portal.'
+    : hasAnyActiveAddon
+      ? 'Workspace plan, apps, AI credits, and Stripe billing portal.'
+      : 'Workspace plan, AI credits, and Stripe billing portal.';
+
   return (
     <div className="flex flex-col gap-6">
       <div>
         <h2 className="text-base font-semibold">Billing</h2>
         <p className="text-muted-foreground mt-1 text-sm">
-          Workspace plan, Signatures, AI credits, and Stripe billing portal.
+          {billingDescription}
         </p>
       </div>
 
@@ -142,6 +168,9 @@ export async function WorkspaceBillingPanel({
           canManageBilling={canManageBilling}
           accountSlug={accountSlug}
           billingStatus={accessState.status}
+          billingExempt={
+            accessState.exempt && accessState.reason === 'billing_exempt'
+          }
         />
 
         <If condition={showPlanCheckout}>
@@ -168,7 +197,20 @@ export async function WorkspaceBillingPanel({
           <CannotManageBillingAlert />
         </If>
 
-        <If condition={canManageBilling}>
+        {isCommercial && commercialBreakdown && subscriptionIsWorkspacePlan ? (
+          <CommercialSeatQuantityCard
+            accountId={accountId}
+            accountSlug={accountSlug}
+            canManageBilling={canManageBilling}
+            subscribedBillable={commercialBreakdown.subscribedBillable}
+            billableAssigned={commercialBreakdown.billableCount}
+            supportAssigned={commercialBreakdown.supportCount}
+            pendingBillableSeats={pendingBillableSeats}
+            pendingEffectiveAt={pendingSeatsEffectiveAt}
+          />
+        ) : null}
+
+        <If condition={showAddonCheckout}>
           <OzerAddonCheckoutSection
             accountId={accountId}
             workspacePaid={addonState.workspacePaid}
@@ -183,19 +225,20 @@ export async function WorkspaceBillingPanel({
           canManageBilling={canManageBilling}
         />
 
-        {canManageBilling ? (
-          <MediaGenerateAppToggle
-            accountId={accountId}
-            accountSlug={accountSlug}
-            billingHref={`/home/${accountSlug}/settings/billing`}
-          />
+        {showMediaGenerate ? (
+          <>
+            <MediaGenerateAppToggle
+              accountId={accountId}
+              accountSlug={accountSlug}
+              billingHref={`/home/${accountSlug}/settings/billing`}
+            />
+            <WorkspaceMediaUnitsBillingCard
+              accountId={accountId}
+              accountSlug={accountSlug}
+              canManageBilling={canManageBilling}
+            />
+          </>
         ) : null}
-
-        <WorkspaceMediaUnitsBillingCard
-          accountId={accountId}
-          accountSlug={accountSlug}
-          canManageBilling={canManageBilling}
-        />
 
         {subscription &&
         subscriptionIsWorkspacePlan &&

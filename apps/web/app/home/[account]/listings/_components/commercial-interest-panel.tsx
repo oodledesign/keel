@@ -2,16 +2,23 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import { Loader2, Plus, Sparkles } from 'lucide-react';
+import { Loader2, MoreHorizontal, Plus, Search, Sparkles } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@kit/ui/dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -22,15 +29,18 @@ import {
   SelectValue,
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 import type { MatchSuggestion } from '~/home/[account]/listings/_lib/server/match-suggestions.service';
 import {
+  bulkCreateInterestMatches,
   createInterestMatch,
   deleteInterestMatch,
   draftInterestOutreach,
   explainInterestSuggestions,
   listMatchesForListing,
   listMatchesForRequirement,
+  rankBookForRequirement,
   suggestInterestMatches,
   updateInterestMatch,
 } from '~/home/[account]/listings/_lib/server/matches-actions';
@@ -43,6 +53,8 @@ import {
   type InterestStatus,
 } from '~/lib/commercial/commercial-constants';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
+
+import { RequirementMatchesMap } from './requirement-matches-map';
 
 function suggestionKey(s: MatchSuggestion) {
   return `${s.listingId}:${s.requirementId}`;
@@ -95,10 +107,19 @@ export function CommercialInterestPanel({
     body: string;
   } | null>(null);
 
+  const [rankedBook, setRankedBook] = useState<MatchSuggestion[] | null>(null);
+  const [rankLoading, setRankLoading] = useState(false);
+  const [selectedListingIds, setSelectedListingIds] = useState<Set<string>>(
+    () => new Set(),
+  );
+
   const [sector, setSector] = useState('');
   const [sizeMin, setSizeMin] = useState('');
   const [sizeMax, setSizeMax] = useState('');
   const [lastDays, setLastDays] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | InterestStatus>(
+    'all',
+  );
 
   const title =
     mode.kind === 'listing'
@@ -179,9 +200,8 @@ export function CommercialInterestPanel({
               })),
           );
         } else {
-          const collected: Awaited<
-            ReturnType<typeof listListings>
-          >['data'] = [];
+          const collected: Awaited<ReturnType<typeof listListings>>['data'] =
+            [];
           let page = 1;
           let total = 0;
           do {
@@ -218,6 +238,32 @@ export function CommercialInterestPanel({
     if (lastDays !== 'all') bits.push(`last ${lastDays} days`);
     return bits.length ? `Filtered by ${bits.join(', ')}` : null;
   }, [mode.kind, sector, sizeMin, sizeMax, lastDays]);
+
+  const statusCounts = useMemo(() => {
+    const counts = Object.fromEntries(
+      INTEREST_STATUSES.map((status) => [status, 0]),
+    ) as Record<InterestStatus, number>;
+    for (const match of matches) {
+      const status = (INTEREST_STATUSES as readonly string[]).includes(
+        match.status,
+      )
+        ? (match.status as InterestStatus)
+        : 'new';
+      counts[status] = (counts[status] ?? 0) + 1;
+    }
+    return counts;
+  }, [matches]);
+
+  const filteredMatches = useMemo(() => {
+    if (statusFilter === 'all') return matches;
+    return matches.filter((match) => match.status === statusFilter);
+  }, [matches, statusFilter]);
+
+  const showUnifiedEmpty =
+    !loading &&
+    !suggestionsLoading &&
+    matches.length === 0 &&
+    suggestions.length === 0;
 
   const onStatusChange = (matchId: string, status: InterestStatus) => {
     startTransition(async () => {
@@ -316,7 +362,7 @@ export function CommercialInterestPanel({
           limit: 8,
         });
         setSuggestions(next);
-        toast.success(triage ? 'AI triage ready' : 'AI explanations ready');
+        toast.success(triage ? 'AI ranking ready' : 'Fit explanations ready');
       } catch (error) {
         toast.error(
           error instanceof Error ? error.message : 'AI explain failed',
@@ -357,6 +403,191 @@ export function CommercialInterestPanel({
     });
   };
 
+  const onRankStock = (withAi = false) => {
+    if (mode.kind !== 'requirement') return;
+    setRankLoading(true);
+    startTransition(async () => {
+      try {
+        const ranked = await rankBookForRequirement({
+          accountId,
+          requirementId: mode.requirementId,
+          withAi,
+        });
+        setRankedBook(ranked);
+        setSelectedListingIds(
+          new Set(ranked.slice(0, 5).map((s) => s.listingId)),
+        );
+        toast.success(
+          ranked.length
+            ? `Ranked ${ranked.length} disposal${ranked.length === 1 ? '' : 's'}`
+            : 'No strong stock matches',
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not rank stock',
+        );
+      } finally {
+        setRankLoading(false);
+      }
+    });
+  };
+
+  const toggleRankedListing = (listingId: string, checked: boolean) => {
+    setSelectedListingIds((prev) => {
+      const next = new Set(prev);
+      if (checked) next.add(listingId);
+      else next.delete(listingId);
+      return next;
+    });
+  };
+
+  const onBulkAddSelected = () => {
+    if (mode.kind !== 'requirement') return;
+    const listingIds = [...selectedListingIds];
+    if (listingIds.length === 0) {
+      toast.error('Select at least one disposal');
+      return;
+    }
+    startTransition(async () => {
+      try {
+        const result = await bulkCreateInterestMatches({
+          accountId,
+          requirementId: mode.requirementId,
+          listingIds,
+        });
+        toast.success(
+          `Added ${result.createdCount} interest${
+            result.createdCount === 1 ? '' : 's'
+          }${
+            result.existingCount
+              ? ` (${result.existingCount} already linked)`
+              : ''
+          }`,
+        );
+        setRankedBook(null);
+        setSelectedListingIds(new Set());
+        await load();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not add interests',
+        );
+      }
+    });
+  };
+
+  const rankedBookBlock =
+    mode.kind === 'requirement' && rankedBook ? (
+      <div className="mb-5 space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/15 p-3">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Ranked stock
+            </p>
+            <p className="text-xs text-[var(--workspace-shell-text)]/45">
+              Select disposals to add to this requirement’s Interest schedule.
+            </p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              size="sm"
+              variant="ghost"
+              onClick={() => {
+                setRankedBook(null);
+                setSelectedListingIds(new Set());
+              }}
+            >
+              Clear
+            </Button>
+            <Button
+              type="button"
+              size="sm"
+              disabled={pending || selectedListingIds.size === 0}
+              className={workspaceBtnPrimaryMd}
+              onClick={onBulkAddSelected}
+            >
+              Add selected to Interest
+            </Button>
+          </div>
+        </div>
+        {rankedBook.length === 0 ? (
+          <p className="text-xs text-[var(--workspace-shell-text)]/45">
+            No ranked stock above the score threshold.
+          </p>
+        ) : (
+          <>
+            <RequirementMatchesMap
+              pins={rankedBook
+                .filter(
+                  (s) =>
+                    s.listingLatitude != null && s.listingLongitude != null,
+                )
+                .map((s) => ({
+                  id: s.listingId,
+                  name: s.listingName,
+                  latitude: s.listingLatitude!,
+                  longitude: s.listingLongitude!,
+                  selected: selectedListingIds.has(s.listingId),
+                }))}
+            />
+            <ul className="max-h-72 space-y-1.5 overflow-y-auto">
+            {rankedBook.map((suggestion) => {
+              const checked = selectedListingIds.has(suggestion.listingId);
+              return (
+                <li
+                  key={suggestionKey(suggestion)}
+                  className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--workspace-shell-sidebar-accent)]/40"
+                >
+                  <Checkbox
+                    checked={checked}
+                    onCheckedChange={(value) =>
+                      toggleRankedListing(suggestion.listingId, value === true)
+                    }
+                    className="mt-1"
+                    aria-label={`Select ${suggestion.listingName}`}
+                  />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {suggestion.listingName}
+                      </span>
+                      <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)] tabular-nums">
+                        {suggestion.score}%
+                      </span>
+                      {suggestion.aiRecommendation ? (
+                        <span className="text-[11px] text-[var(--workspace-shell-text)]/50">
+                          AI: {suggestion.aiRecommendation}
+                        </span>
+                      ) : null}
+                    </div>
+                    <p className="truncate text-xs text-[var(--workspace-shell-text)]/50">
+                      {[
+                        suggestion.listingDisposalType,
+                        suggestion.listingSector,
+                        suggestion.listingTown,
+                        formatSize(
+                          suggestion.listingSizeMinSqft,
+                          suggestion.listingSizeMaxSqft,
+                        ),
+                      ]
+                        .filter(Boolean)
+                        .join(' · ')}
+                    </p>
+                    {suggestion.reasons.length > 0 ? (
+                      <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text)]/45">
+                        {suggestion.reasons.slice(0, 2).join(' · ')}
+                      </p>
+                    ) : null}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+          </>
+        )}
+      </div>
+    ) : null;
+
   const suggestionsBlock = (
     <div className="mb-5 space-y-2">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -365,11 +596,12 @@ export function CommercialInterestPanel({
             Suggested fits
           </p>
           <p className="text-xs text-[var(--workspace-shell-text)]/45">
-            Rule-scored from sector, size, location, tenure and budget
+            Automatic matches from sector, size, location, tenure and budget —
+            then optionally explain with AI.
           </p>
         </div>
-        {!compact ? (
-          <div className="flex flex-wrap gap-2">
+        {!compact && suggestions.length > 0 ? (
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
@@ -378,32 +610,50 @@ export function CommercialInterestPanel({
               onClick={() => onExplainSuggestions(false)}
             >
               <Sparkles className="h-3.5 w-3.5" />
-              Why these fit
+              Explain fits
             </Button>
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={pending || suggestionsLoading}
-              onClick={() => onExplainSuggestions(true)}
-            >
-              AI triage
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  size="icon"
+                  variant="outline"
+                  className="h-8 w-8"
+                  disabled={pending || suggestionsLoading}
+                  aria-label="More AI actions"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                <DropdownMenuItem
+                  disabled={pending || suggestionsLoading}
+                  onClick={() => onExplainSuggestions(true)}
+                >
+                  Rank with AI
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         ) : null}
       </div>
+      {!compact && suggestions.length > 0 ? (
+        <p className="text-[11px] text-[var(--workspace-shell-text)]/40">
+          Explain fits adds a short reason to each suggestion (uses AI credits).
+        </p>
+      ) : null}
 
       {suggestionsLoading ? (
         <div className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/50">
           <Loader2 className="h-4 w-4 animate-spin" />
           Finding fits…
         </div>
-      ) : suggestions.length === 0 ? (
+      ) : suggestions.length === 0 && !showUnifiedEmpty ? (
         <p className="text-xs text-[var(--workspace-shell-text)]/45">
           No strong suggestions yet — add more brief detail or stock to improve
           matches.
         </p>
-      ) : (
+      ) : suggestions.length > 0 ? (
         <ul className="space-y-2">
           {suggestions.map((suggestion) => {
             const primary =
@@ -496,97 +746,28 @@ export function CommercialInterestPanel({
             );
           })}
         </ul>
-      )}
+      ) : null}
     </div>
   );
 
-  const panel = (
+  const scheduleList = (
     <>
-      {mode.kind === 'listing' && !compact ? (
-        <div className="mb-4 grid gap-3 sm:grid-cols-4">
-          <div className="space-y-1">
-            <Label className="text-xs">Sector</Label>
-            <Input
-              value={sector}
-              onChange={(e) => setSector(e.target.value)}
-              placeholder="e.g. industrial"
-              className="h-8"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Size min</Label>
-            <Input
-              type="number"
-              value={sizeMin}
-              onChange={(e) => setSizeMin(e.target.value)}
-              className="h-8"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Size max</Label>
-            <Input
-              type="number"
-              value={sizeMax}
-              onChange={(e) => setSizeMax(e.target.value)}
-              className="h-8"
-            />
-          </div>
-          <div className="space-y-1">
-            <Label className="text-xs">Activity</Label>
-            <Select value={lastDays} onValueChange={setLastDays}>
-              <SelectTrigger className="h-8">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Any time</SelectItem>
-                <SelectItem value="7">Last 7 days</SelectItem>
-                <SelectItem value="30">Last 30 days</SelectItem>
-                <SelectItem value="90">Last 90 days</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-      ) : null}
-
-      {mode.kind === 'requirement' && !compact ? (
-        <div className="mb-4 max-w-xs space-y-1">
-          <Label className="text-xs">Activity</Label>
-          <Select value={lastDays} onValueChange={setLastDays}>
-            <SelectTrigger className="h-8">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Any time</SelectItem>
-              <SelectItem value="7">Last 7 days</SelectItem>
-              <SelectItem value="30">Last 30 days</SelectItem>
-              <SelectItem value="90">Last 90 days</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-      ) : null}
-
-      {filteredHint ? (
-        <p className="mb-2 text-xs text-[var(--workspace-shell-text)]/45">
-          {filteredHint}
-        </p>
-      ) : null}
-
-      {suggestionsBlock}
-
       {loading ? (
         <div className="flex items-center gap-2 text-sm text-[var(--workspace-shell-text)]/50">
           <Loader2 className="h-4 w-4 animate-spin" />
           Loading interests…
         </div>
-      ) : matches.length === 0 ? (
+      ) : filteredMatches.length === 0 ? (
         <p className="text-sm text-[var(--workspace-shell-text)]/50">
-          No interests yet. Link a{' '}
-          {mode.kind === 'listing' ? 'requirement' : 'disposal'} to track
-          progress, or add from suggestions above.
+          {matches.length === 0
+            ? `Add from suggestions above or link a ${
+                mode.kind === 'listing' ? 'requirement' : 'disposal'
+              } to start tracking.`
+            : 'No interests in this stage.'}
         </p>
       ) : (
         <ul className="space-y-2">
-          {matches.map((match) => {
+          {filteredMatches.map((match) => {
             const primary =
               mode.kind === 'listing'
                 ? match.requirementCompanyName ||
@@ -674,6 +855,193 @@ export function CommercialInterestPanel({
             );
           })}
         </ul>
+      )}
+    </>
+  );
+
+  const panel = (
+    <>
+      {rankedBookBlock}
+      {showUnifiedEmpty ? (
+        <div className="flex flex-col items-center justify-center gap-4 px-4 py-12 text-center">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/40">
+            <Search className="h-5 w-5" />
+          </div>
+          <div className="space-y-1">
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Interest schedule is empty
+            </p>
+            <p className="max-w-sm text-sm text-[var(--workspace-shell-text)]/50">
+              Find matching requirements or add interest to start tracking.
+            </p>
+          </div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              disabled={suggestionsLoading || pending}
+              onClick={() => void loadSuggestions()}
+            >
+              {suggestionsLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Search className="h-4 w-4" />
+              )}
+              Find matches
+            </Button>
+            {mode.kind === 'requirement' ? (
+              <Button
+                type="button"
+                variant="outline"
+                disabled={rankLoading || pending}
+                onClick={() => onRankStock(false)}
+              >
+                {rankLoading ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Sparkles className="h-4 w-4" />
+                )}
+                Rank stock
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              className={workspaceBtnPrimaryMd}
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-4 w-4" />
+              Add interest
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <>
+          {suggestionsBlock}
+
+          <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
+            <div>
+              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                Interest schedule
+              </p>
+              <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                {mode.kind === 'listing'
+                  ? 'Linked requirements and their progress on this disposal.'
+                  : 'Linked disposals and their progress on this requirement.'}
+              </p>
+            </div>
+
+            {mode.kind === 'listing' && !compact ? (
+              <div className="grid gap-3 sm:grid-cols-4">
+                <div className="space-y-1">
+                  <Label className="text-xs">Sector</Label>
+                  <Input
+                    value={sector}
+                    onChange={(e) => setSector(e.target.value)}
+                    placeholder="e.g. industrial"
+                    className="h-8"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Size min</Label>
+                  <Input
+                    type="number"
+                    value={sizeMin}
+                    onChange={(e) => setSizeMin(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Size max</Label>
+                  <Input
+                    type="number"
+                    value={sizeMax}
+                    onChange={(e) => setSizeMax(e.target.value)}
+                    className="h-8"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Activity</Label>
+                  <Select value={lastDays} onValueChange={setLastDays}>
+                    <SelectTrigger className="h-8">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Any time</SelectItem>
+                      <SelectItem value="7">Last 7 days</SelectItem>
+                      <SelectItem value="30">Last 30 days</SelectItem>
+                      <SelectItem value="90">Last 90 days</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            ) : null}
+
+            {mode.kind === 'requirement' && !compact ? (
+              <div className="max-w-xs space-y-1">
+                <Label className="text-xs">Activity</Label>
+                <Select value={lastDays} onValueChange={setLastDays}>
+                  <SelectTrigger className="h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Any time</SelectItem>
+                    <SelectItem value="7">Last 7 days</SelectItem>
+                    <SelectItem value="30">Last 30 days</SelectItem>
+                    <SelectItem value="90">Last 90 days</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
+
+            {filteredHint ? (
+              <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                {filteredHint}
+              </p>
+            ) : null}
+
+            {!compact ? (
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className={cn(
+                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                    statusFilter === 'all'
+                      ? 'bg-[var(--ozer-accent)] text-white'
+                      : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]',
+                  )}
+                >
+                  All
+                  <span className="tabular-nums opacity-80">
+                    {matches.length}
+                  </span>
+                </button>
+                {INTEREST_STATUSES.map((status) => {
+                  const count = statusCounts[status] ?? 0;
+                  if (count === 0 && statusFilter !== status) return null;
+                  return (
+                    <button
+                      key={status}
+                      type="button"
+                      onClick={() => setStatusFilter(status)}
+                      className={cn(
+                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                        statusFilter === status
+                          ? 'bg-[var(--ozer-accent)] text-white'
+                          : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]',
+                      )}
+                    >
+                      {INTEREST_STATUS_LABELS[status]}
+                      <span className="tabular-nums opacity-80">{count}</span>
+                    </button>
+                  );
+                })}
+              </div>
+            ) : null}
+
+            {scheduleList}
+          </div>
+        </>
       )}
 
       {addOpen ? (
@@ -781,15 +1149,33 @@ export function CommercialInterestPanel({
           <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
             {title}
           </h3>
-          <Button
-            type="button"
-            size="sm"
-            variant="outline"
-            onClick={() => setAddOpen(true)}
-          >
-            <Plus className="h-3.5 w-3.5" />
-            Add
-          </Button>
+          <div className="flex items-center gap-1.5">
+            {mode.kind === 'requirement' ? (
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={rankLoading || pending}
+                onClick={() => onRankStock(false)}
+              >
+                {rankLoading ? (
+                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="h-3.5 w-3.5" />
+                )}
+                Rank stock
+              </Button>
+            ) : null}
+            <Button
+              type="button"
+              size="sm"
+              variant="outline"
+              onClick={() => setAddOpen(true)}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add
+            </Button>
+          </div>
         </div>
         {panel}
       </div>
@@ -804,18 +1190,34 @@ export function CommercialInterestPanel({
             {title}
           </CardTitle>
           <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/50">
-            Interest Schedule — suggestions, one-click add, and status through
-            to agreed.
+            Find matches, add interest, and track status through to agreed.
           </p>
         </div>
-        <Button
-          type="button"
-          className={workspaceBtnPrimaryMd}
-          onClick={() => setAddOpen(true)}
-        >
-          <Plus className="h-4 w-4" />
-          Add interest
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          {mode.kind === 'requirement' ? (
+            <Button
+              type="button"
+              variant="outline"
+              disabled={rankLoading || pending}
+              onClick={() => onRankStock(false)}
+            >
+              {rankLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                <Sparkles className="h-4 w-4" />
+              )}
+              Rank stock
+            </Button>
+          ) : null}
+          <Button
+            type="button"
+            className={workspaceBtnPrimaryMd}
+            onClick={() => setAddOpen(true)}
+          >
+            <Plus className="h-4 w-4" />
+            Add interest
+          </Button>
+        </div>
       </CardHeader>
       <CardContent>{panel}</CardContent>
     </Card>

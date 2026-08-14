@@ -10,6 +10,8 @@ import { loadAdminAccountBillingState } from '~/admin/accounts/[id]/_lib/load-ad
 
 import { AdminWorkspaceMembersPanel } from './_components/admin-workspace-members-panel';
 import { loadAdminWorkspaceDetail } from './_lib/load-admin-workspace';
+import { loadSeatUsageSummary } from '~/home/[account]/members/_lib/server/seat-usage.loader';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -25,6 +27,14 @@ async function AdminWorkspaceDetailPage(props: Params) {
   const { id } = await props.params;
   const workspace = await loadAdminWorkspaceDetail(id);
   const billing = await loadAdminAccountBillingState(workspace.id);
+
+  const admin = getSupabaseServerAdminClient();
+  const seatUsage = await loadSeatUsageSummary(
+    admin,
+    workspace.id,
+    workspace.slug,
+    workspace.isCommercial ? 'commercial_property' : 'work_design',
+  );
 
   return (
     <>
@@ -59,8 +69,10 @@ async function AdminWorkspaceDetailPage(props: Params) {
           <h2 className="text-base font-semibold">Members</h2>
           <AdminWorkspaceMembersPanel
             accountId={workspace.id}
+            isCommercial={workspace.isCommercial}
             members={workspace.members}
             invitations={workspace.invitations}
+            seatUsage={seatUsage}
           />
         </section>
 

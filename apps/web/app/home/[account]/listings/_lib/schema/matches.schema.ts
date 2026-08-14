@@ -94,5 +94,19 @@ export const DraftMatchOutreachSchema = z.object({
   aiWhyFit: z.string().max(600).nullable().optional(),
 });
 
+export const RankBookForRequirementSchema = z.object({
+  accountId: z.string().uuid(),
+  requirementId: z.string().uuid(),
+  minScore: z.number().min(0).max(100).optional(),
+  withAi: z.boolean().optional(),
+});
+
+export const BulkCreateInterestMatchesSchema = z.object({
+  accountId: z.string().uuid(),
+  requirementId: z.string().uuid(),
+  listingIds: z.array(z.string().uuid()).min(1).max(40),
+  notes: z.string().trim().max(4000).optional().nullable(),
+});
+
 export type CreateMatchInput = z.infer<typeof CreateMatchSchema>;
 export type UpdateMatchInput = z.infer<typeof UpdateMatchSchema>;

@@ -15,6 +15,10 @@ async function ListingMediaPage({ params }: PageProps) {
   const workspace = await loadTeamWorkspace(slug);
   const accountId = workspace.account.id as string;
   const service = createListingsService(getSupabaseServerClient());
+  const listing = await service.getListing(listingId, accountId);
+
+  if (!listing) return null;
+
   const media = await service.withSignedMediaUrls(
     await service.listMedia(listingId),
   );
@@ -24,6 +28,7 @@ async function ListingMediaPage({ params }: PageProps) {
       accountId={accountId}
       listingId={listingId}
       media={media}
+      websiteUrl={listing.websiteUrl}
     />
   );
 }

@@ -1,6 +1,7 @@
 import { notFound } from 'next/navigation';
 
 import { aspectRatioCss, buildEmbedUrl } from '~/lib/videos/embed';
+import { formatViewCount } from '~/lib/videos/format';
 import { loadPublicVideoByToken } from '~/lib/videos/server/public-video.loader';
 
 import { PublicTimelineWatchPlayer } from './_components/public-timeline-watch-player';
@@ -69,6 +70,10 @@ export default async function PublicWatchPage({
           <h1 className="font-heading text-2xl font-semibold tracking-tight text-[var(--ozer-plum-900)] sm:text-3xl">
             {video.title}
           </h1>
+          <p className="text-sm text-[var(--ozer-text-muted)]">
+            {formatViewCount(video.view_count)}{' '}
+            {Number(video.view_count ?? 0) === 1 ? 'view' : 'views'}
+          </p>
           {video.description ? (
             <p className="max-w-3xl text-sm leading-relaxed text-[var(--ozer-text-muted)]">
               {video.description}

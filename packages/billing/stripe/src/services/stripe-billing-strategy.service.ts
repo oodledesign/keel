@@ -297,19 +297,39 @@ export class StripeBillingStrategyService implements BillingStrategyProviderServ
       subscriptionId: params.subscriptionId,
       subscriptionItemId: params.subscriptionItemId,
       quantity: params.quantity,
+      timing: params.timing,
+      restartBillingCycle: params.restartBillingCycle,
     };
 
     logger.info(ctx, 'Updating subscription...');
 
     try {
-      await stripe.subscriptions.update(params.subscriptionId, {
-        items: [
-          {
-            id: params.subscriptionItemId,
-            quantity: params.quantity,
-          },
-        ],
-      });
+      if (params.timing === 'period_end') {
+        await this.scheduleQuantityAtPeriodEnd(stripe, params);
+      } else {
+        // Drop any pending period-end schedule so a prior downgrade cannot stick.
+        await this.releaseSubscriptionScheduleIfPresent(
+          stripe,
+          params.subscriptionId,
+        );
+
+        const updateParams: Stripe.SubscriptionUpdateParams = {
+          items: [
+            {
+              id: params.subscriptionItemId,
+              quantity: params.quantity,
+            },
+          ],
+          proration_behavior: 'create_prorations',
+        };
+
+        if (params.restartBillingCycle) {
+          updateParams.billing_cycle_anchor = 'now';
+          updateParams.proration_behavior = 'always_invoice';
+        }
+
+        await stripe.subscriptions.update(params.subscriptionId, updateParams);
+      }
 
       logger.info(ctx, 'Subscription updated successfully');
 
@@ -319,6 +339,88 @@ export class StripeBillingStrategyService implements BillingStrategyProviderServ
 
       throw new Error('Failed to update subscription');
     }
+  }
+
+  private async releaseSubscriptionScheduleIfPresent(
+    stripe: Stripe,
+    subscriptionId: string,
+  ) {
+    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+    const scheduleId =
+      typeof subscription.schedule === 'string'
+        ? subscription.schedule
+        : subscription.schedule?.id;
+
+    if (!scheduleId) {
+      return;
+    }
+
+    try {
+      await stripe.subscriptionSchedules.release(scheduleId);
+    } catch {
+      // Schedule may already be released or completed.
+    }
+  }
+
+  /**
+   * Schedule a seat quantity change for the current period end using
+   * Stripe Subscription Schedules (upgrade uses immediate path instead).
+   */
+  private async scheduleQuantityAtPeriodEnd(
+    stripe: Stripe,
+    params: z.infer<typeof UpdateSubscriptionParamsSchema>,
+  ) {
+    const subscription = await stripe.subscriptions.retrieve(
+      params.subscriptionId,
+      { expand: ['items.data.price'] },
+    );
+
+    const item = subscription.items.data.find(
+      (entry) => entry.id === params.subscriptionItemId,
+    );
+
+    if (!item?.price?.id) {
+      throw new Error('Subscription item or price not found');
+    }
+
+    const priceId = item.price.id;
+    const currentQuantity = item.quantity ?? 1;
+    const periodEnd = subscription.current_period_end;
+
+    let scheduleId =
+      typeof subscription.schedule === 'string'
+        ? subscription.schedule
+        : subscription.schedule?.id;
+
+    if (!scheduleId) {
+      const created = await stripe.subscriptionSchedules.create({
+        from_subscription: params.subscriptionId,
+      });
+      scheduleId = created.id;
+    }
+
+    const schedule = await stripe.subscriptionSchedules.retrieve(scheduleId);
+    const currentPhase = schedule.phases[0];
+
+    if (!currentPhase) {
+      throw new Error('Subscription schedule has no current phase');
+    }
+
+    await stripe.subscriptionSchedules.update(scheduleId, {
+      end_behavior: 'release',
+      phases: [
+        {
+          start_date: currentPhase.start_date,
+          end_date: periodEnd,
+          items: [{ price: priceId, quantity: currentQuantity }],
+          proration_behavior: 'none',
+        },
+        {
+          items: [{ price: priceId, quantity: params.quantity }],
+          proration_behavior: 'none',
+        },
+      ],
+    });
   }
 
   /**

@@ -1,10 +1,14 @@
 'use client';
 
+import { useEffect, useState } from 'react';
+
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 
 import {
+  Activity,
   Camera,
+  Edit2,
   FileText,
   LayoutDashboard,
   MapPin,
@@ -13,6 +17,7 @@ import {
   Users,
 } from 'lucide-react';
 
+import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -20,10 +25,11 @@ import {
   DISPOSAL_TYPE_LABELS,
   LISTING_STATUS_LABELS,
 } from '~/lib/commercial/commercial-constants';
+import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
-import { ListingEachFeedToggle } from './listing-each-feed-toggle';
+import { ListingFormModal } from './listing-form-modal';
 
 const NAV = [
   { key: 'overview', label: 'Overview', icon: LayoutDashboard, href: '' },
@@ -42,6 +48,7 @@ const NAV = [
     icon: Settings2,
     href: '/management',
   },
+  { key: 'activity', label: 'Activity', icon: Activity, href: '/activity' },
 ] as const;
 
 function listingAddress(listing: CommercialListing) {
@@ -57,19 +64,25 @@ function listingAddress(listing: CommercialListing) {
 }
 
 export function ListingDetailShell({
-  listing,
+  listing: initialListing,
   accountSlug,
   accountId,
-  eachFeedEnabled,
   children,
 }: {
   listing: CommercialListing;
   accountSlug: string;
   accountId: string;
-  eachFeedEnabled: boolean;
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [listing, setListing] = useState(initialListing);
+  const [editOpen, setEditOpen] = useState(false);
+
+  useEffect(() => {
+    setListing(initialListing);
+  }, [initialListing]);
+
   const base = pathsConfig.app.accountListingDetail
     .replace('[account]', accountSlug)
     .replace('[id]', listing.id);
@@ -77,17 +90,31 @@ export function ListingDetailShell({
   const isOverview = pathname === base || pathname === `${base}/`;
   const address = listingAddress(listing);
 
+  const editButton = (
+    <Button
+      type="button"
+      className={workspaceBtnPrimaryMd}
+      onClick={() => setEditOpen(true)}
+    >
+      <Edit2 className="h-4 w-4" />
+      Edit
+    </Button>
+  );
+
   return (
     <div className="space-y-5">
       {isOverview ? (
         <OverviewHeader
           listing={listing}
           address={address}
-          accountId={accountId}
-          eachFeedEnabled={eachFeedEnabled}
+          editButton={editButton}
         />
       ) : (
-        <CompactHeader listing={listing} address={address} />
+        <CompactHeader
+          listing={listing}
+          address={address}
+          editButton={editButton}
+        />
       )}
 
       <div className="flex flex-col gap-6 lg:flex-row">
@@ -117,6 +144,18 @@ export function ListingDetailShell({
 
         <div className="min-w-0 flex-1">{children}</div>
       </div>
+
+      <ListingFormModal
+        open={editOpen}
+        onClose={() => setEditOpen(false)}
+        accountId={accountId}
+        listing={listing}
+        onSaved={(saved) => {
+          setListing(saved);
+          setEditOpen(false);
+          router.refresh();
+        }}
+      />
     </div>
   );
 }
@@ -124,21 +163,26 @@ export function ListingDetailShell({
 function CompactHeader({
   listing,
   address,
+  editButton,
 }: {
   listing: CommercialListing;
   address: string;
+  editButton: React.ReactNode;
 }) {
   return (
-    <div className="min-w-0">
-      <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
-        {listing.name}
-      </h2>
-      {address ? (
-        <p className="mt-0.5 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text)]/55">
-          <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
-          <span>{address}</span>
-        </p>
-      ) : null}
+    <div className="flex items-start justify-between gap-3">
+      <div className="min-w-0">
+        <h2 className="text-lg font-semibold text-[var(--workspace-shell-text)]">
+          {listing.name}
+        </h2>
+        {address ? (
+          <p className="mt-0.5 flex items-start gap-1.5 text-sm text-[var(--workspace-shell-text)]/55">
+            <MapPin className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>{address}</span>
+          </p>
+        ) : null}
+      </div>
+      <div className="shrink-0">{editButton}</div>
     </div>
   );
 }
@@ -146,13 +190,11 @@ function CompactHeader({
 function OverviewHeader({
   listing,
   address,
-  accountId,
-  eachFeedEnabled,
+  editButton,
 }: {
   listing: CommercialListing;
   address: string;
-  accountId: string;
-  eachFeedEnabled: boolean;
+  editButton: React.ReactNode;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
@@ -186,14 +228,17 @@ function OverviewHeader({
                 <span>{address || 'No address'}</span>
               </p>
             </div>
-            {(listing.actingAgents?.length ?? 0) > 0 ? (
-              <div className="shrink-0 pt-0.5">
-                <ListingAgentAvatarStack
-                  agents={listing.actingAgents ?? []}
-                  size="md"
-                />
-              </div>
-            ) : null}
+            <div className="flex shrink-0 items-start gap-2">
+              {(listing.actingAgents?.length ?? 0) > 0 ? (
+                <div className="pt-0.5">
+                  <ListingAgentAvatarStack
+                    agents={listing.actingAgents ?? []}
+                    size="md"
+                  />
+                </div>
+              ) : null}
+              {editButton}
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             <span className="inline-flex rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-text)]/60">
@@ -212,14 +257,6 @@ function OverviewHeader({
                 sq ft
               </span>
             ) : null}
-          </div>
-          <div className="mt-1 max-w-sm">
-            <ListingEachFeedToggle
-              accountId={accountId}
-              listingId={listing.id}
-              initialEnabled={eachFeedEnabled}
-              compact
-            />
           </div>
         </div>
       </div>

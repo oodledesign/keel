@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useTransition } from 'react';
 
-import { UserRound, X } from 'lucide-react';
+import { ArrowDown, ArrowUp, UserRound, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
@@ -261,6 +261,29 @@ export function ListingAssignmentCard({
     }));
   };
 
+  const moveAgent = (userId: string, direction: -1 | 1) => {
+    const index = agentIds.indexOf(userId);
+    const target = index + direction;
+    if (index < 0 || target < 0 || target >= agentIds.length) return;
+    const next = [...agentIds];
+    const tmp = next[index]!;
+    next[index] = next[target]!;
+    next[target] = tmp;
+    persist({ actingAgentUserIds: next }, (prev) => {
+      const agents = [...prev.actingAgents];
+      const a = agents[index]!;
+      agents[index] = agents[target]!;
+      agents[target] = a;
+      return {
+        ...prev,
+        actingAgents: agents.map((agent, i) => ({
+          ...agent,
+          sortOrder: i,
+        })),
+      };
+    });
+  };
+
   const createTeam = () => {
     const name = newTeamName.trim();
     if (!name) return;
@@ -311,8 +334,30 @@ export function ListingAssignmentCard({
                 No acting agents yet.
               </li>
             ) : (
-              assignment.actingAgents.map((agent) => (
-                <li key={agent.userId}>
+              assignment.actingAgents.map((agent, index) => (
+                <li key={agent.userId} className="flex items-center gap-1">
+                  <div className="flex flex-col">
+                    <button
+                      type="button"
+                      className="text-[var(--workspace-shell-text)]/40 hover:text-[var(--workspace-shell-text)] disabled:opacity-30"
+                      aria-label={`Move ${agent.name} up`}
+                      disabled={pending || index === 0}
+                      onClick={() => moveAgent(agent.userId, -1)}
+                    >
+                      <ArrowUp className="h-3.5 w-3.5" />
+                    </button>
+                    <button
+                      type="button"
+                      className="text-[var(--workspace-shell-text)]/40 hover:text-[var(--workspace-shell-text)] disabled:opacity-30"
+                      aria-label={`Move ${agent.name} down`}
+                      disabled={
+                        pending || index === assignment.actingAgents.length - 1
+                      }
+                      onClick={() => moveAgent(agent.userId, 1)}
+                    >
+                      <ArrowDown className="h-3.5 w-3.5" />
+                    </button>
+                  </div>
                   <SelectedMemberChip
                     member={{
                       userId: agent.userId,

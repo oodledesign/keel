@@ -26,6 +26,7 @@ export const PLATFORM_EMAIL_TYPES = [
   'signature_install',
   'signature_sync',
   'signature_connect',
+  'commercial_match_digest',
 ] as const;
 
 export type PlatformEmailType = (typeof PLATFORM_EMAIL_TYPES)[number];

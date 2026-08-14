@@ -14,6 +14,8 @@ const baseListing: MatchListingSnapshot = {
   town: 'Manchester',
   postcode: 'M17 1AB',
   addressLine1: 'Trafford Park',
+  latitude: null,
+  longitude: null,
   sizeMinSqft: 8000,
   sizeMaxSqft: 12000,
   askingRentPence: 12_000_000, // £120,000/year in pence
@@ -29,6 +31,9 @@ const baseRequirement: MatchRequirementSnapshot = {
   sector: 'warehouse',
   tenure: 'rent',
   locationText: 'Manchester Trafford Park',
+  latitude: null,
+  longitude: null,
+  searchRadiusMiles: null,
   sizeMinSqft: 7000,
   sizeMaxSqft: 15000,
   budgetMinPence: null,
@@ -72,5 +77,49 @@ describe('scoreListingRequirementMatch', () => {
       },
     );
     expect(result.score).toBeGreaterThanOrEqual(55);
+  });
+
+  it('gives full location weight inside search radius', () => {
+    const result = scoreListingRequirementMatch(
+      {
+        ...baseListing,
+        latitude: 53.48,
+        longitude: -2.24,
+      },
+      {
+        ...baseRequirement,
+        latitude: 53.48,
+        longitude: -2.25,
+        searchRadiusMiles: 10,
+        locationText: null,
+      },
+    );
+    expect(result.breakdown.location).toBe(20);
+    expect(result.reasons.some((r) => /search radius/i.test(r))).toBe(true);
+  });
+
+  it('zeros location when outside search radius', () => {
+    const result = scoreListingRequirementMatch(
+      {
+        ...baseListing,
+        latitude: 53.48,
+        longitude: -2.24,
+        town: null,
+        postcode: null,
+        addressLine1: null,
+      },
+      {
+        ...baseRequirement,
+        // ~200 miles away
+        latitude: 51.5,
+        longitude: -0.12,
+        searchRadiusMiles: 10,
+        locationText: null,
+      },
+    );
+    expect(result.breakdown.location).toBe(0);
+    expect(result.reasons.some((r) => /outside search radius/i.test(r))).toBe(
+      true,
+    );
   });
 });

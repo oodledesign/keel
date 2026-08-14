@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   AddListingCoAgentSchema,
   AddListingPartySchema,
+  BackfillListingLocationsSchema,
   CreateListingEnquirySchema,
   CreateListingMediaSchema,
   CreateListingSchema,
@@ -107,6 +108,21 @@ export const deleteListing = enhanceAction(
     return { success: true };
   },
   { schema: DeleteListingSchema },
+);
+
+export const backfillListingLocations = enhanceAction(
+  async (input) => {
+    const { requireCommercialBillableActor } =
+      await import('~/lib/commercial/require-commercial-billable-actor');
+    await requireCommercialBillableActor(
+      input.accountId,
+      'create or edit disposals',
+    );
+    return getService().backfillListingLocations(input.accountId, {
+      limit: input.limit,
+    });
+  },
+  { schema: BackfillListingLocationsSchema },
 );
 
 export const setLandlordShare = enhanceAction(

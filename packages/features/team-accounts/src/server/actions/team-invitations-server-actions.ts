@@ -211,9 +211,41 @@ export const acceptInvitationAction = enhanceAction(
       throw new Error('Failed to accept invitation');
     }
 
-    // Support seats do not bump Stripe quantity
+    // Support seats do not bump Stripe quantity. Billable seats only bump when
+    // assigned headcount exceeds the subscribed quantity (explicit upgrade).
     if (seatKind !== 'support') {
-      await perSeatBillingService.increaseSeats(accountId);
+      const subscription =
+        await perSeatBillingService.getPerSeatSubscriptionItem(accountId);
+      const item = subscription?.subscription_items.find(
+        (entry) => entry.type === 'per_seat',
+      );
+      const subscribed = item?.quantity ?? 0;
+
+      const { count } = await (
+        adminClient as unknown as {
+          from: (t: string) => {
+            select: (
+              c: string,
+              o: { count: 'exact'; head: true },
+            ) => {
+              eq: (a: string, b: string) => {
+                eq: (
+                  c: string,
+                  d: string,
+                ) => Promise<{ count: number | null }>;
+              };
+            };
+          };
+        }
+      )
+        .from('accounts_memberships')
+        .select('*', { count: 'exact', head: true })
+        .eq('account_id', accountId)
+        .eq('seat_kind', 'billable');
+
+      if ((count ?? 0) > subscribed) {
+        await perSeatBillingService.increaseSeats(accountId);
+      }
     }
 
     return redirect(nextPath);

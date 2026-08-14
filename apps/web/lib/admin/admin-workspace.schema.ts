@@ -36,6 +36,8 @@ export const AddAdminWorkspaceMemberSchema = z.object({
   accountId: z.string().uuid(),
   email: z.string().email(),
   role: z.enum(ADMIN_WORKSPACE_ROLES),
+  /** Commercial Property only — ignored for other profiles. */
+  seatKind: z.enum(['billable', 'support']).default('billable'),
 });
 
 export type AddAdminWorkspaceMemberInput = z.infer<

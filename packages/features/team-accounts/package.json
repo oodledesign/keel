@@ -10,6 +10,7 @@
   },
   "exports": {
     "./api": "./src/server/api.ts",
+    "./billing": "./src/server/services/account-per-seat-billing.service.ts",
     "./components": "./src/components/index.ts",
     "./hooks/*": "./src/hooks/*.ts",
     "./webhooks": "./src/server/services/webhooks/index.ts",

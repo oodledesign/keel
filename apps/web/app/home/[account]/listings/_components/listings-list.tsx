@@ -12,10 +12,12 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
+  Bell,
   Building2,
   Edit2,
   LayoutGrid,
   List,
+  Map as MapIcon,
   MoreHorizontal,
   Plus,
   Search,
@@ -62,11 +64,17 @@ import {
 } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
-import { deleteListing, listListings } from '../_lib/server/server-actions';
+import {
+  backfillListingLocations,
+  deleteListing,
+  listListings,
+} from '../_lib/server/server-actions';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
+import { ListingsMapView } from './listings-map-view';
 
 const PAGE_SIZE = 20;
+const MAP_PAGE_SIZE = 100;
 
 interface ListingsListProps {
   accountId: string;
@@ -75,7 +83,7 @@ interface ListingsListProps {
   initialTotal: number;
 }
 
-type ViewMode = 'cards' | 'table';
+type ViewMode = 'cards' | 'table' | 'map';
 
 function mergeListings(
   current: CommercialListing[],
@@ -83,9 +91,26 @@ function mergeListings(
 ) {
   const byId = new Map(current.map((item) => [item.id, item]));
   for (const item of incoming) byId.set(item.id, item);
-  return Array.from(byId.values()).sort((a, b) =>
-    b.updatedAt.localeCompare(a.updatedAt),
-  );
+  return sortListingsByUpdated(Array.from(byId.values()));
+}
+
+function sortListingsByUpdated(listings: CommercialListing[]) {
+  return [...listings].sort((a, b) => {
+    const byUpdated = b.updatedAt.localeCompare(a.updatedAt);
+    if (byUpdated !== 0) return byUpdated;
+    return b.createdAt.localeCompare(a.createdAt);
+  });
+}
+
+function formatUpdatedAt(iso: string | null | undefined) {
+  if (!iso) return null;
+  const date = new Date(iso);
+  if (!Number.isFinite(date.getTime())) return null;
+  return date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
 }
 
 function formatMoney(pence: number | null) {
@@ -139,6 +164,7 @@ export function ListingsList({
   const [statusFilter, setStatusFilter] = useState<ListingStatus | 'all'>(
     'all',
   );
+  const [needsLocationOnly, setNeedsLocationOnly] = useState(false);
   const [viewMode, setViewMode] = useState<ViewMode>('cards');
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialListing | null>(null);
@@ -147,6 +173,8 @@ export function ListingsList({
   );
   const [loadingPage, setLoadingPage] = useState(false);
   const [enrichingSearch, setEnrichingSearch] = useState(false);
+  const [enrichingMap, setEnrichingMap] = useState(false);
+  const [backfillingLocations, setBackfillingLocations] = useState(false);
   const [isDeleting, startDeleteTransition] = useTransition();
 
   useEffect(() => {
@@ -169,7 +197,10 @@ export function ListingsList({
   }, [createRequested, router]);
 
   const fetchPage = useCallback(
-    async (pageNum: number, opts?: { search?: string; status?: ListingStatus | 'all' }) => {
+    async (
+      pageNum: number,
+      opts?: { search?: string; status?: ListingStatus | 'all' },
+    ) => {
       setLoadingPage(true);
       try {
         const status =
@@ -205,13 +236,7 @@ export function ListingsList({
     if (isDefaultFirstPage) return;
 
     void fetchPage(page);
-  }, [
-    page,
-    searchDebounced,
-    statusFilter,
-    fetchPage,
-    initialListings.length,
-  ]);
+  }, [page, searchDebounced, statusFilter, fetchPage, initialListings.length]);
 
   useEffect(() => {
     const query = searchDebounced.trim();
@@ -273,38 +298,143 @@ export function ListingsList({
     setPage(1);
   }, [statusFilter]);
 
+  useEffect(() => {
+    if (viewMode !== 'map' && !needsLocationOnly) {
+      setEnrichingMap(false);
+      return;
+    }
+
+    // Search enrichment already pages through the full filtered set.
+    if (searchDebounced.trim()) return;
+
+    let cancelled = false;
+
+    const loadAllForMap = async () => {
+      setEnrichingMap(true);
+      try {
+        let nextPage = 1;
+        let serverTotal = 0;
+        const status = statusFilter === 'all' ? undefined : statusFilter;
+
+        while (!cancelled) {
+          const result = await listListings({
+            accountId,
+            page: nextPage,
+            pageSize: MAP_PAGE_SIZE,
+            status,
+          });
+          const list = Array.isArray(result?.data) ? result.data : [];
+          serverTotal =
+            typeof result?.total === 'number' ? result.total : list.length;
+
+          if (!cancelled && list.length > 0) {
+            setCachedListings((current) =>
+              nextPage === 1 && statusFilter !== 'all'
+                ? list
+                : mergeListings(current, list),
+            );
+          }
+
+          if (
+            list.length < MAP_PAGE_SIZE ||
+            nextPage * MAP_PAGE_SIZE >= serverTotal
+          ) {
+            break;
+          }
+          nextPage += 1;
+        }
+
+        if (!cancelled) setTotal(serverTotal);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        if (!cancelled) setEnrichingMap(false);
+      }
+    };
+
+    void loadAllForMap();
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId, viewMode, needsLocationOnly, statusFilter, searchDebounced]);
+
   const isSearching = searchDebounced.trim().length > 0;
 
   const visibleListings = useMemo(() => {
-    if (!isSearching) return pageListings;
+    const applyNeedsLocation = (items: CommercialListing[]) =>
+      needsLocationOnly
+        ? items.filter((l) => l.latitude == null || l.longitude == null)
+        : items;
+
+    if (viewMode === 'map' || needsLocationOnly) {
+      const q = searchDebounced.trim().toLowerCase();
+      return applyNeedsLocation(
+        sortListingsByUpdated(
+          cachedListings.filter((l) => {
+            if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+            if (!q) return true;
+            const haystack = [
+              l.name,
+              l.addressLine1,
+              l.addressLine2,
+              l.town,
+              l.postcode,
+              l.county,
+              l.sector,
+              l.externalId,
+            ]
+              .filter(Boolean)
+              .join(' ')
+              .toLowerCase();
+            return haystack.includes(q);
+          }),
+        ),
+      );
+    }
+
+    if (!isSearching) return sortListingsByUpdated(pageListings);
     const q = searchDebounced.trim().toLowerCase();
-    return cachedListings.filter((l) => {
-      if (statusFilter !== 'all' && l.status !== statusFilter) return false;
-      const haystack = [
-        l.name,
-        l.addressLine1,
-        l.addressLine2,
-        l.town,
-        l.postcode,
-        l.county,
-        l.sector,
-        l.externalId,
-      ]
-        .filter(Boolean)
-        .join(' ')
-        .toLowerCase();
-      return haystack.includes(q);
-    });
+    return sortListingsByUpdated(
+      cachedListings.filter((l) => {
+        if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+        const haystack = [
+          l.name,
+          l.addressLine1,
+          l.addressLine2,
+          l.town,
+          l.postcode,
+          l.county,
+          l.sector,
+          l.externalId,
+        ]
+          .filter(Boolean)
+          .join(' ')
+          .toLowerCase();
+        return haystack.includes(q);
+      }),
+    );
   }, [
     cachedListings,
     isSearching,
+    needsLocationOnly,
     pageListings,
     searchDebounced,
     statusFilter,
+    viewMode,
   ]);
 
+  const needsLocationCount = useMemo(
+    () =>
+      cachedListings.filter((l) => l.latitude == null || l.longitude == null)
+        .length,
+    [cachedListings],
+  );
+
   const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
-  const displayCount = isSearching ? visibleListings.length : total;
+  const displayCount =
+    isSearching || viewMode === 'map' || needsLocationOnly
+      ? visibleListings.length
+      : total;
 
   const openCreate = () => {
     setEditing(null);
@@ -328,9 +458,9 @@ export function ListingsList({
         if (idx >= 0) {
           const next = [...prev];
           next[idx] = saved;
-          return next;
+          return sortListingsByUpdated(next);
         }
-        return [saved, ...prev];
+        return sortListingsByUpdated([saved, ...prev]);
       });
       setTotal((prev) => (wasNew ? prev + 1 : prev));
       router.refresh();
@@ -395,6 +525,18 @@ export function ListingsList({
             >
               <List className="h-4 w-4" />
             </button>
+            <button
+              type="button"
+              onClick={() => setViewMode('map')}
+              aria-label="Map view"
+              className={`flex h-9 w-9 items-center justify-center transition-colors ${
+                viewMode === 'map'
+                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--workspace-shell-accent-text)]'
+                  : 'text-[var(--workspace-shell-text)]/45 hover:text-[var(--workspace-shell-text)]'
+              }`}
+            >
+              <MapIcon className="h-4 w-4" />
+            </button>
           </div>
           <Button variant="outline" asChild>
             <Link
@@ -426,7 +568,7 @@ export function ListingsList({
         />
       </div>
 
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <FilterChip
           active={statusFilter === 'all'}
           onClick={() => setStatusFilter('all')}
@@ -441,15 +583,72 @@ export function ListingsList({
             activeClassName={LISTING_STATUS_FILTER_ACTIVE_CLASS[status]}
           />
         ))}
+        <FilterChip
+          active={needsLocationOnly}
+          onClick={() => setNeedsLocationOnly((v) => !v)}
+          label={
+            needsLocationCount > 0
+              ? `Needs location (${needsLocationCount})`
+              : 'Needs location'
+          }
+        />
+        {needsLocationOnly && needsLocationCount > 0 ? (
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={backfillingLocations}
+            className="h-8 border-[color:var(--workspace-shell-border)]"
+            onClick={() => {
+              void (async () => {
+                setBackfillingLocations(true);
+                try {
+                  const result = await backfillListingLocations({
+                    accountId,
+                    limit: 40,
+                  });
+                  // Refresh caches so new coords appear.
+                  const pageResult = await listListings({
+                    accountId,
+                    page: 1,
+                    pageSize: MAP_PAGE_SIZE,
+                    status:
+                      statusFilter === 'all' ? undefined : statusFilter,
+                  });
+                  const list = Array.isArray(pageResult?.data)
+                    ? pageResult.data
+                    : [];
+                  setCachedListings((current) => mergeListings(current, list));
+                  setPageListings((current) => mergeListings(current, list));
+                  if (typeof result?.updated === 'number' && result.updated > 0) {
+                    router.refresh();
+                  }
+                } catch (err) {
+                  console.error(err);
+                } finally {
+                  setBackfillingLocations(false);
+                }
+              })();
+            }}
+          >
+            {backfillingLocations ? 'Geocoding…' : 'Backfill locations'}
+          </Button>
+        ) : null}
       </div>
 
-      {isSearching && enrichingSearch ? (
+      {(isSearching && enrichingSearch) ||
+      (viewMode === 'map' && enrichingMap) ? (
         <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-          Searching all disposals…
+          {viewMode === 'map' && enrichingMap
+            ? 'Loading disposals for map…'
+            : 'Searching all disposals…'}
         </p>
       ) : null}
 
-      {visibleListings.length === 0 && !loadingPage && !enrichingSearch ? (
+      {visibleListings.length === 0 &&
+      !loadingPage &&
+      !enrichingSearch &&
+      !enrichingMap ? (
         <Card className={workspacePanelCard}>
           <CardContent className="flex flex-col items-center justify-center py-16 text-center">
             <Building2 className="mb-4 h-12 w-12 text-[var(--workspace-shell-text)]/20" />
@@ -485,8 +684,14 @@ export function ListingsList({
             )}
           </CardContent>
         </Card>
+      ) : viewMode === 'map' ? (
+        <ListingsMapView
+          listings={visibleListings}
+          accountSlug={accountSlug}
+          loading={enrichingMap || enrichingSearch}
+        />
       ) : viewMode === 'cards' ? (
-        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {visibleListings.map((listing) => (
             <ListingCard
               key={listing.id}
@@ -512,6 +717,12 @@ export function ListingsList({
                 </th>
                 <th className="hidden px-4 py-3 font-medium sm:table-cell">
                   Rent / price
+                </th>
+                <th className="hidden px-4 py-3 font-medium md:table-cell">
+                  Matches
+                </th>
+                <th className="hidden px-4 py-3 font-medium xl:table-cell">
+                  Updated
                 </th>
                 <th className="px-4 py-3 font-medium" />
               </tr>
@@ -579,6 +790,23 @@ export function ListingsList({
                     <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/70 sm:table-cell">
                       {rent ?? price ?? '—'}
                     </td>
+                    <td className="hidden px-4 py-3 md:table-cell">
+                      {(listing.matchCount ?? 0) > 0 ? (
+                        <span className="inline-flex items-center gap-1 rounded-md bg-[var(--ozer-accent)] px-2 py-0.5 text-[11px] font-semibold text-white">
+                          <Bell className="h-3 w-3" />
+                          <span className="tabular-nums">
+                            {listing.matchCount}
+                          </span>
+                        </span>
+                      ) : (
+                        <span className="text-[var(--workspace-shell-text)]/35">
+                          —
+                        </span>
+                      )}
+                    </td>
+                    <td className="hidden px-4 py-3 text-[var(--workspace-shell-text)]/55 xl:table-cell">
+                      {formatUpdatedAt(listing.updatedAt) ?? '—'}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <ListingActions
                         onEdit={() => openEdit(listing)}
@@ -593,7 +821,10 @@ export function ListingsList({
         </div>
       )}
 
-      {!isSearching && totalPages > 1 ? (
+      {!isSearching &&
+      viewMode !== 'map' &&
+      !needsLocationOnly &&
+      totalPages > 1 ? (
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
             Showing {(page - 1) * PAGE_SIZE + 1}–
@@ -692,6 +923,7 @@ function ListingCard({
   const price = formatMoney(listing.askingPricePence);
   const size = formatSize(listing);
   const location = locationLabel(listing);
+  const updatedLabel = formatUpdatedAt(listing.updatedAt);
 
   return (
     <Card
@@ -721,6 +953,15 @@ function ListingCard({
         >
           {DISPOSAL_TYPE_LABELS[listing.disposalType]}
         </span>
+        {(listing.matchCount ?? 0) > 0 ? (
+          <span
+            className="absolute bottom-3 left-3 inline-flex items-center gap-1.5 rounded-lg bg-[var(--ozer-accent)] px-2.5 py-1 text-xs font-semibold text-white shadow-sm"
+            title={`${listing.matchCount} linked interest match${listing.matchCount === 1 ? '' : 'es'}`}
+          >
+            <Bell className="h-3.5 w-3.5" />
+            <span className="tabular-nums">{listing.matchCount}</span>
+          </span>
+        ) : null}
       </Link>
 
       <CardContent className="space-y-3 p-4">
@@ -744,6 +985,7 @@ function ListingCard({
         <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--workspace-shell-text)]/55">
           {listing.sector ? <span>{listing.sector}</span> : null}
           {size ? <span>{size}</span> : null}
+          {updatedLabel ? <span>Updated {updatedLabel}</span> : null}
         </div>
 
         {(rent || price) && (

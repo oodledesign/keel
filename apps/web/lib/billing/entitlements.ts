@@ -25,6 +25,8 @@ export type AccountPlanLimitsRow = {
   max_members: number | null;
   max_properties: number | null;
   max_videos: number | null;
+  pending_billable_seats?: number | null;
+  pending_seats_effective_at?: string | null;
 };
 
 const ACTIVE_SUB_STATUSES = new Set(['active', 'trialing']);
@@ -33,10 +35,26 @@ export async function loadAccountPlanLimits(
   client: SupabaseClient,
   accountId: string,
 ): Promise<AccountPlanLimitsRow | null> {
-  const { data, error } = await client
+  const { data, error } = await (
+    client as unknown as {
+      from: (t: string) => {
+        select: (c: string) => {
+          eq: (
+            col: string,
+            val: string,
+          ) => {
+            maybeSingle: () => Promise<{
+              data: AccountPlanLimitsRow | null;
+              error: { message: string } | null;
+            }>;
+          };
+        };
+      };
+    }
+  )
     .from('account_plan_limits')
     .select(
-      'account_id, plan_product_id, plan_id, plan_family, max_members, max_properties, max_videos',
+      'account_id, plan_product_id, plan_id, plan_family, max_members, max_properties, max_videos, pending_billable_seats, pending_seats_effective_at',
     )
     .eq('account_id', accountId)
     .maybeSingle();
@@ -46,7 +64,7 @@ export async function loadAccountPlanLimits(
     return null;
   }
 
-  return (data as AccountPlanLimitsRow | null) ?? null;
+  return data ?? null;
 }
 
 export async function isAccountBillingExempt(

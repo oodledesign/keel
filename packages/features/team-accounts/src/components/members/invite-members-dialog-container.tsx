@@ -75,6 +75,12 @@ type SeatUsage = {
   maxMembers: number | null;
   remaining: number | null;
   unlimited: boolean;
+  commercial?: {
+    billableUsed: number;
+    billableMax: number;
+    supportUsed: number;
+    supportMax: number;
+  };
 };
 
 export function InviteMembersDialogContainer({
@@ -148,25 +154,38 @@ export function InviteMembersDialogContainer({
             !isLoadingPolicies &&
             seatUsage &&
             !seatUsage.unlimited &&
-            seatUsage.maxMembers != null
+            (seatUsage.commercial != null || seatUsage.maxMembers != null)
           }
         >
           <p
             className="text-muted-foreground text-sm"
             data-test="invite-seat-usage"
           >
-            <Trans
-              i18nKey={
-                (seatUsage?.remaining ?? 0) > 0
-                  ? 'teams:seatUsageHint'
-                  : 'teams:seatUsageAtLimit'
-              }
-              values={{
-                used: seatUsage?.used,
-                max: seatUsage?.maxMembers,
-                remaining: seatUsage?.remaining,
-              }}
-            />
+            {seatUsage?.commercial ? (
+              <Trans
+                i18nKey="teams:seatUsageCommercialHint"
+                values={{
+                  billableUsed: seatUsage.commercial.billableUsed,
+                  billableMax: seatUsage.commercial.billableMax,
+                  supportUsed: seatUsage.commercial.supportUsed,
+                  supportMax: seatUsage.commercial.supportMax,
+                }}
+                defaults="Billable {{billableUsed}} of {{billableMax}} · Support {{supportUsed}} of {{supportMax}} free"
+              />
+            ) : (
+              <Trans
+                i18nKey={
+                  (seatUsage?.remaining ?? 0) > 0
+                    ? 'teams:seatUsageHint'
+                    : 'teams:seatUsageAtLimit'
+                }
+                values={{
+                  used: seatUsage?.used,
+                  max: seatUsage?.maxMembers,
+                  remaining: seatUsage?.remaining,
+                }}
+              />
+            )}
           </p>
         </If>
 
@@ -371,10 +390,10 @@ function InviteMembersForm({
                                 </SelectTrigger>
                                 <SelectContent>
                                   <SelectItem value="billable">
-                                    Billable
+                                    Billable — negotiator / editor
                                   </SelectItem>
                                   <SelectItem value="support">
-                                    Support
+                                    Support — view and notes
                                   </SelectItem>
                                 </SelectContent>
                               </Select>

@@ -3,6 +3,7 @@ import 'server-only';
 import { notFound, redirect } from 'next/navigation';
 
 import { createBunnyStreamClient } from '@kit/bunny';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { getDefaultAccountPath } from '~/home/[account]/_lib/role-access';
 import { isVideosModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
@@ -14,12 +15,14 @@ import {
 
 import { detectAspectRatio } from '../player-config-types';
 import { buildPublicVideoWatchUrl } from '../public-share';
+import type { VideoRow } from '../types';
 import {
   configValuesFromRow,
   loadAccountPresets,
   loadVideoPlayerConfig,
   resolveEffectivePlayerConfig,
 } from './player-config-data';
+import { syncVideoAnalyticsIfStale } from './sync-video-analytics';
 import { requireVideoById } from './videos-access';
 import { getBunnyCdnHostname } from './videos-data';
 
@@ -53,12 +56,26 @@ export async function loadVideoPlayerConfigPage(
     notFound();
   }
 
-  const video = access.video!;
-  const accountId = video.account_id as string;
+  const video = access.video as VideoRow;
+  const accountId = video.account_id;
 
   if (video.account_id !== workspace.account.id) {
     notFound();
   }
+
+  const admin = getSupabaseServerAdminClient();
+  const analytics = await syncVideoAnalyticsIfStale(admin, {
+    id: video.id,
+    account_id: accountId,
+    bunny_video_id: video.bunny_video_id,
+    bunny_library_id: video.bunny_library_id,
+    created_at: video.created_at,
+    status: video.status,
+    analytics_synced_at: video.analytics_synced_at ?? null,
+    view_count: video.view_count,
+    watch_time_seconds: video.watch_time_seconds,
+    engagement_score: video.engagement_score,
+  });
 
   const [configRow, presets, resolved] = await Promise.all([
     loadVideoPlayerConfig(access.client, videoId),
@@ -101,6 +118,10 @@ export async function loadVideoPlayerConfigPage(
       bunny_library_id: String(video.bunny_library_id),
       bunny_video_id: String(video.bunny_video_id),
       status: video.status as string,
+      viewCount: analytics.view_count,
+      watchTimeSeconds: analytics.watch_time_seconds,
+      engagementScore: analytics.engagement_score,
+      analyticsSyncedAt: analytics.analytics_synced_at ?? null,
       publicShareEnabled: Boolean(video.public_share_enabled),
       publicShareToken: (video.public_share_token as string | null) ?? null,
       publicShareUrl:

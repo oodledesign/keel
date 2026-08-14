@@ -99,6 +99,7 @@
   "inviteMembersDescription": "Invite members to your team by entering their email and role. Optionally assign them to a project.",
   "seatUsageHint": "{{used}} of {{max}} seats used — {{remaining}} left on your plan",
   "seatUsageAtLimit": "{{used}} of {{max}} seats used — no invites left. Upgrade your plan to invite more people.",
+  "seatUsageCommercialHint": "Billable {{billableUsed}} of {{billableMax}} · Support {{supportUsed}} of {{supportMax}} free",
   "inviteProjectPlaceholder": "Add to a project (optional)",
   "inviteProjectNone": "No project",
   "emailPlaceholder": "member@email.com",

@@ -7,6 +7,7 @@ import {
   type InterestStatus,
   normalizeInterestStatus,
 } from '~/lib/commercial/commercial-constants';
+import { recordListingEvent } from '~/lib/commercial/listing-events';
 
 const INTEREST_STATUS_RANK: Record<InterestStatus, number> = Object.fromEntries(
   INTEREST_STATUSES.map((status, index) => [status, index]),
@@ -186,7 +187,25 @@ export function createMatchesService(client: SupabaseClient) {
         if (error || !data) {
           throw new Error(error?.message ?? 'Failed to update interest');
         }
-        return { match: mapMatch(data as Row), created: false };
+        const promoted = mapMatch(data as Row);
+        try {
+          await recordListingEvent(client, {
+            accountId: input.accountId,
+            listingId: input.listingId,
+            actorUserId: input.createdBy ?? null,
+            eventType: 'match_updated',
+            summary: `Interest updated to ${promoted.status}`,
+            metadata: {
+              matchId: promoted.id,
+              requirementId: promoted.requirementId,
+              status: promoted.status,
+              previousStatus: current.status,
+            },
+          });
+        } catch {
+          /* best-effort */
+        }
+        return { match: promoted, created: false };
       }
       return { match: current, created: false };
     }
@@ -231,7 +250,25 @@ export function createMatchesService(client: SupabaseClient) {
       throw new Error('Failed to create interest');
     }
 
-    return { match: mapMatch(data as Row), created: true };
+    const createdMatch = mapMatch(data as Row);
+    try {
+      await recordListingEvent(client, {
+        accountId: input.accountId,
+        listingId: input.listingId,
+        actorUserId: input.createdBy ?? null,
+        eventType: 'match_added',
+        summary: `Interest added (${createdMatch.status})`,
+        metadata: {
+          matchId: createdMatch.id,
+          requirementId: createdMatch.requirementId,
+          status: createdMatch.status,
+        },
+      });
+    } catch {
+      /* best-effort */
+    }
+
+    return { match: createdMatch, created: true };
   }
 
   return {
@@ -332,7 +369,26 @@ export function createMatchesService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to update interest');
       }
 
-      return mapMatch(data as Row);
+      const updated = mapMatch(data as Row);
+      try {
+        await recordListingEvent(client, {
+          accountId: input.accountId,
+          listingId: updated.listingId,
+          eventType: 'match_updated',
+          summary: input.status
+            ? `Interest status → ${updated.status}`
+            : 'Interest notes updated',
+          metadata: {
+            matchId: updated.id,
+            requirementId: updated.requirementId,
+            status: updated.status,
+          },
+        });
+      } catch {
+        /* best-effort */
+      }
+
+      return updated;
     },
 
     async deleteMatch(matchId: string, accountId: string): Promise<void> {

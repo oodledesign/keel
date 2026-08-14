@@ -14,18 +14,24 @@ export function ListingEachFeedToggle({
   listingId,
   initialEnabled,
   compact = false,
+  onBeforeEnable,
 }: {
   accountId: string;
   listingId: string;
   initialEnabled: boolean;
   /** Tighter layout for overview header. */
   compact?: boolean;
+  /** Return false to cancel enabling (e.g. marketing readiness confirm). */
+  onBeforeEnable?: () => boolean;
 }) {
   const router = useRouter();
   const [enabled, setEnabled] = useState(initialEnabled);
   const [pending, startTransition] = useTransition();
 
   const onCheckedChange = (next: boolean) => {
+    if (next && onBeforeEnable && !onBeforeEnable()) {
+      return;
+    }
     const previous = enabled;
     setEnabled(next);
     startTransition(async () => {

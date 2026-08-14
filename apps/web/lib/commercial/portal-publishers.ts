@@ -12,6 +12,7 @@ import {
   disposalIncludesForSale,
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
+import { recordListingEvent } from '~/lib/commercial/listing-events';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   RightmoveApiError,
@@ -342,7 +343,29 @@ async function recordPublication(input: {
     .single();
 
   if (error) throw new Error(error.message);
-  return data as CommercialPortalPublication;
+  const publication = data as CommercialPortalPublication;
+
+  try {
+    await recordListingEvent(db(), {
+      accountId: input.accountId,
+      listingId: input.listingId,
+      eventType: 'portal_sync',
+      summary:
+        input.status === 'error'
+          ? `Portal ${input.portal} failed${input.lastError ? `: ${input.lastError}` : ''}`
+          : `Portal ${input.portal}: ${input.status}`,
+      metadata: {
+        portal: input.portal,
+        status: input.status,
+        lastError: input.lastError,
+        publicationId: publication.id,
+      },
+    });
+  } catch {
+    /* best-effort */
+  }
+
+  return publication;
 }
 
 async function recordStubPublication(input: {

@@ -1,9 +1,18 @@
 import { z } from 'zod';
 
-import { VIEWING_STATUSES } from '~/lib/commercial/commercial-constants';
+import {
+  INTEREST_STATUSES,
+  REQUIREMENT_STATUSES,
+  VIEWING_STATUSES,
+} from '~/lib/commercial/commercial-constants';
 
 export const ListViewingsSchema = z.object({
   accountId: z.string().uuid(),
+});
+
+export const ListViewingRequirementOptionsSchema = z.object({
+  accountId: z.string().uuid(),
+  listingId: z.string().uuid(),
 });
 
 export const CreateViewingSchema = z.object({
@@ -35,5 +44,21 @@ export const DeleteViewingSchema = z.object({
   accountId: z.string().uuid(),
 });
 
+/** Post-save follow-up after completed viewing with neutral/negative feedback. */
+export const ApplyViewingFeedbackFollowUpSchema = z.object({
+  accountId: z.string().uuid(),
+  viewingId: z.string().uuid(),
+  listingId: z.string().uuid(),
+  requirementId: z.string().uuid(),
+  matchId: z.string().uuid().optional().nullable(),
+  interestStatus: z.enum(INTEREST_STATUSES).optional().nullable(),
+  appendFeedbackToNotes: z.boolean().default(true),
+  requirementStage: z.enum(REQUIREMENT_STATUSES).optional().nullable(),
+  feedbackText: z.string().optional().nullable(),
+});
+
 export type CreateViewingInput = z.infer<typeof CreateViewingSchema>;
 export type UpdateViewingInput = z.infer<typeof UpdateViewingSchema>;
+export type ApplyViewingFeedbackFollowUpInput = z.infer<
+  typeof ApplyViewingFeedbackFollowUpSchema
+>;

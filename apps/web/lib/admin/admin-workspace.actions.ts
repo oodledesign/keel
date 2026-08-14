@@ -300,7 +300,7 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
 
     const { data: workspace, error: workspaceError } = await admin
       .from('accounts')
-      .select('id, slug, is_personal_account')
+      .select('id, slug, is_personal_account, space_type')
       .eq('id', input.accountId)
       .maybeSingle();
 
@@ -311,6 +311,10 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
     if (!workspace.slug) {
       throw new Error('Workspace is missing a slug');
     }
+
+    const isCommercial = workspace.space_type === 'commercial-property';
+    const seatKind =
+      isCommercial && input.seatKind === 'support' ? 'support' : 'billable';
 
     const existingUserId = await resolveUserIdByEmail(admin, input.email);
 
@@ -331,9 +335,10 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
         user_id: existingUserId,
         account_role: input.role,
         company_role: companyRoleForAccountRole(input.role),
+        seat_kind: seatKind,
         onboarding_completed: true,
         onboarding_step: 1,
-      });
+      } as never);
 
       if (error) throw new Error(error.message);
 
@@ -345,6 +350,7 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
           email: input.email.toLowerCase(),
           userId: existingUserId,
           role: input.role,
+          seatKind,
           mode: 'existing_user',
         },
       });
@@ -360,7 +366,11 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
       accountSlug: workspace.slug,
       invitedBy: user.id,
       invitations: [
-        { email: input.email.trim().toLowerCase(), role: input.role },
+        {
+          email: input.email.trim().toLowerCase(),
+          role: input.role,
+          seatKind,
+        },
       ],
     });
 
@@ -371,6 +381,7 @@ export const addAdminWorkspaceMemberAction = enhanceAction(
       metadata: {
         email: input.email.toLowerCase(),
         role: input.role,
+        seatKind,
         mode: 'invite',
       },
     });

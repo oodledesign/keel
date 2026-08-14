@@ -21,6 +21,7 @@ export type AdminWorkspaceDetail = {
   name: string;
   slug: string;
   workspaceLabel: string;
+  isCommercial: boolean;
   primaryOwnerUserId: string;
   createdAt: string | null;
   members: AdminWorkspaceMember[];
@@ -44,6 +45,22 @@ export const loadAdminWorkspaceDetail = cache(
       notFound();
     }
 
+    const adminUntyped = admin as unknown as {
+      from: (table: string) => {
+        select: (cols: string) => {
+          eq: (col: string, val: string) => {
+            order: (
+              col: string,
+              opts: { ascending: boolean },
+            ) => Promise<{
+              data: Array<Record<string, unknown>> | null;
+              error: { message: string } | null;
+            }>;
+          };
+        };
+      };
+    };
+
     const [business, memberships, invitations, projectGuests] =
       await Promise.all([
         admin
@@ -51,14 +68,14 @@ export const loadAdminWorkspaceDetail = cache(
           .select('type')
           .eq('account_id', accountId)
           .maybeSingle(),
-        admin
+        adminUntyped
           .from('accounts_memberships')
-          .select('user_id, account_role, created_at')
+          .select('user_id, account_role, seat_kind, created_at')
           .eq('account_id', accountId)
           .order('created_at', { ascending: true }),
-        admin
+        adminUntyped
           .from('invitations')
-          .select('id, email, role, created_at')
+          .select('id, email, role, seat_kind, created_at')
           .eq('account_id', accountId)
           .order('created_at', { ascending: false }),
         admin
@@ -104,11 +121,16 @@ export const loadAdminWorkspaceDetail = cache(
       (row) => {
         const userId = row.user_id as string;
         const personal = personalById.get(userId);
+        const seatKind =
+          (row as { seat_kind?: string }).seat_kind === 'support'
+            ? 'support'
+            : 'billable';
         return {
           userId,
           name: personal?.name ?? null,
           email: personal?.email ?? null,
           role: String(row.account_role ?? 'staff'),
+          seatKind,
           isPrimaryOwner: userId === account.primary_owner_user_id,
         };
       },
@@ -148,6 +170,10 @@ export const loadAdminWorkspaceDetail = cache(
       invitationId: row.id as number,
       email: String(row.email),
       role: String(row.role),
+      seatKind:
+        (row as { seat_kind?: string }).seat_kind === 'support'
+          ? ('support' as const)
+          : ('billable' as const),
       kind: 'member' as const,
       status: 'pending' as const,
       createdAt: String(row.created_at),
@@ -163,6 +189,7 @@ export const loadAdminWorkspaceDetail = cache(
         invitationId: null,
         email: String(row.invited_email),
         role: 'project guest',
+        seatKind: null,
         kind: 'project_guest' as const,
         status: 'pending' as const,
         createdAt: String(row.created_at),
@@ -180,6 +207,7 @@ export const loadAdminWorkspaceDetail = cache(
       name: (account.name as string) ?? (account.slug as string),
       slug: account.slug as string,
       workspaceLabel: workspaceTypeLabel(profile),
+      isCommercial: profile === 'commercial_property',
       primaryOwnerUserId: account.primary_owner_user_id as string,
       createdAt: (account.created_at as string | null) ?? null,
       members,

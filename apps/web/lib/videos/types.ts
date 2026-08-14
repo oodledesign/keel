@@ -23,6 +23,10 @@ export type VideoRow = {
   published_revision?: number;
   baked_revision?: number;
   published_timeline?: unknown | null;
+  view_count?: number;
+  watch_time_seconds?: number;
+  engagement_score?: number | null;
+  analytics_synced_at?: string | null;
   created_at: string;
   updated_at: string;
   /** Populated server-side for library UI; not stored in the database. */

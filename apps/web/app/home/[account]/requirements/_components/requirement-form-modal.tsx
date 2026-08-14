@@ -65,6 +65,7 @@ interface RequirementFormModalProps {
 
 type BriefForm = {
   locationText: string;
+  searchRadiusMiles: string;
   sector: string;
   tenure: '' | 'rent' | 'buy' | 'both';
   sizeMinSqft: string;
@@ -110,6 +111,7 @@ function briefFromDraft(draft?: RequirementDraftPrefill | null): BriefForm {
   if (!draft) {
     return {
       locationText: '',
+      searchRadiusMiles: '10',
       sector: '',
       tenure: '',
       sizeMinSqft: '',
@@ -126,6 +128,7 @@ function briefFromDraft(draft?: RequirementDraftPrefill | null): BriefForm {
 
   return {
     locationText: draft.locationText ?? '',
+    searchRadiusMiles: '10',
     sector: draft.sector ?? '',
     tenure: draft.tenure ?? '',
     sizeMinSqft: draft.sizeMinSqft != null ? String(draft.sizeMinSqft) : '',
@@ -151,6 +154,10 @@ function briefFromRequirement(
 
   return {
     locationText: requirement.locationText ?? '',
+    searchRadiusMiles:
+      requirement.searchRadiusMiles != null
+        ? String(requirement.searchRadiusMiles)
+        : '10',
     sector: requirement.sector ?? '',
     tenure: requirement.tenure ?? '',
     sizeMinSqft:
@@ -274,6 +281,9 @@ function RequirementFormFields({
           contactEmail: party.contactEmail.trim() || null,
           contactPhone: party.contactPhone.trim() || null,
           locationText: form.locationText.trim() || null,
+          searchRadiusMiles: form.searchRadiusMiles
+            ? parseFloat(form.searchRadiusMiles)
+            : null,
           sector: form.sector.trim() || null,
           useClass: normalizeRequirementUseClass(form.sector.trim() || null),
           tenure: form.tenure || null,
@@ -390,7 +400,29 @@ function RequirementFormFields({
         <Input
           value={form.locationText}
           onChange={(e) => field('locationText', e.target.value)}
-          placeholder="Areas / towns"
+          placeholder="Areas / towns / postcode"
+          className={inputClass}
+        />
+        <p className="text-[11px] text-[var(--workspace-shell-text)]/45">
+          Location is geocoded automatically on save when coordinates are
+          missing.
+        </p>
+        {requirement?.latitude != null && requirement?.longitude != null ? (
+          <p className="text-[11px] text-[var(--workspace-shell-text)]/45 tabular-nums">
+            Coords: {requirement.latitude.toFixed(5)},{' '}
+            {requirement.longitude.toFixed(5)}
+          </p>
+        ) : null}
+      </div>
+      <div className="space-y-1.5">
+        <Label>Search radius (miles)</Label>
+        <Input
+          type="number"
+          min={0.5}
+          max={100}
+          step={0.5}
+          value={form.searchRadiusMiles}
+          onChange={(e) => field('searchRadiusMiles', e.target.value)}
           className={inputClass}
         />
       </div>
@@ -400,10 +432,7 @@ function RequirementFormFields({
           <Select
             value={form.tenure || 'unset'}
             onValueChange={(v) =>
-              field(
-                'tenure',
-                v === 'unset' ? '' : (v as BriefForm['tenure']),
-              )
+              field('tenure', v === 'unset' ? '' : (v as BriefForm['tenure']))
             }
           >
             <SelectTrigger className={inputClass}>

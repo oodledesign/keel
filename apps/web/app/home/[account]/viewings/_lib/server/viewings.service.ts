@@ -3,6 +3,7 @@ import 'server-only';
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { ViewingStatus } from '~/lib/commercial/commercial-constants';
+import { recordListingEvent } from '~/lib/commercial/listing-events';
 
 import type {
   CreateViewingInput,
@@ -77,7 +78,59 @@ function mapViewing(row: Row): CommercialViewing {
 }
 
 export function createViewingsService(client: SupabaseClient) {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = client as any;
+
   return {
+    async listRequirementOptions(input: {
+      accountId: string;
+      listingId: string;
+    }): Promise<
+      Array<{
+        requirementId: string;
+        matchId: string;
+        clientId: string | null;
+        label: string;
+        interestStatus: string;
+      }>
+    > {
+      const { data, error } = await db
+        .from('commercial_matches')
+        .select(
+          `
+          id, status, requirement_id,
+          commercial_requirements (
+            id, client_id, company_name, contact_name
+          )
+        `,
+        )
+        .eq('account_id', input.accountId)
+        .eq('listing_id', input.listingId)
+        .order('last_activity_at', { ascending: false });
+
+      if (error) {
+        console.error('[viewings] listRequirementOptions', error.message);
+        return [];
+      }
+
+      return ((data ?? []) as Array<Record<string, unknown>>).map((row) => {
+        const req = (row.commercial_requirements ?? null) as Record<
+          string,
+          unknown
+        > | null;
+        const company = (req?.company_name as string | null)?.trim();
+        const contact = (req?.contact_name as string | null)?.trim();
+        const label = company || contact || 'Requirement';
+        return {
+          requirementId: String(row.requirement_id),
+          matchId: String(row.id),
+          clientId: (req?.client_id as string | null) ?? null,
+          label: contact && company ? `${company} — ${contact}` : label,
+          interestStatus: String(row.status ?? 'new'),
+        };
+      });
+    },
+
     async listViewings(accountId: string): Promise<CommercialViewing[]> {
       const selectWithLinks =
         '*, commercial_listings(name), clients(display_name, company_name), contacts(full_name, first_name, last_name)';
@@ -149,6 +202,24 @@ export function createViewingsService(client: SupabaseClient) {
         }
       }
 
+      try {
+        await recordListingEvent(client, {
+          accountId: input.accountId,
+          listingId: viewing.listingId,
+          actorUserId: input.createdBy ?? null,
+          eventType: 'viewing_created',
+          summary: `Viewing created (${viewing.status})`,
+          metadata: {
+            viewingId: viewing.id,
+            status: viewing.status,
+            outcome: viewing.outcome,
+            requirementId: viewing.requirementId,
+          },
+        });
+      } catch {
+        /* best-effort */
+      }
+
       return viewing;
     },
 
@@ -159,6 +230,14 @@ export function createViewingsService(client: SupabaseClient) {
     ): Promise<CommercialViewing> {
       const selectWithLinks =
         '*, commercial_listings(name), clients(display_name, company_name), contacts(full_name, first_name, last_name)';
+
+      const { data: beforeRow } = await client
+        .from('commercial_viewings')
+        .select('status, outcome, feedback')
+        .eq('id', viewingId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
       const { data, error } = await client
         .from('commercial_viewings')
         .update({
@@ -207,6 +286,28 @@ export function createViewingsService(client: SupabaseClient) {
         } catch (err) {
           console.error('[viewings] ensureMatch on update failed:', err);
         }
+      }
+
+      try {
+        const prevStatus = (beforeRow as { status?: string } | null)?.status;
+        await recordListingEvent(client, {
+          accountId,
+          listingId: viewing.listingId,
+          eventType: 'viewing_updated',
+          summary:
+            prevStatus && prevStatus !== viewing.status
+              ? `Viewing status ${prevStatus} → ${viewing.status}`
+              : `Viewing updated (${viewing.status})`,
+          metadata: {
+            viewingId: viewing.id,
+            status: viewing.status,
+            previousStatus: prevStatus ?? null,
+            outcome: viewing.outcome,
+            requirementId: viewing.requirementId,
+          },
+        });
+      } catch {
+        /* best-effort */
       }
 
       return viewing;

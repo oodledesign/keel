@@ -45,6 +45,15 @@ export type CommercialPublishingSettings = {
     feedUrl: string | null;
     feedEnabled: boolean;
   };
+  recentPublicationIssues: Array<{
+    id: string;
+    listingId: string;
+    listingName: string | null;
+    portal: string;
+    status: string;
+    lastSyncAt: string | null;
+    lastError: string | null;
+  }>;
 };
 
 function isConfigured(
@@ -107,6 +116,37 @@ export async function loadCommercialPublishingSettings(
     Boolean(b.rightmoveBranchId?.trim()),
   );
 
+  const { data: issueRows } = await client
+    .from('commercial_portal_publications')
+    .select(
+      'id, listing_id, portal, status, last_sync_at, last_error, commercial_listings(name)',
+    )
+    .eq('account_id', accountId)
+    .or('status.eq.error,last_error.not.is.null')
+    .order('last_sync_at', { ascending: false, nullsFirst: false })
+    .limit(15);
+
+  const recentPublicationIssues = (
+    (issueRows ?? []) as Array<Record<string, unknown>>
+  ).map((row) => {
+    const listingJoin = row.commercial_listings as
+      | { name?: string }
+      | { name?: string }[]
+      | null;
+    const listingName = Array.isArray(listingJoin)
+      ? (listingJoin[0]?.name ?? null)
+      : (listingJoin?.name ?? null);
+    return {
+      id: String(row.id),
+      listingId: String(row.listing_id),
+      listingName,
+      portal: String(row.portal ?? ''),
+      status: String(row.status ?? ''),
+      lastSyncAt: (row.last_sync_at as string | null) ?? null,
+      lastError: (row.last_error as string | null) ?? null,
+    };
+  });
+
   return {
     propertyHive: {
       configured: isConfigured(ph),
@@ -128,5 +168,6 @@ export async function loadCommercialPublishingSettings(
       feedUrl: eachFeedUrl,
       feedEnabled: eachFeedEnabled,
     },
+    recentPublicationIssues,
   };
 }

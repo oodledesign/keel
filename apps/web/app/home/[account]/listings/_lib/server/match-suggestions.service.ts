@@ -23,6 +23,8 @@ export type MatchSuggestion = {
   listingDisposalType: DisposalType;
   listingSizeMinSqft: number | null;
   listingSizeMaxSqft: number | null;
+  listingLatitude: number | null;
+  listingLongitude: number | null;
   requirementLabel: string;
   requirementSector: string | null;
   requirementLocationText: string | null;
@@ -49,7 +51,9 @@ function mapListing(row: Record<string, unknown>): MatchListingSnapshot {
     disposalType: (row.disposal_type as DisposalType) ?? 'to_let',
     town: (row.town as string | null) ?? null,
     postcode: (row.postcode as string | null) ?? null,
-    addressLine1: (row.address_line1 as string | null) ?? null,
+    addressLine1: (row.address_line_1 as string | null) ?? null,
+    latitude: num(row.latitude),
+    longitude: num(row.longitude),
     sizeMinSqft: num(row.size_min_sqft),
     sizeMaxSqft: num(row.size_max_sqft),
     askingRentPence: num(row.asking_rent_pence),
@@ -69,6 +73,9 @@ function mapRequirement(
     sector: (row.sector as string | null) ?? null,
     tenure: (row.tenure as MatchRequirementSnapshot['tenure']) ?? null,
     locationText: (row.location_text as string | null) ?? null,
+    latitude: num(row.latitude),
+    longitude: num(row.longitude),
+    searchRadiusMiles: num(row.search_radius_miles),
     sizeMinSqft: num(row.size_min_sqft),
     sizeMaxSqft: num(row.size_max_sqft),
     budgetMinPence: num(row.budget_min_pence),
@@ -100,6 +107,8 @@ function toSuggestion(
     listingDisposalType: listing.disposalType,
     listingSizeMinSqft: listing.sizeMinSqft,
     listingSizeMaxSqft: listing.sizeMaxSqft,
+    listingLatitude: listing.latitude,
+    listingLongitude: listing.longitude,
     requirementLabel: requirementLabel(requirement),
     requirementSector: requirement.sector,
     requirementLocationText: requirement.locationText,
@@ -111,10 +120,10 @@ function toSuggestion(
 }
 
 const LISTING_SELECT =
-  'id, name, sector, disposal_type, town, postcode, address_line1, size_min_sqft, size_max_sqft, asking_rent_pence, asking_rent_to_pence, asking_price_pence, status';
+  'id, name, sector, disposal_type, town, postcode, address_line_1, latitude, longitude, size_min_sqft, size_max_sqft, asking_rent_pence, asking_rent_to_pence, asking_price_pence, status';
 
 const REQUIREMENT_SELECT =
-  'id, company_name, contact_name, sector, tenure, location_text, size_min_sqft, size_max_sqft, budget_min_pence, budget_max_pence, notes, stage, updated_at, created_at';
+  'id, company_name, contact_name, sector, tenure, location_text, latitude, longitude, search_radius_miles, size_min_sqft, size_max_sqft, budget_min_pence, budget_max_pence, notes, stage, updated_at, created_at';
 
 export function createMatchSuggestionsService(client: SupabaseClient) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any

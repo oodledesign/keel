@@ -72,10 +72,32 @@ export const CreateListingSchema = z.object({
   buildStatus: z.string().trim().max(200).optional().nullable(),
   planningStatus: z.string().trim().max(200).optional().nullable(),
   fittedSpace: z.boolean().optional().nullable(),
-  summary: z.string().optional().nullable(),
+  summary: z.string().max(140).optional().nullable(),
   description: z.string().optional().nullable(),
   locationCopy: z.string().optional().nullable(),
   keyPoints: z.array(z.string().min(1)).optional().nullable(),
+  amenities: z.array(z.string().trim().min(1).max(80)).max(50).optional().nullable(),
+  marketingSections: z
+    .array(
+      z.object({
+        id: z.string().min(1).max(80),
+        kind: z.enum([
+          'promo',
+          'specifications',
+          'viewings',
+          'terms',
+          'custom',
+        ]),
+        title: z.string().trim().min(1).max(120),
+        body: z.string().max(20000),
+      }),
+    )
+    .max(20)
+    .optional()
+    .nullable(),
+  websiteUrl: z
+    .union([z.string().trim().url().max(500), z.literal(''), z.null()])
+    .optional(),
   notes: z.string().optional().nullable(),
   externalId: z.string().optional().nullable(),
   instructingClientId: z.string().uuid().optional().nullable(),
@@ -138,6 +160,11 @@ export const DeleteListingSchema = z.object({
   accountId: z.string().uuid(),
 });
 
+export const BackfillListingLocationsSchema = z.object({
+  accountId: z.string().uuid(),
+  limit: z.number().int().min(1).max(100).optional(),
+});
+
 export const SetLandlordShareSchema = z.object({
   listingId: z.string().uuid(),
   accountId: z.string().uuid(),
@@ -157,31 +184,89 @@ export const MEDIA_TYPES = [
   'epc',
   'video',
   'other',
+  'aerial',
+  'goad',
 ] as const;
 
 export type MediaType = (typeof MEDIA_TYPES)[number];
 
 export const MEDIA_TYPE_LABELS: Record<MediaType, string> = {
-  image: 'Image',
+  image: 'Photo',
   brochure: 'Brochure',
-  floorplan: 'Floorplan',
+  floorplan: 'Floor plan',
   epc: 'EPC',
   video: 'Video',
   other: 'Other',
+  aerial: 'Aerial / drone',
+  goad: 'Goad plan',
 };
 
-export const CreateListingMediaSchema = z.object({
-  accountId: z.string().uuid(),
-  listingId: z.string().uuid(),
-  mediaType: z.enum(MEDIA_TYPES).optional(),
-  storagePath: z.string().min(1).optional().nullable(),
-  externalUrl: z.string().url().optional().nullable(),
-  fileName: z.string().optional().nullable(),
-  mimeType: z.string().optional().nullable(),
-  sortOrder: z.number().int().min(0).optional(),
-  isCover: z.boolean().optional(),
-  isPrivate: z.boolean().optional(),
-});
+export const MARKETING_SECTION_KINDS = [
+  'promo',
+  'specifications',
+  'viewings',
+  'terms',
+  'custom',
+] as const;
+
+export type MarketingSectionKind = (typeof MARKETING_SECTION_KINDS)[number];
+
+export const MARKETING_SECTION_KIND_LABELS: Record<
+  MarketingSectionKind,
+  string
+> = {
+  promo: 'Promo message',
+  specifications: 'Specifications',
+  viewings: 'Viewings',
+  terms: 'Terms',
+  custom: 'Custom field',
+};
+
+export const SUGGESTED_LISTING_AMENITIES = [
+  'ESG Credentials',
+  'Travel Times',
+  'Parking',
+  'Staff Amenities',
+  'All Retail',
+  'Air Conditioning',
+  'Raised Floors',
+  'Bike Storage',
+  'Showers',
+  'Reception',
+  'Security',
+  'Loading Bay',
+  'Yard',
+  'EV Charging',
+] as const;
+
+export const CreateListingMediaSchema = z
+  .object({
+    accountId: z.string().uuid(),
+    listingId: z.string().uuid(),
+    mediaType: z.enum(MEDIA_TYPES).optional(),
+    storagePath: z.string().min(1).optional().nullable(),
+    externalUrl: z
+      .union([z.string().trim().url().max(2000), z.literal(''), z.null()])
+      .optional(),
+    fileName: z.string().optional().nullable(),
+    mimeType: z.string().optional().nullable(),
+    sortOrder: z.number().int().min(0).optional(),
+    isCover: z.boolean().optional(),
+    isPrivate: z.boolean().optional(),
+  })
+  .superRefine((data, ctx) => {
+    const hasPath = Boolean(data.storagePath?.trim());
+    const hasUrl = Boolean(
+      data.externalUrl && String(data.externalUrl).trim().length > 0,
+    );
+    if (!hasPath && !hasUrl) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Provide a file or external URL',
+        path: ['externalUrl'],
+      });
+    }
+  });
 
 export const SetListingMediaCoverSchema = z.object({
   mediaId: z.string().uuid(),

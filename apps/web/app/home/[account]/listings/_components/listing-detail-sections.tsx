@@ -2,9 +2,12 @@
 
 import { useEffect, useState, useTransition } from 'react';
 
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
 import {
+  Bell,
+  ChevronRight,
   Copy,
   Edit2,
   Link2,
@@ -30,7 +33,6 @@ import {
   type EnquirySource,
   type EnquiryStatus,
 } from '~/lib/commercial/commercial-constants';
-import { isEachFeedIncluded } from '~/lib/commercial/each-feed-inclusion';
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import { RequirementFormModal } from '../../requirements/_components/requirement-form-modal';
@@ -52,10 +54,10 @@ import {
   updateListingEnquiry,
 } from '../_lib/server/server-actions';
 import { CommercialInterestPanel } from './commercial-interest-panel';
-import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
+import { ListingPortalSyncCard } from './listing-portal-sync-card';
 import { ListingUnitFormModal } from './listing-unit-form-modal';
 
 function formatMoney(pence: number | null) {
@@ -158,10 +160,12 @@ function useListingState(initial: CommercialListing) {
 export function ListingOverviewSection({
   listing: initial,
   accountId,
+  accountSlug,
   interestSummary,
 }: {
   listing: CommercialListing;
   accountId: string;
+  accountSlug: string;
   interestSummary?: {
     active: number;
     archived: number;
@@ -171,8 +175,7 @@ export function ListingOverviewSection({
     awaitingFeedback?: number;
   };
 }) {
-  const { listing, modalOpen, setModalOpen, onSaved } =
-    useListingState(initial);
+  const { listing } = useListingState(initial);
   const dom = daysOnMarket(listing.onMarketAt);
   const summary = interestSummary ?? {
     active: 0,
@@ -183,17 +186,45 @@ export function ListingOverviewSection({
     awaitingFeedback: 0,
   };
 
+  const interestHref = `${pathsConfig.app.accountListingDetail
+    .replace('[account]', accountSlug)
+    .replace('[id]', listing.id)}/interest`;
+
+  const matchCount = listing.matchCount ?? 0;
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-end">
-        <Button
-          onClick={() => setModalOpen(true)}
-          className={workspaceBtnPrimaryMd}
-        >
-          <Edit2 className="h-4 w-4" />
-          Edit
-        </Button>
-      </div>
+      <Card className={workspacePanelCard}>
+        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+          <div className="space-y-1">
+            <div className="flex flex-wrap items-center gap-2">
+              <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                Matches
+              </CardTitle>
+              <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--ozer-accent)] px-2.5 py-1 text-xs font-semibold text-white">
+                <Bell className="h-3.5 w-3.5" />
+                <span className="tabular-nums">{matchCount}</span>
+              </span>
+            </div>
+            <p className="text-sm text-[var(--workspace-shell-text)]/50">
+              Suggested requirement fits and linked interest on this disposal.
+            </p>
+          </div>
+          <Button asChild variant="outline" size="sm">
+            <Link href={interestHref}>
+              Open Interest
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </CardHeader>
+        <CardContent>
+          <CommercialInterestPanel
+            accountId={accountId}
+            mode={{ kind: 'listing', listingId: listing.id }}
+            compact
+          />
+        </CardContent>
+      </Card>
 
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
@@ -370,14 +401,6 @@ export function ListingOverviewSection({
           </CardContent>
         </Card>
       ) : null}
-
-      <ListingFormModal
-        open={modalOpen}
-        onClose={() => setModalOpen(false)}
-        accountId={accountId}
-        listing={listing}
-        onSaved={onSaved}
-      />
     </div>
   );
 }
@@ -526,16 +549,19 @@ export function ListingMediaPageSection({
   accountId,
   listingId,
   media,
+  websiteUrl,
 }: {
   accountId: string;
   listingId: string;
   media: CommercialListingMedia[];
+  websiteUrl?: string | null;
 }) {
   return (
     <ListingMediaSection
       accountId={accountId}
       listingId={listingId}
       initialMedia={media}
+      initialWebsiteUrl={websiteUrl}
     />
   );
 }
@@ -1083,47 +1109,13 @@ export function ListingManagementSection({
       ? `${window.location.origin}${brochurePath}`
       : brochurePath;
 
-  const otherPublications = publications.filter((pub) => pub.portal !== 'each');
-
   return (
     <div className="grid gap-4 md:grid-cols-2">
-      <Card className={workspacePanelCard}>
-        <CardHeader>
-          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-            Portal publishing
-          </CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <ListingEachFeedToggle
-            accountId={accountId}
-            listingId={listing.id}
-            initialEnabled={isEachFeedIncluded(publications)}
-          />
-
-          {otherPublications.length === 0 ? (
-            <p className="text-sm text-[var(--workspace-shell-text)]/50">
-              Rightmove and Property Hive status will appear here after you
-              publish or sync from Commercial publishing.
-            </p>
-          ) : (
-            <ul className="space-y-2">
-              {otherPublications.map((pub) => (
-                <li
-                  key={pub.id}
-                  className="flex items-center justify-between text-sm"
-                >
-                  <span className="text-[var(--workspace-shell-text)] capitalize">
-                    {pub.portal.replace(/_/g, ' ')}
-                  </span>
-                  <span className="text-[var(--workspace-shell-text)]/60">
-                    {pub.status}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
-        </CardContent>
-      </Card>
+      <ListingPortalSyncCard
+        listing={listing}
+        publications={publications}
+        accountId={accountId}
+      />
 
       <Card className={workspacePanelCard}>
         <CardHeader>

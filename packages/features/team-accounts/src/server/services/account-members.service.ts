@@ -10,7 +10,6 @@ import { Database } from '@kit/supabase/database';
 import type { RemoveMemberSchema } from '../../schema/remove-member.schema';
 import type { TransferOwnershipConfirmationSchema } from '../../schema/transfer-ownership-confirmation.schema';
 import type { UpdateMemberRoleSchema } from '../../schema/update-member-role.schema';
-import { createAccountPerSeatBillingService } from './account-per-seat-billing.service';
 
 export function createAccountMembersService(client: SupabaseClient<Database>) {
   return new AccountMembersService(client);
@@ -72,10 +71,7 @@ class AccountMembersService {
       `Successfully removed member from account. Verifying seat count...`,
     );
 
-    if (seatKind !== 'support') {
-      const service = createAccountPerSeatBillingService(this.client);
-      await service.decreaseSeats(params.accountId);
-    }
+    // Subscribed seat quantity is managed on billing (not auto-decreased here).
 
     return data;
   }

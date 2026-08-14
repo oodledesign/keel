@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-import { Loader2, MoreHorizontal, Settings2 } from 'lucide-react';
+import { Eye, Loader2, MoreHorizontal, Settings2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -14,7 +14,7 @@ import {
 } from '@kit/ui/dropdown-menu';
 
 import pathsConfig from '~/config/paths.config';
-import { formatDuration } from '~/lib/videos/format';
+import { formatDuration, formatViewCount } from '~/lib/videos/format';
 import type { VideoRow } from '~/lib/videos/types';
 
 import { VideoThumbnail } from './video-thumbnail';
@@ -74,10 +74,25 @@ export function VideoCard(props: {
           >
             {video.title}
           </Link>
-          <p className="text-muted-foreground mt-0.5 text-xs">
-            {new Date(video.created_at).toLocaleDateString()}
-            {video.source === 'screen_recording' ? ' · Screen recording' : ''}
-            {video.has_master ? ' · Editable' : ''}
+          <p className="text-muted-foreground mt-0.5 flex flex-wrap items-center gap-x-1.5 text-xs">
+            <span className="inline-flex items-center gap-1">
+              <Eye className="h-3 w-3" aria-hidden />
+              {formatViewCount(video.view_count)}
+            </span>
+            <span aria-hidden>·</span>
+            <span>{new Date(video.created_at).toLocaleDateString()}</span>
+            {video.source === 'screen_recording' ? (
+              <>
+                <span aria-hidden>·</span>
+                <span>Screen recording</span>
+              </>
+            ) : null}
+            {video.has_master ? (
+              <>
+                <span aria-hidden>·</span>
+                <span>Editable</span>
+              </>
+            ) : null}
           </p>
         </div>
 

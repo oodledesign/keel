@@ -11,6 +11,7 @@ import { ListingManagementSection } from '../../_components/listing-detail-secti
 import { ListingInstructionCard } from '../../_components/listing-instruction-card';
 import { ListingPartiesCard } from '../../_components/listing-parties-card';
 import { ListingPrivateMediaSection } from '../../_components/listing-private-media-section';
+import { MarketingReadinessCard } from '../../_components/marketing-readiness-card';
 import { createListingsService } from '../../_lib/server/listings.service';
 
 interface PageProps {
@@ -34,6 +35,7 @@ async function ListingManagementPage({ params }: PageProps) {
     teams,
     branches,
     privateMedia,
+    publicMedia,
     landlords,
     otherParties,
   ] = await Promise.all([
@@ -44,6 +46,7 @@ async function ListingManagementPage({ params }: PageProps) {
     service.listWorkspaceTeams(accountId),
     loadAccountBranches(accountId),
     service.listMedia(listingId, { privacy: 'private' }),
+    service.listMedia(listingId, { privacy: 'public' }),
     service.listParties(listingId, accountId, 'landlord'),
     service.listParties(listingId, accountId, 'other'),
   ]);
@@ -61,6 +64,12 @@ async function ListingManagementPage({ params }: PageProps) {
 
   return (
     <div className="space-y-4">
+      <MarketingReadinessCard
+        listing={listing}
+        accountSlug={slug}
+        media={publicMedia}
+        publications={publications}
+      />
       <ListingInstructionCard accountId={accountId} listing={listing} />
       <ListingAssignmentCard
         accountId={accountId}

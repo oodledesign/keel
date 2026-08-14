@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useState, useTransition } from 'react';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
@@ -8,6 +8,7 @@ import { Calendar, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -27,6 +28,12 @@ import {
 import { Textarea } from '@kit/ui/textarea';
 
 import {
+  INTEREST_STATUSES,
+  INTEREST_STATUS_LABELS,
+  type InterestStatus,
+  REQUIREMENT_STATUSES,
+  REQUIREMENT_STATUS_LABELS,
+  type RequirementStatus,
   VIEWING_OUTCOMES,
   VIEWING_OUTCOME_LABELS,
   VIEWING_STATUSES,
@@ -42,8 +49,11 @@ import {
 } from '../../clients/_components/client-contact-picker';
 import type { CommercialListing } from '../../listings/_lib/server/listings.service';
 import {
+  type ViewingRequirementOption,
+  applyViewingFeedbackFollowUp,
   createViewing,
   deleteViewing,
+  listViewingRequirementOptions,
   updateViewing,
 } from '../_lib/server/server-actions';
 import type { CommercialViewing } from '../_lib/server/viewings.service';
@@ -56,6 +66,9 @@ const STATUS_LABELS: Record<ViewingStatus, string> = {
 };
 
 const NONE_OUTCOME = '__none__';
+const NONE_REQUIREMENT = '__none__';
+const NONE_STAGE = '__none__';
+const FOLLOW_UP_STATUSES: InterestStatus[] = ['viewed', 'withdrawn', 'lost'];
 
 function outcomeLabel(value: string | null) {
   if (!value) return '—';
@@ -70,6 +83,27 @@ function isoToDatetimeLocal(iso: string) {
   const offset = d.getTimezoneOffset();
   const local = new Date(d.getTime() - offset * 60_000);
   return local.toISOString().slice(0, 16);
+}
+
+function shouldOfferFeedbackFollowUp(input: {
+  previous: CommercialViewing | null;
+  saved: CommercialViewing;
+}): boolean {
+  const { previous, saved } = input;
+  if (saved.status !== 'completed') return false;
+  if (!saved.requirementId) return false;
+
+  const outcome = saved.outcome;
+  if (outcome === 'negative' || outcome === 'neutral') return true;
+
+  if (
+    previous?.status === 'awaiting_feedback' &&
+    Boolean(saved.feedback?.trim())
+  ) {
+    return true;
+  }
+
+  return false;
 }
 
 interface ViewingsListProps {
@@ -88,6 +122,10 @@ export function ViewingsList({
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<CommercialViewing | null>(null);
   const [listingId, setListingId] = useState(listings[0]?.id ?? '');
+  const [requirementId, setRequirementId] = useState('');
+  const [requirementOptions, setRequirementOptions] = useState<
+    ViewingRequirementOption[]
+  >([]);
   const [scheduledAt, setScheduledAt] = useState('');
   const [status, setStatus] = useState<ViewingStatus>('upcoming');
   const [outcome, setOutcome] = useState('');
@@ -97,6 +135,16 @@ export function ViewingsList({
   );
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+
+  const [followUpOpen, setFollowUpOpen] = useState(false);
+  const [followUpViewing, setFollowUpViewing] =
+    useState<CommercialViewing | null>(null);
+  const [followUpMatchId, setFollowUpMatchId] = useState<string | null>(null);
+  const [followUpInterestStatus, setFollowUpInterestStatus] =
+    useState<InterestStatus>('viewed');
+  const [followUpAppendNotes, setFollowUpAppendNotes] = useState(true);
+  const [followUpStage, setFollowUpStage] = useState<string>(NONE_STAGE);
+  const [followUpError, setFollowUpError] = useState<string | null>(null);
 
   const outcomeSelectValue = VIEWING_OUTCOMES.includes(
     outcome as ViewingOutcome,
@@ -114,6 +162,8 @@ export function ViewingsList({
     setFeedback('');
     setParty(emptyClientContactPickerValue());
     setListingId(listings[0]?.id ?? '');
+    setRequirementId('');
+    setRequirementOptions([]);
     setError(null);
   };
 
@@ -125,6 +175,7 @@ export function ViewingsList({
   const openEdit = (viewing: CommercialViewing) => {
     setEditing(viewing);
     setListingId(viewing.listingId);
+    setRequirementId(viewing.requirementId ?? '');
     setScheduledAt(
       viewing.scheduledAt ? isoToDatetimeLocal(viewing.scheduledAt) : '',
     );
@@ -143,6 +194,75 @@ export function ViewingsList({
     setModalOpen(true);
   };
 
+  // Load linked requirements when listing changes; prefill from client match.
+  useEffect(() => {
+    if (!modalOpen || !listingId) {
+      setRequirementOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    void listViewingRequirementOptions({ accountId, listingId }).then(
+      (options) => {
+        if (cancelled) return;
+        setRequirementOptions(options);
+
+        setRequirementId((current) => {
+          if (current && options.some((o) => o.requirementId === current)) {
+            return current;
+          }
+          if (editing?.requirementId) {
+            const existing = options.find(
+              (o) => o.requirementId === editing.requirementId,
+            );
+            if (existing) return existing.requirementId;
+          }
+          if (party.clientId) {
+            const forClient = options.find(
+              (o) => o.clientId === party.clientId,
+            );
+            if (forClient) return forClient.requirementId;
+          }
+          return current || '';
+        });
+      },
+    );
+
+    return () => {
+      cancelled = true;
+    };
+  }, [modalOpen, listingId, accountId, editing?.requirementId, party.clientId]);
+
+  // When client changes, prefer matching linked requirement.
+  useEffect(() => {
+    if (!modalOpen || !party.clientId || requirementOptions.length === 0) {
+      return;
+    }
+    const forClient = requirementOptions.find(
+      (o) => o.clientId === party.clientId,
+    );
+    if (forClient) {
+      setRequirementId(forClient.requirementId);
+    }
+  }, [party.clientId, requirementOptions, modalOpen]);
+
+  const openFollowUp = (saved: CommercialViewing) => {
+    const option = requirementOptions.find(
+      (o) => o.requirementId === saved.requirementId,
+    );
+    setFollowUpViewing(saved);
+    setFollowUpMatchId(option?.matchId ?? null);
+    const suggested: InterestStatus =
+      saved.outcome === 'negative' ? 'lost' : 'viewed';
+    setFollowUpInterestStatus(
+      FOLLOW_UP_STATUSES.includes(suggested) ? suggested : 'viewed',
+    );
+    setFollowUpAppendNotes(Boolean(saved.feedback?.trim()));
+    setFollowUpStage(NONE_STAGE);
+    setFollowUpError(null);
+    setFollowUpOpen(true);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!listingId) {
@@ -153,6 +273,7 @@ export function ViewingsList({
     const fields = {
       accountId,
       listingId,
+      requirementId: requirementId || null,
       clientId: party.clientId || null,
       contactId: party.contactId || null,
       scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : null,
@@ -160,24 +281,58 @@ export function ViewingsList({
       outcome: outcome.trim() || null,
       feedback: feedback.trim() || null,
     };
+    const previous = editing;
     startTransition(async () => {
       try {
+        let saved: CommercialViewing;
         if (editing) {
-          const updated = await updateViewing({
+          saved = await updateViewing({
             viewingId: editing.id,
             ...fields,
           });
-          setItems((prev) =>
-            prev.map((v) => (v.id === updated.id ? updated : v)),
-          );
+          setItems((prev) => prev.map((v) => (v.id === saved.id ? saved : v)));
         } else {
-          await createViewing(fields);
+          saved = await createViewing(fields);
         }
         setModalOpen(false);
         resetForm();
         handleSaved();
+
+        if (shouldOfferFeedbackFollowUp({ previous, saved })) {
+          openFollowUp(saved);
+        }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to save');
+      }
+    });
+  };
+
+  const handleFollowUpSubmit = () => {
+    if (!followUpViewing?.requirementId) return;
+    setFollowUpError(null);
+    startTransition(async () => {
+      try {
+        await applyViewingFeedbackFollowUp({
+          accountId,
+          viewingId: followUpViewing.id,
+          listingId: followUpViewing.listingId,
+          requirementId: followUpViewing.requirementId!,
+          matchId: followUpMatchId,
+          interestStatus: followUpInterestStatus,
+          appendFeedbackToNotes: followUpAppendNotes,
+          requirementStage:
+            followUpStage === NONE_STAGE
+              ? null
+              : (followUpStage as RequirementStatus),
+          feedbackText: followUpViewing.feedback,
+        });
+        setFollowUpOpen(false);
+        setFollowUpViewing(null);
+        handleSaved();
+      } catch (err) {
+        setFollowUpError(
+          err instanceof Error ? err.message : 'Failed to apply follow-up',
+        );
       }
     });
   };
@@ -336,6 +491,41 @@ export function ViewingsList({
             />
 
             <div className="space-y-1.5">
+              <Label>Linked requirement</Label>
+              <Select
+                value={requirementId || NONE_REQUIREMENT}
+                onValueChange={(v) =>
+                  setRequirementId(v === NONE_REQUIREMENT ? '' : v)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select from Interest" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_REQUIREMENT}>Not linked</SelectItem>
+                  {requirementOptions.map((opt) => (
+                    <SelectItem
+                      key={opt.requirementId}
+                      value={opt.requirementId}
+                    >
+                      {opt.label} (
+                      {INTEREST_STATUS_LABELS[
+                        opt.interestStatus as InterestStatus
+                      ] ?? opt.interestStatus}
+                      )
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {requirementOptions.length === 0 ? (
+                <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                  No Interest matches on this listing yet. Link a requirement
+                  after adding Interest, or leave blank.
+                </p>
+              ) : null}
+            </div>
+
+            <div className="space-y-1.5">
               <Label>Scheduled at</Label>
               <Input
                 type="datetime-local"
@@ -411,6 +601,106 @@ export function ViewingsList({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={followUpOpen}
+        onOpenChange={(open) => {
+          setFollowUpOpen(open);
+          if (!open) setFollowUpViewing(null);
+        }}
+      >
+        <DialogContent className="max-w-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <DialogHeader>
+            <DialogTitle>Update requirement from feedback?</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 pt-2">
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Apply this viewing outcome to the linked Interest and brief.
+            </p>
+
+            <div className="space-y-1.5">
+              <Label>Interest status</Label>
+              <Select
+                value={followUpInterestStatus}
+                onValueChange={(v) =>
+                  setFollowUpInterestStatus(v as InterestStatus)
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {INTEREST_STATUSES.filter(
+                    (s) =>
+                      FOLLOW_UP_STATUSES.includes(s) ||
+                      s === followUpInterestStatus,
+                  ).map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {INTEREST_STATUS_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <label className="flex items-start gap-2 text-sm">
+              <Checkbox
+                checked={followUpAppendNotes}
+                onCheckedChange={(v) => setFollowUpAppendNotes(v === true)}
+                className="mt-0.5"
+              />
+              <span>
+                Append feedback to requirement notes
+                {followUpViewing?.feedback ? (
+                  <span className="mt-1 block text-xs text-[var(--workspace-shell-text-muted)]">
+                    “{followUpViewing.feedback.slice(0, 120)}
+                    {followUpViewing.feedback.length > 120 ? '…' : ''}”
+                  </span>
+                ) : null}
+              </span>
+            </label>
+
+            <div className="space-y-1.5">
+              <Label>Requirement stage (optional)</Label>
+              <Select value={followUpStage} onValueChange={setFollowUpStage}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Keep current stage" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={NONE_STAGE}>Keep current</SelectItem>
+                  {REQUIREMENT_STATUSES.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {REQUIREMENT_STATUS_LABELS[s]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {followUpError ? (
+              <p className="text-sm text-rose-600">{followUpError}</p>
+            ) : null}
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => setFollowUpOpen(false)}
+              >
+                Skip
+              </Button>
+              <Button
+                type="button"
+                disabled={isPending}
+                className={workspaceBtnPrimaryMd}
+                onClick={handleFollowUpSubmit}
+              >
+                {isPending ? 'Applying…' : 'Apply updates'}
+              </Button>
+            </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
     </div>

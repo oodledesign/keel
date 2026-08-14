@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import {
   ChevronLeft,
   ChevronRight,
+  ExternalLink,
   FileText,
   ImageIcon,
   Loader2,
@@ -17,6 +18,7 @@ import {
   Star,
   Trash2,
   Upload,
+  Video,
   X,
 } from 'lucide-react';
 
@@ -39,19 +41,11 @@ import {
 } from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
 import { workspaceBtnPrimaryMd, workspacePanelCard } from '~/lib/workspace-ui';
 
 import {
-  MEDIA_TYPES,
   MEDIA_TYPE_LABELS,
   type MediaType,
 } from '../_lib/schema/listings.schema';
@@ -60,6 +54,7 @@ import {
   createListingMedia,
   deleteListingMedia,
   setListingMediaCover,
+  updateListing,
   updateListingMedia,
 } from '../_lib/server/server-actions';
 
@@ -72,38 +67,97 @@ const ALLOWED = new Set([
   'application/pdf',
 ]);
 
+type FileMediaType = Exclude<MediaType, 'video'>;
+
+const PRIMARY_FILE_SECTIONS: Array<{
+  type: FileMediaType;
+  title: string;
+  description: string;
+  accept: string;
+}> = [
+  {
+    type: 'image',
+    title: 'Photos',
+    description: 'Primary gallery images. Set one as cover.',
+    accept: 'image/jpeg,image/png,image/webp,image/gif',
+  },
+  {
+    type: 'brochure',
+    title: 'Brochure',
+    description: 'PDF or image marketing brochure.',
+    accept: 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
+  },
+  {
+    type: 'floorplan',
+    title: 'Floor plans',
+    description: 'Floor plan drawings and schedules.',
+    accept: 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
+  },
+  {
+    type: 'aerial',
+    title: 'Aerial / drone',
+    description: 'Aerial photography and drone stills.',
+    accept: 'image/jpeg,image/png,image/webp,image/gif',
+  },
+  {
+    type: 'epc',
+    title: 'EPC',
+    description: 'Energy performance certificates.',
+    accept: 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
+  },
+];
+
+const SECONDARY_FILE_SECTIONS: typeof PRIMARY_FILE_SECTIONS = [
+  {
+    type: 'other',
+    title: 'Other files',
+    description: 'Supporting documents that do not fit elsewhere.',
+    accept: 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
+  },
+  {
+    type: 'goad',
+    title: 'Goad plans',
+    description: 'Goad retail plans and related files.',
+    accept: 'image/jpeg,image/png,image/webp,image/gif,application/pdf',
+  },
+];
+
+const FILE_SECTIONS = [...PRIMARY_FILE_SECTIONS, ...SECONDARY_FILE_SECTIONS];
+
 function safeFileName(name: string) {
   return name.replace(/[/\\]/g, '_').replace(/\.\./g, '_').trim().slice(0, 180);
-}
-
-function inferMediaType(mime: string, preferred: MediaType): MediaType {
-  if (preferred !== 'image') return preferred;
-  if (mime === 'application/pdf') return 'brochure';
-  return 'image';
 }
 
 function isImageMedia(item: CommercialListingMedia) {
   return (
     item.mediaType === 'image' ||
     item.mediaType === 'floorplan' ||
+    item.mediaType === 'aerial' ||
     Boolean(item.mimeType?.startsWith('image/'))
   );
+}
+
+function mediaHref(item: CommercialListingMedia) {
+  return item.url ?? item.externalUrl ?? null;
 }
 
 export function ListingMediaSection({
   accountId,
   listingId,
   initialMedia,
+  initialWebsiteUrl,
 }: {
   accountId: string;
   listingId: string;
   initialMedia: CommercialListingMedia[];
+  initialWebsiteUrl?: string | null;
 }) {
   const uploadInputRef = useRef<HTMLInputElement>(null);
   const replaceInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
   const [media, setMedia] = useState(initialMedia);
-  const [mediaType, setMediaType] = useState<MediaType>('image');
+  const [uploadType, setUploadType] = useState<FileMediaType>('image');
+  const [uploadAccept, setUploadAccept] = useState(FILE_SECTIONS[0]!.accept);
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -111,14 +165,26 @@ export function ListingMediaSection({
     useState<CommercialListingMedia | null>(null);
   const [renameValue, setRenameValue] = useState('');
   const [replaceTargetId, setReplaceTargetId] = useState<string | null>(null);
+  const [videoUrl, setVideoUrl] = useState('');
+  const [websiteUrl, setWebsiteUrl] = useState(initialWebsiteUrl ?? '');
   const touchStartX = useRef<number | null>(null);
 
   useEffect(() => {
     setMedia(initialMedia);
   }, [initialMedia]);
 
+  useEffect(() => {
+    setWebsiteUrl(initialWebsiteUrl ?? '');
+  }, [initialWebsiteUrl]);
+
   const imageItems = useMemo(
-    () => media.filter((item) => isImageMedia(item) && Boolean(item.url)),
+    () =>
+      media.filter((item) => isImageMedia(item) && Boolean(mediaHref(item))),
+    [media],
+  );
+
+  const videos = useMemo(
+    () => media.filter((item) => item.mediaType === 'video'),
     [media],
   );
 
@@ -157,6 +223,16 @@ export function ListingMediaSection({
     if (index >= 0) setLightboxIndex(index);
   };
 
+  const startUpload = (type: FileMediaType, accept: string) => {
+    setUploadType(type);
+    setUploadAccept(accept);
+    const input = uploadInputRef.current;
+    if (input) {
+      input.accept = accept;
+      input.click();
+    }
+  };
+
   const handleFiles = (files: FileList | null) => {
     if (!files?.length) return;
     setError(null);
@@ -189,7 +265,7 @@ export function ListingMediaSection({
           const created = await createListingMedia({
             accountId,
             listingId,
-            mediaType: inferMediaType(file.type, mediaType),
+            mediaType: uploadType,
             storagePath: path,
             fileName: file.name,
             mimeType: file.type || null,
@@ -200,6 +276,11 @@ export function ListingMediaSection({
 
         setMedia((prev) => [...prev, ...uploaded]);
         router.refresh();
+        toast.success(
+          uploaded.length === 1
+            ? 'File uploaded'
+            : `${uploaded.length} files uploaded`,
+        );
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Upload failed');
       } finally {
@@ -227,7 +308,12 @@ export function ListingMediaSection({
   };
 
   const handleDelete = (item: CommercialListingMedia) => {
-    if (!confirm(`Remove ${item.fileName ?? 'this media item'}?`)) return;
+    if (
+      !confirm(
+        `Remove ${item.fileName ?? item.externalUrl ?? 'this media item'}?`,
+      )
+    )
+      return;
     startTransition(async () => {
       try {
         await deleteListingMedia({
@@ -240,13 +326,14 @@ export function ListingMediaSection({
           setLightboxIndex((prevIndex) => {
             if (prevIndex == null) return prevIndex;
             const nextImages = next.filter(
-              (row) => isImageMedia(row) && Boolean(row.url),
+              (row) => isImageMedia(row) && Boolean(mediaHref(row)),
             );
             if (nextImages.length === 0) return null;
             return Math.min(prevIndex, nextImages.length - 1);
           });
           return next;
         });
+        router.refresh();
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Delete failed');
       }
@@ -323,10 +410,7 @@ export function ListingMediaSection({
           storagePath: path,
           fileName: file.name,
           mimeType: file.type || null,
-          mediaType: inferMediaType(
-            file.type,
-            existing?.mediaType ?? mediaType,
-          ),
+          mediaType: existing?.mediaType ?? uploadType,
         });
 
         setMedia((prev) =>
@@ -342,182 +426,370 @@ export function ListingMediaSection({
     });
   };
 
-  return (
-    <Card className={workspacePanelCard}>
-      <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
-        <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-          Media
-        </CardTitle>
-        <div className="flex flex-wrap items-center gap-2">
-          <Select
-            value={mediaType}
-            onValueChange={(v) => setMediaType(v as MediaType)}
-          >
-            <SelectTrigger className="h-9 w-[140px] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              {MEDIA_TYPES.map((type) => (
-                <SelectItem key={type} value={type}>
-                  {MEDIA_TYPE_LABELS[type]}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <input
-            ref={uploadInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-            multiple
-            className="hidden"
-            onChange={(e) => handleFiles(e.target.files)}
-          />
-          <input
-            ref={replaceInputRef}
-            type="file"
-            accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
-            className="hidden"
-            onChange={(e) => handleReplace(e.target.files)}
-          />
-          <Button
-            type="button"
-            disabled={pending}
-            className={workspaceBtnPrimaryMd}
-            onClick={() => uploadInputRef.current?.click()}
-          >
-            {pending ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <Upload className="h-4 w-4" />
-            )}
-            Upload
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {error ? (
-          <p className="rounded-lg bg-rose-500/15 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
-            {error}
-          </p>
-        ) : null}
+  const addVideoUrl = () => {
+    const next = videoUrl.trim();
+    if (!next) {
+      toast.error('Enter a video URL');
+      return;
+    }
 
-        {media.length === 0 ? (
+    startTransition(async () => {
+      try {
+        const created = await createListingMedia({
+          accountId,
+          listingId,
+          mediaType: 'video',
+          externalUrl: next,
+          fileName: 'Video',
+          sortOrder: media.length,
+        });
+        setMedia((prev) => [...prev, created]);
+        setVideoUrl('');
+        router.refresh();
+        toast.success('Video URL added');
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not add video');
+      }
+    });
+  };
+
+  const saveWebsiteUrl = () => {
+    startTransition(async () => {
+      try {
+        const trimmed = websiteUrl.trim();
+        await updateListing({
+          accountId,
+          listingId,
+          websiteUrl: trimmed || null,
+        });
+        toast.success('Website URL saved');
+        router.refresh();
+      } catch (err) {
+        toast.error(
+          err instanceof Error ? err.message : 'Could not save website URL',
+        );
+      }
+    });
+  };
+
+  const renderMediaCard = (item: CommercialListingMedia) => {
+    const href = mediaHref(item);
+    const isImage = isImageMedia(item) && Boolean(href);
+
+    return (
+      <div
+        key={item.id}
+        className="group relative overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
+      >
+        {isImage ? (
           <button
             type="button"
-            disabled={pending}
-            onClick={() => uploadInputRef.current?.click()}
-            className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-4 py-10 text-sm text-[var(--workspace-shell-text)]/50 transition-colors hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]/70"
+            className="block w-full cursor-zoom-in text-left"
+            onClick={() => openLightbox(item)}
+            aria-label={`View ${item.fileName ?? 'image'}`}
           >
-            <Plus className="h-5 w-5" />
-            Add photos, floorplans, brochures or EPCs
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={href!}
+              alt={item.fileName ?? 'Listing media'}
+              className="aspect-[4/3] w-full object-cover transition-opacity group-hover:opacity-95"
+            />
           </button>
         ) : (
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {media.map((item) => {
-              const isImage = isImageMedia(item);
-              return (
-                <div
-                  key={item.id}
-                  className="group relative overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]"
-                >
-                  {isImage && item.url ? (
-                    <button
-                      type="button"
-                      className="block w-full cursor-zoom-in text-left"
-                      onClick={() => openLightbox(item)}
-                      aria-label={`View ${item.fileName ?? 'image'}`}
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={item.url}
-                        alt={item.fileName ?? 'Listing media'}
-                        className="aspect-[4/3] w-full object-cover transition-opacity group-hover:opacity-95"
-                      />
-                    </button>
-                  ) : (
-                    <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 text-[var(--workspace-shell-text)]/40">
-                      {item.mediaType === 'image' ? (
-                        <ImageIcon className="h-8 w-8" />
-                      ) : (
-                        <FileText className="h-8 w-8" />
-                      )}
-                      <span className="px-3 text-center text-xs">
-                        {item.fileName ?? MEDIA_TYPE_LABELS[item.mediaType]}
-                      </span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between gap-2 border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2">
-                    <div className="min-w-0">
-                      <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
-                        {item.fileName ?? 'Untitled'}
-                        {item.isCover ? (
-                          <span className="ml-1.5 text-[10px] font-semibold text-[var(--ozer-accent)] uppercase">
-                            Cover
-                          </span>
-                        ) : null}
-                      </p>
-                      <p className="text-[10px] text-[var(--workspace-shell-text)]/45 uppercase">
-                        {MEDIA_TYPE_LABELS[item.mediaType]}
-                      </p>
-                    </div>
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          disabled={pending}
-                          className="h-7 w-7 text-[var(--workspace-shell-text-muted)]"
-                          aria-label={`Actions for ${item.fileName ?? 'media'}`}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent
-                        align="end"
-                        className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-                      >
-                        <DropdownMenuItem
-                          onClick={() => openRename(item)}
-                          className="gap-2"
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Rename
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => startReplace(item)}
-                          className="gap-2"
-                        >
-                          <RefreshCw className="h-3.5 w-3.5" />
-                          Replace
-                        </DropdownMenuItem>
-                        {isImage ? (
-                          <DropdownMenuItem
-                            disabled={item.isCover}
-                            onClick={() => handleSetCover(item.id)}
-                            className="gap-2"
-                          >
-                            <Star className="h-3.5 w-3.5" />
-                            {item.isCover ? 'Cover image' : 'Set as cover'}
-                          </DropdownMenuItem>
-                        ) : null}
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem
-                          onClick={() => handleDelete(item)}
-                          className="gap-2 text-rose-600 focus:text-rose-600 dark:text-rose-400"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                          Delete
-                        </DropdownMenuItem>
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </div>
-              );
-            })}
+          <div className="flex aspect-[4/3] flex-col items-center justify-center gap-2 text-[var(--workspace-shell-text)]/40">
+            {item.mediaType === 'video' ? (
+              <Video className="h-8 w-8" />
+            ) : item.mediaType === 'image' ? (
+              <ImageIcon className="h-8 w-8" />
+            ) : (
+              <FileText className="h-8 w-8" />
+            )}
+            <span className="px-3 text-center text-xs">
+              {item.fileName ??
+                item.externalUrl ??
+                MEDIA_TYPE_LABELS[item.mediaType]}
+            </span>
           </div>
         )}
-      </CardContent>
+        <div className="flex items-center justify-between gap-2 border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-3 py-2">
+          <div className="min-w-0">
+            <p className="truncate text-xs font-medium text-[var(--workspace-shell-text)]">
+              {item.fileName ?? item.externalUrl ?? 'Untitled'}
+              {item.isCover ? (
+                <span className="ml-1.5 text-[10px] font-semibold text-[var(--ozer-accent)] uppercase">
+                  Cover
+                </span>
+              ) : null}
+            </p>
+            <p className="text-[10px] text-[var(--workspace-shell-text)]/45 uppercase">
+              {MEDIA_TYPE_LABELS[item.mediaType]}
+            </p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                disabled={pending}
+                className="h-7 w-7 text-[var(--workspace-shell-text-muted)]"
+                aria-label={`Actions for ${item.fileName ?? 'media'}`}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent
+              align="end"
+              className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
+            >
+              {item.mediaType !== 'video' ? (
+                <DropdownMenuItem
+                  onClick={() => openRename(item)}
+                  className="gap-2"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  Rename
+                </DropdownMenuItem>
+              ) : null}
+              {item.externalUrl || item.url ? (
+                <DropdownMenuItem asChild className="gap-2">
+                  <a
+                    href={item.externalUrl ?? item.url ?? undefined}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    Open
+                  </a>
+                </DropdownMenuItem>
+              ) : null}
+              {item.mediaType !== 'video' && item.storagePath ? (
+                <DropdownMenuItem
+                  onClick={() => startReplace(item)}
+                  className="gap-2"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  Replace
+                </DropdownMenuItem>
+              ) : null}
+              {isImageMedia(item) ? (
+                <DropdownMenuItem
+                  disabled={item.isCover}
+                  onClick={() => handleSetCover(item.id)}
+                  className="gap-2"
+                >
+                  <Star className="h-3.5 w-3.5" />
+                  {item.isCover ? 'Cover image' : 'Set as cover'}
+                </DropdownMenuItem>
+              ) : null}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => handleDelete(item)}
+                className="gap-2 text-rose-600 focus:text-rose-600 dark:text-rose-400"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Delete
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    <div className="space-y-4">
+      <input
+        ref={uploadInputRef}
+        type="file"
+        accept={uploadAccept}
+        multiple
+        className="hidden"
+        onChange={(e) => handleFiles(e.target.files)}
+      />
+      <input
+        ref={replaceInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/gif,application/pdf"
+        className="hidden"
+        onChange={(e) => handleReplace(e.target.files)}
+      />
+
+      {error ? (
+        <p className="rounded-lg bg-rose-500/15 px-3 py-2 text-sm text-rose-700 dark:text-rose-300">
+          {error}
+        </p>
+      ) : null}
+
+      {PRIMARY_FILE_SECTIONS.map((section) => {
+        const items = media.filter((item) => item.mediaType === section.type);
+        return (
+          <Card key={section.type} className={workspacePanelCard}>
+            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+              <div>
+                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                  {section.title}
+                </CardTitle>
+                <p className="text-sm text-[var(--workspace-shell-text)]/50">
+                  {section.description}
+                </p>
+              </div>
+              <Button
+                type="button"
+                disabled={pending}
+                className={workspaceBtnPrimaryMd}
+                onClick={() => startUpload(section.type, section.accept)}
+              >
+                {pending && uploadType === section.type ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                Upload
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {items.length === 0 ? (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => startUpload(section.type, section.accept)}
+                  className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-4 py-8 text-sm text-[var(--workspace-shell-text)]/50 transition-colors hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]/70"
+                >
+                  <Plus className="h-5 w-5" />
+                  Add {section.title.toLowerCase()}
+                </button>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {items.map(renderMediaCard)}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
+
+      <Card className={workspacePanelCard}>
+        <CardHeader>
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+            Videos
+          </CardTitle>
+          <p className="text-sm text-[var(--workspace-shell-text)]/50">
+            Link YouTube, Vimeo, or other hosted video URLs.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={videoUrl}
+              placeholder="https://…"
+              onChange={(e) => setVideoUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  addVideoUrl();
+                }
+              }}
+              className="bg-[var(--workspace-shell-panel)]"
+            />
+            <Button
+              type="button"
+              disabled={pending}
+              className={workspaceBtnPrimaryMd}
+              onClick={addVideoUrl}
+            >
+              <Plus className="h-4 w-4" />
+              Add video URL
+            </Button>
+          </div>
+          {videos.length === 0 ? (
+            <p className="text-sm text-[var(--workspace-shell-text)]/45">
+              No videos yet.
+            </p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {videos.map(renderMediaCard)}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <Card className={workspacePanelCard}>
+        <CardHeader>
+          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+            Marketing website
+          </CardTitle>
+          <p className="text-sm text-[var(--workspace-shell-text)]/50">
+            Public property website or microsite URL.
+          </p>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <Input
+              value={websiteUrl}
+              placeholder="https://…"
+              onChange={(e) => setWebsiteUrl(e.target.value)}
+              className="bg-[var(--workspace-shell-panel)]"
+            />
+            <Button
+              type="button"
+              disabled={pending}
+              className={workspaceBtnPrimaryMd}
+              onClick={saveWebsiteUrl}
+            >
+              {pending ? 'Saving…' : 'Save URL'}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {SECONDARY_FILE_SECTIONS.map((section) => {
+        const items = media.filter((item) => item.mediaType === section.type);
+        return (
+          <Card key={section.type} className={workspacePanelCard}>
+            <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+              <div>
+                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                  {section.title}
+                </CardTitle>
+                <p className="text-sm text-[var(--workspace-shell-text)]/50">
+                  {section.description}
+                </p>
+              </div>
+              <Button
+                type="button"
+                disabled={pending}
+                className={workspaceBtnPrimaryMd}
+                onClick={() => startUpload(section.type, section.accept)}
+              >
+                {pending && uploadType === section.type ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4" />
+                )}
+                Upload
+              </Button>
+            </CardHeader>
+            <CardContent>
+              {items.length === 0 ? (
+                <button
+                  type="button"
+                  disabled={pending}
+                  onClick={() => startUpload(section.type, section.accept)}
+                  className="flex w-full flex-col items-center justify-center gap-2 rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 px-4 py-8 text-sm text-[var(--workspace-shell-text)]/50 transition-colors hover:border-[var(--ozer-accent)]/40 hover:text-[var(--workspace-shell-text)]/70"
+                >
+                  <Plus className="h-5 w-5" />
+                  Add {section.title.toLowerCase()}
+                </button>
+              ) : (
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                  {items.map(renderMediaCard)}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        );
+      })}
 
       {lightboxItem ? (
         <div
@@ -610,7 +882,7 @@ export function ListingMediaSection({
 
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={lightboxItem.url ?? undefined}
+              src={mediaHref(lightboxItem) ?? undefined}
               alt={lightboxItem.fileName ?? 'Listing media'}
               className="max-h-full max-w-full object-contain"
               draggable={false}
@@ -664,6 +936,6 @@ export function ListingMediaSection({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </Card>
+    </div>
   );
 }

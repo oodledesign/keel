@@ -12,6 +12,8 @@ export type MatchListingSnapshot = {
   town: string | null;
   postcode: string | null;
   addressLine1: string | null;
+  latitude: number | null;
+  longitude: number | null;
   sizeMinSqft: number | null;
   sizeMaxSqft: number | null;
   askingRentPence: number | null;
@@ -27,6 +29,9 @@ export type MatchRequirementSnapshot = {
   sector: string | null;
   tenure: 'rent' | 'buy' | 'both' | null;
   locationText: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  searchRadiusMiles: number | null;
   sizeMinSqft: number | null;
   sizeMaxSqft: number | null;
   budgetMinPence: number | null;
@@ -173,6 +178,47 @@ function scoreLocation(
   requirement: MatchRequirementSnapshot,
   reasons: string[],
 ): number {
+  const listingLat = listing.latitude;
+  const listingLng = listing.longitude;
+  const reqLat = requirement.latitude;
+  const reqLng = requirement.longitude;
+  const radius = requirement.searchRadiusMiles;
+
+  const hasCoords =
+    listingLat != null &&
+    listingLng != null &&
+    reqLat != null &&
+    reqLng != null &&
+    Number.isFinite(listingLat) &&
+    Number.isFinite(listingLng) &&
+    Number.isFinite(reqLat) &&
+    Number.isFinite(reqLng);
+
+  if (hasCoords) {
+    const miles = haversineMiles(reqLat, reqLng, listingLat, listingLng);
+
+    if (radius != null && Number.isFinite(radius) && radius > 0) {
+      if (miles <= radius) {
+        reasons.push(
+          `Within ${radius} mi search radius (${miles.toFixed(1)} mi)`,
+        );
+        return WEIGHTS.location;
+      }
+      reasons.push('Outside search radius');
+      return 0;
+    }
+
+    if (miles <= 5) {
+      reasons.push(`Close by (${miles.toFixed(1)} mi)`);
+      return WEIGHTS.location;
+    }
+    if (miles <= 15) {
+      reasons.push(`Nearby (${miles.toFixed(1)} mi)`);
+      return Math.round(WEIGHTS.location * 0.5);
+    }
+    // Fall through to token overlap for distant coords
+  }
+
   const reqTokens = new Set(tokens(requirement.locationText));
   if (reqTokens.size === 0) return 0.4 * WEIGHTS.location;
 
@@ -203,6 +249,22 @@ function scoreLocation(
 
   reasons.push('Soft location overlap');
   return Math.round(WEIGHTS.location * 0.55);
+}
+
+/** Great-circle distance in miles between two WGS84 points. */
+export function haversineMiles(
+  lat1: number,
+  lon1: number,
+  lat2: number,
+  lon2: number,
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 2 * 3958.7613 * Math.asin(Math.min(1, Math.sqrt(a)));
 }
 
 function scoreTenure(

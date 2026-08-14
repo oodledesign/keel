@@ -4,6 +4,8 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { UpsertSubscriptionParams } from '@kit/billing/types';
 
+import { syncAccountCreditLimit } from '~/lib/ai/tiers';
+
 import { markBusinessUpgradedFromLite } from './business-lite';
 import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
 import { findPlanByStripePriceId } from './ozer-plan-catalog';
@@ -132,6 +134,45 @@ export async function syncKeelPlanFromSubscription(
       if (plan.family === 'business') {
         await markBusinessUpgradedFromLite(admin, accountId);
         await syncFullBusinessModules(admin, accountId);
+      }
+
+      if (
+        plan.family === 'business' ||
+        plan.family === 'business_lite' ||
+        plan.family === 'commercial_property'
+      ) {
+        await syncAccountCreditLimit(accountId, admin, {
+          refillRemaining: true,
+        }).catch((error) => {
+          console.error(
+            '[billing] syncAccountCreditLimit after subscription:',
+            error instanceof Error ? error.message : error,
+          );
+        });
+      }
+
+      // Clear pending seat downgrade once Stripe quantity matches (or is lower).
+      if (plan.family === 'commercial_property' && billableQuantity != null) {
+        const { data: limits } = await admin
+          .from('account_plan_limits')
+          .select('pending_billable_seats')
+          .eq('account_id', accountId)
+          .maybeSingle();
+
+        const pending =
+          (limits as { pending_billable_seats?: number | null } | null)
+            ?.pending_billable_seats ?? null;
+
+        if (pending != null && billableQuantity <= pending) {
+          await admin
+            .from('account_plan_limits')
+            .update({
+              pending_billable_seats: null,
+              pending_seats_effective_at: null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq('account_id', accountId);
+        }
       }
     } else if (plan.family === 'addon_videos') {
       const { data: existing } = await admin

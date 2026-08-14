@@ -5,7 +5,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useForm } from 'react-hook-form';
+import { type Resolver, useForm } from 'react-hook-form';
 
 import { AdminImpersonateUserDialog } from '@kit/admin/components/admin-impersonate-user-dialog';
 import { Badge } from '@kit/ui/badge';
@@ -42,11 +42,15 @@ import {
   type AdminWorkspaceRole,
 } from '~/lib/admin/admin-workspace.schema';
 
+import type { SeatUsageSummaryProps } from '~/home/[account]/members/_components/seat-usage-summary';
+import { SeatUsageSummary } from '~/home/[account]/members/_components/seat-usage-summary';
+
 export type AdminWorkspaceMember = {
   userId: string;
   name: string | null;
   email: string | null;
   role: string;
+  seatKind: 'billable' | 'support';
   isPrimaryOwner: boolean;
 };
 
@@ -56,16 +60,21 @@ export type AdminWorkspaceInvitation = {
   invitationId: number | null;
   email: string;
   role: string;
+  seatKind: 'billable' | 'support' | null;
   kind: 'member' | 'project_guest';
   status: 'pending';
   createdAt: string;
   projectName: string | null;
 };
 
+const COMMERCIAL_ADMIN_ROLES = ['owner', 'admin', 'staff'] as const;
+
 export function AdminWorkspaceMembersPanel(props: {
   accountId: string;
+  isCommercial: boolean;
   members: AdminWorkspaceMember[];
   invitations: AdminWorkspaceInvitation[];
+  seatUsage: SeatUsageSummaryProps | null;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -74,22 +83,35 @@ export function AdminWorkspaceMembersPanel(props: {
     null,
   );
 
+  const roles = props.isCommercial
+    ? COMMERCIAL_ADMIN_ROLES
+    : ADMIN_WORKSPACE_ROLES;
+
   const form = useForm<AddAdminWorkspaceMemberInput>({
-    resolver: zodResolver(AddAdminWorkspaceMemberSchema),
+    resolver: zodResolver(
+      AddAdminWorkspaceMemberSchema,
+    ) as unknown as Resolver<AddAdminWorkspaceMemberInput>,
     defaultValues: {
       accountId: props.accountId,
       email: '',
       role: 'staff',
+      seatKind: 'billable',
     },
   });
 
   return (
     <div className="space-y-6">
+      {props.seatUsage ? <SeatUsageSummary {...props.seatUsage} /> : null}
+
       <div className="rounded-lg border p-4">
         <h3 className="mb-3 text-sm font-semibold">Add or invite member</h3>
         <Form {...form}>
           <form
-            className="grid gap-3 sm:grid-cols-[1fr_10rem_auto]"
+            className={
+              props.isCommercial
+                ? 'grid gap-3 sm:grid-cols-[1fr_8rem_9rem_auto]'
+                : 'grid gap-3 sm:grid-cols-[1fr_10rem_auto]'
+            }
             onSubmit={form.handleSubmit((values) => {
               startTransition(async () => {
                 try {
@@ -103,6 +125,7 @@ export function AdminWorkspaceMembersPanel(props: {
                     accountId: props.accountId,
                     email: '',
                     role: 'staff',
+                    seatKind: 'billable',
                   });
                   router.refresh();
                 } catch (error) {
@@ -145,7 +168,7 @@ export function AdminWorkspaceMembersPanel(props: {
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      {ADMIN_WORKSPACE_ROLES.map((role) => (
+                      {roles.map((role) => (
                         <SelectItem key={role} value={role}>
                           {role}
                         </SelectItem>
@@ -156,6 +179,34 @@ export function AdminWorkspaceMembersPanel(props: {
                 </FormItem>
               )}
             />
+            {props.isCommercial ? (
+              <FormField
+                control={form.control}
+                name="seatKind"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="sr-only">Seat</FormLabel>
+                    <Select
+                      value={field.value ?? 'billable'}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Seat" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="billable">
+                          Billable seat
+                        </SelectItem>
+                        <SelectItem value="support">Support seat</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            ) : null}
             <Button type="submit" disabled={pending}>
               {pending ? 'Saving…' : 'Add / invite'}
             </Button>
@@ -164,6 +215,9 @@ export function AdminWorkspaceMembersPanel(props: {
         <p className="text-muted-foreground mt-2 text-xs">
           Existing users are added immediately. New emails get a workspace
           invitation.
+          {props.isCommercial
+            ? ' Role controls permissions; seat kind controls billing and commercial edit rights.'
+            : null}
         </p>
       </div>
 
@@ -194,6 +248,11 @@ export function AdminWorkspaceMembersPanel(props: {
                   <p className="text-muted-foreground truncate text-xs">
                     {member.email}
                   </p>
+                  {props.isCommercial ? (
+                    <Badge variant="outline" className="mt-1 capitalize">
+                      {member.seatKind} seat
+                    </Badge>
+                  ) : null}
                 </div>
                 <div className="flex items-center gap-2">
                   <AdminImpersonateUserDialog
@@ -237,7 +296,7 @@ export function AdminWorkspaceMembersPanel(props: {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {ADMIN_WORKSPACE_ROLES.map((role) => (
+                      {roles.map((role) => (
                         <SelectItem key={role} value={role}>
                           {role}
                         </SelectItem>
@@ -334,6 +393,11 @@ export function AdminWorkspaceMembersPanel(props: {
                     <Badge variant="outline">Pending</Badge>
                     {invite.kind === 'project_guest' ? (
                       <Badge variant="secondary">Project guest</Badge>
+                    ) : null}
+                    {props.isCommercial && invite.seatKind ? (
+                      <Badge variant="secondary" className="capitalize">
+                        {invite.seatKind} seat
+                      </Badge>
                     ) : null}
                   </div>
                   <p className="text-muted-foreground text-xs">

@@ -32,7 +32,9 @@ import {
 } from '../_lib/role-access';
 import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
+import { SeatUsageSummary } from './_components/seat-usage-summary';
 import { loadMembersPageData } from './_lib/server/members-page.loader';
+import { loadSeatUsageSummary } from './_lib/server/seat-usage.loader';
 
 interface TeamAccountMembersPageProps {
   params: Promise<{ account: string }>;
@@ -74,12 +76,51 @@ async function TeamAccountMembersPage({
   const [members, invitations, canAddMember, { user, account }] =
     await loadMembersPageData(client, slug);
 
-  const { data: inviteProjects } = await client
-    .from('projects')
-    .select('id, name')
-    .eq('account_id', account.id)
-    .order('name')
-    .limit(200);
+  const isCommercial = workspace.workspaceProfile === 'commercial_property';
+
+  const [{ data: inviteProjects }, seatUsage, seatKindRows] = await Promise.all(
+    [
+      client
+        .from('projects')
+        .select('id, name')
+        .eq('account_id', account.id)
+        .order('name')
+        .limit(200),
+      loadSeatUsageSummary(
+        client,
+        account.id,
+        account.slug,
+        workspace.workspaceProfile,
+      ),
+      isCommercial
+        ? (
+            client as unknown as {
+              from: (t: string) => {
+                select: (c: string) => {
+                  eq: (
+                    col: string,
+                    val: string,
+                  ) => Promise<{
+                    data: Array<{ user_id: string; seat_kind: string }> | null;
+                  }>;
+                };
+              };
+            }
+          )
+            .from('accounts_memberships')
+            .select('user_id, seat_kind')
+            .eq('account_id', account.id)
+        : Promise.resolve({
+            data: [] as Array<{ user_id: string; seat_kind: string }>,
+          }),
+    ],
+  );
+
+  const seatKindByUserId: Record<string, 'billable' | 'support'> = {};
+  for (const row of seatKindRows.data ?? []) {
+    seatKindByUserId[row.user_id as string] =
+      row.seat_kind === 'support' ? 'support' : 'billable';
+  }
 
   const canManageRoles =
     account.permissions?.includes('roles.manage') || access.canManageRoles;
@@ -138,9 +179,7 @@ async function TeamAccountMembersPage({
                     userRoleHierarchy={currentUserRoleHierarchy}
                     accountSlug={account.slug}
                     defaultOpen={openInvite}
-                    showSeatKind={
-                      workspace.workspaceProfile === 'commercial_property'
-                    }
+                    showSeatKind={isCommercial}
                     projects={(inviteProjects ?? []).map((project) => ({
                       id: project.id,
                       name: project.name?.trim() || 'Untitled project',
@@ -158,7 +197,8 @@ async function TeamAccountMembersPage({
               </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="space-y-4">
+              <SeatUsageSummary {...seatUsage} />
               <AccountMembersTable
                 userRoleHierarchy={currentUserRoleHierarchy}
                 currentUserId={user.id}
@@ -166,6 +206,8 @@ async function TeamAccountMembersPage({
                 members={members}
                 isPrimaryOwner={isPrimaryOwner}
                 canManageRoles={canManageRoles}
+                showSeatKind={isCommercial}
+                seatKindByUserId={seatKindByUserId}
               />
             </CardContent>
           </Card>

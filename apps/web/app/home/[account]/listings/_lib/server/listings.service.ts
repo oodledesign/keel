@@ -12,6 +12,8 @@ import type {
   DisposalType,
   ListingStatus,
 } from '~/lib/commercial/commercial-constants';
+import { geocodeListingAddress } from '~/lib/commercial/geocode-listing';
+import { recordListingEvent } from '~/lib/commercial/listing-events';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   pushListingToPropertyHive,
@@ -147,6 +149,14 @@ export type CommercialListing = {
   description: string | null;
   locationCopy: string | null;
   keyPoints: string[];
+  amenities: string[];
+  marketingSections: Array<{
+    id: string;
+    kind: 'promo' | 'specifications' | 'viewings' | 'terms' | 'custom';
+    title: string;
+    body: string;
+  }>;
+  websiteUrl: string | null;
   onMarketAt: string | null;
   offMarketAt: string | null;
   landlordShareToken: string | null;
@@ -166,6 +176,8 @@ export type CommercialListing = {
   actingAgents?: ListingAgent[];
   /** External co-marketing agents (workspace clients) when loaded. */
   coAgents?: ListingCoAgent[];
+  /** Linked interest matches count when loaded with list match counts. */
+  matchCount?: number;
 };
 
 export type ListingMemberOption = {
@@ -358,6 +370,43 @@ function mapKeyPoints(value: unknown): string[] {
     .filter(Boolean);
 }
 
+function mapAmenities(value: unknown): string[] {
+  return mapKeyPoints(value);
+}
+
+function mapMarketingSections(
+  value: unknown,
+): CommercialListing['marketingSections'] {
+  if (!Array.isArray(value)) return [];
+  const allowed = new Set([
+    'promo',
+    'specifications',
+    'viewings',
+    'terms',
+    'custom',
+  ]);
+  return value
+    .map((item) => {
+      if (!item || typeof item !== 'object') return null;
+      const row = item as Record<string, unknown>;
+      const kind = String(row.kind ?? '');
+      if (!allowed.has(kind)) return null;
+      const title = String(row.title ?? '').trim();
+      const body = String(row.body ?? '');
+      const id = String(row.id ?? '').trim() || randomBytes(8).toString('hex');
+      if (!title) return null;
+      return {
+        id,
+        kind: kind as CommercialListing['marketingSections'][number]['kind'],
+        title,
+        body,
+      };
+    })
+    .filter((item): item is CommercialListing['marketingSections'][number] =>
+      Boolean(item),
+    );
+}
+
 function mapListing(row: ListingRow): CommercialListing {
   return {
     id: row.id,
@@ -418,6 +467,9 @@ function mapListing(row: ListingRow): CommercialListing {
     description: (row.description as string | null) ?? null,
     locationCopy: (row.location_copy as string | null) ?? null,
     keyPoints: mapKeyPoints(row.key_points),
+    amenities: mapAmenities(row.amenities),
+    marketingSections: mapMarketingSections(row.marketing_sections),
+    websiteUrl: (row.website_url as string | null) ?? null,
     onMarketAt: (row.on_market_at as string | null) ?? null,
     offMarketAt: (row.off_market_at as string | null) ?? null,
     landlordShareToken: (row.landlord_share_token as string | null) ?? null,
@@ -647,6 +699,15 @@ function writeColumns(input: Partial<CreateListingInput>) {
     ...(input.keyPoints !== undefined && {
       key_points: input.keyPoints ?? [],
     }),
+    ...(input.amenities !== undefined && {
+      amenities: input.amenities ?? [],
+    }),
+    ...(input.marketingSections !== undefined && {
+      marketing_sections: input.marketingSections ?? [],
+    }),
+    ...(input.websiteUrl !== undefined && {
+      website_url: input.websiteUrl?.trim() ? input.websiteUrl.trim() : null,
+    }),
     ...(input.notes !== undefined && { notes: input.notes }),
     ...(input.externalId !== undefined && { external_id: input.externalId }),
     ...(input.instructingClientId !== undefined && {
@@ -851,6 +912,37 @@ async function attachCoAgents(
   }));
 }
 
+async function attachMatchCounts(
+  client: SupabaseClient,
+  accountId: string,
+  listings: CommercialListing[],
+): Promise<CommercialListing[]> {
+  if (listings.length === 0) return listings;
+
+  const listingIds = listings.map((l) => l.id);
+  const { data, error } = await client
+    .from('commercial_matches')
+    .select('listing_id')
+    .eq('account_id', accountId)
+    .in('listing_id', listingIds);
+
+  if (error) {
+    console.error('[listings] attachMatchCounts:', error.message);
+    return listings.map((listing) => ({ ...listing, matchCount: 0 }));
+  }
+
+  const counts = new Map<string, number>();
+  for (const row of data ?? []) {
+    const listingId = row.listing_id as string;
+    counts.set(listingId, (counts.get(listingId) ?? 0) + 1);
+  }
+
+  return listings.map((listing) => ({
+    ...listing,
+    matchCount: counts.get(listing.id) ?? 0,
+  }));
+}
+
 export function createListingsService(client: SupabaseClient) {
   return {
     async listListings(
@@ -861,7 +953,8 @@ export function createListingsService(client: SupabaseClient) {
         .from('commercial_listings')
         .select('*')
         .eq('account_id', accountId)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false });
 
       if (status) {
         query = query.eq('status', status);
@@ -881,7 +974,8 @@ export function createListingsService(client: SupabaseClient) {
         accountId,
         withCovers,
       );
-      return attachCoAgents(client, accountId, withAgents);
+      const withCoAgents = await attachCoAgents(client, accountId, withAgents);
+      return attachMatchCounts(client, accountId, withCoAgents);
     },
 
     async listListingsPage(input: {
@@ -901,6 +995,7 @@ export function createListingsService(client: SupabaseClient) {
         .select('*', { count: 'exact' })
         .eq('account_id', input.accountId)
         .order('updated_at', { ascending: false })
+        .order('created_at', { ascending: false })
         .range(from, to);
 
       if (input.status) {
@@ -940,7 +1035,16 @@ export function createListingsService(client: SupabaseClient) {
         input.accountId,
         withCovers,
       );
-      const enriched = await attachCoAgents(client, input.accountId, withAgents);
+      const withCoAgents = await attachCoAgents(
+        client,
+        input.accountId,
+        withAgents,
+      );
+      const enriched = await attachMatchCounts(
+        client,
+        input.accountId,
+        withCoAgents,
+      );
       return { data: enriched, total: count ?? 0 };
     },
 
@@ -982,12 +1086,32 @@ export function createListingsService(client: SupabaseClient) {
       const [withAgents] = await attachActingAgents(client, accountId, [
         withCover ?? mapped,
       ]);
-      return withAgents ?? withCover ?? mapped;
+      const [withMatches] = await attachMatchCounts(client, accountId, [
+        withAgents ?? withCover ?? mapped,
+      ]);
+      return withMatches ?? withAgents ?? withCover ?? mapped;
     },
 
     async createListing(
       input: CreateListingInput & { createdBy?: string | null },
     ): Promise<CommercialListing> {
+      let latitude = input.latitude ?? null;
+      let longitude = input.longitude ?? null;
+      if (latitude == null || longitude == null) {
+        const geo = await geocodeListingAddress({
+          addressLine1: input.addressLine1,
+          addressLine2: input.addressLine2,
+          town: input.town,
+          county: input.county,
+          postcode: input.postcode,
+          country: input.country,
+        });
+        if (geo) {
+          latitude = geo.latitude;
+          longitude = geo.longitude;
+        }
+      }
+
       const { data, error } = await client
         .from('commercial_listings')
         .insert({
@@ -999,8 +1123,8 @@ export function createListingsService(client: SupabaseClient) {
           postcode: input.postcode ?? null,
           country: input.country ?? 'GB',
           county: input.county ?? null,
-          latitude: input.latitude ?? null,
-          longitude: input.longitude ?? null,
+          latitude,
+          longitude,
           sector: input.sector ?? null,
           tenure: input.tenure ?? null,
           disposal_type: input.disposalType ?? 'to_let',
@@ -1030,6 +1154,11 @@ export function createListingsService(client: SupabaseClient) {
           description: input.description ?? null,
           location_copy: input.locationCopy ?? null,
           key_points: input.keyPoints ?? [],
+          amenities: input.amenities ?? [],
+          marketing_sections: input.marketingSections ?? [],
+          website_url: input.websiteUrl?.trim()
+            ? input.websiteUrl.trim()
+            : null,
           notes: input.notes ?? null,
           external_id: input.externalId ?? null,
           instructing_client_id: input.instructingClientId ?? null,
@@ -1050,6 +1179,18 @@ export function createListingsService(client: SupabaseClient) {
         listingId: listing.id,
         status: listing.status,
       });
+      try {
+        await recordListingEvent(client, {
+          accountId: input.accountId,
+          listingId: listing.id,
+          actorUserId: input.createdBy ?? null,
+          eventType: 'listing_created',
+          summary: `Listing created (${listing.status})`,
+          metadata: { status: listing.status },
+        });
+      } catch {
+        /* best-effort */
+      }
       return listing;
     },
 
@@ -1058,11 +1199,15 @@ export function createListingsService(client: SupabaseClient) {
       accountId: string,
       input: Omit<UpdateListingInput, 'listingId' | 'accountId'>,
     ): Promise<CommercialListing> {
+      const existing = await this.getListing(listingId, accountId);
+      if (!existing) {
+        throw new Error('Listing not found');
+      }
+
       const patch = writeColumns(input);
 
       if (input.status === 'marketing') {
-        const existing = await this.getListing(listingId, accountId);
-        if (existing && !existing.onMarketAt) {
+        if (!existing.onMarketAt) {
           Object.assign(patch, { on_market_at: new Date().toISOString() });
         }
       }
@@ -1073,6 +1218,49 @@ export function createListingsService(client: SupabaseClient) {
         input.status === 'withdrawn'
       ) {
         Object.assign(patch, { off_market_at: new Date().toISOString() });
+      }
+
+      const addressChanged =
+        (input.addressLine1 !== undefined &&
+          input.addressLine1 !== existing.addressLine1) ||
+        (input.addressLine2 !== undefined &&
+          input.addressLine2 !== existing.addressLine2) ||
+        (input.town !== undefined && input.town !== existing.town) ||
+        (input.county !== undefined && input.county !== existing.county) ||
+        (input.postcode !== undefined &&
+          input.postcode !== existing.postcode) ||
+        (input.country !== undefined && input.country !== existing.country);
+
+      const coordsProvided =
+        input.latitude !== undefined || input.longitude !== undefined;
+      const missingCoords = coordsProvided
+        ? (input.latitude ?? existing.latitude) == null ||
+          (input.longitude ?? existing.longitude) == null
+        : existing.latitude == null || existing.longitude == null;
+
+      if (!coordsProvided && (addressChanged || missingCoords)) {
+        const geo = await geocodeListingAddress({
+          addressLine1:
+            input.addressLine1 !== undefined
+              ? input.addressLine1
+              : existing.addressLine1,
+          addressLine2:
+            input.addressLine2 !== undefined
+              ? input.addressLine2
+              : existing.addressLine2,
+          town: input.town !== undefined ? input.town : existing.town,
+          county: input.county !== undefined ? input.county : existing.county,
+          postcode:
+            input.postcode !== undefined ? input.postcode : existing.postcode,
+          country:
+            input.country !== undefined ? input.country : existing.country,
+        });
+        if (geo) {
+          Object.assign(patch, {
+            latitude: geo.latitude,
+            longitude: geo.longitude,
+          });
+        }
       }
 
       const { data, error } = await client
@@ -1093,7 +1281,73 @@ export function createListingsService(client: SupabaseClient) {
         listingId,
         status: input.status,
       });
+      if (input.status && input.status !== existing.status) {
+        try {
+          await recordListingEvent(client, {
+            accountId,
+            listingId,
+            eventType: 'status_changed',
+            summary: `Status ${existing.status} → ${input.status}`,
+            metadata: {
+              previousStatus: existing.status,
+              status: input.status,
+            },
+          });
+        } catch {
+          /* best-effort */
+        }
+      }
       return listing;
+    },
+
+    async backfillListingLocations(
+      accountId: string,
+      opts?: { limit?: number },
+    ): Promise<{ attempted: number; updated: number }> {
+      const limit = Math.min(Math.max(opts?.limit ?? 40, 1), 100);
+      const { data, error } = await client
+        .from('commercial_listings')
+        .select('*')
+        .eq('account_id', accountId)
+        .or('latitude.is.null,longitude.is.null')
+        .order('updated_at', { ascending: false })
+        .limit(limit);
+
+      if (error) {
+        throw new Error(error.message);
+      }
+
+      const rows = (data ?? []) as ListingRow[];
+      let updated = 0;
+
+      for (const row of rows) {
+        const listing = mapListing(row);
+        const geo = await geocodeListingAddress({
+          addressLine1: listing.addressLine1,
+          addressLine2: listing.addressLine2,
+          town: listing.town,
+          county: listing.county,
+          postcode: listing.postcode,
+          country: listing.country,
+        });
+        if (!geo) continue;
+
+        const { error: updateError } = await client
+          .from('commercial_listings')
+          .update({
+            latitude: geo.latitude,
+            longitude: geo.longitude,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', listing.id)
+          .eq('account_id', accountId);
+
+        if (!updateError) updated += 1;
+        // Soft rate-limit Mapbox forward geocoding.
+        await new Promise((r) => setTimeout(r, 120));
+      }
+
+      return { attempted: rows.length, updated };
     },
 
     async deleteListing(listingId: string, accountId: string): Promise<void> {
@@ -1338,7 +1592,23 @@ export function createListingsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to create media');
       }
 
-      return mapMedia(data as MediaRow);
+      const media = mapMedia(data as MediaRow);
+      try {
+        await recordListingEvent(client, {
+          accountId: input.accountId,
+          listingId: input.listingId,
+          eventType: 'media_changed',
+          summary: `Media added (${media.mediaType})`,
+          metadata: {
+            mediaId: media.id,
+            mediaType: media.mediaType,
+            isCover: media.isCover,
+          },
+        });
+      } catch {
+        /* best-effort */
+      }
+      return media;
     },
 
     async setMediaCover(input: {
@@ -1559,6 +1829,22 @@ export function createListingsService(client: SupabaseClient) {
 
       // Enquiries stay on Interest; WIP Instructions are landlord mandates —
       // do not dual-write a pipeline_deals row from enquiry intake.
+      try {
+        await recordListingEvent(client, {
+          accountId: input.accountId,
+          listingId: input.listingId,
+          eventType: 'enquiry_created',
+          summary: `Enquiry from ${enquiry.contactName?.trim() || 'Unknown'}`,
+          metadata: {
+            enquiryId: enquiry.id,
+            source: enquiry.source,
+            status: enquiry.status,
+          },
+        });
+      } catch {
+        /* best-effort */
+      }
+
       revalidatePath('/home', 'layout');
 
       return enquiry;

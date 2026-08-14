@@ -18,6 +18,8 @@ export const TIER_CREDIT_LIMITS: Record<string, number> = {
   'business-solo': 2_000,
   'business-team': 5_000,
   'business-scale': 12_000,
+  /** Commercial Property — same monthly pool as Business Scale */
+  'commercial-property': 12_000,
   /** @deprecated Alias — prefer business-solo */
   business: 2_000,
   /** Legacy agency key — align with Scale pool */
@@ -39,6 +41,12 @@ function mapPlanIdToTierKey(planId: string | null | undefined): string | null {
   if (planId.startsWith('business-team')) return 'business-team';
   if (planId.startsWith('business-scale')) return 'business-scale';
   if (planId.startsWith('business-')) return 'business-solo';
+  if (
+    planId.startsWith('commercial-property') ||
+    planId.includes('commercial')
+  ) {
+    return 'commercial-property';
+  }
   if (planId.includes('agency')) return 'agency';
   return null;
 }

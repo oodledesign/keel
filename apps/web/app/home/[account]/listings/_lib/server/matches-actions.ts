@@ -11,6 +11,7 @@ import {
 } from '~/lib/commercial/ai-match';
 
 import {
+  BulkCreateInterestMatchesSchema,
   CreateMatchSchema,
   DeleteMatchSchema,
   DraftMatchOutreachSchema,
@@ -18,6 +19,7 @@ import {
   ListMatchesForListingSchema,
   ListMatchesForRequirementSchema,
   MatchDigestSchema,
+  RankBookForRequirementSchema,
   SuggestMatchesSchema,
   UpdateMatchSchema,
 } from '../schema/matches.schema';
@@ -145,6 +147,61 @@ export const explainInterestSuggestions = enhanceAction(
 export const getInterestMatchDigest = enhanceAction(
   async (input) => getSuggestionsService().deskDigest(input),
   { schema: MatchDigestSchema },
+);
+
+export const rankBookForRequirement = enhanceAction(
+  async (input) => {
+    const suggestions = await getSuggestionsService().suggestForRequirement({
+      accountId: input.accountId,
+      requirementId: input.requirementId,
+      minScore: input.minScore,
+      limit: 40,
+    });
+
+    if (!input.withAi || suggestions.length === 0) {
+      return suggestions;
+    }
+
+    return explainMatchSuggestions({
+      accountId: input.accountId,
+      supabase: getSupabaseServerClient(),
+      suggestions,
+      mode: 'triage',
+    });
+  },
+  { schema: RankBookForRequirementSchema },
+);
+
+export const bulkCreateInterestMatches = enhanceAction(
+  async (input, user) => {
+    const service = getService();
+    const created: Awaited<ReturnType<typeof service.ensureMatch>>[] = [];
+    let createdCount = 0;
+    let existingCount = 0;
+
+    for (const listingId of input.listingIds) {
+      const result = await service.ensureMatch({
+        accountId: input.accountId,
+        listingId,
+        requirementId: input.requirementId,
+        notes: input.notes ?? null,
+        createdBy: user.id,
+        status: 'new',
+      });
+      created.push(result);
+      if (result.created) createdCount += 1;
+      else existingCount += 1;
+    }
+
+    revalidatePath('/home', 'layout');
+    return {
+      ok: true as const,
+      createdCount,
+      existingCount,
+      matches: created.map((r) => r.match),
+    };
+  },
+  { schema: BulkCreateInterestMatchesSchema },
 );
 
 export const draftInterestOutreach = enhanceAction(

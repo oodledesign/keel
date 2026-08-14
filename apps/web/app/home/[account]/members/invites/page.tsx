@@ -33,6 +33,8 @@ import {
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
 import { loadInvitesPageData } from '../_lib/server/members-page.loader';
+import { SeatUsageSummary } from '../_components/seat-usage-summary';
+import { loadSeatUsageSummary } from '../_lib/server/seat-usage.loader';
 
 interface TeamAccountInvitesPageProps {
   params: Promise<{ account: string }>;
@@ -71,12 +73,20 @@ async function TeamAccountInvitesPage({ params }: TeamAccountInvitesPageProps) {
     slug,
   );
 
-  const { data: inviteProjects } = await client
-    .from('projects')
-    .select('id, name')
-    .eq('account_id', account.id)
-    .order('name')
-    .limit(200);
+  const [{ data: inviteProjects }, seatUsage] = await Promise.all([
+    client
+      .from('projects')
+      .select('id, name')
+      .eq('account_id', account.id)
+      .order('name')
+      .limit(200),
+    loadSeatUsageSummary(
+      client,
+      account.id,
+      account.slug,
+      workspace.workspaceProfile,
+    ),
+  ]);
 
   const canManageRoles =
     account.permissions?.includes('roles.manage') || access.canManageRoles;
@@ -149,7 +159,8 @@ async function TeamAccountInvitesPage({ params }: TeamAccountInvitesPageProps) {
               </div>
             </CardHeader>
 
-            <CardContent>
+            <CardContent className="space-y-4">
+              <SeatUsageSummary {...seatUsage} />
               <AccountInvitationsTable
                 permissions={{
                   canUpdateInvitation: canManageRoles,

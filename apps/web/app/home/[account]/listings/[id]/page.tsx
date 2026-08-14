@@ -41,6 +41,7 @@ async function ListingOverviewPage({ params }: PageProps) {
     <ListingOverviewSection
       listing={listing}
       accountId={accountId}
+      accountSlug={slug}
       interestSummary={{
         ...interestSummary,
         upcomingViewings,

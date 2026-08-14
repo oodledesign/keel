@@ -30,6 +30,10 @@ const ALLOWED_ORIGINS = [
   SUPABASE_URL,
   WEBSOCKET_URL,
   ...(LOCAL_ALT !== SUPABASE_URL ? [LOCAL_ALT, WEBSOCKET_ALT] : []),
+  'https://api.mapbox.com',
+  'https://events.mapbox.com',
+  'https://*.tiles.mapbox.com',
+  'https://*.mapbox.com',
 ] as never[];
 
 /**
@@ -38,7 +42,15 @@ const ALLOWED_ORIGINS = [
 const IMG_SRC_ORIGINS = [
   SUPABASE_URL,
   ...(LOCAL_ALT !== SUPABASE_URL ? [LOCAL_ALT] : []),
+  'https://*.tiles.mapbox.com',
+  'https://api.mapbox.com',
 ] as never[];
+
+/**
+ * @name WORKER_SRC_ORIGINS
+ * @description Mapbox GL loads a web worker for rendering.
+ */
+const WORKER_SRC_ORIGINS = ["'self'", 'blob:'] as never[];
 
 /**
  * @name UPGRADE_INSECURE_REQUESTS
@@ -83,6 +95,12 @@ export async function createCspResponse() {
           ]),
           'https:',
           'blob:',
+        ],
+        workerSrc: [
+          ...(noseconeConfig.contentSecurityPolicy.directives.workerSrc ?? [
+            "'self'",
+          ]),
+          ...WORKER_SRC_ORIGINS,
         ],
         upgradeInsecureRequests: UPGRADE_INSECURE_REQUESTS,
       },

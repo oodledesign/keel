@@ -4,6 +4,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { RequirementStatus } from '~/lib/commercial/commercial-constants';
 import { normalizeRequirementStage } from '~/lib/commercial/commercial-constants';
+import { geocodeListingAddress } from '~/lib/commercial/geocode-listing';
 
 import type {
   CreateRequirementInput,
@@ -26,6 +27,9 @@ export type CommercialRequirement = {
   externalKey: string | null;
   tenure: 'rent' | 'buy' | 'both' | null;
   locationText: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  searchRadiusMiles: number | null;
   sizeMinSqft: number | null;
   sizeMaxSqft: number | null;
   budgetMinPence: number | null;
@@ -68,6 +72,9 @@ function mapRequirement(row: Row): CommercialRequirement {
     externalKey: (row.external_key as string | null) ?? null,
     tenure: (row.tenure as CommercialRequirement['tenure']) ?? null,
     locationText: (row.location_text as string | null) ?? null,
+    latitude: num(row.latitude),
+    longitude: num(row.longitude),
+    searchRadiusMiles: num(row.search_radius_miles),
     sizeMinSqft: num(row.size_min_sqft),
     sizeMaxSqft: num(row.size_max_sqft),
     budgetMinPence: num(row.budget_min_pence),
@@ -79,6 +86,33 @@ function mapRequirement(row: Row): CommercialRequirement {
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   };
+}
+
+async function resolveRequirementCoords(input: {
+  latitude?: number | null;
+  longitude?: number | null;
+  locationText?: string | null;
+}): Promise<{ latitude: number | null; longitude: number | null }> {
+  let latitude = input.latitude ?? null;
+  let longitude = input.longitude ?? null;
+  if (latitude != null && longitude != null) {
+    return { latitude, longitude };
+  }
+
+  const locationText = input.locationText?.trim() || null;
+  if (!locationText) {
+    return { latitude, longitude };
+  }
+
+  const geo = await geocodeListingAddress({
+    postcode: locationText,
+    addressLine1: locationText,
+  });
+  if (geo) {
+    latitude = geo.latitude;
+    longitude = geo.longitude;
+  }
+  return { latitude, longitude };
 }
 
 export function createRequirementsService(client: SupabaseClient) {
@@ -106,6 +140,12 @@ export function createRequirementsService(client: SupabaseClient) {
     async createRequirement(
       input: CreateRequirementInput & { createdBy?: string | null },
     ): Promise<CommercialRequirement> {
+      const { latitude, longitude } = await resolveRequirementCoords({
+        latitude: input.latitude,
+        longitude: input.longitude,
+        locationText: input.locationText,
+      });
+
       const { data, error } = await client
         .from('commercial_requirements')
         .insert({
@@ -123,6 +163,9 @@ export function createRequirementsService(client: SupabaseClient) {
           external_key: input.externalKey ?? null,
           tenure: input.tenure ?? null,
           location_text: input.locationText ?? null,
+          latitude,
+          longitude,
+          search_radius_miles: input.searchRadiusMiles ?? null,
           size_min_sqft: input.sizeMinSqft ?? null,
           size_max_sqft: input.sizeMaxSqft ?? null,
           budget_min_pence: input.budgetMinPence ?? null,
@@ -146,55 +189,102 @@ export function createRequirementsService(client: SupabaseClient) {
       accountId: string,
       input: Omit<UpdateRequirementInput, 'requirementId' | 'accountId'>,
     ): Promise<CommercialRequirement> {
+      const { data: existingRow, error: existingError } = await client
+        .from('commercial_requirements')
+        .select('*')
+        .eq('id', requirementId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (existingError || !existingRow) {
+        throw new Error(
+          existingError?.message ?? 'Requirement not found for this account',
+        );
+      }
+
+      const existing = mapRequirement(existingRow as Row);
+      const patch: Record<string, unknown> = {
+        ...(input.clientId !== undefined && { client_id: input.clientId }),
+        ...(input.contactId !== undefined && { contact_id: input.contactId }),
+        ...(input.contactName !== undefined && {
+          contact_name: input.contactName,
+        }),
+        ...(input.contactEmail !== undefined && {
+          contact_email: input.contactEmail,
+        }),
+        ...(input.contactPhone !== undefined && {
+          contact_phone: input.contactPhone,
+        }),
+        ...(input.companyName !== undefined && {
+          company_name: input.companyName,
+        }),
+        ...(input.sector !== undefined && { sector: input.sector }),
+        ...(input.useClass !== undefined && { use_class: input.useClass }),
+        ...(input.detailsSent !== undefined && {
+          details_sent: input.detailsSent,
+        }),
+        ...(input.detailsNote !== undefined && {
+          details_note: input.detailsNote,
+        }),
+        ...(input.externalKey !== undefined && {
+          external_key: input.externalKey,
+        }),
+        ...(input.tenure !== undefined && { tenure: input.tenure }),
+        ...(input.locationText !== undefined && {
+          location_text: input.locationText,
+        }),
+        ...(input.latitude !== undefined && { latitude: input.latitude }),
+        ...(input.longitude !== undefined && { longitude: input.longitude }),
+        ...(input.searchRadiusMiles !== undefined && {
+          search_radius_miles: input.searchRadiusMiles,
+        }),
+        ...(input.sizeMinSqft !== undefined && {
+          size_min_sqft: input.sizeMinSqft,
+        }),
+        ...(input.sizeMaxSqft !== undefined && {
+          size_max_sqft: input.sizeMaxSqft,
+        }),
+        ...(input.budgetMinPence !== undefined && {
+          budget_min_pence: input.budgetMinPence,
+        }),
+        ...(input.budgetMaxPence !== undefined && {
+          budget_max_pence: input.budgetMaxPence,
+        }),
+        ...(input.stage !== undefined && { stage: input.stage }),
+        ...(input.notes !== undefined && { notes: input.notes }),
+        ...(input.source !== undefined && { source: input.source }),
+        updated_at: new Date().toISOString(),
+      };
+
+      const locationChanged =
+        input.locationText !== undefined &&
+        (input.locationText?.trim() || null) !==
+          (existing.locationText?.trim() || null);
+
+      const coordsProvided =
+        input.latitude !== undefined || input.longitude !== undefined;
+      const missingCoords = coordsProvided
+        ? (input.latitude ?? existing.latitude) == null ||
+          (input.longitude ?? existing.longitude) == null
+        : existing.latitude == null || existing.longitude == null;
+
+      if (!coordsProvided && (locationChanged || missingCoords)) {
+        const locationText =
+          input.locationText !== undefined
+            ? input.locationText
+            : existing.locationText;
+        const geo = await resolveRequirementCoords({
+          locationText,
+        });
+        if (geo.latitude != null && geo.longitude != null) {
+          patch.latitude = geo.latitude;
+          patch.longitude = geo.longitude;
+        }
+      }
+
       const { data, error } = await client
         .from('commercial_requirements')
-        .update({
-          ...(input.clientId !== undefined && { client_id: input.clientId }),
-          ...(input.contactId !== undefined && { contact_id: input.contactId }),
-          ...(input.contactName !== undefined && {
-            contact_name: input.contactName,
-          }),
-          ...(input.contactEmail !== undefined && {
-            contact_email: input.contactEmail,
-          }),
-          ...(input.contactPhone !== undefined && {
-            contact_phone: input.contactPhone,
-          }),
-          ...(input.companyName !== undefined && {
-            company_name: input.companyName,
-          }),
-          ...(input.sector !== undefined && { sector: input.sector }),
-          ...(input.useClass !== undefined && { use_class: input.useClass }),
-          ...(input.detailsSent !== undefined && {
-            details_sent: input.detailsSent,
-          }),
-          ...(input.detailsNote !== undefined && {
-            details_note: input.detailsNote,
-          }),
-          ...(input.externalKey !== undefined && {
-            external_key: input.externalKey,
-          }),
-          ...(input.tenure !== undefined && { tenure: input.tenure }),
-          ...(input.locationText !== undefined && {
-            location_text: input.locationText,
-          }),
-          ...(input.sizeMinSqft !== undefined && {
-            size_min_sqft: input.sizeMinSqft,
-          }),
-          ...(input.sizeMaxSqft !== undefined && {
-            size_max_sqft: input.sizeMaxSqft,
-          }),
-          ...(input.budgetMinPence !== undefined && {
-            budget_min_pence: input.budgetMinPence,
-          }),
-          ...(input.budgetMaxPence !== undefined && {
-            budget_max_pence: input.budgetMaxPence,
-          }),
-          ...(input.stage !== undefined && { stage: input.stage }),
-          ...(input.notes !== undefined && { notes: input.notes }),
-          ...(input.source !== undefined && { source: input.source }),
-          updated_at: new Date().toISOString(),
-        })
+        .update(patch)
         .eq('id', requirementId)
         .eq('account_id', accountId)
         .select('*')
@@ -204,6 +294,36 @@ export function createRequirementsService(client: SupabaseClient) {
         throw new Error(error?.message ?? 'Failed to update requirement');
       }
       return mapRequirement(data as Row);
+    },
+
+    async appendNotes(
+      requirementId: string,
+      accountId: string,
+      noteBlock: string,
+      opts?: { stage?: UpdateRequirementInput['stage'] },
+    ): Promise<CommercialRequirement> {
+      const { data: existingRow, error: existingError } = await client
+        .from('commercial_requirements')
+        .select('*')
+        .eq('id', requirementId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (existingError || !existingRow) {
+        throw new Error(
+          existingError?.message ?? 'Requirement not found for this account',
+        );
+      }
+
+      const existing = mapRequirement(existingRow as Row);
+      const nextNotes = existing.notes?.trim()
+        ? `${existing.notes.trim()}\n\n${noteBlock}`
+        : noteBlock;
+
+      return this.updateRequirement(requirementId, accountId, {
+        notes: nextNotes,
+        ...(opts?.stage ? { stage: opts.stage } : {}),
+      });
     },
 
     async deleteRequirement(

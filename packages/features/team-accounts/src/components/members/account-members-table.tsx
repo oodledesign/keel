@@ -41,6 +41,9 @@ type AccountMembersTableProps = {
   userRoleHierarchy: number;
   isPrimaryOwner: boolean;
   canManageRoles: boolean;
+  /** Commercial Property: userId → seat kind */
+  seatKindByUserId?: Record<string, 'billable' | 'support'>;
+  showSeatKind?: boolean;
 };
 
 export function AccountMembersTable({
@@ -50,6 +53,8 @@ export function AccountMembersTable({
   isPrimaryOwner,
   userRoleHierarchy,
   canManageRoles,
+  seatKindByUserId,
+  showSeatKind = false,
 }: AccountMembersTableProps) {
   const [search, setSearch] = useState('');
   const { t } = useTranslation('teams');
@@ -129,6 +134,8 @@ export function AccountMembersTable({
               currentUserId={currentUserId}
               currentAccountId={currentAccountId}
               currentRoleHierarchy={userRoleHierarchy}
+              seatKind={seatKindByUserId?.[member.user_id]}
+              showSeatKind={showSeatKind}
             />
           ))}
         </div>
@@ -143,12 +150,16 @@ function MemberCard({
   currentUserId,
   currentAccountId,
   currentRoleHierarchy,
+  seatKind,
+  showSeatKind,
 }: {
   member: Members[0];
   permissions: Permissions;
   currentUserId: string;
   currentAccountId: string;
   currentRoleHierarchy: number;
+  seatKind?: 'billable' | 'support';
+  showSeatKind?: boolean;
 }) {
   const { t } = useTranslation('teams');
   const displayName = member.name ?? member.email.split('@')[0];
@@ -202,6 +213,11 @@ function MemberCard({
 
       <div className="mt-auto flex flex-wrap items-center gap-2">
         <RoleBadge role={member.role} />
+        <If condition={Boolean(showSeatKind && seatKind)}>
+          <Badge variant="outline" className="capitalize">
+            {seatKind} seat
+          </Badge>
+        </If>
         <If condition={isPrimaryOwner}>
           <span className="rounded-md bg-yellow-400/90 px-2.5 py-1 text-xs font-medium text-black">
             {t('primaryOwnerLabel')}

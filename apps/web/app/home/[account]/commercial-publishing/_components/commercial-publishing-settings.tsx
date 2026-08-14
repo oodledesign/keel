@@ -292,6 +292,36 @@ export function CommercialPublishingSettings({
 
   return (
     <div className="mx-auto max-w-3xl space-y-6">
+      {(settings.recentPublicationIssues?.length ?? 0) > 0 ? (
+        <Card className={workspacePanelCard}>
+          <CardHeader>
+            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+              Recent portal sync issues
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
+              {settings.recentPublicationIssues.map((issue) => (
+                <li
+                  key={issue.id}
+                  className="space-y-0.5 py-2.5 first:pt-0 last:pb-0"
+                >
+                  <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                    {issue.listingName ?? 'Disposal'}
+                    <span className="ml-1 font-normal text-[var(--workspace-shell-text)]/55 capitalize">
+                      · {issue.portal.replace(/_/g, ' ')}
+                    </span>
+                  </p>
+                  <p className="text-xs text-rose-500">
+                    <span className="capitalize">{issue.status}</span>
+                    {issue.lastError ? ` — ${issue.lastError}` : null}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
+      ) : null}
       <Card className={workspacePanelCard}>
         <CardHeader className="flex flex-row items-center justify-between gap-3 space-y-0">
           <CardTitle className="text-base text-[var(--workspace-shell-text)]">
