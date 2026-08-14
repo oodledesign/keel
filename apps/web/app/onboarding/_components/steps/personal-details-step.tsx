@@ -4,7 +4,10 @@ import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 
+import pathsConfig from '~/config/paths.config';
+
 import {
+  completeOnboarding,
   updateOnboardingStep,
   upsertUserSettings,
 } from '../../_lib/server/onboarding.actions';
@@ -12,7 +15,9 @@ import { PrimaryButton } from '../primary-button';
 
 interface PersonalDetailsStepProps {
   accountId: string;
+  accountSlug: string;
   nextStep: number;
+  isLastStep: boolean;
   initial?: {
     first_name: string | null;
     last_name: string | null;
@@ -22,7 +27,9 @@ interface PersonalDetailsStepProps {
 
 export function PersonalDetailsStep({
   accountId,
+  accountSlug,
   nextStep,
+  isLastStep,
   initial,
 }: PersonalDetailsStepProps) {
   const router = useRouter();
@@ -30,19 +37,47 @@ export function PersonalDetailsStep({
   const [lastName, setLastName] = useState(initial?.last_name ?? '');
   const [mobile, setMobile] = useState(initial?.mobile ?? '');
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
-    await upsertUserSettings({
-      first_name: firstName.trim() || null,
-      last_name: lastName.trim() || null,
-      mobile: mobile.trim() || null,
-    });
-    await updateOnboardingStep(accountId, nextStep);
-    setLoading(false);
-    router.push(`/onboarding?account_id=${accountId}&step=${nextStep}`);
-    router.refresh();
+    setError(null);
+
+    try {
+      const settingsResult = await upsertUserSettings({
+        first_name: firstName.trim() || null,
+        last_name: lastName.trim() || null,
+        mobile: mobile.trim() || null,
+      });
+
+      if (settingsResult?.error) {
+        setError(settingsResult.error);
+        return;
+      }
+
+      if (isLastStep) {
+        const result = await completeOnboarding(accountId);
+        if (result?.error) {
+          setError(result.error);
+          return;
+        }
+        router.push(
+          pathsConfig.app.accountHome.replace('[account]', accountSlug),
+        );
+      } else {
+        const stepResult = await updateOnboardingStep(accountId, nextStep);
+        if (stepResult?.error) {
+          setError(stepResult.error);
+          return;
+        }
+        router.push(`/onboarding?account_id=${accountId}&step=${nextStep}`);
+      }
+
+      router.refresh();
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -107,6 +142,12 @@ export function PersonalDetailsStep({
           placeholder="+44 7700 900000"
         />
       </div>
+
+      {error ? (
+        <p className="text-sm text-red-600" role="alert">
+          {error}
+        </p>
+      ) : null}
 
       <PrimaryButton type="submit" disabled={loading}>
         {loading ? 'Saving…' : 'Continue'}

@@ -7,8 +7,6 @@ import {
   TooltipTrigger,
 } from '@kit/ui/tooltip';
 
-import type { ListingAgent } from '../_lib/server/listings.service';
-
 function initials(name: string) {
   return name
     .split(/\s+/)
@@ -22,7 +20,11 @@ export function ListingAgentAvatarStack({
   agents,
   size = 'md',
 }: {
-  agents: ListingAgent[];
+  agents: Array<{
+    userId: string;
+    name: string;
+    pictureUrl: string | null;
+  }>;
   size?: 'sm' | 'md';
 }) {
   if (agents.length === 0) return null;

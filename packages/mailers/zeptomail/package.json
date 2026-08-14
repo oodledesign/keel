@@ -1,5 +1,5 @@
 {
-  "name": "@kit/mailers",
+  "name": "@kit/zeptomail",
   "private": true,
   "version": "0.1.0",
   "scripts": {
@@ -12,16 +12,14 @@
   "exports": {
     ".": "./src/index.ts"
   },
+  "dependencies": {
+    "zeptomail": "^8.0.1"
+  },
   "devDependencies": {
     "@kit/eslint-config": "workspace:*",
     "@kit/mailers-shared": "workspace:*",
-    "@kit/nodemailer": "workspace:*",
     "@kit/prettier-config": "workspace:*",
-    "@kit/resend": "workspace:*",
-    "@kit/ses": "workspace:*",
-    "@kit/shared": "workspace:*",
     "@kit/tsconfig": "workspace:*",
-    "@kit/zeptomail": "workspace:*",
     "@types/node": "catalog:",
     "zod": "catalog:"
   },

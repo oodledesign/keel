@@ -469,7 +469,9 @@ class AccountInvitationsService {
         { ...ctx, error: result.error },
         'Failed to resend invitation email',
       );
-      throw new Error('Failed to send invitation email');
+      throw new Error('Failed to send invitation email', {
+        cause: result.error,
+      });
     }
 
     logger.info(

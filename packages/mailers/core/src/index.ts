@@ -1,13 +1,13 @@
-import { MAILER_PROVIDER } from './provider-enum';
+import { MAILER_PROVIDER, resolveMailerProvider } from './provider-enum';
 import { mailerRegistry } from './registry';
 
 /**
  * @name getMailer
- * @description Get the mailer based on the environment variable using the registry internally.
+ * @description Get the mailer based on env. Prefers Zepto when ZEPTOMAIL_TOKEN is set.
  */
 export function getMailer() {
-  return mailerRegistry.get(MAILER_PROVIDER);
+  return mailerRegistry.get(resolveMailerProvider());
 }
 
-export { MAILER_PROVIDER };
+export { MAILER_PROVIDER, resolveMailerProvider };
 export { sanitizeEmailSender } from '@kit/mailers-shared';

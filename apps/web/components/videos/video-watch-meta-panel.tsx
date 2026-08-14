@@ -17,15 +17,17 @@ const VARIANT_STYLES: Record<
     panel: string;
     title: string;
     muted: string;
+    body: string;
     link: string;
     border: string;
   }
 > = {
   public: {
     panel:
-      'rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-white p-5',
-    title: 'text-sm font-semibold text-[var(--ozer-plum-900)]',
-    muted: 'text-sm text-[var(--ozer-text-muted)]',
+      'rounded-2xl border border-[color:var(--ozer-border-on-light)] bg-white p-5 sm:p-6',
+    title: 'text-base font-semibold text-[var(--ozer-plum-900)]',
+    muted: 'text-base leading-relaxed text-[var(--ozer-text-on-light-muted)]',
+    body: 'text-base leading-relaxed text-[var(--ozer-plum-900)]',
     link: 'text-[var(--ozer-info)] hover:underline',
     border: 'border-[color:var(--ozer-border-on-light)]',
   },
@@ -34,6 +36,7 @@ const VARIANT_STYLES: Record<
       'rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-5',
     title: 'text-sm font-semibold text-[var(--workspace-shell-text)]',
     muted: 'text-sm text-[var(--workspace-shell-text-muted)]',
+    body: 'text-sm leading-relaxed text-[var(--workspace-shell-text)]',
     link: 'text-[var(--ozer-accent)] hover:underline',
     border: 'border-[color:var(--workspace-shell-border)]',
   },
@@ -55,15 +58,15 @@ export function VideoChaptersList(props: {
           <li key={chapter.id}>
             <button
               type="button"
-              className={`flex w-full items-baseline gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-black/5 ${styles.muted}`}
+              className={`flex w-full items-baseline gap-3 rounded-lg px-2 py-2 text-left transition-colors hover:bg-black/5 ${styles.body}`}
               onClick={() => props.onSeek(chapter.startMs)}
             >
               <span
-                className={`shrink-0 font-mono text-xs tabular-nums ${styles.link}`}
+                className={`shrink-0 font-mono text-sm tabular-nums ${styles.link}`}
               >
                 {formatChapterTime(chapter.startMs)}
               </span>
-              <span className={`text-sm ${styles.title}`}>{chapter.title}</span>
+              <span className={styles.title}>{chapter.title}</span>
             </button>
           </li>
         ))}
@@ -104,8 +107,8 @@ export function VideoTranscriptCard(props: {
         </Button>
       </div>
       <div
-        className={`mt-3 text-sm leading-relaxed whitespace-pre-wrap ${styles.muted} ${
-          expanded ? '' : 'line-clamp-6'
+        className={`mt-3 whitespace-pre-wrap ${styles.body} ${
+          expanded ? '' : 'line-clamp-8'
         }`}
       >
         {text}
@@ -125,7 +128,7 @@ export function VideoSummaryCard(props: {
   return (
     <section className={styles.panel}>
       <h2 className={styles.title}>Summary</h2>
-      <p className={`mt-3 text-sm leading-relaxed ${styles.muted}`}>{text}</p>
+      <p className={`mt-3 ${styles.body}`}>{text}</p>
     </section>
   );
 }

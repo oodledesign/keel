@@ -19,6 +19,12 @@ import {
 } from '../../listings/_lib/server/match-suggestions.service';
 import { loadTeamWorkspace } from './team-account-workspace.loader';
 
+export type CommercialDashboardListingAgent = {
+  userId: string;
+  name: string;
+  pictureUrl: string | null;
+};
+
 export type CommercialDashboardListing = {
   id: string;
   name: string;
@@ -28,6 +34,7 @@ export type CommercialDashboardListing = {
   postcode: string | null;
   updatedAt: string;
   coverUrl: string | null;
+  agents: CommercialDashboardListingAgent[];
 };
 
 export type CommercialDashboardData = {
@@ -71,21 +78,30 @@ export async function loadCommercialDashboardData(
     );
   }
 
-  const recentListings = await attachCoverUrls(
-    client,
-    ((listingsResult.data ?? []) as Array<Record<string, unknown>>).map(
-      (row) => ({
-        id: row.id as string,
-        name: row.name as string,
-        status: row.status as string,
-        disposalType: row.disposal_type as string,
-        town: (row.town as string | null) ?? null,
-        postcode: (row.postcode as string | null) ?? null,
-        updatedAt: row.updated_at as string,
-        coverUrl: null,
-      }),
-    ),
-  );
+  const baseListings = (
+    (listingsResult.data ?? []) as Array<Record<string, unknown>>
+  ).map((row) => ({
+    id: row.id as string,
+    name: row.name as string,
+    status: row.status as string,
+    disposalType: row.disposal_type as string,
+    town: (row.town as string | null) ?? null,
+    postcode: (row.postcode as string | null) ?? null,
+    updatedAt: row.updated_at as string,
+    coverUrl: null as string | null,
+    agents: [] as CommercialDashboardListingAgent[],
+  }));
+
+  const [withCovers, withAgents] = await Promise.all([
+    attachCoverUrls(client, baseListings),
+    attachActingAgents(client, accountId, baseListings),
+  ]);
+
+  const agentsById = new Map(withAgents.map((l) => [l.id, l.agents]));
+  const recentListings = withCovers.map((listing) => ({
+    ...listing,
+    agents: agentsById.get(listing.id) ?? [],
+  }));
 
   return {
     accountSlug,
@@ -94,6 +110,71 @@ export async function loadCommercialDashboardData(
     recentListings,
     matchDigest,
   };
+}
+
+async function attachActingAgents(
+  client: SupabaseClient,
+  accountId: string,
+  listings: CommercialDashboardListing[],
+): Promise<CommercialDashboardListing[]> {
+  if (listings.length === 0) return listings;
+
+  const listingIds = listings.map((listing) => listing.id);
+  // commercial_* junction may lag generated Database types
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { data: agentRows, error } = await (client as any)
+    .from('commercial_listing_agents')
+    .select('listing_id, user_id, sort_order')
+    .eq('account_id', accountId)
+    .in('listing_id', listingIds)
+    .order('sort_order', { ascending: true });
+
+  if (error) {
+    console.error('[commercial-dashboard] acting agents:', error.message);
+    return listings;
+  }
+
+  const rows = (agentRows ?? []) as Array<{
+    listing_id: string;
+    user_id: string;
+    sort_order: number;
+  }>;
+  const userIds = [...new Set(rows.map((row) => row.user_id))];
+  const memberById = new Map<
+    string,
+    { name: string; pictureUrl: string | null }
+  >();
+
+  if (userIds.length > 0) {
+    const { data: accounts } = await client
+      .from('accounts')
+      .select('id, name, picture_url')
+      .in('id', userIds);
+    for (const row of accounts ?? []) {
+      memberById.set(row.id as string, {
+        name: (row.name as string)?.trim() || 'Team member',
+        pictureUrl: (row.picture_url as string | null) ?? null,
+      });
+    }
+  }
+
+  const agentsByListing = new Map<string, CommercialDashboardListingAgent[]>();
+  for (const row of rows) {
+    const member = memberById.get(row.user_id);
+    if (!member) continue;
+    const list = agentsByListing.get(row.listing_id) ?? [];
+    list.push({
+      userId: row.user_id,
+      name: member.name,
+      pictureUrl: member.pictureUrl,
+    });
+    agentsByListing.set(row.listing_id, list);
+  }
+
+  return listings.map((listing) => ({
+    ...listing,
+    agents: agentsByListing.get(listing.id) ?? [],
+  }));
 }
 
 async function attachCoverUrls(

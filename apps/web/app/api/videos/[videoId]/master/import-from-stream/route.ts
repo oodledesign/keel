@@ -23,23 +23,62 @@ type RouteContext = {
   params: Promise<{ videoId: string }>;
 };
 
-function pickPlayUrl(
+/** Prefer mid/low MP4s first — enough for edit + Whisper, less memory on Vercel. */
+const RESOLUTION_PREFERENCE = [
+  '480p',
+  '360p',
+  '720p',
+  '240p',
+  '1080p',
+] as const;
+
+function siteReferer() {
+  const fromEnv = process.env.NEXT_PUBLIC_SITE_URL?.trim().replace(/\/$/, '');
+  return `${fromEnv || 'https://app.ozer.so'}/`;
+}
+
+function playUrlCandidates(
   cdnHostname: string,
   bunnyVideoId: string,
   resolutions: string | null,
 ) {
   const host = cdnHostname.replace(/^https?:\/\//, '').replace(/\/$/, '');
-  if (!host || !bunnyVideoId) return null;
+  if (!host || !bunnyVideoId) return [] as string[];
 
-  const list = (resolutions ?? '')
-    .split(',')
-    .map((r) => r.trim())
-    .filter(Boolean);
-  const preferred = ['1080p', '720p', '480p', '360p', '240p'];
-  const pick =
-    preferred.find((p) => list.includes(p)) ?? list[list.length - 1] ?? '720p';
+  const available = new Set(
+    (resolutions ?? '')
+      .split(',')
+      .map((r) => r.trim())
+      .filter(Boolean),
+  );
 
-  return `https://${host}/${bunnyVideoId}/play_${pick}.mp4`;
+  const ordered = [
+    ...RESOLUTION_PREFERENCE.filter((r) => available.has(r)),
+    ...[...available].filter(
+      (r) => !(RESOLUTION_PREFERENCE as readonly string[]).includes(r),
+    ),
+  ];
+
+  if (ordered.length === 0) {
+    ordered.push('720p', '480p', '360p');
+  }
+
+  return [
+    ...ordered.map((res) => `https://${host}/${bunnyVideoId}/play_${res}.mp4`),
+    `https://${host}/${bunnyVideoId}/original`,
+  ];
+}
+
+async function downloadWithHotlinkReferer(url: string) {
+  const referer = siteReferer();
+  return fetch(url, {
+    headers: {
+      // Bunny "Block direct URL file access" requires an allowed Referer.
+      Referer: referer,
+      Origin: referer.replace(/\/$/, ''),
+    },
+    redirect: 'follow',
+  });
 }
 
 /**
@@ -100,13 +139,13 @@ export async function POST(_request: Request, context: RouteContext) {
     const bunny = createBunnyStreamClient(apiKey);
     const bunnyVideo = await bunny.getVideo(libraryId, bunnyVideoId);
     const cdnHostname = await resolveBunnyCdnHostname(libraryId);
-    const playUrl = pickPlayUrl(
+    const candidates = playUrlCandidates(
       cdnHostname,
       bunnyVideoId,
       bunnyVideo.availableResolutions,
     );
 
-    if (!playUrl) {
+    if (candidates.length === 0) {
       return NextResponse.json(
         {
           error:
@@ -116,11 +155,26 @@ export async function POST(_request: Request, context: RouteContext) {
       );
     }
 
-    const mediaRes = await fetch(playUrl);
-    if (!mediaRes.ok) {
+    let mediaRes: Response | null = null;
+    let playUrl: string | null = null;
+    let lastStatus = 0;
+
+    for (const url of candidates) {
+      const res = await downloadWithHotlinkReferer(url);
+      lastStatus = res.status;
+      if (res.ok) {
+        mediaRes = res;
+        playUrl = url;
+        break;
+      }
+    }
+
+    if (!mediaRes || !playUrl) {
       return NextResponse.json(
         {
-          error: `Could not download published video (${mediaRes.status}). Try again once status is Ready.`,
+          error: `Could not download published video (${lastStatus || 'no response'}). Bunny may still be encoding, or direct file access is blocked. You can upload a local master instead.`,
+          lastStatus,
+          canUploadLocally: true,
         },
         { status: 502 },
       );
@@ -180,12 +234,14 @@ export async function POST(_request: Request, context: RouteContext) {
       sourceUrl: playUrl,
     });
   } catch (err) {
+    console.error('[videos/master/import-from-stream]', err);
     return NextResponse.json(
       {
         error:
           err instanceof Error
             ? err.message
             : 'Failed to import master from published video',
+        canUploadLocally: true,
       },
       { status: 500 },
     );

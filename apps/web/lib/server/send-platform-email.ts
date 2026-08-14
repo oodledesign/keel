@@ -64,7 +64,12 @@ export async function sendPlatformEmail(params: {
   let errorMessage: string | null = null;
 
   try {
-    if (process.env.MAILER_PROVIDER === 'resend') {
+    // Prefer Zepto whenever ZEPTOMAIL_TOKEN is set (matches getMailer).
+    // Legacy Resend only when token is absent and MAILER_PROVIDER=resend.
+    if (
+      process.env.MAILER_PROVIDER === 'resend' &&
+      !process.env.ZEPTOMAIL_TOKEN?.trim()
+    ) {
       const mailer = await getMailer();
       await mailer.sendEmail(mail);
     } else {

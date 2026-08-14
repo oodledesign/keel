@@ -137,6 +137,7 @@ export function VideoEditorClient(props: Props) {
   const micAudioRef = useRef<HTMLAudioElement>(null);
   const systemAudioRef = useRef<HTMLAudioElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const draggingRef = useRef<{ startMs: number } | null>(null);
   const seekingRef = useRef(false);
   const previewAudioCtxRef = useRef<AudioContext | null>(null);
@@ -685,10 +686,10 @@ export function VideoEditorClient(props: Props) {
           need a master copy in storage.
         </p>
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          Import one from the published Bunny video, then use{' '}
-          <span className="font-medium">Re-time with Whisper</span> to rebuild a
-          full transcript (desktop Apple Speech often stops after a couple of
-          minutes).
+          Import one from the published Bunny video, or upload a local recording,
+          then use <span className="font-medium">Re-time with Whisper</span> to
+          rebuild a full transcript (desktop Apple Speech often stops after a
+          couple of minutes).
         </p>
         <div className="flex flex-wrap gap-3">
           <Button
@@ -701,7 +702,10 @@ export function VideoEditorClient(props: Props) {
                     `/api/videos/${props.videoId}/master/import-from-stream`,
                     { method: 'POST' },
                   );
-                  const json = await res.json();
+                  const json = (await res.json()) as {
+                    ok?: boolean;
+                    error?: string;
+                  };
                   if (!json.ok) {
                     throw new Error(json.error ?? 'Import failed');
                   }
@@ -724,6 +728,69 @@ export function VideoEditorClient(props: Props) {
               'Use published video as master'
             )}
           </Button>
+          <Button
+            type="button"
+            variant="outline"
+            disabled={isPending}
+            onClick={() => fileInputRef.current?.click()}
+          >
+            Upload local master
+          </Button>
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="video/mp4,video/quicktime,video/*"
+            className="hidden"
+            onChange={(event) => {
+              const file = event.target.files?.[0];
+              event.target.value = '';
+              if (!file) return;
+              startTransition(async () => {
+                try {
+                  toast.message('Uploading master…');
+                  const initRes = await fetch(
+                    `/api/videos/${props.videoId}/master`,
+                    {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      body: JSON.stringify({
+                        contentType: file.type || 'video/mp4',
+                        byteSize: file.size,
+                      }),
+                    },
+                  );
+                  const initJson = (await initRes.json()) as {
+                    ok?: boolean;
+                    signedUrl?: string;
+                    error?: string;
+                  };
+                  if (!initRes.ok || !initJson.ok || !initJson.signedUrl) {
+                    throw new Error(
+                      typeof initJson.error === 'string'
+                        ? initJson.error
+                        : 'Could not start master upload',
+                    );
+                  }
+                  const putRes = await fetch(initJson.signedUrl, {
+                    method: 'PUT',
+                    headers: {
+                      'Content-Type': file.type || 'video/mp4',
+                    },
+                    body: file,
+                  });
+                  if (!putRes.ok) {
+                    throw new Error(
+                      `Upload failed (${putRes.status}). Try a smaller MP4.`,
+                    );
+                  }
+                  toast.success('Master uploaded — reloading editor');
+                  window.location.reload();
+                } catch (err) {
+                  toast.error(getErrorMessage(err));
+                }
+              });
+            }}
+          />
           <Link
             href={videoHref}
             className="inline-flex h-9 items-center text-sm text-[var(--ozer-accent)]"

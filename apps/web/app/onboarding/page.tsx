@@ -138,7 +138,9 @@ export default async function OnboardingPage({
       {stepDef?.key === 'personal' && (
         <PersonalDetailsStep
           accountId={ctx.accountId}
+          accountSlug={ctx.accountSlug}
           nextStep={nextStep}
+          isLastStep={currentIndex === maxStep - 1}
           initial={getPersonalDetailsInitial(ctx.userSettings, ctx.prefillName)}
         />
       )}

@@ -29,4 +29,10 @@ mailerRegistry.register('ses', async () => {
   return createSesMailer();
 });
 
+mailerRegistry.register('zeptomail', async () => {
+  const { createZeptomailMailer } = await import('@kit/zeptomail');
+
+  return createZeptomailMailer();
+});
+
 export { mailerRegistry };

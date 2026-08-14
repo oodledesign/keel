@@ -196,8 +196,6 @@ class AccountInvitationsDispatchService {
     const { renderInviteEmail } = await import('@kit/email-templates');
     const { getMailer } = await import('@kit/mailers');
 
-    const mailer = await getMailer();
-
     const { html, subject } = await renderInviteEmail({
       link,
       invitedUserEmail: invitation.email,
@@ -206,21 +204,21 @@ class AccountInvitationsDispatchService {
       teamName: team.name,
     });
 
-    return mailer
-      .sendEmail({
+    try {
+      // getMailer() prefers Zepto when ZEPTOMAIL_TOKEN is set
+      const mailer = await getMailer();
+      await mailer.sendEmail({
         from: env.emailSender,
         to: invitation.email,
         subject,
         html,
-      })
-      .then(() => {
-        logger.info(ctx, 'Invitation email successfully sent!');
-      })
-      .catch((error) => {
-        console.error(error);
-
-        logger.error({ error, ...ctx }, 'Failed to send invitation email');
       });
+
+      logger.info(ctx, 'Invitation email successfully sent!');
+    } catch (error) {
+      logger.error({ error, ...ctx }, 'Failed to send invitation email');
+      throw error;
+    }
   }
 
   /**
