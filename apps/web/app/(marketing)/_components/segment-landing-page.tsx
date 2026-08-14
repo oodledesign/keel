@@ -935,8 +935,8 @@ async function CommercialSpotlightSections({
         className="marketing-section-plum py-20"
         aria-labelledby="ai-writing-heading"
       >
-        <div className="relative mx-auto grid w-full max-w-7xl items-start gap-10 px-6 lg:grid-cols-2 lg:gap-14">
-          <div>
+        <div className="relative mx-auto w-full max-w-7xl px-6">
+          <div className="max-w-3xl">
             <span className={marketingEyebrowOnDark}>
               <Sparkles className="mr-1.5 h-3.5 w-3.5" aria-hidden />
               AI
@@ -956,12 +956,12 @@ async function CommercialSpotlightSections({
               publishes or emails until you say so.
             </p>
           </div>
-          <ul className="space-y-3">
+          <ul className="mt-10 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-5">
             {COMMERCIAL_AI_USES.map((item) => (
-              <li key={item.title}>
-                <article className="flex gap-3 rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-08)] p-4">
+              <li key={item.title} className="min-w-0">
+                <article className="flex h-full flex-col gap-3 rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-08)] p-4">
                   <item.icon
-                    className="mt-0.5 h-5 w-5 shrink-0 text-[var(--ozer-accent)]"
+                    className="h-5 w-5 shrink-0 text-[var(--ozer-accent)]"
                     aria-hidden
                   />
                   <div>
