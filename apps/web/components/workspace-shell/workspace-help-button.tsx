@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 
-import { LifeBuoy } from 'lucide-react';
+import { ChevronDown, LifeBuoy } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -30,18 +30,25 @@ export function WorkspaceHelpButton({
     <>
       <button
         type="button"
-        onClick={() => setOpen(true)}
+        onClick={() => setOpen((value) => !value)}
         className={cn(
           triggerBaseClass,
+          open &&
+            'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]',
           variant === 'inline'
             ? 'h-12 w-12 bg-[var(--workspace-shell-panel)]/98 shadow-[0_4px_16px_rgba(42,23,32,0.12),0_8px_28px_rgba(42,23,32,0.1)] backdrop-blur-xl'
-            : 'fixed right-4 bottom-6 z-[35] hidden h-11 w-11 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] lg:flex',
+            : 'fixed right-4 bottom-6 z-[65] hidden h-11 w-11 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] lg:flex',
           className,
         )}
-        aria-label="Help and feedback"
+        aria-label={open ? 'Close help and support' : 'Help and feedback'}
+        aria-expanded={open}
         title="Help and feedback"
       >
-        <LifeBuoy className="h-5 w-5" />
+        {open ? (
+          <ChevronDown className="h-5 w-5" />
+        ) : (
+          <LifeBuoy className="h-5 w-5" />
+        )}
       </button>
 
       <PlatformSupportTicketDialog
