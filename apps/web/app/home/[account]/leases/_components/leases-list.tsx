@@ -5,7 +5,7 @@ import { useCallback, useMemo, useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import { FileText, Pencil, Plus, Trash2, Upload } from 'lucide-react';
+import { FileText, Pencil, Plus, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
@@ -27,6 +27,7 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
@@ -44,7 +45,6 @@ import {
   deleteLease,
   updateLease,
 } from '../_lib/server/server-actions';
-import { importKatoHistoricRegister } from '../_lib/server/transaction-import-actions';
 
 const STATUS_LABELS: Record<LeaseStatus, string> = {
   active: 'Active',
@@ -52,6 +52,25 @@ const STATUS_LABELS: Record<LeaseStatus, string> = {
   terminated: 'Terminated',
   completed: 'Completed',
 };
+
+const COMPLETED_STATUS_LABELS = new Set(['Completed', 'Sold', 'Let']);
+
+function StatusPill({ status }: { status: string }) {
+  const isCompleted = COMPLETED_STATUS_LABELS.has(status);
+
+  return (
+    <span
+      className={cn(
+        'inline-flex rounded-full px-2.5 py-0.5 text-[11px] font-medium',
+        isCompleted
+          ? 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+          : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
+      )}
+    >
+      {status}
+    </span>
+  );
+}
 
 const NONE_LISTING = '__none__';
 
@@ -112,37 +131,8 @@ export function LeasesList({
   const [notes, setNotes] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
-  const [importing, setImporting] = useState(false);
 
   const handleSaved = useCallback(() => router.refresh(), [router]);
-
-  const handleImportHistoric = () => {
-    if (
-      !confirm(
-        'Import historic Kato sales and lettings into this workspace? Existing imported rows with the same Kato ID will be updated.',
-      )
-    ) {
-      return;
-    }
-    setImporting(true);
-    startTransition(async () => {
-      try {
-        const result = await importKatoHistoricRegister({ accountId });
-        toast.success(
-          `Imported ${result.inserted} new, updated ${result.updated}${
-            result.skipped ? `, skipped ${result.skipped}` : ''
-          }`,
-        );
-        handleSaved();
-      } catch (err) {
-        toast.error(
-          err instanceof Error ? err.message : 'Import failed',
-        );
-      } finally {
-        setImporting(false);
-      }
-    });
-  };
 
   const listingDetailBase = pathsConfig.app.accountListingDetail.replace(
     '[account]',
@@ -341,16 +331,6 @@ export function LeasesList({
             </button>
           ))}
         </div>
-        <Button
-          type="button"
-          variant="outline"
-          disabled={importing || isPending}
-          className="border-[color:var(--workspace-shell-border)]"
-          onClick={handleImportHistoric}
-        >
-          <Upload className="h-4 w-4" />
-          {importing ? 'Importing…' : 'Import Kato history'}
-        </Button>
         <Button onClick={openCreate} className={workspaceBtnPrimaryMd}>
           <Plus className="h-4 w-4" />
           Add letting
@@ -426,8 +406,8 @@ export function LeasesList({
                       ? `${formatDate(row.lease.leaseStart)} – ${formatDate(row.lease.leaseEnd)}`
                       : formatDate(row.updatedAt)}
                   </td>
-                  <td className="px-4 py-3 text-[var(--workspace-shell-text)]/70">
-                    {row.status}
+                  <td className="px-4 py-3">
+                    <StatusPill status={row.status} />
                   </td>
                   <td className="px-4 py-3 text-right">
                     {row.lease ? (

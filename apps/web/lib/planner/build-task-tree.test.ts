@@ -26,6 +26,7 @@ function baseTask(overrides: Partial<TasksPageTask> = {}): TasksPageTask {
     areaId: null,
     clientName: null,
     clientPictureUrl: null,
+    assigneeName: null,
     workspaceName: 'Oodle',
     workspaceSlug: 'oodle',
     workspaceColor: null,

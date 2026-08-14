@@ -6,17 +6,16 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { isInsufficientCreditsError } from '~/lib/ai/router';
 import { queueEmailThreadBrainSync } from '~/lib/brain/email-thread-brain-sync';
 
-import { extractEmailAddress, isFromOwner } from './address-utils';
+import { isFromOwner } from './address-utils';
 import { autoExtractEmailActionItems } from './auto-extract-email-action-items';
 import { autoLinkEmailThread } from './auto-link-thread';
 import { createThreadDraft } from './create-thread-draft';
 import { resolveDraftOwnerContext } from './draft-owner';
 import {
-  extractEmailDomain,
-  isAddressIgnored,
-  normalizeIgnoredDomains,
-  normalizeIgnoredSenders,
-} from './ignored-senders';
+  type EmailTriageRules,
+  matchEmailTriageRule,
+  normalizeEmailTriageRules,
+} from './email-triage-rules';
 import type { MailboxKind } from './mailbox-kind';
 import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { ensureNeedsReplyWorkspaceAffinity } from './needs-reply-workspace-affinity';
@@ -60,8 +59,7 @@ type AssistantSettings = {
   auto_triage_enabled: boolean;
   auto_draft_enabled: boolean;
   auto_save_gmail_drafts: boolean;
-  ignored_senders: string[];
-  ignored_domains: string[];
+  triageRules: EmailTriageRules;
 };
 
 export async function runEmailAssistantPipeline(
@@ -96,7 +94,7 @@ export async function runEmailAssistantPipeline(
   const { data: settingsRow, error: settingsError } = await admin
     .from('email_assistant_settings')
     .select(
-      'auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders, ignored_domains',
+      'auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders, ignored_domains, ignored_subject_keywords, priority_senders, priority_domains, priority_subject_keywords',
     )
     .eq('connection_id', owner.connectionId)
     .maybeSingle();
@@ -106,23 +104,23 @@ export async function runEmailAssistantPipeline(
     return result;
   }
 
-  const settingsRowTyped = settingsRow as
-    | (Omit<AssistantSettings, 'ignored_senders' | 'ignored_domains'> & {
-        ignored_senders?: string[] | null;
-        ignored_domains?: string[] | null;
-      })
-    | null;
+  const settingsRowTyped = settingsRow as {
+    auto_triage_enabled?: boolean | null;
+    auto_draft_enabled?: boolean | null;
+    auto_save_gmail_drafts?: boolean | null;
+    ignored_senders?: string[] | null;
+    ignored_domains?: string[] | null;
+    ignored_subject_keywords?: string[] | null;
+    priority_senders?: string[] | null;
+    priority_domains?: string[] | null;
+    priority_subject_keywords?: string[] | null;
+  } | null;
 
   const settings: AssistantSettings = {
     auto_triage_enabled: settingsRowTyped?.auto_triage_enabled ?? true,
     auto_draft_enabled: settingsRowTyped?.auto_draft_enabled ?? true,
     auto_save_gmail_drafts: settingsRowTyped?.auto_save_gmail_drafts ?? false,
-    ignored_senders: normalizeIgnoredSenders(
-      settingsRowTyped?.ignored_senders ?? [],
-    ),
-    ignored_domains: normalizeIgnoredDomains(
-      settingsRowTyped?.ignored_domains ?? [],
-    ),
+    triageRules: normalizeEmailTriageRules(settingsRowTyped),
   };
 
   if (!settings.auto_triage_enabled && !settings.auto_draft_enabled) {
@@ -201,29 +199,30 @@ export async function runEmailAssistantPipeline(
 
     const latest = latestMessage as MessageRow;
 
-    if (
-      isAddressIgnored(latest.from_address, {
-        senders: settings.ignored_senders,
-        domains: settings.ignored_domains,
-      })
-    ) {
-      const ignoredLabel =
-        extractEmailAddress(latest.from_address) ??
-        extractEmailDomain(latest.from_address) ??
-        'unknown';
-      const { error: ignoreUpdateError } = await admin
+    const ruleMatch = matchEmailTriageRule(
+      {
+        fromAddress: latest.from_address,
+        subject: latest.subject ?? thread.subject,
+      },
+      settings.triageRules,
+    );
+
+    if (ruleMatch) {
+      const category =
+        ruleMatch.action === 'ignore' ? 'no_reply' : 'needs_reply';
+      const { error: ruleUpdateError } = await admin
         .from('email_threads')
         .update({
-          assistant_category: 'no_reply',
-          assistant_category_reason: `Sender or domain ignored (${ignoredLabel})`,
+          assistant_category: category,
+          assistant_category_reason: ruleMatch.reason,
           assistant_processed_message_id: latest.id,
           updated_at: new Date().toISOString(),
         })
         .eq('id', thread.id)
         .eq('user_id', userId);
 
-      if (ignoreUpdateError) {
-        result.errors.push(ignoreUpdateError.message);
+      if (ruleUpdateError) {
+        result.errors.push(ruleUpdateError.message);
       } else {
         result.classified += 1;
       }

@@ -24,7 +24,10 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const video = access.video!;
   if (!video.account_id) {
-    return NextResponse.json({ error: 'Video has no account' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Video has no account' },
+      { status: 500 },
+    );
   }
 
   try {

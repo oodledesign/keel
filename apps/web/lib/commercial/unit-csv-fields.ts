@@ -36,7 +36,7 @@ export const UNIT_CSV_FIELD_OPTIONS: Array<{
   label: string;
 }> = [
   { value: CSV_SKIP_FIELD, label: "Don't import" },
-  { value: 'external_id', label: 'External ID (Kato ID)' },
+  { value: 'external_id', label: 'External ID' },
   { value: 'listing_address', label: 'Parent listing address' },
   { value: 'label', label: 'Unit label' },
   { value: 'floor_or_unit', label: 'Level / floor' },
@@ -132,7 +132,7 @@ export function heuristicUnitMapping(
   return {
     mapping,
     confidence: 'high',
-    notes: 'Mapped using Kato floor-units column names',
+    notes: 'Mapped using floor-units column names',
   };
 }
 

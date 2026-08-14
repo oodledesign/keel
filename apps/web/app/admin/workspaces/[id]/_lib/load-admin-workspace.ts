@@ -48,7 +48,10 @@ export const loadAdminWorkspaceDetail = cache(
     const adminUntyped = admin as unknown as {
       from: (table: string) => {
         select: (cols: string) => {
-          eq: (col: string, val: string) => {
+          eq: (
+            col: string,
+            val: string,
+          ) => {
             order: (
               col: string,
               opts: { ascending: boolean },

@@ -1,6 +1,12 @@
 'use client';
 
-import { useCallback, useEffect, useImperativeHandle, useRef, useState } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useRef,
+  useState,
+} from 'react';
 
 import {
   type VideoEditTimeline,

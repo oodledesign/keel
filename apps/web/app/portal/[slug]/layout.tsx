@@ -10,6 +10,7 @@ import { isAgencyPortalRequest } from '~/lib/agency-portal-request';
 import { AgencyPortalShell } from './_components/agency-portal-shell';
 import { PortalShell } from './_components/portal-shell';
 import { loadClientPortalContext } from './_lib/server/client-portal.loader';
+import { createPortalCreditsService } from './_lib/server/portal-credits.service';
 
 interface PortalSlugLayoutProps {
   children: ReactNode;
@@ -36,6 +37,18 @@ export default async function PortalSlugLayout({
 
   const ctx = await loadClientPortalContext(slug);
 
+  let creditBalance = 0;
+  let creditsPerCycle: number | null = null;
+  try {
+    const credits = await createPortalCreditsService(
+      getSupabaseServerClient(),
+    ).getCreditsBundle(ctx.clientOrgId);
+    creditBalance = credits.balance;
+    creditsPerCycle = credits.creditsPerCycle;
+  } catch {
+    // Credits are optional — keep the shell usable if the pool is missing.
+  }
+
   return (
     <PortalShell
       clientSlug={slug}
@@ -43,8 +56,11 @@ export default async function PortalSlugLayout({
       clientPictureUrl={ctx.clientPictureUrl}
       accountName={ctx.accountName}
       accountLogoUrl={ctx.accountLogoUrl}
+      displayName={ctx.displayName}
       userEmail={ctx.userEmail}
       userAvatarUrl={ctx.userAvatarUrl}
+      creditBalance={creditBalance}
+      creditsPerCycle={creditsPerCycle}
       hasWorkspaceAccess={ctx.hasWorkspaceAccess}
       showWebsiteNav={ctx.showWebsiteNav}
       showProjectsNav={ctx.showProjectsNav}

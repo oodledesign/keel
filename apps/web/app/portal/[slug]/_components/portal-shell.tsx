@@ -6,20 +6,18 @@ import { usePathname } from 'next/navigation';
 import {
   Briefcase,
   CheckSquare,
-  Coins,
-  CreditCard,
   Globe,
   Layers,
   LayoutDashboard,
   MessageSquare,
-  Settings,
 } from 'lucide-react';
 
-import { useSignOut } from '@kit/supabase/hooks/use-sign-out';
 import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
-import { Button } from '@kit/ui/button';
 
 import pathsConfig from '~/config/paths.config';
+
+import { PortalProfileDropdown } from './portal-profile-dropdown';
+import { PortalSupportFab } from './portal-support-fab';
 
 const iconClasses = 'w-4 h-4';
 
@@ -63,24 +61,6 @@ const navItems = [
     pathKey: 'clientPortalSupport' as const,
     icon: <Layers className={iconClasses} />,
   },
-  {
-    key: 'credits',
-    label: 'Credits',
-    pathKey: 'clientPortalCredits' as const,
-    icon: <Coins className={iconClasses} />,
-  },
-  {
-    key: 'billing',
-    label: 'Billing',
-    pathKey: 'clientPortalBilling' as const,
-    icon: <CreditCard className={iconClasses} />,
-  },
-  {
-    key: 'settings',
-    label: 'Settings',
-    pathKey: 'clientPortalSettings' as const,
-    icon: <Settings className={iconClasses} />,
-  },
 ];
 
 function createPortalPath(
@@ -95,6 +75,15 @@ function isNavActive(pathname: string, href: string, key: string) {
     return pathname === href;
   }
 
+  if (key === 'services') {
+    // Keep Services highlighted on credits (credits lives under Services).
+    return (
+      pathname === href ||
+      pathname.startsWith(`${href}/`) ||
+      pathname.includes('/credits')
+    );
+  }
+
   return pathname === href || pathname.startsWith(`${href}/`);
 }
 
@@ -103,6 +92,19 @@ function initials(label: string) {
   if (parts.length === 0) return '?';
   if (parts.length === 1) return parts[0]!.slice(0, 2).toUpperCase();
   return `${parts[0]![0] ?? ''}${parts[1]![0] ?? ''}`.toUpperCase();
+}
+
+function normalizeLogoUrl(url: string | null | undefined): string | null {
+  const trimmed = url?.trim();
+  if (!trimmed) return null;
+  try {
+    const parsed = new URL(trimmed);
+    parsed.search = '';
+    parsed.hash = '';
+    return parsed.toString();
+  } catch {
+    return trimmed.split('?')[0] || trimmed;
+  }
 }
 
 function PortalBrandMark(props: {
@@ -128,8 +130,11 @@ export function PortalShell({
   clientPictureUrl = null,
   accountName = null,
   accountLogoUrl = null,
+  displayName,
   userEmail,
   userAvatarUrl,
+  creditBalance = 0,
+  creditsPerCycle = null,
   hasWorkspaceAccess = false,
   showWebsiteNav = true,
   showProjectsNav = false,
@@ -141,8 +146,11 @@ export function PortalShell({
   clientPictureUrl?: string | null;
   accountName?: string | null;
   accountLogoUrl?: string | null;
+  displayName: string;
   userEmail: string | null;
   userAvatarUrl?: string | null;
+  creditBalance?: number;
+  creditsPerCycle?: number | null;
   hasWorkspaceAccess?: boolean;
   showWebsiteNav?: boolean;
   showProjectsNav?: boolean;
@@ -150,7 +158,6 @@ export function PortalShell({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
-  const signOut = useSignOut();
 
   const visibility: Record<string, boolean> = {
     showWebsiteNav,
@@ -158,12 +165,16 @@ export function PortalShell({
     showMessagesNav,
   };
 
-  const primaryLogo = clientPictureUrl || accountLogoUrl;
+  const clientLogo = normalizeLogoUrl(clientPictureUrl);
+  const agencyLogo = normalizeLogoUrl(accountLogoUrl);
   const agencyName = accountName?.trim() || 'Agency';
+
+  // Client logo is primary when present; agency logo only as a badge when both
+  // exist and are different. Never show the agency mark twice.
+  const primaryLogo = clientLogo ?? agencyLogo;
+  const primaryLabel = clientLogo ? orgName : agencyName;
   const secondaryLogo =
-    accountLogoUrl && accountLogoUrl !== clientPictureUrl
-      ? accountLogoUrl
-      : null;
+    clientLogo && agencyLogo && agencyLogo !== clientLogo ? agencyLogo : null;
 
   return (
     <div className="min-h-screen bg-[var(--workspace-shell-canvas)] text-[var(--workspace-shell-text)]">
@@ -174,7 +185,7 @@ export function PortalShell({
               <div className="relative shrink-0">
                 <PortalBrandMark
                   src={primaryLogo}
-                  label={orgName}
+                  label={primaryLabel}
                   sizeClass="size-12"
                 />
                 {secondaryLogo ? (
@@ -197,34 +208,15 @@ export function PortalShell({
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              {userEmail ? (
-                <span className="hidden items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)] sm:flex">
-                  {userAvatarUrl ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={userAvatarUrl}
-                      alt=""
-                      className="h-6 w-6 rounded-full object-cover"
-                    />
-                  ) : null}
-                  {userEmail}
-                </span>
-              ) : null}
-              {hasWorkspaceAccess ? (
-                <Button type="button" variant="outline" size="sm" asChild>
-                  <Link href={pathsConfig.app.home}>Back to Ozer</Link>
-                </Button>
-              ) : null}
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                onClick={() => signOut.mutateAsync()}
-              >
-                Sign out
-              </Button>
-            </div>
+            <PortalProfileDropdown
+              clientSlug={clientSlug}
+              displayName={displayName}
+              userEmail={userEmail}
+              userAvatarUrl={userAvatarUrl}
+              creditBalance={creditBalance}
+              creditsPerCycle={creditsPerCycle}
+              hasWorkspaceAccess={hasWorkspaceAccess}
+            />
           </div>
 
           <nav className="flex flex-wrap gap-1">
@@ -256,6 +248,8 @@ export function PortalShell({
       <main className="mx-auto max-w-6xl px-4 py-8 sm:px-6 lg:px-8">
         {children}
       </main>
+
+      <PortalSupportFab clientSlug={clientSlug} />
     </div>
   );
 }

@@ -189,7 +189,10 @@ function parseFeeGbp(raw: string): number | null {
   return Number.isFinite(n) ? n : null;
 }
 
-function splitPropertyCell(raw: string): { title: string; meta: string | null } {
+function splitPropertyCell(raw: string): {
+  title: string;
+  meta: string | null;
+} {
   const lines = raw
     .split(/\r?\n/)
     .map((line) => line.trim())
@@ -359,11 +362,7 @@ export function parseBrackettsWipCsvRows(
 
       // Under Management, short service lines stay on the open parent;
       // other empty headers start a new portfolio group.
-      if (
-        openPortfolio &&
-        ctx.portfolioMode &&
-        isManagementChildLabel(title)
-      ) {
+      if (openPortfolio && ctx.portfolioMode && isManagementChildLabel(title)) {
         openPortfolio.childLabels.push(meta ? `${title} — ${meta}` : title);
         continue;
       }

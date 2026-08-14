@@ -9,6 +9,7 @@ import {
   ChevronUp,
   FileText,
   Loader2,
+  MoreHorizontal,
   Sparkles,
   X,
 } from 'lucide-react';
@@ -28,6 +29,16 @@ import { cn } from '@kit/ui/utils';
 import { useAiCreditsExhausted } from '~/components/ai/ai-credits-exhausted-context';
 import { listTemplatesPickerAction } from '~/lib/content-templates/account.actions';
 import type { PickerTemplate } from '~/lib/content-templates/types';
+import {
+  addEmailTriageRuleFromThreadAction,
+  ignoreEmailNeedsReplyAction,
+  markEmailNeedsReplyAction,
+} from '~/lib/email-assistant/email-assistant.actions';
+import type {
+  EmailTriageAction,
+  EmailTriageScope,
+} from '~/lib/email-assistant/email-triage-rules.shared';
+import { triageRuleSuccessMessage } from '~/lib/email-assistant/email-triage-rules.shared';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 import {
   previewEmailBody,
@@ -45,6 +56,7 @@ import type {
 } from '../_lib/types';
 import { AcceptActionItemDialog } from './accept-action-item-dialog';
 import { EmailThreadLinkSection } from './email-thread-link-section';
+import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -284,6 +296,97 @@ export function EmailThreadPanel({
     });
   }
 
+  function markNeedsReply() {
+    if (!threadId) return;
+    startTransition(async () => {
+      try {
+        await markEmailNeedsReplyAction({ threadId });
+        setDetail((current) =>
+          current
+            ? {
+                ...current,
+                thread: {
+                  ...current.thread,
+                  assistant_category: 'needs_reply',
+                },
+              }
+            : current,
+        );
+        toast.success('Marked as needing a reply');
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not mark as needing a reply',
+        );
+      }
+    });
+  }
+
+  function clearNeedsReply() {
+    if (!threadId) return;
+    startTransition(async () => {
+      try {
+        await ignoreEmailNeedsReplyAction({ threadId });
+        setDetail((current) =>
+          current
+            ? {
+                ...current,
+                thread: {
+                  ...current.thread,
+                  assistant_category: 'no_reply',
+                },
+              }
+            : current,
+        );
+        toast.success('Marked as no reply needed');
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not update this email',
+        );
+      }
+    });
+  }
+
+  function addTriageRule(action: EmailTriageAction, scope: EmailTriageScope) {
+    if (!threadId) return;
+    startTransition(async () => {
+      try {
+        const result = await addEmailTriageRuleFromThreadAction({
+          threadId,
+          action,
+          scope,
+        });
+        setDetail((current) =>
+          current
+            ? {
+                ...current,
+                thread: {
+                  ...current.thread,
+                  assistant_category:
+                    action === 'ignore' ? 'no_reply' : 'needs_reply',
+                },
+              }
+            : current,
+        );
+        toast.success(
+          triageRuleSuccessMessage(
+            action,
+            scope,
+            result.value,
+            result.affectedCount,
+          ),
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save triage rule',
+        );
+      }
+    });
+  }
+
   if (!threadId) {
     return (
       <section
@@ -369,6 +472,42 @@ export function EmailThreadPanel({
                 {detail.messages.length === 1 ? '' : 's'}
               </p>
             </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="mt-0.5 shrink-0 text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                  disabled={pending}
+                  aria-label="Thread triage actions"
+                >
+                  <MoreHorizontal className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end">
+                {detail.thread.assistant_category === 'needs_reply' ? (
+                  <DropdownMenuItem
+                    disabled={pending}
+                    onSelect={() => clearNeedsReply()}
+                  >
+                    Mark as no reply needed
+                  </DropdownMenuItem>
+                ) : (
+                  <DropdownMenuItem
+                    disabled={pending}
+                    onSelect={() => markNeedsReply()}
+                  >
+                    Mark as needing a reply
+                  </DropdownMenuItem>
+                )}
+                <EmailTriageRulesMenuItems
+                  subject={detail.thread.subject}
+                  disabled={pending}
+                  onSelectRule={addTriageRule}
+                />
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 

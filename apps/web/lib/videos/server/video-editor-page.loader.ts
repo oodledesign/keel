@@ -16,7 +16,10 @@ import {
 } from '~/lib/videos/edit-timeline';
 import { normalizeVideoChapters } from '~/lib/videos/server/generate-video-chapters';
 import { normalizeVideoSummary } from '~/lib/videos/server/generate-video-summary';
-import { ensureEditProject, createSignedMasterUrl } from '~/lib/videos/server/video-edit.service';
+import {
+  createSignedMasterUrl,
+  ensureEditProject,
+} from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 
 export async function loadVideoEditorPage(

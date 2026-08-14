@@ -54,6 +54,8 @@ type PlatformSupportMessengerProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   defaultAccountId?: string | null;
+  /** View to show when the messenger opens (profile Support → new). */
+  initialView?: Exclude<View, 'thread'>;
 };
 
 function subjectFromBody(body: string) {
@@ -94,8 +96,9 @@ export function PlatformSupportMessenger({
   open,
   onOpenChange,
   defaultAccountId = null,
+  initialView = 'home',
 }: PlatformSupportMessengerProps) {
-  const [view, setView] = useState<View>('home');
+  const [view, setView] = useState<View>(initialView);
   const [firstName, setFirstName] = useState('there');
   const [tickets, setTickets] = useState<
     PlatformSupportMessengerTicketSummary[]
@@ -170,8 +173,13 @@ export function PlatformSupportMessenger({
       setView('home');
       setActiveTicketId(null);
       setThread(null);
+      return;
     }
-  }, [open]);
+
+    setView(initialView);
+    setActiveTicketId(null);
+    setThread(null);
+  }, [open, initialView]);
 
   if (!open) return null;
 
@@ -503,6 +511,10 @@ function NewConversationView(props: {
   const [body, setBody] = useState('');
   const [attachments, setAttachments] = useState<SupportAttachmentItem[]>([]);
   const [showAttach, setShowAttach] = useState(false);
+
+  useEffect(() => {
+    setAccountId(props.defaultAccountId ?? '');
+  }, [props.defaultAccountId]);
 
   return (
     <div className="flex min-h-0 flex-1 flex-col">
@@ -851,9 +863,7 @@ function ComposerBar(props: {
         <Textarea
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
-          placeholder={
-            dragOver ? 'Drop files to attach…' : props.placeholder
-          }
+          placeholder={dragOver ? 'Drop files to attach…' : props.placeholder}
           rows={1}
           className="max-h-28 min-h-[36px] flex-1 resize-none border-0 bg-transparent px-0 py-2 text-sm shadow-none focus-visible:ring-0"
           onKeyDown={(e) => {

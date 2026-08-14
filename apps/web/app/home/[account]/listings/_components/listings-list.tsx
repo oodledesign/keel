@@ -417,7 +417,8 @@ export function ListingsList({
       return applyNeedsLocation(
         sortListings(
           cachedListings.filter((l) => {
-            if (statusFilter !== 'all' && l.status !== statusFilter) return false;
+            if (statusFilter !== 'all' && l.status !== statusFilter)
+              return false;
             if (!q) return true;
             const haystack = [
               l.name,
@@ -677,15 +678,17 @@ export function ListingsList({
                     accountId,
                     page: 1,
                     pageSize: MAP_PAGE_SIZE,
-                    status:
-                      statusFilter === 'all' ? undefined : statusFilter,
+                    status: statusFilter === 'all' ? undefined : statusFilter,
                   });
                   const list = Array.isArray(pageResult?.data)
                     ? pageResult.data
                     : [];
                   setCachedListings((current) => mergeListings(current, list));
                   setPageListings((current) => mergeListings(current, list));
-                  if (typeof result?.updated === 'number' && result.updated > 0) {
+                  if (
+                    typeof result?.updated === 'number' &&
+                    result.updated > 0
+                  ) {
                     router.refresh();
                   }
                 } catch (err) {

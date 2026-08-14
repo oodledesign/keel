@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useRef, useState, type DragEvent } from 'react';
+import { type DragEvent, useCallback, useRef, useState } from 'react';
 
 import { Loader2, Paperclip, Upload, X } from 'lucide-react';
 

@@ -4,16 +4,16 @@ import {
   LayoutDashboard,
   Settings,
   StickyNote,
-  Users,
   UserRound,
+  Users,
   Wallet,
   Wrench,
 } from 'lucide-react';
 
 import pathsConfig from '~/config/paths.config';
 import { PROPERTY_WORKSPACE_MODULE_ORDER } from '~/config/workspace-module-order';
-import { isPropertyNavModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 import type { TeamAccountAccess } from '~/home/[account]/_lib/role-access';
+import { isPropertyNavModuleEnabled } from '~/home/[account]/_lib/server/account-modules';
 
 const iconClasses = 'w-4';
 
@@ -22,6 +22,7 @@ type NavChild = {
   path: string;
   Icon: React.ReactNode;
   end?: boolean;
+  tourId?: string;
 };
 
 function createPath(path: string, account: string) {
@@ -44,6 +45,7 @@ export function buildPropertySpaceNavChildren(
             path: home,
             Icon: <LayoutDashboard className={iconClasses} />,
             end: true,
+            tourId: 'nav-dashboard',
           }
         : null,
     properties: () =>
@@ -52,6 +54,7 @@ export function buildPropertySpaceNavChildren(
             label: 'Properties',
             path: createPath(pathsConfig.app.accountProperties, account),
             Icon: <Building2 className={iconClasses} />,
+            tourId: 'nav-properties',
           }
         : null,
     tenants: () =>
@@ -60,6 +63,7 @@ export function buildPropertySpaceNavChildren(
             label: 'Tenants',
             path: createPath(pathsConfig.app.accountClients, account),
             Icon: <UserRound className={iconClasses} />,
+            tourId: 'nav-clients',
           }
         : null,
     maintenance: () =>
@@ -85,6 +89,7 @@ export function buildPropertySpaceNavChildren(
             label: 'Tasks',
             path: createPath(pathsConfig.app.accountTasks, account),
             Icon: <CheckSquare className={iconClasses} />,
+            tourId: 'nav-tasks',
           }
         : null,
     notes: () =>

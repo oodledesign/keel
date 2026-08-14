@@ -7,6 +7,11 @@ import { z } from 'zod';
 import { enhanceAction } from '@kit/next/actions';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  addEmailTriageRule,
+  addEmailTriageRuleFromThread,
+  removeEmailTriageRule,
+} from '~/lib/email-assistant/email-triage-rules';
 import { ignoreEmailThreadNeedsReply } from '~/lib/email-assistant/ignore-thread-needs-reply';
 import {
   ignoreEmailRuleAndDismissSuggestions,
@@ -39,6 +44,30 @@ const IgnoreSuggestedEmailRuleSchema = SuggestedEmailTaskSchema.extend({
 const RemoveIgnoredEmailRuleSchema = z.object({
   mailboxKind: z.enum(['business', 'personal']).default('personal'),
   scope: z.enum(['sender', 'domain']),
+  value: z.string().min(1).max(320),
+});
+
+const EmailTriageActionSchema = z.enum(['ignore', 'priority']);
+const EmailTriageScopeSchema = z.enum(['sender', 'domain', 'subject']);
+
+const AddEmailTriageRuleFromThreadSchema = z.object({
+  threadId: z.string().uuid(),
+  action: EmailTriageActionSchema,
+  scope: EmailTriageScopeSchema,
+  accountSlug: z.string().min(1).optional(),
+});
+
+const AddEmailTriageRuleSchema = z.object({
+  mailboxKind: z.enum(['business', 'personal']).default('personal'),
+  action: EmailTriageActionSchema,
+  scope: EmailTriageScopeSchema,
+  value: z.string().min(1).max(320),
+});
+
+const RemoveEmailTriageRuleSchema = z.object({
+  mailboxKind: z.enum(['business', 'personal']).default('personal'),
+  action: EmailTriageActionSchema,
+  scope: EmailTriageScopeSchema,
   value: z.string().min(1).max(320),
 });
 
@@ -254,6 +283,117 @@ export const removeIgnoredEmailSenderAction = enhanceAction(
     };
   },
   { auth: true, schema: RemoveIgnoredEmailRuleSchema },
+);
+
+export const addEmailTriageRuleFromThreadAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    const result = await addEmailTriageRuleFromThread({
+      client,
+      userId: user.id,
+      threadId: data.threadId,
+      action: data.action,
+      scope: data.scope,
+    });
+
+    revalidateNeedsReplyPaths(data.accountSlug);
+    revalidatePath('/home/email');
+    revalidatePath('/app/email');
+
+    return {
+      ok: true as const,
+      action: data.action,
+      scope: data.scope,
+      value: result.value,
+      affectedCount: result.affectedCount,
+      rules: result.rules,
+    };
+  },
+  { auth: true, schema: AddEmailTriageRuleFromThreadSchema },
+);
+
+export const addEmailTriageRuleAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    const { data: connection, error: connectionError } = await client
+      .from('google_connections')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('mailbox_kind', data.mailboxKind)
+      .maybeSingle();
+
+    if (connectionError) {
+      throw new Error(connectionError.message);
+    }
+
+    const connectionId = (connection as { id?: string } | null)?.id;
+
+    if (!connectionId) {
+      throw new Error('Connect Gmail before updating triage rules');
+    }
+
+    const result = await addEmailTriageRule({
+      client,
+      userId: user.id,
+      connectionId,
+      action: data.action,
+      scope: data.scope,
+      value: data.value,
+    });
+
+    revalidatePath('/home/email');
+    revalidatePath('/app/email');
+
+    return {
+      ok: true as const,
+      action: data.action,
+      scope: data.scope,
+      value: result.value,
+      affectedCount: result.affectedCount,
+      rules: result.rules,
+    };
+  },
+  { auth: true, schema: AddEmailTriageRuleSchema },
+);
+
+export const removeEmailTriageRuleAction = enhanceAction(
+  async (data, user) => {
+    const client = getSupabaseServerClient();
+    const { data: connection, error: connectionError } = await client
+      .from('google_connections')
+      .select('id')
+      .eq('user_id', user.id)
+      .eq('mailbox_kind', data.mailboxKind)
+      .maybeSingle();
+
+    if (connectionError) {
+      throw new Error(connectionError.message);
+    }
+
+    const connectionId = (connection as { id?: string } | null)?.id;
+
+    if (!connectionId) {
+      throw new Error('Connect Gmail before updating triage rules');
+    }
+
+    const rules = await removeEmailTriageRule({
+      client,
+      userId: user.id,
+      connectionId,
+      action: data.action,
+      scope: data.scope,
+      value: data.value,
+    });
+
+    revalidatePath('/home/email');
+    revalidatePath('/app/email');
+
+    return {
+      ok: true as const,
+      rules,
+    };
+  },
+  { auth: true, schema: RemoveEmailTriageRuleSchema },
 );
 
 function revalidateSuggestedEmailPaths(accountSlug?: string) {

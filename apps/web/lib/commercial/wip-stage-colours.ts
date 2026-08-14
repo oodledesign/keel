@@ -1,7 +1,6 @@
 /**
  * Ladder / board / sheet stage colour accents for commercial WIP.
  */
-
 import type {
   CommercialPipelineStage,
   RequirementStatus,

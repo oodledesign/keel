@@ -43,7 +43,10 @@ export function normalizeRequirementUseClass(
   raw: string | null | undefined,
 ): RequirementUseClass | null {
   if (!raw) return null;
-  const key = raw.trim().toLowerCase().replace(/[\s/-]+/g, '_');
+  const key = raw
+    .trim()
+    .toLowerCase()
+    .replace(/[\s/-]+/g, '_');
   if ((REQUIREMENT_USE_CLASSES as readonly string[]).includes(key)) {
     return key as RequirementUseClass;
   }

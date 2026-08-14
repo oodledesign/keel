@@ -1,10 +1,6 @@
 /** Commercial instruction work type (disposal vs professional vs management). */
 
-export const WIP_WORK_TYPES = [
-  'agency',
-  'professional',
-  'management',
-] as const;
+export const WIP_WORK_TYPES = ['agency', 'professional', 'management'] as const;
 
 export type WipWorkType = (typeof WIP_WORK_TYPES)[number];
 

@@ -23,7 +23,6 @@ import {
   loadBusinessIdsForTeamAccount,
   loadUserWorkspaceAccounts,
 } from '~/home/_lib/server/workspace-scope';
-import { loadPersonalDashboardShortcuts } from '~/lib/dashboard-shortcuts/load-shortcuts';
 import { loadPersonalIncludeWorkspaceTasks } from '~/lib/personal-preferences/load-unified-tasks-preference';
 import { createPersonalVisionService } from '~/lib/personal-vision/personal-vision.service';
 import { getPersonalAccountId } from '~/lib/recorder/personal-account';
@@ -93,7 +92,6 @@ export type OzerDashboardData = {
   userName: string;
   dateLabel: string;
   workspaces: PersonalNavWorkspace[];
-  dashboardShortcuts: import('~/lib/dashboard-shortcuts/types').ResolvedShortcut[];
   includeWorkspaceTasks: boolean;
   showPersonalVisionLaunch: boolean;
   todaysFocus: PersonalDashboardTask[];
@@ -102,16 +100,49 @@ export type OzerDashboardData = {
   peopleUpcoming: PersonalPeopleUpcomingItem[];
   workspaceOverview: WorkspaceOverviewCard[];
   recentNotes: PersonalRecentNote[];
-  brainWorkspaceSlug: string | null;
 };
 
 // ─── Helpers ─────────────────────────────────────────────────────────
 
 function toFirstName(raw: string | null | undefined): string {
   if (!raw) return 'there';
-  const base = raw.split(' ')[0] ?? raw;
-  if (!base) return 'there';
-  return base.charAt(0).toUpperCase() + base.slice(1);
+  const cleaned = raw.trim();
+  if (!cleaned) return 'there';
+
+  // Prefer the first word of a real name ("Abbey Mitchell" → Abbey).
+  let token = cleaned.split(/\s+/)[0] ?? cleaned;
+
+  // Email-style local parts ("abbey.mitchell" / "abbey_mitchell") → Abbey.
+  if (/[._-]/.test(token)) {
+    token = token.split(/[._-]/)[0] ?? token;
+  }
+
+  if (!token) return 'there';
+  return token.charAt(0).toUpperCase() + token.slice(1).toLowerCase();
+}
+
+function resolveGreetingName(input: {
+  userMetadata?: Record<string, unknown> | null;
+  accountName?: string | null;
+  email?: string | null;
+}): string {
+  const meta = input.userMetadata ?? undefined;
+  const candidates = [
+    typeof meta?.first_name === 'string' ? meta.first_name : null,
+    typeof meta?.given_name === 'string' ? meta.given_name : null,
+    input.accountName,
+    typeof meta?.full_name === 'string' ? meta.full_name : null,
+    typeof meta?.display_name === 'string' ? meta.display_name : null,
+    typeof meta?.name === 'string' ? meta.name : null,
+    input.email?.split('@')[0] ?? null,
+  ];
+
+  for (const candidate of candidates) {
+    const name = toFirstName(candidate);
+    if (name !== 'there') return name;
+  }
+
+  return 'there';
 }
 
 function formatDateLabel(now = new Date()): string {
@@ -584,15 +615,6 @@ async function loadRecentNotesAcrossWorkspaces(
   });
 }
 
-function resolveBrainWorkspaceSlug(
-  workspaceRows: WorkspaceAccountRow[],
-): string | null {
-  const work = workspaceRows.find(
-    (w) => w.slug && normalizeSpaceType(w.space_type) === 'work',
-  );
-  return work?.slug ?? workspaceRows.find((w) => w.slug)?.slug ?? null;
-}
-
 // ─── Main loader ─────────────────────────────────────────────────────
 
 export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
@@ -603,12 +625,17 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
   const { start: todayStart, end: todayEnd } = localDayBounds();
 
   const meta = user.user_metadata as Record<string, unknown> | undefined;
-  const displayNameRaw =
-    (typeof meta?.display_name === 'string' && meta.display_name.trim()) ||
-    (typeof meta?.name === 'string' && meta.name.trim()) ||
-    user.email?.split('@')[0] ||
-    '';
-  const userName = toFirstName(displayNameRaw) || 'there';
+  const { data: personalAccount } = await client
+    .from('accounts')
+    .select('name')
+    .eq('id', userId)
+    .eq('is_personal_account', true)
+    .maybeSingle();
+  const userName = resolveGreetingName({
+    userMetadata: meta,
+    accountName: (personalAccount as { name?: string | null } | null)?.name,
+    email: user.email,
+  });
 
   const workspaceRows = await loadUserWorkspaceAccounts(client, userId);
   const workspaceById = new Map(workspaceRows.map((w) => [w.id, w]));
@@ -697,12 +724,7 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     });
   }
 
-  const workspaceOverview = await buildWorkspaceOverview(
-    client,
-    userId,
-    workspaceRows,
-    bizIdsByWorkspace,
-  );
+  const workspaceOverview: WorkspaceOverviewCard[] = [];
 
   let peopleUpcoming: PersonalPeopleUpcomingItem[] = [];
   try {
@@ -764,21 +786,15 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     peopleUpcoming = [];
   }
 
-  let dashboardShortcuts: Awaited<
-    ReturnType<typeof loadPersonalDashboardShortcuts>
-  > = [];
   let includeWorkspaceTasks = true;
   let showPersonalVisionLaunch = false;
   try {
     const visionService = createPersonalVisionService(client);
-    [dashboardShortcuts, includeWorkspaceTasks, showPersonalVisionLaunch] =
-      await Promise.all([
-        loadPersonalDashboardShortcuts(client, userId),
-        loadPersonalIncludeWorkspaceTasks(client, userId),
-        visionService.isDashboardEnabled(userId),
-      ]);
+    [includeWorkspaceTasks, showPersonalVisionLaunch] = await Promise.all([
+      loadPersonalIncludeWorkspaceTasks(client, userId),
+      visionService.isDashboardEnabled(userId),
+    ]);
   } catch {
-    dashboardShortcuts = [];
     includeWorkspaceTasks = true;
     showPersonalVisionLaunch = false;
   }
@@ -800,13 +816,10 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     recentNotes = [];
   }
 
-  const brainWorkspaceSlug = resolveBrainWorkspaceSlug(workspaceRows);
-
   return {
     userName,
     dateLabel: formatDateLabel(),
     workspaces,
-    dashboardShortcuts,
     includeWorkspaceTasks,
     showPersonalVisionLaunch,
     todaysFocus: filterPersonalOnly(todaysFocus),
@@ -815,6 +828,5 @@ export const loadOzerDashboard = cache(async (): Promise<OzerDashboardData> => {
     peopleUpcoming,
     workspaceOverview,
     recentNotes,
-    brainWorkspaceSlug,
   };
 });

@@ -114,6 +114,8 @@ export type PortalProjectTask = {
   priority: string | null;
   dueDate: string | null;
   phaseId: string | null;
+  /** Contact assignee preferred; otherwise team member (`user_id`). */
+  assigneeName: string | null;
 };
 
 export type PortalMyTask = {
@@ -161,6 +163,16 @@ export type PortalOverviewData = {
   openTicketCount: number;
   subscription: PortalSubscription | null;
   notices: PortalNotice[];
+};
+
+export type PortalOverviewTask = {
+  id: string;
+  title: string;
+  status: string;
+  dueDate: string | null;
+  projectId: string | null;
+  projectName: string | null;
+  assigneeName: string | null;
 };
 
 export function createClientPortalService(client: SupabaseClient) {
@@ -700,17 +712,47 @@ class ClientPortalService {
 
     const { data, error } = await this.db
       .from('tasks')
-      .select('id, title, status, priority, due_date, phase_id')
+      .select(
+        'id, title, status, priority, due_date, phase_id, user_id, assignee_contact_id',
+      )
       .eq('project_id', projectId)
       .order('sort_order', { ascending: true })
       .order('created_at', { ascending: true });
 
     if (error) {
+      // Older schemas may lack assignee_contact_id — retry without it.
+      if (/assignee_contact_id/i.test(error.message)) {
+        const fallback = await this.db
+          .from('tasks')
+          .select('id, title, status, priority, due_date, phase_id, user_id')
+          .eq('project_id', projectId)
+          .order('sort_order', { ascending: true })
+          .order('created_at', { ascending: true });
+        if (fallback.error) {
+          console.error(
+            '[client-portal] listPortalProjectTasks:',
+            fallback.error.message,
+          );
+          return [];
+        }
+        return this.mapPortalProjectTasks(
+          (fallback.data ?? []) as Array<{
+            id: string;
+            title: string;
+            status: string;
+            priority: string | null;
+            due_date: string | null;
+            phase_id?: string | null;
+            user_id?: string | null;
+            assignee_contact_id?: string | null;
+          }>,
+        );
+      }
       console.error('[client-portal] listPortalProjectTasks:', error.message);
       return [];
     }
 
-    return (
+    return this.mapPortalProjectTasks(
       (data ?? []) as Array<{
         id: string;
         title: string;
@@ -718,15 +760,91 @@ class ClientPortalService {
         priority: string | null;
         due_date: string | null;
         phase_id?: string | null;
-      }>
-    ).map((row) => ({
-      id: row.id,
-      title: row.title,
-      status: row.status ?? 'todo',
-      priority: row.priority,
-      dueDate: row.due_date,
-      phaseId: row.phase_id ?? null,
-    }));
+        user_id?: string | null;
+        assignee_contact_id?: string | null;
+      }>,
+    );
+  }
+
+  private async mapPortalProjectTasks(
+    rows: Array<{
+      id: string;
+      title: string;
+      status: string;
+      priority: string | null;
+      due_date: string | null;
+      phase_id?: string | null;
+      user_id?: string | null;
+      assignee_contact_id?: string | null;
+    }>,
+  ): Promise<PortalProjectTask[]> {
+    const contactIds = [
+      ...new Set(
+        rows
+          .map((row) => row.assignee_contact_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+    const memberIds = [
+      ...new Set(
+        rows
+          .filter((row) => !row.assignee_contact_id)
+          .map((row) => row.user_id)
+          .filter((id): id is string => Boolean(id)),
+      ),
+    ];
+
+    const [contactNames, memberNames] = await Promise.all([
+      this.loadContactAssigneeNames(contactIds),
+      this.loadAuthorNames(memberIds),
+    ]);
+
+    return rows.map((row) => {
+      let assigneeName: string | null = null;
+      if (row.assignee_contact_id) {
+        assigneeName = contactNames.get(row.assignee_contact_id) ?? null;
+      } else if (row.user_id) {
+        assigneeName = memberNames.get(row.user_id) ?? null;
+      }
+
+      return {
+        id: row.id,
+        title: row.title,
+        status: row.status ?? 'todo',
+        priority: row.priority,
+        dueDate: row.due_date,
+        phaseId: row.phase_id ?? null,
+        assigneeName,
+      };
+    });
+  }
+
+  private async loadContactAssigneeNames(contactIds: string[]) {
+    const map = new Map<string, string>();
+    if (contactIds.length === 0) return map;
+
+    const { data } = await this.db
+      .from('contacts')
+      .select('id, full_name, first_name, last_name, email')
+      .in('id', contactIds);
+
+    for (const row of (data ?? []) as Array<{
+      id: string;
+      full_name?: string | null;
+      first_name?: string | null;
+      last_name?: string | null;
+      email?: string | null;
+    }>) {
+      const fullName = row.full_name?.trim();
+      const composed = [row.first_name, row.last_name]
+        .filter((value): value is string => Boolean(value && value.trim()))
+        .map((value) => value.trim())
+        .join(' ');
+      const name = fullName || composed || row.email?.trim() || null;
+      if (name) map.set(row.id, name);
+    }
+
+    return map;
   }
 
   /**
@@ -794,6 +912,123 @@ class ClientPortalService {
         ? (projectNameById.get(row.project_id) ?? null)
         : null,
     }));
+  }
+
+  /**
+   * Open tasks across portal-visible projects (for overview "All tasks").
+   */
+  async listPortalOpenTasks(
+    clientOrgId: string,
+    limit = 12,
+  ): Promise<PortalOverviewTask[]> {
+    await this.ensureMember(clientOrgId);
+
+    const projects = await this.listPortalProjects(clientOrgId);
+    if (projects.length === 0) return [];
+
+    const projectIds = projects.map((p) => p.id);
+    const projectNameById = new Map(projects.map((p) => [p.id, p.name]));
+
+    const { data, error } = await this.db
+      .from('tasks')
+      .select(
+        'id, title, status, due_date, project_id, user_id, assignee_contact_id',
+      )
+      .in('project_id', projectIds)
+      .not('status', 'in', '(done,completed,cancelled)')
+      .order('due_date', { ascending: true, nullsFirst: false })
+      .order('created_at', { ascending: false })
+      .limit(limit);
+
+    if (error) {
+      if (/assignee_contact_id/i.test(error.message)) {
+        const fallback = await this.db
+          .from('tasks')
+          .select('id, title, status, due_date, project_id, user_id')
+          .in('project_id', projectIds)
+          .not('status', 'in', '(done,completed,cancelled)')
+          .order('due_date', { ascending: true, nullsFirst: false })
+          .order('created_at', { ascending: false })
+          .limit(limit);
+        if (fallback.error) {
+          console.error(
+            '[client-portal] listPortalOpenTasks:',
+            fallback.error.message,
+          );
+          return [];
+        }
+        return this.mapPortalOverviewTasks(
+          (fallback.data ?? []) as Array<{
+            id: string;
+            title: string;
+            status: string;
+            due_date: string | null;
+            project_id: string | null;
+            user_id?: string | null;
+            assignee_contact_id?: string | null;
+          }>,
+          projectNameById,
+        );
+      }
+      console.error('[client-portal] listPortalOpenTasks:', error.message);
+      return [];
+    }
+
+    return this.mapPortalOverviewTasks(
+      (data ?? []) as Array<{
+        id: string;
+        title: string;
+        status: string;
+        due_date: string | null;
+        project_id: string | null;
+        user_id?: string | null;
+        assignee_contact_id?: string | null;
+      }>,
+      projectNameById,
+    );
+  }
+
+  private async mapPortalOverviewTasks(
+    rows: Array<{
+      id: string;
+      title: string;
+      status: string;
+      due_date: string | null;
+      project_id: string | null;
+      user_id?: string | null;
+      assignee_contact_id?: string | null;
+    }>,
+    projectNameById: Map<string, string>,
+  ): Promise<PortalOverviewTask[]> {
+    const enriched = await this.mapPortalProjectTasks(
+      rows.map((row) => ({
+        id: row.id,
+        title: row.title,
+        status: row.status,
+        priority: null,
+        due_date: row.due_date,
+        phase_id: null,
+        user_id: row.user_id,
+        assignee_contact_id: row.assignee_contact_id,
+      })),
+    );
+
+    const byId = new Map(enriched.map((task) => [task.id, task]));
+
+    return rows.map((row) => {
+      const mapped = byId.get(row.id);
+      return {
+        id: row.id,
+        title: row.title,
+        status: row.status ?? 'todo',
+        dueDate: row.due_date,
+        projectId: row.project_id,
+        projectName: row.project_id
+          ? (projectNameById.get(row.project_id) ?? null)
+          : null,
+        assigneeName: mapped?.assigneeName ?? null,
+      };
+    });
   }
 
   async completePortalMyTask(

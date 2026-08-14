@@ -8,11 +8,13 @@ import {
   TeamAccountSettingsContainer,
 } from '@kit/team-accounts/components';
 
+import { ProductTourSettingsCard } from '~/components/product-tour/product-tour-settings-card';
 import featuresFlagConfig from '~/config/feature-flags.config';
 import pathsConfig from '~/config/paths.config';
 import { createInvoicePaymentSettingsService } from '~/home/[account]/invoices/_lib/server/invoice-payment-settings.service';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
+import { resolveTeamProductTourId } from '~/lib/product-tour/tour-steps';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
@@ -100,8 +102,16 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
     stripeConnected = false;
   }
 
+  const productTourId = resolveTeamProductTourId(workspace.workspaceProfile);
+
   return (
     <div className="flex flex-col gap-6">
+      {!isClient && productTourId ? (
+        <ProductTourSettingsCard
+          tourId={productTourId}
+          accountSlug={account.slug}
+        />
+      ) : null}
       {!isClient && workspace.workspaceProfile === 'commercial_property' ? (
         <CommercialNavModulesSettingsForm
           accountId={account.id}

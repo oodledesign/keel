@@ -587,7 +587,9 @@ export function isPurchasableWorkspaceAddonProduct(productId: string): boolean {
     return true;
   }
 
-  const plans = OZER_PLAN_CATALOG.filter((plan) => plan.productId === productId);
+  const plans = OZER_PLAN_CATALOG.filter(
+    (plan) => plan.productId === productId,
+  );
   if (plans.length === 0) {
     return false;
   }

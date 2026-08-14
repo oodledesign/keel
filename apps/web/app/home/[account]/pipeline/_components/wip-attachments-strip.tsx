@@ -205,8 +205,7 @@ export function WipAttachmentsStrip({
           accountSlug,
           noteId: editingId,
           content: editBody.trim(),
-          assignedToUserId:
-            editAssignee === '__none__' ? null : editAssignee,
+          assignedToUserId: editAssignee === '__none__' ? null : editAssignee,
           occurredAt: dateInputToIso(editDate),
         });
         setEditingId(null);

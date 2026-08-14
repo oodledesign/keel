@@ -25,6 +25,7 @@ type NavChild = {
   path: string;
   Icon: React.ReactNode;
   end?: boolean;
+  tourId?: string;
 };
 
 function createPath(path: string, account: string) {
@@ -58,6 +59,7 @@ export function buildCommercialPropertySpaceNavChildren(
             path: home,
             Icon: <LayoutDashboard className={iconClasses} />,
             end: true,
+            tourId: 'nav-dashboard',
           }
         : null,
     listings: () =>
@@ -66,6 +68,7 @@ export function buildCommercialPropertySpaceNavChildren(
             label: 'Disposals',
             path: createPath(pathsConfig.app.accountListings, account),
             Icon: <Building2 className={iconClasses} />,
+            tourId: 'nav-disposals',
           }
         : null,
     pipeline: () =>
@@ -74,6 +77,7 @@ export function buildCommercialPropertySpaceNavChildren(
             label: pipelineBoardName,
             path: createPath(pathsConfig.app.accountPipeline, account),
             Icon: <ClipboardList className={iconClasses} />,
+            tourId: 'nav-wip',
           }
         : null,
     clients: () =>
@@ -82,6 +86,7 @@ export function buildCommercialPropertySpaceNavChildren(
             label: 'Contacts',
             path: createPath(pathsConfig.app.accountClients, account),
             Icon: <UserRound className={iconClasses} />,
+            tourId: 'nav-contacts',
           }
         : null,
     requirements: () =>
@@ -90,6 +95,7 @@ export function buildCommercialPropertySpaceNavChildren(
             label: 'Requirements',
             path: `${createPath(pathsConfig.app.accountPipeline, account)}?view=requirements`,
             Icon: <ClipboardList className={iconClasses} />,
+            tourId: 'nav-requirements',
           }
         : null,
     viewings: () =>
@@ -122,6 +128,7 @@ export function buildCommercialPropertySpaceNavChildren(
             label: 'Insights',
             path: createPath(pathsConfig.app.accountCommercialReports, account),
             Icon: <LineChart className={iconClasses} />,
+            tourId: 'nav-insights',
           }
         : null,
     docs: () => null,

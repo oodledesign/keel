@@ -1,17 +1,17 @@
 import Link from 'next/link';
 
 import { AdminGuard } from '@kit/admin/components/admin-guard';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { AppBreadcrumbs } from '@kit/ui/app-breadcrumbs';
 import { Badge } from '@kit/ui/badge';
 import { PageBody, PageHeader } from '@kit/ui/page';
 
 import { AdminBillingGrantsPanel } from '~/admin/accounts/[id]/_components/admin-billing-grants-panel';
 import { loadAdminAccountBillingState } from '~/admin/accounts/[id]/_lib/load-admin-account-billing';
+import { loadSeatUsageSummary } from '~/home/[account]/members/_lib/server/seat-usage.loader';
 
 import { AdminWorkspaceMembersPanel } from './_components/admin-workspace-members-panel';
 import { loadAdminWorkspaceDetail } from './_lib/load-admin-workspace';
-import { loadSeatUsageSummary } from '~/home/[account]/members/_lib/server/seat-usage.loader';
-import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 interface Params {
   params: Promise<{ id: string }>;

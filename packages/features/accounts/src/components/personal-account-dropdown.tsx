@@ -31,7 +31,7 @@ import { cn } from '@kit/ui/utils';
 import { usePersonalAccountData } from '../hooks/use-personal-account-data';
 
 const MENU_PANEL_CLASS =
-  'w-[min(18rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-[0_16px_48px_rgba(53,30,40,0.18)] outline-none ring-0 dark:shadow-[0_16px_48px_rgba(0,0,0,0.45)]';
+  'w-[min(21.6rem,calc(100vw-2rem))] overflow-hidden rounded-[1.25rem] border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-0 text-[var(--workspace-shell-text)] shadow-[0_16px_48px_rgba(53,30,40,0.18)] outline-none ring-0 dark:shadow-[0_16px_48px_rgba(0,0,0,0.45)]';
 
 const MENU_ITEM_CLASS =
   'flex cursor-pointer items-center gap-3 rounded-xl px-2.5 py-2 text-sm font-medium text-[var(--workspace-shell-text)] outline-none focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)] data-[highlighted]:bg-[var(--workspace-shell-sidebar-accent)] data-[highlighted]:text-[var(--workspace-shell-text)]';
@@ -64,6 +64,35 @@ function MenuLinkItem({
   );
 }
 
+function MenuActionItem({
+  icon: Icon,
+  label,
+  onSelect,
+  className,
+  iconClassName,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: React.ReactNode;
+  onSelect: () => void;
+  className?: string;
+  iconClassName?: string;
+}) {
+  return (
+    <DropdownMenuItem
+      className={cn(MENU_ITEM_CLASS, className)}
+      onSelect={(event) => {
+        event.preventDefault();
+        onSelect();
+      }}
+    >
+      <span className={cn(MENU_ICON_WRAP_CLASS, iconClassName)}>
+        <Icon className="h-4 w-4" />
+      </span>
+      <span className="truncate">{label}</span>
+    </DropdownMenuItem>
+  );
+}
+
 export function PersonalAccountDropdown({
   className,
   user,
@@ -74,6 +103,7 @@ export function PersonalAccountDropdown({
   account,
   menuClassName,
   menuExtras,
+  onSupportClick,
 }: {
   user: JWTUserData;
 
@@ -102,6 +132,9 @@ export function PersonalAccountDropdown({
 
   /** Rendered between the profile header and menu links (e.g. AI credit meter). */
   menuExtras?: ReactNode | ((open: boolean) => ReactNode);
+
+  /** When set, Support opens the in-app messenger instead of navigating. */
+  onSupportClick?: () => void;
 }) {
   const [open, setOpen] = useState(false);
   const { data: personalAccountData } = usePersonalAccountData(
@@ -230,11 +263,22 @@ export function PersonalAccountDropdown({
           ) : null}
 
           {paths.support ? (
-            <MenuLinkItem
-              href={paths.support}
-              icon={HelpCircle}
-              label={<Trans i18nKey={'common:support'} />}
-            />
+            onSupportClick ? (
+              <MenuActionItem
+                icon={HelpCircle}
+                label={<Trans i18nKey={'common:support'} />}
+                onSelect={() => {
+                  setOpen(false);
+                  onSupportClick();
+                }}
+              />
+            ) : (
+              <MenuLinkItem
+                href={paths.support}
+                icon={HelpCircle}
+                label={<Trans i18nKey={'common:support'} />}
+              />
+            )
           ) : null}
 
           <MenuLinkItem

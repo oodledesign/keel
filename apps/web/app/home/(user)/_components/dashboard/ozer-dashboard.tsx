@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import { useMemo } from 'react';
 
 import Link from 'next/link';
@@ -10,19 +8,15 @@ import {
   ArrowRight,
   Cake,
   CalendarClock,
-  MessageSquare,
   Sparkles,
   StickyNote,
   Users,
 } from 'lucide-react';
 
-import { Avatar, AvatarFallback, AvatarImage } from '@kit/ui/avatar';
 import { Button } from '@kit/ui/button';
 
-import { DashboardShortcutsBar } from '~/components/dashboard-shortcuts/dashboard-shortcuts-bar';
 import pathsConfig from '~/config/paths.config';
 import { NoteAssignmentLabels } from '~/home/[account]/_components/note-assignment-labels';
-import { buildBrainChatUrl } from '~/lib/brain/build-brain-chat-url';
 
 import type {
   OzerDashboardData,
@@ -30,9 +24,7 @@ import type {
   PersonalDashboardTask,
   PersonalPeopleUpcomingItem,
   PersonalRecentNote,
-  WorkspaceOverviewCard,
 } from '../../_lib/server/ozer-dashboard.loader';
-import { ConnectedWorkspacesBar } from './connected-workspaces-bar';
 import { PersonalDashboardTaskRow } from './personal-dashboard-task-row';
 
 const panelClass =
@@ -40,7 +32,6 @@ const panelClass =
 
 const DASHBOARD_TASK_PREVIEW_LIMIT = 5;
 const personalTasksHref = `${pathsConfig.app.home}/tasks`;
-
 type Props = {
   data: OzerDashboardData;
 };
@@ -58,10 +49,6 @@ export function OzerDashboard({ data }: Props) {
   return (
     <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-8 overflow-x-hidden px-4 pt-6 pb-12 text-[var(--workspace-shell-text)] md:px-6 lg:px-8">
       <header className="space-y-4">
-        <DashboardShortcutsBar
-          shortcuts={data.dashboardShortcuts}
-          settingsHref={pathsConfig.app.personalAccountSettings}
-        />
         <div>
           <h1 className="text-3xl font-bold tracking-tight md:text-4xl">
             {greeting}, {data.userName}
@@ -70,24 +57,16 @@ export function OzerDashboard({ data }: Props) {
             {data.dateLabel}
           </p>
         </div>
-        <div className="flex flex-wrap gap-2">
-          {data.showPersonalVisionLaunch ? (
+        {data.showPersonalVisionLaunch ? (
+          <div className="flex flex-wrap gap-2">
             <Button asChild className="ozer-gradient-btn w-full sm:w-auto">
               <Link href={pathsConfig.app.personalVision}>
                 <Sparkles className="mr-2 h-4 w-4" />
                 Personal Vision
               </Link>
             </Button>
-          ) : null}
-          {data.brainWorkspaceSlug ? (
-            <Button asChild variant="outline" className="w-full sm:w-auto">
-              <Link href={buildBrainChatUrl(data.brainWorkspaceSlug)}>
-                <MessageSquare className="mr-2 h-4 w-4" />
-                Ask Second Brain
-              </Link>
-            </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </header>
 
       <div className="grid min-w-0 grid-cols-1 gap-6 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
@@ -174,24 +153,6 @@ export function OzerDashboard({ data }: Props) {
           </DashboardSection>
         </div>
       ) : null}
-
-      <DashboardSection title="Workspace overview">
-        {data.workspaceOverview.length > 0 ? (
-          <div className="grid gap-4 sm:grid-cols-2">
-            {data.workspaceOverview.map((card) => (
-              <WorkspaceOverviewCardView key={card.id} card={card} />
-            ))}
-          </div>
-        ) : (
-          <EmptyPanel message="Join or create a workspace to see an overview here." />
-        )}
-      </DashboardSection>
-
-      <ConnectedWorkspacesBar
-        cards={data.workspaceOverview}
-        includeWorkspaceTasks={data.includeWorkspaceTasks}
-        settingsHref={pathsConfig.app.personalAccountSettings}
-      />
     </div>
   );
 }
@@ -327,57 +288,6 @@ function PeopleUpcomingRow(props: { item: PersonalPeopleUpcomingItem }) {
       </div>
       <ArrowRight className="h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
     </Link>
-  );
-}
-
-function WorkspaceOverviewCardView(props: { card: WorkspaceOverviewCard }) {
-  const { card } = props;
-  const href = pathsConfig.app.accountHome.replace('[account]', card.slug);
-  const initial = (card.name.trim()[0] ?? '?').toUpperCase();
-
-  return (
-    <div className={panelClass}>
-      <div className="flex flex-col gap-4 p-5">
-        <dl className="grid grid-cols-2 gap-3">
-          {card.stats.map((stat) => {
-            const isPipeline = stat.label === 'Pipeline value';
-
-            return (
-              <div
-                key={stat.label}
-                className="rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 py-2"
-              >
-                <dt className="flex items-center gap-2 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
-                  {isPipeline ? (
-                    <Avatar className="h-5 w-5 rounded-md">
-                      <AvatarImage src={card.pictureUrl ?? undefined} alt="" />
-                      <AvatarFallback
-                        className="rounded-md text-[9px] font-semibold text-[var(--workspace-shell-text)]"
-                        style={{ backgroundColor: card.color }}
-                      >
-                        {initial}
-                      </AvatarFallback>
-                    </Avatar>
-                  ) : null}
-                  <span>{isPipeline ? 'Pipeline' : stat.label}</span>
-                </dt>
-                <dd className="mt-0.5 text-lg font-semibold text-[var(--workspace-shell-text)]">
-                  {stat.value}
-                </dd>
-              </div>
-            );
-          })}
-        </dl>
-
-        <Link
-          href={href}
-          className="inline-flex items-center gap-1 text-sm font-medium text-[var(--ozer-accent)] hover:text-[#34b3a4]"
-        >
-          Open
-          <ArrowRight className="h-4 w-4" />
-        </Link>
-      </div>
-    </div>
   );
 }
 

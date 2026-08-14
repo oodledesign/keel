@@ -37,10 +37,7 @@ async function ViewingsPage({ params }: ViewingsPageProps) {
 
   return (
     <>
-      <TeamAccountLayoutPageHeader
-        account={slug}
-        title="Viewings"
-      />
+      <TeamAccountLayoutPageHeader account={slug} title="Viewings" />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 pt-2 pb-6 lg:px-6">
         <ViewingsList
           accountId={accountId}

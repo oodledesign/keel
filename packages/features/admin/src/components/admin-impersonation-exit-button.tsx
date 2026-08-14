@@ -28,7 +28,13 @@ export function AdminImpersonationExitButton(props: {
   if (tokens) {
     return (
       <>
-        <RestoreAdminSession tokens={tokens} />
+        <RestoreAdminSession
+          tokens={tokens}
+          onError={(message) => {
+            setTokens(undefined);
+            setError(message);
+          }}
+        />
         <LoadingOverlay>Restoring admin session...</LoadingOverlay>
       </>
     );
@@ -89,27 +95,50 @@ export function AdminImpersonationExitButton(props: {
   );
 }
 
-function RestoreAdminSession(props: { tokens: SessionTokens }) {
-  useRestoreAdminSession(props.tokens);
+function RestoreAdminSession(props: {
+  tokens: SessionTokens;
+  onError: (message: string) => void;
+}) {
+  useRestoreAdminSession(props.tokens, props.onError);
   return null;
 }
 
-function useRestoreAdminSession(tokens: SessionTokens) {
+function useRestoreAdminSession(
+  tokens: SessionTokens,
+  onError: (message: string) => void,
+) {
   const supabase = useSupabase();
 
   return useQuery({
     // Opaque nonce only — never put bearer tokens in the query cache key.
     queryKey: ['end-impersonation', tokens.nonce],
     gcTime: 0,
+    retry: false,
     queryFn: async () => {
-      await supabase.auth.signOut({ scope: 'local' });
+      const { error: signOutError } = await supabase.auth.signOut({
+        scope: 'local',
+      });
 
-      await supabase.auth.setSession({
+      if (signOutError) {
+        onError(signOutError.message);
+        throw signOutError;
+      }
+
+      const { data, error: setSessionError } = await supabase.auth.setSession({
         access_token: tokens.accessToken,
         refresh_token: tokens.refreshToken,
       });
 
+      if (setSessionError || !data.session) {
+        const message =
+          setSessionError?.message ??
+          'Could not restore admin session. Sign in again from /auth/sign-in.';
+        onError(message);
+        throw new Error(message);
+      }
+
       window.location.replace('/admin');
+      return true;
     },
   });
 }

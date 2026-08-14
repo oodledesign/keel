@@ -32,7 +32,7 @@ async function UnitImportPage({ params }: PageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title="Import floor units"
-        description="Bulk import units from a Kato or Numbers CSV export."
+        description="Bulk import units from a CSV export."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
         <UnitImportPageClient

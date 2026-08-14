@@ -72,7 +72,10 @@ export const updateCommercialSeatQuantityAction = enhanceAction(
       data.quantity,
     );
 
-    if (result.timing === 'immediate' || result.timing === 'cancelled_pending') {
+    if (
+      result.timing === 'immediate' ||
+      result.timing === 'cancelled_pending'
+    ) {
       await client
         .from('account_plan_limits')
         .update({

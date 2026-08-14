@@ -53,7 +53,8 @@ import type {
   WorkspaceTeam,
 } from '../_lib/server/listings.service';
 import { setBrochureShare, updateListing } from '../_lib/server/server-actions';
-import { ListingAssignmentCard,
+import {
+  ListingAssignmentCard,
   type ListingBranchOption,
 } from './listing-assignment-card';
 import { ListingCoAgentsCard } from './listing-co-agents-card';
@@ -764,9 +765,7 @@ export function ListingMarketingEditor({
             listing: {
               ...listing,
               summary,
-              keyPoints: keyPoints
-                .map((p) => p.text.trim())
-                .filter(Boolean),
+              keyPoints: keyPoints.map((p) => p.text.trim()).filter(Boolean),
             },
             media,
             publications,

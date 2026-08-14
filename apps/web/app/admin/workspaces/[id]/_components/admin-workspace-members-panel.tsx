@@ -28,6 +28,8 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 
+import type { SeatUsageSummaryProps } from '~/home/[account]/members/_components/seat-usage-summary';
+import { SeatUsageSummary } from '~/home/[account]/members/_components/seat-usage-summary';
 import {
   addAdminWorkspaceMemberAction,
   deleteAdminWorkspaceInviteAction,
@@ -42,9 +44,6 @@ import {
   AddAdminWorkspaceMemberSchema,
   type AdminWorkspaceRole,
 } from '~/lib/admin/admin-workspace.schema';
-
-import type { SeatUsageSummaryProps } from '~/home/[account]/members/_components/seat-usage-summary';
-import { SeatUsageSummary } from '~/home/[account]/members/_components/seat-usage-summary';
 
 export type AdminWorkspaceMember = {
   userId: string;
@@ -200,9 +199,7 @@ export function AdminWorkspaceMembersPanel(props: {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="billable">
-                          Billable seat
-                        </SelectItem>
+                        <SelectItem value="billable">Billable seat</SelectItem>
                         <SelectItem value="support">Support seat</SelectItem>
                       </SelectContent>
                     </Select>
@@ -361,9 +358,11 @@ export function AdminWorkspaceMembersPanel(props: {
                 onClick={() => {
                   startResendTransition(async () => {
                     try {
-                      const result = await resendAllAdminWorkspaceInvitesAction({
-                        accountId: props.accountId,
-                      });
+                      const result = await resendAllAdminWorkspaceInvitesAction(
+                        {
+                          accountId: props.accountId,
+                        },
+                      );
                       toast.success(
                         result.failed > 0
                           ? `Sent ${result.sent}, failed ${result.failed}`

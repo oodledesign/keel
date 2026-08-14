@@ -21,8 +21,8 @@ import {
   isCommercialTerminalStage,
   normalizeCommercialPipelineStage,
 } from '~/lib/commercial/pipeline-stage-config';
-import type { WipBoardView } from '~/lib/commercial/wip-board-mapping';
 import { normalizeRequirementUseClass } from '~/lib/commercial/requirement-use-class';
+import type { WipBoardView } from '~/lib/commercial/wip-board-mapping';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import { workspaceTextMuted } from '~/lib/workspace-ui';
 
@@ -260,219 +260,221 @@ export function WipSheetView({
                   sortedRequirements.map((row) => {
                     const stageColour = wipStageColour(row.stage);
                     return (
-                    <tr
-                      key={row.id}
-                      className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
-                      style={{
-                        boxShadow: `inset 3px 0 0 ${stageColour.bar}`,
-                      }}
-                    >
-                      <td className={`${tdClass} px-2`}>
-                        <button
-                          type="button"
-                          className={`text-left text-xs underline-offset-2 hover:underline ${workspaceTextMuted}`}
-                          onClick={() => onEditRequirement(row)}
-                          title="Open full editor"
-                        >
-                          {formatDate(row.updatedAt)}
-                        </button>
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={row.companyName ?? ''}
-                          placeholder="Company"
-                          className="min-w-[9rem]"
-                          onCommit={(next) =>
-                            patchRequirement(
-                              row.id,
-                              { companyName: next.trim() || null },
-                              { companyName: next.trim() || null },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={row.contactName ?? ''}
-                          placeholder="Contact"
-                          className="min-w-[8rem]"
-                          onCommit={(next) =>
-                            patchRequirement(
-                              row.id,
-                              { contactName: next.trim() || null },
-                              { contactName: next.trim() || null },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={row.contactPhone ?? ''}
-                          placeholder="Tel"
-                          className="min-w-[7rem]"
-                          onCommit={(next) =>
-                            patchRequirement(
-                              row.id,
-                              { contactPhone: next.trim() || null },
-                              { contactPhone: next.trim() || null },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={row.contactEmail ?? ''}
-                          placeholder="Email"
-                          className="min-w-[10rem]"
-                          onCommit={(next) =>
-                            patchRequirement(
-                              row.id,
-                              { contactEmail: next.trim() || null },
-                              { contactEmail: next.trim() || null },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={row.sector ?? ''}
-                          placeholder="Gym, office…"
-                          className="min-w-[8rem]"
-                          onCommit={(next) => {
-                            const sector = next.trim() || null;
-                            const useClass =
-                              normalizeRequirementUseClass(sector);
-                            patchRequirement(
-                              row.id,
-                              { sector, useClass },
-                              { sector, useClass },
-                            );
-                          }}
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <select
-                          className={selectClass}
-                          value={row.tenure ?? ''}
-                          onChange={(e) => {
-                            const raw = e.target.value;
-                            const tenure =
-                              raw === 'rent' || raw === 'buy' || raw === 'both'
-                                ? raw
-                                : null;
-                            patchRequirement(row.id, { tenure }, { tenure });
-                          }}
-                        >
-                          <option value="">—</option>
-                          <option value="buy">FH</option>
-                          <option value="rent">LH</option>
-                          <option value="both">FH / LH</option>
-                        </select>
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={
-                            row.sizeMinSqft != null
-                              ? String(row.sizeMinSqft)
-                              : ''
-                          }
-                          placeholder="Min"
-                          className="min-w-[5rem] tabular-nums"
-                          onCommit={(next) => {
-                            const sizeMinSqft = parseOptionalNumber(next);
-                            patchRequirement(
-                              row.id,
-                              { sizeMinSqft },
-                              { sizeMinSqft },
-                            );
-                          }}
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={
-                            row.sizeMaxSqft != null
-                              ? String(row.sizeMaxSqft)
-                              : ''
-                          }
-                          placeholder="Max"
-                          className="min-w-[5rem] tabular-nums"
-                          onCommit={(next) => {
-                            const sizeMaxSqft = parseOptionalNumber(next);
-                            patchRequirement(
-                              row.id,
-                              { sizeMaxSqft },
-                              { sizeMaxSqft },
-                            );
-                          }}
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={row.locationText ?? ''}
-                          placeholder="Location"
-                          className="min-w-[9rem]"
-                          onCommit={(next) =>
-                            patchRequirement(
-                              row.id,
-                              { locationText: next.trim() || null },
-                              { locationText: next.trim() || null },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <input
-                          type="checkbox"
-                          className="mx-auto block h-4 w-4 accent-[var(--workspace-shell-accent)]"
-                          checked={row.detailsSent}
-                          title={row.detailsNote ?? undefined}
-                          onChange={(e) => {
-                            const detailsSent = e.target.checked;
-                            patchRequirement(
-                              row.id,
-                              { detailsSent },
-                              { detailsSent },
-                            );
-                          }}
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <select
-                          className={selectClass}
-                          style={{
-                            color: stageColour.label,
-                            borderColor: stageColour.bar,
-                            background: stageColour.tint,
-                          }}
-                          value={row.stage}
-                          onChange={(e) => {
-                            const stage = e.target.value as RequirementStatus;
-                            patchRequirement(row.id, { stage }, { stage });
-                          }}
-                        >
-                          {REQUIREMENT_STATUSES.map((status) => (
-                            <option key={status} value={status}>
-                              {REQUIREMENT_STATUS_LABELS[status]}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={row.notes ?? ''}
-                          placeholder="Notes / timing…"
-                          className="min-w-[16rem]"
-                          onCommit={(next) =>
-                            patchRequirement(
-                              row.id,
-                              { notes: next.trim() || null },
-                              { notes: next.trim() || null },
-                            )
-                          }
-                        />
-                      </td>
-                    </tr>
+                      <tr
+                        key={row.id}
+                        className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
+                        style={{
+                          boxShadow: `inset 3px 0 0 ${stageColour.bar}`,
+                        }}
+                      >
+                        <td className={`${tdClass} px-2`}>
+                          <button
+                            type="button"
+                            className={`text-left text-xs underline-offset-2 hover:underline ${workspaceTextMuted}`}
+                            onClick={() => onEditRequirement(row)}
+                            title="Open full editor"
+                          >
+                            {formatDate(row.updatedAt)}
+                          </button>
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={row.companyName ?? ''}
+                            placeholder="Company"
+                            className="min-w-[9rem]"
+                            onCommit={(next) =>
+                              patchRequirement(
+                                row.id,
+                                { companyName: next.trim() || null },
+                                { companyName: next.trim() || null },
+                              )
+                            }
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={row.contactName ?? ''}
+                            placeholder="Contact"
+                            className="min-w-[8rem]"
+                            onCommit={(next) =>
+                              patchRequirement(
+                                row.id,
+                                { contactName: next.trim() || null },
+                                { contactName: next.trim() || null },
+                              )
+                            }
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={row.contactPhone ?? ''}
+                            placeholder="Tel"
+                            className="min-w-[7rem]"
+                            onCommit={(next) =>
+                              patchRequirement(
+                                row.id,
+                                { contactPhone: next.trim() || null },
+                                { contactPhone: next.trim() || null },
+                              )
+                            }
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={row.contactEmail ?? ''}
+                            placeholder="Email"
+                            className="min-w-[10rem]"
+                            onCommit={(next) =>
+                              patchRequirement(
+                                row.id,
+                                { contactEmail: next.trim() || null },
+                                { contactEmail: next.trim() || null },
+                              )
+                            }
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={row.sector ?? ''}
+                            placeholder="Gym, office…"
+                            className="min-w-[8rem]"
+                            onCommit={(next) => {
+                              const sector = next.trim() || null;
+                              const useClass =
+                                normalizeRequirementUseClass(sector);
+                              patchRequirement(
+                                row.id,
+                                { sector, useClass },
+                                { sector, useClass },
+                              );
+                            }}
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <select
+                            className={selectClass}
+                            value={row.tenure ?? ''}
+                            onChange={(e) => {
+                              const raw = e.target.value;
+                              const tenure =
+                                raw === 'rent' ||
+                                raw === 'buy' ||
+                                raw === 'both'
+                                  ? raw
+                                  : null;
+                              patchRequirement(row.id, { tenure }, { tenure });
+                            }}
+                          >
+                            <option value="">—</option>
+                            <option value="buy">FH</option>
+                            <option value="rent">LH</option>
+                            <option value="both">FH / LH</option>
+                          </select>
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={
+                              row.sizeMinSqft != null
+                                ? String(row.sizeMinSqft)
+                                : ''
+                            }
+                            placeholder="Min"
+                            className="min-w-[5rem] tabular-nums"
+                            onCommit={(next) => {
+                              const sizeMinSqft = parseOptionalNumber(next);
+                              patchRequirement(
+                                row.id,
+                                { sizeMinSqft },
+                                { sizeMinSqft },
+                              );
+                            }}
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={
+                              row.sizeMaxSqft != null
+                                ? String(row.sizeMaxSqft)
+                                : ''
+                            }
+                            placeholder="Max"
+                            className="min-w-[5rem] tabular-nums"
+                            onCommit={(next) => {
+                              const sizeMaxSqft = parseOptionalNumber(next);
+                              patchRequirement(
+                                row.id,
+                                { sizeMaxSqft },
+                                { sizeMaxSqft },
+                              );
+                            }}
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={row.locationText ?? ''}
+                            placeholder="Location"
+                            className="min-w-[9rem]"
+                            onCommit={(next) =>
+                              patchRequirement(
+                                row.id,
+                                { locationText: next.trim() || null },
+                                { locationText: next.trim() || null },
+                              )
+                            }
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <input
+                            type="checkbox"
+                            className="mx-auto block h-4 w-4 accent-[var(--workspace-shell-accent)]"
+                            checked={row.detailsSent}
+                            title={row.detailsNote ?? undefined}
+                            onChange={(e) => {
+                              const detailsSent = e.target.checked;
+                              patchRequirement(
+                                row.id,
+                                { detailsSent },
+                                { detailsSent },
+                              );
+                            }}
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <select
+                            className={selectClass}
+                            style={{
+                              color: stageColour.label,
+                              borderColor: stageColour.bar,
+                              background: stageColour.tint,
+                            }}
+                            value={row.stage}
+                            onChange={(e) => {
+                              const stage = e.target.value as RequirementStatus;
+                              patchRequirement(row.id, { stage }, { stage });
+                            }}
+                          >
+                            {REQUIREMENT_STATUSES.map((status) => (
+                              <option key={status} value={status}>
+                                {REQUIREMENT_STATUS_LABELS[status]}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={row.notes ?? ''}
+                            placeholder="Notes / timing…"
+                            className="min-w-[16rem]"
+                            onCommit={(next) =>
+                              patchRequirement(
+                                row.id,
+                                { notes: next.trim() || null },
+                                { notes: next.trim() || null },
+                              )
+                            }
+                          />
+                        </td>
+                      </tr>
                     );
                   })
                 )}
@@ -529,161 +531,163 @@ export function WipSheetView({
                       : null;
                     const stageColour = wipStageColour(deal.stage);
                     return (
-                    <tr
-                      key={deal.id}
-                      className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
-                      style={{
-                        boxShadow: `inset 3px 0 0 ${stageColour.bar}`,
-                      }}
-                    >
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={deal.projectName ?? ''}
-                          placeholder="Instruction"
-                          className="min-w-[10rem] font-medium"
-                          onCommit={(next) =>
-                            patchDeal(
-                              deal.id,
-                              { projectName: next.trim() || null },
-                              { projectName: next.trim() || null },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={deal.companyName}
-                          placeholder="Company"
-                          className="min-w-[8rem]"
-                          onCommit={(next) =>
-                            patchDeal(
-                              deal.id,
-                              { companyName: next },
-                              { companyName: next },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={deal.contactName}
-                          placeholder="Contact"
-                          className="min-w-[8rem]"
-                          onCommit={(next) =>
-                            patchDeal(
-                              deal.id,
-                              { contactName: next },
-                              { contactName: next },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={`${tdClass} px-2`}>
-                        {deal.commercialListingId ? (
-                          <Link
-                            href={pathsConfig.app.accountListingDetail
-                              .replace('[account]', accountSlug)
-                              .replace('[id]', deal.commercialListingId)}
-                            className="block max-w-[12rem] truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
-                            title="Open disposal"
-                          >
-                            {listing?.name?.trim() || 'Open disposal'}
-                          </Link>
-                        ) : (
-                          <span className={`text-xs ${workspaceTextMuted}`}>
-                            —
-                          </span>
-                        )}
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={deal.value ? String(deal.value) : ''}
-                          placeholder="0"
-                          className="min-w-[6rem] tabular-nums"
-                          onCommit={(next) => {
-                            const value = parseOptionalNumber(next) ?? 0;
-                            patchDeal(deal.id, { value }, { value });
-                          }}
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <select
-                          className={selectClass}
-                          style={{
-                            color: stageColour.label,
-                            borderColor: stageColour.bar,
-                            background: stageColour.tint,
-                          }}
-                          value={normalizeCommercialPipelineStage(deal.stage)}
-                          onChange={(e) => {
-                            const stage = e.target.value;
-                            patchDeal(deal.id, { stage }, { stage });
-                          }}
-                        >
-                          {instructionStages.map((stage) => (
-                            <option key={stage.key} value={stage.key}>
-                              {stage.label}
-                            </option>
-                          ))}
-                        </select>
-                      </td>
-                      <td className={tdClass}>
-                        <SheetTextCell
-                          value={deal.nextAction}
-                          placeholder="Next action"
-                          className="min-w-[9rem]"
-                          onCommit={(next) =>
-                            patchDeal(
-                              deal.id,
-                              { nextAction: next },
-                              { nextAction: next },
-                            )
-                          }
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <input
-                          type="date"
-                          className={selectClass}
-                          defaultValue={deal.nextActionDate?.slice(0, 10) ?? ''}
-                          key={`${deal.id}-due-${deal.nextActionDate ?? ''}`}
-                          onBlur={(e) => {
-                            const nextActionDate = e.target.value || null;
-                            const current =
-                              deal.nextActionDate?.slice(0, 10) || null;
-                            if (nextActionDate === current) return;
-                            patchDeal(
-                              deal.id,
-                              { nextActionDate },
-                              { nextActionDate },
-                            );
-                          }}
-                        />
-                      </td>
-                      <td className={tdClass}>
-                        <div className="flex items-center gap-1">
+                      <tr
+                        key={deal.id}
+                        className="hover:bg-[var(--workspace-shell-sidebar-accent)]/25"
+                        style={{
+                          boxShadow: `inset 3px 0 0 ${stageColour.bar}`,
+                        }}
+                      >
+                        <td className={tdClass}>
                           <SheetTextCell
-                            value={deal.description ?? ''}
-                            placeholder="Notes"
-                            className="min-w-[12rem]"
+                            value={deal.projectName ?? ''}
+                            placeholder="Instruction"
+                            className="min-w-[10rem] font-medium"
                             onCommit={(next) =>
                               patchDeal(
                                 deal.id,
-                                { description: next.trim() || null },
-                                { description: next.trim() || null },
+                                { projectName: next.trim() || null },
+                                { projectName: next.trim() || null },
                               )
                             }
                           />
-                          <button
-                            type="button"
-                            className={`shrink-0 px-1 text-[11px] ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
-                            onClick={() => onEditInstruction(deal)}
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={deal.companyName}
+                            placeholder="Company"
+                            className="min-w-[8rem]"
+                            onCommit={(next) =>
+                              patchDeal(
+                                deal.id,
+                                { companyName: next },
+                                { companyName: next },
+                              )
+                            }
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={deal.contactName}
+                            placeholder="Contact"
+                            className="min-w-[8rem]"
+                            onCommit={(next) =>
+                              patchDeal(
+                                deal.id,
+                                { contactName: next },
+                                { contactName: next },
+                              )
+                            }
+                          />
+                        </td>
+                        <td className={`${tdClass} px-2`}>
+                          {deal.commercialListingId ? (
+                            <Link
+                              href={pathsConfig.app.accountListingDetail
+                                .replace('[account]', accountSlug)
+                                .replace('[id]', deal.commercialListingId)}
+                              className="block max-w-[12rem] truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
+                              title="Open disposal"
+                            >
+                              {listing?.name?.trim() || 'Open disposal'}
+                            </Link>
+                          ) : (
+                            <span className={`text-xs ${workspaceTextMuted}`}>
+                              —
+                            </span>
+                          )}
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={deal.value ? String(deal.value) : ''}
+                            placeholder="0"
+                            className="min-w-[6rem] tabular-nums"
+                            onCommit={(next) => {
+                              const value = parseOptionalNumber(next) ?? 0;
+                              patchDeal(deal.id, { value }, { value });
+                            }}
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <select
+                            className={selectClass}
+                            style={{
+                              color: stageColour.label,
+                              borderColor: stageColour.bar,
+                              background: stageColour.tint,
+                            }}
+                            value={normalizeCommercialPipelineStage(deal.stage)}
+                            onChange={(e) => {
+                              const stage = e.target.value;
+                              patchDeal(deal.id, { stage }, { stage });
+                            }}
                           >
-                            Open
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
+                            {instructionStages.map((stage) => (
+                              <option key={stage.key} value={stage.key}>
+                                {stage.label}
+                              </option>
+                            ))}
+                          </select>
+                        </td>
+                        <td className={tdClass}>
+                          <SheetTextCell
+                            value={deal.nextAction}
+                            placeholder="Next action"
+                            className="min-w-[9rem]"
+                            onCommit={(next) =>
+                              patchDeal(
+                                deal.id,
+                                { nextAction: next },
+                                { nextAction: next },
+                              )
+                            }
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <input
+                            type="date"
+                            className={selectClass}
+                            defaultValue={
+                              deal.nextActionDate?.slice(0, 10) ?? ''
+                            }
+                            key={`${deal.id}-due-${deal.nextActionDate ?? ''}`}
+                            onBlur={(e) => {
+                              const nextActionDate = e.target.value || null;
+                              const current =
+                                deal.nextActionDate?.slice(0, 10) || null;
+                              if (nextActionDate === current) return;
+                              patchDeal(
+                                deal.id,
+                                { nextActionDate },
+                                { nextActionDate },
+                              );
+                            }}
+                          />
+                        </td>
+                        <td className={tdClass}>
+                          <div className="flex items-center gap-1">
+                            <SheetTextCell
+                              value={deal.description ?? ''}
+                              placeholder="Notes"
+                              className="min-w-[12rem]"
+                              onCommit={(next) =>
+                                patchDeal(
+                                  deal.id,
+                                  { description: next.trim() || null },
+                                  { description: next.trim() || null },
+                                )
+                              }
+                            />
+                            <button
+                              type="button"
+                              className={`shrink-0 px-1 text-[11px] ${workspaceTextMuted} hover:text-[var(--workspace-shell-text)]`}
+                              onClick={() => onEditInstruction(deal)}
+                            >
+                              Open
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
                     );
                   })
                 )}

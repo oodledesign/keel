@@ -40,7 +40,7 @@ export const LISTING_CSV_FIELD_OPTIONS: Array<{
   label: string;
 }> = [
   { value: CSV_SKIP_FIELD, label: "Don't import" },
-  { value: 'external_id', label: 'External ID (Kato ID)' },
+  { value: 'external_id', label: 'External ID' },
   { value: 'name', label: 'Listing name' },
   { value: 'address_line_1', label: 'Address' },
   { value: 'address_line_2', label: 'Address line 2' },
@@ -129,7 +129,7 @@ export function heuristicListingMapping(
     }
   };
 
-  // Kato disposals export columns (exact first).
+  // Legacy disposals export columns (exact first).
   assignExact('external_id', 'id');
   assignExact('status', 'status');
   assignExact('address_line_1', 'address');
@@ -183,7 +183,7 @@ export function heuristicListingMapping(
   return {
     mapping,
     confidence: 'high',
-    notes: 'Mapped using Kato / commercial disposal column names',
+    notes: 'Mapped using commercial disposal column names',
   };
 }
 

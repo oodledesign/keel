@@ -12,9 +12,8 @@ import {
   useTransition,
 } from 'react';
 
-import { useRouter, useSearchParams } from 'next/navigation';
-
 import Link from 'next/link';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 import {
   DndContext,
@@ -96,6 +95,12 @@ import {
   resolveCommercialPipelineBoardStages,
 } from '~/lib/commercial/pipeline-stage-config';
 import {
+  REQUIREMENT_USE_CLASS_LABELS,
+  REQUIREMENT_USE_CLASS_STYLES,
+  normalizeRequirementUseClass,
+  requirementTenureLabel,
+} from '~/lib/commercial/requirement-use-class';
+import {
   type InstructionClosedChoice,
   type RequirementClosedChoice,
   WIP_SHARED_STATUSES,
@@ -109,12 +114,6 @@ import {
   sharedBoardStages,
   toSharedStatus,
 } from '~/lib/commercial/wip-board-mapping';
-import {
-  REQUIREMENT_USE_CLASS_LABELS,
-  REQUIREMENT_USE_CLASS_STYLES,
-  normalizeRequirementUseClass,
-  requirementTenureLabel,
-} from '~/lib/commercial/requirement-use-class';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import { scrollWheelDeltaToScrollParent } from '~/lib/scroll-passthrough';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
@@ -803,7 +802,9 @@ export function CommercialWipBoard({
     >
       <div
         className={`flex flex-wrap items-center gap-x-3 gap-y-2 px-4 pt-1 md:px-6 lg:px-8 ${
-          fullscreen ? 'shrink-0 border-b border-[color:var(--workspace-shell-border)] py-3' : ''
+          fullscreen
+            ? 'shrink-0 border-b border-[color:var(--workspace-shell-border)] py-3'
+            : ''
         }`}
       >
         <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">

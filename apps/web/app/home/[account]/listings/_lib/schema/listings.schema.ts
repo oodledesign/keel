@@ -76,7 +76,11 @@ export const CreateListingSchema = z.object({
   description: z.string().optional().nullable(),
   locationCopy: z.string().optional().nullable(),
   keyPoints: z.array(z.string().min(1)).optional().nullable(),
-  amenities: z.array(z.string().trim().min(1).max(80)).max(50).optional().nullable(),
+  amenities: z
+    .array(z.string().trim().min(1).max(80))
+    .max(50)
+    .optional()
+    .nullable(),
   marketingSections: z
     .array(
       z.object({

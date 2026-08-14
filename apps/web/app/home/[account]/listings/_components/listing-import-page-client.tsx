@@ -93,7 +93,7 @@ export function ListingImportPageClient({
             existingLabel: dup.existing.name || dup.existing.id,
             matchReason:
               dup.matchReason === 'external_id'
-                ? 'Same Kato / external ID'
+                ? 'Same external ID'
                 : 'Same address + postcode',
           };
         }),
@@ -167,7 +167,7 @@ export function ListingImportPageClient({
 
       <CsvImportWizard
         title="Import disposals"
-        description="Upload a Kato / Numbers CSV of disposals. Map columns, resolve duplicates, then import."
+        description="Upload a CSV of disposals. Map columns, resolve duplicates, then import."
         backHref={backHref}
         fieldOptions={LISTING_CSV_FIELD_OPTIONS}
         enableDuplicateReview

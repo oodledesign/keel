@@ -11,7 +11,7 @@ import { cn } from '@kit/ui/utils';
 
 import { HapticButton, HapticLink } from '~/components/haptic-link';
 import { MobileNavTabIcon } from '~/components/workspace-shell/mobile-nav-tab-icon';
-import { PlatformSupportTicketDialog } from '~/components/workspace-shell/platform-support-ticket-dialog';
+import { useOptionalPlatformSupportMessenger } from '~/components/workspace-shell/platform-support-messenger-context';
 import {
   WorkspaceAccountsSelector,
   type WorkspaceSwitcherPortal,
@@ -63,7 +63,7 @@ export function WorkspaceMobileMenu({
 }: WorkspaceMobileMenuProps) {
   const pathname = usePathname();
   const [visible, setVisible] = useState(open);
-  const [supportOpen, setSupportOpen] = useState(false);
+  const messenger = useOptionalPlatformSupportMessenger();
 
   const close = useCallback(() => onOpenChange(false), [onOpenChange]);
 
@@ -85,7 +85,7 @@ export function WorkspaceMobileMenu({
     return () => window.clearTimeout(timer);
   }, [open]);
 
-  if (!visible && !open && !supportOpen) return null;
+  if (!visible && !open) return null;
 
   const showMenu = visible || open;
   let linkIndex = 0;
@@ -205,7 +205,10 @@ export function WorkspaceMobileMenu({
                 className="flex min-h-[3.25rem] w-full items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium text-[var(--workspace-shell-text)] hover:bg-white/6"
                 onClick={() => {
                   close();
-                  setSupportOpen(true);
+                  messenger?.openMessenger({
+                    view: 'home',
+                    accountId: helpDefaultAccountId,
+                  });
                 }}
               >
                 <span className="flex h-6 w-6 shrink-0 items-center justify-center text-[var(--ozer-accent)]">
@@ -226,12 +229,6 @@ export function WorkspaceMobileMenu({
           </div>
         </>
       ) : null}
-
-      <PlatformSupportTicketDialog
-        open={supportOpen}
-        onOpenChange={setSupportOpen}
-        defaultAccountId={helpDefaultAccountId}
-      />
     </>
   );
 }

@@ -117,7 +117,7 @@ export const loadEmailPageData = cache(
         ? client
             .from('email_assistant_settings')
             .select(
-              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders, ignored_domains',
+              'style_notes, signature, signature_is_html, last_synced_at, auto_triage_enabled, auto_draft_enabled, auto_save_gmail_drafts, ignored_senders, ignored_domains, ignored_subject_keywords, priority_senders, priority_domains, priority_subject_keywords',
             )
             .eq('connection_id', connectionId)
             .maybeSingle()
@@ -145,6 +145,10 @@ export const loadEmailPageData = cache(
       auto_save_gmail_drafts?: boolean | null;
       ignored_senders?: string[] | null;
       ignored_domains?: string[] | null;
+      ignored_subject_keywords?: string[] | null;
+      priority_senders?: string[] | null;
+      priority_domains?: string[] | null;
+      priority_subject_keywords?: string[] | null;
     } | null;
 
     const threadRows = threadsResult.data ?? [];
@@ -174,6 +178,14 @@ export const loadEmailPageData = cache(
         autoSaveGmailDrafts: settingsRow?.auto_save_gmail_drafts ?? false,
         ignoredSenders: (settingsRow?.ignored_senders ?? []).filter(Boolean),
         ignoredDomains: (settingsRow?.ignored_domains ?? []).filter(Boolean),
+        ignoredSubjectKeywords: (
+          settingsRow?.ignored_subject_keywords ?? []
+        ).filter(Boolean),
+        prioritySenders: (settingsRow?.priority_senders ?? []).filter(Boolean),
+        priorityDomains: (settingsRow?.priority_domains ?? []).filter(Boolean),
+        prioritySubjectKeywords: (
+          settingsRow?.priority_subject_keywords ?? []
+        ).filter(Boolean),
       },
       threads: await enrichEmailThreadLinks(
         client,

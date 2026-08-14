@@ -21,7 +21,9 @@ export function formatChapterTime(ms: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
-export function formatPublishedAt(iso: string | null | undefined): string | null {
+export function formatPublishedAt(
+  iso: string | null | undefined,
+): string | null {
   if (!iso) return null;
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return null;

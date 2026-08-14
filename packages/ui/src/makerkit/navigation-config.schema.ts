@@ -15,6 +15,7 @@ const RouteSubChild = z.object({
   Icon: z.custom<React.ReactNode>().optional(),
   end: RouteMatchingEnd,
   renderAction: z.custom<React.ReactNode>().optional(),
+  tourId: z.string().optional(),
 });
 
 const RouteChild = z.object({
@@ -26,6 +27,7 @@ const RouteChild = z.object({
   collapsible: z.boolean().default(false).optional(),
   collapsed: z.boolean().default(false).optional(),
   renderAction: z.custom<React.ReactNode>().optional(),
+  tourId: z.string().optional(),
 });
 
 const RouteGroup = z.object({

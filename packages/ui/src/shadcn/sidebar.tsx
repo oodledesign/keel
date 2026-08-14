@@ -908,6 +908,9 @@ export function SidebarNavigation({
                                   'mx-auto w-full gap-0! [&>svg]:flex-1': !open,
                                 })}
                                 href={path}
+                                {...('tourId' in child && child.tourId
+                                  ? { 'data-tour': child.tourId }
+                                  : {})}
                               >
                                 {child.Icon}
                                 <span

@@ -149,7 +149,8 @@ export function mapKatoLettingRow(
   if (!id) return null;
   const leaseStart =
     parseDate(row['Lease Start']) || parseDate(row['Transaction Date']);
-  const leaseEnd = parseDate(row['Lease End']) || parseDate(row['Lease Expiry']);
+  const leaseEnd =
+    parseDate(row['Lease End']) || parseDate(row['Lease Expiry']);
   const tenant = emptyToNull(row['Tenant']);
   const status = mapLettingStatus(emptyToNull(row['Status']), leaseEnd);
 

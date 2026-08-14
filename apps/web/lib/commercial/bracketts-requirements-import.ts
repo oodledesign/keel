@@ -1,7 +1,6 @@
 /**
  * Parse Bracketts "All requirements" sheet into contacts / businesses / requirements.
  */
-
 import {
   type RequirementUseClass,
   inferRequirementUseClass,
@@ -85,7 +84,9 @@ function normalizePhone(raw: string): string | null {
   return t.replace(/\s+/g, ' ');
 }
 
-function sectorFromUseClass(useClass: RequirementUseClass | null): string | null {
+function sectorFromUseClass(
+  useClass: RequirementUseClass | null,
+): string | null {
   if (!useClass) return null;
   switch (useClass) {
     case 'class_b':

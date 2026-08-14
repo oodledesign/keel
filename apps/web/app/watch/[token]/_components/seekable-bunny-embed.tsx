@@ -45,12 +45,7 @@ export const SeekableBunnyEmbed = forwardRef<SeekableBunnyEmbedHandle, Props>(
         url.searchParams.set('autoplay', 'true');
       }
       return url.toString();
-    }, [
-      props.libraryId,
-      props.bunnyVideoId,
-      props.config,
-      startSeconds,
-    ]);
+    }, [props.libraryId, props.bunnyVideoId, props.config, startSeconds]);
 
     const ratio = aspectRatioCss(props.config.aspect_ratio);
 

@@ -60,12 +60,10 @@ class AdminAuthUserService {
   }
 
   /**
-   * Impersonate a user by generating a magic link and returning the access and refresh tokens.
-   * @param userId
+   * Create a fresh browser session (access + refresh tokens) for a user via
+   * admin magic-link exchange. Used for impersonation enter/exit.
    */
-  async impersonateUser(userId: string) {
-    await this.assertUserIsNotCurrentSuperAdmin(userId);
-
+  async createSessionTokensForUser(userId: string) {
     const {
       data: { user },
       error,
@@ -78,7 +76,7 @@ class AdminAuthUserService {
     const email = user.email;
 
     if (!email) {
-      throw new Error(`User has no email. Cannot impersonate`);
+      throw new Error(`User has no email. Cannot create session`);
     }
 
     const { error: linkError, data } =
@@ -94,7 +92,13 @@ class AdminAuthUserService {
       throw new Error(`Error generating magic link`);
     }
 
-    const response = await fetch(data.properties?.action_link, {
+    const actionLink = data.properties?.action_link;
+
+    if (!actionLink) {
+      throw new Error(`Error generating magic link. Action link missing`);
+    }
+
+    const response = await fetch(actionLink, {
       method: 'GET',
       redirect: 'manual',
     });
@@ -120,6 +124,15 @@ class AdminAuthUserService {
       accessToken,
       refreshToken,
     };
+  }
+
+  /**
+   * Impersonate a user by generating a magic link and returning the access and refresh tokens.
+   * @param userId
+   */
+  async impersonateUser(userId: string) {
+    await this.assertUserIsNotCurrentSuperAdmin(userId);
+    return this.createSessionTokensForUser(userId);
   }
 
   /**

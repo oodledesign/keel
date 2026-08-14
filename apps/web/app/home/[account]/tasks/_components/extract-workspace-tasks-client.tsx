@@ -19,6 +19,7 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import { cn } from '@kit/ui/utils';
 
 import { DueDateInput } from '~/components/due-date-input';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
@@ -32,6 +33,124 @@ import {
   extractWorkspaceTasksFromTranscript,
 } from '../_lib/server/task-ai-actions';
 
+const EXTRACT_STATUS_STEPS = [
+  {
+    afterMs: 0,
+    label: 'Reading the transcript',
+    detail: 'Preparing the meeting text for the model…',
+  },
+  {
+    afterMs: 2500,
+    label: 'Finding action items',
+    detail: 'Looking for owners, deadlines, and follow-ups…',
+  },
+  {
+    afterMs: 7000,
+    label: 'Linking clients & projects',
+    detail: 'Matching tasks to people and work in this workspace…',
+  },
+  {
+    afterMs: 14000,
+    label: 'Still working',
+    detail: 'Longer meetings take a bit more time — hanging in there…',
+  },
+  {
+    afterMs: 25000,
+    label: 'Almost ready',
+    detail: 'Grouping suggestions for you to review…',
+  },
+] as const;
+
+function transcriptStats(text: string) {
+  const trimmed = text.trim();
+  if (!trimmed) {
+    return { words: 0, chars: 0 };
+  }
+
+  const words = trimmed.split(/\s+/).filter(Boolean).length;
+  return { words, chars: trimmed.length };
+}
+
+function formatElapsed(ms: number) {
+  const seconds = Math.max(0, Math.floor(ms / 1000));
+  if (seconds < 60) return `${seconds}s`;
+  const minutes = Math.floor(seconds / 60);
+  const rem = seconds % 60;
+  return `${minutes}m ${rem.toString().padStart(2, '0')}s`;
+}
+
+function ExtractionProgressPanel({
+  rawText,
+  meetingDateYmd,
+}: {
+  rawText: string;
+  meetingDateYmd?: string | null;
+}) {
+  const stats = useMemo(() => transcriptStats(rawText), [rawText]);
+  const [elapsedMs, setElapsedMs] = useState(0);
+  const [progress, setProgress] = useState(8);
+
+  useEffect(() => {
+    const started = Date.now();
+    const tick = window.setInterval(() => {
+      const elapsed = Date.now() - started;
+      setElapsedMs(elapsed);
+      // Ease toward ~90% so the bar keeps moving without claiming completion.
+      const eased = 8 + (1 - Math.exp(-elapsed / 12000)) * 82;
+      setProgress(Math.min(92, eased));
+    }, 200);
+
+    return () => window.clearInterval(tick);
+  }, []);
+
+  const step =
+    [...EXTRACT_STATUS_STEPS]
+      .reverse()
+      .find((item) => elapsedMs >= item.afterMs) ?? EXTRACT_STATUS_STEPS[0]!;
+
+  return (
+    <div
+      className="space-y-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-accent-subtle)]/40 px-4 py-4"
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+    >
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 space-y-1">
+          <p className="flex items-center gap-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+            <Loader2 className="h-4 w-4 shrink-0 animate-spin text-[var(--ozer-accent)]" />
+            {step.label}
+          </p>
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            {step.detail}
+          </p>
+        </div>
+        <span className="shrink-0 text-xs text-[var(--workspace-shell-text-muted)] tabular-nums">
+          {formatElapsed(elapsedMs)}
+        </span>
+      </div>
+
+      <div
+        className="h-1.5 w-full overflow-hidden rounded-full bg-[color:var(--workspace-shell-border)]"
+        aria-hidden
+      >
+        <div
+          className={cn(
+            'h-full rounded-full bg-[var(--ozer-accent)] transition-[width] duration-300 ease-out',
+          )}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+      <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+        Scanning about {stats.words.toLocaleString('en-GB')} words
+        {stats.chars > 0
+          ? ` (${stats.chars.toLocaleString('en-GB')} characters)`
+          : ''}
+        {meetingDateYmd ? ` · meeting ${meetingDateYmd}` : ''}.
+      </p>
+    </div>
+  );
+}
 type Props = {
   accountId: string;
   accountSlug: string;
@@ -323,6 +442,12 @@ export function ExtractWorkspaceTasksClient({
                 </>
               )}
             </Button>
+            {extracting ? (
+              <ExtractionProgressPanel
+                rawText={rawText}
+                meetingDateYmd={meetingDateYmd}
+              />
+            ) : null}
           </div>
         ) : (
           <div className="space-y-6">

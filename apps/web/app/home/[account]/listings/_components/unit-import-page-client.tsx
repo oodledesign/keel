@@ -87,7 +87,7 @@ export function UnitImportPageClient({
             existingLabel: dup.existing.label || dup.existing.id,
             matchReason:
               dup.matchReason === 'external_id'
-                ? 'Same Kato / external ID'
+                ? 'Same external ID'
                 : 'Same floor + label on listing',
           };
         }),
@@ -147,7 +147,7 @@ export function UnitImportPageClient({
 
       <CsvImportWizard
         title="Import floor units"
-        description="Upload a Kato / Numbers CSV of floor units. Units link to listings by Address."
+        description="Upload a CSV of floor units. Units link to listings by Address."
         backHref={backHref}
         fieldOptions={UNIT_CSV_FIELD_OPTIONS}
         enableDuplicateReview

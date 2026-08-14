@@ -13,6 +13,7 @@ import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AiCreditsExhaustedShell } from '~/components/ai/ai-credits-exhausted-shell';
 import { AppLogo } from '~/components/app-logo';
+import { ProductTourHost } from '~/components/product-tour/product-tour-host';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
 import pathsConfig from '~/config/paths.config';
@@ -30,6 +31,8 @@ import { loadPersonalMobileNavShortcuts } from '~/lib/dashboard-shortcuts/load-s
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import { loadCompletedProductTours } from '~/lib/product-tour/product-tour.actions';
+import type { CompletedProductTours } from '~/lib/product-tour/types';
 import { buildPersonalShellMetadata } from '~/lib/seo/app-shell-metadata';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
@@ -102,23 +105,33 @@ async function SidebarLayout({
     >
   > | null = null;
 
+  let completedTours: CompletedProductTours = {};
+
   try {
     client = (
       await import('@kit/supabase/server-client')
     ).getSupabaseServerClient();
-    [workspace, sharedWorkspaces, switcherAccounts, switcherPortals] =
-      await Promise.all([
-        loadUserWorkspace(),
-        loadPersonalSidebarWorkspaces(),
-        loadWorkspaceSwitcherAccounts(client, user.id),
-        listUserClientPortalMemberships(user.id),
-      ]);
+    [
+      workspace,
+      sharedWorkspaces,
+      switcherAccounts,
+      switcherPortals,
+      completedTours,
+    ] = await Promise.all([
+      loadUserWorkspace(),
+      loadPersonalSidebarWorkspaces(),
+      loadWorkspaceSwitcherAccounts(client, user.id),
+      listUserClientPortalMemberships(user.id),
+      loadCompletedProductTours(),
+    ]);
   } catch (e) {
     if (isRedirectError(e)) throw e;
     workspace = null;
     sharedWorkspaces = [];
     switcherAccounts = [];
     switcherPortals = [];
+    // Empty map may replay the tour after a transient load failure — acceptable.
+    completedTours = {};
   }
 
   if (!workspace) {
@@ -169,6 +182,10 @@ async function SidebarLayout({
       ),
     });
 
+    const workspaceOptions = switcherAccounts
+      .filter((row) => Boolean(row.slug))
+      .map((row) => ({ slug: String(row.slug), name: row.label }));
+
     return (
       <WorkspaceFocusProviderShell
         settingsByAccountId={params.focusSettingsByAccountId}
@@ -185,6 +202,7 @@ async function SidebarLayout({
                 switcherAccounts={switcherAccounts}
                 switcherPortals={switcherPortals}
                 emailNeedsReplyCount={params.emailNeedsReplyCount}
+                completedTours={completedTours}
               />
             </PageNavigation>
 
@@ -220,6 +238,11 @@ async function SidebarLayout({
                   pathsConfig.app.personalAccountBilling,
                 )}
               >
+                <ProductTourHost
+                  variant="personal"
+                  completedTours={completedTours}
+                  workspaceOptions={workspaceOptions}
+                />
                 {children}
               </AiCreditsExhaustedShell>
             </PersonalHomeMobileChrome>

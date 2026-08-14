@@ -6,6 +6,7 @@ import { useUser } from '@kit/supabase/hooks/use-user';
 import { JWTUserData } from '@kit/supabase/types';
 
 import { AiCreditsMenuMeter } from '~/components/ai/ai-credits-menu-meter';
+import { useOptionalPlatformSupportMessenger } from '~/components/workspace-shell/platform-support-messenger-context';
 import pathsConfig from '~/config/paths.config';
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
 
@@ -40,6 +41,7 @@ export function ProfileAccountDropdownContainer(props: {
   const signOut = useSignOut();
   const user = useUser(props.user);
   const userData = user.data;
+  const messenger = useOptionalPlatformSupportMessenger();
 
   if (!userData) {
     return null;
@@ -60,6 +62,14 @@ export function ProfileAccountDropdownContainer(props: {
       account={props.account}
       signOutRequested={() => signOut.mutateAsync()}
       showProfileName={props.showProfileName}
+      onSupportClick={
+        messenger
+          ? () =>
+              messenger.openNewConversation(
+                props.account?.id ?? props.billingAccountId ?? null,
+              )
+          : undefined
+      }
       menuExtras={
         showMeter
           ? (open) => (

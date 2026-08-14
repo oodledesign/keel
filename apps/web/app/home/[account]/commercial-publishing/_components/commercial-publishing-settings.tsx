@@ -413,9 +413,9 @@ export function CommercialPublishingSettings({
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-[var(--workspace-shell-text)]/60">
-            Kato-compatible XML for Property Hive Import. EACH has a separate
-            feed URL under Portal publishing so you can later choose different
-            stock per portal.
+            XML feed for Property Hive Import. EACH has a separate feed URL
+            under Portal publishing so you can later choose different stock per
+            portal.
           </p>
 
           {feedUrl ? (
@@ -434,7 +434,7 @@ export function CommercialPublishingSettings({
                 </Button>
               </div>
               <ol className="list-decimal space-y-1 pl-4 text-xs text-[var(--workspace-shell-text)]/55">
-                <li>Property Hive → Property Import: Kato XML / generic XML</li>
+                <li>Property Hive → Property Import: XML / generic XML</li>
                 <li>Paste this URL, Frequency → Every 15 minutes</li>
                 <li>Prefer a real server cron (WP-Cron alone can drift)</li>
               </ol>
@@ -490,8 +490,8 @@ export function CommercialPublishingSettings({
             Rightmove Commercial Listings uses platform OAuth (env). Rightmove
             Branch IDs live on each workspace office under Brand settings →
             Branches, and disposals pick an office on Management. EACH and
-            Property Hive WordPress use Kato-compatible XML feed URLs (EACH has
-            its own token so stock can diverge later).
+            Property Hive WordPress use XML feed URLs (EACH has its own token so
+            stock can diverge later).
           </p>
 
           <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] p-4">
@@ -585,9 +585,9 @@ export function CommercialPublishingSettings({
               <ConfiguredBadge configured={settings.each.configured} />
             </div>
             <p className="text-xs text-[var(--workspace-shell-text)]/55">
-              Dedicated Kato-compatible feed URL for EACH. Includes all
-              Marketing / Under offer disposals unless switched Off on the
-              listing (Overview or Management).
+              Dedicated XML feed URL for EACH. Includes all Marketing / Under
+              offer disposals unless switched Off on the listing (Overview or
+              Management).
             </p>
             {eachFeedUrl ? (
               <div className="space-y-2">

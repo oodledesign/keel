@@ -78,6 +78,50 @@ function hasCoords(listing: CommercialListing) {
   return listing.latitude != null && listing.longitude != null;
 }
 
+function fitMapToListings(
+  map: MapRef,
+  points: CommercialListing[],
+  options?: { duration?: number },
+) {
+  const duration = options?.duration ?? 700;
+  const withCoords = points.filter(hasCoords);
+  if (withCoords.length === 0) return;
+
+  if (withCoords.length === 1) {
+    const only = withCoords[0]!;
+    map.flyTo({
+      center: [only.longitude!, only.latitude!],
+      zoom: 12,
+      duration,
+    });
+    return;
+  }
+
+  let minLng = Infinity;
+  let maxLng = -Infinity;
+  let minLat = Infinity;
+  let maxLat = -Infinity;
+
+  for (const listing of withCoords) {
+    minLng = Math.min(minLng, listing.longitude!);
+    maxLng = Math.max(maxLng, listing.longitude!);
+    minLat = Math.min(minLat, listing.latitude!);
+    maxLat = Math.max(maxLat, listing.latitude!);
+  }
+
+  map.fitBounds(
+    [
+      [minLng, minLat],
+      [maxLng, maxLat],
+    ],
+    {
+      padding: { top: 56, bottom: 56, left: 56, right: 56 },
+      maxZoom: 14,
+      duration,
+    },
+  );
+}
+
 function moneyLabel(listing: CommercialListing) {
   const rent = formatMoney(listing.askingRentPence);
   const price = formatMoney(listing.askingPricePence);
@@ -103,6 +147,15 @@ export function ListingsMapView({
 
   const mappable = useMemo(() => listings.filter(hasCoords), [listings]);
 
+  const mappableKey = useMemo(
+    () =>
+      mappable
+        .map((l) => `${l.id}:${l.latitude}:${l.longitude}`)
+        .sort()
+        .join('|'),
+    [mappable],
+  );
+
   const selected = useMemo(
     () => listings.find((l) => l.id === selectedId) ?? null,
     [listings, selectedId],
@@ -112,6 +165,16 @@ export function ListingsMapView({
     () => listings.find((l) => l.id === popupId) ?? null,
     [listings, popupId],
   );
+
+  useEffect(() => {
+    const map = mapRef.current;
+    if (!map || mappable.length === 0) return;
+    // Defer until Mapbox has sized the container.
+    const frame = requestAnimationFrame(() => {
+      fitMapToListings(map, mappable, { duration: 0 });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [mappable, mappableKey]);
 
   useEffect(() => {
     if (!selected || !hasCoords(selected)) return;
@@ -294,9 +357,14 @@ export function ListingsMapView({
             ref={mapRef}
             mapboxAccessToken={MAPBOX_TOKEN}
             initialViewState={UK_DEFAULT}
-            mapStyle="mapbox://styles/mapbox/light-v11"
+            mapStyle="mapbox://styles/mapbox/streets-v12"
             style={{ width: '100%', height: '100%' }}
             attributionControl
+            onLoad={() => {
+              if (mappable.length > 0) {
+                fitMapToListings(mapRef.current!, mappable, { duration: 0 });
+              }
+            }}
           >
             <NavigationControl position="bottom-right" showCompass={false} />
 

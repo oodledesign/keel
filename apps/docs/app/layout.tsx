@@ -2,14 +2,7 @@ import type { ReactNode } from 'react';
 
 import type { Metadata } from 'next';
 
-import { headers } from 'next/headers';
-import Image from 'next/image';
-
-import { Footer, Layout, Navbar } from 'nextra-theme-docs';
 import { Head } from 'nextra/components';
-import { getPageMap } from 'nextra/page-map';
-
-import { workspaceFromPathname } from '../lib/workspaces';
 
 import './globals.css';
 
@@ -47,86 +40,15 @@ export const metadata: Metadata = {
   },
 };
 
-const footer = (
-  <Footer>
-    <a
-      href="https://www.ozer.so"
-      target="_blank"
-      rel="noopener noreferrer"
-    >
-      Ozer
-    </a>
-    {' · '}
-    Workspace OS documentation · {new Date().getFullYear()}
-  </Footer>
-);
-
-export default async function RootLayout({
-  children,
-}: {
-  children: ReactNode;
-}) {
-  const headerList = await headers();
-  const pathname = headerList.get('x-pathname') ?? '/';
-  const workspace = workspaceFromPathname(pathname);
-  const pageMap = workspace
-    ? await getPageMap(`/${workspace}`)
-    : await getPageMap('/');
-
-  const navbar = (
-    <Navbar
-      logo={
-        <span className="ozer-docs-logo">
-          <Image
-            className="ozer-docs-logo-light"
-            src="/brand/ozer-wordmark-on-light.svg"
-            alt="Ozer"
-            width={100}
-            height={24}
-            priority
-          />
-          <Image
-            className="ozer-docs-logo-dark"
-            src="/brand/ozer-wordmark-on-dark.svg"
-            alt="Ozer"
-            width={100}
-            height={24}
-            priority
-          />
-          <span className="ozer-docs-logo-text">Docs</span>
-        </span>
-      }
-      logoLink="/"
-      projectLink="https://www.ozer.so"
-      projectIcon={
-        <Image
-          src="/brand/ozer-icon.svg"
-          alt="Ozer"
-          width={24}
-          height={24}
-          className="ozer-docs-project-icon"
-        />
-      }
-    />
-  );
-
+/**
+ * Root shell only. Pathname-dependent sidebar lives in `template.tsx` so it
+ * remounts on client navigations (layouts do not).
+ */
+export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" dir="ltr" suppressHydrationWarning>
       <Head />
-      <body>
-        <Layout
-          navbar={navbar}
-          footer={footer}
-          pageMap={pageMap}
-          editLink={null}
-          feedback={{ content: null }}
-          sidebar={{ defaultMenuCollapseLevel: 1 }}
-          darkMode
-          nextThemes={{ defaultTheme: 'light' }}
-        >
-          {children}
-        </Layout>
-      </body>
+      <body>{children}</body>
     </html>
   );
 }

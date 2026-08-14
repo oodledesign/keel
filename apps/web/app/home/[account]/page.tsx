@@ -189,10 +189,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
   if (spaceType === 'commercial-property') {
     return (
       <>
-        <TeamAccountLayoutPageHeader
-          account={account}
-          title="Agency home"
-        />
+        <TeamAccountLayoutPageHeader account={account} title="Agency home" />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
           <Suspense fallback={null}>
             <PersonalVisionDashboardLaunch className="px-4 pt-4 md:px-6 lg:px-8" />

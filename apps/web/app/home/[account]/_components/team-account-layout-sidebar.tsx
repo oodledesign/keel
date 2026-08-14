@@ -62,16 +62,21 @@ export function TeamAccountLayoutSidebar(props: {
     >
       <SidebarHeader className="gap-3 border-b border-[color:var(--workspace-shell-border)] px-3 py-3">
         <SidebarLogoLink account={props.account} />
-        <TeamAccountAccountsSelector
-          userId={props.user.id}
-          selectedAccount={props.account}
-          accounts={props.accounts}
-          portals={props.portals}
-          className="w-full px-0"
-        />
+        <div data-tour="workspace-switcher">
+          <TeamAccountAccountsSelector
+            userId={props.user.id}
+            selectedAccount={props.account}
+            accounts={props.accounts}
+            portals={props.portals}
+            className="w-full px-0"
+          />
+        </div>
       </SidebarHeader>
 
-      <SidebarContent className="mt-2 flex-1 overflow-y-auto px-2 pb-2">
+      <SidebarContent
+        data-tour="sidebar"
+        className="mt-2 flex-1 overflow-y-auto px-2 pb-2"
+      >
         <TeamAccountLayoutSidebarNavigation config={config} />
       </SidebarContent>
 

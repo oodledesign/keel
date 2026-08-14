@@ -79,10 +79,7 @@ type Props = {
   /** When compact, link to the full Interest page with total count. */
   seeAllHref?: string | null;
   /** Fires when linked interest + suggested fits totals change (for Matches badges). */
-  onMatchTotalsChange?: (totals: {
-    linked: number;
-    suggested: number;
-  }) => void;
+  onMatchTotalsChange?: (totals: { linked: number; suggested: number }) => void;
 };
 
 function formatSize(min: number | null, max: number | null) {
@@ -567,58 +564,61 @@ export function CommercialInterestPanel({
                 }))}
             />
             <ul className="max-h-72 space-y-1.5 overflow-y-auto">
-            {rankedBook.map((suggestion) => {
-              const checked = selectedListingIds.has(suggestion.listingId);
-              return (
-                <li
-                  key={suggestionKey(suggestion)}
-                  className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--workspace-shell-sidebar-accent)]/40"
-                >
-                  <Checkbox
-                    checked={checked}
-                    onCheckedChange={(value) =>
-                      toggleRankedListing(suggestion.listingId, value === true)
-                    }
-                    className="mt-1"
-                    aria-label={`Select ${suggestion.listingName}`}
-                  />
-                  <div className="min-w-0 flex-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                        {suggestion.listingName}
-                      </span>
-                      <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)] tabular-nums">
-                        {suggestion.score}%
-                      </span>
-                      {suggestion.aiRecommendation ? (
-                        <span className="text-[11px] text-[var(--workspace-shell-text)]/50">
-                          AI: {suggestion.aiRecommendation}
+              {rankedBook.map((suggestion) => {
+                const checked = selectedListingIds.has(suggestion.listingId);
+                return (
+                  <li
+                    key={suggestionKey(suggestion)}
+                    className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-[var(--workspace-shell-sidebar-accent)]/40"
+                  >
+                    <Checkbox
+                      checked={checked}
+                      onCheckedChange={(value) =>
+                        toggleRankedListing(
+                          suggestion.listingId,
+                          value === true,
+                        )
+                      }
+                      className="mt-1"
+                      aria-label={`Select ${suggestion.listingName}`}
+                    />
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                          {suggestion.listingName}
                         </span>
+                        <span className="rounded-full bg-[var(--ozer-accent-subtle)] px-2 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-accent-text)] tabular-nums">
+                          {suggestion.score}%
+                        </span>
+                        {suggestion.aiRecommendation ? (
+                          <span className="text-[11px] text-[var(--workspace-shell-text)]/50">
+                            AI: {suggestion.aiRecommendation}
+                          </span>
+                        ) : null}
+                      </div>
+                      <p className="truncate text-xs text-[var(--workspace-shell-text)]/50">
+                        {[
+                          suggestion.listingDisposalType,
+                          suggestion.listingSector,
+                          suggestion.listingTown,
+                          formatSize(
+                            suggestion.listingSizeMinSqft,
+                            suggestion.listingSizeMaxSqft,
+                          ),
+                        ]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                      {suggestion.reasons.length > 0 ? (
+                        <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text)]/45">
+                          {suggestion.reasons.slice(0, 2).join(' · ')}
+                        </p>
                       ) : null}
                     </div>
-                    <p className="truncate text-xs text-[var(--workspace-shell-text)]/50">
-                      {[
-                        suggestion.listingDisposalType,
-                        suggestion.listingSector,
-                        suggestion.listingTown,
-                        formatSize(
-                          suggestion.listingSizeMinSqft,
-                          suggestion.listingSizeMaxSqft,
-                        ),
-                      ]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
-                    {suggestion.reasons.length > 0 ? (
-                      <p className="mt-0.5 text-[11px] text-[var(--workspace-shell-text)]/45">
-                        {suggestion.reasons.slice(0, 2).join(' · ')}
-                      </p>
-                    ) : null}
-                  </div>
-                </li>
-              );
-            })}
-          </ul>
+                  </li>
+                );
+              })}
+            </ul>
           </>
         )}
       </div>

@@ -323,7 +323,7 @@ function DisposalsInsightsPanel({
                   }}
                 />
                 <Tooltip />
-                <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
                 <Bar
                   dataKey="current"
                   name="This period"
@@ -371,7 +371,7 @@ function DisposalsInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                  <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -407,7 +407,7 @@ function DisposalsInsightsPanel({
                 }}
               />
               <Tooltip />
-              <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+              <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
               <Bar
                 dataKey="current"
                 name="This period"
@@ -576,7 +576,7 @@ function ViewingsInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                  <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -613,7 +613,7 @@ function ViewingsInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                  <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -649,7 +649,7 @@ function ViewingsInsightsPanel({
                 }}
               />
               <Tooltip />
-              <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+              <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
               <Bar
                 dataKey="current"
                 name="This period"
@@ -891,7 +891,7 @@ function InboundInsightsPanel({
                   }}
                 />
                 <Tooltip />
-                <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
                 <Bar
                   dataKey="current"
                   name="This period"
@@ -970,7 +970,7 @@ function RequirementInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                  <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}
@@ -1110,7 +1110,7 @@ function SourceInsightsPanel({
                   }}
                 />
                 <Tooltip />
-                <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
                 <Bar
                   dataKey="current"
                   name="This period"
@@ -1258,7 +1258,7 @@ function TransactionInsightsPanel({
                     ))}
                   </Pie>
                   <Tooltip />
-                  <Legend wrapperStyle={{ fontSize: "0.8rem" }} />
+                  <Legend wrapperStyle={{ fontSize: '0.8rem' }} />
                 </PieChart>
               </ResponsiveContainer>
             )}

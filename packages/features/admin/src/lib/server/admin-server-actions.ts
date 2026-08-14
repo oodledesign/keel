@@ -168,8 +168,9 @@ export const impersonateUserAction = adminAction(
 
 /**
  * @name endImpersonationAction
- * @description Restore the stashed super-admin session after impersonation.
+ * @description Restore the super-admin session after impersonation.
  * Not wrapped in adminAction — the current JWT is the target user.
+ * Mints a fresh admin session (stashed tokens often expire / rotate).
  */
 export const endImpersonationAction = enhanceAction(
   async (_data, user) => {
@@ -189,6 +190,30 @@ export const endImpersonationAction = enhanceAction(
 
     if (!restored) {
       throw new Error('Impersonation session is invalid or expired');
+    }
+
+    // Prefer a freshly minted admin session. Stashed access/refresh tokens from
+    // the start of impersonation frequently fail setSession (expiry / rotation),
+    // which left the browser signed out after "Back to admin".
+    const authService = createAdminAuthUserService(
+      getSupabaseServerClient(),
+      adminClient,
+    );
+    let tokens = restored.tokens;
+
+    try {
+      tokens = await authService.createSessionTokensForUser(
+        restored.actorUserId,
+      );
+    } catch (mintError) {
+      logger.warn(
+        {
+          error: mintError,
+          actorUserId: restored.actorUserId,
+          impersonationSessionId: sessionId,
+        },
+        'Failed to mint fresh admin session; falling back to stashed tokens',
+      );
     }
 
     const { error: auditError } = await adminClient
@@ -222,8 +247,8 @@ export const endImpersonationAction = enhanceAction(
     );
 
     return {
-      accessToken: restored.tokens.accessToken,
-      refreshToken: restored.tokens.refreshToken,
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
     };
   },
   {

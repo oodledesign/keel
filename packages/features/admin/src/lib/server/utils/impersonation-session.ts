@@ -92,7 +92,9 @@ function cookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict' as const,
+    // Lax so the restore cookie is reliably present on same-site navigations
+    // after the admin session swap (Strict can drop it in edge cases).
+    sameSite: 'lax' as const,
     path: '/',
     maxAge: maxAgeSeconds,
   };

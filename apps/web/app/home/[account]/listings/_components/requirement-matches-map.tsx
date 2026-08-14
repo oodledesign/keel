@@ -2,11 +2,9 @@
 
 import { useMemo } from 'react';
 
-import MapboxMap, { Marker, NavigationControl } from 'react-map-gl/mapbox';
-
-import 'mapbox-gl/dist/mapbox-gl.css';
-
 import { MapPin } from 'lucide-react';
+import 'mapbox-gl/dist/mapbox-gl.css';
+import MapboxMap, { Marker, NavigationControl } from 'react-map-gl/mapbox';
 
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() ?? '';
 
@@ -67,7 +65,7 @@ export function RequirementMatchesMap({
       <MapboxMap
         mapboxAccessToken={MAPBOX_TOKEN}
         initialViewState={initialViewState}
-        mapStyle="mapbox://styles/mapbox/light-v11"
+        mapStyle="mapbox://styles/mapbox/streets-v12"
         style={{ width: '100%', height: '100%' }}
         attributionControl={false}
       >

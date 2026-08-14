@@ -50,26 +50,31 @@ export function buildPersonalHomeNavRoutes(options?: {
           path: getExplicitPersonalHomePath(),
           Icon: <LayoutDashboard className={iconClasses} />,
           end: true,
+          tourId: 'nav-home',
         },
         {
           label: 'Tasks',
           path: `${pathsConfig.app.home}/tasks`,
           Icon: <CheckSquare className={iconClasses} />,
+          tourId: 'nav-tasks',
         },
         {
           label: 'Projects',
           path: pathsConfig.app.personalProjects,
           Icon: <Kanban className={iconClasses} />,
+          tourId: 'nav-projects',
         },
         {
           label: 'Planner',
           path: pathsConfig.app.personalPlanner,
           Icon: <CalendarDays className={iconClasses} />,
+          tourId: 'nav-planner',
         },
         {
           label: 'Personal email',
           path: pathsConfig.app.personalEmailAssistant,
           Icon: <Mail className={iconClasses} />,
+          tourId: 'nav-email',
           renderAction:
             needsReplyCount > 0 ? (
               <SidebarMenuBadge className="bg-[color:var(--ozer-accent)]/15 leading-none text-[color:var(--ozer-accent)]">

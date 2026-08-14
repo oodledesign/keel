@@ -114,6 +114,17 @@ export function PortalCreditsContent({
           Credits power billable requests. Your balance updates when invoices
           are paid and when work starts on a ticket.
         </p>
+        <div className="mt-4 flex w-fit items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5">
+          <Link
+            href={supportHref}
+            className="rounded px-2.5 py-1 text-xs font-medium text-[var(--ozer-text-on-light-muted)] hover:text-[var(--ozer-text-on-light)]"
+          >
+            Requests
+          </Link>
+          <span className="rounded bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--workspace-shell-accent-text)]">
+            Credits
+          </span>
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">

@@ -63,6 +63,7 @@ export type NavChild = {
   end?: boolean;
   description?: string;
   renderAction?: React.ReactNode;
+  tourId?: string;
 };
 
 type NavCollapsible = NavChild & {
@@ -176,6 +177,7 @@ function buildWorkNavItemsForKeys(
             path: home,
             Icon: <LayoutDashboard className={iconClasses} />,
             end: true,
+            tourId: 'nav-dashboard',
           }
         : null,
     projects: () =>
@@ -184,6 +186,7 @@ function buildWorkNavItemsForKeys(
             label: 'Projects',
             path: createPath(pathsConfig.app.accountProjects, account),
             Icon: <ClipboardList className={iconClasses} />,
+            tourId: 'nav-projects',
             description:
               'Delivery projects, campaign trackers, and kanban overview.',
           }
@@ -194,6 +197,7 @@ function buildWorkNavItemsForKeys(
             label: 'Tasks',
             path: createPath(pathsConfig.app.accountTasks, account),
             Icon: <CheckSquare className={iconClasses} />,
+            tourId: 'nav-tasks',
           }
         : null,
     planner: () =>
@@ -236,6 +240,7 @@ function buildWorkNavItemsForKeys(
             label: 'Clients',
             path: createPath(pathsConfig.app.accountClients, account),
             Icon: <Briefcase className={iconClasses} />,
+            tourId: 'nav-clients',
           }
         : null,
     meetings: () =>
@@ -287,6 +292,7 @@ function buildWorkNavItemsForKeys(
             label: 'Invoices',
             path: createPath(pathsConfig.app.accountInvoices, account),
             Icon: <FileText className={iconClasses} />,
+            tourId: 'nav-invoices',
           }
         : null,
     proposals: () =>

@@ -19,9 +19,15 @@ import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
 import {
+  addEmailTriageRuleFromThreadAction,
   ignoreEmailNeedsReplyAction,
   markEmailNeedsReplyAction,
 } from '~/lib/email-assistant/email-assistant.actions';
+import type {
+  EmailTriageAction,
+  EmailTriageScope,
+} from '~/lib/email-assistant/email-triage-rules.shared';
+import { triageRuleSuccessMessage } from '~/lib/email-assistant/email-triage-rules.shared';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 
 import type {
@@ -29,6 +35,7 @@ import type {
   EmailThreadSummary,
   EmailWorkspaceOption,
 } from '../_lib/types';
+import { EmailTriageRulesMenuItems } from './email-triage-rules-menu';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -149,6 +156,39 @@ export function EmailInboxList({
           error instanceof Error
             ? error.message
             : 'Could not update this email',
+        );
+      }
+    });
+  }
+
+  function addTriageRule(
+    threadId: string,
+    action: EmailTriageAction,
+    scope: EmailTriageScope,
+  ) {
+    startTransition(async () => {
+      try {
+        const result = await addEmailTriageRuleFromThreadAction({
+          threadId,
+          action,
+          scope,
+          accountSlug: accountSlug ?? undefined,
+        });
+        onThreadCategoryChange?.(
+          threadId,
+          action === 'ignore' ? 'no_reply' : 'needs_reply',
+        );
+        toast.success(
+          triageRuleSuccessMessage(
+            action,
+            scope,
+            result.value,
+            result.affectedCount,
+          ),
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save triage rule',
         );
       }
     });
@@ -369,6 +409,13 @@ export function EmailInboxList({
                             Mark as needing a reply
                           </DropdownMenuItem>
                         )}
+                        <EmailTriageRulesMenuItems
+                          subject={thread.subject}
+                          disabled={pending}
+                          onSelectRule={(action, scope) =>
+                            addTriageRule(thread.id, action, scope)
+                          }
+                        />
                         {href ? (
                           <DropdownMenuItem asChild>
                             <Link href={href}>Open client</Link>

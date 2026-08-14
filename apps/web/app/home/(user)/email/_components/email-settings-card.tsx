@@ -7,7 +7,15 @@ import Link from 'next/link';
 import { Loader2, Mail, Unplug } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
@@ -17,7 +25,16 @@ import {
   GMAIL_DISCONNECT_CONSEQUENCES,
 } from '~/components/integrations/disconnect-integration-dialog';
 import pathsConfig from '~/config/paths.config';
-import { removeIgnoredEmailSenderAction } from '~/lib/email-assistant/email-assistant.actions';
+import {
+  addEmailTriageRuleAction,
+  removeEmailTriageRuleAction,
+} from '~/lib/email-assistant/email-assistant.actions';
+import type {
+  EmailTriageAction,
+  EmailTriageRules,
+  EmailTriageScope,
+} from '~/lib/email-assistant/email-triage-rules.shared';
+import { triageRuleSuccessMessage } from '~/lib/email-assistant/email-triage-rules.shared';
 
 import {
   disconnectGmailConnection,
@@ -44,7 +61,17 @@ type Props = {
   initialAutoSaveGmailDrafts: boolean;
   initialIgnoredSenders?: string[];
   initialIgnoredDomains?: string[];
+  initialIgnoredSubjectKeywords?: string[];
+  initialPrioritySenders?: string[];
+  initialPriorityDomains?: string[];
+  initialPrioritySubjectKeywords?: string[];
   lastSyncedAt: string | null;
+};
+
+type RuleRow = {
+  action: EmailTriageAction;
+  scope: EmailTriageScope;
+  value: string;
 };
 
 function formatSyncedAt(value: string | null) {
@@ -98,6 +125,123 @@ function SettingToggle({
   );
 }
 
+function rulesFromProps(props: {
+  ignoredSenders: string[];
+  ignoredDomains: string[];
+  ignoredSubjectKeywords: string[];
+  prioritySenders: string[];
+  priorityDomains: string[];
+  prioritySubjectKeywords: string[];
+}): EmailTriageRules {
+  return {
+    ignoredSenders: props.ignoredSenders,
+    ignoredDomains: props.ignoredDomains,
+    ignoredSubjectKeywords: props.ignoredSubjectKeywords,
+    prioritySenders: props.prioritySenders,
+    priorityDomains: props.priorityDomains,
+    prioritySubjectKeywords: props.prioritySubjectKeywords,
+  };
+}
+
+function flattenRules(
+  rules: EmailTriageRules,
+  action: EmailTriageAction,
+): RuleRow[] {
+  if (action === 'ignore') {
+    return [
+      ...rules.ignoredSenders.map((value) => ({
+        action,
+        scope: 'sender' as const,
+        value,
+      })),
+      ...rules.ignoredDomains.map((value) => ({
+        action,
+        scope: 'domain' as const,
+        value,
+      })),
+      ...rules.ignoredSubjectKeywords.map((value) => ({
+        action,
+        scope: 'subject' as const,
+        value,
+      })),
+    ];
+  }
+
+  return [
+    ...rules.prioritySenders.map((value) => ({
+      action,
+      scope: 'sender' as const,
+      value,
+    })),
+    ...rules.priorityDomains.map((value) => ({
+      action,
+      scope: 'domain' as const,
+      value,
+    })),
+    ...rules.prioritySubjectKeywords.map((value) => ({
+      action,
+      scope: 'subject' as const,
+      value,
+    })),
+  ];
+}
+
+function ruleLabel(row: RuleRow) {
+  if (row.scope === 'sender') return `Sender · ${row.value}`;
+  if (row.scope === 'domain') return `Domain · @${row.value}`;
+  return `Subject · “${row.value}”`;
+}
+
+function TriageRuleList({
+  title,
+  emptyLabel,
+  rows,
+  pending,
+  onRemove,
+}: {
+  title: string;
+  emptyLabel: string;
+  rows: RuleRow[];
+  pending: boolean;
+  onRemove: (row: RuleRow) => void;
+}) {
+  return (
+    <div className="space-y-2">
+      <p className="text-xs font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+        {title}
+      </p>
+      {rows.length === 0 ? (
+        <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          {emptyLabel}
+        </p>
+      ) : (
+        <ul className="space-y-2">
+          {rows.map((row) => (
+            <li
+              key={`${row.action}:${row.scope}:${row.value}`}
+              className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2"
+            >
+              <span className="min-w-0 truncate text-sm text-[var(--workspace-shell-text)]">
+                {ruleLabel(row)}
+              </span>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                disabled={pending}
+                className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent)]"
+                onClick={() => onRemove(row)}
+              >
+                Remove
+              </Button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  );
+}
+
 export function EmailSettingsCard({
   connectedEmail,
   mailboxKind = 'personal',
@@ -110,6 +254,10 @@ export function EmailSettingsCard({
   initialAutoSaveGmailDrafts,
   initialIgnoredSenders = [],
   initialIgnoredDomains = [],
+  initialIgnoredSubjectKeywords = [],
+  initialPrioritySenders = [],
+  initialPriorityDomains = [],
+  initialPrioritySubjectKeywords = [],
   lastSyncedAt,
 }: Props) {
   const [styleNotes, setStyleNotes] = useState(initialStyleNotes);
@@ -126,8 +274,19 @@ export function EmailSettingsCard({
   const [autoSaveGmailDrafts, setAutoSaveGmailDrafts] = useState(
     initialAutoSaveGmailDrafts,
   );
-  const [ignoredSenders, setIgnoredSenders] = useState(initialIgnoredSenders);
-  const [ignoredDomains, setIgnoredDomains] = useState(initialIgnoredDomains);
+  const [rules, setRules] = useState(() =>
+    rulesFromProps({
+      ignoredSenders: initialIgnoredSenders,
+      ignoredDomains: initialIgnoredDomains,
+      ignoredSubjectKeywords: initialIgnoredSubjectKeywords,
+      prioritySenders: initialPrioritySenders,
+      priorityDomains: initialPriorityDomains,
+      prioritySubjectKeywords: initialPrioritySubjectKeywords,
+    }),
+  );
+  const [addAction, setAddAction] = useState<EmailTriageAction>('ignore');
+  const [addScope, setAddScope] = useState<EmailTriageScope>('sender');
+  const [addValue, setAddValue] = useState('');
   const [pending, startTransition] = useTransition();
   const [disconnecting, setDisconnecting] = useState(false);
   const [confirmDisconnectOpen, setConfirmDisconnectOpen] = useState(false);
@@ -139,8 +298,16 @@ export function EmailSettingsCard({
     setAutoTriageEnabled(initialAutoTriageEnabled);
     setAutoDraftEnabled(initialAutoDraftEnabled);
     setAutoSaveGmailDrafts(initialAutoSaveGmailDrafts);
-    setIgnoredSenders(initialIgnoredSenders);
-    setIgnoredDomains(initialIgnoredDomains);
+    setRules(
+      rulesFromProps({
+        ignoredSenders: initialIgnoredSenders,
+        ignoredDomains: initialIgnoredDomains,
+        ignoredSubjectKeywords: initialIgnoredSubjectKeywords,
+        prioritySenders: initialPrioritySenders,
+        priorityDomains: initialPriorityDomains,
+        prioritySubjectKeywords: initialPrioritySubjectKeywords,
+      }),
+    );
   }, [
     initialStyleNotes,
     initialSignature,
@@ -150,11 +317,17 @@ export function EmailSettingsCard({
     initialAutoSaveGmailDrafts,
     initialIgnoredSenders,
     initialIgnoredDomains,
+    initialIgnoredSubjectKeywords,
+    initialPrioritySenders,
+    initialPriorityDomains,
+    initialPrioritySubjectKeywords,
   ]);
 
   const mailboxLabel =
     mailboxKind === 'business' ? 'Business Gmail' : 'Personal Gmail';
   const connectHref = `/api/google/connect?mailbox=${mailboxKind}&returnPath=${encodeURIComponent(returnPath)}`;
+  const ignoredRows = flattenRules(rules, 'ignore');
+  const priorityRows = flattenRules(rules, 'priority');
 
   function saveSettings() {
     startTransition(async () => {
@@ -192,6 +365,60 @@ export function EmailSettingsCard({
         toast.success(`${mailboxLabel} disconnected`);
       } finally {
         setDisconnecting(false);
+      }
+    });
+  }
+
+  function addRule() {
+    const value = addValue.trim();
+    if (!value) {
+      toast.error('Enter a value for the rule');
+      return;
+    }
+
+    startTransition(async () => {
+      try {
+        const result = await addEmailTriageRuleAction({
+          mailboxKind,
+          action: addAction,
+          scope: addScope,
+          value,
+        });
+        setRules(result.rules);
+        setAddValue('');
+        toast.success(
+          triageRuleSuccessMessage(
+            addAction,
+            addScope,
+            result.value,
+            result.affectedCount,
+          ),
+        );
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not add triage rule',
+        );
+      }
+    });
+  }
+
+  function removeRule(row: RuleRow) {
+    startTransition(async () => {
+      try {
+        const result = await removeEmailTriageRuleAction({
+          mailboxKind,
+          action: row.action,
+          scope: row.scope,
+          value: row.value,
+        });
+        setRules(result.rules);
+        toast.success('Removed triage rule');
+      } catch (error) {
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : 'Could not remove triage rule',
+        );
       }
     });
   }
@@ -339,107 +566,89 @@ export function EmailSettingsCard({
 
         <EmailReplyPresetsSection />
 
-        <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-4">
-          <Label className="text-sm font-medium text-[var(--workspace-shell-text)]">
-            Ignored senders & domains
-          </Label>
-          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            Mail matching these addresses or domains is skipped for auto-sort,
-            drafts, and task extraction. Add them from Email tasks to review
-            with Ignore → sender or domain.
-          </p>
-          {ignoredSenders.length === 0 && ignoredDomains.length === 0 ? (
-            <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              No ignored senders or domains yet.
+        <div className="space-y-4 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-canvas)]/60 p-4">
+          <div>
+            <Label className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Triage rules
+            </Label>
+            <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+              Ignore wins over always-needs-reply when both match. You can also
+              add rules from the inbox or thread menu.
             </p>
-          ) : (
-            <ul className="space-y-2">
-              {ignoredSenders.map((sender) => (
-                <li
-                  key={`sender:${sender}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2"
-                >
-                  <span className="min-w-0 truncate text-sm text-[var(--workspace-shell-text)]">
-                    <span className="text-[var(--workspace-shell-text-muted)]">
-                      Sender ·{' '}
-                    </span>
-                    {sender}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={pending}
-                    className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent)]"
-                    onClick={() => {
-                      startTransition(async () => {
-                        try {
-                          const result = await removeIgnoredEmailSenderAction({
-                            mailboxKind,
-                            scope: 'sender',
-                            value: sender,
-                          });
-                          setIgnoredSenders(result.ignoredSenders);
-                          setIgnoredDomains(result.ignoredDomains);
-                          toast.success(`Stopped ignoring ${sender}`);
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : 'Could not update ignore list',
-                          );
-                        }
-                      });
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-              {ignoredDomains.map((domain) => (
-                <li
-                  key={`domain:${domain}`}
-                  className="flex items-center justify-between gap-3 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-2"
-                >
-                  <span className="min-w-0 truncate text-sm text-[var(--workspace-shell-text)]">
-                    <span className="text-[var(--workspace-shell-text-muted)]">
-                      Domain ·{' '}
-                    </span>
-                    @{domain}
-                  </span>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    disabled={pending}
-                    className="text-[var(--workspace-shell-text-muted)] hover:text-[var(--ozer-accent)]"
-                    onClick={() => {
-                      startTransition(async () => {
-                        try {
-                          const result = await removeIgnoredEmailSenderAction({
-                            mailboxKind,
-                            scope: 'domain',
-                            value: domain,
-                          });
-                          setIgnoredSenders(result.ignoredSenders);
-                          setIgnoredDomains(result.ignoredDomains);
-                          toast.success(`Stopped ignoring @${domain}`);
-                        } catch (error) {
-                          toast.error(
-                            error instanceof Error
-                              ? error.message
-                              : 'Could not update ignore list',
-                          );
-                        }
-                      });
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </li>
-              ))}
-            </ul>
-          )}
+          </div>
+
+          <TriageRuleList
+            title="Ignored"
+            emptyLabel="No ignore rules yet."
+            rows={ignoredRows}
+            pending={pending}
+            onRemove={removeRule}
+          />
+          <TriageRuleList
+            title="Always needs a reply"
+            emptyLabel="No priority rules yet."
+            rows={priorityRows}
+            pending={pending}
+            onRemove={removeRule}
+          />
+
+          <div className="space-y-2 border-t border-[color:var(--workspace-shell-border)] pt-3">
+            <p className="text-xs font-medium text-[var(--workspace-shell-text)]">
+              Add rule
+            </p>
+            <div className="flex flex-col gap-2 sm:flex-row">
+              <Select
+                value={addAction}
+                onValueChange={(value) =>
+                  setAddAction(value as EmailTriageAction)
+                }
+              >
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] sm:w-[10rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="ignore">Ignore</SelectItem>
+                  <SelectItem value="priority">Always needs reply</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select
+                value={addScope}
+                onValueChange={(value) =>
+                  setAddScope(value as EmailTriageScope)
+                }
+              >
+                <SelectTrigger className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] sm:w-[9rem]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="sender">Sender</SelectItem>
+                  <SelectItem value="domain">Domain</SelectItem>
+                  <SelectItem value="subject">Subject contains</SelectItem>
+                </SelectContent>
+              </Select>
+              <Input
+                value={addValue}
+                onChange={(event) => setAddValue(event.target.value)}
+                placeholder={
+                  addScope === 'sender'
+                    ? 'name@example.com'
+                    : addScope === 'domain'
+                      ? 'example.com'
+                      : 'newsletter'
+                }
+                className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                className="border-[color:var(--workspace-shell-border)] bg-transparent"
+                disabled={pending || !connectedEmail}
+                onClick={addRule}
+              >
+                Add
+              </Button>
+            </div>
+          </div>
         </div>
 
         <Button

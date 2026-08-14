@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
 
-import { Layers, Plus } from 'lucide-react';
+import { Coins, Layers, Plus } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent } from '@kit/ui/card';
@@ -59,6 +59,14 @@ export function PortalSupportListContent({
     '[clientSlug]',
     clientSlug,
   );
+  const creditsHref = pathsConfig.app.clientPortalCredits.replace(
+    '[clientSlug]',
+    clientSlug,
+  );
+  const servicesHref = pathsConfig.app.clientPortalSupport.replace(
+    '[clientSlug]',
+    clientSlug,
+  );
 
   return (
     <div className="space-y-6">
@@ -89,12 +97,35 @@ export function PortalSupportListContent({
           </p>
         </div>
 
-        <Button asChild>
-          <Link href={newHref}>
-            <Plus className="h-4 w-4" />
-            New request
-          </Link>
-        </Button>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button asChild variant="outline">
+            <Link href={creditsHref}>
+              <Coins className="h-4 w-4" />
+              Credits
+            </Link>
+          </Button>
+          <Button asChild>
+            <Link href={newHref}>
+              <Plus className="h-4 w-4" />
+              New request
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5 w-fit">
+        <Link
+          href={servicesHref}
+          className="rounded bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--workspace-shell-accent-text)]"
+        >
+          Requests
+        </Link>
+        <Link
+          href={creditsHref}
+          className="rounded px-2.5 py-1 text-xs font-medium text-[var(--ozer-text-on-light-muted)] hover:text-[var(--ozer-text-on-light)]"
+        >
+          Credits
+        </Link>
       </div>
 
       <div className="flex flex-wrap gap-2">

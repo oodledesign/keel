@@ -1,7 +1,7 @@
 import 'server-only';
 
-import { z } from 'zod';
 import { SendMailClient } from 'zeptomail';
+import { z } from 'zod';
 
 import { Mailer, MailerSchema } from '@kit/mailers-shared';
 

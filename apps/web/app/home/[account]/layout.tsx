@@ -11,6 +11,7 @@ import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AiCreditsExhaustedShell } from '~/components/ai/ai-credits-exhausted-shell';
+import { ProductTourHost } from '~/components/product-tour/product-tour-host';
 import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
 import pathsConfig from '~/config/paths.config';
@@ -20,6 +21,7 @@ import { listUserClientPortalMemberships } from '~/home/(user)/_lib/server/list-
 import { toHomeBillingHref } from '~/lib/ai/billing-href';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import { resolveMobileBottomNavTabs } from '~/lib/mobile-nav/resolve-bottom-nav-tabs';
+import type { CompletedProductTours } from '~/lib/product-tour/types';
 import { buildWorkspaceShellMetadata } from '~/lib/seo/app-shell-metadata';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 import {
@@ -113,12 +115,17 @@ async function SidebarLayout({
     await import('@kit/supabase/server-client')
   ).getSupabaseServerClient();
 
-  const [data, switcherAccounts, switcherPortals] = await Promise.all([
-    loadTeamWorkspace(account),
-    loadWorkspaceSwitcherAccounts(client, user.id),
-    listUserClientPortalMemberships(user.id),
-    enforceWorkspaceBilling(account),
-  ]);
+  const [data, switcherAccounts, switcherPortals, completedTours] =
+    await Promise.all([
+      loadTeamWorkspace(account),
+      loadWorkspaceSwitcherAccounts(client, user.id),
+      listUserClientPortalMemberships(user.id),
+      (
+        await import('~/lib/product-tour/product-tour.actions')
+      ).loadCompletedProductTours(),
+    ]);
+
+  await enforceWorkspaceBilling(account);
 
   if (!data) {
     redirect('/');
@@ -132,6 +139,17 @@ async function SidebarLayout({
     ...new Set([accountId, ...accounts.map((row) => row.id)]),
   ];
 
+  const { data: membershipRow } = await client
+    .from('accounts_memberships')
+    .select('onboarding_completed')
+    .eq('account_id', accountId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  const onboardingCompleted =
+    (membershipRow as { onboarding_completed?: boolean | null } | null)
+      ?.onboarding_completed === true;
+
   const accountAccess = data.account as {
     permissions?: string[] | null;
     role?: string | null;
@@ -140,6 +158,10 @@ async function SidebarLayout({
 
   const access = getTeamAccountAccess(accountAccess);
   const homePath = pathsConfig.app.accountHome.replace('[account]', account);
+
+  const workspaceOptions = accounts
+    .filter((row) => Boolean(row.slug))
+    .map((row) => ({ slug: String(row.slug), name: row.label }));
 
   const shellProps = {
     account,
@@ -153,6 +175,9 @@ async function SidebarLayout({
     layoutState,
     showNewMenu: access.canUseQuickCreate,
     homePath,
+    completedTours,
+    onboardingCompleted,
+    workspaceOptions,
   };
 
   return (
@@ -229,6 +254,9 @@ function TeamWorkspaceSidebarShell({
   layoutState,
   showNewMenu,
   homePath,
+  completedTours,
+  onboardingCompleted,
+  workspaceOptions,
   children,
 }: {
   account: string;
@@ -255,6 +283,9 @@ function TeamWorkspaceSidebarShell({
   layoutState: LayoutState;
   showNewMenu: boolean;
   homePath: string;
+  completedTours: CompletedProductTours;
+  onboardingCompleted: boolean;
+  workspaceOptions: Array<{ slug: string; name: string }>;
   children: React.ReactNode;
 }) {
   const mobileNavSections = flattenTeamNavSections(
@@ -274,7 +305,10 @@ function TeamWorkspaceSidebarShell({
   });
 
   return (
-    <WorkspaceFocusProviderShell settingsByAccountId={focusSettingsByAccountId}>
+    <WorkspaceFocusProviderShell
+      settingsByAccountId={focusSettingsByAccountId}
+      supportDefaultAccountId={accountId}
+    >
       <SidebarProvider defaultOpen={layoutState.open}>
         <Page
           style={'sidebar'}
@@ -309,6 +343,14 @@ function TeamWorkspaceSidebarShell({
             spaceType={spaceTypeFromProfile(workspaceProfile)}
             showNewMenu={showNewMenu}
           >
+            <ProductTourHost
+              variant="team"
+              completedTours={completedTours}
+              workspaceProfile={workspaceProfile}
+              accountSlug={account}
+              onboardingCompleted={onboardingCompleted}
+              workspaceOptions={workspaceOptions}
+            />
             {children}
           </TeamWorkspaceMobileChrome>
         </Page>
@@ -454,6 +496,7 @@ function HeaderLayoutShell({
   return (
     <WorkspaceFocusProviderShell
       settingsByAccountId={adornments.focusSettingsByAccountId}
+      supportDefaultAccountId={accountId}
     >
       <Page style={'header'}>
         <PageNavigation>

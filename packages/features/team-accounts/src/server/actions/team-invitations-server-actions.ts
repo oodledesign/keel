@@ -228,11 +228,11 @@ export const acceptInvitationAction = enhanceAction(
               c: string,
               o: { count: 'exact'; head: true },
             ) => {
-              eq: (a: string, b: string) => {
-                eq: (
-                  c: string,
-                  d: string,
-                ) => Promise<{ count: number | null }>;
+              eq: (
+                a: string,
+                b: string,
+              ) => {
+                eq: (c: string, d: string) => Promise<{ count: number | null }>;
               };
             };
           };

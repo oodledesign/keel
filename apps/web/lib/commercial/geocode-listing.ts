@@ -1,8 +1,10 @@
 /**
  * Forward-geocode a UK commercial address via Mapbox Geocoding API.
  * Uses NEXT_PUBLIC_MAPBOX_TOKEN (same token as the disposals map).
+ *
+ * Prefer postcode (most reliable), then town-anchored queries. Building names
+ * like "Pickhill Business Centre" can otherwise match unrelated UK places.
  */
-
 import 'server-only';
 
 export type GeocodeResult = {
@@ -11,52 +13,62 @@ export type GeocodeResult = {
   placeName: string | null;
 };
 
-function buildAddressQuery(parts: {
-  addressLine1?: string | null;
-  addressLine2?: string | null;
-  town?: string | null;
-  county?: string | null;
-  postcode?: string | null;
-  country?: string | null;
-}): string | null {
-  const postcode = parts.postcode?.trim();
-  if (postcode) {
-    // Postcode-first queries are more reliable for UK stock.
-    const rest = [parts.addressLine1, parts.town, parts.county]
-      .map((p) => p?.trim())
-      .filter(Boolean)
-      .join(', ');
-    return rest ? `${postcode}, ${rest}` : postcode;
-  }
+const MAX_TOWN_DISTANCE_KM = 40;
 
-  const query = [
-    parts.addressLine1,
-    parts.addressLine2,
-    parts.town,
-    parts.county,
-    parts.country ?? 'United Kingdom',
-  ]
-    .map((p) => p?.trim())
-    .filter(Boolean)
-    .join(', ');
-
-  return query || null;
+function haversineKm(
+  a: { latitude: number; longitude: number },
+  b: { latitude: number; longitude: number },
+): number {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(b.latitude - a.latitude);
+  const dLng = toRad(b.longitude - a.longitude);
+  const lat1 = toRad(a.latitude);
+  const lat2 = toRad(b.latitude);
+  const h =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(h), Math.sqrt(1 - h));
 }
 
-export async function geocodeListingAddress(parts: {
+function buildCandidateQueries(parts: {
   addressLine1?: string | null;
   addressLine2?: string | null;
   town?: string | null;
   county?: string | null;
   postcode?: string | null;
   country?: string | null;
-}): Promise<GeocodeResult | null> {
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim();
-  if (!token) return null;
+}): string[] {
+  const postcode = parts.postcode?.trim() || null;
+  const town = parts.town?.trim() || null;
+  const county = parts.county?.trim() || null;
+  const line1 = parts.addressLine1?.trim() || null;
+  const line2 = parts.addressLine2?.trim() || null;
+  const country = parts.country?.trim() || 'United Kingdom';
+  const queries: string[] = [];
 
-  const query = buildAddressQuery(parts);
-  if (!query) return null;
+  // 1) Postcode alone — best signal for UK stock.
+  if (postcode) {
+    queries.push(postcode);
+    if (town) queries.push(`${postcode}, ${town}`);
+  }
 
+  // 2) Town-anchored full address (town before county/country).
+  const townAnchored = [line1, line2, town, county, country]
+    .filter(Boolean)
+    .join(', ');
+  if (townAnchored) queries.push(townAnchored);
+
+  // 3) Town + county fallback when address lines are ambiguous place names.
+  const townOnly = [town, county, country].filter(Boolean).join(', ');
+  if (townOnly && townOnly !== townAnchored) queries.push(townOnly);
+
+  return [...new Set(queries.filter(Boolean))];
+}
+
+async function mapboxGeocode(
+  query: string,
+  token: string,
+): Promise<GeocodeResult | null> {
   const url = new URL(
     `https://api.mapbox.com/geocoding/v5/mapbox.places/${encodeURIComponent(query)}.json`,
   );
@@ -101,6 +113,47 @@ export async function geocodeListingAddress(parts: {
     console.error('[geocode] failed', err);
     return null;
   }
+}
+
+export async function geocodeListingAddress(parts: {
+  addressLine1?: string | null;
+  addressLine2?: string | null;
+  town?: string | null;
+  county?: string | null;
+  postcode?: string | null;
+  country?: string | null;
+}): Promise<GeocodeResult | null> {
+  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim();
+  if (!token) return null;
+
+  const queries = buildCandidateQueries(parts);
+  if (queries.length === 0) return null;
+
+  const town = parts.town?.trim();
+  const county = parts.county?.trim();
+  let townAnchor: GeocodeResult | null = null;
+  if (town) {
+    townAnchor = await mapboxGeocode(
+      [town, county, 'United Kingdom'].filter(Boolean).join(', '),
+      token,
+    );
+  }
+
+  for (const query of queries) {
+    const result = await mapboxGeocode(query, token);
+    if (!result) continue;
+
+    if (townAnchor && haversineKm(result, townAnchor) > MAX_TOWN_DISTANCE_KM) {
+      // Reject matches that land far from the stated town (e.g. Pickhill, N. Yorks
+      // when the disposal is in Tenterden).
+      continue;
+    }
+
+    return result;
+  }
+
+  // Last resort: trust the town centre rather than a distant building-name hit.
+  return townAnchor;
 }
 
 export function listingNeedsLocation(listing: {

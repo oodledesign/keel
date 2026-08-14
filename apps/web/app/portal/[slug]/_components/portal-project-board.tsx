@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import { Columns3, GanttChart, List } from 'lucide-react';
+import { Columns3, GanttChart, List, MessageSquare } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
@@ -54,6 +54,32 @@ const PRIORITY_DOT: Record<string, string> = {
   none: 'bg-[var(--workspace-shell-panel-hover)]',
 };
 
+function TaskCardMeta({ task }: { task: PortalProjectTask }) {
+  const status = normalizeStatus(task.status);
+  const dueLabel = formatPortalDueLabel(task.dueDate);
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-2">
+      <span
+        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+          STATUS_STYLES[status] ?? STATUS_STYLES.todo
+        }`}
+      >
+        {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+      </span>
+      {task.assigneeName ? (
+        <span className="max-w-full truncate text-[11px] text-[var(--ozer-text-on-light-muted)]">
+          {task.assigneeName}
+        </span>
+      ) : null}
+      {dueLabel ? (
+        <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
+          {dueLabel}
+        </span>
+      ) : null}
+    </div>
+  );
+}
+
 const PHASE_COLUMN_COLOURS = [
   '#41606F',
   '#8B5CF6',
@@ -76,6 +102,7 @@ function TaskComments({
   setDrafts,
   pending,
   onSubmit,
+  className,
 }: {
   taskId: string;
   comments: PortalTaskComment[];
@@ -83,13 +110,19 @@ function TaskComments({
   setDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   pending: boolean;
   onSubmit: (taskId: string) => void;
+  className?: string;
 }) {
   return (
-    <div className="mt-3 space-y-2">
+    <div className={cn('space-y-2', className)}>
+      {comments.length === 0 ? (
+        <p className="text-xs text-[var(--ozer-text-on-light-muted)]">
+          No comments yet
+        </p>
+      ) : null}
       {comments.map((comment) => (
         <div
           key={comment.id}
-          className="rounded-lg bg-[var(--workspace-shell-panel-hover)] px-3 py-2"
+          className="rounded-lg bg-[var(--workspace-shell-panel)] px-3 py-2"
         >
           <p className="text-xs font-medium text-[var(--ozer-text-on-light)]">
             {comment.authorName ?? 'Team'}{' '}
@@ -109,7 +142,7 @@ function TaskComments({
             setDrafts((prev) => ({ ...prev, [taskId]: e.target.value }))
           }
           placeholder="Add a comment…"
-          className="h-8 border-[color:var(--workspace-shell-border)] text-sm"
+          className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-sm"
           onKeyDown={(e) => {
             if (e.key === 'Enter') {
               e.preventDefault();
@@ -130,6 +163,11 @@ function TaskComments({
   );
 }
 
+function formatPortalDueLabel(value: string | null | undefined) {
+  if (parsePortalDueMs(value) == null) return null;
+  return formatPortalDate(value);
+}
+
 function PortalProjectListView({
   tasks,
   commentsByTask,
@@ -137,6 +175,8 @@ function PortalProjectListView({
   setDrafts,
   pending,
   onSubmit,
+  expandedTaskId,
+  setExpandedTaskId,
 }: {
   tasks: PortalProjectTask[];
   commentsByTask: Map<string, PortalTaskComment[]>;
@@ -144,8 +184,21 @@ function PortalProjectListView({
   setDrafts: React.Dispatch<React.SetStateAction<Record<string, string>>>;
   pending: boolean;
   onSubmit: (taskId: string) => void;
+  expandedTaskId: string | null;
+  setExpandedTaskId: (id: string | null) => void;
 }) {
-  if (tasks.length === 0) {
+  const sorted = useMemo(() => {
+    return [...tasks].sort((a, b) => {
+      const aMs = parsePortalDueMs(a.dueDate);
+      const bMs = parsePortalDueMs(b.dueDate);
+      if (aMs != null && bMs != null && aMs !== bMs) return aMs - bMs;
+      if (aMs != null && bMs == null) return -1;
+      if (aMs == null && bMs != null) return 1;
+      return a.title.localeCompare(b.title);
+    });
+  }, [tasks]);
+
+  if (sorted.length === 0) {
     return (
       <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
         No tasks yet.
@@ -154,37 +207,115 @@ function PortalProjectListView({
   }
 
   return (
-    <div className="space-y-3">
-      {tasks.map((task) => (
-        <div
-          key={task.id}
-          className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4"
-        >
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <p className="font-medium text-[var(--ozer-text-on-light)]">
-              {task.title}
-            </p>
-            <div className="flex items-center gap-2">
-              <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-0.5 text-[11px] font-medium text-[var(--workspace-shell-nav-text)]">
-                {STATUS_LABELS[task.status] ?? task.status}
-              </span>
-              {task.dueDate ? (
-                <span className="text-xs text-[var(--ozer-text-on-light-muted)]">
-                  Due {formatPortalDate(task.dueDate)}
+    <div className="overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+      <div
+        className={cn(
+          'hidden border-b border-[color:var(--workspace-shell-border)] px-3 py-2 text-[11px] font-medium tracking-wide text-[var(--ozer-text-on-light-muted)] uppercase sm:grid sm:px-4',
+          'sm:grid-cols-[minmax(0,1fr)_minmax(7rem,9rem)_minmax(5.5rem,7rem)_minmax(5.5rem,7rem)_4.5rem]',
+          'sm:gap-x-3',
+        )}
+      >
+        <span>Task</span>
+        <span>Assignee</span>
+        <span>Status</span>
+        <span>Due</span>
+        <span className="text-right">Comments</span>
+      </div>
+
+      <ul>
+        {sorted.map((task) => {
+          const open = expandedTaskId === task.id;
+          const status = normalizeStatus(task.status);
+          const comments = commentsByTask.get(task.id) ?? [];
+          const dueLabel = formatPortalDueLabel(task.dueDate);
+          const priorityKey = task.priority || 'none';
+
+          return (
+            <li
+              key={task.id}
+              className="border-b border-[color:var(--workspace-shell-border)] last:border-b-0"
+            >
+              <button
+                type="button"
+                className={cn(
+                  'grid w-full items-center gap-x-2 px-3 py-2.5 text-left transition-colors hover:bg-[var(--workspace-shell-panel-hover)] sm:gap-x-3 sm:px-4',
+                  'grid-cols-[minmax(0,1fr)_auto]',
+                  'sm:grid-cols-[minmax(0,1fr)_minmax(7rem,9rem)_minmax(5.5rem,7rem)_minmax(5.5rem,7rem)_4.5rem]',
+                )}
+                onClick={() => setExpandedTaskId(open ? null : task.id)}
+                aria-expanded={open}
+              >
+                <div className="flex min-w-0 items-start gap-2">
+                  <span
+                    className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[priorityKey] ?? PRIORITY_DOT.none}`}
+                    title={task.priority ?? 'No priority'}
+                  />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
+                      {task.title}
+                    </p>
+                    <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+                          STATUS_STYLES[status] ?? STATUS_STYLES.todo
+                        }`}
+                      >
+                        {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                      </span>
+                      {task.assigneeName ? (
+                        <span className="truncate text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                          {task.assigneeName}
+                        </span>
+                      ) : null}
+                      {dueLabel ? (
+                        <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                          {dueLabel}
+                        </span>
+                      ) : null}
+                    </div>
+                  </div>
+                </div>
+
+                <span className="hidden truncate text-sm text-[var(--ozer-text-on-light-muted)] sm:block">
+                  {task.assigneeName ?? '—'}
                 </span>
+
+                <span className="hidden sm:block">
+                  <span
+                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+                      STATUS_STYLES[status] ?? STATUS_STYLES.todo
+                    }`}
+                  >
+                    {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                  </span>
+                </span>
+
+                <span className="hidden text-sm text-[var(--ozer-text-on-light-muted)] sm:block">
+                  {dueLabel ?? '—'}
+                </span>
+
+                <span className="inline-flex items-center justify-end gap-1 text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                  <MessageSquare className="h-3.5 w-3.5 shrink-0" />
+                  <span className="tabular-nums">{comments.length}</span>
+                </span>
+              </button>
+
+              {open ? (
+                <div className="border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel-hover)]/40 px-3 py-3 sm:px-4">
+                  <TaskComments
+                    taskId={task.id}
+                    comments={comments}
+                    drafts={drafts}
+                    setDrafts={setDrafts}
+                    pending={pending}
+                    onSubmit={onSubmit}
+                  />
+                </div>
               ) : null}
-            </div>
-          </div>
-          <TaskComments
-            taskId={task.id}
-            comments={commentsByTask.get(task.id) ?? []}
-            drafts={drafts}
-            setDrafts={setDrafts}
-            pending={pending}
-            onSubmit={onSubmit}
-          />
-        </div>
-      ))}
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 }
@@ -259,7 +390,6 @@ function PortalProjectKanbanView({
                 columnTasks.map((task) => {
                   const open = expandedTaskId === task.id;
                   const priorityKey = task.priority || 'none';
-                  const status = normalizeStatus(task.status);
                   return (
                     <div
                       key={task.id}
@@ -278,26 +408,13 @@ function PortalProjectKanbanView({
                             <p className="text-sm leading-snug font-medium text-[var(--ozer-text-on-light)]">
                               {task.title}
                             </p>
-                            <div className="mt-2 flex flex-wrap items-center gap-2">
-                              <span
-                                className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                                  STATUS_STYLES[status] ?? STATUS_STYLES.todo
-                                }`}
-                              >
-                                {STATUS_LABELS[status] ??
-                                  status.replace('_', ' ')}
-                              </span>
-                              {task.dueDate ? (
-                                <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
-                                  {formatPortalDate(task.dueDate)}
-                                </span>
-                              ) : null}
-                            </div>
+                            <TaskCardMeta task={task} />
                           </div>
                         </div>
                       </button>
                       {open ? (
                         <TaskComments
+                          className="mt-3"
                           taskId={task.id}
                           comments={commentsByTask.get(task.id) ?? []}
                           drafts={drafts}
@@ -325,14 +442,69 @@ function PortalProjectKanbanView({
   );
 }
 
+function parsePortalDueMs(value: string | null | undefined): number | null {
+  if (!value?.trim()) return null;
+  const trimmed = value.trim();
+  // Prefer YYYY-MM-DD (date-only) to avoid UTC day-shift surprises.
+  const ymd = /^(\d{4})-(\d{2})-(\d{2})/.exec(trimmed);
+  if (ymd) {
+    const y = Number(ymd[1]);
+    const m = Number(ymd[2]);
+    const d = Number(ymd[3]);
+    if (y < 2000) return null; // treat epoch / bogus legacy dates as undated
+    const ms = Date.UTC(y, m - 1, d);
+    return Number.isFinite(ms) ? ms : null;
+  }
+  const ms = new Date(trimmed).getTime();
+  if (!Number.isFinite(ms)) return null;
+  // Discard Unix-epoch noise and clearly invalid historical values.
+  if (ms < Date.UTC(2000, 0, 1)) return null;
+  return ms;
+}
+
+function formatTimelineGroupLabel(ms: number) {
+  return new Date(ms).toLocaleDateString('en-GB', {
+    weekday: 'short',
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
 function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
-  const dated = useMemo(() => {
-    return [...tasks]
-      .filter((task) => task.dueDate)
-      .sort((a, b) => String(a.dueDate).localeCompare(String(b.dueDate)));
+  const { dated, undated } = useMemo(() => {
+    const withDue: Array<PortalProjectTask & { dueMs: number }> = [];
+    const withoutDue: PortalProjectTask[] = [];
+
+    for (const task of tasks) {
+      const dueMs = parsePortalDueMs(task.dueDate);
+      if (dueMs == null) {
+        withoutDue.push(task);
+      } else {
+        withDue.push({ ...task, dueMs });
+      }
+    }
+
+    withDue.sort((a, b) => a.dueMs - b.dueMs || a.title.localeCompare(b.title));
+    withoutDue.sort((a, b) => a.title.localeCompare(b.title));
+
+    return { dated: withDue, undated: withoutDue };
   }, [tasks]);
 
-  const undated = useMemo(() => tasks.filter((task) => !task.dueDate), [tasks]);
+  const groups = useMemo(() => {
+    const map = new Map<string, Array<PortalProjectTask & { dueMs: number }>>();
+    for (const task of dated) {
+      const key = new Date(task.dueMs).toISOString().slice(0, 10);
+      const list = map.get(key) ?? [];
+      list.push(task);
+      map.set(key, list);
+    }
+    return [...map.entries()].map(([ymd, items]) => ({
+      ymd,
+      dueMs: items[0]!.dueMs,
+      items,
+    }));
+  }, [dated]);
 
   if (tasks.length === 0) {
     return (
@@ -342,53 +514,103 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
     );
   }
 
-  if (dated.length === 0) {
-    return (
-      <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
-        No due dates yet — switch to Board or List to browse tasks.
-      </p>
-    );
-  }
-
-  const starts = dated.map((task) => new Date(String(task.dueDate)).getTime());
-  const min = Math.min(...starts);
-  const max = Math.max(...starts);
-  const span = Math.max(max - min, 1000 * 60 * 60 * 24 * 7);
-
   return (
     <div className="space-y-4">
-      <div className="space-y-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
-        {dated.map((task) => {
-          const t = new Date(String(task.dueDate)).getTime();
-          const left = ((t - min) / span) * 100;
-          return (
-            <div key={task.id} className="grid grid-cols-[140px_1fr] gap-3">
-              <div>
-                <p className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
-                  {task.title}
+      {groups.length > 0 ? (
+        <div className="space-y-3">
+          {groups.map((group) => (
+            <div
+              key={group.ymd}
+              className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]"
+            >
+              <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-2.5">
+                <p className="text-sm font-medium text-[var(--ozer-text-on-light)]">
+                  {formatTimelineGroupLabel(group.dueMs)}
                 </p>
-                <p className="text-xs text-[var(--ozer-text-on-light-muted)]">
-                  {formatPortalDate(task.dueDate)}
+                <p className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                  {group.items.length} task
+                  {group.items.length === 1 ? '' : 's'} due
                 </p>
               </div>
-              <div className="relative h-8 rounded-md bg-[var(--workspace-shell-panel-hover)]">
-                <div
-                  className="absolute top-1.5 h-5 w-5 rounded-full bg-[var(--ozer-accent)]"
-                  style={{
-                    left: `max(0%, min(calc(${left}% - 10px), calc(100% - 20px)))`,
-                  }}
-                  title={task.title}
-                />
-              </div>
+              <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
+                {group.items.map((task) => {
+                  const status = normalizeStatus(task.status);
+                  return (
+                    <li
+                      key={task.id}
+                      className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+                    >
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
+                          {task.title}
+                        </p>
+                        {task.assigneeName ? (
+                          <p className="truncate text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                            {task.assigneeName}
+                          </p>
+                        ) : null}
+                      </div>
+                      <span
+                        className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+                          STATUS_STYLES[status] ?? STATUS_STYLES.todo
+                        }`}
+                      >
+                        {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
             </div>
-          );
-        })}
-      </div>
-      {undated.length > 0 ? (
-        <p className="text-xs text-[var(--ozer-text-on-light-muted)]">
-          {undated.length} task{undated.length === 1 ? '' : 's'} without a due
-          date.
+          ))}
+        </div>
+      ) : (
+        <p className="text-sm text-[var(--ozer-text-on-light-muted)]">
+          No tasks with a due date yet.
         </p>
+      )}
+
+      {undated.length > 0 ? (
+        <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+          <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-2.5">
+            <p className="text-sm font-medium text-[var(--ozer-text-on-light)]">
+              No due date
+            </p>
+            <p className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
+              {undated.length} task{undated.length === 1 ? '' : 's'} — still on
+              the board, just without a date
+            </p>
+          </div>
+          <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
+            {undated.map((task) => {
+              const status = normalizeStatus(task.status);
+              return (
+                <li
+                  key={task.id}
+                  className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
+                >
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
+                      {task.title}
+                    </p>
+                    {task.assigneeName ? (
+                      <p className="truncate text-[11px] text-[var(--ozer-text-on-light-muted)]">
+                        {task.assigneeName}
+                      </p>
+                    ) : null}
+                  </div>
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
+                      STATUS_STYLES[status] ?? STATUS_STYLES.todo
+                    }`}
+                  >
+                    {STATUS_LABELS[status] ?? status.replace('_', ' ')}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
+        </div>
       ) : null}
     </div>
   );
@@ -482,7 +704,6 @@ function PortalProjectPhaseKanbanView({
               {columnTasks.map((task) => {
                 const open = expandedTaskId === task.id;
                 const priorityKey = task.priority || 'none';
-                const status = normalizeStatus(task.status);
                 return (
                   <div
                     key={task.id}
@@ -501,26 +722,13 @@ function PortalProjectPhaseKanbanView({
                           <p className="text-sm leading-snug font-medium text-[var(--ozer-text-on-light)]">
                             {task.title}
                           </p>
-                          <div className="mt-2 flex flex-wrap items-center gap-2">
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase ${
-                                STATUS_STYLES[status] ?? STATUS_STYLES.todo
-                              }`}
-                            >
-                              {STATUS_LABELS[status] ??
-                                status.replace('_', ' ')}
-                            </span>
-                            {task.dueDate ? (
-                              <span className="text-[11px] text-[var(--ozer-text-on-light-muted)]">
-                                {formatPortalDate(task.dueDate)}
-                              </span>
-                            ) : null}
-                          </div>
+                          <TaskCardMeta task={task} />
                         </div>
                       </div>
                     </button>
                     {open ? (
                       <TaskComments
+                        className="mt-3"
                         taskId={task.id}
                         comments={commentsByTask.get(task.id) ?? []}
                         drafts={drafts}
@@ -673,6 +881,8 @@ export function PortalProjectBoard({
           setDrafts={setDrafts}
           pending={pending}
           onSubmit={submitComment}
+          expandedTaskId={expandedTaskId}
+          setExpandedTaskId={setExpandedTaskId}
         />
       ) : null}
 

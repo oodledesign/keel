@@ -32,8 +32,8 @@ import {
 } from '../../_lib/role-access';
 import { isWorkModuleEnabled } from '../../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../../_lib/server/team-account-workspace.loader';
-import { loadInvitesPageData } from '../_lib/server/members-page.loader';
 import { SeatUsageSummary } from '../_components/seat-usage-summary';
+import { loadInvitesPageData } from '../_lib/server/members-page.loader';
 import { loadSeatUsageSummary } from '../_lib/server/seat-usage.loader';
 
 interface TeamAccountInvitesPageProps {

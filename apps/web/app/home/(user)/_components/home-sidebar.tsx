@@ -19,6 +19,7 @@ import {
 } from '@kit/ui/shadcn-sidebar';
 import { cn } from '@kit/ui/utils';
 
+import { ProductTourNavHint } from '~/components/product-tour/product-tour-nav-hint';
 import { OzerSidebarLogo } from '~/components/workspace-shell/ozer-sidebar-logo';
 import {
   WorkspaceAccountsSelector,
@@ -36,6 +37,10 @@ import {
 } from '~/config/personal-account-navigation.config';
 import type { WorkspaceSwitcherAccount } from '~/home/_lib/server/workspace-switcher.loader';
 import { getExplicitPersonalHomePath } from '~/lib/dashboard-shortcuts/personal-home-url';
+import {
+  type CompletedProductTours,
+  hasCompletedProductTour,
+} from '~/lib/product-tour/types';
 import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
 
 import type { UserWorkspace } from '../_lib/server/load-user-workspace';
@@ -53,6 +58,7 @@ interface HomeSidebarProps {
     pictureUrl: string | null;
   }>;
   emailNeedsReplyCount?: number;
+  completedTours?: CompletedProductTours;
 }
 
 export function HomeSidebar(props: HomeSidebarProps) {
@@ -79,27 +85,38 @@ export function HomeSidebar(props: HomeSidebarProps) {
             (props.switcherPortals?.length ?? 0) > 0
           }
         >
-          <WorkspaceAccountsSelector
-            selectedAccount={PERSONAL_WORKSPACE_VALUE}
-            userId={user.id}
-            accounts={switcherAccounts}
-            portals={props.switcherPortals}
-            personalAccount={
-              workspace
-                ? {
-                    id: workspace.id,
-                    name: workspace.name,
-                    picture_url: workspace.picture_url,
-                  }
-                : undefined
-            }
-            className="w-full px-0"
-            enableTeamCreation={featureFlagsConfig.enableTeamCreation}
-          />
+          <div data-tour="workspace-switcher">
+            <WorkspaceAccountsSelector
+              selectedAccount={PERSONAL_WORKSPACE_VALUE}
+              userId={user.id}
+              accounts={switcherAccounts}
+              portals={props.switcherPortals}
+              personalAccount={
+                workspace
+                  ? {
+                      id: workspace.id,
+                      name: workspace.name,
+                      picture_url: workspace.picture_url,
+                    }
+                  : undefined
+              }
+              className="w-full px-0"
+              enableTeamCreation={featureFlagsConfig.enableTeamCreation}
+            />
+          </div>
         </If>
       </SidebarHeader>
 
-      <SidebarContent className="mt-2 flex-1 overflow-y-auto px-2 pb-2">
+      <SidebarContent
+        data-tour="sidebar"
+        className="mt-2 flex-1 overflow-y-auto px-2 pb-2"
+      >
+        {!hasCompletedProductTour(
+          props.completedTours ?? {},
+          'personal_nav_tour_hint',
+        ) ? (
+          <ProductTourNavHint />
+        ) : null}
         <SidebarNavigation config={sidebarNavConfig} />
         <PersonalWorkspaceNav workspaces={sharedWorkspaces} />
       </SidebarContent>

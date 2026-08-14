@@ -36,10 +36,7 @@ export function WipRecentUpdatesStrip({ items, onOpenInstruction }: Props) {
   // Collapsed by default so the desk stays clear; expand to review updates.
   const [expanded, setExpanded] = useState(false);
 
-  const visible = useMemo(
-    () => (expanded ? items : []),
-    [expanded, items],
-  );
+  const visible = useMemo(() => (expanded ? items : []), [expanded, items]);
 
   if (items.length === 0) {
     return (

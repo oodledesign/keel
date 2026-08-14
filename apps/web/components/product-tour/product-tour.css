@@ -1,0 +1,47 @@
+.ozer-driver-popover.driver-popover {
+  background: var(--workspace-shell-panel, #fff);
+  color: var(--workspace-shell-text, #1a1a1a);
+  border: 1px solid var(--workspace-shell-border, #e5e5e5);
+  border-radius: 12px;
+  box-shadow:
+    0 1px 2px rgba(42, 23, 32, 0.04),
+    0 8px 24px rgba(42, 23, 32, 0.12);
+  max-width: 320px;
+}
+
+.ozer-driver-popover .driver-popover-title {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--workspace-shell-text, #1a1a1a);
+}
+
+.ozer-driver-popover .driver-popover-description {
+  font-size: 0.875rem;
+  line-height: 1.45;
+  color: var(--workspace-shell-text-muted, #6b6b6b);
+}
+
+.ozer-driver-popover .driver-popover-progress-text {
+  color: var(--workspace-shell-text-muted, #6b6b6b);
+  font-size: 0.75rem;
+}
+
+.ozer-driver-popover .driver-popover-next-btn,
+.ozer-driver-popover .driver-popover-done-btn {
+  background: var(--ozer-accent, #ff5c34) !important;
+  color: #fff !important;
+  border: none !important;
+  text-shadow: none !important;
+  border-radius: 8px !important;
+  padding: 6px 12px !important;
+}
+
+.ozer-driver-popover .driver-popover-prev-btn,
+.ozer-driver-popover .driver-popover-close-btn {
+  color: var(--workspace-shell-text-muted, #6b6b6b) !important;
+  text-shadow: none !important;
+}
+
+.driver-overlay {
+  background: rgba(20, 12, 16, 0.55) !important;
+}

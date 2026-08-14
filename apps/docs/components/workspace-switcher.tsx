@@ -57,6 +57,7 @@ export function WorkspaceSwitcher() {
     const href = pathForWorkspaceSwitch(pathname, next);
     startTransition(() => {
       router.push(href);
+      router.refresh();
     });
   }
 

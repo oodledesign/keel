@@ -1,11 +1,6 @@
 import { z } from 'zod';
 
-const MAILER_PROVIDERS = [
-  'nodemailer',
-  'resend',
-  'ses',
-  'zeptomail',
-] as const;
+const MAILER_PROVIDERS = ['nodemailer', 'resend', 'ses', 'zeptomail'] as const;
 
 const MAILER_PROVIDER = z
   .enum(MAILER_PROVIDERS)

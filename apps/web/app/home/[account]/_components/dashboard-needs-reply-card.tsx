@@ -4,13 +4,28 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { ChevronRight, Mail, X } from 'lucide-react';
+import { ChevronRight, Mail, MoreHorizontal, X } from 'lucide-react';
 
+import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { toast } from '@kit/ui/sonner';
 
 import { HapticLink } from '~/components/haptic-link';
 import pathsConfig from '~/config/paths.config';
-import { ignoreEmailNeedsReplyAction } from '~/lib/email-assistant/email-assistant.actions';
+import {
+  addEmailTriageRuleFromThreadAction,
+  ignoreEmailNeedsReplyAction,
+} from '~/lib/email-assistant/email-assistant.actions';
+import type {
+  EmailTriageAction,
+  EmailTriageScope,
+} from '~/lib/email-assistant/email-triage-rules.shared';
+import { triageRuleSuccessMessage } from '~/lib/email-assistant/email-triage-rules.shared';
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 
 import type { DashboardNeedsReplyThread } from '../_lib/server/dashboard-page.loader';
@@ -83,6 +98,46 @@ export function DashboardNeedsReplyCard({
     });
   }
 
+  function addTriageRule(
+    threadId: string,
+    action: EmailTriageAction,
+    scope: EmailTriageScope,
+  ) {
+    setPendingIds((prev) => new Set(prev).add(threadId));
+    startTransition(async () => {
+      try {
+        const result = await addEmailTriageRuleFromThreadAction({
+          threadId,
+          action,
+          scope,
+          accountSlug,
+        });
+        if (action === 'ignore') {
+          setItems((prev) => prev.filter((thread) => thread.id !== threadId));
+        }
+        toast.success(
+          triageRuleSuccessMessage(
+            action,
+            scope,
+            result.value,
+            result.affectedCount,
+          ),
+        );
+        router.refresh();
+      } catch (error) {
+        toast.error(
+          error instanceof Error ? error.message : 'Could not save triage rule',
+        );
+      } finally {
+        setPendingIds((prev) => {
+          const next = new Set(prev);
+          next.delete(threadId);
+          return next;
+        });
+      }
+    });
+  }
+
   return (
     <section className={panelClass}>
       <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
@@ -109,7 +164,7 @@ export function DashboardNeedsReplyCard({
         <ul className="divide-y divide-[color:var(--workspace-shell-border)]">
           {items.map((thread) => {
             const href = `${pathsConfig.app.accountEmailAssistant.replace('[account]', accountSlug)}?thread=${thread.id}`;
-            const ignoring = isPending && pendingIds.has(thread.id);
+            const busy = isPending && pendingIds.has(thread.id);
 
             return (
               <li
@@ -137,17 +192,51 @@ export function DashboardNeedsReplyCard({
                       .join(' · ')}
                   </p>
                 </HapticLink>
-                <button
-                  type="button"
-                  onClick={() => ignoreThread(thread.id)}
-                  disabled={ignoring}
-                  title="Ignore — no reply needed"
-                  aria-label="Ignore — no reply needed"
-                  className="mt-0.5 inline-flex h-8 shrink-0 items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
-                >
-                  <X className="h-3.5 w-3.5" />
-                  Ignore
-                </button>
+                <div className="mt-0.5 flex shrink-0 items-center gap-1">
+                  <button
+                    type="button"
+                    onClick={() => ignoreThread(thread.id)}
+                    disabled={busy}
+                    title="Ignore — no reply needed"
+                    aria-label="Ignore — no reply needed"
+                    className="inline-flex h-8 items-center gap-1 rounded-lg border border-[color:var(--workspace-shell-border)] px-2 text-[11px] font-medium text-[var(--workspace-shell-text-muted)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:text-[var(--ozer-accent)] disabled:opacity-50"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    Ignore
+                  </button>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
+                        disabled={busy}
+                        aria-label="More triage actions"
+                      >
+                        <MoreHorizontal className="h-4 w-4" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end">
+                      <DropdownMenuItem
+                        disabled={busy}
+                        onSelect={() =>
+                          addTriageRule(thread.id, 'ignore', 'sender')
+                        }
+                      >
+                        Always ignore this sender
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        disabled={busy}
+                        onSelect={() =>
+                          addTriageRule(thread.id, 'ignore', 'domain')
+                        }
+                      >
+                        Always ignore this domain
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </li>
             );
           })}

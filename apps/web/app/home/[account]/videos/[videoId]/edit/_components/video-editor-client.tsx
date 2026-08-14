@@ -686,10 +686,11 @@ export function VideoEditorClient(props: Props) {
           need a master copy in storage.
         </p>
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          Import one from the published Bunny video, or upload a local recording,
-          then use <span className="font-medium">Re-time with Whisper</span> to
-          rebuild a full transcript (desktop Apple Speech often stops after a
-          couple of minutes).
+          Import one from the published Bunny video, or upload a local
+          recording, then use{' '}
+          <span className="font-medium">Re-time with Whisper</span> to rebuild a
+          full transcript (desktop Apple Speech often stops after a couple of
+          minutes).
         </p>
         <div className="flex flex-wrap gap-3">
           <Button
@@ -705,9 +706,15 @@ export function VideoEditorClient(props: Props) {
                   const json = (await res.json()) as {
                     ok?: boolean;
                     error?: string;
+                    canUploadLocally?: boolean;
                   };
                   if (!json.ok) {
-                    throw new Error(json.error ?? 'Import failed');
+                    throw new Error(
+                      json.error ??
+                        (json.canUploadLocally
+                          ? 'Import failed — try uploading a local master'
+                          : 'Import failed'),
+                    );
                   }
                   toast.success('Master ready — reloading editor');
                   window.location.reload();

@@ -153,8 +153,18 @@ export function CommercialAgencyDashboard({
       icon: ClipboardList,
     },
     { href: pipelineHref, label: 'WIP', title: 'Pipeline / WIP', icon: Tag },
-    { href: viewingsHref, label: 'Viewings', title: 'Viewings', icon: CalendarDays },
-    { href: reportsHref, label: 'Insights', title: 'Insights', icon: Building2 },
+    {
+      href: viewingsHref,
+      label: 'Viewings',
+      title: 'Viewings',
+      icon: CalendarDays,
+    },
+    {
+      href: reportsHref,
+      label: 'Insights',
+      title: 'Insights',
+      icon: Building2,
+    },
   ];
 
   return (
@@ -173,9 +183,7 @@ export function CommercialAgencyDashboard({
               title={item.title}
               className="flex min-w-0 flex-col items-center justify-center gap-2 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-1.5 py-3 text-center text-[var(--workspace-shell-text)] transition-colors hover:border-[var(--ozer-accent)]/35 hover:bg-[var(--workspace-shell-sidebar-accent)] sm:flex-row sm:justify-start sm:gap-3 sm:px-4 sm:py-3 sm:text-left"
             >
-              <item.icon
-                className={`h-5 w-5 shrink-0 ${workspaceTextMuted}`}
-              />
+              <item.icon className={`h-5 w-5 shrink-0 ${workspaceTextMuted}`} />
               <span className="w-full truncate text-[11px] font-medium sm:text-sm">
                 {item.label}
               </span>
@@ -237,16 +245,13 @@ export function CommercialAgencyDashboard({
             <div className="mb-3 flex items-start justify-between gap-3">
               <div className="min-w-0">
                 <h3 className="text-base font-semibold text-[var(--workspace-shell-text)]">
-                  Desk digest
+                  Strongest matches
                 </h3>
-                <p className={`text-sm ${workspaceTextMuted}`}>
-                  Suggested requirement ↔ stock fits
-                </p>
               </div>
               {matchDigest.count > 0 ? (
                 <Link
                   href={listingsHref}
-                  className={`${workspaceLinkAccent} shrink-0 whitespace-nowrap text-[0.8rem]`}
+                  className={`${workspaceLinkAccent} shrink-0 text-[0.8rem] whitespace-nowrap`}
                 >
                   See all
                 </Link>
@@ -255,9 +260,7 @@ export function CommercialAgencyDashboard({
 
             {matchDigest.suggestions.length === 0 ? (
               <div className="rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] px-4 py-8 text-center">
-                <Sparkles
-                  className={`mx-auto h-7 w-7 ${workspaceTextMuted}`}
-                />
+                <Sparkles className={`mx-auto h-7 w-7 ${workspaceTextMuted}`} />
                 <p className="mt-3 text-sm font-medium text-[var(--workspace-shell-text)]">
                   No strong fits right now
                 </p>
@@ -314,13 +317,10 @@ export function CommercialAgencyDashboard({
                 <h3 className="text-base font-semibold text-[var(--workspace-shell-text)]">
                   Recently updated
                 </h3>
-                <p className={`text-sm ${workspaceTextMuted}`}>
-                  Disposals touched most recently
-                </p>
               </div>
               <Link
                 href={listingsHref}
-                className={`${workspaceLinkAccent} shrink-0 whitespace-nowrap text-[0.8rem]`}
+                className={`${workspaceLinkAccent} shrink-0 text-[0.8rem] whitespace-nowrap`}
               >
                 View all
               </Link>

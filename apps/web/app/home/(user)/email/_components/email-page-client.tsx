@@ -478,6 +478,14 @@ export function EmailPageClient({ initialData }: Props) {
             }
             initialIgnoredSenders={initialData.settings.ignoredSenders}
             initialIgnoredDomains={initialData.settings.ignoredDomains}
+            initialIgnoredSubjectKeywords={
+              initialData.settings.ignoredSubjectKeywords
+            }
+            initialPrioritySenders={initialData.settings.prioritySenders}
+            initialPriorityDomains={initialData.settings.priorityDomains}
+            initialPrioritySubjectKeywords={
+              initialData.settings.prioritySubjectKeywords
+            }
             lastSyncedAt={initialData.settings.lastSyncedAt}
           />
         </div>

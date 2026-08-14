@@ -191,9 +191,7 @@ export const SECTOR_BADGE_CLASS: Record<CommercialSectorKey, string> = {
 };
 
 /** Split multi-value sector strings like "Office, Retail". */
-export function splitSectorLabels(
-  sector: string | null | undefined,
-): string[] {
+export function splitSectorLabels(sector: string | null | undefined): string[] {
   if (!sector?.trim()) return [];
   return sector
     .split(/[,;/|]+/)

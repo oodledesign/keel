@@ -32,7 +32,7 @@ async function ListingImportPage({ params }: PageProps) {
       <TeamAccountLayoutPageHeader
         account={accountSlug}
         title="Import disposals"
-        description="Bulk import listings from a Kato or Numbers CSV export."
+        description="Bulk import listings from a CSV export."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
         <ListingImportPageClient

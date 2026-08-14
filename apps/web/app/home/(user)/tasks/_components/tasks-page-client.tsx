@@ -21,11 +21,15 @@ import {
   ChevronDown,
   ChevronRight,
   ClipboardCheck,
+  Copy,
+  Download,
+  FileText,
   Flame,
   KanbanSquare,
   List as ListIcon,
   Repeat,
   Search,
+  Share2,
   SlidersHorizontal,
   Users,
 } from 'lucide-react';
@@ -37,6 +41,7 @@ import { Checkbox } from '@kit/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
@@ -47,9 +52,20 @@ import {
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
+import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import {
+  downloadTextFile,
+  exportFilename,
+  flattenScheduledSeriesForExport,
+  flattenTasksForExport,
+  tasksToCsv,
+  tasksToMarkdown,
+  tasksToPlainText,
+  type TaskExportRow,
+} from '~/lib/tasks/export-tasks';
 
 import {
   compareYmd,
@@ -1240,6 +1256,87 @@ function TasksViewMenu(props: {
   );
 }
 
+const shareMenuItemClass =
+  'cursor-pointer gap-2 text-[var(--workspace-shell-text)] focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]';
+
+function TasksShareMenu(props: { getRows: () => TaskExportRow[] }) {
+  const copyText = async (content: string, successMessage: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      toast.success(successMessage);
+    } catch {
+      toast.error('Could not copy to clipboard');
+    }
+  };
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          aria-label="Share or export tasks"
+          className={toolbarLabeledButtonClass}
+        >
+          <Share2 className="h-4 w-4" />
+          Share
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className={cn('w-52', dropdownContentClass)}
+      >
+        <DropdownMenuLabel className="text-xs text-[var(--workspace-shell-text-muted)]">
+          Current view
+        </DropdownMenuLabel>
+        <DropdownMenuItem
+          className={shareMenuItemClass}
+          onSelect={() => {
+            const rows = props.getRows();
+            downloadTextFile(
+              exportFilename('tasks', 'csv'),
+              tasksToCsv(rows),
+              'text/csv;charset=utf-8',
+            );
+            toast.success(
+              rows.length === 0
+                ? 'Downloaded empty CSV'
+                : `Downloaded ${rows.length} task${rows.length === 1 ? '' : 's'}`,
+            );
+          }}
+        >
+          <Download className="h-4 w-4 shrink-0" />
+          Download as CSV
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className={shareMenuItemClass}
+          onSelect={() => {
+            void copyText(
+              tasksToPlainText(props.getRows()),
+              'Copied tasks as text',
+            );
+          }}
+        >
+          <Copy className="h-4 w-4 shrink-0" />
+          Copy as text
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          className={shareMenuItemClass}
+          onSelect={() => {
+            void copyText(
+              tasksToMarkdown(props.getRows()),
+              'Copied tasks as Markdown',
+            );
+          }}
+        >
+          <FileText className="h-4 w-4 shrink-0" />
+          Copy as MD
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
 type Props = {
   initialTasks: TasksPageTask[];
   /** Team workspace: only tasks linked to this account’s projects/clients; hides life/work scope toggle. */
@@ -1616,6 +1713,17 @@ export function TasksPageClient({
           />
 
           <TasksViewMenu view={view} onViewChange={setView} />
+
+          <TasksShareMenu
+            getRows={() => {
+              if (view === 'scheduled') {
+                return flattenScheduledSeriesForExport(scheduledSeries);
+              }
+              const source =
+                view === 'board' ? filteredForBoard : filteredForList;
+              return flattenTasksForExport(source);
+            }}
+          />
 
           {reviewHref ? (
             <Button

@@ -1,5 +1,6 @@
 import { Suspense } from 'react';
 
+import { ProductTourSettingsCard } from '~/components/product-tour/product-tour-settings-card';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -18,17 +19,20 @@ export const generateMetadata = async () => {
 
 function PersonalPreferencesSettingsPage() {
   return (
-    <PersonalSettingsPanel>
-      <Suspense
-        fallback={
-          <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Loading…
-          </p>
-        }
-      >
-        <OzerUsePreferencesSection />
-      </Suspense>
-    </PersonalSettingsPanel>
+    <div className="flex flex-col gap-6">
+      <ProductTourSettingsCard tourId="personal" />
+      <PersonalSettingsPanel>
+        <Suspense
+          fallback={
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Loading…
+            </p>
+          }
+        >
+          <OzerUsePreferencesSection />
+        </Suspense>
+      </PersonalSettingsPanel>
+    </div>
   );
 }
 

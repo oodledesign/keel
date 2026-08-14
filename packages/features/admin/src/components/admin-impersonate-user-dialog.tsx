@@ -207,16 +207,30 @@ function useSetSession(tokens: SessionTokens) {
     // Opaque nonce only — never put bearer tokens in the query cache key.
     queryKey: ['impersonate-user', tokens.nonce],
     gcTime: 0,
+    retry: false,
     queryFn: async () => {
-      await supabase.auth.signOut({ scope: 'local' });
+      const { error: signOutError } = await supabase.auth.signOut({
+        scope: 'local',
+      });
 
-      await supabase.auth.setSession({
+      if (signOutError) {
+        throw signOutError;
+      }
+
+      const { data, error: setSessionError } = await supabase.auth.setSession({
         refresh_token: tokens.refreshToken,
         access_token: tokens.accessToken,
       });
 
+      if (setSessionError || !data.session) {
+        throw new Error(
+          setSessionError?.message ?? 'Failed to start impersonation session',
+        );
+      }
+
       // use a hard refresh to avoid hitting cached pages
       window.location.replace('/app');
+      return true;
     },
   });
 }

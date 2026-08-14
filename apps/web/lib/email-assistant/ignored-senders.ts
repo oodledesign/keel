@@ -347,22 +347,8 @@ async function dismissSuggestedItemsMatchingIgnore(
   lists: EmailIgnoreLists,
   reason: string,
 ): Promise<number> {
-  const { data: threads, error: threadsError } = await client
-    .from('email_threads')
-    .select('id')
-    .eq('user_id', userId)
-    .eq('connection_id', connectionId);
-
-  if (threadsError) {
-    throw new Error(threadsError.message);
-  }
-
-  const threadIds = (threads ?? []).map((row) => row.id as string);
-
-  if (threadIds.length === 0) {
-    return 0;
-  }
-
+  // Filter via inner join on connection — avoid `.in(thread_id, allIds)` which
+  // blows PostgREST URL limits on large mailboxes (400 Bad Request).
   const { data: suggested, error: suggestedError } = await client
     .from('email_action_items')
     .select(
@@ -370,18 +356,24 @@ async function dismissSuggestedItemsMatchingIgnore(
       id,
       thread_id,
       message_id,
-      email_messages:message_id ( from_address )
+      email_messages:message_id ( from_address ),
+      email_threads!inner ( id, connection_id )
     `,
     )
     .eq('user_id', userId)
     .eq('status', 'suggested')
-    .in('thread_id', threadIds);
+    .eq('email_threads.connection_id', connectionId);
 
   if (suggestedError) {
     throw new Error(suggestedError.message);
   }
 
   const rows = suggested ?? [];
+
+  if (rows.length === 0) {
+    return 0;
+  }
+
   const threadIdsNeedingTip = [
     ...new Set(
       rows
@@ -391,18 +383,18 @@ async function dismissSuggestedItemsMatchingIgnore(
             typeof linked?.from_address === 'string' && linked.from_address
           );
         })
-        .map((row) => row.thread_id as string),
+        .map((row) => String(row.thread_id)),
     ),
   ];
 
   const tipByThread = new Map<string, string | null>();
 
-  if (threadIdsNeedingTip.length > 0) {
+  for (const chunk of chunkIds(threadIdsNeedingTip, 80)) {
     const { data: tipMessages, error: tipsError } = await client
       .from('email_messages')
       .select('thread_id, from_address')
       .eq('user_id', userId)
-      .in('thread_id', threadIdsNeedingTip)
+      .in('thread_id', chunk)
       .order('internal_date', { ascending: false, nullsFirst: false });
 
     if (tipsError) {
@@ -410,7 +402,7 @@ async function dismissSuggestedItemsMatchingIgnore(
     }
 
     for (const tip of tipMessages ?? []) {
-      const threadId = tip.thread_id as string;
+      const threadId = String(tip.thread_id);
 
       if (tipByThread.has(threadId)) {
         continue;
@@ -427,16 +419,16 @@ async function dismissSuggestedItemsMatchingIgnore(
     const linked = unwrapOne(row.email_messages as unknown);
     const linkedFrom =
       typeof linked?.from_address === 'string' ? linked.from_address : null;
-    const tipFrom = tipByThread.get(row.thread_id as string) ?? null;
+    const tipFrom = tipByThread.get(String(row.thread_id)) ?? null;
     const from = linkedFrom ?? tipFrom;
 
     if (isAddressIgnored(from, lists)) {
-      dismissIds.push(row.id as string);
-      matchingThreadIds.add(row.thread_id as string);
+      dismissIds.push(String(row.id));
+      matchingThreadIds.add(String(row.thread_id));
     }
   }
 
-  if (matchingThreadIds.size > 0) {
+  for (const chunk of chunkIds([...matchingThreadIds], 80)) {
     const { error: threadUpdateError } = await client
       .from('email_threads')
       .update({
@@ -445,7 +437,7 @@ async function dismissSuggestedItemsMatchingIgnore(
         updated_at: new Date().toISOString(),
       })
       .eq('user_id', userId)
-      .in('id', [...matchingThreadIds]);
+      .in('id', chunk);
 
     if (threadUpdateError) {
       throw new Error(threadUpdateError.message);
@@ -456,18 +448,34 @@ async function dismissSuggestedItemsMatchingIgnore(
     return 0;
   }
 
-  const { error: dismissError } = await client
-    .from('email_action_items')
-    .update({ status: 'dismissed' })
-    .eq('user_id', userId)
-    .eq('status', 'suggested')
-    .in('id', dismissIds);
+  for (const chunk of chunkIds(dismissIds, 80)) {
+    const { error: dismissError } = await client
+      .from('email_action_items')
+      .update({ status: 'dismissed' })
+      .eq('user_id', userId)
+      .eq('status', 'suggested')
+      .in('id', chunk);
 
-  if (dismissError) {
-    throw new Error(dismissError.message);
+    if (dismissError) {
+      throw new Error(dismissError.message);
+    }
   }
 
   return dismissIds.length;
+}
+
+function chunkIds(ids: string[], size: number): string[][] {
+  if (ids.length === 0) {
+    return [];
+  }
+
+  const chunks: string[][] = [];
+
+  for (let i = 0; i < ids.length; i += size) {
+    chunks.push(ids.slice(i, i + size));
+  }
+
+  return chunks;
 }
 
 function unwrapOne(value: unknown): Record<string, unknown> | null {

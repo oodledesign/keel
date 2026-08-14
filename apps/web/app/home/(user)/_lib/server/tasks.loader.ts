@@ -20,12 +20,12 @@ export const COMPLETED_TASK_LIST_LIMIT = 100;
 
 const ACTIVE_TASK_STATUSES = ['todo', 'in_progress', 'client_review'] as const;
 
-/** List rows omit notes — loaded on edit via loadTaskById. */
+/** Include notes so list/export views can show descriptions without a second fetch. */
 const TASK_LIST_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status, recurring_series_id, note_refs, source';
+  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs, source';
 
 const TASK_SELECT =
-  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status, recurring_series_id, note_refs, source';
+  'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs, source';
 
 /** Same as TASK_SELECT; kept for call sites that try series first. */
 const TASK_SELECT_WITH_SERIES = TASK_SELECT;
@@ -49,6 +49,8 @@ type TaskQueryRow = {
   area_id?: string | null;
   account_id?: string | null;
   parent_task_id?: string | null;
+  user_id?: string | null;
+  assignee_contact_id?: string | null;
   notes?: string | null;
   calendar_schedule_status?: string | null;
   recurring_series_id?: string | null;
@@ -94,6 +96,20 @@ type AreaEnrichment = {
   colour?: string | null;
 };
 
+type ContactAssigneeEnrichment = {
+  id: string;
+  full_name?: string | null;
+  first_name?: string | null;
+  last_name?: string | null;
+  email?: string | null;
+};
+
+type MemberAssigneeEnrichment = {
+  id: string;
+  name?: string | null;
+  email?: string | null;
+};
+
 function isWorkTaskRow(row: {
   project_id?: string | null;
   client_id?: string | null;
@@ -125,6 +141,8 @@ export type TasksPageTask = {
   areaId: string | null;
   clientName: string | null;
   clientPictureUrl: string | null;
+  /** Resolved assignee label (contact preferred over team member). */
+  assigneeName: string | null;
   /** Team account (workspace) for work tasks — from linked project or client. */
   workspaceName: string | null;
   workspaceSlug: string | null;
@@ -284,6 +302,47 @@ function normalizeTaskNoteRefs(
   return out;
 }
 
+function contactAssigneeDisplayName(
+  contact: ContactAssigneeEnrichment,
+): string | null {
+  const fullName = contact.full_name?.trim();
+  if (fullName) return fullName;
+  const composed = [contact.first_name, contact.last_name]
+    .filter((value): value is string => Boolean(value && String(value).trim()))
+    .map((value) => String(value).trim())
+    .join(' ');
+  return composed || contact.email?.trim() || null;
+}
+
+function memberAssigneeDisplayName(
+  member: MemberAssigneeEnrichment,
+): string | null {
+  return member.name?.trim() || member.email?.trim() || null;
+}
+
+function resolveAssigneeName(
+  row: TaskQueryRow,
+  maps: {
+    contactsById: Map<string, ContactAssigneeEnrichment>;
+    membersById: Map<string, MemberAssigneeEnrichment>;
+  },
+): string | null {
+  // Contact assignee takes precedence (user_id stays the internal owner).
+  if (row.assignee_contact_id) {
+    const contact = maps.contactsById.get(row.assignee_contact_id);
+    if (contact) {
+      return contactAssigneeDisplayName(contact);
+    }
+  }
+  if (row.user_id) {
+    const member = maps.membersById.get(row.user_id);
+    if (member) {
+      return memberAssigneeDisplayName(member);
+    }
+  }
+  return null;
+}
+
 function taskRowToPageTask(
   row: TaskQueryRow,
   maps: {
@@ -291,6 +350,8 @@ function taskRowToPageTask(
     clients: Map<string, ClientEnrichment>;
     areas: Map<string, AreaEnrichment>;
     accountsById: Map<string, AccountWorkspaceRow>;
+    contactsById: Map<string, ContactAssigneeEnrichment>;
+    membersById: Map<string, MemberAssigneeEnrichment>;
   },
   contextOverride?: 'work' | 'life',
   workspaceFallback?: { name: string; slug: string | null },
@@ -403,6 +464,7 @@ function taskRowToPageTask(
     areaId: row.area_id ?? null,
     clientName,
     clientPictureUrl,
+    assigneeName: resolveAssigneeName(row, maps),
     workspaceName,
     workspaceSlug,
     workspaceColor,
@@ -544,7 +606,57 @@ async function enrichTaskRows(
     }
   }
 
-  const maps = { projects, clients, areas, accountsById };
+  const contactIds = [
+    ...new Set(
+      rows
+        .map((row) => row.assignee_contact_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+  const memberIds = [
+    ...new Set(
+      rows
+        .filter((row) => !row.assignee_contact_id)
+        .map((row) => row.user_id)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const [contactsResult, membersResult] = await Promise.all([
+    contactIds.length > 0
+      ? rowDb
+          .from('contacts')
+          .select('id, full_name, first_name, last_name, email')
+          .in('id', contactIds)
+      : Promise.resolve({ data: [] as ContactAssigneeEnrichment[] }),
+    memberIds.length > 0
+      ? rowDb
+          .from('accounts')
+          .select('id, name, email')
+          .in('id', memberIds)
+      : Promise.resolve({ data: [] as MemberAssigneeEnrichment[] }),
+  ]);
+
+  const contactsById = new Map<string, ContactAssigneeEnrichment>();
+  for (const contact of (contactsResult.data ??
+    []) as ContactAssigneeEnrichment[]) {
+    contactsById.set(contact.id, contact);
+  }
+
+  const membersById = new Map<string, MemberAssigneeEnrichment>();
+  for (const member of (membersResult.data ??
+    []) as MemberAssigneeEnrichment[]) {
+    membersById.set(member.id, member);
+  }
+
+  const maps = {
+    projects,
+    clients,
+    areas,
+    accountsById,
+    contactsById,
+    membersById,
+  };
 
   const flat = rows.map((row) =>
     taskRowToPageTask(row, maps, contextOverride, workspaceFallback),
@@ -721,7 +833,7 @@ export async function loadTaskById(
   } else if (withSeries.error || !withSeries.data) {
     return null;
   } else {
-    data = withSeries.data as TaskQueryRow;
+    data = withSeries.data as unknown as TaskQueryRow;
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -780,7 +892,7 @@ export async function loadTaskById(
     const fallback = await client
       .from('tasks')
       .select(
-        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, notes, calendar_schedule_status, recurring_series_id, note_refs',
+        'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, user_id, assignee_contact_id, notes, calendar_schedule_status, recurring_series_id, note_refs',
       )
       .eq('user_id', user.id)
       .eq('parent_task_id', taskId)
@@ -843,10 +955,12 @@ async function fetchActiveThenCompletedTaskRows(
 
   if (
     activeError &&
-    /note_refs|recurring_series_id|source/i.test(`${activeError.message ?? ''}`)
+    /note_refs|recurring_series_id|source|assignee_contact_id/i.test(
+      `${activeError.message ?? ''}`,
+    )
   ) {
     const fallbackSelect =
-      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, calendar_schedule_status';
+      'id, title, status, priority, due_date, project_id, client_id, area_id, account_id, parent_task_id, user_id, notes, calendar_schedule_status';
     [
       { data: active, error: activeError },
       { data: completed, error: completedError },
