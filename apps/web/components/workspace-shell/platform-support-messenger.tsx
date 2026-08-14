@@ -189,6 +189,7 @@ export function PlatformSupportMessenger({
 
   return (
     <div
+      data-tour="support-messenger"
       className={cn(
         'fixed z-[60] flex flex-col overflow-hidden border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_12px_40px_rgba(42,23,32,0.18)]',
         'right-3 bottom-[5.5rem] h-[min(640px,calc(100dvh-7rem))] w-[calc(100vw-1.5rem)] max-w-[380px] rounded-2xl',

@@ -45,6 +45,11 @@ export type VisionSlide =
       standards: string[];
       financeActuals: VisionFinanceActuals | null;
     }
+  | {
+      kind: 'finance';
+      title: string;
+      financeActuals: VisionFinanceActuals;
+    }
   | { kind: 'affirmations'; title: string; items: string[] };
 
 function nonEmptyStrings(items: string[]): string[] {
@@ -169,8 +174,13 @@ export function buildVisionSlides(input: {
     });
   }
 
+  let financeAttached = false;
   for (const block of content.goals) {
     if (!hasGoalsBlock(block)) continue;
+    const hasWealthGoals = block.wealth_goals.some((g) => g.label.trim());
+    const attachFinance = Boolean(financeActuals) && hasWealthGoals;
+    if (attachFinance) financeAttached = true;
+
     slides.push({
       kind: 'goals',
       title:
@@ -187,10 +197,16 @@ export function buildVisionSlides(input: {
         })),
       otherGoals: nonEmptyStrings(block.other_goals),
       standards: nonEmptyStrings(block.standards),
-      financeActuals:
-        block.wealth_goals.some((g) => g.label.trim()) && financeActuals
-          ? financeActuals
-          : null,
+      financeActuals: attachFinance ? financeActuals : null,
+    });
+  }
+
+  // Selected finance workspaces still surface even when wealth goals are empty.
+  if (financeActuals && !financeAttached) {
+    slides.push({
+      kind: 'finance',
+      title: 'Finances',
+      financeActuals,
     });
   }
 

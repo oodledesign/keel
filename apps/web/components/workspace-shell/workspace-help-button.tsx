@@ -25,6 +25,7 @@ export function WorkspaceHelpButton({
   return (
     <button
       type="button"
+      data-tour="support-help"
       onClick={() => {
         if (!messenger) return;
         if (open) {

@@ -45,12 +45,18 @@ import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
 import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 import {
   createBlankWorkspaceNoteAction,
   saveWorkspaceNoteAction,
 } from '~/home/[account]/_lib/workspace-content/notes-actions';
 import { listNotesAndFilesForContextAction } from '~/home/[account]/_lib/workspace-content/notes-files-actions';
+import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
+import {
+  parsePersonAssigneeSelectValue,
+  personAssigneeSelectValue,
+} from '~/lib/tasks/task-person-assignee';
 
 import {
   type TaskAssignmentOption,
@@ -60,6 +66,7 @@ import {
   loadTaskAssignmentOptions,
   loadTaskAssignmentOptionsForWorkspace,
   loadTaskForEdit,
+  loadTaskPersonAssigneesAction,
   updateTask,
   updateTaskRecurringSeriesStatusAction,
 } from '../../_lib/actions/task-actions';
@@ -114,6 +121,22 @@ function initialAssignTo(task: TasksPageTask): string {
     return task.areaId;
   }
   return 'none';
+}
+
+function initialPersonAssignee(task: TasksPageTask): string {
+  if (task.assigneeContactId) {
+    return personAssigneeSelectValue({
+      kind: 'contact',
+      contactId: task.assigneeContactId,
+    });
+  }
+  if (task.assigneeUserId) {
+    return personAssigneeSelectValue({
+      kind: 'member',
+      userId: task.assigneeUserId,
+    });
+  }
+  return '__none__';
 }
 
 function assignmentFromSelection(
@@ -289,6 +312,11 @@ export function EditTaskDialog({
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [assignTo, setAssignTo] = useState(initialAssignTo(task));
+  const [personAssignee, setPersonAssignee] = useState(initialPersonAssignee(task));
+  const [personOptions, setPersonOptions] = useState<TaskPersonAssigneeOption[]>(
+    [],
+  );
+  const [personOptionsLoading, setPersonOptionsLoading] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [subtaskAdding, setSubtaskAdding] = useState(false);
   const [subtasks, setSubtasks] = useState<TasksPageTask[]>(
@@ -362,6 +390,33 @@ export function EditTaskDialog({
   }, [open, workspaceAccountId]);
 
   useEffect(() => {
+    if (!open || !notesAccountId) {
+      setPersonOptions([]);
+      return;
+    }
+
+    let cancelled = false;
+    setPersonOptionsLoading(true);
+    void loadTaskPersonAssigneesAction({
+      accountId: notesAccountId,
+      clientId: task.clientId,
+    })
+      .then((rows) => {
+        if (!cancelled) setPersonOptions(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setPersonOptions([]);
+      })
+      .finally(() => {
+        if (!cancelled) setPersonOptionsLoading(false);
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [open, notesAccountId, task.clientId]);
+
+  useEffect(() => {
     if (!open || !isRootTask) {
       return;
     }
@@ -382,6 +437,7 @@ export function EditTaskDialog({
       setNotes(task.notes ?? '');
       setNoteRefs(task.noteRefs ?? []);
       setAssignTo(initialAssignTo(task));
+      setPersonAssignee(initialPersonAssignee(task));
       setError(null);
       setDeleteDialogOpen(false);
       setNewSubtaskTitle('');
@@ -411,6 +467,8 @@ export function EditTaskDialog({
     task.projectId,
     task.clientId,
     task.areaId,
+    task.assigneeUserId,
+    task.assigneeContactId,
     task.source,
     task.sourceContext,
   ]);
@@ -534,6 +592,7 @@ export function EditTaskDialog({
     }
 
     const assignment = assignmentFromSelection(assignTo, options);
+    const person = parsePersonAssigneeSelectValue(personAssignee);
 
     const showDayOfMonth =
       frequency === 'monthly' ||
@@ -549,6 +608,22 @@ export function EditTaskDialog({
         notes: notes.trim() || null,
         noteRefs: canAttachNotes ? noteRefs : undefined,
         assignment,
+        ...(notesAccountId
+          ? {
+              assigneeUserId:
+                person.kind === 'member'
+                  ? person.id
+                  : person.kind === 'none'
+                    ? null
+                    : undefined,
+              assigneeContactId:
+                person.kind === 'contact'
+                  ? person.id
+                  : person.kind === 'member' || person.kind === 'none'
+                    ? null
+                    : undefined,
+            }
+          : {}),
       });
 
       if (!result.success) {
@@ -1220,6 +1295,22 @@ export function EditTaskDialog({
                 </Select>
               </div>
             </div>
+
+            {notesAccountId ? (
+              personOptionsLoading ? (
+                <div className="flex h-9 items-center gap-2 rounded-md border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] px-3 text-sm text-[var(--workspace-shell-text-muted)]">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Loading assignees…
+                </div>
+              ) : (
+                <TaskPersonAssigneeSelect
+                  options={personOptions}
+                  value={personAssignee}
+                  onChange={setPersonAssignee}
+                  disabled={isPending || isDeleting}
+                />
+              )
+            ) : null}
 
             <div className="space-y-2">
               <Label className="text-[var(--workspace-shell-text-muted)]">

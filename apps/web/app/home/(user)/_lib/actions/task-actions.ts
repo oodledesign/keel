@@ -2,10 +2,13 @@
 
 import { revalidatePath } from 'next/cache';
 
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTaskForUser } from '@kit/tasks/create-task';
 
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
+import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
+import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
 
 import {
   loadPersonalLifeAssignmentOptions as loadPersonalLifeAssignmentOptionsCached,
@@ -317,6 +320,10 @@ export type UpdateTaskInput = {
   noteRefs?: Array<{ id: string; title: string }>;
   /** When set, replaces project/client/area linking (mutually exclusive). */
   assignment?: TaskAssignmentUpdate;
+  /** Team member assignee (`tasks.user_id`). Pass null to clear back to current user. */
+  assigneeUserId?: string | null;
+  /** CRM contact assignee. Pass null to clear. */
+  assigneeContactId?: string | null;
 };
 
 export async function updateTask(taskId: string, input: UpdateTaskInput) {
@@ -403,15 +410,33 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
     }
   }
 
+  if (input.assigneeContactId !== undefined || input.assigneeUserId !== undefined) {
+    const contactId = input.assigneeContactId?.trim() || null;
+    if (contactId) {
+      // Contact is responsible; keep an internal owner on user_id.
+      updates.assignee_contact_id = contactId;
+      updates.user_id = user.id;
+    } else if (input.assigneeUserId !== undefined) {
+      const memberId = input.assigneeUserId?.trim() || null;
+      updates.assignee_contact_id = null;
+      updates.user_id = memberId || user.id;
+    } else {
+      updates.assignee_contact_id = null;
+      updates.user_id = user.id;
+    }
+  }
+
   if (Object.keys(updates).length === 0) {
     return { success: true, error: null };
   }
 
-  const { error } = await client
-    .from('tasks')
+  // RLS enforces access (owner + workspace membership). Do not filter by
+  // user_id — tasks may be assigned to another member.
+  // assignee_contact_id may lag generated Database types until typegen.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const { error } = await (client.from('tasks') as any)
     .update(updates)
-    .eq('id', taskId)
-    .eq('user_id', user.id);
+    .eq('id', taskId);
 
   if (error) {
     const msg =
@@ -491,4 +516,30 @@ export async function loadTaskForEdit(
   workspaceAccountId?: string,
 ): Promise<TasksPageTask | null> {
   return loadTaskById(taskId, { workspaceAccountId });
+}
+
+/** Team members + CRM contacts for the person-assignee picker on a task. */
+export async function loadTaskPersonAssigneesAction(input: {
+  accountId: string;
+  clientId?: string | null;
+}): Promise<TaskPersonAssigneeOption[]> {
+  const client = getSupabaseServerClient();
+  const user = await requireUserInServerComponent();
+
+  const { data: membership } = await client
+    .from('accounts_memberships')
+    .select('account_id')
+    .eq('account_id', input.accountId)
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (!membership) {
+    return [];
+  }
+
+  return loadTaskPersonAssigneeOptions(
+    getSupabaseServerAdminClient(),
+    input.accountId,
+    { clientId: input.clientId ?? null },
+  );
 }

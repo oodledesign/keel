@@ -3,7 +3,6 @@
 import { useCallback, useState, useTransition } from 'react';
 
 import dynamic from 'next/dynamic';
-import { useRouter } from 'next/navigation';
 
 import {
   DndContext,
@@ -17,11 +16,14 @@ import {
   useSensor,
   useSensors,
 } from '@dnd-kit/core';
-import { AlertTriangle, Flame } from 'lucide-react';
+import { AlertTriangle, Flame, User } from 'lucide-react';
 
 import { parseDueDateParts } from '../../../_lib/due-date-ymd';
-import { updateTask } from '../../_lib/actions/task-actions';
 import type { TasksPageTask } from '../../_lib/server/tasks.loader';
+import {
+  isAssignedToSomeoneElse,
+  taskAssigneeDisplayName,
+} from '~/lib/tasks/task-assignee';
 import { InlineTaskTitle } from './tasks-inline-task-title';
 
 const EditTaskDialog = dynamic(
@@ -120,12 +122,14 @@ function BoardCard({
   task,
   today,
   workspaceAccountId,
+  currentUserId,
   onTitleChanged,
   isOverlay = false,
 }: {
   task: TasksPageTask;
   today: string;
   workspaceAccountId?: string;
+  currentUserId?: string | null;
   onTitleChanged?: (taskId: string, title: string) => void;
   isOverlay?: boolean;
 }) {
@@ -210,6 +214,15 @@ function BoardCard({
               {doneSubCount}/{subCount} complete
             </span>
           )}
+          {isAssignedToSomeoneElse(task, currentUserId) ? (
+            <span
+              className="inline-flex max-w-full items-center gap-1 rounded bg-[var(--workspace-shell-sidebar-accent)] px-1.5 py-0.5 font-medium text-[var(--workspace-shell-text-muted)]"
+              title={`Assigned to ${taskAssigneeDisplayName(task)}`}
+            >
+              <User className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
+              <span className="truncate">{taskAssigneeDisplayName(task)}</span>
+            </span>
+          ) : null}
         </div>
       </div>
 
@@ -230,12 +243,14 @@ function BoardColumn({
   tasks,
   today,
   workspaceAccountId,
+  currentUserId,
   onTitleChanged,
 }: {
   column: (typeof STATUS_COLUMNS)[number];
   tasks: TasksPageTask[];
   today: string;
   workspaceAccountId?: string;
+  currentUserId?: string | null;
   onTitleChanged: (taskId: string, title: string) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({
@@ -281,6 +296,7 @@ function BoardColumn({
               task={t}
               today={today}
               workspaceAccountId={workspaceAccountId}
+              currentUserId={currentUserId}
               onTitleChanged={onTitleChanged}
             />
           ))
@@ -295,8 +311,12 @@ export type TasksKanbanBoardProps = {
   flatTasks: TasksPageTask[];
   today: string;
   workspaceAccountId?: string;
+  currentUserId?: string | null;
   onTitleChanged: (taskId: string, title: string) => void;
-  onStatusChanged: (taskId: string, status: TaskStatus) => void;
+  onStatusChanged: (
+    taskId: string,
+    status: TaskStatus,
+  ) => void | Promise<void>;
 };
 
 export function TasksKanbanBoard({
@@ -304,10 +324,10 @@ export function TasksKanbanBoard({
   flatTasks,
   today,
   workspaceAccountId,
+  currentUserId,
   onTitleChanged,
   onStatusChanged,
 }: TasksKanbanBoardProps) {
-  const router = useRouter();
   const [, startTransition] = useTransition();
   const [activeDragTask, setActiveDragTask] = useState<TasksPageTask | null>(
     null,
@@ -350,18 +370,11 @@ export function TasksKanbanBoard({
       const current = flatTasks.find((t) => t.id === taskId);
       if (!current || current.status === newStatus) return;
 
-      const previousStatus = current.status;
-      onStatusChanged(taskId, newStatus);
-      startTransition(async () => {
-        const result = await updateTask(taskId, { status: newStatus! });
-        if (!result.success) {
-          onStatusChanged(taskId, previousStatus);
-        } else {
-          router.refresh();
-        }
+      startTransition(() => {
+        void onStatusChanged(taskId, newStatus!);
       });
     },
-    [flatTasks, onStatusChanged, router],
+    [flatTasks, onStatusChanged],
   );
 
   return (
@@ -381,6 +394,7 @@ export function TasksKanbanBoard({
             )}
             today={today}
             workspaceAccountId={workspaceAccountId}
+            currentUserId={currentUserId}
             onTitleChanged={onTitleChanged}
           />
         ))}
@@ -392,6 +406,7 @@ export function TasksKanbanBoard({
             task={activeDragTask}
             today={today}
             workspaceAccountId={workspaceAccountId}
+            currentUserId={currentUserId}
             onTitleChanged={onTitleChanged}
             isOverlay
           />

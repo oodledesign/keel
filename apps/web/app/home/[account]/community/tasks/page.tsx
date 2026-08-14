@@ -60,6 +60,7 @@ async function CommunityTasksPage({ params }: CommunityTasksPageProps) {
         variant="workspace"
         workspaceAccountId={accountId}
         workspaceAccountSlug={slug}
+        currentUserId={(workspace.user as { id: string }).id}
       />
     </PageBody>
   );

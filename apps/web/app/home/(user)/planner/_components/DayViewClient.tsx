@@ -5,6 +5,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
 } from 'react';
 
@@ -28,6 +29,7 @@ import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
+import { useCommandUndoStack } from '~/lib/hooks/use-command-undo-stack';
 import type { PlannerCalendarEvent } from '~/lib/integrations/google-calendar/types';
 import { plannerTaskMetaWithoutClient } from '~/lib/planner/build-task-tree';
 import { parseDayScheduleFromMarkdown } from '~/lib/planner/parse-plan-markdown';
@@ -120,9 +122,12 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
     [],
   );
   const [tasks, setTasks] = useState<PlannerTask[]>(initialData.tasksDueToday);
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [now, setNow] = useState(() => new Date());
+  const { push: pushUndo } = useCommandUndoStack();
 
   const workspaceAccountId =
     initialData.scope.kind === 'workspace'
@@ -414,6 +419,8 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
   const [plannedTaskOverrides, setPlannedTaskOverrides] = useState<
     Record<string, PlannerTask['status']>
   >({});
+  const plannedOverridesRef = useRef(plannedTaskOverrides);
+  plannedOverridesRef.current = plannedTaskOverrides;
 
   useEffect(() => {
     setPlannedTaskOverrides({});
@@ -433,40 +440,134 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
     return stored?.userContext?.trim() ?? '';
   }, [dateYmd, initialData.scope, planMarkdown]);
 
+  const applyDueTaskStatusRef = useRef<
+    (
+      taskId: string,
+      nextStatus: PlannerTask['status'],
+      previousStatus: PlannerTask['status'],
+      options?: { recordHistory?: boolean },
+    ) => Promise<void>
+  >(async () => undefined);
+
+  const applyDueTaskStatus = useCallback(
+    async (
+      taskId: string,
+      nextStatus: PlannerTask['status'],
+      previousStatus: PlannerTask['status'],
+      options?: { recordHistory?: boolean },
+    ) => {
+      const recordHistory = options?.recordHistory !== false;
+      setTasks((prev) =>
+        prev.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t)),
+      );
+      tasksRef.current = tasksRef.current.map((t) =>
+        t.id === taskId ? { ...t, status: nextStatus } : t,
+      );
+
+      const result = await updateTask(taskId, { status: nextStatus });
+      if (!result.success) {
+        setTasks((prev) =>
+          prev.map((t) =>
+            t.id === taskId ? { ...t, status: previousStatus } : t,
+          ),
+        );
+        tasksRef.current = tasksRef.current.map((t) =>
+          t.id === taskId ? { ...t, status: previousStatus } : t,
+        );
+        toast.error(result.error ?? 'Could not update task');
+        return;
+      }
+
+      if (recordHistory) {
+        pushUndo({
+          label: 'task status',
+          undo: () =>
+            applyDueTaskStatusRef.current(taskId, previousStatus, nextStatus, {
+              recordHistory: false,
+            }),
+          redo: () =>
+            applyDueTaskStatusRef.current(taskId, nextStatus, previousStatus, {
+              recordHistory: false,
+            }),
+        });
+      }
+    },
+    [pushUndo],
+  );
+  applyDueTaskStatusRef.current = applyDueTaskStatus;
+
+  const applyPlannedTaskStatusRef = useRef<
+    (
+      taskId: string,
+      nextStatus: PlannerTask['status'],
+      previousStatus: PlannerTask['status'],
+      options?: { recordHistory?: boolean },
+    ) => Promise<void>
+  >(async () => undefined);
+
+  const applyPlannedTaskStatus = useCallback(
+    async (
+      taskId: string,
+      nextStatus: PlannerTask['status'],
+      previousStatus: PlannerTask['status'],
+      options?: { recordHistory?: boolean },
+    ) => {
+      const recordHistory = options?.recordHistory !== false;
+      setPlannedTaskOverrides((prev) => ({ ...prev, [taskId]: nextStatus }));
+      plannedOverridesRef.current = {
+        ...plannedOverridesRef.current,
+        [taskId]: nextStatus,
+      };
+
+      const result = await updateTask(taskId, { status: nextStatus });
+      if (!result.success) {
+        setPlannedTaskOverrides((prev) => {
+          const next = { ...prev };
+          if (previousStatus === 'completed') {
+            next[taskId] = previousStatus;
+          } else {
+            delete next[taskId];
+          }
+          return next;
+        });
+        toast.error(result.error ?? 'Could not update task');
+        return;
+      }
+
+      if (recordHistory) {
+        pushUndo({
+          label: 'planned task status',
+          undo: () =>
+            applyPlannedTaskStatusRef.current(
+              taskId,
+              previousStatus,
+              nextStatus,
+              { recordHistory: false },
+            ),
+          redo: () =>
+            applyPlannedTaskStatusRef.current(
+              taskId,
+              nextStatus,
+              previousStatus,
+              { recordHistory: false },
+            ),
+        });
+      }
+    },
+    [pushUndo],
+  );
+  applyPlannedTaskStatusRef.current = applyPlannedTaskStatus;
+
   async function toggleTask(task: PlannerTask) {
     const completing = task.status !== 'completed';
     const nextStatus = completing ? 'completed' : 'pending';
-
-    setTasks((prev) =>
-      prev.map((t) => (t.id === task.id ? { ...t, status: nextStatus } : t)),
-    );
-
-    const result = await updateTask(task.id, { status: nextStatus });
-
-    if (!result.success) {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === task.id ? { ...t, status: task.status } : t)),
-      );
-      toast.error(result.error ?? 'Could not update task');
-    }
+    await applyDueTaskStatus(task.id, nextStatus, task.status);
   }
 
   async function togglePlannedTask(task: PlannerTask) {
     const completing = task.status !== 'completed';
     const nextStatus = completing ? 'completed' : 'pending';
-
-    setPlannedTaskOverrides((prev) => ({ ...prev, [task.id]: nextStatus }));
-
-    const result = await updateTask(task.id, { status: nextStatus });
-
-    if (!result.success) {
-      setPlannedTaskOverrides((prev) => {
-        const next = { ...prev };
-        delete next[task.id];
-        return next;
-      });
-      toast.error(result.error ?? 'Could not update task');
-    }
+    await applyPlannedTaskStatus(task.id, nextStatus, task.status);
   }
 
   async function addTask(event: FormEvent) {

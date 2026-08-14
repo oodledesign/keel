@@ -169,23 +169,25 @@ export function WorkspaceDesktopTopBar(
           ) : null}
 
           {props.user ? (
-            <ProfileAccountDropdownContainer
-              user={props.user}
-              account={props.account}
-              showProfileName={false}
-              className="shrink-0"
-              billingAccountId={
-                props.variant === 'team' ? props.accountId : props.userId
-              }
-              billingHref={
-                props.variant === 'team'
-                  ? toHomeBillingHref(
-                      pathsConfig.app.accountBilling,
-                      props.accountSlug,
-                    )
-                  : toHomeBillingHref(pathsConfig.app.personalAccountBilling)
-              }
-            />
+            <div data-tour="profile-menu" className="shrink-0">
+              <ProfileAccountDropdownContainer
+                user={props.user}
+                account={props.account}
+                showProfileName={false}
+                className="shrink-0"
+                billingAccountId={
+                  props.variant === 'team' ? props.accountId : props.userId
+                }
+                billingHref={
+                  props.variant === 'team'
+                    ? toHomeBillingHref(
+                        pathsConfig.app.accountBilling,
+                        props.accountSlug,
+                      )
+                    : toHomeBillingHref(pathsConfig.app.personalAccountBilling)
+                }
+              />
+            </div>
           ) : null}
         </div>
       </TooltipProvider>

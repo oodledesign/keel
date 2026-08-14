@@ -72,6 +72,7 @@ async function TeamAccountTasksPage({ params }: TeamAccountTasksPageProps) {
         workspaceAccountSlug={accountSlug}
         reviewHref={reviewHref}
         pendingReviewCount={pendingReviewCount}
+        currentUserId={(workspace.user as { id: string }).id}
       />
     </PageBody>
   );

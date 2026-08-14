@@ -81,18 +81,20 @@ export function ProductTourHost(
     preferredWorkspaceSlug = props.accountSlug;
   }
 
-  if (!tourId || !autoStart) {
-    return null;
-  }
-
   const showDefaultLandingPrompt =
     props.workspaceOptions.length > 0 &&
     !hasCompletedProductTour(props.completedTours, 'default_landing_prompt');
 
+  // Keep mounted after the tour finishes so the default-landing dialog can show
+  // (marking the tour complete revalidates and would otherwise unmount it).
+  if (!tourId || (!autoStart && !showDefaultLandingPrompt)) {
+    return null;
+  }
+
   return (
     <ProductTour
       tourId={tourId}
-      autoStart
+      autoStart={autoStart}
       showDefaultLandingPrompt={showDefaultLandingPrompt}
       workspaceOptions={props.workspaceOptions}
       preferredWorkspaceSlug={preferredWorkspaceSlug}

@@ -143,6 +143,10 @@ export type TasksPageTask = {
   clientPictureUrl: string | null;
   /** Resolved assignee label (contact preferred over team member). */
   assigneeName: string | null;
+  /** Team member assignee (`tasks.user_id`). */
+  assigneeUserId: string | null;
+  /** External CRM contact assignee when set. */
+  assigneeContactId: string | null;
   /** Team account (workspace) for work tasks — from linked project or client. */
   workspaceName: string | null;
   workspaceSlug: string | null;
@@ -465,6 +469,8 @@ function taskRowToPageTask(
     clientName,
     clientPictureUrl,
     assigneeName: resolveAssigneeName(row, maps),
+    assigneeUserId: row.user_id ?? null,
+    assigneeContactId: row.assignee_contact_id ?? null,
     workspaceName,
     workspaceSlug,
     workspaceColor,

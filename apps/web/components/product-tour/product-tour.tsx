@@ -17,13 +17,17 @@ import {
 import { toast } from '@kit/ui/sonner';
 
 import '~/components/product-tour/product-tour.css';
+import { useOptionalPlatformSupportMessenger } from '~/components/workspace-shell/platform-support-messenger-context';
 import pathsConfig from '~/config/paths.config';
 import { saveDefaultLandingAction } from '~/lib/dashboard-shortcuts/dashboard-shortcuts.actions';
 import {
   markProductTourCompletedAction,
   resetProductTourAction,
 } from '~/lib/product-tour/product-tour.actions';
-import { getProductTourSteps } from '~/lib/product-tour/tour-steps';
+import {
+  getProductTourStepDefs,
+  type TourChromeAction,
+} from '~/lib/product-tour/tour-steps';
 import type { DriveableProductTourId } from '~/lib/product-tour/types';
 
 type WorkspaceOption = { slug: string; name: string };
@@ -37,6 +41,39 @@ type ProductTourProps = {
   preferredWorkspaceSlug?: string | null;
 };
 
+function setTourChromeOpen(active: boolean) {
+  document.body.classList.toggle('ozer-tour-chrome-open', active);
+}
+
+function clickTourTarget(root: Element | undefined | null) {
+  if (!root) return;
+  const clickable =
+    root instanceof HTMLElement &&
+    (root.matches('button, a, [role="button"]')
+      ? root
+      : root.querySelector<HTMLElement>('button, a, [role="button"]'));
+  clickable?.click();
+}
+
+function closeChromeUi(action: TourChromeAction | null) {
+  if (!action) return;
+
+  if (action === 'open-support') {
+    // closed by caller via messenger
+    return;
+  }
+
+  const selector =
+    action === 'open-workspace-switcher'
+      ? '[data-tour="workspace-switcher"]'
+      : action === 'open-new-menu'
+        ? '[data-tour="new-menu"]'
+        : '[data-tour="profile-menu"]';
+
+  // Toggle the same control closed (avoid Escape — driver.js treats it as cancel).
+  clickTourTarget(document.querySelector(selector));
+}
+
 export function ProductTour({
   tourId,
   autoStart,
@@ -46,11 +83,25 @@ export function ProductTour({
   preferredWorkspaceSlug,
 }: ProductTourProps) {
   const startedRef = useRef(false);
-  const [landingOpen, setLandingOpen] = useState(false);
+  const messenger = useOptionalPlatformSupportMessenger();
+  const messengerRef = useRef(messenger);
+  messengerRef.current = messenger;
+
+  const [landingOpen, setLandingOpen] = useState(
+    () => !autoStart && !forceStart && showDefaultLandingPrompt,
+  );
   const [selected, setSelected] = useState<string>(
     preferredWorkspaceSlug ? `workspace:${preferredWorkspaceSlug}` : 'personal',
   );
   const [pending, startTransition] = useTransition();
+
+  // After the tour is marked complete, layout revalidation remounts this
+  // component with autoStart=false — reopen the landing prompt so it isn't lost.
+  useEffect(() => {
+    if (autoStart || forceStart) return;
+    if (!showDefaultLandingPrompt) return;
+    setLandingOpen(true);
+  }, [autoStart, forceStart, showDefaultLandingPrompt]);
 
   useEffect(() => {
     // Driver.js needs DOM access after mount — intentional client-only init.
@@ -61,6 +112,38 @@ export function ProductTour({
     let cancelled = false;
     let skipMarkOnDestroy = false;
     let driverObj: Driver | null = null;
+    let activeChromeAction: TourChromeAction | null = null;
+
+    const clearChrome = () => {
+      setTourChromeOpen(false);
+      if (activeChromeAction === 'open-support') {
+        messengerRef.current?.setOpen(false);
+      } else {
+        closeChromeUi(activeChromeAction);
+      }
+      activeChromeAction = null;
+    };
+
+    const runChromeAction = (
+      action: TourChromeAction | undefined,
+      element: Element | undefined,
+    ) => {
+      clearChrome();
+      if (!action) return;
+
+      activeChromeAction = action;
+      setTourChromeOpen(true);
+
+      if (action === 'open-support') {
+        messengerRef.current?.openMessenger({ view: 'home' });
+        return;
+      }
+
+      // Wait a frame so driver.js can finish positioning before we open menus.
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => clickTourTarget(element));
+      });
+    };
 
     const run = async () => {
       const { driver } = await import('driver.js');
@@ -76,8 +159,8 @@ export function ProductTour({
         await new Promise((r) => setTimeout(r, 250));
       }
 
-      const steps = getProductTourSteps(tourId);
-      if (steps.length === 0) {
+      const stepDefs = getProductTourStepDefs(tourId);
+      if (stepDefs.length === 0) {
         await markProductTourCompletedAction({ tourId });
         if (showDefaultLandingPrompt) setLandingOpen(true);
         return;
@@ -87,15 +170,43 @@ export function ProductTour({
       const markDone = async () => {
         if (marked) return;
         marked = true;
+        // Open landing before marking complete so a remount can still show it.
+        if (showDefaultLandingPrompt) {
+          setLandingOpen(true);
+        }
         try {
           await markProductTourCompletedAction({ tourId });
         } catch {
           // Non-blocking — tour UX should still finish.
         }
-        if (showDefaultLandingPrompt) {
-          setLandingOpen(true);
-        }
       };
+
+      const steps = stepDefs.map((def) => {
+        if (!def.element) {
+          return {
+            popover: {
+              title: def.title,
+              description: def.description,
+            },
+          };
+        }
+
+        return {
+          element: def.element,
+          popover: {
+            title: def.title,
+            description: def.description,
+            side: def.side ?? ('right' as const),
+            align: def.align ?? ('start' as const),
+          },
+          onHighlightStarted: (element?: Element) => {
+            runChromeAction(def.chromeAction, element);
+          },
+          onDeselected: () => {
+            clearChrome();
+          },
+        };
+      });
 
       driverObj = driver({
         showProgress: true,
@@ -111,6 +222,7 @@ export function ProductTour({
         doneBtnText: 'Done',
         steps,
         onDestroyStarted: (_el, _step, { driver: activeDriver }) => {
+          clearChrome();
           if (!skipMarkOnDestroy) {
             void markDone();
           }
@@ -127,6 +239,7 @@ export function ProductTour({
       cancelled = true;
       skipMarkOnDestroy = true;
       startedRef.current = false;
+      clearChrome();
       driverObj?.destroy();
     };
   }, [autoStart, forceStart, showDefaultLandingPrompt, tourId]);
@@ -179,7 +292,7 @@ export function ProductTour({
       open={landingOpen}
       onOpenChange={(open) => !open && dismissLanding()}
     >
-      <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
+      <DialogContent className="z-[10050] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Where should Ozer open next time?</DialogTitle>
           <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
@@ -266,6 +379,14 @@ export function ReplayProductTourButton({
         startTransition(async () => {
           try {
             await resetProductTourAction({ tourId });
+            // Also allow the default-landing prompt to show again after a replay.
+            try {
+              await resetProductTourAction({
+                tourId: 'default_landing_prompt',
+              });
+            } catch {
+              // ignore — prompt may already be unset
+            }
             // Land on the matching home so ProductTourHost auto-starts.
             const href = accountSlug
               ? pathsConfig.app.accountHome.replace('[account]', accountSlug)

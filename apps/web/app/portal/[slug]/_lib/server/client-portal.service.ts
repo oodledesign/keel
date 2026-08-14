@@ -221,7 +221,10 @@ class ClientPortalService {
     if (userIds.length === 0) return map;
 
     const unique = [...new Set(userIds)];
-    const { data } = await this.db
+    // Portal members often cannot read team profiles via RLS — use admin
+    // after ensureMember has already authorized this request.
+    const admin = getSupabaseServerAdminClient();
+    const { data } = await admin
       .from('profiles')
       .select('id, full_name')
       .in('id', unique);
@@ -237,7 +240,7 @@ class ClientPortalService {
     const missing = unique.filter((id) => !map.has(id));
     if (missing.length === 0) return map;
 
-    const { data: accounts } = await this.db
+    const { data: accounts } = await admin
       .from('accounts')
       .select('id, name, email')
       .in('id', missing);
@@ -823,7 +826,8 @@ class ClientPortalService {
     const map = new Map<string, string>();
     if (contactIds.length === 0) return map;
 
-    const { data } = await this.db
+    const admin = getSupabaseServerAdminClient();
+    const { data } = await admin
       .from('contacts')
       .select('id, full_name, first_name, last_name, email')
       .in('id', contactIds);

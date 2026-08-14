@@ -175,7 +175,8 @@ export function PersonalVisionSettingsForm({
           <Label className="text-base">Finance actuals workspaces</Label>
           <p className="mt-0.5 mb-3 text-sm text-[var(--workspace-shell-text-muted)]">
             Current-month income from the Finances module in these workspaces is
-            summed onto wealth-goal slides.
+            shown on a Finances slide (and on wealth-goal slides when those are
+            filled in).
           </p>
           {workspaces.length === 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">

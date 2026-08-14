@@ -251,6 +251,17 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
         </SlideShell>
       );
 
+    case 'finance':
+      return (
+        <SlideShell>
+          <p className="text-sm font-medium tracking-wide text-[var(--ozer-coral-400)] uppercase">
+            This month
+          </p>
+          <SlideTitle>{slide.title}</SlideTitle>
+          <FinanceActualsBlock actuals={slide.financeActuals} />
+        </SlideShell>
+      );
+
     case 'affirmations':
       return (
         <SlideShell>

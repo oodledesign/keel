@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 
 import Link from 'next/link';
 
-import { Bell, Building2, MapPin } from 'lucide-react';
+import { Bell, Building2, MapPin, X } from 'lucide-react';
 import 'mapbox-gl/dist/mapbox-gl.css';
 import MapboxMap, {
   type MapRef,
@@ -13,6 +13,8 @@ import MapboxMap, {
   Popup,
 } from 'react-map-gl/mapbox';
 
+import { Button } from '@kit/ui/button';
+
 import pathsConfig from '~/config/paths.config';
 import {
   DISPOSAL_TYPE_BADGE_CLASS,
@@ -20,6 +22,8 @@ import {
 } from '~/lib/commercial/commercial-constants';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
+import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
+import './listings-map-popup.css';
 
 /** Public Mapbox token — set NEXT_PUBLIC_MAPBOX_TOKEN in .env.local / Vercel. */
 const MAPBOX_TOKEN = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim() ?? '';
@@ -400,32 +404,63 @@ export function ListingsMapView({
                 latitude={popupListing.latitude!}
                 anchor="bottom"
                 offset={14}
+                closeButton={false}
                 closeOnClick={false}
                 onClose={() => setPopupId(null)}
                 className="listings-map-popup"
               >
-                <div className="max-w-[220px] min-w-[160px] space-y-1.5 p-0.5">
-                  <p className="line-clamp-2 text-sm font-semibold text-[var(--workspace-shell-text)]">
-                    {popupListing.name}
-                  </p>
-                  <span
-                    className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${DISPOSAL_TYPE_BADGE_CLASS[popupListing.disposalType]}`}
+                <div className="relative w-[248px] p-3.5 pr-11">
+                  <button
+                    type="button"
+                    aria-label="Close"
+                    className="absolute top-1.5 right-1.5 inline-flex size-8 items-center justify-center rounded-md text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                    onClick={() => setPopupId(null)}
                   >
-                    {DISPOSAL_TYPE_LABELS[popupListing.disposalType]}
-                  </span>
-                  {(moneyLabel(popupListing) || formatSize(popupListing)) && (
-                    <p className="text-xs text-[var(--workspace-shell-text)]/70">
-                      {[moneyLabel(popupListing), formatSize(popupListing)]
-                        .filter(Boolean)
-                        .join(' · ')}
+                    <X className="h-5 w-5" strokeWidth={2.25} aria-hidden />
+                  </button>
+
+                  <div className="space-y-2">
+                    <p className="line-clamp-2 pr-1 text-sm leading-snug font-semibold text-[var(--workspace-shell-text)]">
+                      {popupListing.name}
                     </p>
-                  )}
-                  <Link
-                    href={listingHref(accountSlug, popupListing.id)}
-                    className="inline-flex text-xs font-medium text-[var(--ozer-accent)] hover:underline"
-                  >
-                    Open disposal
-                  </Link>
+
+                    <span
+                      className={`inline-flex rounded-full px-2 py-0.5 text-[10px] font-medium ${DISPOSAL_TYPE_BADGE_CLASS[popupListing.disposalType]}`}
+                    >
+                      {DISPOSAL_TYPE_LABELS[popupListing.disposalType]}
+                    </span>
+
+                    {(moneyLabel(popupListing) ||
+                      formatSize(popupListing)) && (
+                      <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+                        {[moneyLabel(popupListing), formatSize(popupListing)]
+                          .filter(Boolean)
+                          .join(' · ')}
+                      </p>
+                    )}
+
+                    <div className="flex items-center justify-between gap-2 pt-0.5">
+                      {(popupListing.actingAgents?.length ?? 0) > 0 ? (
+                        <ListingAgentAvatarStack
+                          agents={popupListing.actingAgents ?? []}
+                          size="sm"
+                        />
+                      ) : (
+                        <span />
+                      )}
+
+                      <Button
+                        asChild
+                        size="sm"
+                        variant="outline"
+                        className="h-7 shrink-0 rounded-md border-[color:var(--ozer-accent)] px-2.5 text-xs font-medium text-[var(--ozer-accent)] hover:bg-[var(--ozer-accent-subtle)] hover:text-[var(--ozer-accent)]"
+                      >
+                        <Link href={listingHref(accountSlug, popupListing.id)}>
+                          Open disposal
+                        </Link>
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               </Popup>
             ) : null}

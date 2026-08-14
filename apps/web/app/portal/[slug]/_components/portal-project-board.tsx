@@ -41,7 +41,7 @@ const STATUS_STYLES: Record<string, string> = {
   in_progress: 'bg-[var(--ozer-info)]/15 text-[var(--ozer-info)]',
   client_review:
     'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
-  done: 'bg-[color:var(--ozer-accent)]/15 text-[color:var(--ozer-accent)]',
+  done: 'bg-emerald-500/15 text-emerald-700',
   cancelled:
     'bg-[var(--workspace-shell-panel-hover)] text-[var(--ozer-text-on-light-muted)]',
 };
@@ -90,9 +90,31 @@ const PHASE_COLUMN_COLOURS = [
 ] as const;
 
 function normalizeStatus(status: string) {
-  if (status === 'completed') return 'done';
-  if (STATUS_COLUMNS.some((col) => col.key === status)) return status;
+  const key = (status ?? '').toLowerCase();
+  if (key === 'completed' || key === 'done') return 'done';
+  if (
+    key === 'pending' ||
+    key === 'not_started' ||
+    key === 'open' ||
+    key === 'todo'
+  ) {
+    return 'todo';
+  }
+  if (STATUS_COLUMNS.some((col) => col.key === key)) return key;
   return 'todo';
+}
+
+function isDoneStatus(status: string) {
+  return normalizeStatus(status) === 'done';
+}
+
+function taskTitleClassName(status: string) {
+  return cn(
+    'truncate text-sm font-medium',
+    isDoneStatus(status)
+      ? 'text-[var(--ozer-text-on-light-muted)] line-through'
+      : 'text-[var(--ozer-text-on-light)]',
+  );
 }
 
 function TaskComments({
@@ -251,7 +273,7 @@ function PortalProjectListView({
                     title={task.priority ?? 'No priority'}
                   />
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
+                    <p className={taskTitleClassName(task.status)}>
                       {task.title}
                     </p>
                     <div className="mt-1 flex flex-wrap items-center gap-2 sm:hidden">
@@ -405,7 +427,14 @@ function PortalProjectKanbanView({
                             className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[priorityKey] ?? PRIORITY_DOT.none}`}
                           />
                           <div className="min-w-0 flex-1">
-                            <p className="text-sm leading-snug font-medium text-[var(--ozer-text-on-light)]">
+                            <p
+                              className={cn(
+                                'text-sm leading-snug font-medium',
+                                isDoneStatus(task.status)
+                                  ? 'text-[var(--ozer-text-on-light-muted)] line-through'
+                                  : 'text-[var(--ozer-text-on-light)]',
+                              )}
+                            >
                               {task.title}
                             </p>
                             <TaskCardMeta task={task} />
@@ -541,7 +570,7 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
                       className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
                     >
                       <div className="min-w-0">
-                        <p className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
+                        <p className={taskTitleClassName(task.status)}>
                           {task.title}
                         </p>
                         {task.assigneeName ? (
@@ -590,7 +619,7 @@ function PortalProjectTimelineView({ tasks }: { tasks: PortalProjectTask[] }) {
                   className="flex flex-wrap items-center justify-between gap-2 px-4 py-3"
                 >
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--ozer-text-on-light)]">
+                    <p className={taskTitleClassName(task.status)}>
                       {task.title}
                     </p>
                     {task.assigneeName ? (
@@ -719,7 +748,14 @@ function PortalProjectPhaseKanbanView({
                           className={`mt-1.5 h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[priorityKey] ?? PRIORITY_DOT.none}`}
                         />
                         <div className="min-w-0 flex-1">
-                          <p className="text-sm leading-snug font-medium text-[var(--ozer-text-on-light)]">
+                          <p
+                            className={cn(
+                              'text-sm leading-snug font-medium',
+                              isDoneStatus(task.status)
+                                ? 'text-[var(--ozer-text-on-light-muted)] line-through'
+                                : 'text-[var(--ozer-text-on-light)]',
+                            )}
+                          >
                             {task.title}
                           </p>
                           <TaskCardMeta task={task} />

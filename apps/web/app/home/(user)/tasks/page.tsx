@@ -49,6 +49,7 @@ async function TasksContent({
       initialTasks={tasks}
       includeWorkspaceTasks={includeWorkspaceTasks}
       initialWorkspaceFilter={initialWorkspaceFilter}
+      currentUserId={user.id}
     />
   );
 }

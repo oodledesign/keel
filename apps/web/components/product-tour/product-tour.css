@@ -42,6 +42,27 @@
   text-shadow: none !important;
 }
 
-.driver-overlay {
-  background: rgba(20, 12, 16, 0.55) !important;
+/*
+ * Driver.js cuts the highlight out of an SVG path. Do NOT set a background on
+ * `.driver-overlay` — that paints over the cutout and leaves the stage dimmed.
+ */
+.driver-overlay path {
+  fill: rgba(20, 12, 16, 0.55);
+}
+
+/* Keep the focused control visually above the dimmed page chrome. */
+.driver-active-element {
+  position: relative;
+  z-index: 10001 !important;
+}
+
+/* Support messenger + menus opened during tour steps sit above the overlay
+ * and the driver.js popover (popover uses z-index: 1000000000). */
+body.ozer-tour-chrome-open [data-tour='support-messenger'],
+body.ozer-tour-chrome-open [data-tour='support-help'] {
+  z-index: 1000000001 !important;
+}
+
+body.ozer-tour-chrome-open [data-radix-popper-content-wrapper] {
+  z-index: 1000000001 !important;
 }

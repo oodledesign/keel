@@ -4,6 +4,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   useTransition,
 } from 'react';
@@ -31,6 +32,7 @@ import {
   Search,
   Share2,
   SlidersHorizontal,
+  User,
   Users,
 } from 'lucide-react';
 
@@ -56,6 +58,11 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
+import { useCommandUndoStack } from '~/lib/hooks/use-command-undo-stack';
+import {
+  isAssignedToSomeoneElse,
+  taskAssigneeDisplayName,
+} from '~/lib/tasks/task-assignee';
 import {
   downloadTextFile,
   exportFilename,
@@ -223,6 +230,32 @@ function formatDueDateLabel(due: string | null): string {
     day: 'numeric',
     month: 'short',
   });
+}
+
+/** True when a contact or another team member owns the task. */
+function TaskAssigneeChip({
+  task,
+  currentUserId,
+  className,
+}: {
+  task: TasksPageTask;
+  currentUserId?: string | null;
+  className?: string;
+}) {
+  if (!isAssignedToSomeoneElse(task, currentUserId)) return null;
+  const label = taskAssigneeDisplayName(task);
+  return (
+    <span
+      className={cn(
+        'inline-flex max-w-full items-center gap-1 text-[11px] text-[var(--workspace-shell-text-muted)]',
+        className,
+      )}
+      title={`Assigned to ${label}`}
+    >
+      <User className="h-3 w-3 shrink-0 opacity-80" aria-hidden />
+      <span className="truncate">{label}</span>
+    </span>
+  );
 }
 
 function TaskRowMetaColumn({
@@ -661,9 +694,13 @@ type TaskRowHandlers = {
   workspaceAccountId?: string;
   workspaceAccountSlug?: string;
   today: string;
+  currentUserId?: string | null;
   expandedRootTaskIds: Set<string>;
   onToggleSubtasks: (taskId: string) => void;
-  onStatusChanged: (taskId: string, status: TaskStatus) => void;
+  onStatusChanged: (
+    taskId: string,
+    status: TaskStatus,
+  ) => void | Promise<void>;
   onTitleChanged: (taskId: string, title: string) => void;
   onDueDateChanged: (
     taskId: string,
@@ -681,6 +718,7 @@ function renderTaskRows(list: TasksPageTask[], handlers: TaskRowHandlers) {
       workspaceAccountId={handlers.workspaceAccountId}
       workspaceAccountSlug={handlers.workspaceAccountSlug}
       today={handlers.today}
+      currentUserId={handlers.currentUserId}
       onStatusChanged={handlers.onStatusChanged}
       onTitleChanged={handlers.onTitleChanged}
       onDueDateChanged={handlers.onDueDateChanged}
@@ -857,6 +895,37 @@ function updateTaskTitleInTree(
     }
     return node;
   });
+}
+
+function updateTaskStatusInTree(
+  list: TasksPageTask[],
+  taskId: string,
+  status: TaskStatus,
+): TasksPageTask[] {
+  return list.map((node) => {
+    if (node.id === taskId) return { ...node, status };
+    if (node.subtasks?.length) {
+      return {
+        ...node,
+        subtasks: updateTaskStatusInTree(node.subtasks, taskId, status),
+      };
+    }
+    return node;
+  });
+}
+
+function findTaskStatusInTree(
+  list: TasksPageTask[],
+  taskId: string,
+): TaskStatus | null {
+  for (const node of list) {
+    if (node.id === taskId) return node.status;
+    if (node.subtasks?.length) {
+      const nested = findTaskStatusInTree(node.subtasks, taskId);
+      if (nested) return nested;
+    }
+  }
+  return null;
 }
 
 const toolbarLabeledButtonClass =
@@ -1353,6 +1422,8 @@ type Props = {
   reviewHref?: string | null;
   /** Workspace: pending meeting suggestions awaiting review. */
   pendingReviewCount?: number;
+  /** Signed-in user — used to hide assignee chip when the task is yours. */
+  currentUserId?: string | null;
 };
 
 export function TasksPageClient({
@@ -1364,8 +1435,11 @@ export function TasksPageClient({
   initialWorkspaceFilter = 'all',
   reviewHref = null,
   pendingReviewCount = 0,
+  currentUserId = null,
 }: Props) {
   const [tasks, setTasks] = useState<TasksPageTask[]>(initialTasks);
+  const tasksRef = useRef(tasks);
+  tasksRef.current = tasks;
   const [view, setView] = useState<TaskViewMode>('list');
   const [filter, setFilter] = useState<'all' | 'work' | 'life'>(() =>
     variant === 'workspace' ? 'work' : includeWorkspaceTasks ? 'all' : 'life',
@@ -1391,6 +1465,8 @@ export function TasksPageClient({
     useState<ScheduledSeriesItem | null>(null);
   const [editSeriesOpen, setEditSeriesOpen] = useState(false);
 
+  const router = useRouter();
+  const { push: pushUndo } = useCommandUndoStack();
   const todayKey = todayISO();
 
   useEffect(() => {
@@ -1594,14 +1670,65 @@ export function TasksPageClient({
     [tasks],
   );
 
+  const applyTaskStatusRef = useRef<
+    (
+      taskId: string,
+      nextStatus: TaskStatus,
+      options?: { recordHistory?: boolean },
+    ) => Promise<void>
+  >(async () => undefined);
+
   const handleStatusChanged = useCallback(
-    (taskId: string, nextStatus: TaskStatus) => {
-      setTasks((prev) =>
-        prev.map((t) => (t.id === taskId ? { ...t, status: nextStatus } : t)),
+    async (
+      taskId: string,
+      nextStatus: TaskStatus,
+      options?: { recordHistory?: boolean },
+    ) => {
+      const recordHistory = options?.recordHistory !== false;
+      const previous = findTaskStatusInTree(tasksRef.current, taskId);
+      if (!previous || previous === nextStatus) return;
+
+      const nextTasks = updateTaskStatusInTree(
+        tasksRef.current,
+        taskId,
+        nextStatus,
       );
+      tasksRef.current = nextTasks;
+      setTasks(nextTasks);
+
+      const result = await updateTask(taskId, { status: nextStatus });
+      if (!result.success) {
+        const reverted = updateTaskStatusInTree(
+          tasksRef.current,
+          taskId,
+          previous,
+        );
+        tasksRef.current = reverted;
+        setTasks(reverted);
+        toast.error(result.error ?? 'Could not update task');
+        return;
+      }
+
+      router.refresh();
+
+      if (recordHistory) {
+        pushUndo({
+          label: 'task status',
+          undo: () =>
+            applyTaskStatusRef.current(taskId, previous, {
+              recordHistory: false,
+            }),
+          redo: () =>
+            applyTaskStatusRef.current(taskId, nextStatus, {
+              recordHistory: false,
+            }),
+        });
+      }
     },
-    [],
+    [pushUndo, router],
   );
+
+  applyTaskStatusRef.current = handleStatusChanged;
 
   const handleTitleChanged = useCallback((taskId: string, title: string) => {
     setTasks((prev) => updateTaskTitleInTree(prev, taskId, title));
@@ -1622,6 +1749,7 @@ export function TasksPageClient({
       workspaceAccountId,
       workspaceAccountSlug,
       today: todayKey,
+      currentUserId,
       expandedRootTaskIds,
       onToggleSubtasks: toggleRootExpanded,
       onStatusChanged: handleStatusChanged,
@@ -1633,6 +1761,7 @@ export function TasksPageClient({
       workspaceAccountId,
       workspaceAccountSlug,
       todayKey,
+      currentUserId,
       expandedRootTaskIds,
       toggleRootExpanded,
       handleStatusChanged,
@@ -1941,6 +2070,7 @@ export function TasksPageClient({
           flatTasks={filteredForBoard}
           today={todayKey}
           workspaceAccountId={workspaceAccountId}
+          currentUserId={currentUserId}
           onTitleChanged={handleTitleChanged}
           onStatusChanged={handleStatusChanged}
         />
@@ -1957,6 +2087,7 @@ function TaskRow({
   workspaceAccountId,
   workspaceAccountSlug,
   today,
+  currentUserId,
   onStatusChanged,
   onTitleChanged,
   onDueDateChanged,
@@ -1968,7 +2099,11 @@ function TaskRow({
   workspaceAccountId?: string;
   workspaceAccountSlug?: string;
   today: string;
-  onStatusChanged?: (taskId: string, status: TaskStatus) => void;
+  currentUserId?: string | null;
+  onStatusChanged?: (
+    taskId: string,
+    status: TaskStatus,
+  ) => void | Promise<void>;
   onTitleChanged?: (taskId: string, title: string) => void;
   onDueDateChanged?: (
     taskId: string,
@@ -1981,7 +2116,6 @@ function TaskRow({
 }) {
   const [editOpen, setEditOpen] = useState(false);
   const [isPending, startTransition] = useTransition();
-  const router = useRouter();
   const isDone = task.status === 'completed';
   const isRoot = !task.parentTaskId;
   const subtasks = task.subtasks ?? [];
@@ -1991,12 +2125,8 @@ function TaskRow({
 
   const handleCheckedChange = (checked: boolean) => {
     const next: TaskStatus = checked ? 'completed' : 'pending';
-    onStatusChanged?.(task.id, next);
-    startTransition(async () => {
-      const result = await updateTask(task.id, { status: next });
-      if (result.success) {
-        router.refresh();
-      }
+    startTransition(() => {
+      void onStatusChanged?.(task.id, next);
     });
   };
 
@@ -2061,36 +2191,39 @@ function TaskRow({
             isDone={isDone}
             readOnly
           />
-          {isRoot && subCount > 0 ? (
-            <div className="mt-0.5 flex items-center gap-0.5">
-              <span
-                className="text-[10px] font-normal text-[var(--workspace-shell-text-muted)] tabular-nums"
-                title="Subtasks completed / total"
-              >
-                {doneSubCount}/{subCount}
-              </span>
-              {showExpandToggle ? (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onToggleSubtasks?.();
-                  }}
-                  className="rounded p-0.5 text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
-                  aria-expanded={subtasksExpanded}
-                  aria-label={
-                    subtasksExpanded ? 'Collapse subtasks' : 'Expand subtasks'
-                  }
+          <div className="mt-0.5 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-0.5">
+            <TaskAssigneeChip task={task} currentUserId={currentUserId} />
+            {isRoot && subCount > 0 ? (
+              <div className="flex items-center gap-0.5">
+                <span
+                  className="text-[10px] font-normal text-[var(--workspace-shell-text-muted)] tabular-nums"
+                  title="Subtasks completed / total"
                 >
-                  {subtasksExpanded ? (
-                    <ChevronDown className="h-3.5 w-3.5" />
-                  ) : (
-                    <ChevronRight className="h-3.5 w-3.5" />
-                  )}
-                </button>
-              ) : null}
-            </div>
-          ) : null}
+                  {doneSubCount}/{subCount}
+                </span>
+                {showExpandToggle ? (
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onToggleSubtasks?.();
+                    }}
+                    className="rounded p-0.5 text-[var(--workspace-shell-text-muted)] transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]"
+                    aria-expanded={subtasksExpanded}
+                    aria-label={
+                      subtasksExpanded ? 'Collapse subtasks' : 'Expand subtasks'
+                    }
+                  >
+                    {subtasksExpanded ? (
+                      <ChevronDown className="h-3.5 w-3.5" />
+                    ) : (
+                      <ChevronRight className="h-3.5 w-3.5" />
+                    )}
+                  </button>
+                ) : null}
+              </div>
+            ) : null}
+          </div>
         </div>
         <div className="sm:hidden">
           <TaskRowMetaColumn
@@ -2135,6 +2268,7 @@ function TaskRow({
               workspaceAccountId={workspaceAccountId}
               workspaceAccountSlug={workspaceAccountSlug}
               today={today}
+              currentUserId={currentUserId}
               onStatusChanged={onStatusChanged}
               onTitleChanged={onTitleChanged}
               onDueDateChanged={onDueDateChanged}

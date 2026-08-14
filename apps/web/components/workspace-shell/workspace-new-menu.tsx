@@ -190,6 +190,7 @@ export function WorkspaceNewMenu(props: WorkspaceNewMenuProps) {
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <Button
+          data-tour="new-menu"
           className={cn(
             'ozer-gradient-btn h-8 gap-1 rounded-md border-0 px-2.5 text-xs font-semibold shadow-none',
           )}
