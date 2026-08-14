@@ -228,6 +228,7 @@ export function ListingOverviewSection({
             accountId={accountId}
             mode={{ kind: 'listing', listingId: listing.id }}
             compact
+            seeAllHref={interestHref}
             onMatchTotalsChange={({ linked, suggested }) => {
               setMatchBadgeCount(linked + suggested);
             }}

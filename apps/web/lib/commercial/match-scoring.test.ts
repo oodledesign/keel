@@ -122,4 +122,28 @@ describe('scoreListingRequirementMatch', () => {
       true,
     );
   });
+
+  it('differentiates incomplete briefs by size overlap', () => {
+    const sparse = {
+      ...baseRequirement,
+      sector: null,
+      locationText: null,
+      budgetMinPence: null,
+      budgetMaxPence: null,
+    };
+
+    const tight = scoreListingRequirementMatch(baseListing, {
+      ...sparse,
+      sizeMinSqft: 9000,
+      sizeMaxSqft: 11000,
+    });
+    const loose = scoreListingRequirementMatch(baseListing, {
+      ...sparse,
+      sizeMinSqft: 1000,
+      sizeMaxSqft: 50000,
+    });
+
+    expect(tight.score).not.toEqual(loose.score);
+    expect(tight.score).toBeGreaterThan(loose.score);
+  });
 });

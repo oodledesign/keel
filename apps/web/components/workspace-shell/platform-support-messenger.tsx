@@ -12,6 +12,7 @@ import {
 import {
   ArrowLeft,
   Home,
+  LifeBuoy,
   Loader2,
   MessageCircle,
   Paperclip,
@@ -27,6 +28,7 @@ import { cn } from '@kit/ui/utils';
 import {
   type SupportAttachmentItem,
   SupportAttachmentUploader,
+  uploadSupportAttachmentFiles,
 } from '~/components/support/support-attachment-uploader';
 import { loadPlatformSupportAccountOptions } from '~/lib/support/load-platform-support-account-options';
 import type { PlatformSupportTicketDetail } from '~/lib/support/load-platform-support-ticket';
@@ -215,7 +217,7 @@ export function PlatformSupportMessenger({
             </p>
             {view === 'home' ? (
               <p className="mt-1 text-sm text-[var(--ozer-text-on-dark)]/75">
-                How can we help?
+                Chat with Ozer support
               </p>
             ) : null}
             {view === 'thread' && thread ? (
@@ -358,18 +360,16 @@ function HomeView(props: {
       <button
         type="button"
         onClick={props.onStart}
-        className="flex w-full items-center justify-between gap-3 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] px-4 py-4 text-left shadow-sm transition-colors hover:border-[var(--ozer-accent)]/35"
+        className="flex w-full items-center justify-between gap-3 rounded-2xl bg-[var(--ozer-accent)] px-4 py-4 text-left text-[var(--ozer-white)] shadow-sm transition-colors hover:bg-[var(--ozer-accent-hover)]"
       >
         <div>
-          <p className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Ask a question
-          </p>
-          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
+          <p className="text-sm font-semibold">Contact support</p>
+          <p className="mt-0.5 text-xs text-[var(--ozer-white)]/85">
             Message the Ozer team — we usually reply within a day.
           </p>
         </div>
-        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[var(--ozer-accent)] text-[var(--ozer-white)]">
-          <MessageCircle className="h-5 w-5" />
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-white/15">
+          <LifeBuoy className="h-5 w-5" />
         </span>
       </button>
 
@@ -564,6 +564,7 @@ function NewConversationView(props: {
         {showAttach ? (
           <SupportAttachmentUploader
             platformSupport
+            compact
             value={attachments}
             onChange={setAttachments}
           />
@@ -577,6 +578,21 @@ function NewConversationView(props: {
         placeholder="Send a message to Ozer…"
         onAttach={() => setShowAttach((v) => !v)}
         attachActive={showAttach || attachments.length > 0}
+        onFilesDropped={async (files) => {
+          setShowAttach(true);
+          try {
+            const next = await uploadSupportAttachmentFiles({
+              files,
+              context: { platformSupport: true },
+              existing: attachments,
+            });
+            setAttachments(next);
+          } catch (error) {
+            toast.error(
+              error instanceof Error ? error.message : 'Upload failed',
+            );
+          }
+        }}
         onSend={() => {
           const trimmed = body.trim();
           if (trimmed.length < 10) {
@@ -663,6 +679,7 @@ function ThreadView(props: {
           <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3">
             <SupportAttachmentUploader
               platformSupport
+              compact
               value={attachments}
               onChange={setAttachments}
             />
@@ -677,6 +694,21 @@ function ThreadView(props: {
         placeholder="Write a reply…"
         onAttach={() => setShowAttach((v) => !v)}
         attachActive={showAttach || attachments.length > 0}
+        onFilesDropped={async (files) => {
+          setShowAttach(true);
+          try {
+            const next = await uploadSupportAttachmentFiles({
+              files,
+              context: { platformSupport: true },
+              existing: attachments,
+            });
+            setAttachments(next);
+          } catch (error) {
+            toast.error(
+              error instanceof Error ? error.message : 'Upload failed',
+            );
+          }
+        }}
         onSend={() => {
           const trimmed = body.trim();
           if (!trimmed) return;
@@ -769,10 +801,40 @@ function ComposerBar(props: {
   onSend: () => void;
   onAttach: () => void;
   attachActive: boolean;
+  onFilesDropped?: (files: File[]) => void | Promise<void>;
 }) {
+  const [dragOver, setDragOver] = useState(false);
+
   return (
     <div className="shrink-0 border-t border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-3">
-      <div className="flex items-end gap-2 rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-2 py-2">
+      <div
+        className={cn(
+          'flex items-end gap-2 rounded-2xl border bg-[var(--workspace-shell-canvas)] px-2 py-2 transition-colors',
+          dragOver
+            ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
+            : 'border-[color:var(--workspace-shell-border)]',
+        )}
+        onDragEnter={(event) => {
+          event.preventDefault();
+          if (props.onFilesDropped) setDragOver(true);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          if (props.onFilesDropped) setDragOver(true);
+        }}
+        onDragLeave={(event) => {
+          event.preventDefault();
+          setDragOver(false);
+        }}
+        onDrop={(event) => {
+          event.preventDefault();
+          setDragOver(false);
+          const files = Array.from(event.dataTransfer.files);
+          if (files.length > 0) {
+            void props.onFilesDropped?.(files);
+          }
+        }}
+      >
         <button
           type="button"
           className={cn(
@@ -789,7 +851,9 @@ function ComposerBar(props: {
         <Textarea
           value={props.value}
           onChange={(e) => props.onChange(e.target.value)}
-          placeholder={props.placeholder}
+          placeholder={
+            dragOver ? 'Drop files to attach…' : props.placeholder
+          }
           rows={1}
           className="max-h-28 min-h-[36px] flex-1 resize-none border-0 bg-transparent px-0 py-2 text-sm shadow-none focus-visible:ring-0"
           onKeyDown={(e) => {

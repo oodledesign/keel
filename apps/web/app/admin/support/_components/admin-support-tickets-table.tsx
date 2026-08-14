@@ -39,13 +39,21 @@ export function AdminSupportTicketsTable({
 
   return (
     <div className="rounded-lg border p-2">
-      <DataTable data={tickets} columns={columns} pageSize={25} />
+      <DataTable
+        data={tickets}
+        columns={columns}
+        pageSize={Math.max(tickets.length, 1)}
+        pageCount={1}
+        pageIndex={0}
+        getRowId={(row) => row.id}
+      />
     </div>
   );
 }
 
 const columns: ColumnDef<AdminSupportTicketRow>[] = [
   {
+    id: 'ticket',
     header: 'Ticket',
     cell: ({ row }) => (
       <div>
@@ -60,6 +68,7 @@ const columns: ColumnDef<AdminSupportTicketRow>[] = [
     ),
   },
   {
+    id: 'category',
     header: 'Category',
     cell: ({ row }) => (
       <Badge variant="secondary">
@@ -68,27 +77,31 @@ const columns: ColumnDef<AdminSupportTicketRow>[] = [
     ),
   },
   {
+    id: 'status',
     header: 'Status',
     cell: ({ row }) => (
       <Badge variant="outline" className="capitalize">
-        {row.original.status.replace('_', ' ')}
+        {(row.original.status || 'open').replace(/_/g, ' ')}
       </Badge>
     ),
   },
   {
+    id: 'priority',
     header: 'Priority',
     cell: ({ row }) => (
       <Badge variant="secondary" className="capitalize">
-        {row.original.priority}
+        {row.original.priority || 'normal'}
       </Badge>
     ),
   },
   {
+    id: 'created',
     header: 'Created',
     cell: ({ row }) =>
       new Date(row.original.created_at).toLocaleString('en-GB'),
   },
   {
+    id: 'actions',
     header: '',
     cell: ({ row }) => (
       <Button asChild variant="outline" size="sm">

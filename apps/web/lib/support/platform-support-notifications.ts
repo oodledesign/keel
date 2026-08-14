@@ -6,6 +6,7 @@ import {
   escapeNotificationHtml,
   wrapNotificationEmail,
 } from '~/lib/email/wrap-notification-email';
+import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 import { renderSupportAttachmentsEmailHtml } from '~/lib/support/support-attachments-email';
 
@@ -15,19 +16,35 @@ import {
 } from './platform-support.types';
 
 function getSupportInbox(): string | null {
-  return (
-    process.env.SUPPORT_INBOX?.trim() ||
-    process.env.CONTACT_EMAIL?.trim() ||
-    null
-  );
+  const explicit =
+    process.env.SUPPORT_INBOX?.trim() || process.env.CONTACT_EMAIL?.trim();
+  if (explicit) return explicit;
+
+  const zepto = process.env.ZEPTOMAIL_FROM_ADDRESS?.trim();
+  if (zepto) return zepto;
+
+  const sender = process.env.EMAIL_SENDER?.trim();
+  if (!sender) return null;
+  const match = sender.match(/<([^>]+)>/);
+  return match?.[1]?.trim() || sender;
 }
 
 function getEmailConfig() {
-  const sender = process.env.EMAIL_SENDER?.trim();
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL?.trim();
   const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
+  const sender = resolveTransactionalEmailFrom(productName);
 
-  if (!sender || !siteUrl) {
+  if (!siteUrl) {
+    console.warn(
+      '[platform-support] NEXT_PUBLIC_SITE_URL is not set; skipping email',
+    );
+    return null;
+  }
+
+  if (!sender) {
+    console.warn(
+      '[platform-support] No email sender configured (ZEPTOMAIL_FROM_ADDRESS or EMAIL_SENDER); skipping email',
+    );
     return null;
   }
 
@@ -58,7 +75,13 @@ export async function notifySupportTeamNewTicket(
 ): Promise<void> {
   const config = getEmailConfig();
   const inbox = getSupportInbox();
-  if (!config || !inbox) return;
+  if (!config) return;
+  if (!inbox) {
+    console.warn(
+      '[platform-support] SUPPORT_INBOX / CONTACT_EMAIL not set; skipping new-ticket email',
+    );
+    return;
+  }
 
   const userEmail = await loadUserEmail(admin, input.userId);
   const ticketLabel = formatPlatformTicketNumber(input.ticketNumber);
@@ -158,7 +181,13 @@ export async function notifySupportTeamUserReply(
 ): Promise<void> {
   const config = getEmailConfig();
   const inbox = getSupportInbox();
-  if (!config || !inbox) return;
+  if (!config) return;
+  if (!inbox) {
+    console.warn(
+      '[platform-support] SUPPORT_INBOX / CONTACT_EMAIL not set; skipping user-reply email',
+    );
+    return;
+  }
 
   const userEmail = await loadUserEmail(admin, input.userId);
   const ticketLabel = formatPlatformTicketNumber(input.ticketNumber);

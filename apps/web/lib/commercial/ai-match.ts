@@ -143,14 +143,15 @@ export async function explainMatchSuggestions<
 
   const triage = input.mode === 'triage';
   const systemPrompt = `You are a UK commercial agency desk assistant.
-Given scored disposal↔requirement pairs (already rule-scored), return JSON only.
+Given scored disposal↔requirement pairs (already rule-scored), return JSON only in this exact shape:
+{"items":[{"listingId":"...","requirementId":"...","whyFit":"...","softScore":0,"recommendation":"add|skip|review"}]}
 For each item write a concise whyFit (1–2 sentences, UK English) using only the provided facts — do not invent sizes, rents, or locations.
 ${
   triage
     ? 'Also set recommendation: "add" if a clear fit for Interest Schedule, "skip" if mismatched, "review" if uncertain. softScore may nudge 0–100.'
     : 'Optionally set softScore (0–100) and recommendation add|skip|review when confidence is clear.'
 }
-Keep IDs exactly as provided.`;
+Keep IDs exactly as provided. No markdown fences.`;
 
   const userPrompt = JSON.stringify(
     { pairs: suggestions.map(suggestionPayload) },

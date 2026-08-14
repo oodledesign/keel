@@ -134,12 +134,23 @@ export const explainInterestSuggestions = enhanceAction(
 
     if (suggestions.length === 0) return [];
 
-    return explainMatchSuggestions({
-      accountId: input.accountId,
-      supabase: getSupabaseServerClient(),
-      suggestions,
-      mode: input.mode,
-    });
+    try {
+      return await explainMatchSuggestions({
+        accountId: input.accountId,
+        supabase: getSupabaseServerClient(),
+        suggestions,
+        mode: input.mode,
+      });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : 'AI explain failed';
+      console.error('[explainInterestSuggestions]', message);
+      throw new Error(
+        message.includes('credit')
+          ? message
+          : 'Could not explain fits right now. Please try again in a moment.',
+      );
+    }
   },
   { schema: ExplainSuggestionsSchema },
 );
@@ -251,6 +262,8 @@ export const draftInterestOutreach = enhanceAction(
         listing.size_min_sqft == null ? null : Number(listing.size_min_sqft),
       listingSizeMaxSqft:
         listing.size_max_sqft == null ? null : Number(listing.size_max_sqft),
+      listingLatitude: null,
+      listingLongitude: null,
       requirementLabel:
         (requirement.company_name as string | null) ||
         (requirement.contact_name as string | null) ||

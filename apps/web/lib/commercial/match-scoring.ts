@@ -109,8 +109,10 @@ function rangeOverlapRatio(
 
   const overlap = Math.max(0, Math.min(aHi, bHi) - Math.max(aLo, bLo));
   if (overlap > 0) {
-    const denom = Math.max(1, Math.min(aHi - aLo, bHi - bLo) || overlap);
-    return Math.min(1, overlap / denom);
+    // Jaccard-style: rewards size bands that actually align, not just
+    // "listing sits inside a very wide brief".
+    const union = Math.max(aHi, bHi) - Math.min(aLo, bLo);
+    return Math.min(1, overlap / Math.max(1, union));
   }
 
   // Near miss: midpoints within 25% of each other
@@ -130,7 +132,8 @@ function scoreSector(
 ): number {
   const a = normalizeSector(listing.sector);
   const b = normalizeSector(requirement.sector);
-  if (!a || !b) return 0.35 * WEIGHTS.sector;
+  // Low soft fill so incomplete briefs don't all cluster mid-band.
+  if (!a || !b) return Math.round(0.15 * WEIGHTS.sector);
 
   if (a === b) {
     reasons.push(`Sector match (${listing.sector})`);
@@ -156,21 +159,21 @@ function scoreSize(
     requirement.sizeMinSqft,
     requirement.sizeMaxSqft,
   );
-  if (overlap == null) return 0.4 * WEIGHTS.size;
+  if (overlap == null) return Math.round(0.15 * WEIGHTS.size);
 
+  // Confirmed mismatch should not outscore "unknown size".
+  if (overlap === 0) return 0;
+
+  // Continuous scoring spreads near-identical bands instead of 3 buckets.
+  const points = Math.round(WEIGHTS.size * (0.25 + 0.75 * overlap));
   if (overlap >= 0.85) {
     reasons.push('Size band overlaps well');
-    return WEIGHTS.size;
-  }
-  if (overlap >= 0.45) {
+  } else if (overlap >= 0.45) {
     reasons.push('Partial size overlap');
-    return Math.round(WEIGHTS.size * 0.7);
-  }
-  if (overlap > 0) {
+  } else if (overlap > 0) {
     reasons.push('Size is close');
-    return Math.round(WEIGHTS.size * 0.35);
   }
-  return 0;
+  return points;
 }
 
 function scoreLocation(
@@ -220,7 +223,7 @@ function scoreLocation(
   }
 
   const reqTokens = new Set(tokens(requirement.locationText));
-  if (reqTokens.size === 0) return 0.4 * WEIGHTS.location;
+  if (reqTokens.size === 0) return Math.round(0.15 * WEIGHTS.location);
 
   const listingBits = [
     listing.town,
@@ -231,7 +234,7 @@ function scoreLocation(
     .flatMap((v) => tokens(v))
     .filter(Boolean);
 
-  if (listingBits.length === 0) return 0.35 * WEIGHTS.location;
+  if (listingBits.length === 0) return Math.round(0.12 * WEIGHTS.location);
 
   const hits = listingBits.filter((t) => reqTokens.has(t));
   if (hits.length === 0) return 0;
@@ -273,7 +276,7 @@ function scoreTenure(
   reasons: string[],
 ): number {
   const tenure = requirement.tenure;
-  if (!tenure) return 0.45 * WEIGHTS.tenure;
+  if (!tenure) return Math.round(0.2 * WEIGHTS.tenure);
 
   const lets = disposalIncludesToLet(listing.disposalType);
   const sells = disposalIncludesForSale(listing.disposalType);
@@ -338,7 +341,7 @@ function scoreBudget(
   const tenure = requirement.tenure;
   const min = requirement.budgetMinPence;
   const max = requirement.budgetMaxPence;
-  if (min == null && max == null) return 0.4 * WEIGHTS.budget;
+  if (min == null && max == null) return Math.round(0.15 * WEIGHTS.budget);
 
   const rentCandidates = [
     listing.askingRentPence,
@@ -367,7 +370,7 @@ function scoreBudget(
     else if (result === 'out' && best === 'unknown') best = 'out';
   }
 
-  if (best === 'unknown') return 0.35 * WEIGHTS.budget;
+  if (best === 'unknown') return Math.round(0.15 * WEIGHTS.budget);
   if (best === 'in') {
     reasons.push('Within budget');
     return WEIGHTS.budget;

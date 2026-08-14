@@ -1,11 +1,12 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useCallback, useRef, useState, type DragEvent } from 'react';
 
-import { Loader2, Paperclip, X } from 'lucide-react';
+import { Loader2, Paperclip, Upload, X } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
+import { cn } from '@kit/ui/utils';
 
 export type SupportAttachmentItem = {
   name: string;
@@ -13,6 +14,11 @@ export type SupportAttachmentItem = {
   mimeType: string;
   size: number;
 };
+
+type UploadContext =
+  | { platformSupport: true }
+  | { accountId: string }
+  | { supportToken: string };
 
 type Props = {
   accountId?: string;
@@ -22,7 +28,66 @@ type Props = {
   value: SupportAttachmentItem[];
   onChange: (attachments: SupportAttachmentItem[]) => void;
   max?: number;
+  /** Compact drop target for messenger composer. */
+  compact?: boolean;
 };
+
+const ACCEPT = 'image/*,application/pdf';
+
+function isAcceptedFile(file: File) {
+  return file.type.startsWith('image/') || file.type === 'application/pdf';
+}
+
+export async function uploadSupportAttachmentFiles(input: {
+  files: FileList | File[];
+  context: UploadContext;
+  existing: SupportAttachmentItem[];
+  max?: number;
+}): Promise<SupportAttachmentItem[]> {
+  const max = input.max ?? 5;
+  const remaining = max - input.existing.length;
+  if (remaining <= 0) {
+    throw new Error('Attachment limit reached');
+  }
+
+  const list = Array.from(input.files).filter(isAcceptedFile);
+  if (list.length === 0) {
+    throw new Error('Please attach images or PDFs only');
+  }
+
+  const batch = list.slice(0, remaining);
+  const uploaded: SupportAttachmentItem[] = [];
+
+  for (const file of batch) {
+    const body = new FormData();
+    body.set('file', file);
+    if ('supportToken' in input.context) {
+      body.set('supportToken', input.context.supportToken);
+    } else if ('platformSupport' in input.context) {
+      body.set('platformSupport', '1');
+    } else {
+      body.set('accountId', input.context.accountId);
+    }
+
+    const response = await fetch('/api/support/upload-attachment', {
+      method: 'POST',
+      body,
+    });
+
+    const json = (await response.json()) as {
+      attachment?: SupportAttachmentItem;
+      error?: string;
+    };
+
+    if (!response.ok || !json.attachment) {
+      throw new Error(json.error ?? 'Upload failed');
+    }
+
+    uploaded.push(json.attachment);
+  }
+
+  return [...input.existing, ...uploaded];
+}
 
 export function SupportAttachmentUploader({
   accountId,
@@ -31,95 +96,121 @@ export function SupportAttachmentUploader({
   value,
   onChange,
   max = 5,
+  compact = false,
 }: Props) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
+  const [dragOver, setDragOver] = useState(false);
 
   const atMax = value.length >= max;
 
-  async function uploadFiles(files: FileList | null) {
-    if (!files?.length || atMax) return;
+  const context: UploadContext | null = supportToken
+    ? { supportToken }
+    : platformSupport
+      ? { platformSupport: true }
+      : accountId
+        ? { accountId }
+        : null;
 
-    setUploading(true);
-    try {
-      const remaining = max - value.length;
-      const batch = Array.from(files).slice(0, remaining);
-      const uploaded: SupportAttachmentItem[] = [];
+  const uploadFiles = useCallback(
+    async (files: FileList | File[] | null) => {
+      if (!files || atMax) return;
+      if (!context) {
+        toast.error('Missing upload context');
+        return;
+      }
 
-      for (const file of batch) {
-        const body = new FormData();
-        body.set('file', file);
-        if (supportToken) {
-          body.set('supportToken', supportToken);
-        } else if (platformSupport) {
-          body.set('platformSupport', '1');
-        } else if (accountId) {
-          body.set('accountId', accountId);
-        } else {
-          throw new Error('Missing upload context');
-        }
-
-        const response = await fetch('/api/support/upload-attachment', {
-          method: 'POST',
-          body,
+      setUploading(true);
+      try {
+        const next = await uploadSupportAttachmentFiles({
+          files,
+          context,
+          existing: value,
+          max,
         });
-
-        const json = (await response.json()) as {
-          attachment?: SupportAttachmentItem;
-          error?: string;
-        };
-
-        if (!response.ok || !json.attachment) {
-          throw new Error(json.error ?? 'Upload failed');
+        onChange(next);
+      } catch (error) {
+        toast.error(error instanceof Error ? error.message : 'Upload failed');
+      } finally {
+        setUploading(false);
+        if (inputRef.current) {
+          inputRef.current.value = '';
         }
-
-        uploaded.push(json.attachment);
       }
-
-      onChange([...value, ...uploaded]);
-    } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Upload failed');
-    } finally {
-      setUploading(false);
-      if (inputRef.current) {
-        inputRef.current.value = '';
-      }
-    }
-  }
+    },
+    [atMax, context, max, onChange, value],
+  );
 
   function removeAt(index: number) {
     onChange(value.filter((_, i) => i !== index));
   }
 
+  function onDrop(event: DragEvent) {
+    event.preventDefault();
+    event.stopPropagation();
+    setDragOver(false);
+    if (uploading || atMax) return;
+    void uploadFiles(event.dataTransfer.files);
+  }
+
   return (
     <div className="space-y-2">
-      <div className="flex flex-wrap items-center gap-2">
+      <div
+        onDragEnter={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!uploading && !atMax) setDragOver(true);
+        }}
+        onDragOver={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          if (!uploading && !atMax) setDragOver(true);
+        }}
+        onDragLeave={(event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          setDragOver(false);
+        }}
+        onDrop={onDrop}
+        className={cn(
+          'rounded-xl border border-dashed transition-colors',
+          dragOver
+            ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent-subtle)]'
+            : 'border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
+          compact ? 'px-3 py-3' : 'px-3 py-4',
+        )}
+      >
         <input
           ref={inputRef}
           type="file"
-          accept="image/*,application/pdf"
+          accept={ACCEPT}
           multiple
           className="hidden"
           disabled={uploading || atMax}
           onChange={(event) => void uploadFiles(event.target.files)}
         />
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          disabled={uploading || atMax}
-          onClick={() => inputRef.current?.click()}
-        >
-          {uploading ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Paperclip className="h-4 w-4" />
-          )}
-          Attach files
-        </Button>
-        <span className="text-xs text-[var(--workspace-shell-text)]/50">
-          {value.length}/{max} · Images or PDF, max 10MB each
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={uploading || atMax}
+            onClick={() => inputRef.current?.click()}
+          >
+            {uploading ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Paperclip className="h-4 w-4" />
+            )}
+            Attach files
+          </Button>
+          <span className="inline-flex items-center gap-1 text-xs text-[var(--workspace-shell-text)]/50">
+            <Upload className="h-3.5 w-3.5" />
+            {dragOver
+              ? 'Drop to upload'
+              : `${value.length}/${max} · Images or PDF · drag & drop`}
+          </span>
+        </div>
       </div>
 
       {value.length > 0 ? (

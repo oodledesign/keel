@@ -93,9 +93,15 @@ export const createPlatformSupportTicketAction = enhanceAction(
       attachments: input.attachments ?? [],
       userId: user.id,
       accountName,
-    }).catch(() => undefined);
+    }).catch((error) => {
+      console.error(
+        '[platform-support] failed to notify support inbox of new ticket',
+        error instanceof Error ? error.message : error,
+      );
+    });
 
     revalidatePath('/app/support');
+    revalidatePath('/admin/support');
     return { id: data.id as string };
   },
   { schema: createTicketSchema },
@@ -157,7 +163,12 @@ export const replyPlatformSupportTicketAction = enhanceAction(
       userId: user.id,
       replyBody: body,
       attachments: input.attachments ?? [],
-    }).catch(() => undefined);
+    }).catch((error) => {
+      console.error(
+        '[platform-support] failed to notify support inbox of user reply',
+        error instanceof Error ? error.message : error,
+      );
+    });
 
     revalidatePath('/app/support');
     revalidatePath(`/app/support/${input.ticketId}`);
@@ -193,8 +204,10 @@ export const adminUpdatePlatformSupportTicketAction = enhanceAction(
       throw new Error('Super admin access required');
     }
 
+    const admin = getSupabaseServerAdminClient();
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { error } = await (client.from('platform_support_tickets') as any)
+    const { error } = await (admin.from('platform_support_tickets') as any)
       .update({
         status: input.status,
         priority: input.priority,
@@ -234,7 +247,9 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
       throw new Error('Super admin access required');
     }
 
-    const { data: ticket, error: ticketError } = await client
+    const admin = getSupabaseServerAdminClient();
+
+    const { data: ticket, error: ticketError } = await admin
       .from('platform_support_tickets')
       .select('id, user_id, subject, ticket_number')
       .eq('id', input.ticketId)
@@ -248,7 +263,7 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
     const isInternal = input.isInternalNote ?? false;
 
     const { error } = await (
-      client.from('platform_support_messages') as any
+      admin.from('platform_support_messages') as any
     ).insert({
       ticket_id: input.ticketId,
       author_user_id: user.id,
@@ -265,7 +280,7 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
       input.status ?? (isInternal ? undefined : ('waiting' as const));
 
     if (nextStatus) {
-      await client
+      await admin
         .from('platform_support_tickets')
         .update({
           status: nextStatus,
@@ -273,14 +288,13 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
         })
         .eq('id', input.ticketId);
     } else {
-      await client
+      await admin
         .from('platform_support_tickets')
         .update({ updated_at: new Date().toISOString() })
         .eq('id', input.ticketId);
     }
 
     if (!isInternal) {
-      const admin = getSupabaseServerAdminClient();
       await notifyUserSupportReply(admin, {
         ticketId: input.ticketId,
         ticketNumber: (ticket as { ticket_number: number }).ticket_number,
@@ -288,7 +302,12 @@ export const adminReplyPlatformSupportTicketAction = enhanceAction(
         userId: (ticket as { user_id: string }).user_id,
         replyBody: body,
         attachments: input.attachments ?? [],
-      }).catch(() => undefined);
+      }).catch((error) => {
+        console.error(
+          '[platform-support] failed to notify user of support reply',
+          error instanceof Error ? error.message : error,
+        );
+      });
     }
 
     revalidatePath('/admin/support');

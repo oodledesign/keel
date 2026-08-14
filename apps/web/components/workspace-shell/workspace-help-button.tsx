@@ -16,9 +16,6 @@ type WorkspaceHelpButtonProps = {
   variant?: 'inline' | 'fixed';
 };
 
-const triggerBaseClass =
-  'flex items-center justify-center rounded-full border border-[var(--workspace-shell-border)] text-[var(--ozer-accent)] transition-colors hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]';
-
 export function WorkspaceHelpButton({
   className,
   defaultAccountId = null,
@@ -32,17 +29,23 @@ export function WorkspaceHelpButton({
         type="button"
         onClick={() => setOpen((value) => !value)}
         className={cn(
-          triggerBaseClass,
-          open &&
-            'border-[var(--ozer-accent)]/50 bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)] hover:text-[var(--ozer-white)]',
+          'flex items-center justify-center rounded-full border transition-colors',
           variant === 'inline'
-            ? 'h-12 w-12 bg-[var(--workspace-shell-panel)]/98 shadow-[0_4px_16px_rgba(42,23,32,0.12),0_8px_28px_rgba(42,23,32,0.1)] backdrop-blur-xl'
-            : 'fixed right-4 bottom-6 z-[65] hidden h-11 w-11 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] lg:flex',
+            ? 'h-12 w-12 shadow-[0_4px_16px_rgba(42,23,32,0.12),0_8px_28px_rgba(42,23,32,0.1)] backdrop-blur-xl'
+            : 'fixed right-4 bottom-6 z-[65] hidden h-11 w-11 shadow-[0_2px_8px_rgba(42,23,32,0.06),0_8px_24px_rgba(42,23,32,0.08)] lg:flex',
+          open
+            ? 'border-[var(--ozer-accent)] bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:border-[var(--ozer-accent-hover)] hover:bg-[var(--ozer-accent-hover)]'
+            : cn(
+                'border-[var(--workspace-shell-border)] text-[var(--ozer-accent)] hover:border-[var(--ozer-accent)]/40 hover:bg-[var(--ozer-accent-subtle)]',
+                variant === 'inline'
+                  ? 'bg-[var(--workspace-shell-panel)]/98'
+                  : 'bg-[var(--workspace-shell-panel)]',
+              ),
           className,
         )}
-        aria-label={open ? 'Close help and support' : 'Help and feedback'}
+        aria-label={open ? 'Close help and support' : 'Help and support'}
         aria-expanded={open}
-        title="Help and feedback"
+        title="Help and support"
       >
         {open ? (
           <ChevronDown className="h-5 w-5" />

@@ -70,7 +70,7 @@ export const loadUserPlatformSupportTicket = cache(
 
 export const loadAdminPlatformSupportTicket = cache(
   async (ticketId: string): Promise<PlatformSupportTicketDetail | null> => {
-    const client = getSupabaseServerClient();
+    const client = getSupabaseServerAdminClient();
 
     const { data: ticket, error } = await (
       client.from('platform_support_tickets') as any

@@ -2,7 +2,16 @@
 
 import { useEffect, useMemo, useState, useTransition } from 'react';
 
-import { Loader2, MoreHorizontal, Plus, Search, Sparkles } from 'lucide-react';
+import Link from 'next/link';
+
+import {
+  ChevronRight,
+  Loader2,
+  MoreHorizontal,
+  Plus,
+  Search,
+  Sparkles,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
@@ -67,6 +76,8 @@ type Props = {
   accountId: string;
   mode: Mode;
   compact?: boolean;
+  /** When compact, link to the full Interest page with total count. */
+  seeAllHref?: string | null;
   /** Fires when linked interest + suggested fits totals change (for Matches badges). */
   onMatchTotalsChange?: (totals: {
     linked: number;
@@ -95,6 +106,7 @@ export function CommercialInterestPanel({
   accountId,
   mode,
   compact = false,
+  seeAllHref = null,
   onMatchTotalsChange,
 }: Props) {
   const [matches, setMatches] = useState<CommercialInterestMatch[]>([]);
@@ -140,8 +152,8 @@ export function CommercialInterestPanel({
         listingId: mode.kind === 'listing' ? mode.listingId : undefined,
         requirementId:
           mode.kind === 'requirement' ? mode.requirementId : undefined,
-        // Compact UI shows a short list, but load enough for accurate totals.
-        limit: compact ? 40 : 8,
+        // Load enough for badge totals and the full Interest list (badge can be 20+).
+        limit: 40,
       });
       setSuggestions(next);
     } catch (error) {
@@ -378,9 +390,14 @@ export function CommercialInterestPanel({
           requirementId:
             mode.kind === 'requirement' ? mode.requirementId : undefined,
           mode: triage ? 'triage' : 'explain',
-          limit: 8,
+          limit: Math.min(12, Math.max(suggestions.length, 1)),
         });
-        setSuggestions(next);
+        setSuggestions((prev) => {
+          // Keep any remaining suggestions beyond the explained batch.
+          const explainedKeys = new Set(next.map(suggestionKey));
+          const rest = prev.filter((s) => !explainedKeys.has(suggestionKey(s)));
+          return [...next, ...rest];
+        });
         toast.success(triage ? 'AI ranking ready' : 'Fit explanations ready');
       } catch (error) {
         toast.error(
@@ -617,6 +634,16 @@ export function CommercialInterestPanel({
           <p className="text-xs text-[var(--workspace-shell-text)]/45">
             Automatic matches from sector, size, location, tenure and budget —
             then optionally explain with AI.
+            {suggestions.length > 0 ? (
+              <>
+                {' '}
+                Showing {visibleSuggestions.length}
+                {suggestions.length > visibleSuggestions.length
+                  ? ` of ${suggestions.length}`
+                  : ''}{' '}
+                suggested fit{suggestions.length === 1 ? '' : 's'}.
+              </>
+            ) : null}
           </p>
         </div>
         {!compact && suggestions.length > 0 ? (
@@ -765,6 +792,27 @@ export function CommercialInterestPanel({
             );
           })}
         </ul>
+      ) : null}
+      {compact &&
+      seeAllHref &&
+      suggestions.length > visibleSuggestions.length ? (
+        <div className="pt-1">
+          <Button asChild type="button" size="sm" variant="outline">
+            <Link href={seeAllHref}>
+              See all {suggestions.length} matches
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
+      ) : compact && seeAllHref && suggestions.length > 0 ? (
+        <div className="pt-1">
+          <Button asChild type="button" size="sm" variant="ghost">
+            <Link href={seeAllHref}>
+              Open Interest
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+          </Button>
+        </div>
       ) : null}
     </div>
   );
