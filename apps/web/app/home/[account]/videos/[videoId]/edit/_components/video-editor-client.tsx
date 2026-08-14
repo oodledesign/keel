@@ -102,6 +102,7 @@ export function VideoEditorClient(props: Props) {
     props.publishedRevision,
   );
   const [masterUrl, setMasterUrl] = useState<string | null>(null);
+  const [masterAvailable, setMasterAvailable] = useState(props.hasMaster);
   const [micUrl, setMicUrl] = useState<string | null>(null);
   const [systemUrl, setSystemUrl] = useState<string | null>(null);
   const [hasDualAudio, setHasDualAudio] = useState(false);
@@ -233,17 +234,37 @@ export function VideoEditorClient(props: Props) {
   );
 
   useEffect(() => {
-    if (!props.hasMaster) return;
+    if (!masterAvailable) return;
     void fetch(`/api/videos/${props.videoId}/master`)
-      .then((r) => r.json())
-      .then((j) => {
-        if (j.ok && j.url) setMasterUrl(j.url as string);
-        setMicUrl((j.micUrl as string | null) ?? null);
-        setSystemUrl((j.systemUrl as string | null) ?? null);
+      .then(async (r) => {
+        const j = (await r.json().catch(() => null)) as {
+          ok?: boolean;
+          url?: string;
+          micUrl?: string | null;
+          systemUrl?: string | null;
+          code?: string;
+          error?: string;
+        } | null;
+        if (!r.ok || !j?.ok || !j.url) {
+          setMasterAvailable(false);
+          setMasterUrl(null);
+          if (j?.code === 'MASTER_MISSING') {
+            toast.message(
+              'Master file missing — import it from the published video to edit and re-transcribe.',
+            );
+          }
+          return;
+        }
+        setMasterUrl(j.url);
+        setMicUrl(j.micUrl ?? null);
+        setSystemUrl(j.systemUrl ?? null);
         setHasDualAudio(Boolean(j.micUrl || j.systemUrl));
       })
-      .catch(() => toast.error('Could not load master preview'));
-  }, [props.hasMaster, props.videoId]);
+      .catch(() => {
+        setMasterAvailable(false);
+        toast.error('Could not load master preview');
+      });
+  }, [masterAvailable, props.videoId]);
 
   const saveTimeline = useCallback(
     (next: VideoEditTimeline) => {
@@ -655,16 +676,19 @@ export function VideoEditorClient(props: Props) {
 
   const selectedZoom = timeline.zooms.find((z) => z.id === selectedZoomId);
 
-  if (!props.hasMaster) {
+  if (!masterAvailable) {
     return (
       <div className={cn(workspacePanelCard, 'space-y-4 p-8')}>
         <p className="text-[var(--workspace-shell-text)]">
-          This video does not have an editable master yet. The desktop recorder
-          uploaded the published file, but not a re-editable master copy.
+          This video does not have an editable master file available. The
+          published Bunny video is fine to watch, but transcription and editing
+          need a master copy in storage.
         </p>
         <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-          You can create one from the published Bunny video (good for cuts /
-          zooms). Click ripples need a new recording from an updated Mac app.
+          Import one from the published Bunny video, then use{' '}
+          <span className="font-medium">Re-time with Whisper</span> to rebuild a
+          full transcript (desktop Apple Speech often stops after a couple of
+          minutes).
         </p>
         <div className="flex flex-wrap gap-3">
           <Button

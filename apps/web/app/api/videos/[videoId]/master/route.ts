@@ -47,7 +47,21 @@ export async function GET(_request: Request, context: RouteContext) {
     return NextResponse.json({ error: 'No master uploaded' }, { status: 404 });
   }
 
-  const url = await createSignedMasterUrl(String(master.storage_path));
+  let url: string;
+  try {
+    url = await createSignedMasterUrl(String(master.storage_path));
+  } catch {
+    // Row exists but the storage object was never uploaded / was deleted.
+    return NextResponse.json(
+      {
+        error: 'Master file missing from storage',
+        code: 'MASTER_MISSING',
+        canImportFromStream: true,
+      },
+      { status: 404 },
+    );
+  }
+
   let micUrl: string | null = null;
   let systemUrl: string | null = null;
   if (master.mic_storage_path) {

@@ -70,11 +70,28 @@ export async function POST(_request: Request, context: RouteContext) {
 
   const { data: existing } = await access.client
     .from('video_masters')
-    .select('id')
+    .select('id, storage_path')
     .eq('video_id', videoId)
     .maybeSingle();
 
-  if (existing || video.has_master) {
+  const admin = getSupabaseServerAdminClient();
+  let masterObjectExists = false;
+  if (existing?.storage_path) {
+    const folder = String(existing.storage_path).replace(/\/[^/]+$/, '');
+    const { data: listed } = await admin.storage
+      .from(VIDEO_MASTERS_BUCKET)
+      .list(folder, { limit: 50 });
+    masterObjectExists = Boolean(
+      listed?.some(
+        (obj) =>
+          obj.name === 'master.mp4' &&
+          Number((obj.metadata as { size?: number } | null)?.size ?? 0) > 0,
+      ),
+    );
+  }
+
+  // DB may say has_master while the storage object was never uploaded / was deleted.
+  if ((existing || video.has_master) && masterObjectExists) {
     return NextResponse.json({ ok: true, alreadyHadMaster: true });
   }
 
@@ -118,7 +135,6 @@ export async function POST(_request: Request, context: RouteContext) {
     }
 
     const path = masterStoragePath(accountId, videoId);
-    const admin = getSupabaseServerAdminClient();
     const { error: uploadError } = await admin.storage
       .from(VIDEO_MASTERS_BUCKET)
       .upload(path, bytes, {

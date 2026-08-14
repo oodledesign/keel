@@ -16,7 +16,7 @@ import {
 } from '~/lib/videos/edit-timeline';
 import { normalizeVideoChapters } from '~/lib/videos/server/generate-video-chapters';
 import { normalizeVideoSummary } from '~/lib/videos/server/generate-video-summary';
-import { ensureEditProject } from '~/lib/videos/server/video-edit.service';
+import { ensureEditProject, createSignedMasterUrl } from '~/lib/videos/server/video-edit.service';
 import { requireVideoById } from '~/lib/videos/server/videos-access';
 
 export async function loadVideoEditorPage(
@@ -50,7 +50,7 @@ export async function loadVideoEditorPage(
 
   const { data: master } = await access.client
     .from('video_masters')
-    .select('duration_ms')
+    .select('duration_ms, storage_path')
     .eq('video_id', videoId)
     .maybeSingle();
 
@@ -59,6 +59,15 @@ export async function loadVideoEditorPage(
     (video.duration_seconds != null
       ? Number(video.duration_seconds) * 1000
       : 0);
+
+  let hasMasterFile = Boolean(video.has_master && master?.storage_path);
+  if (hasMasterFile && master?.storage_path) {
+    try {
+      await createSignedMasterUrl(String(master.storage_path), 60);
+    } catch {
+      hasMasterFile = false;
+    }
+  }
 
   const { project, timeline } = await ensureEditProject({
     client: access.client,
@@ -79,7 +88,7 @@ export async function loadVideoEditorPage(
     video: {
       id: video.id as string,
       title: video.title as string,
-      hasMaster: Boolean(video.has_master),
+      hasMaster: hasMasterFile,
       editRevision: Number(video.edit_revision ?? project.revision ?? 0),
       publishedRevision: Number(video.published_revision ?? 0),
       hasChapters: normalizeVideoChapters(video.chapters).length > 0,
