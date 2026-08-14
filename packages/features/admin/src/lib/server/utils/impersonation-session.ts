@@ -255,7 +255,9 @@ export async function getImpersonationExitState(params: {
   });
 
   if (!row) {
-    await clearImpersonationRestoreCookie();
+    // Do not clear the cookie here — this runs during RSC render, and Next.js
+    // throws if cookies are mutated outside a Server Action / Route Handler.
+    // Stale cookies are cleared by AdminClearStaleImpersonationCookie instead.
     return { active: false };
   }
 

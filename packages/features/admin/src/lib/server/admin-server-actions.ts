@@ -23,6 +23,7 @@ import { createAdminAccountsService } from './services/admin-accounts.service';
 import { createAdminAuthUserService } from './services/admin-auth-user.service';
 import { adminAction } from './utils/admin-action';
 import {
+  clearImpersonationRestoreCookie,
   consumeImpersonationRestoreSession,
   createImpersonationRestoreSession,
   readImpersonationSessionIdFromCookie,
@@ -253,6 +254,21 @@ export const endImpersonationAction = enhanceAction(
   },
   {
     auth: true,
+    schema: z.object({}),
+  },
+);
+
+/**
+ * Clears a leftover impersonation restore cookie after logout / mismatched login.
+ * Safe with or without an auth session — only drops the httpOnly cookie.
+ */
+export const clearStaleImpersonationCookieAction = enhanceAction(
+  async () => {
+    await clearImpersonationRestoreCookie();
+    return { success: true as const };
+  },
+  {
+    auth: false,
     schema: z.object({}),
   },
 );

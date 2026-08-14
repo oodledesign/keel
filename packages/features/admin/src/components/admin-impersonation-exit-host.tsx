@@ -7,6 +7,7 @@ import {
   getImpersonationExitState,
   readImpersonationSessionIdFromCookie,
 } from '../lib/server/utils/impersonation-session';
+import { AdminClearStaleImpersonationCookie } from './admin-clear-stale-impersonation-cookie';
 import { AdminImpersonationExitButton } from './admin-impersonation-exit-button';
 
 /**
@@ -26,7 +27,8 @@ export async function AdminImpersonationExitHost() {
   } = await client.auth.getUser();
 
   if (!user) {
-    return null;
+    // Signed out (e.g. from marketing) while the restore cookie remains.
+    return <AdminClearStaleImpersonationCookie />;
   }
 
   const adminClient = getSupabaseServerAdminClient();
@@ -37,7 +39,8 @@ export async function AdminImpersonationExitHost() {
   });
 
   if (!state.active) {
-    return null;
+    // Cookie no longer matches the signed-in user (common after logout + re-login).
+    return <AdminClearStaleImpersonationCookie />;
   }
 
   return <AdminImpersonationExitButton viewingAsEmail={state.viewingAsEmail} />;
