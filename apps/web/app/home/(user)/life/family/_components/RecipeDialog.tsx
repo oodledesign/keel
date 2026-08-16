@@ -31,28 +31,47 @@ import {
   priorityChoices,
 } from './meal-ui';
 
+/** Prefill for a new recipe (e.g. after AI extract) — never has an id. */
+export type RecipeFormDraft = {
+  name: string;
+  description: string | null;
+  ingredients: string[];
+  instructions: string | null;
+  tags: string[];
+  meal_type: RecipeMealType;
+  prep_minutes: number | null;
+  cook_minutes: number | null;
+  servings: number | null;
+  is_favorite?: boolean;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   recipe: RecipeRow | null;
+  /** When creating, optional extract/import draft to review before save. */
+  draft?: RecipeFormDraft | null;
+  /** Bumps when a new import arrives so the form remounts even if names match. */
+  draftKey?: number;
   accountSlug?: string;
   onSaved: () => void;
 };
 
 const suggestedTags = [...priorityChoices, ...dietaryChoices];
 
-function toForm(recipe: RecipeRow | null) {
+function toForm(recipe: RecipeRow | null, draft?: RecipeFormDraft | null) {
+  const source = recipe ?? draft ?? null;
   return {
-    name: recipe?.name ?? '',
-    description: recipe?.description ?? '',
-    ingredients: (recipe?.ingredients ?? []).join('\n'),
-    instructions: recipe?.instructions ?? '',
-    tags: recipe?.tags ?? [],
-    meal_type: (recipe?.meal_type ?? 'dinner') as RecipeMealType,
-    prep_minutes: recipe?.prep_minutes?.toString() ?? '',
-    cook_minutes: recipe?.cook_minutes?.toString() ?? '',
-    servings: recipe?.servings?.toString() ?? '',
-    is_favorite: recipe?.is_favorite ?? false,
+    name: source?.name ?? '',
+    description: source?.description ?? '',
+    ingredients: (source?.ingredients ?? []).join('\n'),
+    instructions: source?.instructions ?? '',
+    tags: source?.tags ?? [],
+    meal_type: (source?.meal_type ?? 'dinner') as RecipeMealType,
+    prep_minutes: source?.prep_minutes?.toString() ?? '',
+    cook_minutes: source?.cook_minutes?.toString() ?? '',
+    servings: source?.servings?.toString() ?? '',
+    is_favorite: source?.is_favorite ?? false,
   };
 }
 
@@ -60,16 +79,21 @@ export function RecipeDialog({
   open,
   onOpenChange,
   recipe,
+  draft = null,
+  draftKey = 0,
   accountSlug,
   onSaved,
 }: Props) {
+  const formKey = recipe?.id ?? (draft ? `draft:${draftKey}` : 'new');
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-lg">
         {open ? (
           <RecipeForm
-            key={recipe?.id ?? 'new'}
+            key={formKey}
             recipe={recipe}
+            draft={draft}
             accountSlug={accountSlug}
             onClose={() => onOpenChange(false)}
             onSaved={onSaved}
@@ -82,19 +106,22 @@ export function RecipeDialog({
 
 function RecipeForm({
   recipe,
+  draft,
   accountSlug,
   onClose,
   onSaved,
 }: {
   recipe: RecipeRow | null;
+  draft?: RecipeFormDraft | null;
   accountSlug?: string;
   onClose: () => void;
   onSaved: () => void;
 }) {
   const scopeFields = accountSlug ? { accountSlug } : {};
-  const [form, setForm] = useState(() => toForm(recipe));
+  const [form, setForm] = useState(() => toForm(recipe, draft));
   const [customTag, setCustomTag] = useState('');
   const [isPending, startTransition] = useTransition();
+  const isImportReview = !recipe && Boolean(draft);
 
   function toggleTag(tag: string) {
     setForm((f) => ({
@@ -140,6 +167,7 @@ function RecipeForm({
       cook_minutes: toNum(form.cook_minutes),
       servings: toNum(form.servings),
       is_favorite: form.is_favorite,
+      ...(isImportReview ? { source: 'ai' as const } : {}),
     };
 
     startTransition(async () => {
@@ -157,9 +185,17 @@ function RecipeForm({
   return (
     <>
       <DialogHeader>
-        <DialogTitle>{recipe ? 'Edit recipe' : 'Add recipe'}</DialogTitle>
+        <DialogTitle>
+          {recipe
+            ? 'Edit recipe'
+            : isImportReview
+              ? 'Review imported recipe'
+              : 'Add recipe'}
+        </DialogTitle>
         <DialogDescription className="text-[var(--workspace-shell-text-muted)]">
-          Build your library so the planner can reuse meals you love.
+          {isImportReview
+            ? 'Check the details below, then save to your library. Nothing is saved until you confirm.'
+            : 'Build your library so the planner can reuse meals you love.'}
         </DialogDescription>
       </DialogHeader>
 

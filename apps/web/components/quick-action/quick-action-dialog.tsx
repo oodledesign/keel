@@ -27,9 +27,9 @@ import {
   prefetchNavCatalog,
 } from '~/lib/quick-action/nav-catalog-cache';
 import {
+  type SearchHistoryItem,
   loadSearchHistory,
   pushSearchHistory,
-  type SearchHistoryItem,
 } from '~/lib/quick-action/search-history';
 
 type QuickActionDialogProps = {
@@ -74,7 +74,8 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
     () => !getCachedNavCatalog(),
   );
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
-  const [viewport, setViewport] = useState<VisualViewportBox>(readVisualViewport);
+  const [viewport, setViewport] =
+    useState<VisualViewportBox>(readVisualViewport);
 
   useEffect(() => {
     if (!open) {

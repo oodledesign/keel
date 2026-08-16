@@ -64,8 +64,7 @@ export async function syncRecipeStructure(
     sort_order: number;
   }>;
 
-  const methodContent =
-    input.instructions?.trim() || 'No instructions yet.';
+  const methodContent = input.instructions?.trim() || 'No instructions yet.';
 
   const methodStep = existing.find((step) => step.title === 'Method');
 

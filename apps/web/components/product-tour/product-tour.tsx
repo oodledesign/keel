@@ -25,8 +25,8 @@ import {
   resetProductTourAction,
 } from '~/lib/product-tour/product-tour.actions';
 import {
-  getProductTourStepDefs,
   type TourChromeAction,
+  getProductTourStepDefs,
 } from '~/lib/product-tour/tour-steps';
 import type { DriveableProductTourId } from '~/lib/product-tour/types';
 
@@ -251,8 +251,7 @@ export function ProductTour({
         const opensNewMenu = def.chromeAction === 'open-new-menu';
         // Closing the hamburger before Next so the New FAB exists when the
         // next step queries `[data-tour="new-menu"]` (skipMissingElement).
-        const preparesNewMenu =
-          def.chromeAction === 'open-workspace-switcher';
+        const preparesNewMenu = def.chromeAction === 'open-workspace-switcher';
 
         return {
           element: def.element,

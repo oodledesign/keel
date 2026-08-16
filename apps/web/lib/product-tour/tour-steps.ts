@@ -215,9 +215,7 @@ const STEPS_BY_TOUR: Record<DriveableProductTourId, TourStepDef[]> = {
   work_property: WORK_PROPERTY_STEPS,
 };
 
-export function getProductTourStepDefs(
-  tourId: ProductTourId,
-): TourStepDef[] {
+export function getProductTourStepDefs(tourId: ProductTourId): TourStepDef[] {
   if (
     tourId === 'default_landing_prompt' ||
     tourId === 'personal_nav_tour_hint'

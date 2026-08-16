@@ -25,9 +25,7 @@ export async function generateMetadata({ params }: RecipeDetailRouteProps) {
   };
 }
 
-async function PersonalRecipeDetailRoute({
-  params,
-}: RecipeDetailRouteProps) {
+async function PersonalRecipeDetailRoute({ params }: RecipeDetailRouteProps) {
   const { recipeId } = await params;
   const [recipe, scope, popularity, recentLogs, structure] = await Promise.all([
     loadFamilyRecipeById(recipeId),

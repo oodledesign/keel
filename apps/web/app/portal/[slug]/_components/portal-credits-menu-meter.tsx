@@ -20,8 +20,7 @@ export function PortalCreditsMenuMeter({
       : balance === 0
         ? 0
         : 100;
-  const low =
-    balance === 0 || (capacity > 0 && balance / capacity < 0.1);
+  const low = balance === 0 || (capacity > 0 && balance / capacity < 0.1);
 
   return (
     <div className="border-b border-[color:var(--workspace-shell-border)] px-4 py-2.5">

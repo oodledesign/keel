@@ -18,12 +18,13 @@ import {
 } from '@dnd-kit/core';
 import { AlertTriangle, Flame, User } from 'lucide-react';
 
-import { parseDueDateParts } from '../../../_lib/due-date-ymd';
-import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import {
   isAssignedToSomeoneElse,
   taskAssigneeDisplayName,
 } from '~/lib/tasks/task-assignee';
+
+import { parseDueDateParts } from '../../../_lib/due-date-ymd';
+import type { TasksPageTask } from '../../_lib/server/tasks.loader';
 import { InlineTaskTitle } from './tasks-inline-task-title';
 
 const EditTaskDialog = dynamic(
@@ -313,10 +314,7 @@ export type TasksKanbanBoardProps = {
   workspaceAccountId?: string;
   currentUserId?: string | null;
   onTitleChanged: (taskId: string, title: string) => void;
-  onStatusChanged: (
-    taskId: string,
-    status: TaskStatus,
-  ) => void | Promise<void>;
+  onStatusChanged: (taskId: string, status: TaskStatus) => void | Promise<void>;
 };
 
 export function TasksKanbanBoard({

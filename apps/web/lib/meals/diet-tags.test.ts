@@ -42,19 +42,27 @@ describe('detectKeywordDietFlags', () => {
   });
 
   it('catches common UK plural forms: prawns, mussels, sardines, sausages', () => {
-    expect(detectKeywordDietFlags(['300g king prawns', 'garlic butter'])).toMatchObject({
+    expect(
+      detectKeywordDietFlags(['300g king prawns', 'garlic butter']),
+    ).toMatchObject({
       vegetarian: false,
       vegan: false,
     });
-    expect(detectKeywordDietFlags(['500g fresh mussels', 'white wine', 'cream'])).toMatchObject({
+    expect(
+      detectKeywordDietFlags(['500g fresh mussels', 'white wine', 'cream']),
+    ).toMatchObject({
       vegetarian: false,
       vegan: false,
     });
-    expect(detectKeywordDietFlags(['1 tin sardines in olive oil'])).toMatchObject({
+    expect(
+      detectKeywordDietFlags(['1 tin sardines in olive oil']),
+    ).toMatchObject({
       vegetarian: false,
       vegan: false,
     });
-    expect(detectKeywordDietFlags(['4 pork sausages', 'mashed potato'])).toMatchObject({
+    expect(
+      detectKeywordDietFlags(['4 pork sausages', 'mashed potato']),
+    ).toMatchObject({
       vegetarian: false,
       vegan: false,
     });

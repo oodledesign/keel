@@ -169,6 +169,7 @@ async function TeamAccountSettingsPage(props: TeamAccountSettingsPageProps) {
           <WorkspaceDashboardShortcutsSection
             accountId={account.id}
             accountSlug={account.slug}
+            showLayoutPresets={workspace.workspaceProfile === 'work_design'}
           />
         </div>
       ) : null}

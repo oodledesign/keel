@@ -1,8 +1,8 @@
 'use server';
 
-import { z } from 'zod';
-
 import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { z } from 'zod';
 
 import type { Database } from '@kit/supabase/database';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
@@ -286,6 +286,9 @@ export async function upsertRecipeAction(
       cook_minutes: parsed.cook_minutes ?? null,
       servings: parsed.servings ?? null,
       is_favorite: parsed.is_favorite,
+      ...(parsed.id
+        ? {}
+        : { source: parsed.source === 'ai' ? 'ai' : 'manual' }),
       updated_at: new Date().toISOString(),
     };
 

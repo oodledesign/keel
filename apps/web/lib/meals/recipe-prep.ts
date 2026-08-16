@@ -5,12 +5,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@kit/supabase/database';
 
 import { callAI } from '~/lib/ai/router';
+import { hashRecipeIngredients } from '~/lib/meals/recipe-nutrition';
 import {
   PREP_STEP_SORT_ORDER,
   PREP_STEP_TITLE,
   normalisePrepContent,
 } from '~/lib/meals/recipe-prep-utils';
-import { hashRecipeIngredients } from '~/lib/meals/recipe-nutrition';
 
 export {
   PREP_STEP_SORT_ORDER,

@@ -22,11 +22,31 @@ const MAX_PAYLOAD_BYTES = {
   url: 2_000,
 } as const;
 
-const requestSchema = z.object({
-  source: z.enum(['text', 'image', 'url']),
-  payload: z.string().min(1).max(6_000_000),
-  accountSlug: z.string().min(1).optional(),
-});
+const requestSchema = z
+  .object({
+    source: z.enum(['text', 'image', 'url']),
+    payload: z.string().min(1).max(6_000_000),
+    accountSlug: z.string().min(1).optional(),
+  })
+  .superRefine((value, ctx) => {
+    if (value.source !== 'url') return;
+    try {
+      const parsed = new URL(value.payload.trim());
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          message: 'URL must use http or https',
+          path: ['payload'],
+        });
+      }
+    } catch {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Invalid URL',
+        path: ['payload'],
+      });
+    }
+  });
 
 export async function POST(request: NextRequest) {
   const client = getSupabaseServerClient();

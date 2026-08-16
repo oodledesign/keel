@@ -113,7 +113,7 @@ export function PortalSupportListContent({
         </div>
       </div>
 
-      <div className="flex items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5 w-fit">
+      <div className="flex w-fit items-center gap-0.5 rounded-md border border-[color:var(--workspace-shell-border)] p-0.5">
         <Link
           href={servicesHref}
           className="rounded bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-xs font-medium text-[var(--workspace-shell-accent-text)]"

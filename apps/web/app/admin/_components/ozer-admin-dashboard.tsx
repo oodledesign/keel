@@ -64,7 +64,9 @@ export async function OzerAdminDashboard() {
           <Link key={item.href} href={item.href}>
             <Card className="hover:border-foreground/20 h-full transition">
               <CardHeader className="space-y-1 p-4 pb-3 sm:p-6 sm:pb-2">
-                <CardTitle className="text-sm sm:text-base">{item.label}</CardTitle>
+                <CardTitle className="text-sm sm:text-base">
+                  {item.label}
+                </CardTitle>
                 <CardDescription className="text-xs sm:text-sm">
                   {item.description}
                 </CardDescription>

@@ -10,8 +10,14 @@ import pathsConfig from '~/config/paths.config';
 import { aggregateTransactionsByMonth } from '~/lib/date-range/analytics-date-range';
 import { loadSuggestedEmailActionItems } from '~/lib/email-assistant/suggested-email-tasks.loader';
 import { accumulateFinanceTotals } from '~/lib/finance/transaction-totals';
+import type { DayViewPipeline } from '~/lib/planner/types';
 
 import { toIsoDateString } from '../../../_lib/due-date-ymd';
+import {
+  type DashboardPipelineDealRow,
+  hasRecentPipelineActivity,
+  summariseDashboardPipeline,
+} from '../dashboard-pipeline-summary';
 import {
   displayTitle,
   resolveNoteAssignmentLabels,
@@ -165,6 +171,14 @@ export type DashboardPageData = {
     email: string | null;
     role: string | null;
   }>;
+  pipeline: DayViewPipeline | null;
+  recommendationSignals: {
+    accountRole: string | null;
+    seatKind: string | null;
+    hasRecentPipelineActivity: boolean;
+    openSupportTicketCount: number;
+    hasRecentInvoiceActivity: boolean;
+  };
 };
 
 export const loadDashboardPageData = cache(loadDashboardPageDataImpl);
@@ -240,6 +254,10 @@ async function loadDashboardPageDataImpl(
   weekStart.setHours(0, 0, 0, 0);
   const weekStartIso = weekStart.toISOString();
 
+  const invoiceActivityCutoff = new Date();
+  invoiceActivityCutoff.setDate(invoiceActivityCutoff.getDate() - 14);
+  const invoiceActivityCutoffIso = invoiceActivityCutoff.toISOString();
+
   const [
     activeProjectsCountResult,
     clientsCountResult,
@@ -252,6 +270,13 @@ async function loadDashboardPageDataImpl(
     upcomingTasksResult,
     suggestedEmailLoaded,
     openSupportTicketsResult,
+    pipelineDealsResult,
+    activeJobsListResult,
+    projectStatusCountsResult,
+    recentInvoicesResult,
+    recentInvoiceActivityResult,
+    teamMembersResult,
+    membershipResult,
   ] = await Promise.all([
     client
       .from('projects')
@@ -329,6 +354,53 @@ async function loadDashboardPageDataImpl(
       .eq('status', 'open')
       .order('last_activity_at', { ascending: false, nullsFirst: false })
       .limit(6),
+    client
+      .from('pipeline_deals')
+      .select(
+        'id, stage, value, contact_name, company_name, next_action, next_action_date, updated_at',
+      )
+      .eq('account_id', accountId)
+      .not('stage', 'in', '("won","lost")'),
+    client
+      .from('projects')
+      .select(
+        'id, title, name, status, priority, due_date, clients(display_name)',
+      )
+      .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
+      .in('status', ['pending', 'in_progress'])
+      .order('updated_at', { ascending: false })
+      .limit(8),
+    client
+      .from('projects')
+      .select('status')
+      .eq('account_id', accountId)
+      .eq('project_type', 'delivery')
+      .in('status', ['pending', 'in_progress', 'completed']),
+    client
+      .from('invoices')
+      .select(
+        'id, invoice_number, total_pence, due_at, status, clients(display_name)',
+      )
+      .eq('account_id', accountId)
+      .is('archived_at', null)
+      .not('status', 'in', '("paid","void","cancelled")')
+      .order('due_at', { ascending: true, nullsFirst: false })
+      .limit(5),
+    client
+      .from('invoices')
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', accountId)
+      .gte('updated_at', invoiceActivityCutoffIso),
+    client.rpc('get_account_members', { account_slug: accountSlug }),
+    userId
+      ? client
+          .from('accounts_memberships')
+          .select('account_role, seat_kind')
+          .eq('account_id', accountId)
+          .eq('user_id', userId)
+          .maybeSingle()
+      : Promise.resolve({ data: null, error: null }),
   ]);
 
   const businessConnectionId =
@@ -387,7 +459,35 @@ async function loadDashboardPageDataImpl(
     overdue: 0,
   };
 
-  const activeJobsList: DashboardJobSummary[] = [];
+  if (!isTableMissingFromApi(projectStatusCountsResult.error)) {
+    for (const row of projectStatusCountsResult.data ?? []) {
+      const status = (row.status as string | null) ?? '';
+      if (status === 'completed') statusSummary.completed += 1;
+      else if (status === 'in_progress') statusSummary.inProgress += 1;
+      else if (status === 'pending') statusSummary.pending += 1;
+    }
+  }
+
+  const activeJobsList: DashboardJobSummary[] = isTableMissingFromApi(
+    activeJobsListResult.error,
+  )
+    ? []
+    : (activeJobsListResult.data ?? []).map((row) => {
+        const clientEmbed = Array.isArray(row.clients)
+          ? row.clients[0]
+          : row.clients;
+        return {
+          id: row.id as string,
+          title: ((row.title as string | null)?.trim() ||
+            (row.name as string | null)?.trim() ||
+            'Untitled project') as string,
+          clientName:
+            (clientEmbed?.display_name as string | null)?.trim() || null,
+          status: (row.status as string | null) ?? 'pending',
+          priority: (row.priority as string | null) ?? 'medium',
+          dueDate: toIsoDateString(row.due_date as string | null | undefined),
+        };
+      });
 
   const totalRevenuePence = invoicesUnavailable
     ? 0
@@ -608,6 +708,77 @@ async function loadDashboardPageDataImpl(
 
   const accountName = account.name?.trim() || account.slug || accountSlug;
 
+  const pipelineUnavailable = isTableMissingFromApi(pipelineDealsResult.error);
+  if (!pipelineUnavailable && pipelineDealsResult.error) {
+    console.error('[dashboard] pipeline deals', pipelineDealsResult.error);
+  }
+
+  const pipelineDealRows = (
+    pipelineUnavailable || pipelineDealsResult.error
+      ? []
+      : (pipelineDealsResult.data ?? [])
+  ) as DashboardPipelineDealRow[];
+
+  const pipelineHref = pathsConfig.app.accountPipeline.replace(
+    '[account]',
+    account.slug ?? accountSlug,
+  );
+  const pipeline = summariseDashboardPipeline(pipelineDealRows, pipelineHref);
+
+  const invoicesListUnavailable = isTableMissingFromApi(
+    recentInvoicesResult.error,
+  );
+  const recentInvoices: DashboardInvoiceSummary[] =
+    invoicesListUnavailable || recentInvoicesResult.error
+      ? []
+      : (recentInvoicesResult.data ?? []).map((row) => {
+          const clientEmbed = Array.isArray(row.clients)
+            ? row.clients[0]
+            : row.clients;
+          return {
+            id: row.id as string,
+            invoiceNumber: ((row.invoice_number as string | null)?.trim() ||
+              'Invoice') as string,
+            clientName:
+              (clientEmbed?.display_name as string | null)?.trim() || null,
+            totalPence: (row.total_pence as number | null) ?? 0,
+            dueAt: (row.due_at as string | null) ?? null,
+            status: (row.status as string | null) ?? 'draft',
+          };
+        });
+
+  const teamMembers: DashboardPageData['teamMembers'] = teamMembersResult.error
+    ? []
+    : (
+        (teamMembersResult.data ?? []) as Array<{
+          user_id?: string;
+          name?: string | null;
+          email?: string | null;
+          role?: string | null;
+          account_role?: string | null;
+        }>
+      )
+        .map((row) => ({
+          userId: row.user_id ?? '',
+          name: row.name ?? null,
+          email: row.email ?? null,
+          role: row.role ?? row.account_role ?? null,
+        }))
+        .filter((m) => Boolean(m.userId));
+
+  const accountRole =
+    (membershipResult.data as { account_role?: string | null } | null)
+      ?.account_role ??
+    (workspace.account as { role?: string | null }).role ??
+    null;
+  const seatKind =
+    (membershipResult.data as { seat_kind?: string | null } | null)
+      ?.seat_kind ?? null;
+
+  const hasRecentInvoiceActivity =
+    !isTableMissingFromApi(recentInvoiceActivityResult.error) &&
+    (recentInvoiceActivityResult.count ?? 0) > 0;
+
   return {
     accountId,
     accountSlug: account.slug ?? accountSlug,
@@ -622,8 +793,16 @@ async function loadDashboardPageDataImpl(
     suggestedEmailTasks,
     openSupportTickets,
     recentNotes,
-    recentInvoices: [],
-    teamMembers: [],
+    recentInvoices,
+    teamMembers,
+    pipeline,
+    recommendationSignals: {
+      accountRole,
+      seatKind,
+      hasRecentPipelineActivity: hasRecentPipelineActivity(pipelineDealRows),
+      openSupportTicketCount: openSupportTickets.totalCount,
+      hasRecentInvoiceActivity,
+    },
   };
 }
 

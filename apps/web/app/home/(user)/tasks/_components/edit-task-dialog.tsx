@@ -44,8 +44,8 @@ import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
 import { cn } from '@kit/ui/utils';
 
-import pathsConfig from '~/config/paths.config';
 import { TaskPersonAssigneeSelect } from '~/components/task-person-assignee-select';
+import pathsConfig from '~/config/paths.config';
 import { TaskAssignmentCombobox } from '~/home/(user)/_components/dashboard/task-assignment-combobox';
 import {
   createBlankWorkspaceNoteAction,
@@ -312,10 +312,12 @@ export function EditTaskDialog({
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
   const [assignTo, setAssignTo] = useState(initialAssignTo(task));
-  const [personAssignee, setPersonAssignee] = useState(initialPersonAssignee(task));
-  const [personOptions, setPersonOptions] = useState<TaskPersonAssigneeOption[]>(
-    [],
+  const [personAssignee, setPersonAssignee] = useState(
+    initialPersonAssignee(task),
   );
+  const [personOptions, setPersonOptions] = useState<
+    TaskPersonAssigneeOption[]
+  >([]);
   const [personOptionsLoading, setPersonOptionsLoading] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState('');
   const [subtaskAdding, setSubtaskAdding] = useState(false);

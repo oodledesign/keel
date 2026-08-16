@@ -636,10 +636,7 @@ async function enrichTaskRows(
           .in('id', contactIds)
       : Promise.resolve({ data: [] as ContactAssigneeEnrichment[] }),
     memberIds.length > 0
-      ? rowDb
-          .from('accounts')
-          .select('id, name, email')
-          .in('id', memberIds)
+      ? rowDb.from('accounts').select('id, name, email').in('id', memberIds)
       : Promise.resolve({ data: [] as MemberAssigneeEnrichment[] }),
   ]);
 

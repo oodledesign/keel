@@ -89,8 +89,15 @@ export function flattenScheduledSeriesForExport(
   return series.map((item) => ({
     title: item.title.trim() || 'Untitled',
     description: (item.notes ?? '').trim(),
-    status: item.status === 'paused' ? 'Paused' : item.status === 'ended' ? 'Ended' : 'Active',
-    priority: PRIORITY_LABELS[item.priority as TasksPageTask['priority']] ?? item.priority,
+    status:
+      item.status === 'paused'
+        ? 'Paused'
+        : item.status === 'ended'
+          ? 'Ended'
+          : 'Active',
+    priority:
+      PRIORITY_LABELS[item.priority as TasksPageTask['priority']] ??
+      item.priority,
     dueDate: `Next ${item.nextCreateYmd} · due +${item.dueDays}d`,
     client: '—',
     project: '—',
@@ -128,7 +135,9 @@ export function tasksToCsv(rows: TaskExportRow[]): string {
     CSV_HEADERS.join(','),
     ...rows.map((row) =>
       [
-        escapeCsvCell(row.depth > 0 ? `${'  '.repeat(row.depth)}${row.title}` : row.title),
+        escapeCsvCell(
+          row.depth > 0 ? `${'  '.repeat(row.depth)}${row.title}` : row.title,
+        ),
         escapeCsvCell(row.description),
         escapeCsvCell(row.status),
         escapeCsvCell(row.priority),

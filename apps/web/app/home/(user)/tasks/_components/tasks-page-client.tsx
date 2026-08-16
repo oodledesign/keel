@@ -60,10 +60,7 @@ import { cn } from '@kit/ui/utils';
 import { workspacePageMainClassName } from '~/components/workspace-shell/workspace-shell-styles';
 import { useCommandUndoStack } from '~/lib/hooks/use-command-undo-stack';
 import {
-  isAssignedToSomeoneElse,
-  taskAssigneeDisplayName,
-} from '~/lib/tasks/task-assignee';
-import {
+  type TaskExportRow,
   downloadTextFile,
   exportFilename,
   flattenScheduledSeriesForExport,
@@ -71,8 +68,11 @@ import {
   tasksToCsv,
   tasksToMarkdown,
   tasksToPlainText,
-  type TaskExportRow,
 } from '~/lib/tasks/export-tasks';
+import {
+  isAssignedToSomeoneElse,
+  taskAssigneeDisplayName,
+} from '~/lib/tasks/task-assignee';
 
 import {
   compareYmd,
@@ -697,10 +697,7 @@ type TaskRowHandlers = {
   currentUserId?: string | null;
   expandedRootTaskIds: Set<string>;
   onToggleSubtasks: (taskId: string) => void;
-  onStatusChanged: (
-    taskId: string,
-    status: TaskStatus,
-  ) => void | Promise<void>;
+  onStatusChanged: (taskId: string, status: TaskStatus) => void | Promise<void>;
   onTitleChanged: (taskId: string, title: string) => void;
   onDueDateChanged: (
     taskId: string,

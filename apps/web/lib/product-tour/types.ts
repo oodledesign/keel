@@ -5,6 +5,7 @@ export const PRODUCT_TOUR_IDS = [
   'work_property',
   'default_landing_prompt',
   'personal_nav_tour_hint',
+  'work_dashboard_preset',
 ] as const;
 
 export type ProductTourId = (typeof PRODUCT_TOUR_IDS)[number];
@@ -12,7 +13,7 @@ export type ProductTourId = (typeof PRODUCT_TOUR_IDS)[number];
 /** Tour variants that drive the UI (excludes prompt/dismiss meta keys). */
 export type DriveableProductTourId = Exclude<
   ProductTourId,
-  'default_landing_prompt' | 'personal_nav_tour_hint'
+  'default_landing_prompt' | 'personal_nav_tour_hint' | 'work_dashboard_preset'
 >;
 
 export type CompletedProductTours = Partial<Record<ProductTourId, string>>;

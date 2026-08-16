@@ -48,20 +48,14 @@ const UNIT_ALIASES: Record<string, string> = {
   teaspoons: 'tsp',
 };
 
-const METRIC_TO_IMPERIAL: Record<
-  string,
-  { unit: string; factor: number }
-> = {
+const METRIC_TO_IMPERIAL: Record<string, { unit: string; factor: number }> = {
   g: { unit: 'oz', factor: 1 / 28.3495 },
   kg: { unit: 'lb', factor: 2.20462 },
   ml: { unit: 'fl oz', factor: 1 / 29.5735 },
   l: { unit: 'fl oz', factor: 33.814 },
 };
 
-const IMPERIAL_TO_METRIC: Record<
-  string,
-  { unit: string; factor: number }
-> = {
+const IMPERIAL_TO_METRIC: Record<string, { unit: string; factor: number }> = {
   oz: { unit: 'g', factor: 28.3495 },
   lb: { unit: 'kg', factor: 1 / 2.20462 },
   'fl oz': { unit: 'ml', factor: 29.5735 },
@@ -86,9 +80,7 @@ export function parseIngredientLine(line: string): ParsedIngredientLine {
   );
 
   if (!match) {
-    const bareAmount = original_text.match(
-      /^(\d+(?:[./]\d+)?)\s+(.+)$/,
-    );
+    const bareAmount = original_text.match(/^(\d+(?:[./]\d+)?)\s+(.+)$/);
     if (bareAmount?.[1] && bareAmount[2]) {
       return {
         name: bareAmount[2].trim(),
@@ -171,8 +163,7 @@ export function formatIngredientDisplay(input: {
   quantityMultiplier?: number;
   system: MeasurementSystem;
 }): string {
-  const multiplier =
-    input.servingsScale * (input.quantityMultiplier ?? 1);
+  const multiplier = input.servingsScale * (input.quantityMultiplier ?? 1);
 
   if (input.amount == null) {
     return input.name || input.original_text;

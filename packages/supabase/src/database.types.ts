@@ -137,6 +137,7 @@ export type Database = {
           is_default: boolean;
           name: string;
           phone: string | null;
+          rightmove_branch_id: string | null;
           sort_order: number;
           updated_at: string;
         };
@@ -149,6 +150,7 @@ export type Database = {
           is_default?: boolean;
           name: string;
           phone?: string | null;
+          rightmove_branch_id?: string | null;
           sort_order?: number;
           updated_at?: string;
         };
@@ -161,6 +163,7 @@ export type Database = {
           is_default?: boolean;
           name?: string;
           phone?: string | null;
+          rightmove_branch_id?: string | null;
           sort_order?: number;
           updated_at?: string;
         };
@@ -632,6 +635,8 @@ export type Database = {
           max_members: number | null;
           max_properties: number | null;
           max_videos: number | null;
+          pending_billable_seats: number | null;
+          pending_seats_effective_at: string | null;
           plan_family: string | null;
           plan_id: string | null;
           plan_product_id: string | null;
@@ -642,6 +647,8 @@ export type Database = {
           max_members?: number | null;
           max_properties?: number | null;
           max_videos?: number | null;
+          pending_billable_seats?: number | null;
+          pending_seats_effective_at?: string | null;
           plan_family?: string | null;
           plan_id?: string | null;
           plan_product_id?: string | null;
@@ -652,6 +659,8 @@ export type Database = {
           max_members?: number | null;
           max_properties?: number | null;
           max_videos?: number | null;
+          pending_billable_seats?: number | null;
+          pending_seats_effective_at?: string | null;
           plan_family?: string | null;
           plan_id?: string | null;
           plan_product_id?: string | null;
@@ -805,6 +814,7 @@ export type Database = {
           created_by: string | null;
           onboarding_completed: boolean;
           onboarding_step: number;
+          seat_kind: string;
           trade_role: string | null;
           updated_at: string;
           updated_by: string | null;
@@ -818,6 +828,7 @@ export type Database = {
           created_by?: string | null;
           onboarding_completed?: boolean;
           onboarding_step?: number;
+          seat_kind?: string;
           trade_role?: string | null;
           updated_at?: string;
           updated_by?: string | null;
@@ -831,6 +842,7 @@ export type Database = {
           created_by?: string | null;
           onboarding_completed?: boolean;
           onboarding_step?: number;
+          seat_kind?: string;
           trade_role?: string | null;
           updated_at?: string;
           updated_by?: string | null;
@@ -1153,6 +1165,42 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
+      };
+      admin_impersonation_sessions: {
+        Row: {
+          actor_user_id: string;
+          created_at: string;
+          encrypted_payload: string;
+          ended_at: string | null;
+          expires_at: string;
+          id: string;
+          reason: string;
+          support_ticket_id: string | null;
+          target_user_id: string;
+        };
+        Insert: {
+          actor_user_id: string;
+          created_at?: string;
+          encrypted_payload: string;
+          ended_at?: string | null;
+          expires_at: string;
+          id?: string;
+          reason: string;
+          support_ticket_id?: string | null;
+          target_user_id: string;
+        };
+        Update: {
+          actor_user_id?: string;
+          created_at?: string;
+          encrypted_payload?: string;
+          ended_at?: string | null;
+          expires_at?: string;
+          id?: string;
+          reason?: string;
+          support_ticket_id?: string | null;
+          target_user_id?: string;
+        };
+        Relationships: [];
       };
       admin_user_invites: {
         Row: {
@@ -3023,6 +3071,235 @@ export type Database = {
           },
         ];
       };
+      client_credit_batches: {
+        Row: {
+          account_id: string;
+          client_org_id: string;
+          created_at: string;
+          expires_at: string | null;
+          granted_at: string;
+          id: string;
+          related_invoice_id: string | null;
+          source_type: string;
+          swept_at: string | null;
+          units_granted: number;
+          units_remaining: number;
+        };
+        Insert: {
+          account_id: string;
+          client_org_id: string;
+          created_at?: string;
+          expires_at?: string | null;
+          granted_at?: string;
+          id?: string;
+          related_invoice_id?: string | null;
+          source_type: string;
+          swept_at?: string | null;
+          units_granted: number;
+          units_remaining: number;
+        };
+        Update: {
+          account_id?: string;
+          client_org_id?: string;
+          created_at?: string;
+          expires_at?: string | null;
+          granted_at?: string;
+          id?: string;
+          related_invoice_id?: string | null;
+          source_type?: string;
+          swept_at?: string | null;
+          units_granted?: number;
+          units_remaining?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'client_credit_batches_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_batches_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_batches_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_batches_client_org_id_fkey';
+            columns: ['client_org_id'];
+            isOneToOne: false;
+            referencedRelation: 'client_orgs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_batches_related_invoice_id_fkey';
+            columns: ['related_invoice_id'];
+            isOneToOne: false;
+            referencedRelation: 'invoices';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      client_credit_pools: {
+        Row: {
+          account_id: string;
+          balance: number;
+          client_org_id: string;
+          created_at: string;
+          cycle_end: string | null;
+          cycle_start: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          account_id: string;
+          balance?: number;
+          client_org_id: string;
+          created_at?: string;
+          cycle_end?: string | null;
+          cycle_start?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          account_id?: string;
+          balance?: number;
+          client_org_id?: string;
+          created_at?: string;
+          cycle_end?: string | null;
+          cycle_start?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'client_credit_pools_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_pools_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_pools_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_pools_client_org_id_fkey';
+            columns: ['client_org_id'];
+            isOneToOne: true;
+            referencedRelation: 'client_orgs';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      client_credit_transactions: {
+        Row: {
+          account_id: string;
+          actor_id: string | null;
+          amount: number;
+          batch_id: string | null;
+          client_org_id: string;
+          created_at: string;
+          id: string;
+          reason: string | null;
+          related_invoice_id: string | null;
+          related_ticket_id: string | null;
+          type: string;
+        };
+        Insert: {
+          account_id: string;
+          actor_id?: string | null;
+          amount: number;
+          batch_id?: string | null;
+          client_org_id: string;
+          created_at?: string;
+          id?: string;
+          reason?: string | null;
+          related_invoice_id?: string | null;
+          related_ticket_id?: string | null;
+          type: string;
+        };
+        Update: {
+          account_id?: string;
+          actor_id?: string | null;
+          amount?: number;
+          batch_id?: string | null;
+          client_org_id?: string;
+          created_at?: string;
+          id?: string;
+          reason?: string | null;
+          related_invoice_id?: string | null;
+          related_ticket_id?: string | null;
+          type?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'client_credit_transactions_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_transactions_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_transactions_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_transactions_batch_id_fkey';
+            columns: ['batch_id'];
+            isOneToOne: false;
+            referencedRelation: 'client_credit_batches';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_transactions_client_org_id_fkey';
+            columns: ['client_org_id'];
+            isOneToOne: false;
+            referencedRelation: 'client_orgs';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_transactions_related_invoice_id_fkey';
+            columns: ['related_invoice_id'];
+            isOneToOne: false;
+            referencedRelation: 'invoices';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'client_credit_transactions_related_ticket_id_fkey';
+            columns: ['related_ticket_id'];
+            isOneToOne: false;
+            referencedRelation: 'support_tickets';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       client_invitations: {
         Row: {
           accepted_at: string | null;
@@ -3873,6 +4150,8 @@ export type Database = {
           client_id: string | null;
           created_at: string;
           created_by: string | null;
+          external_id: string | null;
+          headline_price_pence: number | null;
           headline_rent_psf: number | null;
           id: string;
           lease_end: string | null;
@@ -3884,6 +4163,7 @@ export type Database = {
           status: string;
           tenant_name: string | null;
           town: string | null;
+          transaction_kind: string;
           updated_at: string;
         };
         Insert: {
@@ -3891,6 +4171,8 @@ export type Database = {
           client_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          external_id?: string | null;
+          headline_price_pence?: number | null;
           headline_rent_psf?: number | null;
           id?: string;
           lease_end?: string | null;
@@ -3902,6 +4184,7 @@ export type Database = {
           status?: string;
           tenant_name?: string | null;
           town?: string | null;
+          transaction_kind?: string;
           updated_at?: string;
         };
         Update: {
@@ -3909,6 +4192,8 @@ export type Database = {
           client_id?: string | null;
           created_at?: string;
           created_by?: string | null;
+          external_id?: string | null;
+          headline_price_pence?: number | null;
           headline_rent_psf?: number | null;
           id?: string;
           lease_end?: string | null;
@@ -3920,6 +4205,7 @@ export type Database = {
           status?: string;
           tenant_name?: string | null;
           town?: string | null;
+          transaction_kind?: string;
           updated_at?: string;
         };
         Relationships: [
@@ -4016,6 +4302,143 @@ export type Database = {
           },
         ];
       };
+      commercial_listing_co_agents: {
+        Row: {
+          account_id: string;
+          client_id: string;
+          contact_email: string | null;
+          contact_name: string | null;
+          contact_phone: string | null;
+          created_at: string;
+          external_id: string | null;
+          id: string;
+          listing_id: string;
+          sort_order: number;
+        };
+        Insert: {
+          account_id: string;
+          client_id: string;
+          contact_email?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          created_at?: string;
+          external_id?: string | null;
+          id?: string;
+          listing_id: string;
+          sort_order?: number;
+        };
+        Update: {
+          account_id?: string;
+          client_id?: string;
+          contact_email?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          created_at?: string;
+          external_id?: string | null;
+          id?: string;
+          listing_id?: string;
+          sort_order?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'commercial_listing_co_agents_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_co_agents_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_co_agents_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_co_agents_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_co_agents_listing_id_fkey';
+            columns: ['listing_id'];
+            isOneToOne: false;
+            referencedRelation: 'commercial_listings';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      commercial_listing_events: {
+        Row: {
+          account_id: string;
+          actor_user_id: string | null;
+          created_at: string;
+          event_type: string;
+          id: string;
+          listing_id: string;
+          metadata: Json;
+          summary: string;
+        };
+        Insert: {
+          account_id: string;
+          actor_user_id?: string | null;
+          created_at?: string;
+          event_type: string;
+          id?: string;
+          listing_id: string;
+          metadata?: Json;
+          summary: string;
+        };
+        Update: {
+          account_id?: string;
+          actor_user_id?: string | null;
+          created_at?: string;
+          event_type?: string;
+          id?: string;
+          listing_id?: string;
+          metadata?: Json;
+          summary?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'commercial_listing_events_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_events_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_events_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_events_listing_id_fkey';
+            columns: ['listing_id'];
+            isOneToOne: false;
+            referencedRelation: 'commercial_listings';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       commercial_listing_media: {
         Row: {
           account_id: string;
@@ -4024,6 +4447,7 @@ export type Database = {
           file_name: string | null;
           id: string;
           is_cover: boolean;
+          is_private: boolean;
           listing_id: string;
           media_type: string;
           mime_type: string | null;
@@ -4037,6 +4461,7 @@ export type Database = {
           file_name?: string | null;
           id?: string;
           is_cover?: boolean;
+          is_private?: boolean;
           listing_id: string;
           media_type?: string;
           mime_type?: string | null;
@@ -4050,6 +4475,7 @@ export type Database = {
           file_name?: string | null;
           id?: string;
           is_cover?: boolean;
+          is_private?: boolean;
           listing_id?: string;
           media_type?: string;
           mime_type?: string | null;
@@ -4087,44 +4513,229 @@ export type Database = {
           },
         ];
       };
-      commercial_listing_units: {
+      commercial_listing_parties: {
+        Row: {
+          account_id: string;
+          client_id: string;
+          contact_email: string | null;
+          contact_name: string | null;
+          contact_phone: string | null;
+          created_at: string;
+          id: string;
+          is_private: boolean;
+          listing_id: string;
+          role: string;
+          sort_order: number;
+        };
+        Insert: {
+          account_id: string;
+          client_id: string;
+          contact_email?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          created_at?: string;
+          id?: string;
+          is_private?: boolean;
+          listing_id: string;
+          role: string;
+          sort_order?: number;
+        };
+        Update: {
+          account_id?: string;
+          client_id?: string;
+          contact_email?: string | null;
+          contact_name?: string | null;
+          contact_phone?: string | null;
+          created_at?: string;
+          id?: string;
+          is_private?: boolean;
+          listing_id?: string;
+          role?: string;
+          sort_order?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'commercial_listing_parties_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_parties_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_parties_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_parties_client_id_fkey';
+            columns: ['client_id'];
+            isOneToOne: false;
+            referencedRelation: 'clients';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_parties_listing_id_fkey';
+            columns: ['listing_id'];
+            isOneToOne: false;
+            referencedRelation: 'commercial_listings';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      commercial_listing_pending_agents: {
         Row: {
           account_id: string;
           created_at: string;
+          email: string;
+          id: string;
+          listing_id: string;
+          sort_order: number;
+        };
+        Insert: {
+          account_id: string;
+          created_at?: string;
+          email: string;
+          id?: string;
+          listing_id: string;
+          sort_order?: number;
+        };
+        Update: {
+          account_id?: string;
+          created_at?: string;
+          email?: string;
+          id?: string;
+          listing_id?: string;
+          sort_order?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'commercial_listing_pending_agents_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_pending_agents_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_pending_agents_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'commercial_listing_pending_agents_listing_id_fkey';
+            columns: ['listing_id'];
+            isOneToOne: false;
+            referencedRelation: 'commercial_listings';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
+      commercial_listing_units: {
+        Row: {
+          account_id: string;
+          asking_rent_pence: number | null;
+          build_status: string | null;
+          created_at: string;
+          description: string | null;
+          epc_band: string | null;
+          estate_charge_per_sqft: number | null;
           external_id: string | null;
+          fitted_space: boolean | null;
           floor_or_unit: string | null;
           id: string;
           label: string;
           listing_id: string;
           measurement_standard: string | null;
+          notes: string | null;
+          part_floor: boolean;
+          planning_status: string | null;
+          possession: string | null;
+          rates_payable_per_sqft: number | null;
+          rent_per_sqft: number | null;
+          sector: string | null;
+          service_charge_per_sqft: number | null;
+          size_accuracy: string | null;
           size_sqft: number | null;
           sort_order: number;
+          status: string | null;
+          tenure: string | null;
           updated_at: string;
         };
         Insert: {
           account_id: string;
+          asking_rent_pence?: number | null;
+          build_status?: string | null;
           created_at?: string;
+          description?: string | null;
+          epc_band?: string | null;
+          estate_charge_per_sqft?: number | null;
           external_id?: string | null;
+          fitted_space?: boolean | null;
           floor_or_unit?: string | null;
           id?: string;
           label: string;
           listing_id: string;
           measurement_standard?: string | null;
+          notes?: string | null;
+          part_floor?: boolean;
+          planning_status?: string | null;
+          possession?: string | null;
+          rates_payable_per_sqft?: number | null;
+          rent_per_sqft?: number | null;
+          sector?: string | null;
+          service_charge_per_sqft?: number | null;
+          size_accuracy?: string | null;
           size_sqft?: number | null;
           sort_order?: number;
+          status?: string | null;
+          tenure?: string | null;
           updated_at?: string;
         };
         Update: {
           account_id?: string;
+          asking_rent_pence?: number | null;
+          build_status?: string | null;
           created_at?: string;
+          description?: string | null;
+          epc_band?: string | null;
+          estate_charge_per_sqft?: number | null;
           external_id?: string | null;
+          fitted_space?: boolean | null;
           floor_or_unit?: string | null;
           id?: string;
           label?: string;
           listing_id?: string;
           measurement_standard?: string | null;
+          notes?: string | null;
+          part_floor?: boolean;
+          planning_status?: string | null;
+          possession?: string | null;
+          rates_payable_per_sqft?: number | null;
+          rent_per_sqft?: number | null;
+          sector?: string | null;
+          service_charge_per_sqft?: number | null;
+          size_accuracy?: string | null;
           size_sqft?: number | null;
           sort_order?: number;
+          status?: string | null;
+          tenure?: string | null;
           updated_at?: string;
         };
         Relationships: [
@@ -4160,13 +4771,23 @@ export type Database = {
       };
       commercial_listings: {
         Row: {
+          account_branch_id: string | null;
           account_id: string;
           address_line_1: string | null;
           address_line_2: string | null;
+          amenities: Json;
           asking_price_pence: number | null;
           asking_rent_pence: number | null;
+          asking_rent_to_pence: number | null;
           assigned_to: string | null;
           available_from: string | null;
+          average_floor_plate_sqft: number | null;
+          breeam_rating: string | null;
+          brochure_share_enabled: boolean;
+          brochure_share_token: string | null;
+          build_status: string | null;
+          condition_description: string | null;
+          controlled_by: string | null;
           country: string | null;
           county: string | null;
           created_at: string;
@@ -4175,45 +4796,73 @@ export type Database = {
           disposal_type: string;
           epc_band: string | null;
           epc_rating: number | null;
+          estate_charge_per_sqft: number | null;
           external_id: string | null;
+          fitted_space: boolean | null;
+          hide_landlord_from_marketing: boolean;
+          hide_price_from_marketing: boolean;
           hide_rent_from_marketing: boolean;
           id: string;
           instructing_client_id: string | null;
           instruction_nature: string | null;
+          is_instructed: boolean;
           key_points: Json;
           landlord_share_enabled: boolean;
           landlord_share_token: string | null;
           latitude: number | null;
           location_copy: string | null;
           longitude: number | null;
+          marketing_sections: Json;
           measurement_standard: string | null;
           name: string;
           notes: string | null;
           off_market_at: string | null;
           on_market_at: string | null;
           pa_user_id: string | null;
+          planning_status: string | null;
+          possession: string | null;
           postcode: string | null;
+          project_code: string | null;
+          rates_payable_per_sqft: number | null;
           record_owner_user_id: string | null;
+          reference_number: string | null;
           rent_frequency: string | null;
+          restrict_access_to_assigned: boolean;
           sector: string | null;
+          service_charge_per_sqft: number | null;
+          size_accuracy: string | null;
+          size_breakdown: string | null;
           size_max_sqft: number | null;
           size_min_sqft: number | null;
           status: string;
           summary: string | null;
           team_id: string | null;
           tenure: string | null;
+          terms_internal: string | null;
+          terms_of_engagement: string | null;
           town: string | null;
           updated_at: string;
           use_class: string | null;
+          website_url: string | null;
         };
         Insert: {
+          account_branch_id?: string | null;
           account_id: string;
           address_line_1?: string | null;
           address_line_2?: string | null;
+          amenities?: Json;
           asking_price_pence?: number | null;
           asking_rent_pence?: number | null;
+          asking_rent_to_pence?: number | null;
           assigned_to?: string | null;
           available_from?: string | null;
+          average_floor_plate_sqft?: number | null;
+          breeam_rating?: string | null;
+          brochure_share_enabled?: boolean;
+          brochure_share_token?: string | null;
+          build_status?: string | null;
+          condition_description?: string | null;
+          controlled_by?: string | null;
           country?: string | null;
           county?: string | null;
           created_at?: string;
@@ -4222,45 +4871,73 @@ export type Database = {
           disposal_type?: string;
           epc_band?: string | null;
           epc_rating?: number | null;
+          estate_charge_per_sqft?: number | null;
           external_id?: string | null;
+          fitted_space?: boolean | null;
+          hide_landlord_from_marketing?: boolean;
+          hide_price_from_marketing?: boolean;
           hide_rent_from_marketing?: boolean;
           id?: string;
           instructing_client_id?: string | null;
           instruction_nature?: string | null;
+          is_instructed?: boolean;
           key_points?: Json;
           landlord_share_enabled?: boolean;
           landlord_share_token?: string | null;
           latitude?: number | null;
           location_copy?: string | null;
           longitude?: number | null;
+          marketing_sections?: Json;
           measurement_standard?: string | null;
           name: string;
           notes?: string | null;
           off_market_at?: string | null;
           on_market_at?: string | null;
           pa_user_id?: string | null;
+          planning_status?: string | null;
+          possession?: string | null;
           postcode?: string | null;
+          project_code?: string | null;
+          rates_payable_per_sqft?: number | null;
           record_owner_user_id?: string | null;
+          reference_number?: string | null;
           rent_frequency?: string | null;
+          restrict_access_to_assigned?: boolean;
           sector?: string | null;
+          service_charge_per_sqft?: number | null;
+          size_accuracy?: string | null;
+          size_breakdown?: string | null;
           size_max_sqft?: number | null;
           size_min_sqft?: number | null;
           status?: string;
           summary?: string | null;
           team_id?: string | null;
           tenure?: string | null;
+          terms_internal?: string | null;
+          terms_of_engagement?: string | null;
           town?: string | null;
           updated_at?: string;
           use_class?: string | null;
+          website_url?: string | null;
         };
         Update: {
+          account_branch_id?: string | null;
           account_id?: string;
           address_line_1?: string | null;
           address_line_2?: string | null;
+          amenities?: Json;
           asking_price_pence?: number | null;
           asking_rent_pence?: number | null;
+          asking_rent_to_pence?: number | null;
           assigned_to?: string | null;
           available_from?: string | null;
+          average_floor_plate_sqft?: number | null;
+          breeam_rating?: string | null;
+          brochure_share_enabled?: boolean;
+          brochure_share_token?: string | null;
+          build_status?: string | null;
+          condition_description?: string | null;
+          controlled_by?: string | null;
           country?: string | null;
           county?: string | null;
           created_at?: string;
@@ -4269,38 +4946,63 @@ export type Database = {
           disposal_type?: string;
           epc_band?: string | null;
           epc_rating?: number | null;
+          estate_charge_per_sqft?: number | null;
           external_id?: string | null;
+          fitted_space?: boolean | null;
+          hide_landlord_from_marketing?: boolean;
+          hide_price_from_marketing?: boolean;
           hide_rent_from_marketing?: boolean;
           id?: string;
           instructing_client_id?: string | null;
           instruction_nature?: string | null;
+          is_instructed?: boolean;
           key_points?: Json;
           landlord_share_enabled?: boolean;
           landlord_share_token?: string | null;
           latitude?: number | null;
           location_copy?: string | null;
           longitude?: number | null;
+          marketing_sections?: Json;
           measurement_standard?: string | null;
           name?: string;
           notes?: string | null;
           off_market_at?: string | null;
           on_market_at?: string | null;
           pa_user_id?: string | null;
+          planning_status?: string | null;
+          possession?: string | null;
           postcode?: string | null;
+          project_code?: string | null;
+          rates_payable_per_sqft?: number | null;
           record_owner_user_id?: string | null;
+          reference_number?: string | null;
           rent_frequency?: string | null;
+          restrict_access_to_assigned?: boolean;
           sector?: string | null;
+          service_charge_per_sqft?: number | null;
+          size_accuracy?: string | null;
+          size_breakdown?: string | null;
           size_max_sqft?: number | null;
           size_min_sqft?: number | null;
           status?: string;
           summary?: string | null;
           team_id?: string | null;
           tenure?: string | null;
+          terms_internal?: string | null;
+          terms_of_engagement?: string | null;
           town?: string | null;
           updated_at?: string;
           use_class?: string | null;
+          website_url?: string | null;
         };
         Relationships: [
+          {
+            foreignKeyName: 'commercial_listings_account_branch_id_fkey';
+            columns: ['account_branch_id'];
+            isOneToOne: false;
+            referencedRelation: 'account_branches';
+            referencedColumns: ['id'];
+          },
           {
             foreignKeyName: 'commercial_listings_account_id_fkey';
             columns: ['account_id'];
@@ -4574,9 +5276,15 @@ export type Database = {
           contact_phone: string | null;
           created_at: string;
           created_by: string | null;
+          details_note: string | null;
+          details_sent: boolean;
+          external_key: string | null;
           id: string;
+          latitude: number | null;
           location_text: string | null;
+          longitude: number | null;
           notes: string | null;
+          search_radius_miles: number | null;
           sector: string | null;
           size_max_sqft: number | null;
           size_min_sqft: number | null;
@@ -4584,6 +5292,7 @@ export type Database = {
           stage: string;
           tenure: string | null;
           updated_at: string;
+          use_class: string | null;
         };
         Insert: {
           account_id: string;
@@ -4598,9 +5307,15 @@ export type Database = {
           contact_phone?: string | null;
           created_at?: string;
           created_by?: string | null;
+          details_note?: string | null;
+          details_sent?: boolean;
+          external_key?: string | null;
           id?: string;
+          latitude?: number | null;
           location_text?: string | null;
+          longitude?: number | null;
           notes?: string | null;
+          search_radius_miles?: number | null;
           sector?: string | null;
           size_max_sqft?: number | null;
           size_min_sqft?: number | null;
@@ -4608,6 +5323,7 @@ export type Database = {
           stage?: string;
           tenure?: string | null;
           updated_at?: string;
+          use_class?: string | null;
         };
         Update: {
           account_id?: string;
@@ -4622,9 +5338,15 @@ export type Database = {
           contact_phone?: string | null;
           created_at?: string;
           created_by?: string | null;
+          details_note?: string | null;
+          details_sent?: boolean;
+          external_key?: string | null;
           id?: string;
+          latitude?: number | null;
           location_text?: string | null;
+          longitude?: number | null;
           notes?: string | null;
+          search_radius_miles?: number | null;
           sector?: string | null;
           size_max_sqft?: number | null;
           size_min_sqft?: number | null;
@@ -4632,6 +5354,7 @@ export type Database = {
           stage?: string;
           tenure?: string | null;
           updated_at?: string;
+          use_class?: string | null;
         };
         Relationships: [
           {
@@ -6054,8 +6777,12 @@ export type Database = {
           created_at: string;
           ignored_domains: string[];
           ignored_senders: string[];
+          ignored_subject_keywords: string[];
           last_history_id: string | null;
           last_synced_at: string | null;
+          priority_domains: string[];
+          priority_senders: string[];
+          priority_subject_keywords: string[];
           signature: string | null;
           signature_is_html: boolean;
           style_notes: string | null;
@@ -6070,8 +6797,12 @@ export type Database = {
           created_at?: string;
           ignored_domains?: string[];
           ignored_senders?: string[];
+          ignored_subject_keywords?: string[];
           last_history_id?: string | null;
           last_synced_at?: string | null;
+          priority_domains?: string[];
+          priority_senders?: string[];
+          priority_subject_keywords?: string[];
           signature?: string | null;
           signature_is_html?: boolean;
           style_notes?: string | null;
@@ -6086,8 +6817,12 @@ export type Database = {
           created_at?: string;
           ignored_domains?: string[];
           ignored_senders?: string[];
+          ignored_subject_keywords?: string[];
           last_history_id?: string | null;
           last_synced_at?: string | null;
+          priority_domains?: string[];
+          priority_senders?: string[];
+          priority_subject_keywords?: string[];
           signature?: string | null;
           signature_is_html?: boolean;
           style_notes?: string | null;
@@ -6939,7 +7674,7 @@ export type Database = {
           sort_order: number;
           unit: string | null;
           updated_at: string;
-        }
+        };
         Insert: {
           amount?: number | null;
           created_at?: string;
@@ -6950,7 +7685,7 @@ export type Database = {
           sort_order?: number;
           unit?: string | null;
           updated_at?: string;
-        }
+        };
         Update: {
           amount?: number | null;
           created_at?: string;
@@ -6961,17 +7696,17 @@ export type Database = {
           sort_order?: number;
           unit?: string | null;
           updated_at?: string;
-        }
+        };
         Relationships: [
           {
-            foreignKeyName: "family_recipe_ingredients_recipe_id_fkey";
-            columns: ["recipe_id"];
+            foreignKeyName: 'family_recipe_ingredients_recipe_id_fkey';
+            columns: ['recipe_id'];
             isOneToOne: false;
-            referencedRelation: "family_recipes";
-            referencedColumns: ["id"];
+            referencedRelation: 'family_recipes';
+            referencedColumns: ['id'];
           },
         ];
-      },
+      };
       family_recipe_logs: {
         Row: {
           cooked_at: string;
@@ -6981,7 +7716,7 @@ export type Database = {
           notes: string | null;
           rating: number | null;
           recipe_id: string;
-        }
+        };
         Insert: {
           cooked_at?: string;
           created_at?: string;
@@ -6990,7 +7725,7 @@ export type Database = {
           notes?: string | null;
           rating?: number | null;
           recipe_id: string;
-        }
+        };
         Update: {
           cooked_at?: string;
           created_at?: string;
@@ -6999,50 +7734,50 @@ export type Database = {
           notes?: string | null;
           rating?: number | null;
           recipe_id?: string;
-        }
+        };
         Relationships: [
           {
-            foreignKeyName: "family_recipe_logs_recipe_id_fkey";
-            columns: ["recipe_id"];
+            foreignKeyName: 'family_recipe_logs_recipe_id_fkey';
+            columns: ['recipe_id'];
             isOneToOne: false;
-            referencedRelation: "family_recipes";
-            referencedColumns: ["id"];
+            referencedRelation: 'family_recipes';
+            referencedColumns: ['id'];
           },
         ];
-      },
+      };
       family_recipe_step_ingredients: {
         Row: {
           ingredient_id: string;
           quantity_multiplier: number;
           step_id: string;
-        }
+        };
         Insert: {
           ingredient_id: string;
           quantity_multiplier?: number;
           step_id: string;
-        }
+        };
         Update: {
           ingredient_id?: string;
           quantity_multiplier?: number;
           step_id?: string;
-        }
+        };
         Relationships: [
           {
-            foreignKeyName: "family_recipe_step_ingredients_ingredient_id_fkey";
-            columns: ["ingredient_id"];
+            foreignKeyName: 'family_recipe_step_ingredients_ingredient_id_fkey';
+            columns: ['ingredient_id'];
             isOneToOne: false;
-            referencedRelation: "family_recipe_ingredients";
-            referencedColumns: ["id"];
+            referencedRelation: 'family_recipe_ingredients';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "family_recipe_step_ingredients_step_id_fkey";
-            columns: ["step_id"];
+            foreignKeyName: 'family_recipe_step_ingredients_step_id_fkey';
+            columns: ['step_id'];
             isOneToOne: false;
-            referencedRelation: "family_recipe_steps";
-            referencedColumns: ["id"];
+            referencedRelation: 'family_recipe_steps';
+            referencedColumns: ['id'];
           },
         ];
-      },
+      };
       family_recipe_steps: {
         Row: {
           content: string;
@@ -7053,7 +7788,7 @@ export type Database = {
           timer_seconds: number | null;
           title: string;
           updated_at: string;
-        }
+        };
         Insert: {
           content: string;
           created_at?: string;
@@ -7063,7 +7798,7 @@ export type Database = {
           timer_seconds?: number | null;
           title: string;
           updated_at?: string;
-        }
+        };
         Update: {
           content?: string;
           created_at?: string;
@@ -7073,17 +7808,17 @@ export type Database = {
           timer_seconds?: number | null;
           title?: string;
           updated_at?: string;
-        }
+        };
         Relationships: [
           {
-            foreignKeyName: "family_recipe_steps_recipe_id_fkey";
-            columns: ["recipe_id"];
+            foreignKeyName: 'family_recipe_steps_recipe_id_fkey';
+            columns: ['recipe_id'];
             isOneToOne: false;
-            referencedRelation: "family_recipes";
-            referencedColumns: ["id"];
+            referencedRelation: 'family_recipes';
+            referencedColumns: ['id'];
           },
         ];
-      },
+      };
       family_recipes: {
         Row: {
           account_id: string | null;
@@ -7110,7 +7845,7 @@ export type Database = {
           tags: string[];
           updated_at: string;
           user_id: string;
-        }
+        };
         Insert: {
           account_id?: string | null;
           calories_per_serving?: number | null;
@@ -7136,7 +7871,7 @@ export type Database = {
           tags?: string[];
           updated_at?: string;
           user_id: string;
-        }
+        };
         Update: {
           account_id?: string | null;
           calories_per_serving?: number | null;
@@ -7162,31 +7897,31 @@ export type Database = {
           tags?: string[];
           updated_at?: string;
           user_id?: string;
-        }
+        };
         Relationships: [
           {
-            foreignKeyName: "family_recipes_account_id_fkey";
-            columns: ["account_id"];
+            foreignKeyName: 'family_recipes_account_id_fkey';
+            columns: ['account_id'];
             isOneToOne: false;
-            referencedRelation: "accounts";
-            referencedColumns: ["id"];
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "family_recipes_account_id_fkey";
-            columns: ["account_id"];
+            foreignKeyName: 'family_recipes_account_id_fkey';
+            columns: ['account_id'];
             isOneToOne: false;
-            referencedRelation: "user_account_workspace";
-            referencedColumns: ["id"];
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
           },
           {
-            foreignKeyName: "family_recipes_account_id_fkey";
-            columns: ["account_id"];
+            foreignKeyName: 'family_recipes_account_id_fkey';
+            columns: ['account_id'];
             isOneToOne: false;
-            referencedRelation: "user_accounts";
-            referencedColumns: ["id"];
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
           },
         ];
-      },
+      };
       finance_bank_accounts: {
         Row: {
           account_id: string;
@@ -7839,6 +8574,7 @@ export type Database = {
           invited_by: string;
           project_id: string | null;
           role: string;
+          seat_kind: string;
           updated_at: string;
         };
         Insert: {
@@ -7851,6 +8587,7 @@ export type Database = {
           invited_by: string;
           project_id?: string | null;
           role: string;
+          seat_kind?: string;
           updated_at?: string;
         };
         Update: {
@@ -7863,6 +8600,7 @@ export type Database = {
           invited_by?: string;
           project_id?: string | null;
           role?: string;
+          seat_kind?: string;
           updated_at?: string;
         };
         Relationships: [
@@ -8152,6 +8890,7 @@ export type Database = {
           account_id: string;
           auto_send: boolean;
           client_id: string;
+          client_subscription_id: string | null;
           created_at: string;
           created_by: string | null;
           currency: string;
@@ -8171,6 +8910,7 @@ export type Database = {
           account_id: string;
           auto_send?: boolean;
           client_id: string;
+          client_subscription_id?: string | null;
           created_at?: string;
           created_by?: string | null;
           currency?: string;
@@ -8190,6 +8930,7 @@ export type Database = {
           account_id?: string;
           auto_send?: boolean;
           client_id?: string;
+          client_subscription_id?: string | null;
           created_at?: string;
           created_by?: string | null;
           currency?: string;
@@ -8234,6 +8975,13 @@ export type Database = {
             referencedRelation: 'clients';
             referencedColumns: ['id'];
           },
+          {
+            foreignKeyName: 'invoice_recurring_series_client_subscription_id_fkey';
+            columns: ['client_subscription_id'];
+            isOneToOne: false;
+            referencedRelation: 'client_subscriptions';
+            referencedColumns: ['id'];
+          },
         ];
       };
       invoices: {
@@ -8259,6 +9007,7 @@ export type Database = {
           issued_at: string | null;
           late_fee_type: string | null;
           late_fee_value: number | null;
+          metadata: Json;
           notes: string | null;
           paid_at: string | null;
           private_note: string | null;
@@ -8303,6 +9052,7 @@ export type Database = {
           issued_at?: string | null;
           late_fee_type?: string | null;
           late_fee_value?: number | null;
+          metadata?: Json;
           notes?: string | null;
           paid_at?: string | null;
           private_note?: string | null;
@@ -8347,6 +9097,7 @@ export type Database = {
           issued_at?: string | null;
           late_fee_type?: string | null;
           late_fee_value?: number | null;
+          metadata?: Json;
           notes?: string | null;
           paid_at?: string | null;
           private_note?: string | null;
@@ -9916,6 +10667,30 @@ export type Database = {
           },
         ];
       };
+      personal_visions: {
+        Row: {
+          content: Json;
+          created_at: string;
+          finance_account_ids: string[];
+          updated_at: string;
+          user_id: string;
+        };
+        Insert: {
+          content?: Json;
+          created_at?: string;
+          finance_account_ids?: string[];
+          updated_at?: string;
+          user_id: string;
+        };
+        Update: {
+          content?: Json;
+          created_at?: string;
+          finance_account_ids?: string[];
+          updated_at?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
       pipeline_activities: {
         Row: {
           content: string | null;
@@ -10029,10 +10804,10 @@ export type Database = {
           probability: number | null;
           source: string | null;
           stage: string | null;
-          work_type: string | null;
           updated_at: string | null;
           value: number | null;
           won_at: string | null;
+          work_type: string | null;
         };
         Insert: {
           account_id?: string | null;
@@ -10065,10 +10840,10 @@ export type Database = {
           probability?: number | null;
           source?: string | null;
           stage?: string | null;
-          work_type?: string | null;
           updated_at?: string | null;
           value?: number | null;
           won_at?: string | null;
+          work_type?: string | null;
         };
         Update: {
           account_id?: string | null;
@@ -10101,10 +10876,10 @@ export type Database = {
           probability?: number | null;
           source?: string | null;
           stage?: string | null;
-          work_type?: string | null;
           updated_at?: string | null;
           value?: number | null;
           won_at?: string | null;
+          work_type?: string | null;
         };
         Relationships: [
           {
@@ -10173,6 +10948,7 @@ export type Database = {
           billing_interval: string | null;
           business_id: string;
           created_at: string;
+          credits_per_cycle: number | null;
           currency: string;
           description: string | null;
           features: Json | null;
@@ -10181,6 +10957,8 @@ export type Database = {
           kind: string | null;
           monthly_amount: number;
           name: string;
+          rollover_cap: number | null;
+          rollover_policy: string | null;
           setup_fee: number;
           stripe_price_id: string | null;
           stripe_product_id: string | null;
@@ -10195,6 +10973,7 @@ export type Database = {
           billing_interval?: string | null;
           business_id: string;
           created_at?: string;
+          credits_per_cycle?: number | null;
           currency?: string;
           description?: string | null;
           features?: Json | null;
@@ -10203,6 +10982,8 @@ export type Database = {
           kind?: string | null;
           monthly_amount?: number;
           name: string;
+          rollover_cap?: number | null;
+          rollover_policy?: string | null;
           setup_fee?: number;
           stripe_price_id?: string | null;
           stripe_product_id?: string | null;
@@ -10217,6 +10998,7 @@ export type Database = {
           billing_interval?: string | null;
           business_id?: string;
           created_at?: string;
+          credits_per_cycle?: number | null;
           currency?: string;
           description?: string | null;
           features?: Json | null;
@@ -10225,6 +11007,8 @@ export type Database = {
           kind?: string | null;
           monthly_amount?: number;
           name?: string;
+          rollover_cap?: number | null;
+          rollover_policy?: string | null;
           setup_fee?: number;
           stripe_price_id?: string | null;
           stripe_product_id?: string | null;
@@ -11183,7 +11967,10 @@ export type Database = {
           estimated_minutes: number | null;
           icon: string | null;
           id: string;
+          is_ongoing: boolean;
+          is_phased: boolean;
           name: string;
+          picture_url: string | null;
           portal_visible: boolean;
           priority: string | null;
           project_type: string;
@@ -11211,7 +11998,10 @@ export type Database = {
           estimated_minutes?: number | null;
           icon?: string | null;
           id?: string;
+          is_ongoing?: boolean;
+          is_phased?: boolean;
           name: string;
+          picture_url?: string | null;
           portal_visible?: boolean;
           priority?: string | null;
           project_type?: string;
@@ -11239,7 +12029,10 @@ export type Database = {
           estimated_minutes?: number | null;
           icon?: string | null;
           id?: string;
+          is_ongoing?: boolean;
+          is_phased?: boolean;
           name?: string;
+          picture_url?: string | null;
           portal_visible?: boolean;
           priority?: string | null;
           project_type?: string;
@@ -11842,6 +12635,80 @@ export type Database = {
         };
         Relationships: [];
       };
+      request_types: {
+        Row: {
+          account_id: string;
+          business_id: string | null;
+          category_group: string | null;
+          created_at: string;
+          credit_cost: number;
+          id: string;
+          is_active: boolean;
+          is_billable: boolean;
+          is_support: boolean;
+          label: string;
+          sort_order: number;
+          updated_at: string;
+        };
+        Insert: {
+          account_id: string;
+          business_id?: string | null;
+          category_group?: string | null;
+          created_at?: string;
+          credit_cost?: number;
+          id?: string;
+          is_active?: boolean;
+          is_billable?: boolean;
+          is_support?: boolean;
+          label: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Update: {
+          account_id?: string;
+          business_id?: string | null;
+          category_group?: string | null;
+          created_at?: string;
+          credit_cost?: number;
+          id?: string;
+          is_active?: boolean;
+          is_billable?: boolean;
+          is_support?: boolean;
+          label?: string;
+          sort_order?: number;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'request_types_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'request_types_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'request_types_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'request_types_business_id_fkey';
+            columns: ['business_id'];
+            isOneToOne: false;
+            referencedRelation: 'businesses';
+            referencedColumns: ['id'];
+          },
+        ];
+      };
       role_permissions: {
         Row: {
           id: number;
@@ -12324,6 +13191,8 @@ export type Database = {
           client_org_id: string | null;
           created_at: string | null;
           created_by: string | null;
+          credit_cost_snapshot: number | null;
+          credits_deducted_at: string | null;
           description: string | null;
           external_url: string | null;
           id: string;
@@ -12333,6 +13202,7 @@ export type Database = {
           public_token: string | null;
           raised_by: string | null;
           recording_url: string | null;
+          request_type_id: string | null;
           resolved_at: string | null;
           status: string | null;
           submitter_contact_id: string | null;
@@ -12351,6 +13221,8 @@ export type Database = {
           client_org_id?: string | null;
           created_at?: string | null;
           created_by?: string | null;
+          credit_cost_snapshot?: number | null;
+          credits_deducted_at?: string | null;
           description?: string | null;
           external_url?: string | null;
           id?: string;
@@ -12360,6 +13232,7 @@ export type Database = {
           public_token?: string | null;
           raised_by?: string | null;
           recording_url?: string | null;
+          request_type_id?: string | null;
           resolved_at?: string | null;
           status?: string | null;
           submitter_contact_id?: string | null;
@@ -12378,6 +13251,8 @@ export type Database = {
           client_org_id?: string | null;
           created_at?: string | null;
           created_by?: string | null;
+          credit_cost_snapshot?: number | null;
+          credits_deducted_at?: string | null;
           description?: string | null;
           external_url?: string | null;
           id?: string;
@@ -12387,6 +13262,7 @@ export type Database = {
           public_token?: string | null;
           raised_by?: string | null;
           recording_url?: string | null;
+          request_type_id?: string | null;
           resolved_at?: string | null;
           status?: string | null;
           submitter_contact_id?: string | null;
@@ -12453,6 +13329,13 @@ export type Database = {
             columns: ['project_id'];
             isOneToOne: false;
             referencedRelation: 'projects';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'support_tickets_request_type_id_fkey';
+            columns: ['request_type_id'];
+            isOneToOne: false;
+            referencedRelation: 'request_types';
             referencedColumns: ['id'];
           },
           {
@@ -12704,6 +13587,7 @@ export type Database = {
         Row: {
           account_id: string | null;
           area_id: string | null;
+          assignee_contact_id: string | null;
           calendar_schedule_status: string | null;
           client_id: string | null;
           commercial_requirement_id: string | null;
@@ -12732,6 +13616,7 @@ export type Database = {
         Insert: {
           account_id?: string | null;
           area_id?: string | null;
+          assignee_contact_id?: string | null;
           calendar_schedule_status?: string | null;
           client_id?: string | null;
           commercial_requirement_id?: string | null;
@@ -12760,6 +13645,7 @@ export type Database = {
         Update: {
           account_id?: string | null;
           area_id?: string | null;
+          assignee_contact_id?: string | null;
           calendar_schedule_status?: string | null;
           client_id?: string | null;
           commercial_requirement_id?: string | null;
@@ -12812,6 +13698,13 @@ export type Database = {
             columns: ['area_id'];
             isOneToOne: false;
             referencedRelation: 'areas';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'tasks_assignee_contact_id_fkey';
+            columns: ['assignee_contact_id'];
+            isOneToOne: false;
+            referencedRelation: 'contacts';
             referencedColumns: ['id'];
           },
           {
@@ -12963,6 +13856,7 @@ export type Database = {
           accessibility_high_contrast: boolean;
           accessibility_simplified_mode: boolean;
           accessibility_text_size: string;
+          completed_product_tours: Json;
           created_at: string | null;
           default_landing_type: string;
           default_workspace_slug: string | null;
@@ -12972,6 +13866,7 @@ export type Database = {
           personal_dashboard_shortcuts: Json;
           personal_include_workspace_tasks: boolean;
           personal_mobile_nav_shortcuts: Json;
+          personal_vision_dashboard_enabled: boolean;
           updated_at: string | null;
           use_ozer_for_community: boolean;
           use_ozer_for_family: boolean;
@@ -12985,6 +13880,7 @@ export type Database = {
           accessibility_high_contrast?: boolean;
           accessibility_simplified_mode?: boolean;
           accessibility_text_size?: string;
+          completed_product_tours?: Json;
           created_at?: string | null;
           default_landing_type?: string;
           default_workspace_slug?: string | null;
@@ -12994,6 +13890,7 @@ export type Database = {
           personal_dashboard_shortcuts?: Json;
           personal_include_workspace_tasks?: boolean;
           personal_mobile_nav_shortcuts?: Json;
+          personal_vision_dashboard_enabled?: boolean;
           updated_at?: string | null;
           use_ozer_for_community?: boolean;
           use_ozer_for_family?: boolean;
@@ -13007,6 +13904,7 @@ export type Database = {
           accessibility_high_contrast?: boolean;
           accessibility_simplified_mode?: boolean;
           accessibility_text_size?: string;
+          completed_product_tours?: Json;
           created_at?: string | null;
           default_landing_type?: string;
           default_workspace_slug?: string | null;
@@ -13016,6 +13914,7 @@ export type Database = {
           personal_dashboard_shortcuts?: Json;
           personal_include_workspace_tasks?: boolean;
           personal_mobile_nav_shortcuts?: Json;
+          personal_vision_dashboard_enabled?: boolean;
           updated_at?: string | null;
           use_ozer_for_community?: boolean;
           use_ozer_for_family?: boolean;
@@ -13024,6 +13923,68 @@ export type Database = {
           workspace_setup_skipped_at?: string | null;
         };
         Relationships: [];
+      };
+      video_analytics_daily: {
+        Row: {
+          account_id: string;
+          country_views: Json;
+          day: string;
+          id: string;
+          synced_at: string;
+          video_id: string;
+          views: number;
+          watch_time_seconds: number;
+        };
+        Insert: {
+          account_id: string;
+          country_views?: Json;
+          day: string;
+          id?: string;
+          synced_at?: string;
+          video_id: string;
+          views?: number;
+          watch_time_seconds?: number;
+        };
+        Update: {
+          account_id?: string;
+          country_views?: Json;
+          day?: string;
+          id?: string;
+          synced_at?: string;
+          video_id?: string;
+          views?: number;
+          watch_time_seconds?: number;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'video_analytics_daily_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'video_analytics_daily_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_account_workspace';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'video_analytics_daily_account_id_fkey';
+            columns: ['account_id'];
+            isOneToOne: false;
+            referencedRelation: 'user_accounts';
+            referencedColumns: ['id'];
+          },
+          {
+            foreignKeyName: 'video_analytics_daily_video_id_fkey';
+            columns: ['video_id'];
+            isOneToOne: false;
+            referencedRelation: 'videos';
+            referencedColumns: ['id'];
+          },
+        ];
       };
       video_edit_projects: {
         Row: {
@@ -13542,14 +14503,16 @@ export type Database = {
       videos: {
         Row: {
           account_id: string;
+          analytics_synced_at: string | null;
           baked_revision: number;
           bunny_library_id: string;
-          chapters: Json;
           bunny_video_id: string;
+          chapters: Json;
           created_at: string;
           description: string | null;
           duration_seconds: number | null;
           edit_revision: number;
+          engagement_score: number | null;
           file_size_bytes: number | null;
           folder_id: string | null;
           has_master: boolean;
@@ -13557,8 +14520,8 @@ export type Database = {
           original_filename: string | null;
           public_share_enabled: boolean;
           public_share_token: string | null;
-          published_revision: number;
           published_at: string | null;
+          published_revision: number;
           published_timeline: Json | null;
           recorded_at: string | null;
           source: string;
@@ -13568,17 +14531,21 @@ export type Database = {
           thumbnail_url: string | null;
           title: string;
           updated_at: string;
+          view_count: number;
+          watch_time_seconds: number;
         };
         Insert: {
           account_id: string;
+          analytics_synced_at?: string | null;
           baked_revision?: number;
           bunny_library_id: string;
-          chapters?: Json;
           bunny_video_id: string;
+          chapters?: Json;
           created_at?: string;
           description?: string | null;
           duration_seconds?: number | null;
           edit_revision?: number;
+          engagement_score?: number | null;
           file_size_bytes?: number | null;
           folder_id?: string | null;
           has_master?: boolean;
@@ -13586,8 +14553,8 @@ export type Database = {
           original_filename?: string | null;
           public_share_enabled?: boolean;
           public_share_token?: string | null;
-          published_revision?: number;
           published_at?: string | null;
+          published_revision?: number;
           published_timeline?: Json | null;
           recorded_at?: string | null;
           source?: string;
@@ -13597,17 +14564,21 @@ export type Database = {
           thumbnail_url?: string | null;
           title: string;
           updated_at?: string;
+          view_count?: number;
+          watch_time_seconds?: number;
         };
         Update: {
           account_id?: string;
+          analytics_synced_at?: string | null;
           baked_revision?: number;
           bunny_library_id?: string;
-          chapters?: Json;
           bunny_video_id?: string;
+          chapters?: Json;
           created_at?: string;
           description?: string | null;
           duration_seconds?: number | null;
           edit_revision?: number;
+          engagement_score?: number | null;
           file_size_bytes?: number | null;
           folder_id?: string | null;
           has_master?: boolean;
@@ -13615,8 +14586,8 @@ export type Database = {
           original_filename?: string | null;
           public_share_enabled?: boolean;
           public_share_token?: string | null;
-          published_revision?: number;
           published_at?: string | null;
+          published_revision?: number;
           published_timeline?: Json | null;
           recorded_at?: string | null;
           source?: string;
@@ -13626,6 +14597,8 @@ export type Database = {
           thumbnail_url?: string | null;
           title?: string;
           updated_at?: string;
+          view_count?: number;
+          watch_time_seconds?: number;
         };
         Relationships: [
           {
@@ -14343,6 +15316,7 @@ export type Database = {
         Row: {
           account_id: string;
           created_at: string;
+          dashboard_preset: string | null;
           mobile_nav_shortcuts: Json;
           shortcuts: Json;
           updated_at: string;
@@ -14351,6 +15325,7 @@ export type Database = {
         Insert: {
           account_id: string;
           created_at?: string;
+          dashboard_preset?: string | null;
           mobile_nav_shortcuts?: Json;
           shortcuts?: Json;
           updated_at?: string;
@@ -14359,6 +15334,7 @@ export type Database = {
         Update: {
           account_id?: string;
           created_at?: string;
+          dashboard_preset?: string | null;
           mobile_nav_shortcuts?: Json;
           shortcuts?: Json;
           updated_at?: string;
@@ -14497,7 +15473,7 @@ export type Database = {
             referencedColumns: ['id'];
           },
         ];
-      },
+      };
       user_account_workspace: {
         Row: {
           id: string | null;
@@ -14537,6 +15513,7 @@ export type Database = {
         Args: {
           account_slug: string;
           invitations: Database['public']['CompositeTypes']['invitation'][];
+          invited_by: string;
         };
         Returns: Database['public']['Tables']['invitations']['Row'][];
       };
@@ -14545,6 +15522,10 @@ export type Database = {
         Returns: string;
       };
       attach_invitation_projects: {
+        Args: { account_slug: string; links: Json };
+        Returns: undefined;
+      };
+      attach_invitation_seat_kinds: {
         Args: { account_slug: string; links: Json };
         Returns: undefined;
       };
@@ -14603,6 +15584,7 @@ export type Database = {
           issued_at: string | null;
           late_fee_type: string | null;
           late_fee_value: number | null;
+          metadata: Json;
           notes: string | null;
           paid_at: string | null;
           private_note: string | null;
@@ -14640,6 +15622,19 @@ export type Database = {
           user_id: string;
         }[];
       };
+      clamp_client_credit_balance: {
+        Args: { p_cap: number; p_client_org_id: string };
+        Returns: number;
+      };
+      consume_client_credits: {
+        Args: {
+          p_actor_id?: string;
+          p_amount: number;
+          p_client_org_id: string;
+          p_related_ticket_id?: string;
+        };
+        Returns: Json;
+      };
       contractor_assigned_to_job: {
         Args: { job_id: string };
         Returns: boolean;
@@ -14660,6 +15655,7 @@ export type Database = {
           invited_by: string;
           project_id: string | null;
           role: string;
+          seat_kind: string;
           updated_at: string;
         };
         SetofOptions: {
@@ -14669,136 +15665,60 @@ export type Database = {
           isSetofReturn: false;
         };
       };
-      create_team_account:
-        | {
-            Args: {
-              account_name: string;
-              account_slug?: string;
-              user_id: string;
-            };
-            Returns: {
-              created_at: string | null;
-              created_by: string | null;
-              default_currency: string;
-              email: string | null;
-              id: string;
-              is_personal_account: boolean;
-              name: string;
-              picture_url: string | null;
-              primary_owner_user_id: string;
-              public_data: Json;
-              slug: string | null;
-              space_type: string | null;
-              updated_at: string | null;
-              updated_by: string | null;
-              video_settings: Json;
-            };
-            SetofOptions: {
-              from: '*';
-              to: 'accounts';
-              isOneToOne: true;
-              isSetofReturn: false;
-            };
-          }
-        | {
-            Args: {
-              account_name: string;
-              account_slug?: string;
-              account_space_type?: string;
-              user_id: string;
-            };
-            Returns: {
-              created_at: string | null;
-              created_by: string | null;
-              default_currency: string;
-              email: string | null;
-              id: string;
-              is_personal_account: boolean;
-              name: string;
-              picture_url: string | null;
-              primary_owner_user_id: string;
-              public_data: Json;
-              slug: string | null;
-              space_type: string | null;
-              updated_at: string | null;
-              updated_by: string | null;
-              video_settings: Json;
-            };
-            SetofOptions: {
-              from: '*';
-              to: 'accounts';
-              isOneToOne: true;
-              isSetofReturn: false;
-            };
-          }
-        | {
-            Args: {
-              account_business_type?: string;
-              account_complete_onboarding?: boolean;
-              account_name: string;
-              account_slug?: string;
-              account_space_type?: string;
-              user_id: string;
-            };
-            Returns: {
-              created_at: string | null;
-              created_by: string | null;
-              default_currency: string;
-              email: string | null;
-              id: string;
-              is_personal_account: boolean;
-              name: string;
-              picture_url: string | null;
-              primary_owner_user_id: string;
-              public_data: Json;
-              slug: string | null;
-              space_type: string | null;
-              updated_at: string | null;
-              updated_by: string | null;
-              video_settings: Json;
-            };
-            SetofOptions: {
-              from: '*';
-              to: 'accounts';
-              isOneToOne: true;
-              isSetofReturn: false;
-            };
-          }
-        | {
-            Args: {
-              account_business_type?: string;
-              account_name: string;
-              account_slug?: string;
-              account_space_type?: string;
-              user_id: string;
-            };
-            Returns: {
-              created_at: string | null;
-              created_by: string | null;
-              default_currency: string;
-              email: string | null;
-              id: string;
-              is_personal_account: boolean;
-              name: string;
-              picture_url: string | null;
-              primary_owner_user_id: string;
-              public_data: Json;
-              slug: string | null;
-              space_type: string | null;
-              updated_at: string | null;
-              updated_by: string | null;
-              video_settings: Json;
-            };
-            SetofOptions: {
-              from: '*';
-              to: 'accounts';
-              isOneToOne: true;
-              isSetofReturn: false;
-            };
-          };
+      create_team_account: {
+        Args: {
+          account_business_type?: string;
+          account_complete_onboarding?: boolean;
+          account_name: string;
+          account_slug?: string;
+          account_space_type?: string;
+          user_id: string;
+        };
+        Returns: {
+          created_at: string | null;
+          created_by: string | null;
+          default_currency: string;
+          email: string | null;
+          id: string;
+          is_personal_account: boolean;
+          name: string;
+          picture_url: string | null;
+          primary_owner_user_id: string;
+          public_data: Json;
+          slug: string | null;
+          space_type: string | null;
+          updated_at: string | null;
+          updated_by: string | null;
+          video_settings: Json;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'accounts';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       debit_media_credits: {
         Args: { p_account_id: string; p_amount: number; p_job_id: string };
         Returns: Json;
+      };
+      ensure_client_credit_pool: {
+        Args: { p_account_id: string; p_client_org_id: string };
+        Returns: {
+          account_id: string;
+          balance: number;
+          client_org_id: string;
+          created_at: string;
+          cycle_end: string | null;
+          cycle_start: string | null;
+          updated_at: string;
+        };
+        SetofOptions: {
+          from: '*';
+          to: 'client_credit_pools';
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
       };
       ensure_media_credit_pool: {
         Args: { p_account_id: string };
@@ -14819,7 +15739,12 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      expire_stale_client_credit_batches: { Args: never; Returns: number };
       expire_stale_media_credit_batches: { Args: never; Returns: number };
+      family_recipe_is_accessible: {
+        Args: { p_recipe_id: string };
+        Returns: boolean;
+      };
       forfeit_media_credits_on_closure: {
         Args: { p_account_id: string };
         Returns: number;
@@ -14889,6 +15814,17 @@ export type Database = {
           isSetofReturn: false;
         };
       };
+      grant_client_credits: {
+        Args: {
+          p_account_id: string;
+          p_amount: number;
+          p_client_org_id: string;
+          p_expires_at?: string;
+          p_related_invoice_id?: string;
+          p_source_type: string;
+        };
+        Returns: Json;
+      };
       grant_media_credits: {
         Args: {
           p_account_id: string;
@@ -14940,10 +15876,6 @@ export type Database = {
         Args: { capability_key: string; target_project_id: string };
         Returns: boolean;
       };
-      family_recipe_is_accessible: {
-        Args: { p_recipe_id: string };
-        Returns: boolean;
-      },
       has_role_on_account: {
         Args: { account_id: string; account_role?: string };
         Returns: boolean;
@@ -14987,6 +15919,10 @@ export type Database = {
         Args: { account_id: string };
         Returns: boolean;
       };
+      is_portal_assigned_task: {
+        Args: { target_task_id: string };
+        Returns: boolean;
+      };
       is_portal_visible_project: {
         Args: { target_project_id: string };
         Returns: boolean;
@@ -15022,6 +15958,14 @@ export type Database = {
       personal_person_owned_by_user: {
         Args: { p_person_id: string };
         Returns: boolean;
+      };
+      refund_client_credits: {
+        Args: {
+          p_actor_id?: string;
+          p_reason?: string;
+          p_related_ticket_id: string;
+        };
+        Returns: Json;
       };
       refund_media_credits: {
         Args: { p_job_id: string; p_reason?: string };

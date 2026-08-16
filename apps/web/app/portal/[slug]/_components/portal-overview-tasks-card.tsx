@@ -47,9 +47,7 @@ export function PortalOverviewTasksCard({
       tasks.filter((task) => {
         const status = (task.status ?? '').toLowerCase();
         return (
-          status !== 'done' &&
-          status !== 'completed' &&
-          status !== 'cancelled'
+          status !== 'done' && status !== 'completed' && status !== 'cancelled'
         );
       }),
     [tasks],

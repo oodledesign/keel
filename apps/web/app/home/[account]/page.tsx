@@ -10,6 +10,8 @@ import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
 import { isBusinessLiteWorkspace } from '~/lib/billing/is-business-lite-workspace';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
 import { withI18n } from '~/lib/i18n/with-i18n';
+import { loadCompletedProductTours } from '~/lib/product-tour/product-tour.actions';
+import { hasCompletedProductTour } from '~/lib/product-tour/types';
 
 import { BusinessDashboardSkeleton } from './_components/business-dashboard-skeleton';
 import { BusinessLiteDashboard } from './_components/business-lite-dashboard';
@@ -19,6 +21,7 @@ import { FamilyDashboard } from './_components/family-dashboard';
 import { HomegroupDashboard } from './_components/homegroup-dashboard';
 import { PropertyBusinessDashboard } from './_components/property-business-dashboard';
 import { TeamAccountLayoutPageHeader } from './_components/team-account-layout-page-header';
+import { recommendDashboardPreset } from './_lib/recommend-dashboard-preset';
 import {
   getDefaultAccountPath,
   getTeamAccountAccess,
@@ -27,6 +30,7 @@ import { isPropertyNavModuleEnabled } from './_lib/server/account-modules';
 import { loadCommercialDashboardData } from './_lib/server/commercial-dashboard.loader';
 import { loadCommunityDashboardData } from './_lib/server/community-dashboard.loader';
 import { loadDashboardPageData } from './_lib/server/dashboard-page.loader';
+import { loadWorkspaceDashboardPreset } from './_lib/server/dashboard-preset.loader';
 import { loadFamilyDashboardData } from './_lib/server/family-dashboard.loader';
 import { loadPropertyDashboardData } from './_lib/server/property-dashboard.loader';
 import { loadTeamWorkspace } from './_lib/server/team-account-workspace.loader';
@@ -111,6 +115,19 @@ async function CommunityDashboardContent({ account }: { account: string }) {
 async function WorkDashboardContent({ account }: { account: string }) {
   const data = await loadDashboardPageData(account);
 
+  const [presetId, tours] = await Promise.all([
+    loadWorkspaceDashboardPreset(data.accountId),
+    loadCompletedProductTours(),
+  ]);
+
+  const recommendedPresetId = recommendDashboardPreset(
+    data.recommendationSignals,
+  );
+
+  const showPresetOnboarding =
+    presetId === null &&
+    !hasCompletedProductTour(tours, 'work_dashboard_preset');
+
   return (
     <DashboardPageContent
       accountSlug={data.accountSlug}
@@ -122,6 +139,14 @@ async function WorkDashboardContent({ account }: { account: string }) {
       suggestedEmailTasks={data.suggestedEmailTasks}
       openSupportTickets={data.openSupportTickets}
       recentNotes={data.recentNotes}
+      pipeline={data.pipeline}
+      activeJobsList={data.activeJobsList}
+      statusSummary={data.statusSummary}
+      teamMembers={data.teamMembers}
+      recentInvoices={data.recentInvoices}
+      presetId={presetId}
+      recommendedPresetId={recommendedPresetId}
+      showPresetOnboarding={showPresetOnboarding}
     />
   );
 }

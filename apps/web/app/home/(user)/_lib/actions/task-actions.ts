@@ -7,8 +7,8 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { createTaskForUser } from '@kit/tasks/create-task';
 
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
-import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
 import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee';
+import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
 
 import {
   loadPersonalLifeAssignmentOptions as loadPersonalLifeAssignmentOptionsCached,
@@ -410,7 +410,10 @@ export async function updateTask(taskId: string, input: UpdateTaskInput) {
     }
   }
 
-  if (input.assigneeContactId !== undefined || input.assigneeUserId !== undefined) {
+  if (
+    input.assigneeContactId !== undefined ||
+    input.assigneeUserId !== undefined
+  ) {
     const contactId = input.assigneeContactId?.trim() || null;
     if (contactId) {
       // Contact is responsible; keep an internal owner on user_id.

@@ -22,8 +22,8 @@ import { toSupabasePublicStorageUrl } from '~/lib/storage/public-url';
 
 import { loadClientPortalContext } from '../_lib/server/client-portal.loader';
 import {
-  createClientPortalService,
   type PortalOverviewTask,
+  createClientPortalService,
 } from '../_lib/server/client-portal.service';
 import { formatPortalDate, portalExternalHref } from './portal-badges';
 import { PortalOverviewTasksCard } from './portal-overview-tasks-card';
@@ -45,7 +45,9 @@ export default async function ClientPortalOverviewPage({
   const myTasks: PortalOverviewTask[] = myTasksRaw
     .filter((task) => {
       const status = (task.status ?? '').toLowerCase();
-      return status !== 'done' && status !== 'completed' && status !== 'cancelled';
+      return (
+        status !== 'done' && status !== 'completed' && status !== 'cancelled'
+      );
     })
     .map((task) => ({
       id: task.id,

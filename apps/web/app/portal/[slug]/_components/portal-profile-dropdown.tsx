@@ -4,13 +4,7 @@ import { useState } from 'react';
 
 import Link from 'next/link';
 
-import {
-  BookOpen,
-  CreditCard,
-  Home,
-  LogOut,
-  Settings,
-} from 'lucide-react';
+import { BookOpen, CreditCard, Home, LogOut, Settings } from 'lucide-react';
 
 import { useSignOut } from '@kit/supabase/hooks/use-sign-out';
 import {

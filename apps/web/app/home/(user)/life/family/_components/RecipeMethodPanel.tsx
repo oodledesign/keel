@@ -8,8 +8,8 @@ import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import {
-  formatIngredientDisplay,
   type MeasurementSystem,
+  formatIngredientDisplay,
   renderStepContent,
 } from '~/lib/meals/recipe-measurements';
 
@@ -86,9 +86,7 @@ export function RecipeMethodPanel({
     }
 
     return steps.map((step) => {
-      const multipliers = new Map(
-        Object.entries(step.ingredient_multipliers),
-      );
+      const multipliers = new Map(Object.entries(step.ingredient_multipliers));
       return {
         id: step.id,
         title: step.title,
@@ -128,7 +126,7 @@ export function RecipeMethodPanel({
             >
               <Minus className="h-3.5 w-3.5" />
             </Button>
-            <span className="min-w-8 text-center text-sm font-medium tabular-nums text-[var(--workspace-shell-text)]">
+            <span className="min-w-8 text-center text-sm font-medium text-[var(--workspace-shell-text)] tabular-nums">
               {servings}
             </span>
             <Button

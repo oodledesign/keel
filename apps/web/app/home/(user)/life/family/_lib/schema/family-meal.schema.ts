@@ -102,6 +102,7 @@ export const RecipeInputSchema = AccountSlugFieldSchema.extend({
   cook_minutes: z.number().int().min(0).max(1_440).optional().nullable(),
   servings: z.number().int().min(1).max(50).optional().nullable(),
   is_favorite: z.boolean().default(false),
+  source: z.enum(['manual', 'ai']).optional(),
 });
 export type RecipeInput = z.infer<typeof RecipeInputSchema>;
 

@@ -430,8 +430,7 @@ export function ListingsMapView({
                       {DISPOSAL_TYPE_LABELS[popupListing.disposalType]}
                     </span>
 
-                    {(moneyLabel(popupListing) ||
-                      formatSize(popupListing)) && (
+                    {(moneyLabel(popupListing) || formatSize(popupListing)) && (
                       <p className="text-xs text-[var(--workspace-shell-text-muted)]">
                         {[moneyLabel(popupListing), formatSize(popupListing)]
                           .filter(Boolean)

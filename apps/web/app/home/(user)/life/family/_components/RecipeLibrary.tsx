@@ -6,6 +6,7 @@ import Link from 'next/link';
 
 import {
   Clock,
+  Link2,
   Pencil,
   Plus,
   Search,
@@ -26,15 +27,19 @@ import {
   toggleRecipeFavoriteAction,
 } from '../_lib/actions';
 import { buildRecipeDetailPath } from '../_lib/family-meal.paths';
-import type { RecipeRow } from '../_lib/schema/family-meal.schema';
+import type {
+  MealPreferencesRow,
+  RecipeRow,
+} from '../_lib/schema/family-meal.schema';
 import { RecipeBadges } from './RecipeBadges';
-import { RecipeDialog } from './RecipeDialog';
+import { RecipeDialog, type RecipeFormDraft } from './RecipeDialog';
 import { RecipeGenerateDialog } from './RecipeGenerateDialog';
+import { RecipeImportDialog } from './RecipeImportDialog';
 import { ACCENT, panelClass, totalTimeLabel } from './meal-ui';
 
 type Props = {
   recipes: RecipeRow[];
-  preferences: import('../_lib/schema/family-meal.schema').MealPreferencesRow;
+  preferences: MealPreferencesRow;
   basePath: string;
   accountSlug?: string;
   onChanged: () => void;
@@ -52,7 +57,10 @@ export function RecipeLibrary({
   const [activeTag, setActiveTag] = useState<string | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [generateOpen, setGenerateOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [editing, setEditing] = useState<RecipeRow | null>(null);
+  const [draft, setDraft] = useState<RecipeFormDraft | null>(null);
+  const [draftKey, setDraftKey] = useState(0);
   const [, startTransition] = useTransition();
 
   const allTags = useMemo(() => {
@@ -76,12 +84,29 @@ export function RecipeLibrary({
 
   function openNew() {
     setEditing(null);
+    setDraft(null);
     setDialogOpen(true);
   }
 
   function openEdit(recipe: RecipeRow) {
+    setDraft(null);
     setEditing(recipe);
     setDialogOpen(true);
+  }
+
+  function openImportedDraft(next: RecipeFormDraft) {
+    setEditing(null);
+    setDraft(next);
+    setDraftKey((key) => key + 1);
+    setDialogOpen(true);
+  }
+
+  function handleDialogOpenChange(open: boolean) {
+    setDialogOpen(open);
+    if (!open) {
+      setEditing(null);
+      setDraft(null);
+    }
   }
 
   function handleDelete(recipe: RecipeRow) {
@@ -127,6 +152,10 @@ export function RecipeLibrary({
           />
         </div>
         <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setImportOpen(true)}>
+            <Link2 className="mr-1.5 h-4 w-4" />
+            Import
+          </Button>
           <Button variant="outline" onClick={() => setGenerateOpen(true)}>
             <Sparkles className="mr-1.5 h-4 w-4" />
             Generate with AI
@@ -184,7 +213,7 @@ export function RecipeLibrary({
           <UtensilsCrossed className="mx-auto mb-3 h-8 w-8 text-[var(--workspace-shell-text-muted)]" />
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             {recipes.length === 0
-              ? 'No recipes yet. Add your family favourites to get started.'
+              ? 'No recipes yet. Import from a link or photo, generate with AI, or add one by hand.'
               : 'No recipes match your search.'}
           </p>
         </div>
@@ -295,10 +324,19 @@ export function RecipeLibrary({
         onSaved={onChanged}
       />
 
+      <RecipeImportDialog
+        open={importOpen}
+        onOpenChange={setImportOpen}
+        accountSlug={accountSlug}
+        onExtracted={openImportedDraft}
+      />
+
       <RecipeDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={handleDialogOpenChange}
         recipe={editing}
+        draft={draft}
+        draftKey={draftKey}
         accountSlug={accountSlug}
         onSaved={onChanged}
       />
