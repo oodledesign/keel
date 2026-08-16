@@ -59,13 +59,15 @@ export async function OzerAdminDashboard() {
         <StatCard title="Past due" value={data.pastDue} />
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         {links.map((item) => (
           <Link key={item.href} href={item.href}>
             <Card className="hover:border-foreground/20 h-full transition">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-base">{item.label}</CardTitle>
-                <CardDescription>{item.description}</CardDescription>
+              <CardHeader className="space-y-1 p-4 pb-3 sm:p-6 sm:pb-2">
+                <CardTitle className="text-sm sm:text-base">{item.label}</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">
+                  {item.description}
+                </CardDescription>
               </CardHeader>
             </Card>
           </Link>

@@ -3,7 +3,12 @@ import { redirect } from 'next/navigation';
 import { PageBody } from '@kit/ui/page';
 
 import { RecipeDetailPage } from '~/home/(user)/life/family/_components/RecipeDetailPage';
-import { loadFamilyRecipeById } from '~/home/(user)/life/family/_lib/server/family-meal.loader';
+import {
+  loadFamilyRecipeById,
+  loadFamilyRecipeCookLogs,
+  loadFamilyRecipePopularity,
+  loadFamilyRecipeStructure,
+} from '~/home/(user)/life/family/_lib/server/family-meal.loader';
 import { resolveMealPlanScope } from '~/home/(user)/life/family/_lib/server/family-meal.scope';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
@@ -54,9 +59,12 @@ async function WorkspaceRecipeDetailPage({
     redirect(getDefaultAccountPath(slug, workspace.account));
   }
 
-  const [recipe, scope] = await Promise.all([
+  const [recipe, scope, popularity, recentLogs, structure] = await Promise.all([
     loadFamilyRecipeById(recipeId, slug),
     resolveMealPlanScope(slug),
+    loadFamilyRecipePopularity(recipeId),
+    loadFamilyRecipeCookLogs(recipeId),
+    loadFamilyRecipeStructure(recipeId),
   ]);
 
   if (!recipe) {
@@ -69,6 +77,9 @@ async function WorkspaceRecipeDetailPage({
         recipe={recipe}
         basePath={scope.basePath}
         accountSlug={slug}
+        popularity={popularity}
+        recentLogs={recentLogs}
+        structure={structure}
       />
     </PageBody>
   );

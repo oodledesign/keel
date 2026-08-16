@@ -45,6 +45,10 @@ function setTourChromeOpen(active: boolean) {
   document.body.classList.toggle('ozer-tour-chrome-open', active);
 }
 
+function setTourNavOpen(active: boolean) {
+  document.body.classList.toggle('ozer-tour-nav-open', active);
+}
+
 function clickTourTarget(root: Element | undefined | null) {
   if (!root) return;
   const clickable =
@@ -72,6 +76,62 @@ function closeChromeUi(action: TourChromeAction | null) {
 
   // Toggle the same control closed (avoid Escape — driver.js treats it as cancel).
   clickTourTarget(document.querySelector(selector));
+}
+
+function isMobileNavOpen() {
+  const menu = document.querySelector<HTMLElement>('[data-mobile-nav="menu"]');
+  if (!menu) return false;
+  return menu.getAttribute('aria-hidden') === 'false';
+}
+
+async function ensureNavigationVisible() {
+  // Mobile: open the full-screen menu so nav tour targets exist in the DOM.
+  if (!isMobileNavOpen()) {
+    const mobileTrigger = document.querySelector<HTMLButtonElement>(
+      '[data-tour="mobile-nav-trigger"]',
+    );
+    if (mobileTrigger) {
+      mobileTrigger.click();
+      setTourNavOpen(true);
+      await new Promise((r) => setTimeout(r, 320));
+      return;
+    }
+  } else {
+    setTourNavOpen(true);
+    return;
+  }
+
+  // Desktop: expand the sidebar if it is collapsed/hidden.
+  const trigger = document.querySelector<HTMLButtonElement>(
+    '[data-sidebar="trigger"]',
+  );
+  const sidebar = document.querySelector('[data-tour="sidebar"]');
+  if (trigger && sidebar && getComputedStyle(sidebar).display === 'none') {
+    trigger.click();
+    await new Promise((r) => setTimeout(r, 250));
+  }
+}
+
+function closeMobileNavIfOpen() {
+  setTourNavOpen(false);
+  if (!isMobileNavOpen()) return;
+  const closeButton = document.querySelector<HTMLButtonElement>(
+    '[data-mobile-nav="menu"] button[aria-label="Close menu"]',
+  );
+  closeButton?.click();
+}
+
+function wait(ms: number) {
+  return new Promise<void>((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+/** Bottom-bar New FAB is unmounted while the hamburger menu is open. */
+async function ensureNewMenuVisible() {
+  if (!isMobileNavOpen()) return;
+  closeMobileNavIfOpen();
+  await wait(350);
 }
 
 export function ProductTour({
@@ -149,15 +209,9 @@ export function ProductTour({
       const { driver } = await import('driver.js');
       if (cancelled) return;
 
-      // Expand mobile sidebar if needed so targets exist.
-      const trigger = document.querySelector<HTMLButtonElement>(
-        '[data-sidebar="trigger"]',
-      );
-      const sidebar = document.querySelector('[data-tour="sidebar"]');
-      if (trigger && sidebar && getComputedStyle(sidebar).display === 'none') {
-        trigger.click();
-        await new Promise((r) => setTimeout(r, 250));
-      }
+      // Open mobile menu / expand sidebar so nav targets exist for later steps.
+      await ensureNavigationVisible();
+      if (cancelled) return;
 
       const stepDefs = getProductTourStepDefs(tourId);
       if (stepDefs.length === 0) {
@@ -191,6 +245,15 @@ export function ProductTour({
           };
         }
 
+        const needsNav =
+          def.element === '[data-tour="sidebar"]' ||
+          def.element.startsWith('[data-tour="nav-');
+        const opensNewMenu = def.chromeAction === 'open-new-menu';
+        // Closing the hamburger before Next so the New FAB exists when the
+        // next step queries `[data-tour="new-menu"]` (skipMissingElement).
+        const preparesNewMenu =
+          def.chromeAction === 'open-workspace-switcher';
+
         return {
           element: def.element,
           popover: {
@@ -198,8 +261,49 @@ export function ProductTour({
             description: def.description,
             side: def.side ?? ('right' as const),
             align: def.align ?? ('start' as const),
+            ...(preparesNewMenu
+              ? {
+                  onNextClick: (
+                    _element: Element | undefined,
+                    _step: unknown,
+                    { driver: activeDriver }: { driver: Driver },
+                  ) => {
+                    clearChrome();
+                    void ensureNewMenuVisible().then(() => {
+                      activeDriver.moveNext();
+                    });
+                  },
+                }
+              : {}),
+            ...(opensNewMenu
+              ? {
+                  onPrevClick: (
+                    _element: Element | undefined,
+                    _step: unknown,
+                    { driver: activeDriver }: { driver: Driver },
+                  ) => {
+                    clearChrome();
+                    void ensureNavigationVisible().then(() => {
+                      activeDriver.movePrevious();
+                    });
+                  },
+                }
+              : {}),
           },
           onHighlightStarted: (element?: Element) => {
+            if (needsNav) {
+              void ensureNavigationVisible();
+            }
+            if (opensNewMenu) {
+              void ensureNewMenuVisible().then(() => {
+                const target =
+                  document.querySelector('[data-tour="new-menu"]') ??
+                  element ??
+                  undefined;
+                runChromeAction(def.chromeAction, target);
+              });
+              return;
+            }
             runChromeAction(def.chromeAction, element);
           },
           onDeselected: () => {
@@ -223,6 +327,7 @@ export function ProductTour({
         steps,
         onDestroyStarted: (_el, _step, { driver: activeDriver }) => {
           clearChrome();
+          closeMobileNavIfOpen();
           if (!skipMarkOnDestroy) {
             void markDone();
           }
@@ -240,6 +345,7 @@ export function ProductTour({
       skipMarkOnDestroy = true;
       startedRef.current = false;
       clearChrome();
+      setTourNavOpen(false);
       driverObj?.destroy();
     };
   }, [autoStart, forceStart, showDefaultLandingPrompt, tourId]);

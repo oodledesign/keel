@@ -42,6 +42,22 @@
   text-shadow: none !important;
 }
 
+.ozer-driver-popover .driver-popover-close-btn {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.ozer-driver-popover .driver-popover-close-btn:focus,
+.ozer-driver-popover .driver-popover-close-btn:focus-visible,
+.ozer-driver-popover .driver-popover-close-btn:active {
+  border: none !important;
+  outline: none !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
 /*
  * Driver.js cuts the highlight out of an SVG path. Do NOT set a background on
  * `.driver-overlay` — that paints over the cutout and leaves the stage dimmed.
@@ -54,6 +70,11 @@
 .driver-active-element {
   position: relative;
   z-index: 10001 !important;
+}
+
+/* Keep the mobile nav sheet above the dimmed page during nav tour steps. */
+body.ozer-tour-nav-open [data-mobile-nav='menu'] {
+  z-index: 1000000001 !important;
 }
 
 /* Support messenger + menus opened during tour steps sit above the overlay

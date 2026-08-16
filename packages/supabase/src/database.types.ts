@@ -6928,85 +6928,265 @@ export type Database = {
           },
         ];
       };
+      family_recipe_ingredients: {
+        Row: {
+          amount: number | null;
+          created_at: string;
+          id: string;
+          name: string;
+          original_text: string;
+          recipe_id: string;
+          sort_order: number;
+          unit: string | null;
+          updated_at: string;
+        }
+        Insert: {
+          amount?: number | null;
+          created_at?: string;
+          id?: string;
+          name: string;
+          original_text: string;
+          recipe_id: string;
+          sort_order?: number;
+          unit?: string | null;
+          updated_at?: string;
+        }
+        Update: {
+          amount?: number | null;
+          created_at?: string;
+          id?: string;
+          name?: string;
+          original_text?: string;
+          recipe_id?: string;
+          sort_order?: number;
+          unit?: string | null;
+          updated_at?: string;
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_recipe_ingredients_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "family_recipes";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
+      family_recipe_logs: {
+        Row: {
+          cooked_at: string;
+          created_at: string;
+          id: string;
+          logged_by: string;
+          notes: string | null;
+          rating: number | null;
+          recipe_id: string;
+        }
+        Insert: {
+          cooked_at?: string;
+          created_at?: string;
+          id?: string;
+          logged_by?: string;
+          notes?: string | null;
+          rating?: number | null;
+          recipe_id: string;
+        }
+        Update: {
+          cooked_at?: string;
+          created_at?: string;
+          id?: string;
+          logged_by?: string;
+          notes?: string | null;
+          rating?: number | null;
+          recipe_id?: string;
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_recipe_logs_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "family_recipes";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
+      family_recipe_step_ingredients: {
+        Row: {
+          ingredient_id: string;
+          quantity_multiplier: number;
+          step_id: string;
+        }
+        Insert: {
+          ingredient_id: string;
+          quantity_multiplier?: number;
+          step_id: string;
+        }
+        Update: {
+          ingredient_id?: string;
+          quantity_multiplier?: number;
+          step_id?: string;
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_recipe_step_ingredients_ingredient_id_fkey";
+            columns: ["ingredient_id"];
+            isOneToOne: false;
+            referencedRelation: "family_recipe_ingredients";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "family_recipe_step_ingredients_step_id_fkey";
+            columns: ["step_id"];
+            isOneToOne: false;
+            referencedRelation: "family_recipe_steps";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
+      family_recipe_steps: {
+        Row: {
+          content: string;
+          created_at: string;
+          id: string;
+          recipe_id: string;
+          sort_order: number;
+          timer_seconds: number | null;
+          title: string;
+          updated_at: string;
+        }
+        Insert: {
+          content: string;
+          created_at?: string;
+          id?: string;
+          recipe_id: string;
+          sort_order: number;
+          timer_seconds?: number | null;
+          title: string;
+          updated_at?: string;
+        }
+        Update: {
+          content?: string;
+          created_at?: string;
+          id?: string;
+          recipe_id?: string;
+          sort_order?: number;
+          timer_seconds?: number | null;
+          title?: string;
+          updated_at?: string;
+        }
+        Relationships: [
+          {
+            foreignKeyName: "family_recipe_steps_recipe_id_fkey";
+            columns: ["recipe_id"];
+            isOneToOne: false;
+            referencedRelation: "family_recipes";
+            referencedColumns: ["id"];
+          },
+        ];
+      },
       family_recipes: {
         Row: {
           account_id: string | null;
+          calories_per_serving: number | null;
+          carbs_g: number | null;
           cook_minutes: number | null;
           created_at: string;
           description: string | null;
+          diet_tags: string[];
+          fat_g: number | null;
           id: string;
           ingredients: string[];
           instructions: string | null;
           is_favorite: boolean;
           meal_type: string;
           name: string;
+          nutrition_computed_at: string | null;
+          nutrition_pending: boolean;
+          prep_ingredients_hash: string | null;
           prep_minutes: number | null;
+          protein_g: number | null;
           servings: number | null;
           source: string;
           tags: string[];
           updated_at: string;
           user_id: string;
-        };
+        }
         Insert: {
           account_id?: string | null;
+          calories_per_serving?: number | null;
+          carbs_g?: number | null;
           cook_minutes?: number | null;
           created_at?: string;
           description?: string | null;
+          diet_tags?: string[];
+          fat_g?: number | null;
           id?: string;
           ingredients?: string[];
           instructions?: string | null;
           is_favorite?: boolean;
           meal_type?: string;
           name: string;
+          nutrition_computed_at?: string | null;
+          nutrition_pending?: boolean;
+          prep_ingredients_hash?: string | null;
           prep_minutes?: number | null;
+          protein_g?: number | null;
           servings?: number | null;
           source?: string;
           tags?: string[];
           updated_at?: string;
           user_id: string;
-        };
+        }
         Update: {
           account_id?: string | null;
+          calories_per_serving?: number | null;
+          carbs_g?: number | null;
           cook_minutes?: number | null;
           created_at?: string;
           description?: string | null;
+          diet_tags?: string[];
+          fat_g?: number | null;
           id?: string;
           ingredients?: string[];
           instructions?: string | null;
           is_favorite?: boolean;
           meal_type?: string;
           name?: string;
+          nutrition_computed_at?: string | null;
+          nutrition_pending?: boolean;
+          prep_ingredients_hash?: string | null;
           prep_minutes?: number | null;
+          protein_g?: number | null;
           servings?: number | null;
           source?: string;
           tags?: string[];
           updated_at?: string;
           user_id?: string;
-        };
+        }
         Relationships: [
           {
-            foreignKeyName: 'family_recipes_account_id_fkey';
-            columns: ['account_id'];
+            foreignKeyName: "family_recipes_account_id_fkey";
+            columns: ["account_id"];
             isOneToOne: false;
-            referencedRelation: 'accounts';
-            referencedColumns: ['id'];
+            referencedRelation: "accounts";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: 'family_recipes_account_id_fkey';
-            columns: ['account_id'];
+            foreignKeyName: "family_recipes_account_id_fkey";
+            columns: ["account_id"];
             isOneToOne: false;
-            referencedRelation: 'user_account_workspace';
-            referencedColumns: ['id'];
+            referencedRelation: "user_account_workspace";
+            referencedColumns: ["id"];
           },
           {
-            foreignKeyName: 'family_recipes_account_id_fkey';
-            columns: ['account_id'];
+            foreignKeyName: "family_recipes_account_id_fkey";
+            columns: ["account_id"];
             isOneToOne: false;
-            referencedRelation: 'user_accounts';
-            referencedColumns: ['id'];
+            referencedRelation: "user_accounts";
+            referencedColumns: ["id"];
           },
         ];
-      };
+      },
       finance_bank_accounts: {
         Row: {
           account_id: string;
@@ -14301,6 +14481,23 @@ export type Database = {
       };
     };
     Views: {
+      family_recipe_popularity: {
+        Row: {
+          avg_rating: number | null;
+          popularity_score: number | null;
+          recipe_id: string | null;
+          times_cooked: number | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: 'family_recipe_logs_recipe_id_fkey';
+            columns: ['recipe_id'];
+            isOneToOne: false;
+            referencedRelation: 'family_recipes';
+            referencedColumns: ['id'];
+          },
+        ];
+      },
       user_account_workspace: {
         Row: {
           id: string | null;
@@ -14743,6 +14940,10 @@ export type Database = {
         Args: { capability_key: string; target_project_id: string };
         Returns: boolean;
       };
+      family_recipe_is_accessible: {
+        Args: { p_recipe_id: string };
+        Returns: boolean;
+      },
       has_role_on_account: {
         Args: { account_id: string; account_role?: string };
         Returns: boolean;

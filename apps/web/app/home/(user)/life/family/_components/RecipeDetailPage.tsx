@@ -5,15 +5,7 @@ import { useState, useTransition } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-import {
-  ArrowLeft,
-  Clock,
-  Pencil,
-  Sparkles,
-  Star,
-  Trash2,
-  Users,
-} from 'lucide-react';
+import { ArrowLeft, Clock, Pencil, Star, Trash2, Users } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { toast } from '@kit/ui/sonner';
@@ -21,32 +13,58 @@ import { cn } from '@kit/ui/utils';
 
 import {
   deleteRecipeAction,
+  retryRecipeNutritionAction,
   toggleRecipeFavoriteAction,
 } from '../_lib/actions';
 import { buildRecipesListPath } from '../_lib/family-meal.paths';
-import type { RecipeRow } from '../_lib/schema/family-meal.schema';
+import type {
+  RecipeCookLogRow,
+  RecipePopularityStats,
+  RecipeRow,
+  RecipeStructure,
+} from '../_lib/schema/family-meal.schema';
+import { RecipeBadges } from './RecipeBadges';
+import { RecipeCookLogPanel } from './RecipeCookLogPanel';
 import { RecipeDialog } from './RecipeDialog';
-import {
-  mealTypeLabels,
-  panelClass,
-  titleCase,
-  totalTimeLabel,
-} from './meal-ui';
+import { RecipeMethodPanel } from './RecipeMethodPanel';
+import { panelClass, totalTimeLabel } from './meal-ui';
 
 type Props = {
   recipe: RecipeRow;
   basePath: string;
   accountSlug?: string;
+  popularity?: RecipePopularityStats;
+  recentLogs?: RecipeCookLogRow[];
+  structure?: RecipeStructure;
 };
 
-export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
+function formatMacro(value: number | null | undefined, unit: string) {
+  if (value == null || !Number.isFinite(value)) return null;
+  const rounded = Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return `${rounded}${unit}`;
+}
+
+export function RecipeDetailPage({
+  recipe,
+  basePath,
+  accountSlug,
+  popularity = { times_cooked: 0, avg_rating: null, popularity_score: 0 },
+  recentLogs = [],
+  structure = { ingredients: [], steps: [] },
+}: Props) {
   const router = useRouter();
   const scopeFields = accountSlug ? { accountSlug } : {};
   const [editOpen, setEditOpen] = useState(false);
+  const [nutritionPending, startNutritionTransition] = useTransition();
   const [, startTransition] = useTransition();
 
   const time = totalTimeLabel(recipe.prep_minutes, recipe.cook_minutes);
   const backHref = buildRecipesListPath(basePath);
+  const hasNutrition =
+    recipe.calories_per_serving != null ||
+    recipe.protein_g != null ||
+    recipe.carbs_g != null ||
+    recipe.fat_g != null;
 
   function handleDelete() {
     startTransition(async () => {
@@ -75,6 +93,21 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
         toast.error(result.error);
         return;
       }
+      router.refresh();
+    });
+  }
+
+  function handleRetryNutrition() {
+    startNutritionTransition(async () => {
+      const result = await retryRecipeNutritionAction({
+        recipeId: recipe.id,
+        ...scopeFields,
+      });
+      if (!result.success) {
+        toast.error(result.error);
+        return;
+      }
+      toast.success('Nutrition updated');
       router.refresh();
     });
   }
@@ -128,17 +161,12 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
       </div>
 
       <header className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2">
-          {recipe.source === 'ai' ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-[var(--ozer-accent-subtle)] px-2.5 py-1 text-[11px] font-medium text-[var(--ozer-accent-muted)]">
-              <Sparkles className="h-3 w-3" />
-              AI generated
-            </span>
-          ) : null}
-          <span className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-[11px] text-[var(--workspace-shell-text-muted)] capitalize">
-            {mealTypeLabels[recipe.meal_type]}
-          </span>
-        </div>
+        <RecipeBadges
+          source={recipe.source}
+          mealType={recipe.meal_type}
+          tags={recipe.tags}
+          dietTags={recipe.diet_tags}
+        />
 
         <h1 className="text-3xl font-bold tracking-tight">{recipe.name}</h1>
 
@@ -168,58 +196,105 @@ export function RecipeDetailPage({ recipe, basePath, accountSlug }: Props) {
               Serves {recipe.servings}
             </span>
           ) : null}
+          {recipe.calories_per_serving != null ? (
+            <span>{recipe.calories_per_serving} kcal / serving</span>
+          ) : null}
         </div>
-
-        {recipe.tags.length > 0 ? (
-          <div className="flex flex-wrap gap-1.5">
-            {recipe.tags.map((tag) => (
-              <span
-                key={tag}
-                className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-xs text-[var(--workspace-shell-text-muted)] capitalize"
-              >
-                {titleCase(tag)}
-              </span>
-            ))}
-          </div>
-        ) : null}
       </header>
 
-      <div className="grid gap-4 md:grid-cols-2">
-        <section className={cn(panelClass, 'p-5')}>
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Ingredients
-          </h2>
-          {recipe.ingredients.length > 0 ? (
-            <ul className="mt-3 space-y-2 text-sm text-[var(--workspace-shell-text-muted)]">
-              {recipe.ingredients.map((item) => (
-                <li key={item} className="flex gap-2">
-                  <span className="mt-2 h-1 w-1 shrink-0 rounded-full bg-[#FFE3DA]" />
-                  <span>{item}</span>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
-              No ingredients listed.
-            </p>
-          )}
-        </section>
+      {hasNutrition || recipe.nutrition_pending ? (
+        <section className={cn(panelClass, 'space-y-3 p-5')}>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              Nutrition
+            </h2>
+            {recipe.nutrition_pending ? (
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8"
+                disabled={nutritionPending}
+                onClick={handleRetryNutrition}
+              >
+                {nutritionPending ? 'Retrying…' : 'Retry analysis'}
+              </Button>
+            ) : null}
+          </div>
 
-        <section className={cn(panelClass, 'p-5 md:col-span-2')}>
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Method
-          </h2>
-          {recipe.instructions?.trim() ? (
-            <div className="mt-3 text-sm leading-relaxed whitespace-pre-wrap text-[var(--workspace-shell-text-muted)]">
-              {recipe.instructions}
-            </div>
+          {hasNutrition ? (
+            <dl className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+              <div>
+                <dt className="text-[var(--workspace-shell-text-muted)]">
+                  Calories
+                </dt>
+                <dd className="font-medium text-[var(--workspace-shell-text)]">
+                  {recipe.calories_per_serving != null
+                    ? `${recipe.calories_per_serving} kcal`
+                    : '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--workspace-shell-text-muted)]">
+                  Protein
+                </dt>
+                <dd className="font-medium text-[var(--workspace-shell-text)]">
+                  {formatMacro(recipe.protein_g, 'g') ?? '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--workspace-shell-text-muted)]">
+                  Carbs
+                </dt>
+                <dd className="font-medium text-[var(--workspace-shell-text)]">
+                  {formatMacro(recipe.carbs_g, 'g') ?? '—'}
+                </dd>
+              </div>
+              <div>
+                <dt className="text-[var(--workspace-shell-text-muted)]">
+                  Fat
+                </dt>
+                <dd className="font-medium text-[var(--workspace-shell-text)]">
+                  {formatMacro(recipe.fat_g, 'g') ?? '—'}
+                </dd>
+              </div>
+            </dl>
           ) : (
-            <p className="mt-3 text-sm text-[var(--workspace-shell-text-muted)]">
-              No instructions yet.
+            <p className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Nutrition analysis is pending. You can retry once Edamam is
+              configured, or after fixing ingredient lines.
             </p>
           )}
+
+          <p className="text-[11px] text-[var(--workspace-shell-text-muted)]">
+            Nutrition analysis powered by{' '}
+            <a
+              href="https://developer.edamam.com"
+              target="_blank"
+              rel="noreferrer"
+              className="underline underline-offset-2"
+            >
+              Edamam
+            </a>
+            .
+          </p>
         </section>
-      </div>
+      ) : null}
+
+      <RecipeMethodPanel
+        baseServings={recipe.servings}
+        ingredients={structure.ingredients}
+        steps={structure.steps}
+        fallbackIngredients={recipe.ingredients}
+        fallbackInstructions={recipe.instructions}
+      />
+
+      <RecipeCookLogPanel
+        recipeId={recipe.id}
+        accountSlug={accountSlug}
+        popularity={popularity}
+        recentLogs={recentLogs}
+      />
 
       <RecipeDialog
         open={editOpen}

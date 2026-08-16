@@ -46,6 +46,22 @@ const SEARCH_SHELL_CLASS =
 
 const SEARCH_OVERLAY_CLASS = 'bg-[#060a12]/50 backdrop-blur-[2px]';
 
+type VisualViewportBox = {
+  offsetTop: number;
+  height: number;
+};
+
+function readVisualViewport(): VisualViewportBox {
+  if (typeof window === 'undefined') {
+    return { offsetTop: 0, height: 800 };
+  }
+  const vv = window.visualViewport;
+  if (!vv) {
+    return { offsetTop: 0, height: window.innerHeight };
+  }
+  return { offsetTop: vv.offsetTop, height: vv.height };
+}
+
 export function QuickActionDialog(props: QuickActionDialogProps) {
   const { open, onOpenChange } = props;
   const router = useRouter();
@@ -58,6 +74,7 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
     () => !getCachedNavCatalog(),
   );
   const [history, setHistory] = useState<SearchHistoryItem[]>([]);
+  const [viewport, setViewport] = useState<VisualViewportBox>(readVisualViewport);
 
   useEffect(() => {
     if (!open) {
@@ -99,6 +116,26 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
     };
   }, [open]);
 
+  // Keep the dialog centred in the *visible* viewport so the software keyboard
+  // does not leave empty space above or clip the modal.
+  useEffect(() => {
+    if (!open) return;
+
+    const update = () => setViewport(readVisualViewport());
+    update();
+
+    const vv = window.visualViewport;
+    vv?.addEventListener('resize', update);
+    vv?.addEventListener('scroll', update);
+    window.addEventListener('resize', update);
+
+    return () => {
+      vv?.removeEventListener('resize', update);
+      vv?.removeEventListener('scroll', update);
+      window.removeEventListener('resize', update);
+    };
+  }, [open]);
+
   const trimmedQuery = query.trim();
   const matches = useMemo(
     () => (trimmedQuery ? filterNavCatalog(catalog, trimmedQuery, 12) : []),
@@ -120,12 +157,19 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
     Boolean(trimmedQuery) && !catalogLoading && matches.length === 0;
   const showTypeHint = !trimmedQuery && history.length === 0;
 
+  const dialogTop = viewport.offsetTop + viewport.height / 2;
+  const listMaxHeight = Math.min(420, Math.max(160, viewport.height * 0.45));
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
         hideClose
         overlayClassName={SEARCH_OVERLAY_CLASS}
         className={SEARCH_SHELL_CLASS}
+        style={{
+          top: dialogTop,
+          maxHeight: Math.max(240, viewport.height - 24),
+        }}
         onOpenAutoFocus={(event) => {
           event.preventDefault();
           inputRef.current?.focus();
@@ -169,7 +213,10 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
             </div>
           </div>
 
-          <CommandList className="max-h-[min(60vh,420px)] border-t border-[color:var(--workspace-shell-border)] px-2 py-2">
+          <CommandList
+            className="border-t border-[color:var(--workspace-shell-border)] px-2 py-2"
+            style={{ maxHeight: listMaxHeight }}
+          >
             {showTypeHint || showTypedLoading || showNoMatches ? (
               <CommandEmpty className="py-6 text-center text-sm text-[var(--workspace-shell-text-muted)]">
                 {showTypedLoading ? (

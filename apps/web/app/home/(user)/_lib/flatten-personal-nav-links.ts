@@ -7,6 +7,7 @@ type NavLink = {
   path: string;
   label: string;
   Icon: React.ReactNode;
+  tourId?: string;
 };
 
 export function flattenPersonalNavLinks(config: NavConfig): NavLink[] {
@@ -28,6 +29,7 @@ export function flattenPersonalNavLinks(config: NavConfig): NavLink[] {
             path: nested.path,
             label: nested.label,
             Icon: nested.Icon,
+            tourId: 'tourId' in nested ? nested.tourId : undefined,
           });
         }
         continue;
@@ -37,6 +39,7 @@ export function flattenPersonalNavLinks(config: NavConfig): NavLink[] {
         path: child.path,
         label: child.label,
         Icon: child.Icon,
+        tourId: 'tourId' in child ? child.tourId : undefined,
       });
     }
   }

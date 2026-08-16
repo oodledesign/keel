@@ -100,6 +100,16 @@
     --ozer-success: var(--ozer-coral-500);
     --ozer-success-muted: var(--ozer-coral-400);
 
+    /* Recipe badge category fills (Prompt 4) — Orange Topaze / Cool Blue */
+    --ozer-orange-topaze: var(--ozer-coral-500);
+    --ozer-cool-blue: var(--ozer-slate-blue);
+    --ozer-badge-ai-generated-bg: var(--ozer-orange-topaze);
+    --ozer-badge-ai-generated-fg: var(--ozer-white);
+    --ozer-badge-meal-type-bg: var(--ozer-cool-blue);
+    --ozer-badge-meal-type-fg: var(--ozer-white);
+    --ozer-badge-cuisine-tag-bg: var(--ozer-plum-600);
+    --ozer-badge-cuisine-tag-fg: var(--ozer-cream-50);
+
     --ozer-gradient-active-from: var(--ozer-coral-600);
     --ozer-gradient-active-to: var(--ozer-coral-500);
     --ozer-gradient-active-hover-from: var(--ozer-coral-500);

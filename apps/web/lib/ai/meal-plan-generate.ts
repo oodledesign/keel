@@ -12,7 +12,7 @@ You will receive a JSON payload with:
 - "priorities": soft preferences to optimise for, in rough order of importance (e.g. healthy, quick, cheap).
 - "disliked_ingredients": ingredients to avoid where reasonable.
 - "household_size": number of people to cook for.
-- "recipe_library": existing saved recipes [{ "name", "tags", "meal_type" }]. Reuse these by exact name when they fit; otherwise invent suitable new meals.
+- "recipe_library": a weighted candidate pool of saved recipes [{ "name", "tags", "meal_type", "popularity_score", "times_cooked", "avg_rating", "is_favorite" }]. Prefer higher popularity_score when choosing matches, but do not only pick the same top few — keep variety. Reuse by exact name when they fit; otherwise invent suitable new meals.
 - "existing_meals": dinners already on the plan [{ "date", "title" }]. Do not change these; avoid repeating the same protein or cuisine on nearby days.
 - "notes": free-text guidance from the user — treat as high priority.
 
@@ -21,6 +21,7 @@ Rules:
 - Honour the priorities: if "quick" is set, keep total time low; if "cheap", use budget-friendly staples; if "healthy", balance protein/veg.
 - Add variety across the week — do not repeat the same protein or cuisine on consecutive days unless asked.
 - When planning many dates (e.g. a full month), keep variety across the whole range — rotate proteins, cuisines, and cooking styles.
+- Lean toward recipes with higher popularity_score / times_cooked, but deliberately include lower-scored or unscored library meals so the week does not loop the same favourites.
 - When a library recipe fits well, set "recipe_match" to its exact name. Otherwise set it to null.
 - Keep titles short and appetising (max ~6 words). Keep descriptions to one sentence.
 
@@ -42,7 +43,15 @@ export type MealPlanGeneratePayload = {
   priorities: string[];
   disliked_ingredients: string[];
   household_size: number;
-  recipe_library: Array<{ name: string; tags: string[]; meal_type: string }>;
+  recipe_library: Array<{
+    name: string;
+    tags: string[];
+    meal_type: string;
+    popularity_score?: number;
+    times_cooked?: number;
+    avg_rating?: number | null;
+    is_favorite?: boolean;
+  }>;
   existing_meals: Array<{ date: string; title: string }>;
   notes: string;
 };

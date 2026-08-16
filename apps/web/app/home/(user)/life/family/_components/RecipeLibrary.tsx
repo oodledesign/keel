@@ -27,6 +27,7 @@ import {
 } from '../_lib/actions';
 import { buildRecipeDetailPath } from '../_lib/family-meal.paths';
 import type { RecipeRow } from '../_lib/schema/family-meal.schema';
+import { RecipeBadges } from './RecipeBadges';
 import { RecipeDialog } from './RecipeDialog';
 import { RecipeGenerateDialog } from './RecipeGenerateDialog';
 import { ACCENT, panelClass, totalTimeLabel } from './meal-ui';
@@ -250,18 +251,14 @@ export function RecipeLibrary({
                     ) : null}
                   </div>
 
-                  {recipe.tags.length > 0 ? (
-                    <div className="mt-3 flex flex-wrap gap-1">
-                      {recipe.tags.slice(0, 4).map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2 py-0.5 text-[11px] text-[var(--workspace-shell-text-muted)] capitalize"
-                        >
-                          {tag}
-                        </span>
-                      ))}
-                    </div>
-                  ) : null}
+                  <RecipeBadges
+                    className="mt-3"
+                    source={recipe.source}
+                    mealType={recipe.meal_type}
+                    tags={recipe.tags}
+                    dietTags={recipe.diet_tags}
+                    maxTags={4}
+                  />
                 </Link>
 
                 <div className="mt-4 flex items-center gap-2 border-t border-[color:var(--workspace-shell-border)] pt-3">

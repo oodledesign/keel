@@ -15,6 +15,13 @@ import {
   insufficientCreditsResponse,
   isInsufficientCreditsError,
 } from '~/lib/ai/router';
+import {
+  MEAL_PLAN_FAVOURITE_WEIGHT,
+  MEAL_PLAN_LIBRARY_POOL_SIZE,
+  type RecipePopularityRow,
+  type WeightedRecipeCandidate,
+  buildWeightedRecipeLibrary,
+} from '~/lib/meals/meal-plan-popularity';
 
 export const dynamic = 'force-dynamic';
 
@@ -38,7 +45,7 @@ export async function POST(request: NextRequest) {
   } = await client.auth.getUser();
 
   if (!user) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    return NextResponse.json({ error: 'Unauthorised' }, { status: 401 });
   }
 
   const parsed = requestSchema.safeParse(await request.json());
@@ -69,11 +76,11 @@ export async function POST(request: NextRequest) {
     scope.kind === 'workspace'
       ? client
           .from('family_recipes')
-          .select('id, name, tags, meal_type')
+          .select('id, name, tags, meal_type, is_favorite')
           .eq('account_id', scope.accountId)
       : client
           .from('family_recipes')
-          .select('id, name, tags, meal_type')
+          .select('id, name, tags, meal_type, is_favorite')
           .eq('user_id', user.id)
           .is('account_id', null);
 
@@ -85,8 +92,49 @@ export async function POST(request: NextRequest) {
   const preferences = prefData as MealPreferencesRow | null;
   const recipes = (recipeData ?? []) as Pick<
     RecipeRow,
-    'id' | 'name' | 'tags' | 'meal_type'
+    'id' | 'name' | 'tags' | 'meal_type' | 'is_favorite'
   >[];
+
+  const recipeIds = recipes.map((r) => r.id);
+  let popularityByRecipeId = new Map<string, RecipePopularityRow>();
+
+  if (recipeIds.length > 0) {
+    const { data: popularityData } = await client
+      .from('family_recipe_popularity')
+      .select('recipe_id, times_cooked, avg_rating, popularity_score')
+      .in('recipe_id', recipeIds);
+
+    popularityByRecipeId = new Map(
+      ((popularityData ?? []) as RecipePopularityRow[]).map((row) => [
+        row.recipe_id,
+        {
+          recipe_id: row.recipe_id,
+          times_cooked: Number(row.times_cooked) || 0,
+          avg_rating: row.avg_rating == null ? null : Number(row.avg_rating),
+          popularity_score: Number(row.popularity_score) || 0,
+        },
+      ]),
+    );
+  }
+
+  const weightedCandidates: WeightedRecipeCandidate[] = recipes.map((r) => {
+    const popularity = popularityByRecipeId.get(r.id);
+    return {
+      id: r.id,
+      name: r.name,
+      tags: r.tags,
+      meal_type: r.meal_type,
+      is_favorite: r.is_favorite,
+      times_cooked: popularity?.times_cooked ?? 0,
+      avg_rating: popularity?.avg_rating ?? null,
+      popularity_score: popularity?.popularity_score ?? 0,
+    };
+  });
+
+  const recipeLibrary = buildWeightedRecipeLibrary(weightedCandidates, {
+    poolSize: MEAL_PLAN_LIBRARY_POOL_SIZE,
+    favouriteWeight: MEAL_PLAN_FAVOURITE_WEIGHT,
+  });
 
   const sortedDates = [...parsed.data.dates].sort();
   const contextDates = parsed.data.contextDates?.length
@@ -135,10 +183,14 @@ export async function POST(request: NextRequest) {
       disliked_ingredients: preferences?.disliked_ingredients ?? [],
       household_size: preferences?.household_size ?? 2,
       notes: preferences?.notes ?? '',
-      recipe_library: recipes.map((r) => ({
+      recipe_library: recipeLibrary.map((r) => ({
         name: r.name,
         tags: r.tags,
         meal_type: r.meal_type,
+        popularity_score: Number(r.popularity_score.toFixed(3)),
+        times_cooked: r.times_cooked,
+        avg_rating: r.avg_rating,
+        is_favorite: r.is_favorite,
       })),
       existing_meals: existingMeals,
     };

@@ -8,6 +8,7 @@ export type MobileNavLink = {
   path: string;
   label: string;
   Icon: React.ReactNode;
+  tourId?: string;
 };
 
 export type MobileNavSection = {
@@ -27,11 +28,13 @@ function flattenGroupChildren(
     path?: string;
     label: string;
     Icon: React.ReactNode;
+    tourId?: string;
     collapsible?: boolean;
     children?: Array<{
       path: string;
       label: string;
       Icon: React.ReactNode;
+      tourId?: string;
     }>;
   }>) {
     if ('collapsible' in child && child.collapsible && child.children?.length) {
@@ -40,6 +43,7 @@ function flattenGroupChildren(
           path: child.path,
           label: child.label,
           Icon: child.Icon,
+          tourId: child.tourId,
         });
       }
 
@@ -48,6 +52,7 @@ function flattenGroupChildren(
           path: nested.path,
           label: nested.label,
           Icon: nested.Icon,
+          tourId: nested.tourId,
         });
       }
       continue;
@@ -61,6 +66,7 @@ function flattenGroupChildren(
       path: child.path,
       label: child.label,
       Icon: child.Icon,
+      tourId: child.tourId,
     });
   }
 

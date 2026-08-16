@@ -29,6 +29,7 @@ export type MobileNavLink = {
   path: string;
   label: string;
   Icon: React.ReactNode;
+  tourId?: string;
 };
 
 export type MobileNavSection = {
@@ -112,6 +113,8 @@ export function WorkspaceMobileMenu({
             aria-modal="true"
             aria-label="Navigation menu"
             aria-hidden={!open}
+            data-tour="sidebar"
+            data-mobile-nav="menu"
           >
             <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
               <p className="text-base font-semibold text-[var(--workspace-shell-text)]">
@@ -175,6 +178,7 @@ export function WorkspaceMobileMenu({
                             <HapticLink
                               href={item.path}
                               onClick={close}
+                              data-tour={item.tourId}
                               className={cn(
                                 'flex min-h-[3.25rem] items-center gap-4 rounded-xl px-4 py-3 text-[1.05rem] font-medium transition-colors',
                                 active
@@ -360,6 +364,7 @@ export function WorkspaceMobileBottomNav({
           type="button"
           aria-expanded={menuOpen}
           aria-label="Open menu"
+          data-tour="mobile-nav-trigger"
           className={cn(
             MOBILE_NAV_BTN_CLASS,
             'text-[var(--workspace-shell-text-muted)] hover:bg-white/[0.08] hover:text-[var(--ozer-accent)]',

@@ -1,10 +1,22 @@
 'use server';
 
+import { z } from 'zod';
+
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import type { Database } from '@kit/supabase/database';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import {
+  ingredientsChanged,
+  refreshRecipeNutrition,
+} from '~/lib/meals/recipe-nutrition';
+import { refreshRecipePrepStep } from '~/lib/meals/recipe-prep';
+import { syncRecipeStructure } from '~/lib/meals/sync-recipe-structure';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import {
+  AccountSlugFieldSchema,
   type ApplyGeneratedWeekInput,
   ApplyGeneratedWeekSchema,
   type BulkAddGeneratedRecipesInput,
@@ -13,6 +25,8 @@ import {
   ClearMealEntrySchema,
   type DeleteRecipeInput,
   DeleteRecipeSchema,
+  type LogRecipeCookInput,
+  LogRecipeCookSchema,
   type MealPreferencesInput,
   MealPreferencesInputSchema,
   type RecipeInput,
@@ -27,6 +41,15 @@ import {
   revalidateMealPlanPaths,
   revalidateRecipePaths,
 } from './server/family-meal.scope';
+
+type Client = SupabaseClient<Database>;
+
+const RetryRecipeNutritionSchema = AccountSlugFieldSchema.extend({
+  recipeId: z.string().uuid(),
+});
+export type RetryRecipeNutritionInput = z.infer<
+  typeof RetryRecipeNutritionSchema
+>;
 
 type ActionResult<T = undefined> =
   | { success: true; data: T }
@@ -73,7 +96,7 @@ type MealPlanEntryValues = {
 };
 
 async function persistMealPlanEntry(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: Client,
   scope: Awaited<ReturnType<typeof resolveMealPlanScope>>,
   values: Omit<MealPlanEntryValues, 'user_id' | 'account_id' | 'updated_at'>,
 ) {
@@ -136,7 +159,7 @@ async function persistMealPlanEntry(
 }
 
 async function persistMealPreferences(
-  client: ReturnType<typeof getSupabaseServerClient>,
+  client: Client,
   scope: Awaited<ReturnType<typeof resolveMealPlanScope>>,
   values: Omit<MealPreferenceValues, 'user_id' | 'account_id' | 'updated_at'>,
 ) {
@@ -226,6 +249,30 @@ export async function upsertRecipeAction(
     const client = getSupabaseServerClient();
     const scope = await resolveMealPlanScope(parsed.accountSlug);
 
+    let previousIngredients: string[] | null = null;
+    let previousPrepHash: string | null = null;
+    if (parsed.id) {
+      let previousQuery = client
+        .from('family_recipes')
+        .select('ingredients, prep_ingredients_hash')
+        .eq('id', parsed.id);
+
+      if (scope.kind === 'workspace') {
+        previousQuery = previousQuery.eq('account_id', scope.accountId);
+      } else {
+        previousQuery = previousQuery
+          .eq('user_id', scope.userId)
+          .is('account_id', null);
+      }
+
+      const { data: previous } = await previousQuery.maybeSingle();
+      previousIngredients =
+        (previous as { ingredients?: string[] } | null)?.ingredients ?? null;
+      previousPrepHash =
+        (previous as { prep_ingredients_hash?: string | null } | null)
+          ?.prep_ingredients_hash ?? null;
+    }
+
     const values = {
       user_id: scope.userId,
       account_id: scope.kind === 'workspace' ? scope.accountId : null,
@@ -241,6 +288,8 @@ export async function upsertRecipeAction(
       is_favorite: parsed.is_favorite,
       updated_at: new Date().toISOString(),
     };
+
+    let recipeId: string;
 
     if (parsed.id) {
       let updateQuery = client
@@ -258,18 +307,75 @@ export async function upsertRecipeAction(
 
       const { data, error } = await updateQuery.select('id').single();
       if (error) return fail(error);
-      revalidateRecipePaths(scope, (data as { id: string }).id);
-      return ok({ id: (data as { id: string }).id });
+      recipeId = (data as { id: string }).id;
+    } else {
+      const { data, error } = await client
+        .from('family_recipes')
+        .insert(values)
+        .select('id')
+        .single();
+      if (error) return fail(error);
+      recipeId = (data as { id: string }).id;
     }
 
-    const { data, error } = await client
-      .from('family_recipes')
-      .insert(values)
-      .select('id')
-      .single();
-    if (error) return fail(error);
-    revalidateRecipePaths(scope, (data as { id: string }).id);
-    return ok({ id: (data as { id: string }).id });
+    try {
+      await syncRecipeStructure(client, {
+        recipeId,
+        ingredients: parsed.ingredients,
+        instructions: parsed.instructions ?? null,
+      });
+    } catch (structureError) {
+      console.error(
+        '[family-meal] structure sync failed:',
+        structureError instanceof Error
+          ? structureError.message
+          : structureError,
+      );
+    }
+
+    const shouldRefreshNutrition =
+      !parsed.id || ingredientsChanged(previousIngredients, parsed.ingredients);
+
+    const meterAccountId =
+      scope.kind === 'workspace' ? scope.accountId : scope.userId;
+
+    if (shouldRefreshNutrition) {
+      try {
+        await refreshRecipeNutrition({
+          client,
+          recipeId,
+          title: parsed.name,
+          ingredients: parsed.ingredients,
+          servings: parsed.servings ?? null,
+        });
+      } catch (nutritionError) {
+        console.error(
+          '[family-meal] nutrition refresh failed:',
+          nutritionError instanceof Error
+            ? nutritionError.message
+            : nutritionError,
+        );
+      }
+    }
+
+    // Prep step: hash-gated inside refreshRecipePrepStep (skips Haiku when unchanged).
+    try {
+      await refreshRecipePrepStep({
+        client,
+        recipeId,
+        ingredients: parsed.ingredients,
+        previousHash: previousPrepHash,
+        accountId: meterAccountId,
+      });
+    } catch (prepError) {
+      console.error(
+        '[family-meal] prep step refresh failed:',
+        prepError instanceof Error ? prepError.message : prepError,
+      );
+    }
+
+    revalidateRecipePaths(scope, recipeId);
+    return ok({ id: recipeId });
   } catch (err) {
     return fail(err);
   }
@@ -333,6 +439,55 @@ export async function toggleRecipeFavoriteAction(
     if (error) return fail(error);
     revalidateRecipePaths(scope, parsed.recipeId);
     return ok(undefined);
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function logRecipeCookAction(
+  input: LogRecipeCookInput,
+): Promise<ActionResult<{ id: string }>> {
+  try {
+    const parsed = LogRecipeCookSchema.parse(input);
+    const client = getSupabaseServerClient();
+    const user = await requireUserInServerComponent();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
+
+    // Ensure the recipe is in scope before inserting the log (RLS also enforces).
+    let recipeQuery = client
+      .from('family_recipes')
+      .select('id')
+      .eq('id', parsed.recipeId);
+
+    if (scope.kind === 'workspace') {
+      recipeQuery = recipeQuery.eq('account_id', scope.accountId);
+    } else {
+      recipeQuery = recipeQuery
+        .eq('user_id', scope.userId)
+        .is('account_id', null);
+    }
+
+    const { data: recipe, error: recipeError } =
+      await recipeQuery.maybeSingle();
+    if (recipeError) return fail(recipeError);
+    if (!recipe) return fail(new Error('Recipe not found'));
+
+    const { data, error } = await client
+      .from('family_recipe_logs')
+      .insert({
+        recipe_id: parsed.recipeId,
+        logged_by: user.id,
+        rating: parsed.rating ?? null,
+        notes: parsed.notes?.trim() ? parsed.notes.trim() : null,
+        cooked_at: parsed.cookedAt ?? new Date().toISOString(),
+      })
+      .select('id')
+      .single();
+
+    if (error) return fail(error);
+
+    revalidateRecipePaths(scope, parsed.recipeId);
+    return ok({ id: (data as { id: string }).id });
   } catch (err) {
     return fail(err);
   }
@@ -436,14 +591,134 @@ export async function bulkAddGeneratedRecipesAction(
       servings: recipe.servings ?? null,
       is_favorite: false,
       source: 'ai' as const,
+      nutrition_pending: recipe.ingredients.length > 0,
       updated_at: now,
     }));
 
-    const { error } = await client.from('family_recipes').insert(rows);
+    const { data, error } = await client
+      .from('family_recipes')
+      .insert(rows)
+      .select('id, name, ingredients, instructions, servings');
+
     if (error) return fail(error);
 
+    const inserted = (data ?? []) as Array<{
+      id: string;
+      name: string;
+      ingredients: string[];
+      instructions: string | null;
+      servings: number | null;
+    }>;
+
+    const meterAccountId =
+      scope.kind === 'workspace' ? scope.accountId : scope.userId;
+
+    for (const recipe of inserted) {
+      try {
+        await syncRecipeStructure(client, {
+          recipeId: recipe.id,
+          ingredients: recipe.ingredients ?? [],
+          instructions: recipe.instructions,
+        });
+      } catch (structureError) {
+        console.error(
+          '[family-meal] bulk structure sync failed:',
+          structureError instanceof Error
+            ? structureError.message
+            : structureError,
+        );
+      }
+
+      try {
+        await refreshRecipeNutrition({
+          client,
+          recipeId: recipe.id,
+          title: recipe.name,
+          ingredients: recipe.ingredients ?? [],
+          servings: recipe.servings,
+        });
+      } catch (nutritionError) {
+        console.error(
+          '[family-meal] bulk nutrition refresh failed:',
+          nutritionError instanceof Error
+            ? nutritionError.message
+            : nutritionError,
+        );
+      }
+
+      try {
+        await refreshRecipePrepStep({
+          client,
+          recipeId: recipe.id,
+          ingredients: recipe.ingredients ?? [],
+          previousHash: null,
+          accountId: meterAccountId,
+        });
+      } catch (prepError) {
+        console.error(
+          '[family-meal] bulk prep step refresh failed:',
+          prepError instanceof Error ? prepError.message : prepError,
+        );
+      }
+    }
+
     revalidateMealPlanPaths(scope);
-    return ok({ added: rows.length });
+    return ok({ added: inserted.length });
+  } catch (err) {
+    return fail(err);
+  }
+}
+
+export async function retryRecipeNutritionAction(
+  input: RetryRecipeNutritionInput,
+): Promise<ActionResult> {
+  try {
+    const parsed = RetryRecipeNutritionSchema.parse(input);
+    const client = getSupabaseServerClient();
+    const scope = await resolveMealPlanScope(parsed.accountSlug);
+
+    let recipeQuery = client
+      .from('family_recipes')
+      .select('id, name, ingredients, servings')
+      .eq('id', parsed.recipeId);
+
+    if (scope.kind === 'workspace') {
+      recipeQuery = recipeQuery.eq('account_id', scope.accountId);
+    } else {
+      recipeQuery = recipeQuery
+        .eq('user_id', scope.userId)
+        .is('account_id', null);
+    }
+
+    const { data, error } = await recipeQuery.maybeSingle();
+    if (error) return fail(error);
+    if (!data) return fail(new Error('Recipe not found'));
+
+    const recipe = data as {
+      id: string;
+      name: string;
+      ingredients: string[];
+      servings: number | null;
+    };
+
+    const nutrition = await refreshRecipeNutrition({
+      client,
+      recipeId: recipe.id,
+      title: recipe.name,
+      ingredients: recipe.ingredients ?? [],
+      servings: recipe.servings,
+    });
+
+    revalidateRecipePaths(scope, recipe.id);
+
+    if (nutrition.nutrition_pending) {
+      return fail(
+        new Error(
+          'Nutrition analysis could not be completed. Please check your Edamam credentials or ingredient formatting and try again.',
+        ),
+      );
+    }
+    return ok(undefined);
   } catch (err) {
     return fail(err);
   }

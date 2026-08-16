@@ -52,6 +52,14 @@ export type RecipeRow = {
   servings: number | null;
   is_favorite: boolean;
   source: 'manual' | 'ai';
+  calories_per_serving: number | null;
+  protein_g: number | null;
+  carbs_g: number | null;
+  fat_g: number | null;
+  diet_tags: string[];
+  nutrition_computed_at: string | null;
+  nutrition_pending: boolean;
+  prep_ingredients_hash: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -157,6 +165,55 @@ export const ToggleRecipeFavoriteSchema = AccountSlugFieldSchema.extend({
 export type ToggleRecipeFavoriteInput = z.infer<
   typeof ToggleRecipeFavoriteSchema
 >;
+
+export const LogRecipeCookSchema = AccountSlugFieldSchema.extend({
+  recipeId: z.string().uuid(),
+  rating: z.number().int().min(1).max(5).optional().nullable(),
+  notes: z.string().trim().max(1_000).optional().nullable(),
+  cookedAt: z.string().datetime().optional(),
+});
+export type LogRecipeCookInput = z.infer<typeof LogRecipeCookSchema>;
+
+export type RecipeCookLogRow = {
+  id: string;
+  recipe_id: string;
+  rating: number | null;
+  cooked_at: string;
+  notes: string | null;
+  created_at: string;
+};
+
+export type RecipePopularityStats = {
+  times_cooked: number;
+  avg_rating: number | null;
+  popularity_score: number;
+};
+
+export type RecipeIngredientRow = {
+  id: string;
+  recipe_id: string;
+  sort_order: number;
+  name: string;
+  amount: number | null;
+  unit: string | null;
+  original_text: string;
+};
+
+export type RecipeStepRow = {
+  id: string;
+  recipe_id: string;
+  sort_order: number;
+  title: string;
+  content: string;
+  timer_seconds: number | null;
+  /** ingredient_id → quantity_multiplier for this step */
+  ingredient_multipliers: Record<string, number>;
+};
+
+export type RecipeStructure = {
+  ingredients: RecipeIngredientRow[];
+  steps: RecipeStepRow[];
+};
 
 export const GeneratedRecipeDraftSchema = z.object({
   name: z.string().trim().min(1).max(160),
