@@ -55,6 +55,8 @@ import {
 } from '../_lib/server/server-actions';
 import { CommercialInterestPanel } from './commercial-interest-panel';
 import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
+import { ListingBrochureDownload } from './listing-brochure-download';
+import { ListingCirculateDialog } from './listing-circulate-dialog';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingMapCard } from './listing-map-card';
 import { ListingMediaSection } from './listing-media-section';
@@ -1097,10 +1099,12 @@ export function ListingManagementSection({
   listing: initial,
   publications,
   accountId,
+  accountSlug,
 }: {
   listing: CommercialListing;
   publications: CommercialPortalPublication[];
   accountId: string;
+  accountSlug: string;
 }) {
   const { listing, setListing } = useListingState(initial);
   const [sharePending, startShareTransition] = useTransition();
@@ -1258,6 +1262,30 @@ export function ListingManagementSection({
               </Button>
             </div>
           ) : null}
+
+          <div className="border-t border-[var(--workspace-shell-border)] pt-3">
+            <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+              PDF brochure
+            </p>
+            <ListingBrochureDownload
+              listingId={listing.id}
+              accountId={accountId}
+              accountSlug={accountSlug}
+            />
+          </div>
+
+          <div className="border-t border-[var(--workspace-shell-border)] pt-3">
+            <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+              Circulate to requirements
+            </p>
+            <p className="mb-2 text-sm text-[var(--workspace-shell-text)]/60">
+              Email matching subscribed applicants via Amazon SES.
+            </p>
+            <ListingCirculateDialog
+              accountId={accountId}
+              listingId={listing.id}
+            />
+          </div>
         </CardContent>
       </Card>
     </div>

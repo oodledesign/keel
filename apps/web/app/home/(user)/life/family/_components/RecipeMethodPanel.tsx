@@ -143,25 +143,39 @@ export function RecipeMethodPanel({
           </div>
         </div>
 
-        <div className="flex items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] p-0.5">
-          {(['metric', 'imperial'] as const).map((option) => {
-            const active = system === option;
-            return (
-              <button
-                key={option}
-                type="button"
-                onClick={() => setSystem(option)}
-                className={cn(
-                  'rounded-full px-3 py-1 text-xs font-medium capitalize transition-colors',
-                  active
-                    ? 'bg-[var(--ozer-badge-meal-type-bg)] text-[var(--ozer-badge-meal-type-fg)]'
-                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-                )}
-              >
-                {option}
-              </button>
-            );
-          })}
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-[var(--workspace-shell-text-muted)]">
+            Units
+          </span>
+          <div
+            role="group"
+            aria-label="Measurement units"
+            className="flex items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] p-0.5"
+          >
+            {(
+              [
+                { id: 'metric', label: 'Metric' },
+                { id: 'imperial', label: 'Imperial' },
+              ] as const
+            ).map((option) => {
+              const active = system === option.id;
+              return (
+                <button
+                  key={option.id}
+                  type="button"
+                  onClick={() => setSystem(option.id)}
+                  className={cn(
+                    'rounded-full px-3 py-1 text-xs font-medium transition-colors',
+                    active
+                      ? 'bg-[var(--ozer-cool-blue)] text-[var(--ozer-white)]'
+                      : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                  )}
+                >
+                  {option.label}
+                </button>
+              );
+            })}
+          </div>
         </div>
       </div>
 

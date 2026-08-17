@@ -1,0 +1,78 @@
+---
+title: Circulation & email compliance
+description: UK B2B PECR/GDPR guidance for requirement embeds and circulating disposals via Amazon SES
+---
+
+# Circulation & email compliance
+
+This is an **internal product brief** for Ozer Commercial property. It is **not legal advice**. Agencies should have UK privacy counsel review soft opt-in copy and their own privacy notices.
+
+## What “circulation” is
+
+1. Occupiers / investors register a **requirement** (website embed or CRM).
+2. Agents match a disposal to active requirements.
+3. Agents **circulate** particulars by email to that matching set.
+4. Recipients can **unsubscribe** from matching-opportunity emails for that agency.
+
+## Email classification
+
+
+| Message | Class | Pipe |
+| --- | --- | --- |
+| “Thanks — we received your requirement” | Transactional / service | ZeptoMail |
+| One-to-one reply about a specific enquiry / listing | Transactional / service | ZeptoMail |
+| “New letting that may match your registered requirement” (list) | **Marketing** (solicited / soft opt-in or LI) | **Amazon SES** |
+| General newsletter / market commentary | Marketing (usually consent) | Amazon SES |
+
+Having a lawful basis does **not** make a circulation blast transactional. ZeptoMail’s terms forbid marketing/bulk; do not send circulation through Zepto.
+
+## Lawful basis (UK B2B PECR + UK GDPR)
+
+For **B2B** commercial applicants, PECR is more permissive than consumer marketing, but you still need:
+
+1. **Clear sender identity** — agency brand From / body (not “via Ozer” alone).
+2. **Easy opt-out** on every circulation email (unsubscribe link + honour promptly).
+3. A documented basis, typically:
+   - **Soft opt-in / solicited:** they submitted the requirement form asking to be notified of matching opportunities; or
+   - **Legitimate interests** + balancing test for existing business contacts (use the platform LIA template / agency LIA); or
+   - **Consent** where soft opt-in does not apply (cold, bought, or residential).
+
+**Not permission:** “their email is already in the CRM.”
+
+### Suggested soft opt-in notice (B2B — counsel to approve)
+
+> By submitting this form you ask {Agency} to store your requirement and email you commercial property opportunities that may match. You can unsubscribe at any time. See our [privacy notice]({url}).
+
+### Purpose limitation
+
+Circulation emails should only promote **matching disposals** for the purpose `matching_disposals`. Do not silently expand to newsletters without a separate preference / consent.
+
+## Roles
+
+| Party | Role |
+| --- | --- |
+| Agency (workspace) | **Controller** of applicant data and circulation content |
+| Ozer | **Processor** hosting CRM, embed, and SES send on the agency’s behalf |
+| Amazon SES | Sub-processor for marketing/circulation delivery |
+| Zoho ZeptoMail | Sub-processor for **transactional** product email only |
+
+Update the DPA / data-processing inventory when enabling circulation: list SES for marketing sends; do not imply Zepto covers blasts.
+
+## Product rules (enforced in Ozer)
+
+1. Upserting a requirement **must not** re-subscribe someone who unsubscribed.
+2. Circulation recipients are filtered to `marketing_status = subscribed` (and not suppressed).
+3. Imported historical lists default to `lawful_basis = imported_historical` and should not circulate until the agency attests or re-permissions.
+4. Every SES circulation message includes `List-Unsubscribe` and a branded unsubscribe page scoped to that workspace.
+5. Agents preview the recipient set and confirm before send (audit log stores who/what/when).
+
+## SES production access
+
+Amazon SES requires production access for unrestricted sending. Re-apply with:
+
+- Public company/product website (not behind auth or bot blocks)
+- Use case text: *UK B2B commercial property applicants who registered requirements; opt-out on every email; no purchased lists*
+- Live privacy policy + unsubscribe URL
+- Verified sending domain (SPF/DKIM)
+
+See also: [Circulation](/commercial-property/circulation) product guide.

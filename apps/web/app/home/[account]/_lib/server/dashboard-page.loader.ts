@@ -363,9 +363,7 @@ async function loadDashboardPageDataImpl(
       .not('stage', 'in', '("won","lost")'),
     client
       .from('projects')
-      .select(
-        'id, title, name, status, priority, due_date, clients(display_name)',
-      )
+      .select('id, title, name, status, priority, due_date, client_id')
       .eq('account_id', accountId)
       .eq('project_type', 'delivery')
       .in('status', ['pending', 'in_progress'])
@@ -468,26 +466,65 @@ async function loadDashboardPageDataImpl(
     }
   }
 
-  const activeJobsList: DashboardJobSummary[] = isTableMissingFromApi(
-    activeJobsListResult.error,
-  )
-    ? []
-    : (activeJobsListResult.data ?? []).map((row) => {
-        const clientEmbed = Array.isArray(row.clients)
-          ? row.clients[0]
-          : row.clients;
-        return {
-          id: row.id as string,
-          title: ((row.title as string | null)?.trim() ||
-            (row.name as string | null)?.trim() ||
-            'Untitled project') as string,
-          clientName:
-            (clientEmbed?.display_name as string | null)?.trim() || null,
-          status: (row.status as string | null) ?? 'pending',
-          priority: (row.priority as string | null) ?? 'medium',
-          dueDate: toIsoDateString(row.due_date as string | null | undefined),
-        };
-      });
+  const activeJobsUnavailable =
+    Boolean(activeJobsListResult.error) &&
+    !isTableMissingFromApi(activeJobsListResult.error);
+
+  if (activeJobsUnavailable) {
+    console.error(
+      '[dashboard] active projects list',
+      activeJobsListResult.error,
+    );
+  }
+
+  const projectRows =
+    activeJobsUnavailable || isTableMissingFromApi(activeJobsListResult.error)
+      ? []
+      : (activeJobsListResult.data ?? []);
+
+  const projectClientIds = [
+    ...new Set(
+      projectRows
+        .map((row) => row.client_id as string | null)
+        .filter((id): id is string => Boolean(id)),
+    ),
+  ];
+
+  const projectClientNameById = new Map<string, string>();
+  if (projectClientIds.length > 0) {
+    const { data: projectClientRows, error: projectClientsError } = await client
+      .from('clients')
+      .select('id, display_name, first_name, last_name')
+      .in('id', projectClientIds);
+
+    if (projectClientsError) {
+      console.error('[dashboard] project client names', projectClientsError);
+    } else {
+      for (const row of projectClientRows ?? []) {
+        const name =
+          (row.display_name as string | null)?.trim() ||
+          [row.first_name, row.last_name].filter(Boolean).join(' ').trim() ||
+          'Client';
+        projectClientNameById.set(row.id as string, name);
+      }
+    }
+  }
+
+  const activeJobsList: DashboardJobSummary[] = projectRows.map((row) => {
+    const clientId = row.client_id as string | null;
+    return {
+      id: row.id as string,
+      title: ((row.title as string | null)?.trim() ||
+        (row.name as string | null)?.trim() ||
+        'Untitled project') as string,
+      clientName: clientId
+        ? (projectClientNameById.get(clientId) ?? null)
+        : null,
+      status: (row.status as string | null) ?? 'pending',
+      priority: (row.priority as string | null) ?? 'medium',
+      dueDate: toIsoDateString(row.due_date as string | null | undefined),
+    };
+  });
 
   const totalRevenuePence = invoicesUnavailable
     ? 0

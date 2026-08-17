@@ -13,6 +13,7 @@ import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AiCreditsExhaustedShell } from '~/components/ai/ai-credits-exhausted-shell';
 import { AppLogo } from '~/components/app-logo';
+import { PersonalVisionChromeShell } from '~/components/personal-vision/personal-vision-chrome-shell';
 import { ProductTourHost } from '~/components/product-tour/product-tour-host';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
 import { WorkspaceTopBar } from '~/components/workspace-shell/workspace-top-bar';
@@ -187,68 +188,71 @@ async function SidebarLayout({
       .map((row) => ({ slug: String(row.slug), name: row.label }));
 
     return (
-      <WorkspaceFocusProviderShell
-        settingsByAccountId={params.focusSettingsByAccountId}
-      >
-        <SidebarProvider defaultOpen={layoutState.open}>
-          <Page
-            style={'sidebar'}
-            contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
-          >
-            <PageNavigation>
-              <HomeSidebar
+      <PersonalVisionChromeShell>
+        <WorkspaceFocusProviderShell
+          settingsByAccountId={params.focusSettingsByAccountId}
+        >
+          <SidebarProvider defaultOpen={layoutState.open}>
+            <Page
+              style={'sidebar'}
+              contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
+            >
+              <PageNavigation>
+                <HomeSidebar
+                  workspace={workspaceForShell}
+                  sharedWorkspaces={sharedWorkspaces}
+                  switcherAccounts={switcherAccounts}
+                  switcherPortals={switcherPortals}
+                  emailNeedsReplyCount={params.emailNeedsReplyCount}
+                  completedTours={completedTours}
+                />
+              </PageNavigation>
+
+              <PageMobileNavigation className="hidden" />
+
+              <PersonalHomeMobileChrome
                 workspace={workspaceForShell}
-                sharedWorkspaces={sharedWorkspaces}
+                navLinks={navLinks}
+                bottomNavTabs={bottomNavTabs}
                 switcherAccounts={switcherAccounts}
                 switcherPortals={switcherPortals}
-                emailNeedsReplyCount={params.emailNeedsReplyCount}
-                completedTours={completedTours}
-              />
-            </PageNavigation>
-
-            <PageMobileNavigation className="hidden" />
-
-            <PersonalHomeMobileChrome
-              workspace={workspaceForShell}
-              navLinks={navLinks}
-              bottomNavTabs={bottomNavTabs}
-              switcherAccounts={switcherAccounts}
-              switcherPortals={switcherPortals}
-            >
-              <div className="hidden lg:block">
-                <WorkspaceTopBar
-                  variant="personal"
-                  userId={workspaceForShell.user.id}
-                  user={workspaceForShell.user}
-                  account={
-                    workspaceForShell.workspace
-                      ? {
-                          id: workspaceForShell.workspace.id,
-                          name: workspaceForShell.workspace.name,
-                          picture_url: workspaceForShell.workspace.picture_url,
-                        }
-                      : undefined
-                  }
-                  accountId={workspaceForShell.workspace?.id ?? undefined}
-                />
-              </div>
-              <AiCreditsExhaustedShell
-                accountId={workspaceForShell.user.id}
-                billingHref={toHomeBillingHref(
-                  pathsConfig.app.personalAccountBilling,
-                )}
               >
-                <ProductTourHost
-                  variant="personal"
-                  completedTours={completedTours}
-                  workspaceOptions={workspaceOptions}
-                />
-                {children}
-              </AiCreditsExhaustedShell>
-            </PersonalHomeMobileChrome>
-          </Page>
-        </SidebarProvider>
-      </WorkspaceFocusProviderShell>
+                <div className="hidden lg:block">
+                  <WorkspaceTopBar
+                    variant="personal"
+                    userId={workspaceForShell.user.id}
+                    user={workspaceForShell.user}
+                    account={
+                      workspaceForShell.workspace
+                        ? {
+                            id: workspaceForShell.workspace.id,
+                            name: workspaceForShell.workspace.name,
+                            picture_url:
+                              workspaceForShell.workspace.picture_url,
+                          }
+                        : undefined
+                    }
+                    accountId={workspaceForShell.workspace?.id ?? undefined}
+                  />
+                </div>
+                <AiCreditsExhaustedShell
+                  accountId={workspaceForShell.user.id}
+                  billingHref={toHomeBillingHref(
+                    pathsConfig.app.personalAccountBilling,
+                  )}
+                >
+                  <ProductTourHost
+                    variant="personal"
+                    completedTours={completedTours}
+                    workspaceOptions={workspaceOptions}
+                  />
+                  {children}
+                </AiCreditsExhaustedShell>
+              </PersonalHomeMobileChrome>
+            </Page>
+          </SidebarProvider>
+        </WorkspaceFocusProviderShell>
+      </PersonalVisionChromeShell>
     );
   };
 
@@ -286,26 +290,28 @@ function HeaderLayout({ children }: React.PropsWithChildren) {
   const workspace = use(loadUserWorkspace());
 
   return (
-    <UserWorkspaceContextProvider value={workspace}>
-      <Page style={'header'}>
-        <PageNavigation>
-          <HomeMenuNavigation workspace={workspace} />
-        </PageNavigation>
+    <PersonalVisionChromeShell>
+      <UserWorkspaceContextProvider value={workspace}>
+        <Page style={'header'}>
+          <PageNavigation>
+            <HomeMenuNavigation workspace={workspace} />
+          </PageNavigation>
 
-        <PageMobileNavigation className={'flex items-center justify-between'}>
-          <MobileNavigation workspace={workspace} />
-        </PageMobileNavigation>
+          <PageMobileNavigation className={'flex items-center justify-between'}>
+            <MobileNavigation workspace={workspace} />
+          </PageMobileNavigation>
 
-        <AiCreditsExhaustedShell
-          accountId={workspace.user.id}
-          billingHref={toHomeBillingHref(
-            pathsConfig.app.personalAccountBilling,
-          )}
-        >
-          {children}
-        </AiCreditsExhaustedShell>
-      </Page>
-    </UserWorkspaceContextProvider>
+          <AiCreditsExhaustedShell
+            accountId={workspace.user.id}
+            billingHref={toHomeBillingHref(
+              pathsConfig.app.personalAccountBilling,
+            )}
+          >
+            {children}
+          </AiCreditsExhaustedShell>
+        </Page>
+      </UserWorkspaceContextProvider>
+    </PersonalVisionChromeShell>
   );
 }
 

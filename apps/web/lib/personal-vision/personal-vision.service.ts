@@ -2,6 +2,7 @@ import 'server-only';
 
 import type { SupabaseClient } from '@supabase/supabase-js';
 
+import { visionHasPlayableContent } from './build-vision-slides';
 import {
   EMPTY_PERSONAL_VISION_CONTENT,
   type PersonalVisionContent,
@@ -53,6 +54,13 @@ export function sanitizePersonalVisionContent(
           label: g.label.trim(),
           target_pence:
             typeof g.target_pence === 'number' ? g.target_pence : null,
+          due_date: g.due_date?.trim() || null,
+          cadence: g.cadence === 'monthly' ? 'monthly' : 'one_off',
+          monthly_target_pence:
+            typeof g.monthly_target_pence === 'number'
+              ? g.monthly_target_pence
+              : null,
+          months: typeof g.months === 'number' ? g.months : null,
         }))
         .filter((g) => g.label),
       other_goals: cleanStringList(goal.other_goals),
@@ -66,6 +74,7 @@ export type PersonalVisionRow = {
   content: PersonalVisionContent;
   financeAccountIds: string[];
   dashboardEnabled: boolean;
+  morningPromptEnabled: boolean;
 };
 
 function parseContent(raw: unknown): PersonalVisionContent {
@@ -104,7 +113,9 @@ export function createPersonalVisionService(client: SupabaseClient) {
           .maybeSingle(),
         db
           .from('user_settings')
-          .select('personal_vision_dashboard_enabled')
+          .select(
+            'personal_vision_dashboard_enabled, personal_vision_morning_prompt_enabled',
+          )
           .eq('user_id', userId)
           .maybeSingle(),
       ]);
@@ -116,6 +127,7 @@ export function createPersonalVisionService(client: SupabaseClient) {
 
       const settingsRow = settings as {
         personal_vision_dashboard_enabled?: boolean | null;
+        personal_vision_morning_prompt_enabled?: boolean | null;
       } | null;
 
       return {
@@ -125,6 +137,8 @@ export function createPersonalVisionService(client: SupabaseClient) {
         ),
         dashboardEnabled:
           settingsRow?.personal_vision_dashboard_enabled === true,
+        morningPromptEnabled:
+          settingsRow?.personal_vision_morning_prompt_enabled !== false,
       };
     },
 
@@ -134,6 +148,7 @@ export function createPersonalVisionService(client: SupabaseClient) {
         content: PersonalVisionContent;
         financeAccountIds: string[];
         dashboardEnabled: boolean;
+        morningPromptEnabled: boolean;
       },
     ) {
       const content = sanitizePersonalVisionContent(input.content);
@@ -156,6 +171,7 @@ export function createPersonalVisionService(client: SupabaseClient) {
         {
           user_id: userId,
           personal_vision_dashboard_enabled: input.dashboardEnabled,
+          personal_vision_morning_prompt_enabled: input.morningPromptEnabled,
           updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id' },
@@ -177,6 +193,21 @@ export function createPersonalVisionService(client: SupabaseClient) {
         (data as { personal_vision_dashboard_enabled?: boolean | null } | null)
           ?.personal_vision_dashboard_enabled === true
       );
+    },
+
+    async loadChromeFlags(userId: string): Promise<{
+      showIcon: boolean;
+      morningPromptEnabled: boolean;
+      hasContent: boolean;
+    }> {
+      const row = await this.loadForUser(userId);
+      const hasContent = visionHasPlayableContent(row.content);
+      return {
+        // Show once the deck has content, or when the user opts in (empty deck).
+        showIcon: hasContent || row.dashboardEnabled,
+        morningPromptEnabled: row.morningPromptEnabled,
+        hasContent,
+      };
     },
   };
 }

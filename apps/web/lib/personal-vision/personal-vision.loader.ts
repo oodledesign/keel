@@ -22,6 +22,7 @@ export type PersonalVisionDeck = {
   content: PersonalVisionContent;
   financeAccountIds: string[];
   dashboardEnabled: boolean;
+  morningPromptEnabled: boolean;
   displayName: string | null;
 };
 
@@ -71,6 +72,7 @@ export const loadPersonalVisionDeck = cache(
       content: row.content,
       financeAccountIds: allowedFinanceIds,
       dashboardEnabled: row.dashboardEnabled,
+      morningPromptEnabled: row.morningPromptEnabled,
       displayName,
     };
   },

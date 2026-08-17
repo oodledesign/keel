@@ -202,6 +202,14 @@ export function RecipeDetailPage({
         </div>
       </header>
 
+      <RecipeMethodPanel
+        baseServings={recipe.servings}
+        ingredients={structure.ingredients}
+        steps={structure.steps}
+        fallbackIngredients={recipe.ingredients}
+        fallbackInstructions={recipe.instructions}
+      />
+
       {hasNutrition || recipe.nutrition_pending ? (
         <section className={cn(panelClass, 'space-y-3 p-5')}>
           <div className="flex flex-wrap items-center justify-between gap-3">
@@ -280,14 +288,6 @@ export function RecipeDetailPage({
           </p>
         </section>
       ) : null}
-
-      <RecipeMethodPanel
-        baseServings={recipe.servings}
-        ingredients={structure.ingredients}
-        steps={structure.steps}
-        fallbackIngredients={recipe.ingredients}
-        fallbackInstructions={recipe.instructions}
-      />
 
       <RecipeCookLogPanel
         recipeId={recipe.id}

@@ -20,6 +20,7 @@ export async function PersonalVisionSettingsSection() {
       initialContent={row.content}
       initialFinanceAccountIds={row.financeAccountIds}
       initialDashboardEnabled={row.dashboardEnabled}
+      initialMorningPromptEnabled={row.morningPromptEnabled}
       workspaces={memberships.map((m) => ({
         id: m.id,
         name: m.name?.trim() || m.slug || 'Workspace',

@@ -2,7 +2,13 @@
 
 import { useState } from 'react';
 
-import { ChevronRight } from 'lucide-react';
+import {
+  Briefcase,
+  ChevronRight,
+  FolderKanban,
+  Receipt,
+  Users,
+} from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -17,6 +23,8 @@ import type {
   DashboardJobSummary,
   DashboardStatusSummary,
 } from '../_lib/server/dashboard-page.loader';
+import { InvoiceStatusBadge } from '../invoices/_components/invoice-status-badge';
+import { DashboardStatusPill } from './dashboard-ui';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -41,10 +49,14 @@ type Props = {
   density?: 'sm' | 'md' | 'lg';
 };
 
-const TABS: { id: DashboardOverviewTab; label: string }[] = [
-  { id: 'projects', label: 'Projects' },
-  { id: 'team', label: 'Team' },
-  { id: 'invoices', label: 'Invoices' },
+const TABS: {
+  id: DashboardOverviewTab;
+  label: string;
+  icon: typeof FolderKanban;
+}[] = [
+  { id: 'projects', label: 'Projects', icon: FolderKanban },
+  { id: 'team', label: 'Team', icon: Users },
+  { id: 'invoices', label: 'Invoices', icon: Receipt },
 ];
 
 export function DashboardOverviewTabs({
@@ -81,25 +93,39 @@ export function DashboardOverviewTabs({
         ? membersHref
         : invoicesHref;
 
+  const projectHref = (id: string) =>
+    pathsConfig.app.accountJobDetail
+      .replace('[account]', accountSlug)
+      .replace('[id]', id);
+
+  const invoiceHref = (id: string) =>
+    pathsConfig.app.accountInvoiceEdit
+      .replace('[account]', accountSlug)
+      .replace('[id]', id);
+
   return (
     <section className={cn(panelClass, density === 'lg' && 'xl:col-span-2')}>
       <div className="flex items-center justify-between gap-2 border-b border-[color:var(--workspace-shell-border)] px-3 py-2 sm:px-4">
         <div className="flex min-w-0 gap-1 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-          {TABS.map((item) => (
-            <button
-              key={item.id}
-              type="button"
-              onClick={() => setTab(item.id)}
-              className={cn(
-                'rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
-                tab === item.id
-                  ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
-                  : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
-              )}
-            >
-              {item.label}
-            </button>
-          ))}
+          {TABS.map((item) => {
+            const Icon = item.icon;
+            return (
+              <button
+                key={item.id}
+                type="button"
+                onClick={() => setTab(item.id)}
+                className={cn(
+                  'inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-medium transition-colors',
+                  tab === item.id
+                    ? 'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]'
+                    : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                )}
+              >
+                <Icon className="h-3.5 w-3.5 shrink-0" aria-hidden />
+                {item.label}
+              </button>
+            );
+          })}
         </div>
         <HapticLink
           href={viewAllHref}
@@ -116,25 +142,36 @@ export function DashboardOverviewTabs({
             {statusSummary.inProgress} in progress · {statusSummary.pending}{' '}
             pending · {statusSummary.completed} completed
           </p>
-          <ul className="space-y-2">
+          <ul className="space-y-1">
             {projects.length === 0 ? (
               <li className="px-1 py-2 text-sm text-[var(--workspace-shell-text-muted)]">
                 No active projects.
               </li>
             ) : (
               projects.map((project) => (
-                <li
-                  key={project.id}
-                  className="rounded-xl px-2 py-2 hover:bg-[var(--workspace-shell-sidebar-accent)]"
-                >
-                  <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                    {project.title}
-                  </p>
-                  <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                    {[project.clientName, project.status]
-                      .filter(Boolean)
-                      .join(' · ')}
-                  </p>
+                <li key={project.id}>
+                  <HapticLink
+                    href={projectHref(project.id)}
+                    className="flex items-start gap-2.5 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                  >
+                    <Briefcase className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {project.title}
+                      </p>
+                      <div className="mt-1 flex flex-wrap items-center gap-2">
+                        <DashboardStatusPill
+                          kind="project"
+                          status={project.status}
+                        />
+                        {project.clientName ? (
+                          <span className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                            {project.clientName}
+                          </span>
+                        ) : null}
+                      </div>
+                    </div>
+                  </HapticLink>
                 </li>
               ))
             )}
@@ -143,23 +180,28 @@ export function DashboardOverviewTabs({
       ) : null}
 
       {tab === 'team' ? (
-        <ul className="space-y-2 p-3">
+        <ul className="space-y-1 p-3">
           {teamMembers.length === 0 ? (
             <li className="px-1 py-2 text-sm text-[var(--workspace-shell-text-muted)]">
               No team members yet.
             </li>
           ) : (
             teamMembers.slice(0, 8).map((member) => (
-              <li
-                key={member.userId}
-                className="rounded-xl px-2 py-2 hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              >
-                <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                  {member.name?.trim() || member.email || 'Team member'}
-                </p>
-                <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                  {[member.role, member.email].filter(Boolean).join(' · ')}
-                </p>
+              <li key={member.userId}>
+                <HapticLink
+                  href={membersHref}
+                  className="flex items-start gap-2.5 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                >
+                  <Users className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                      {member.name?.trim() || member.email || 'Team member'}
+                    </p>
+                    <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                      {[member.role, member.email].filter(Boolean).join(' · ')}
+                    </p>
+                  </div>
+                </HapticLink>
               </li>
             ))
           )}
@@ -167,32 +209,42 @@ export function DashboardOverviewTabs({
       ) : null}
 
       {tab === 'invoices' ? (
-        <ul className="space-y-2 p-3">
+        <ul className="space-y-1 p-3">
           {invoices.length === 0 ? (
             <li className="px-1 py-2 text-sm text-[var(--workspace-shell-text-muted)]">
               No open invoices.
             </li>
           ) : (
             invoices.map((invoice) => (
-              <li
-                key={invoice.id}
-                className="rounded-xl px-2 py-2 hover:bg-[var(--workspace-shell-sidebar-accent)]"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
-                      {invoice.invoiceNumber}
-                    </p>
-                    <p className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
-                      {[invoice.clientName, invoice.status]
-                        .filter(Boolean)
-                        .join(' · ')}
-                    </p>
+              <li key={invoice.id}>
+                <HapticLink
+                  href={invoiceHref(invoice.id)}
+                  className="flex items-start gap-2.5 rounded-xl px-2 py-2 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]"
+                >
+                  <Receipt className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="truncate text-sm font-medium text-[var(--workspace-shell-text)]">
+                        {invoice.invoiceNumber}
+                      </p>
+                      <span className="shrink-0 text-xs font-medium text-[var(--workspace-shell-text)]">
+                        {formatMoney(invoice.totalPence)}
+                      </span>
+                    </div>
+                    <div className="mt-1 flex flex-wrap items-center gap-2">
+                      <InvoiceStatusBadge
+                        status={invoice.status}
+                        due_at={invoice.dueAt}
+                        total_pence={invoice.totalPence}
+                      />
+                      {invoice.clientName ? (
+                        <span className="truncate text-xs text-[var(--workspace-shell-text-muted)]">
+                          {invoice.clientName}
+                        </span>
+                      ) : null}
+                    </div>
                   </div>
-                  <span className="shrink-0 text-xs font-medium text-[var(--workspace-shell-text)]">
-                    {formatMoney(invoice.totalPence)}
-                  </span>
-                </div>
+                </HapticLink>
               </li>
             ))
           )}

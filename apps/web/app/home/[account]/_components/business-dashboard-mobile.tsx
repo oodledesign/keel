@@ -2,7 +2,13 @@
 
 import dynamic from 'next/dynamic';
 
-import { ArrowUpRight, ChevronRight, StickyNote } from 'lucide-react';
+import {
+  ArrowUpRight,
+  CheckSquare,
+  ChevronRight,
+  StickyNote,
+  Wallet,
+} from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -40,6 +46,7 @@ import { DashboardOverviewTabs } from './dashboard-overview-tabs';
 import { DashboardPipelineCard } from './dashboard-pipeline-card';
 import { DashboardSuggestedEmailTasksCard } from './dashboard-suggested-email-tasks-card';
 import { DashboardSupportTicketsCard } from './dashboard-support-tickets-card';
+import { DashboardPanelTitle } from './dashboard-ui';
 import { DashboardUpcomingTaskItem } from './dashboard-upcoming-task-item';
 import { NoteAssignmentLabels } from './note-assignment-labels';
 
@@ -161,7 +168,11 @@ export function BusinessDashboardMobile({
           >
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                <p className="flex items-center gap-1.5 text-[10px] font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
+                  <Wallet
+                    className="h-3.5 w-3.5 text-[var(--ozer-accent)]"
+                    aria-hidden
+                  />
                   {metrics.hasFinanceData ? 'This month' : 'Revenue'}
                 </p>
                 <p className="mt-0.5 text-2xl font-semibold tracking-tight text-[var(--workspace-shell-text)]">
@@ -257,9 +268,9 @@ export function BusinessDashboardMobile({
             className={cn(panelClass, density === 'lg' && 'xl:col-span-2')}
           >
             <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              <DashboardPanelTitle icon={CheckSquare}>
                 Upcoming tasks
-              </h2>
+              </DashboardPanelTitle>
               <HapticLink href={tasksHref} className={dashboardLinkClass}>
                 View all
                 <ChevronRight className="h-3.5 w-3.5" />
@@ -286,9 +297,9 @@ export function BusinessDashboardMobile({
         return (
           <section key={cardId} className="xl:col-span-2">
             <div className="mb-2 flex items-center justify-between">
-              <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              <DashboardPanelTitle icon={StickyNote}>
                 Recent notes
-              </h2>
+              </DashboardPanelTitle>
               <HapticLink href={notesHref} className={dashboardLinkClass}>
                 View all
                 <ChevronRight className="h-3.5 w-3.5" />

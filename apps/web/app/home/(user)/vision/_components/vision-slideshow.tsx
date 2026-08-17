@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
@@ -16,19 +17,26 @@ import { VisionSlideView } from './vision-slides';
 type Props = {
   slides: VisionSlide[];
   settingsHref?: string;
+  closeHref?: string;
 };
 
 export function VisionSlideshow({
   slides,
   settingsHref = pathsConfig.app.personalAccountVisionSettings,
+  closeHref = pathsConfig.app.home,
 }: Props) {
+  const router = useRouter();
   const reduced = useReducedMotion() ?? false;
   const [index, setIndex] = useState(0);
-  const [chromeVisible, setChromeVisible] = useState(false);
+  const [chromeVisible, setChromeVisible] = useState(true);
   const hideTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const touchStartX = useRef<number | null>(null);
+  const touchStart = useRef<{ x: number; y: number } | null>(null);
 
   const current = slides[index] as VisionSlide | undefined;
+
+  const close = useCallback(() => {
+    router.push(closeHref);
+  }, [closeHref, router]);
 
   const go = useCallback(
     (next: number) => {
@@ -44,10 +52,11 @@ export function VisionSlideshow({
   const revealChrome = useCallback(() => {
     setChromeVisible(true);
     if (hideTimer.current) clearTimeout(hideTimer.current);
-    hideTimer.current = setTimeout(() => setChromeVisible(false), 2800);
+    hideTimer.current = setTimeout(() => setChromeVisible(false), 3200);
   }, []);
 
   useEffect(() => {
+    hideTimer.current = setTimeout(() => setChromeVisible(false), 3200);
     return () => {
       if (hideTimer.current) clearTimeout(hideTimer.current);
     };
@@ -65,6 +74,11 @@ export function VisionSlideshow({
       ) {
         return;
       }
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        close();
+        return;
+      }
       if (event.key === 'ArrowRight' || event.key === ' ') {
         event.preventDefault();
         next();
@@ -79,7 +93,7 @@ export function VisionSlideshow({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [go, next, prev, slides.length]);
+  }, [close, go, next, prev, slides.length]);
 
   if (!slides.length || !current) {
     return (
@@ -91,34 +105,58 @@ export function VisionSlideshow({
           <p className="mt-3 text-[var(--ozer-text-on-dark-muted)]">
             Add at least one stage in settings, then come back to play the deck.
           </p>
-          <Link
-            href={settingsHref}
-            className="mt-6 inline-flex rounded-full bg-[var(--ozer-coral-500)] px-5 py-2.5 text-sm font-medium text-white"
-          >
-            Open Personal Vision settings
-          </Link>
+          <div className="mt-6 flex flex-wrap items-center justify-center gap-3">
+            <Link
+              href={settingsHref}
+              className="inline-flex rounded-full bg-[var(--ozer-coral-500)] px-5 py-2.5 text-sm font-medium text-white"
+            >
+              Open Personal Vision settings
+            </Link>
+            <Link
+              href={closeHref}
+              className="inline-flex rounded-full border border-white/25 px-5 py-2.5 text-sm font-medium"
+            >
+              Close
+            </Link>
+          </div>
         </div>
       </div>
     );
   }
 
+  const sectionLabel = 'title' in current ? current.title : 'Personal Vision';
+  const sectionPartLabel =
+    current.sectionParts && current.sectionParts > 1 && current.sectionPart
+      ? ` · ${current.sectionPart}/${current.sectionParts}`
+      : '';
+
   return (
     <div
-      className="fixed inset-0 z-[200] overflow-hidden bg-[var(--ozer-plum-900)] text-[var(--ozer-text-on-dark)]"
+      className="fixed inset-0 z-[200] touch-pan-y overflow-hidden bg-[var(--ozer-plum-900)] text-[var(--ozer-text-on-dark)]"
       onMouseMove={revealChrome}
       onTouchStart={(event) => {
         revealChrome();
-        touchStartX.current = event.touches[0]?.clientX ?? null;
+        const touch = event.touches[0];
+        touchStart.current = touch
+          ? { x: touch.clientX, y: touch.clientY }
+          : null;
       }}
       onTouchEnd={(event) => {
-        const start = touchStartX.current;
-        const end = event.changedTouches[0]?.clientX;
-        touchStartX.current = null;
-        if (start == null || end == null) return;
-        const delta = end - start;
-        if (Math.abs(delta) < 48) return;
-        if (delta < 0) next();
-        else prev();
+        const start = touchStart.current;
+        const end = event.changedTouches[0];
+        touchStart.current = null;
+        if (!start || !end) return;
+        const dx = end.clientX - start.x;
+        const dy = end.clientY - start.y;
+        if (Math.abs(dx) < 48 && Math.abs(dy) < 48) return;
+
+        // Prefer horizontal slide changes; swipe down to close.
+        if (Math.abs(dx) >= Math.abs(dy)) {
+          if (dx < 0) next();
+          else prev();
+          return;
+        }
+        if (dy > 80) close();
       }}
       role="region"
       aria-roledescription="carousel"
@@ -141,41 +179,48 @@ export function VisionSlideshow({
         <motion.div
           key={`${current.kind}-${index}`}
           className="absolute inset-0"
-          initial={reduced ? false : { opacity: 0, y: 18 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={reduced ? undefined : { opacity: 0, y: -12 }}
+          initial={reduced ? false : { opacity: 0, x: 24 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={reduced ? undefined : { opacity: 0, x: -24 }}
           transition={
             reduced
               ? { duration: 0 }
-              : { duration: 0.4, ease: marketingHeroEase }
+              : { duration: 0.32, ease: marketingHeroEase }
           }
         >
           <VisionSlideView slide={current} />
         </motion.div>
       </AnimatePresence>
 
-      <div
-        className={`pointer-events-none absolute inset-x-0 top-0 z-30 flex items-start justify-between gap-4 bg-gradient-to-b from-black/55 to-transparent px-4 pt-[max(0.75rem,env(safe-area-inset-top))] pb-10 transition-opacity duration-300 sm:px-6 ${
-          chromeVisible ? 'opacity-100' : 'opacity-0'
-        }`}
-      >
-        <div className="min-w-0">
+      {/* Close is always tappable — sits above shortcuts / shell chrome */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 flex items-start justify-between gap-4 px-4 pt-[max(0.75rem,env(safe-area-inset-top))] sm:px-6">
+        <div
+          className={`min-w-0 transition-opacity duration-300 ${
+            chromeVisible ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
           <p className="truncate text-sm font-medium">Personal Vision</p>
           <p className="truncate text-xs text-[var(--ozer-text-on-dark-muted)]">
-            {'title' in current ? current.title : 'Personal Vision'}
+            {sectionLabel}
+            {sectionPartLabel}
           </p>
         </div>
         <div className="pointer-events-auto flex items-center gap-2">
-          <p className="shrink-0 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs text-[var(--ozer-text-on-dark-muted)] tabular-nums">
+          <p
+            className={`shrink-0 rounded-full border border-white/20 bg-black/40 px-3 py-1 text-xs text-[var(--ozer-text-on-dark-muted)] tabular-nums transition-opacity duration-300 ${
+              chromeVisible ? 'opacity-100' : 'opacity-0'
+            }`}
+          >
             {index + 1} / {slides.length}
           </p>
-          <Link
-            href={pathsConfig.app.home}
-            aria-label="Close"
-            className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/25 bg-black/50 text-[var(--ozer-text-on-dark)] transition hover:border-[var(--ozer-coral-500)]/60"
+          <button
+            type="button"
+            onClick={close}
+            aria-label="Close Personal Vision"
+            className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-white/30 bg-black/70 text-[var(--ozer-text-on-dark)] shadow-lg transition hover:border-[var(--ozer-coral-500)]/70"
           >
-            <X className="h-4 w-4" />
-          </Link>
+            <X className="h-5 w-5" />
+          </button>
         </div>
       </div>
 
@@ -197,7 +242,7 @@ export function VisionSlideshow({
           <div className="pointer-events-auto flex max-w-[60vw] flex-wrap items-center justify-center gap-1.5">
             {slides.map((slide, i) => (
               <button
-                key={`${slide.kind}-${i}`}
+                key={`${slide.kind}-${slide.sectionKey ?? 'x'}-${i}`}
                 type="button"
                 aria-label={`Go to slide ${i + 1}`}
                 aria-current={i === index ? true : undefined}
@@ -205,7 +250,11 @@ export function VisionSlideshow({
                 className={`h-1.5 rounded-full transition-all ${
                   i === index
                     ? 'w-6 bg-[var(--ozer-coral-500)]'
-                    : 'w-1.5 bg-[var(--ozer-text-on-dark)]/35 hover:bg-[var(--ozer-text-on-dark)]/60'
+                    : slide.sectionKey &&
+                        current.sectionKey &&
+                        slide.sectionKey === current.sectionKey
+                      ? 'w-2 bg-[var(--ozer-coral-500)]/45'
+                      : 'w-1.5 bg-[var(--ozer-text-on-dark)]/35 hover:bg-[var(--ozer-text-on-dark)]/60'
                 }`}
               />
             ))}

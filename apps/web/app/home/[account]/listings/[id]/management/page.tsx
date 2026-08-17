@@ -112,6 +112,7 @@ async function ListingManagementPage({ params }: PageProps) {
         listing={listing}
         publications={publications}
         accountId={accountId}
+        accountSlug={slug}
       />
     </div>
   );

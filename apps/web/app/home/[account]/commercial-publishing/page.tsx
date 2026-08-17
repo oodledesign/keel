@@ -10,6 +10,7 @@ import {
   redirectIfSpaceNotIn,
 } from '../_lib/server/workspace-route-guard';
 import { createListingsService } from '../listings/_lib/server/listings.service';
+import { RequirementFormSettingsCard } from '../requirements/_components/requirement-form-settings-card';
 import { CommercialPublishingSettings } from './_components/commercial-publishing-settings';
 import { loadCommercialPublishingSettings } from './_lib/server/commercial-publishing.loader';
 
@@ -52,12 +53,15 @@ async function CommercialPublishingPage({
         description="Property Hive and EACH listing XML feeds, plus Rightmove portal setup."
       />
       <PageBody className="bg-[var(--workspace-shell-canvas)] px-0 py-6 lg:px-6">
-        <CommercialPublishingSettings
-          accountId={accountId}
-          initialSettings={settings}
-          listings={listings}
-          portalPublishingUnlocked={portalPublishingAllowed(billableSeats)}
-        />
+        <div className="space-y-4">
+          <RequirementFormSettingsCard accountId={accountId} />
+          <CommercialPublishingSettings
+            accountId={accountId}
+            initialSettings={settings}
+            listings={listings}
+            portalPublishingUnlocked={portalPublishingAllowed(billableSeats)}
+          />
+        </div>
       </PageBody>
     </>
   );

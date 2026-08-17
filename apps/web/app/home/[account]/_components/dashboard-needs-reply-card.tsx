@@ -29,6 +29,7 @@ import { triageRuleSuccessMessage } from '~/lib/email-assistant/email-triage-rul
 import { formatEmailDateTime } from '~/lib/email-assistant/format-email-date';
 
 import type { DashboardNeedsReplyThread } from '../_lib/server/dashboard-page.loader';
+import { DashboardPanelTitle } from './dashboard-ui';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -142,9 +143,7 @@ export function DashboardNeedsReplyCard({
     <section className={panelClass}>
       <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
         <div className="min-w-0">
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Needs a reply
-          </h2>
+          <DashboardPanelTitle icon={Mail}>Needs a reply</DashboardPanelTitle>
           <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {waitingLabel}
           </p>

@@ -28,6 +28,7 @@ export const savePersonalVisionAction = enhanceAction(
         content: data.content,
         financeAccountIds,
         dashboardEnabled: data.dashboardEnabled,
+        morningPromptEnabled: data.morningPromptEnabled,
       });
     } catch (error) {
       logger.error({ error, name: 'personal-vision.save' }, 'Failed to save');

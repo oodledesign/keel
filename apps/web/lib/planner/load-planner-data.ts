@@ -167,6 +167,7 @@ function summarisePipelineDeals(
       name:
         [deal.contactName, deal.companyName].filter(Boolean).join(' · ') ||
         'Untitled deal',
+      stage: deal.stage,
       stageLabel: stageLabel(deal.stage),
       nextAction: deal.nextAction,
       nextActionDate: deal.nextActionDate,

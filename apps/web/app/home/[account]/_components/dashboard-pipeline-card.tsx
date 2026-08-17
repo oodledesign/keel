@@ -1,6 +1,6 @@
 'use client';
 
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, Kanban } from 'lucide-react';
 
 import { cn } from '@kit/ui/utils';
 
@@ -8,6 +8,8 @@ import { HapticLink } from '~/components/haptic-link';
 import { useWorkspaceCurrency } from '~/lib/currency/use-workspace-currency';
 import { formatWorkspaceAmount } from '~/lib/currency/workspace-currency';
 import type { DayViewPipeline } from '~/lib/planner/types';
+
+import { DashboardPanelTitle, DashboardStatusPill } from './dashboard-ui';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
@@ -27,9 +29,7 @@ export function DashboardPipelineCard({ pipeline, density = 'md' }: Props) {
   if (!pipeline) {
     return (
       <section className={cn(panelClass, 'p-4')}>
-        <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-          Pipeline
-        </h2>
+        <DashboardPanelTitle icon={Kanban}>Pipeline</DashboardPanelTitle>
         <p className="mt-2 text-sm text-[var(--workspace-shell-text-muted)]">
           No open deals yet.
         </p>
@@ -41,10 +41,8 @@ export function DashboardPipelineCard({ pipeline, density = 'md' }: Props) {
     <section className={cn(panelClass, density === 'lg' && 'xl:col-span-2')}>
       <div className="flex items-center justify-between border-b border-[color:var(--workspace-shell-border)] px-4 py-3">
         <div>
-          <h2 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            Pipeline
-          </h2>
-          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+          <DashboardPanelTitle icon={Kanban}>Pipeline</DashboardPanelTitle>
+          <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
             {pipeline.openCount} open · {formatMoney(pipeline.openValue)}
           </p>
         </div>
@@ -56,15 +54,13 @@ export function DashboardPipelineCard({ pipeline, density = 'md' }: Props) {
 
       <div className="flex flex-wrap gap-2 px-4 pt-3">
         {pipeline.stages.map((stage) => (
-          <span
+          <DashboardStatusPill
             key={stage.key}
-            className="rounded-full bg-[var(--workspace-shell-sidebar-accent)] px-2.5 py-1 text-[11px] font-medium text-[var(--workspace-shell-text)]"
-          >
-            {stage.label}{' '}
-            <span className="text-[var(--workspace-shell-text-muted)]">
-              {stage.count}
-            </span>
-          </span>
+            kind="pipeline"
+            status={stage.key}
+            label={stage.label}
+            count={stage.count}
+          />
         ))}
       </div>
 
@@ -88,16 +84,16 @@ export function DashboardPipelineCard({ pipeline, density = 'md' }: Props) {
                     {deal.nextAction}
                   </p>
                 </div>
-                <span
-                  className={cn(
-                    'shrink-0 text-[10px] font-medium',
+                <DashboardStatusPill
+                  kind="pipeline"
+                  status={deal.stage}
+                  label={deal.stageLabel}
+                  className={
                     deal.overdue
-                      ? 'text-[var(--ozer-accent)]'
-                      : 'text-[var(--workspace-shell-text-muted)]',
-                  )}
-                >
-                  {deal.stageLabel}
-                </span>
+                      ? 'ring-1 ring-[var(--ozer-accent)]'
+                      : undefined
+                  }
+                />
               </div>
             </li>
           ))

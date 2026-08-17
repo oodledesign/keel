@@ -61,6 +61,7 @@ export function summariseDashboardPipeline(
       name:
         [deal.contact_name, deal.company_name].filter(Boolean).join(' · ') ||
         'Untitled deal',
+      stage: deal.stage ?? 'lead',
       stageLabel: stageLabel(deal.stage ?? 'lead'),
       nextAction: deal.next_action?.trim() || '',
       nextActionDate: deal.next_action_date,

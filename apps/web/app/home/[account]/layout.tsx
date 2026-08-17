@@ -11,6 +11,7 @@ import { Page, PageMobileNavigation, PageNavigation } from '@kit/ui/page';
 import { SidebarProvider } from '@kit/ui/shadcn-sidebar';
 
 import { AiCreditsExhaustedShell } from '~/components/ai/ai-credits-exhausted-shell';
+import { PersonalVisionChromeShell } from '~/components/personal-vision/personal-vision-chrome-shell';
 import { ProductTourHost } from '~/components/product-tour/product-tour-host';
 import { TeamWorkspaceTopBarClient } from '~/components/workspace-shell/team-workspace-top-bar-client';
 import { WorkspaceFocusProviderShell } from '~/components/workspace-shell/workspace-focus-provider-shell';
@@ -305,57 +306,59 @@ function TeamWorkspaceSidebarShell({
   });
 
   return (
-    <WorkspaceFocusProviderShell
-      settingsByAccountId={focusSettingsByAccountId}
-      supportDefaultAccountId={accountId}
-    >
-      <SidebarProvider defaultOpen={layoutState.open}>
-        <Page
-          style={'sidebar'}
-          contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
-        >
-          <PageNavigation>
-            <TeamAccountLayoutSidebar
+    <PersonalVisionChromeShell>
+      <WorkspaceFocusProviderShell
+        settingsByAccountId={focusSettingsByAccountId}
+        supportDefaultAccountId={accountId}
+      >
+        <SidebarProvider defaultOpen={layoutState.open}>
+          <Page
+            style={'sidebar'}
+            contentContainerClassName="mx-auto flex h-svh min-h-0 w-full min-w-0 flex-1 flex-col overflow-hidden bg-[var(--workspace-shell-canvas)]"
+          >
+            <PageNavigation>
+              <TeamAccountLayoutSidebar
+                account={account}
+                accountId={accountId}
+                accounts={accounts}
+                portals={portals}
+                user={user}
+                moduleSettings={moduleSettings}
+                workspaceProfile={workspaceProfile}
+                navCounts={navCounts}
+                emailAssistantAvailable={emailAssistantAvailable}
+                pipelineBoardName={pipelineBoardName}
+                accountAccess={accountAccess}
+              />
+            </PageNavigation>
+
+            <PageMobileNavigation className="hidden lg:px-0" />
+
+            <TeamWorkspaceMobileChrome
               account={account}
               accountId={accountId}
+              user={user}
               accounts={accounts}
               portals={portals}
-              user={user}
-              moduleSettings={moduleSettings}
-              workspaceProfile={workspaceProfile}
-              navCounts={navCounts}
-              emailAssistantAvailable={emailAssistantAvailable}
-              pipelineBoardName={pipelineBoardName}
-              accountAccess={accountAccess}
-            />
-          </PageNavigation>
-
-          <PageMobileNavigation className="hidden lg:px-0" />
-
-          <TeamWorkspaceMobileChrome
-            account={account}
-            accountId={accountId}
-            user={user}
-            accounts={accounts}
-            portals={portals}
-            navSections={mobileNavSections}
-            bottomNavTabs={bottomNavTabs}
-            spaceType={spaceTypeFromProfile(workspaceProfile)}
-            showNewMenu={showNewMenu}
-          >
-            <ProductTourHost
-              variant="team"
-              completedTours={completedTours}
-              workspaceProfile={workspaceProfile}
-              accountSlug={account}
-              onboardingCompleted={onboardingCompleted}
-              workspaceOptions={workspaceOptions}
-            />
-            {children}
-          </TeamWorkspaceMobileChrome>
-        </Page>
-      </SidebarProvider>
-    </WorkspaceFocusProviderShell>
+              navSections={mobileNavSections}
+              bottomNavTabs={bottomNavTabs}
+              spaceType={spaceTypeFromProfile(workspaceProfile)}
+              showNewMenu={showNewMenu}
+            >
+              <ProductTourHost
+                variant="team"
+                completedTours={completedTours}
+                workspaceProfile={workspaceProfile}
+                accountSlug={account}
+                onboardingCompleted={onboardingCompleted}
+                workspaceOptions={workspaceOptions}
+              />
+              {children}
+            </TeamWorkspaceMobileChrome>
+          </Page>
+        </SidebarProvider>
+      </WorkspaceFocusProviderShell>
+    </PersonalVisionChromeShell>
   );
 }
 
@@ -494,51 +497,53 @@ function HeaderLayoutShell({
   });
 
   return (
-    <WorkspaceFocusProviderShell
-      settingsByAccountId={adornments.focusSettingsByAccountId}
-      supportDefaultAccountId={accountId}
-    >
-      <Page style={'header'}>
-        <PageNavigation>
-          <TeamAccountNavigationMenu
-            workspace={data}
+    <PersonalVisionChromeShell>
+      <WorkspaceFocusProviderShell
+        settingsByAccountId={adornments.focusSettingsByAccountId}
+        supportDefaultAccountId={accountId}
+      >
+        <Page style={'header'}>
+          <PageNavigation>
+            <TeamAccountNavigationMenu
+              workspace={data}
+              accounts={accounts}
+              portals={portals}
+              emailAssistantAvailable={adornments.emailAssistantAvailable}
+              pipelineBoardName={adornments.pipelineBoardName}
+            />
+          </PageNavigation>
+
+          <PageMobileNavigation className="hidden lg:px-0" />
+
+          <TeamWorkspaceMobileChrome
+            account={account}
+            accountId={accountId}
+            user={data.user}
             accounts={accounts}
             portals={portals}
-            emailAssistantAvailable={adornments.emailAssistantAvailable}
-            pipelineBoardName={adornments.pipelineBoardName}
-          />
-        </PageNavigation>
-
-        <PageMobileNavigation className="hidden lg:px-0" />
-
-        <TeamWorkspaceMobileChrome
-          account={account}
-          accountId={accountId}
-          user={data.user}
-          accounts={accounts}
-          portals={portals}
-          navSections={mobileNavSections}
-          bottomNavTabs={bottomNavTabs}
-          spaceType={spaceTypeFromProfile(data.workspaceProfile)}
-          showNewMenu={access.canUseQuickCreate}
-        >
-          <AiCreditsExhaustedShell
-            accountId={accountId}
-            billingHref={toHomeBillingHref(
-              pathsConfig.app.accountBilling,
-              account,
-            )}
+            navSections={mobileNavSections}
+            bottomNavTabs={bottomNavTabs}
+            spaceType={spaceTypeFromProfile(data.workspaceProfile)}
+            showNewMenu={access.canUseQuickCreate}
           >
-            <BillingAccessBannerHost
+            <AiCreditsExhaustedShell
               accountId={accountId}
-              accountSlug={account}
-              canManageBilling={access.canManageBilling}
-            />
-            {children}
-          </AiCreditsExhaustedShell>
-        </TeamWorkspaceMobileChrome>
-      </Page>
-    </WorkspaceFocusProviderShell>
+              billingHref={toHomeBillingHref(
+                pathsConfig.app.accountBilling,
+                account,
+              )}
+            >
+              <BillingAccessBannerHost
+                accountId={accountId}
+                accountSlug={account}
+                canManageBilling={access.canManageBilling}
+              />
+              {children}
+            </AiCreditsExhaustedShell>
+          </TeamWorkspaceMobileChrome>
+        </Page>
+      </WorkspaceFocusProviderShell>
+    </PersonalVisionChromeShell>
   );
 }
 

@@ -686,6 +686,27 @@ export async function fulfillAdminUserInvite(
     },
   });
 
+  void import('~/lib/admin/platform-lifecycle-notifications')
+    .then(({ notifyPlatformInviteAccepted }) =>
+      notifyPlatformInviteAccepted({
+        email: invite.email,
+        userId,
+        inviteKind: 'admin_user',
+        workspaceName: primarySlug
+          ? `Invite workspaces (primary: ${primarySlug})`
+          : config.personalOnly
+            ? 'Personal account'
+            : null,
+        workspaceSlug: landingSlug ?? primarySlug,
+      }),
+    )
+    .catch((err) => {
+      console.error(
+        '[admin-invite] Failed to queue invite-accepted notification:',
+        err instanceof Error ? err.message : err,
+      );
+    });
+
   if (config.personalOnly) {
     if (config.billingExempt) {
       await setBillingExemptOnAccount(admin, userId, invite.invited_by);

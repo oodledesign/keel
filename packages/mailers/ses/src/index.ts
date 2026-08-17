@@ -29,13 +29,27 @@ function buildRawEmail(config: Config) {
   const from = sanitizeHeader(config.from);
   const to = sanitizeHeader(config.to);
   const subject = sanitizeHeader(config.subject);
+  const headers = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    'MIME-Version: 1.0',
+  ];
+
+  if (config.replyTo) {
+    headers.push(`Reply-To: ${sanitizeHeader(config.replyTo)}`);
+  }
+
+  if (config.listUnsubscribeUrl) {
+    headers.push(
+      `List-Unsubscribe: <${sanitizeHeader(config.listUnsubscribeUrl)}>`,
+    );
+    headers.push('List-Unsubscribe-Post: List-Unsubscribe=One-Click');
+  }
 
   if ('text' in config) {
     return [
-      `From: ${from}`,
-      `To: ${to}`,
-      `Subject: ${subject}`,
-      'MIME-Version: 1.0',
+      ...headers,
       'Content-Type: text/plain; charset=UTF-8',
       'Content-Transfer-Encoding: 8bit',
       '',
@@ -45,10 +59,7 @@ function buildRawEmail(config: Config) {
   }
 
   return [
-    `From: ${from}`,
-    `To: ${to}`,
-    `Subject: ${subject}`,
-    'MIME-Version: 1.0',
+    ...headers,
     'Content-Type: text/html; charset=UTF-8',
     'Content-Transfer-Encoding: 8bit',
     '',

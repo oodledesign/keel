@@ -35,6 +35,8 @@ type ReadinessListing = {
   longitude: number | null;
   coverUrl?: string | null;
   actingAgents?: unknown[] | null;
+  brochureShareEnabled?: boolean;
+  hasPdfBrochure?: boolean;
 };
 
 type ReadinessMedia = {
@@ -74,9 +76,12 @@ export function getMarketingReadiness(input: {
   const hasEpcMedia = media.some((m) => m.mediaType === 'epc');
   const epcOk = hasEpcField || hasEpcMedia;
 
-  const brochureOrFloorplan = media.some(
-    (m) => m.mediaType === 'brochure' || m.mediaType === 'floorplan',
-  );
+  const brochureOrFloorplan =
+    media.some(
+      (m) => m.mediaType === 'brochure' || m.mediaType === 'floorplan',
+    ) ||
+    Boolean(listing.brochureShareEnabled) ||
+    Boolean(listing.hasPdfBrochure);
 
   const hasWebsite = Boolean(listing.websiteUrl?.trim());
   const hasPublishedPortal = publications.some((p) => p.status === 'published');
@@ -121,7 +126,7 @@ export function getMarketingReadiness(input: {
       id: 'brochure_or_floorplan',
       label: 'Brochure or floor plan',
       pass: brochureOrFloorplan,
-      hint: 'Upload a brochure or floor plan on Media',
+      hint: 'Upload a brochure/floor plan, enable brochure share, or download a PDF brochure',
       hrefTab: 'media',
     },
     {

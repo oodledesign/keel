@@ -11,6 +11,13 @@ import { Button } from '@kit/ui/button';
 import { Checkbox } from '@kit/ui/checkbox';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Switch } from '@kit/ui/switch';
 import { Textarea } from '@kit/ui/textarea';
@@ -39,6 +46,7 @@ type Props = {
   initialContent: PersonalVisionContent;
   initialFinanceAccountIds: string[];
   initialDashboardEnabled: boolean;
+  initialMorningPromptEnabled: boolean;
   workspaces: WorkspaceOption[];
 };
 
@@ -66,12 +74,16 @@ export function PersonalVisionSettingsForm({
   initialContent,
   initialFinanceAccountIds,
   initialDashboardEnabled,
+  initialMorningPromptEnabled,
   workspaces,
 }: Props) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [dashboardEnabled, setDashboardEnabled] = useState(
     initialDashboardEnabled,
+  );
+  const [morningPromptEnabled, setMorningPromptEnabled] = useState(
+    initialMorningPromptEnabled,
   );
   const [financeAccountIds, setFinanceAccountIds] = useState<string[]>(
     initialFinanceAccountIds,
@@ -109,6 +121,7 @@ export function PersonalVisionSettingsForm({
         },
         financeAccountIds,
         dashboardEnabled,
+        morningPromptEnabled,
       });
 
       if (!result?.success) {
@@ -157,11 +170,12 @@ export function PersonalVisionSettingsForm({
         <div className="flex items-center justify-between gap-4">
           <div>
             <Label htmlFor="vision-dashboard-toggle" className="text-base">
-              Show on dashboards
+              Show icon when Vision is empty
             </Label>
             <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
-              Adds a dedicated Personal Vision button on your personal home and
-              every workspace dashboard.
+              The top-bar icon appears automatically once your deck has content.
+              Turn this on to keep the icon visible while you are still writing
+              it (left of search on mobile).
             </p>
           </div>
           <Switch
@@ -171,12 +185,28 @@ export function PersonalVisionSettingsForm({
           />
         </div>
 
+        <div className="flex items-center justify-between gap-4 border-t border-[color:var(--workspace-shell-border)] pt-4">
+          <div>
+            <Label htmlFor="vision-morning-toggle" className="text-base">
+              Morning reminder
+            </Label>
+            <p className="mt-0.5 text-sm text-[var(--workspace-shell-text-muted)]">
+              Once a day, ask whether you want to open Personal Vision — only
+              when your deck has content.
+            </p>
+          </div>
+          <Switch
+            id="vision-morning-toggle"
+            checked={morningPromptEnabled}
+            onCheckedChange={setMorningPromptEnabled}
+          />
+        </div>
+
         <div className="border-t border-[color:var(--workspace-shell-border)] pt-4">
           <Label className="text-base">Finance actuals workspaces</Label>
           <p className="mt-0.5 mb-3 text-sm text-[var(--workspace-shell-text-muted)]">
-            Current-month income from the Finances module in these workspaces is
-            shown on a Finances slide (and on wealth-goal slides when those are
-            filled in).
+            Income from the Finances module in these workspaces is shown on
+            wealth-goal slides (this month, a 6-month chart, and averages).
           </p>
           {workspaces.length === 0 ? (
             <p className="text-sm text-[var(--workspace-shell-text-muted)]">
@@ -564,57 +594,176 @@ export function PersonalVisionSettingsForm({
                               {block.wealth_goals.map((goal, index) => (
                                 <div
                                   key={goal.id ?? `wealth-${horizon}-${index}`}
-                                  className="flex flex-col gap-2 sm:flex-row"
+                                  className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] p-3"
                                 >
-                                  <Input
-                                    value={goal.label}
-                                    onChange={(e) => {
-                                      const wealth_goals = [
-                                        ...block.wealth_goals,
-                                      ];
-                                      wealth_goals[index] = {
-                                        ...goal,
-                                        label: e.target.value,
-                                      };
-                                      updateGoal(horizon, { wealth_goals });
-                                    }}
-                                    placeholder="Wealth goal label"
-                                    className="flex-1"
-                                  />
-                                  <Input
-                                    value={poundsInputFromPence(
-                                      goal.target_pence,
-                                    )}
-                                    onChange={(e) => {
-                                      const wealth_goals = [
-                                        ...block.wealth_goals,
-                                      ];
-                                      wealth_goals[index] = {
-                                        ...goal,
-                                        target_pence: penceFromPoundsInput(
-                                          e.target.value,
-                                        ),
-                                      };
-                                      updateGoal(horizon, { wealth_goals });
-                                    }}
-                                    placeholder="Target £"
-                                    inputMode="decimal"
-                                    className="sm:w-32"
-                                  />
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="sm"
-                                    onClick={() =>
-                                      updateGoal(horizon, {
-                                        wealth_goals: block.wealth_goals.filter(
-                                          (_, i) => i !== index,
-                                        ),
-                                      })
-                                    }
-                                  >
-                                    Remove
-                                  </Button>
+                                  <div className="flex flex-col gap-2 sm:flex-row">
+                                    <Input
+                                      value={goal.label}
+                                      onChange={(e) => {
+                                        const wealth_goals = [
+                                          ...block.wealth_goals,
+                                        ];
+                                        wealth_goals[index] = {
+                                          ...goal,
+                                          label: e.target.value,
+                                        };
+                                        updateGoal(horizon, { wealth_goals });
+                                      }}
+                                      placeholder="Wealth goal label"
+                                      className="flex-1"
+                                    />
+                                    <Input
+                                      value={poundsInputFromPence(
+                                        goal.target_pence,
+                                      )}
+                                      onChange={(e) => {
+                                        const wealth_goals = [
+                                          ...block.wealth_goals,
+                                        ];
+                                        wealth_goals[index] = {
+                                          ...goal,
+                                          target_pence: penceFromPoundsInput(
+                                            e.target.value,
+                                          ),
+                                        };
+                                        updateGoal(horizon, { wealth_goals });
+                                      }}
+                                      placeholder="Overall £"
+                                      inputMode="decimal"
+                                      className="sm:w-28"
+                                    />
+                                  </div>
+                                  <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                        Due date
+                                      </Label>
+                                      <Input
+                                        type="date"
+                                        value={goal.due_date ?? ''}
+                                        onChange={(e) => {
+                                          const wealth_goals = [
+                                            ...block.wealth_goals,
+                                          ];
+                                          wealth_goals[index] = {
+                                            ...goal,
+                                            due_date: e.target.value || null,
+                                          };
+                                          updateGoal(horizon, { wealth_goals });
+                                        }}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                        Cadence
+                                      </Label>
+                                      <Select
+                                        value={goal.cadence ?? 'one_off'}
+                                        onValueChange={(value) => {
+                                          const wealth_goals = [
+                                            ...block.wealth_goals,
+                                          ];
+                                          wealth_goals[index] = {
+                                            ...goal,
+                                            cadence:
+                                              value === 'monthly'
+                                                ? 'monthly'
+                                                : 'one_off',
+                                          };
+                                          updateGoal(horizon, { wealth_goals });
+                                        }}
+                                      >
+                                        <SelectTrigger className="h-9">
+                                          <SelectValue placeholder="Cadence" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          <SelectItem value="one_off">
+                                            One-off
+                                          </SelectItem>
+                                          <SelectItem value="monthly">
+                                            Monthly
+                                          </SelectItem>
+                                        </SelectContent>
+                                      </Select>
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                        £ / month
+                                      </Label>
+                                      <Input
+                                        value={poundsInputFromPence(
+                                          goal.monthly_target_pence,
+                                        )}
+                                        onChange={(e) => {
+                                          const wealth_goals = [
+                                            ...block.wealth_goals,
+                                          ];
+                                          wealth_goals[index] = {
+                                            ...goal,
+                                            monthly_target_pence:
+                                              penceFromPoundsInput(
+                                                e.target.value,
+                                              ),
+                                            cadence: 'monthly',
+                                          };
+                                          updateGoal(horizon, { wealth_goals });
+                                        }}
+                                        placeholder="e.g. 2000"
+                                        inputMode="decimal"
+                                        disabled={goal.cadence !== 'monthly'}
+                                      />
+                                    </div>
+                                    <div className="space-y-1">
+                                      <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
+                                        Months
+                                      </Label>
+                                      <Input
+                                        type="number"
+                                        min={1}
+                                        max={60}
+                                        value={goal.months ?? ''}
+                                        onChange={(e) => {
+                                          const raw = e.target.value.trim();
+                                          const n = raw
+                                            ? Number.parseInt(raw, 10)
+                                            : null;
+                                          const wealth_goals = [
+                                            ...block.wealth_goals,
+                                          ];
+                                          wealth_goals[index] = {
+                                            ...goal,
+                                            months:
+                                              n != null &&
+                                              Number.isFinite(n) &&
+                                              n > 0
+                                                ? n
+                                                : null,
+                                            cadence: 'monthly',
+                                          };
+                                          updateGoal(horizon, { wealth_goals });
+                                        }}
+                                        placeholder="e.g. 6"
+                                        disabled={goal.cadence !== 'monthly'}
+                                      />
+                                    </div>
+                                  </div>
+                                  <div className="flex justify-end">
+                                    <Button
+                                      type="button"
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() =>
+                                        updateGoal(horizon, {
+                                          wealth_goals:
+                                            block.wealth_goals.filter(
+                                              (_, i) => i !== index,
+                                            ),
+                                        })
+                                      }
+                                    >
+                                      Remove
+                                    </Button>
+                                  </div>
                                 </div>
                               ))}
                               <Button
@@ -629,6 +778,10 @@ export function PersonalVisionSettingsForm({
                                         id: newLocalId(),
                                         label: '',
                                         target_pence: null,
+                                        due_date: null,
+                                        cadence: 'one_off',
+                                        monthly_target_pence: null,
+                                        months: null,
                                       },
                                     ],
                                   })

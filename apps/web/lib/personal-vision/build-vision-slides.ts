@@ -1,16 +1,43 @@
 import type {
   PersonalVisionContent,
   VisionGoalHorizon,
+  VisionWealthGoalCadence,
 } from './personal-vision.schema';
 import { VISION_GOAL_HORIZON_LABELS } from './personal-vision.schema';
+
+export type VisionFinanceMonthPoint = {
+  monthKey: string;
+  monthLabel: string;
+  incomePence: number;
+  isCurrent: boolean;
+};
 
 export type VisionFinanceActuals = {
   incomePence: number;
   hasFinanceData: boolean;
   workspaceNames: string[];
+  monthlyIncome: VisionFinanceMonthPoint[];
+  averageIncomePence: number;
 };
 
-export type VisionSlide =
+export type VisionWealthGoalSlide = {
+  label: string;
+  targetPence: number | null;
+  dueDate: string | null;
+  cadence: VisionWealthGoalCadence;
+  monthlyTargetPence: number | null;
+  months: number | null;
+};
+
+type SectionMeta = {
+  /** Stable section id for markers (e.g. foundations). */
+  sectionKey?: string;
+  /** 1-based part within the section when content spills. */
+  sectionPart?: number;
+  sectionParts?: number;
+};
+
+export type VisionSlide = (
   | { kind: 'cover'; title: string; subtitle?: string }
   | { kind: 'list'; title: string; items: string[] }
   | { kind: 'prose'; title: string; body: string }
@@ -40,7 +67,7 @@ export type VisionSlide =
       title: string;
       horizon: VisionGoalHorizon;
       horizonLabel: string;
-      wealthGoals: { label: string; targetPence: number | null }[];
+      wealthGoals: VisionWealthGoalSlide[];
       otherGoals: string[];
       standards: string[];
       financeActuals: VisionFinanceActuals | null;
@@ -50,7 +77,9 @@ export type VisionSlide =
       title: string;
       financeActuals: VisionFinanceActuals;
     }
-  | { kind: 'affirmations'; title: string; items: string[] };
+  | { kind: 'affirmations'; title: string; items: string[] }
+) &
+  SectionMeta;
 
 function nonEmptyStrings(items: string[]): string[] {
   return items.map((s) => s.trim()).filter(Boolean);
@@ -85,6 +114,128 @@ function hasGoalsBlock(block: PersonalVisionContent['goals'][number]): boolean {
   );
 }
 
+function mapWealthGoals(
+  goals: PersonalVisionContent['goals'][number]['wealth_goals'],
+): VisionWealthGoalSlide[] {
+  return goals
+    .filter((g) => g.label.trim())
+    .map((g) => ({
+      label: g.label.trim(),
+      targetPence: typeof g.target_pence === 'number' ? g.target_pence : null,
+      dueDate: g.due_date?.trim() || null,
+      cadence: g.cadence === 'monthly' ? 'monthly' : 'one_off',
+      monthlyTargetPence:
+        typeof g.monthly_target_pence === 'number'
+          ? g.monthly_target_pence
+          : null,
+      months: typeof g.months === 'number' ? g.months : null,
+    }));
+}
+
+/** Approx items that fit a phone viewport without scrolling. */
+const LIST_CHUNK = 4;
+const AFFIRMATION_CHUNK = 3;
+const STORY_CHUNK = 3;
+const PROSE_CHARS = 420;
+const WEALTH_CHUNK = 2;
+
+function chunkArray<T>(items: T[], size: number): T[][] {
+  if (!items.length) return [[]];
+  const chunks: T[][] = [];
+  for (let i = 0; i < items.length; i += size) {
+    chunks.push(items.slice(i, i + size));
+  }
+  return chunks;
+}
+
+function chunkProse(body: string, maxChars: number): string[] {
+  const trimmed = body.trim();
+  if (trimmed.length <= maxChars) return [trimmed];
+
+  const paragraphs = trimmed
+    .split(/\n{2,}/)
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const chunks: string[] = [];
+  let current = '';
+
+  const pushCurrent = () => {
+    if (current.trim()) chunks.push(current.trim());
+    current = '';
+  };
+
+  for (const para of paragraphs.length ? paragraphs : [trimmed]) {
+    if (!current) {
+      if (para.length <= maxChars) {
+        current = para;
+      } else {
+        for (let i = 0; i < para.length; i += maxChars) {
+          chunks.push(para.slice(i, i + maxChars).trim());
+        }
+      }
+      continue;
+    }
+    if (`${current}\n\n${para}`.length <= maxChars) {
+      current = `${current}\n\n${para}`;
+    } else {
+      pushCurrent();
+      if (para.length <= maxChars) {
+        current = para;
+      } else {
+        for (let i = 0; i < para.length; i += maxChars) {
+          chunks.push(para.slice(i, i + maxChars).trim());
+        }
+      }
+    }
+  }
+  pushCurrent();
+  return chunks.length ? chunks : [trimmed];
+}
+
+function withSectionParts<T extends VisionSlide>(
+  sectionKey: string,
+  slides: T[],
+): T[] {
+  if (slides.length <= 1) {
+    return slides.map((slide) => ({
+      ...slide,
+      sectionKey,
+      sectionPart: 1,
+      sectionParts: 1,
+    }));
+  }
+  return slides.map((slide, i) => ({
+    ...slide,
+    sectionKey,
+    sectionPart: i + 1,
+    sectionParts: slides.length,
+  }));
+}
+
+function pushListSection(
+  slides: VisionSlide[],
+  sectionKey: string,
+  title: string,
+  items: string[],
+) {
+  if (!items.length) return;
+  const chunks = chunkArray(items, LIST_CHUNK);
+  slides.push(
+    ...withSectionParts(
+      sectionKey,
+      chunks.map((chunk) => ({
+        kind: 'list' as const,
+        title,
+        items: chunk,
+      })),
+    ),
+  );
+}
+
+/**
+ * Build the Personal Vision slideshow deck.
+ * Long sections spill onto continuation slides with sectionPart markers.
+ */
 export function buildVisionSlides(input: {
   content: PersonalVisionContent;
   displayName?: string | null;
@@ -100,123 +251,275 @@ export function buildVisionSlides(input: {
     subtitle: 'Read aloud. Feel it. Then go do the work.',
   });
 
-  const foundations = nonEmptyStrings(content.foundations);
-  if (foundations.length) {
-    slides.push({ kind: 'list', title: 'Foundations', items: foundations });
-  }
-
-  const principles = nonEmptyStrings(content.principles);
-  if (principles.length) {
-    slides.push({ kind: 'list', title: 'Principles', items: principles });
-  }
-
-  const ritual = nonEmptyStrings(content.daily_ritual);
-  if (ritual.length) {
-    slides.push({ kind: 'list', title: 'Daily ritual', items: ritual });
-  }
-
-  const longTerm = nonEmptyStrings(content.long_term_mindset);
-  if (longTerm.length) {
-    slides.push({
-      kind: 'list',
-      title: 'Long-term mindset',
-      items: longTerm,
-    });
-  }
+  pushListSection(
+    slides,
+    'foundations',
+    'Foundations',
+    nonEmptyStrings(content.foundations),
+  );
+  pushListSection(
+    slides,
+    'principles',
+    'Principles',
+    nonEmptyStrings(content.principles),
+  );
+  pushListSection(
+    slides,
+    'daily_ritual',
+    'Daily ritual',
+    nonEmptyStrings(content.daily_ritual),
+  );
+  pushListSection(
+    slides,
+    'long_term_mindset',
+    'Long-term mindset',
+    nonEmptyStrings(content.long_term_mindset),
+  );
 
   if (content.identity_snapshot?.trim()) {
-    slides.push({
-      kind: 'prose',
-      title: 'Identity',
-      body: content.identity_snapshot.trim(),
-    });
+    const parts = chunkProse(content.identity_snapshot.trim(), PROSE_CHARS);
+    slides.push(
+      ...withSectionParts(
+        'identity',
+        parts.map((body) => ({
+          kind: 'prose' as const,
+          title: 'Identity',
+          body,
+        })),
+      ),
+    );
   }
 
   if (hasLegacy(content)) {
-    slides.push({
-      kind: 'legacy',
+    const wins = nonEmptyStrings(content.legacy_to_date.wins);
+    const winChunks = wins.length ? chunkArray(wins, LIST_CHUNK) : [[]];
+    const legacySlides: VisionSlide[] = winChunks.map((chunk, i) => ({
+      kind: 'legacy' as const,
       title: 'Legacy to date',
-      headline: content.legacy_to_date.headline?.trim() || undefined,
-      body: content.legacy_to_date.body?.trim() || undefined,
-      wins: nonEmptyStrings(content.legacy_to_date.wins),
-    });
+      headline:
+        i === 0
+          ? content.legacy_to_date.headline?.trim() || undefined
+          : undefined,
+      body:
+        i === 0 ? content.legacy_to_date.body?.trim() || undefined : undefined,
+      wins: chunk,
+    }));
+    slides.push(...withSectionParts('legacy', legacySlides));
   }
 
   const storyItems = content.story.items.filter((i) => i.label.trim());
   if (storyItems.length) {
-    slides.push({
-      kind: 'story',
-      title: 'Story',
-      items: storyItems.map((i) => ({
-        label: i.label.trim(),
-        detail: i.detail?.trim() || undefined,
-      })),
-    });
+    const mapped = storyItems.map((i) => ({
+      label: i.label.trim(),
+      detail: i.detail?.trim() || undefined,
+    }));
+    slides.push(
+      ...withSectionParts(
+        'story',
+        chunkArray(mapped, STORY_CHUNK).map((items) => ({
+          kind: 'story' as const,
+          title: 'Story',
+          items,
+        })),
+      ),
+    );
   }
 
   if (content.manifesto?.trim()) {
-    slides.push({
-      kind: 'prose',
-      title: 'Manifesto',
-      body: content.manifesto.trim(),
-    });
+    const parts = chunkProse(content.manifesto.trim(), PROSE_CHARS);
+    slides.push(
+      ...withSectionParts(
+        'manifesto',
+        parts.map((body) => ({
+          kind: 'prose' as const,
+          title: 'Manifesto',
+          body,
+        })),
+      ),
+    );
   }
 
   if (hasCharacter(content)) {
-    slides.push({
-      kind: 'character',
-      title: 'Character & brand',
-      traits: nonEmptyStrings(content.character.traits),
-      style: nonEmptyStrings(content.character.style),
-      achievements: nonEmptyStrings(content.character.achievements),
-      mentors: nonEmptyStrings(content.character.mentors),
-      branding: content.character.branding?.trim() || undefined,
-    });
+    const c = content.character;
+    const characterSlides: VisionSlide[] = [];
+    const traits = nonEmptyStrings(c.traits);
+    const style = nonEmptyStrings(c.style);
+    const achievements = nonEmptyStrings(c.achievements);
+    const mentors = nonEmptyStrings(c.mentors);
+    const branding = c.branding?.trim() || undefined;
+
+    // Prefer one subsection per slide so mobile never scrolls.
+    if (traits.length) {
+      for (const chunk of chunkArray(traits, LIST_CHUNK)) {
+        characterSlides.push({
+          kind: 'character',
+          title: 'Character & brand',
+          traits: chunk,
+          style: [],
+          achievements: [],
+          mentors: [],
+        });
+      }
+    }
+    if (style.length) {
+      for (const chunk of chunkArray(style, LIST_CHUNK)) {
+        characterSlides.push({
+          kind: 'character',
+          title: 'Character & brand',
+          traits: [],
+          style: chunk,
+          achievements: [],
+          mentors: [],
+        });
+      }
+    }
+    if (achievements.length) {
+      for (const chunk of chunkArray(achievements, LIST_CHUNK)) {
+        characterSlides.push({
+          kind: 'character',
+          title: 'Character & brand',
+          traits: [],
+          style: [],
+          achievements: chunk,
+          mentors: [],
+        });
+      }
+    }
+    if (mentors.length) {
+      for (const chunk of chunkArray(mentors, LIST_CHUNK)) {
+        characterSlides.push({
+          kind: 'character',
+          title: 'Character & brand',
+          traits: [],
+          style: [],
+          achievements: [],
+          mentors: chunk,
+        });
+      }
+    }
+    if (branding) {
+      for (const body of chunkProse(branding, PROSE_CHARS)) {
+        characterSlides.push({
+          kind: 'character',
+          title: 'Character & brand',
+          traits: [],
+          style: [],
+          achievements: [],
+          mentors: [],
+          branding: body,
+        });
+      }
+    }
+
+    slides.push(...withSectionParts('character', characterSlides));
   }
 
   let financeAttached = false;
   for (const block of content.goals) {
     if (!hasGoalsBlock(block)) continue;
-    const hasWealthGoals = block.wealth_goals.some((g) => g.label.trim());
+    const wealthGoals = mapWealthGoals(block.wealth_goals);
+    const otherGoals = nonEmptyStrings(block.other_goals);
+    const standards = nonEmptyStrings(block.standards);
+    const hasWealthGoals = wealthGoals.length > 0;
     const attachFinance = Boolean(financeActuals) && hasWealthGoals;
     if (attachFinance) financeAttached = true;
 
-    slides.push({
-      kind: 'goals',
-      title:
-        block.title?.trim() ||
-        `Goals · ${VISION_GOAL_HORIZON_LABELS[block.horizon]}`,
-      horizon: block.horizon,
-      horizonLabel: VISION_GOAL_HORIZON_LABELS[block.horizon],
-      wealthGoals: block.wealth_goals
-        .filter((g) => g.label.trim())
-        .map((g) => ({
-          label: g.label.trim(),
-          targetPence:
-            typeof g.target_pence === 'number' ? g.target_pence : null,
-        })),
-      otherGoals: nonEmptyStrings(block.other_goals),
-      standards: nonEmptyStrings(block.standards),
-      financeActuals: attachFinance ? financeActuals : null,
-    });
+    const title =
+      block.title?.trim() ||
+      `Goals · ${VISION_GOAL_HORIZON_LABELS[block.horizon]}`;
+    const horizonLabel = VISION_GOAL_HORIZON_LABELS[block.horizon];
+    const sectionKey = `goals_${block.horizon}`;
+    const goalSlides: VisionSlide[] = [];
+    let financePlaced = false;
+
+    if (wealthGoals.length) {
+      chunkArray(wealthGoals, WEALTH_CHUNK).forEach((wealthChunk, wi) => {
+        goalSlides.push({
+          kind: 'goals',
+          title,
+          horizon: block.horizon,
+          horizonLabel,
+          wealthGoals: wealthChunk,
+          otherGoals: [],
+          standards: [],
+          financeActuals:
+            wi === 0 && attachFinance && !financePlaced ? financeActuals : null,
+        });
+        if (wi === 0 && attachFinance) financePlaced = true;
+      });
+    }
+
+    if (otherGoals.length) {
+      chunkArray(otherGoals, LIST_CHUNK).forEach((chunk, oi) => {
+        goalSlides.push({
+          kind: 'goals',
+          title,
+          horizon: block.horizon,
+          horizonLabel,
+          wealthGoals: [],
+          otherGoals: chunk,
+          standards: [],
+          financeActuals:
+            oi === 0 && attachFinance && !financePlaced ? financeActuals : null,
+        });
+        if (oi === 0 && attachFinance) financePlaced = true;
+      });
+    }
+
+    if (standards.length) {
+      for (const chunk of chunkArray(standards, LIST_CHUNK)) {
+        goalSlides.push({
+          kind: 'goals',
+          title,
+          horizon: block.horizon,
+          horizonLabel,
+          wealthGoals: [],
+          otherGoals: [],
+          standards: chunk,
+          financeActuals: null,
+        });
+      }
+    }
+
+    if (!goalSlides.length) {
+      goalSlides.push({
+        kind: 'goals',
+        title,
+        horizon: block.horizon,
+        horizonLabel,
+        wealthGoals: [],
+        otherGoals: [],
+        standards: [],
+        financeActuals: attachFinance ? financeActuals : null,
+      });
+    }
+
+    slides.push(...withSectionParts(sectionKey, goalSlides));
   }
 
-  // Selected finance workspaces still surface even when wealth goals are empty.
   if (financeActuals && !financeAttached) {
     slides.push({
       kind: 'finance',
       title: 'Finances',
       financeActuals,
+      sectionKey: 'finance',
+      sectionPart: 1,
+      sectionParts: 1,
     });
   }
 
   const affirmations = nonEmptyStrings(content.affirmations);
   if (affirmations.length) {
-    slides.push({
-      kind: 'affirmations',
-      title: 'Affirmations',
-      items: affirmations,
-    });
+    slides.push(
+      ...withSectionParts(
+        'affirmations',
+        chunkArray(affirmations, AFFIRMATION_CHUNK).map((items) => ({
+          kind: 'affirmations' as const,
+          title: 'Affirmations',
+          items,
+        })),
+      ),
+    );
   }
 
   return slides;

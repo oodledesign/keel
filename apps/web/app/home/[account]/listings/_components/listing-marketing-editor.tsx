@@ -57,6 +57,7 @@ import {
   ListingAssignmentCard,
   type ListingBranchOption,
 } from './listing-assignment-card';
+import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingCoAgentsCard } from './listing-co-agents-card';
 import { ListingEachFeedToggle } from './listing-each-feed-toggle';
 import {
@@ -839,6 +840,18 @@ export function ListingMarketingEditor({
                     }
                   });
                 }}
+              />
+            </div>
+
+            <div className="border-t border-[var(--workspace-shell-border)] pt-4">
+              <p className="mb-2 text-sm font-medium text-[var(--workspace-shell-text)]">
+                PDF brochure
+              </p>
+              <ListingBrochureDownload
+                listingId={listing.id}
+                accountId={accountId}
+                accountSlug={accountSlug}
+                compact
               />
             </div>
 

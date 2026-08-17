@@ -10,10 +10,27 @@ export const VisionGoalHorizonSchema = z.enum([
 
 export type VisionGoalHorizon = z.infer<typeof VisionGoalHorizonSchema>;
 
+export const VisionWealthGoalCadenceSchema = z.enum(['one_off', 'monthly']);
+
+export type VisionWealthGoalCadence = z.infer<
+  typeof VisionWealthGoalCadenceSchema
+>;
+
 export const VisionWealthGoalSchema = z.object({
   id: z.string().min(1).max(64).optional(),
   label: z.string().max(500),
   target_pence: z.number().int().nonnegative().nullable().optional(),
+  /** ISO date YYYY-MM-DD */
+  due_date: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .optional(),
+  cadence: VisionWealthGoalCadenceSchema.optional().default('one_off'),
+  /** Monthly amount when cadence is monthly (e.g. £X each month). */
+  monthly_target_pence: z.number().int().nonnegative().nullable().optional(),
+  /** How many months the monthly goal runs for (e.g. 6). */
+  months: z.number().int().min(1).max(60).nullable().optional(),
 });
 
 export const VisionGoalHorizonBlockSchema = z.object({
@@ -77,7 +94,10 @@ export type PersonalVisionContent = z.infer<typeof PersonalVisionContentSchema>;
 export const SavePersonalVisionSchema = z.object({
   content: PersonalVisionContentSchema,
   financeAccountIds: z.array(z.string().uuid()).max(50).default([]),
+  /** Show Personal Vision icon in the top bar. */
   dashboardEnabled: z.boolean(),
+  /** Once-per-morning prompt to open the vision deck. */
+  morningPromptEnabled: z.boolean().default(true),
 });
 
 export type SavePersonalVisionInput = z.infer<typeof SavePersonalVisionSchema>;

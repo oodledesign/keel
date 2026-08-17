@@ -3,6 +3,7 @@
 import type {
   VisionFinanceActuals,
   VisionSlide,
+  VisionWealthGoalSlide,
 } from '~/lib/personal-vision/build-vision-slides';
 import { formatVisionPence } from '~/lib/personal-vision/vision-finance-format';
 
@@ -15,10 +16,21 @@ function SlideShell({
 }) {
   return (
     <div
-      className={`flex h-full w-full items-center justify-center overflow-y-auto bg-[var(--ozer-plum-900)] px-6 py-16 text-[var(--ozer-text-on-dark)] sm:px-10 md:px-16 ${className}`}
+      className={`flex h-full w-full items-center justify-center overflow-hidden bg-[var(--ozer-plum-900)] px-6 py-20 text-[var(--ozer-text-on-dark)] sm:px-10 md:px-16 ${className}`}
     >
       <div className="w-full max-w-3xl">{children}</div>
     </div>
+  );
+}
+
+function SectionMarker({ slide }: { slide: VisionSlide }) {
+  const part = slide.sectionPart;
+  const parts = slide.sectionParts;
+  if (!part || !parts || parts <= 1) return null;
+  return (
+    <p className="mb-3 text-xs tracking-wide text-[var(--ozer-text-on-dark-muted)] uppercase">
+      Continuing · {part} of {parts}
+    </p>
   );
 }
 
@@ -45,6 +57,67 @@ function BulletList({ items }: { items: string[] }) {
   );
 }
 
+function formatDueDate(iso: string): string {
+  const d = new Date(`${iso}T12:00:00`);
+  if (Number.isNaN(d.getTime())) return iso;
+  return d.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    year: 'numeric',
+  });
+}
+
+function MonthlyIncomeChart({ actuals }: { actuals: VisionFinanceActuals }) {
+  const points = actuals.monthlyIncome;
+  if (!points.length) return null;
+  const max = Math.max(...points.map((p) => p.incomePence), 1);
+
+  return (
+    <div className="mt-4">
+      <div className="flex h-28 items-end gap-1.5 sm:gap-2">
+        {points.map((point) => {
+          const height = Math.max(
+            6,
+            Math.round((point.incomePence / max) * 100),
+          );
+          return (
+            <div
+              key={point.monthKey}
+              className="flex min-w-0 flex-1 flex-col items-center gap-1"
+            >
+              <span className="text-[10px] text-[var(--ozer-text-on-dark-muted)] tabular-nums">
+                {point.incomePence > 0
+                  ? formatVisionPence(point.incomePence)
+                  : '—'}
+              </span>
+              <div
+                className={`w-full max-w-8 rounded-t-sm ${
+                  point.isCurrent
+                    ? 'bg-[var(--ozer-coral-500)]'
+                    : 'bg-[var(--ozer-coral-500)]/45'
+                }`}
+                style={{ height: `${height}%` }}
+                title={`${point.monthLabel}: ${formatVisionPence(point.incomePence)}`}
+              />
+              <span className="text-[10px] text-[var(--ozer-text-on-dark-muted)]">
+                {point.monthLabel}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+      {actuals.averageIncomePence > 0 ? (
+        <p className="mt-3 text-xs text-[var(--ozer-text-on-dark-muted)]">
+          Average (months with income):{' '}
+          <span className="font-medium text-[var(--ozer-coral-400)] tabular-nums">
+            {formatVisionPence(actuals.averageIncomePence)}
+          </span>
+        </p>
+      ) : null}
+    </div>
+  );
+}
+
 function FinanceActualsBlock({ actuals }: { actuals: VisionFinanceActuals }) {
   return (
     <div className="mt-6 rounded-xl border border-white/15 bg-black/25 px-4 py-3">
@@ -59,12 +132,59 @@ function FinanceActualsBlock({ actuals }: { actuals: VisionFinanceActuals }) {
           From {actuals.workspaceNames.join(', ')}
         </p>
       ) : null}
+      <MonthlyIncomeChart actuals={actuals} />
       {!actuals.hasFinanceData ? (
         <p className="mt-1 text-xs text-[var(--ozer-text-on-dark-muted)]">
           No finance transactions found for the selected workspaces yet.
         </p>
       ) : null}
     </div>
+  );
+}
+
+function WealthGoalRow({ goal }: { goal: VisionWealthGoalSlide }) {
+  const monthly =
+    goal.cadence === 'monthly' && goal.monthlyTargetPence != null
+      ? goal.monthlyTargetPence
+      : null;
+  const months = monthly != null && goal.months != null ? goal.months : null;
+  const projected = monthly != null && months != null ? monthly * months : null;
+
+  return (
+    <li className="space-y-1 border-b border-white/10 pb-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-2">
+        <span className="font-medium">{goal.label}</span>
+        {goal.targetPence != null ? (
+          <span className="text-[var(--ozer-coral-400)] tabular-nums">
+            {formatVisionPence(goal.targetPence)}
+          </span>
+        ) : null}
+      </div>
+      <div className="flex flex-wrap gap-x-3 gap-y-1 text-xs text-[var(--ozer-text-on-dark-muted)]">
+        {goal.dueDate ? <span>Due {formatDueDate(goal.dueDate)}</span> : null}
+        {monthly != null ? (
+          <span>
+            {formatVisionPence(monthly)}
+            /month
+            {months != null ? ` · ${months} months` : ''}
+            {projected != null
+              ? ` · ${formatVisionPence(projected)} total`
+              : ''}
+          </span>
+        ) : null}
+      </div>
+      {monthly != null && months != null && months > 0 ? (
+        <div className="mt-2 flex h-10 items-end gap-1">
+          {Array.from({ length: months }, (_, i) => (
+            <div
+              key={i}
+              className="h-full min-w-0 flex-1 rounded-t-sm bg-[var(--ozer-coral-500)]/55"
+              title={`Month ${i + 1}: ${formatVisionPence(monthly)}`}
+            />
+          ))}
+        </div>
+      ) : null}
+    </li>
   );
 }
 
@@ -90,6 +210,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
     case 'list':
       return (
         <SlideShell>
+          <SectionMarker slide={slide} />
           <SlideTitle>{slide.title}</SlideTitle>
           <BulletList items={slide.items} />
         </SlideShell>
@@ -98,6 +219,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
     case 'prose':
       return (
         <SlideShell>
+          <SectionMarker slide={slide} />
           <SlideTitle>{slide.title}</SlideTitle>
           <p className="mt-8 text-base leading-relaxed whitespace-pre-wrap text-[var(--ozer-text-on-dark)]/90 md:text-lg">
             {slide.body}
@@ -108,6 +230,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
     case 'legacy':
       return (
         <SlideShell>
+          <SectionMarker slide={slide} />
           <SlideTitle>{slide.title}</SlideTitle>
           {slide.headline ? (
             <p className="mt-6 text-xl font-medium text-[var(--ozer-coral-400)]">
@@ -126,6 +249,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
     case 'story':
       return (
         <SlideShell>
+          <SectionMarker slide={slide} />
           <SlideTitle>{slide.title}</SlideTitle>
           <ol className="mt-8 space-y-5">
             {slide.items.map((item, i) => (
@@ -152,6 +276,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
     case 'character':
       return (
         <SlideShell>
+          <SectionMarker slide={slide} />
           <SlideTitle>{slide.title}</SlideTitle>
           <div className="mt-8 space-y-6">
             {slide.traits.length ? (
@@ -203,6 +328,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
     case 'goals':
       return (
         <SlideShell>
+          <SectionMarker slide={slide} />
           <p className="text-sm font-medium tracking-wide text-[var(--ozer-coral-400)] uppercase">
             {slide.horizonLabel}
           </p>
@@ -217,17 +343,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
               </p>
               <ul className="mt-3 space-y-3">
                 {slide.wealthGoals.map((goal, i) => (
-                  <li
-                    key={i}
-                    className="flex flex-wrap items-baseline justify-between gap-2 border-b border-white/10 pb-2"
-                  >
-                    <span>{goal.label}</span>
-                    {goal.targetPence != null ? (
-                      <span className="text-[var(--ozer-coral-400)] tabular-nums">
-                        {formatVisionPence(goal.targetPence)}
-                      </span>
-                    ) : null}
-                  </li>
+                  <WealthGoalRow key={i} goal={goal} />
                 ))}
               </ul>
             </div>
@@ -254,6 +370,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
     case 'finance':
       return (
         <SlideShell>
+          <SectionMarker slide={slide} />
           <p className="text-sm font-medium tracking-wide text-[var(--ozer-coral-400)] uppercase">
             This month
           </p>
@@ -265,6 +382,7 @@ export function VisionSlideView({ slide }: { slide: VisionSlide }) {
     case 'affirmations':
       return (
         <SlideShell>
+          <SectionMarker slide={slide} />
           <SlideTitle>{slide.title}</SlideTitle>
           <ol className="mt-8 space-y-5">
             {slide.items.map((item, i) => (

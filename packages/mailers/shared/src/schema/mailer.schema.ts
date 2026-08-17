@@ -7,6 +7,9 @@ export const MailerSchema = z
     // as an email so we type it loosely
     from: z.string().min(1),
     subject: z.string(),
+    replyTo: z.string().email().optional(),
+    /** Absolute unsubscribe URL for List-Unsubscribe header (marketing/circulation). */
+    listUnsubscribeUrl: z.string().url().optional(),
   })
   .and(
     z.union([

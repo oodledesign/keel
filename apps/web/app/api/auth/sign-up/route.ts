@@ -68,6 +68,23 @@ export async function POST(request: Request) {
     );
   }
 
+  if (user?.id && user.email) {
+    void import('~/lib/admin/platform-lifecycle-notifications')
+      .then(({ notifyPlatformNewSignup }) =>
+        notifyPlatformNewSignup({
+          email: user.email!,
+          userId: user.id,
+          source: 'email_password',
+        }),
+      )
+      .catch((err) => {
+        console.error(
+          '[sign-up] Failed to queue signup notification:',
+          err instanceof Error ? err.message : err,
+        );
+      });
+  }
+
   return NextResponse.json({
     user: data.user,
     session: data.session,

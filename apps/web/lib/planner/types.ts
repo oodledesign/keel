@@ -86,6 +86,7 @@ export type DayViewPipelineStage = {
 export type DayViewPipelineDeal = {
   id: string;
   name: string;
+  stage: string;
   stageLabel: string;
   nextAction: string;
   nextActionDate: string | null;

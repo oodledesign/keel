@@ -5,7 +5,6 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
-import { PersonalVisionDashboardLaunch } from '~/components/personal-vision/personal-vision-dashboard-launch';
 import { buildWorkAppLinks } from '~/config/work-account-navigation.config';
 import { isBusinessLiteWorkspace } from '~/lib/billing/is-business-lite-workspace';
 import { createI18nServerInstance } from '~/lib/i18n/i18n.server';
@@ -197,9 +196,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your property business."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <Suspense fallback={null}>
-            <PersonalVisionDashboardLaunch className="px-4 pt-4 md:px-6 lg:px-8" />
-          </Suspense>
+          <Suspense fallback={null}></Suspense>
           <Suspense fallback={<BusinessDashboardSkeleton />}>
             <PropertyDashboardContent
               account={account}
@@ -216,9 +213,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
       <>
         <TeamAccountLayoutPageHeader account={account} title="Agency home" />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <Suspense fallback={null}>
-            <PersonalVisionDashboardLaunch className="px-4 pt-4 md:px-6 lg:px-8" />
-          </Suspense>
+          <Suspense fallback={null}></Suspense>
           <Suspense fallback={<BusinessDashboardSkeleton />}>
             <CommercialDashboardContent account={account} />
           </Suspense>
@@ -236,9 +231,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your family workspace."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <Suspense fallback={null}>
-            <PersonalVisionDashboardLaunch className="px-4 pt-4 md:px-6 lg:px-8" />
-          </Suspense>
+          <Suspense fallback={null}></Suspense>
           <Suspense fallback={<BusinessDashboardSkeleton />}>
             <FamilyDashboardContent account={account} />
           </Suspense>
@@ -256,9 +249,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Overview of your group workspace."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <Suspense fallback={null}>
-            <PersonalVisionDashboardLaunch className="px-4 pt-4 md:px-6 lg:px-8" />
-          </Suspense>
+          <Suspense fallback={null}></Suspense>
           <Suspense fallback={<BusinessDashboardSkeleton />}>
             <CommunityDashboardContent account={account} />
           </Suspense>
@@ -280,9 +271,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
           description="Your apps workspace — install add-ons or upgrade to full business."
         />
         <PageBody className="bg-[var(--workspace-shell-canvas)] p-0">
-          <Suspense fallback={null}>
-            <PersonalVisionDashboardLaunch className="px-4 pt-4 md:px-6 lg:px-8" />
-          </Suspense>
+          <Suspense fallback={null}></Suspense>
           <BusinessLiteDashboard
             accountSlug={account}
             accountName={accountLabel}
@@ -304,9 +293,7 @@ async function TeamAccountHomePage({ params }: TeamAccountHomePageProps) {
       />
 
       <PageBody className="bg-[var(--workspace-shell-canvas)] p-0 md:p-0">
-        <Suspense fallback={null}>
-          <PersonalVisionDashboardLaunch className="px-4 pt-4 md:px-6 lg:px-8" />
-        </Suspense>
+        <Suspense fallback={null}></Suspense>
         <Suspense fallback={<BusinessDashboardSkeleton />}>
           <WorkDashboardContent account={account} />
         </Suspense>

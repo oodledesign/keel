@@ -190,14 +190,19 @@ export const acceptInvitationAction = enhanceAction(
     // use admin client to accept invitation
     const adminClient = getSupabaseServerAdminClient();
 
-    // Read seat kind before accept deletes the invitation row
+    // Read seat kind / role before accept deletes the invitation row
     const { data: invitationRow } = await adminClient
       .from('invitations')
-      .select('seat_kind')
+      .select('seat_kind, email, role, account_id')
       .eq('invite_token', inviteToken)
       .maybeSingle();
     const seatKind =
       (invitationRow as { seat_kind?: string } | null)?.seat_kind ?? 'billable';
+    const invitationMeta = invitationRow as {
+      email?: string;
+      role?: string;
+      account_id?: string;
+    } | null;
 
     // Accept the invitation
     const accountId = await service.acceptInvitationToTeam(adminClient, {
@@ -247,6 +252,35 @@ export const acceptInvitationAction = enhanceAction(
         await perSeatBillingService.increaseSeats(accountId);
       }
     }
+
+    void (async () => {
+      try {
+        const { data: account } = await adminClient
+          .from('accounts')
+          .select('name, slug')
+          .eq('id', accountId)
+          .maybeSingle();
+
+        const { notifyPlatformTeamInviteAccepted } = await import(
+          '../services/notify-platform-invite-accepted'
+        );
+
+        await notifyPlatformTeamInviteAccepted({
+          email: invitationMeta?.email ?? user.email ?? '',
+          userId: user.id,
+          accountId,
+          workspaceName: account?.name ?? null,
+          workspaceSlug: account?.slug ?? null,
+          role: invitationMeta?.role ?? null,
+        });
+      } catch (err) {
+        const logger = await getLogger();
+        logger.error(
+          { error: err instanceof Error ? err.message : err },
+          'Failed to send invite-accepted ops notification',
+        );
+      }
+    })();
 
     return redirect(nextPath);
   },
