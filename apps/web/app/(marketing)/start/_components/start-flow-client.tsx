@@ -21,6 +21,13 @@ import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import {
+  BUSINESS_GRADUATED_PLAN_ID,
+  BUSINESS_GRADUATED_PRODUCT_ID,
+  BUSINESS_ILLUSTRATIVE_TIERS,
+  estimateMonthlyGbp,
+  formatGraduatedWorkedExample,
+} from '~/lib/billing/business-graduated-pricing';
+import {
   MARKETING_FREE_TIER,
   MARKETING_WORKSPACE_PLANS,
   buildPricingSignupUrl,
@@ -86,9 +93,10 @@ const workspaceOptions: Array<{
   {
     value: 'business',
     title: 'Add a business workspace',
-    description: 'Clients, projects, and invoices — Solo, Team, or Scale.',
+    description:
+      'Clients, projects, and invoices — graduated Business from £29 for seat 1.',
     icon: Briefcase,
-    priceProductId: 'ozer-business-solo',
+    priceProductId: BUSINESS_GRADUATED_PRODUCT_ID,
   },
   {
     value: 'family',
@@ -112,9 +120,7 @@ export function StartFlowClient() {
   const [workspace, setWorkspace] = useState<WorkspaceChoice | null>(null);
   const [businessTier, setBusinessTier] = useState<BusinessTier | null>('solo');
 
-  const solo = planByProductId('ozer-business-solo');
-  const team = planByProductId('ozer-business-team');
-  const scale = planByProductId('ozer-business-scale');
+  const business = planByProductId(BUSINESS_GRADUATED_PRODUCT_ID);
   const lite = planByProductId('ozer-business-lite');
 
   const signupHref = useMemo(() => {
@@ -134,35 +140,20 @@ export function StartFlowClient() {
     if (workspace === 'community') {
       return buildPricingSignupUrl({ profile: 'community' });
     }
-    if (businessTier === 'team') {
-      return buildPricingSignupUrl({
-        profile: 'work_design',
-        productId: 'ozer-business-team',
-        planId: team?.monthlyPlanId ?? 'business-team-monthly',
-        interval: 'month',
-      });
-    }
-    if (businessTier === 'scale') {
-      return buildPricingSignupUrl({
-        profile: 'work_design',
-        productId: 'ozer-business-scale',
-        planId: scale?.monthlyPlanId ?? 'business-scale-monthly',
-        interval: 'month',
-      });
-    }
+
+    const illustrative = BUSINESS_ILLUSTRATIVE_TIERS.find(
+      (tier) => tier.id === businessTier,
+    );
+    const seats = illustrative?.billableSeats ?? 1;
+
     return buildPricingSignupUrl({
       profile: 'work_design',
-      productId: 'ozer-business-solo',
-      planId: solo?.monthlyPlanId ?? 'business-solo-monthly',
+      productId: BUSINESS_GRADUATED_PRODUCT_ID,
+      planId: business?.monthlyPlanId ?? BUSINESS_GRADUATED_PLAN_ID,
       interval: 'month',
+      seats,
     });
-  }, [
-    workspace,
-    businessTier,
-    solo?.monthlyPlanId,
-    team?.monthlyPlanId,
-    scale?.monthlyPlanId,
-  ]);
+  }, [workspace, businessTier, business?.monthlyPlanId]);
 
   const stepIndex = step === 'personal' ? 0 : step === 'workspace' ? 1 : 2;
   const totalSteps = workspace === 'business' || step === 'business' ? 3 : 2;
@@ -423,44 +414,22 @@ export function StartFlowClient() {
           <ul className="grid gap-3">
             {(
               [
-                {
-                  value: 'solo' as const,
-                  title: solo?.name ?? 'Business Solo',
-                  priceLabel:
-                    solo != null
-                      ? `From ${formatGbp(solo.monthlyPriceGbp)}`
-                      : 'From £29',
-                  description:
-                    solo?.description ??
-                    'Full studio stack for one freelancer — 14-day trial.',
-                  recommended: true,
-                  variant: 'plan' as const,
-                },
-                {
-                  value: 'team' as const,
-                  title: team?.name ?? 'Business Team',
-                  priceLabel:
-                    team != null
-                      ? `From ${formatGbp(team.monthlyPriceGbp)}`
-                      : 'From £79',
-                  description:
-                    team?.description ??
-                    'Shared clients and projects for up to five people — 14-day trial.',
-                  recommended: false,
-                  variant: 'plan' as const,
-                },
-                {
-                  value: 'scale' as const,
-                  title: scale?.name ?? 'Business Scale',
-                  priceLabel:
-                    scale != null
-                      ? `From ${formatGbp(scale.monthlyPriceGbp)}`
-                      : 'From £149',
-                  description:
-                    'Larger teams — up to 15 seats and priority support. Need more? Request extra users anytime.',
-                  recommended: false,
-                  variant: 'plan' as const,
-                },
+                ...BUSINESS_ILLUSTRATIVE_TIERS.map((tier) => {
+                  const total = estimateMonthlyGbp(tier.billableSeats);
+                  const isSolo = tier.id === 'solo';
+                  return {
+                    value: tier.id,
+                    title: tier.label,
+                    priceLabel: isSolo
+                      ? `From ${formatGbp(total)}`
+                      : formatGbp(total),
+                    description: isSolo
+                      ? `${tier.description} — 14-day trial.`
+                      : `${tier.description}. ${formatGraduatedWorkedExample(tier.billableSeats, formatGbp)} — 14-day trial.`,
+                    recommended: tier.highlighted,
+                    variant: 'plan' as const,
+                  };
+                }),
                 {
                   value: 'lite' as const,
                   title: lite?.name ?? 'Business Lite',

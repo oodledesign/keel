@@ -16,6 +16,16 @@ import {
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import { formatGbp } from '~/lib/billing/billing-config-prices';
 import {
+  BUSINESS_GRADUATED_PLAN_ID,
+  BUSINESS_GRADUATED_PRODUCT_ID,
+  BUSINESS_GRADUATED_TIERS,
+  BUSINESS_ILLUSTRATIVE_TIERS,
+  aiCreditsForBillableSeats,
+  estimateMonthlyBreakdownGbp as estimateBusinessMonthlyBreakdownGbp,
+  formatGraduatedWorkedExample as formatBusinessGraduatedWorkedExample,
+  maxProjectGuestsForBillableSeats,
+} from '~/lib/billing/business-graduated-pricing';
+import {
   COMMERCIAL_GRADUATED_PLAN_ID,
   COMMERCIAL_GRADUATED_PRODUCT_ID,
   COMMERCIAL_GRADUATED_TIERS,
@@ -183,6 +193,74 @@ function relatedExcept(current: SegmentSlug) {
     icon: SEGMENT_ICONS[slug],
     ...map[slug as 'personal' | 'work'],
   }));
+}
+
+function businessPricingCards(): SegmentPricingCard[] {
+  const unitGbpForSeats = (seats: number) =>
+    estimateBusinessMonthlyBreakdownGbp(seats).lines.at(-1)?.unitGbp ??
+    BUSINESS_GRADUATED_TIERS[0]!.unitGbp;
+
+  const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
+
+  const soloFeatures = [
+    'Clients, projects, invoices & pipeline',
+    `${aiCreditsForBillableSeats(1).toLocaleString()} shared AI credits / mo`,
+    `${maxProjectGuestsForBillableSeats(1)} project guests`,
+    'Unlimited client portal access',
+    'Meeting Assistant — unlimited',
+  ];
+
+  return BUSINESS_ILLUSTRATIVE_TIERS.map((tier) => {
+    const isSolo = tier.id === 'solo';
+    const unitGbp = unitGbpForSeats(tier.billableSeats);
+    const guests = maxProjectGuestsForBillableSeats(tier.billableSeats);
+    const credits = aiCreditsForBillableSeats(tier.billableSeats);
+
+    const features = isSolo
+      ? soloFeatures
+      : [
+          'Everything in Business Solo, plus…',
+          `${credits.toLocaleString()} shared AI credits / mo`,
+          `${guests} project guests`,
+          'Unlimited sharing with other paid workspaces',
+        ];
+
+    const thenLabel =
+      tier.id === 'team'
+        ? `for ${seats2to5!.bandLabel.toLowerCase()}`
+        : tier.id === 'scale'
+          ? `for ${seats6plus!.bandLabel.toLowerCase()}`
+          : '/mo';
+
+    return {
+      id: tier.id,
+      name: tier.label,
+      bandTitle: tier.bandTitle,
+      description: tier.description,
+      priceGbp: unitGbp,
+      priceUnit: isSolo ? 'month' : 'then_band',
+      priceUnitLabel: isSolo ? '/mo' : thenLabel,
+      priceLabel: isSolo
+        ? `${formatGbp(unitGbp)}/mo`
+        : `${formatGbp(unitGbp)} ${thenLabel}`,
+      priceCaption: isSolo
+        ? seat1!.bandLabel
+        : undefined,
+      priceExample: isSolo
+        ? undefined
+        : formatBusinessGraduatedWorkedExample(
+            tier.billableSeats,
+            formatGbp,
+          ),
+      features,
+      highlighted: tier.highlighted,
+      badge: tier.highlighted ? 'Popular' : undefined,
+      signupProfile: 'work_design' as const,
+      productId: BUSINESS_GRADUATED_PRODUCT_ID,
+      planId: BUSINESS_GRADUATED_PLAN_ID,
+      seats: tier.billableSeats,
+    };
+  });
 }
 
 function commercialPricingCards(): SegmentPricingCard[] {
@@ -443,7 +521,7 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           title: 'Start free or trial',
           description:
-            'Business Lite at £0 for apps and team settings, or a 14-day trial on Solo, Team, or Scale.',
+            'Business Lite at £0 for apps and team settings, or a 14-day trial on graduated Business seats.',
         },
         {
           title: 'Add clients and jobs',
@@ -453,14 +531,19 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           title: 'Invite team and clients',
           description:
-            'Staff join the workspace; clients get portal access when you share work.',
+            'Staff and contractors take paid seats; project guests and client portals are included.',
         },
       ],
-      pricingPlans: MARKETING_WORKSPACE_PLANS.filter(
-        (p) => p.profile === 'work_design',
-      ).map((p) => planToCard(p)),
-      pricingNote:
-        'Signatures uses flat mailbox tiers from £9/mo on each workspace. Annual billing is 16.7% less than paying monthly for twelve months. One workspace price covers the team.',
+      pricingPlans: [
+        ...MARKETING_WORKSPACE_PLANS.filter(
+          (p) => p.productId === 'ozer-business-lite',
+        ).map((p) => planToCard(p)),
+        ...businessPricingCards(),
+      ],
+      pricingNote: (() => {
+        const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
+        return `One graduated Business price: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to5!.unitGbp)} for seats 2–5, then ${formatGbp(seats6plus!.unitGbp)} for seats 6+. Solo / Team / Scale describe those bands — not separate products. Project guests scale at 3 per seat; client portals are unlimited.`;
+      })(),
       faqs: [
         {
           question: 'How is Ozer different from other CRMs?',
@@ -473,24 +556,24 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
             'Yes. Planner and Today pull from workspaces you enable. Client work and personal errands in one day — then push blocks to Google Calendar if you want.',
         },
         {
-          question: 'What is Business Lite vs Solo?',
+          question: 'What is Business Lite vs paid Business?',
           answer:
-            'Business Lite is free: apps marketplace, team settings, brand basics — good if you mainly want add-ons. Solo adds full CRM: clients, jobs, invoices, pipeline, messages, SOPs for one person.',
+            'Business Lite is free: apps marketplace, team settings, brand basics, 200 AI credits, and 1 project guest. Paid Business unlocks full CRM with graduated seats, shared AI that scales, more project guests, and unlimited sharing with other paid workspaces.',
         },
         {
           question: 'Do clients pay for Ozer?',
           answer:
-            'No. Portal and message access are free for clients. Billing stays with the workspace owner.',
+            'No. Portal and message access are free for clients — unlimited portal contacts. Billing stays with the workspace owner.',
         },
         {
           question: 'Can contractors work without seeing finances?',
           answer:
-            'Yes. Roles limit contractors to assigned jobs and tasks without admin or billing.',
+            'Yes. Contractors are paid seats with roles limited to assigned jobs and tasks without admin or billing. Project guests are narrower still — one project board, no seat cost.',
         },
         {
           question: 'Is there a free trial?',
           answer:
-            'Paid business plans include a 14-day trial on your first paid workspace — no credit card required. Business Lite remains free forever.',
+            'Paid Business includes a 14-day trial on your first paid workspace — no credit card required. Business Lite remains free forever.',
         },
       ],
       relatedSegments: relatedExcept('work'),

@@ -100,56 +100,33 @@ const CATALOG = [
     ],
   },
   {
-    catalogId: 'ozer-business-solo',
-    productName: 'Ozer Business Solo',
+    catalogId: 'ozer-business',
+    productName: 'Ozer Business',
     prices: [
       {
-        envKey: 'STRIPE_PRICE_BUSINESS_SOLO_MONTHLY',
-        lookupKey: 'keel.business_solo.monthly',
-        amount: 2900,
+        envKey: 'STRIPE_PRICE_BUSINESS_MONTHLY',
+        lookupKey: 'keel.business.monthly',
         interval: 'month',
+        /** Graduated per-seat — matches business-graduated-pricing.ts */
+        billingScheme: 'tiered',
+        tiersMode: 'graduated',
+        tiers: [
+          { upTo: 1, unitAmount: 2900 },
+          { upTo: 5, unitAmount: 2200 },
+          { upTo: 'inf', unitAmount: 1600 },
+        ],
       },
       {
-        envKey: 'STRIPE_PRICE_BUSINESS_SOLO_YEARLY',
-        lookupKey: 'keel.business_solo.yearly',
-        amount: 29000,
+        envKey: 'STRIPE_PRICE_BUSINESS_YEARLY',
+        lookupKey: 'keel.business.yearly',
         interval: 'year',
-      },
-    ],
-  },
-  {
-    catalogId: 'ozer-business-team',
-    productName: 'Ozer Business Team',
-    prices: [
-      {
-        envKey: 'STRIPE_PRICE_BUSINESS_TEAM_MONTHLY',
-        lookupKey: 'keel.business_team.monthly',
-        amount: 7900,
-        interval: 'month',
-      },
-      {
-        envKey: 'STRIPE_PRICE_BUSINESS_TEAM_YEARLY',
-        lookupKey: 'keel.business_team.yearly',
-        amount: 79000,
-        interval: 'year',
-      },
-    ],
-  },
-  {
-    catalogId: 'ozer-business-scale',
-    productName: 'Ozer Business Scale',
-    prices: [
-      {
-        envKey: 'STRIPE_PRICE_BUSINESS_SCALE_MONTHLY',
-        lookupKey: 'keel.business_scale.monthly',
-        amount: 14900,
-        interval: 'month',
-      },
-      {
-        envKey: 'STRIPE_PRICE_BUSINESS_SCALE_YEARLY',
-        lookupKey: 'keel.business_scale.yearly',
-        amount: 149000,
-        interval: 'year',
+        billingScheme: 'tiered',
+        tiersMode: 'graduated',
+        tiers: [
+          { upTo: 1, unitAmount: 29000 },
+          { upTo: 5, unitAmount: 22000 },
+          { upTo: 'inf', unitAmount: 16000 },
+        ],
       },
     ],
   },

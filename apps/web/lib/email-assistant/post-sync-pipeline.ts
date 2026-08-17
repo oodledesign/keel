@@ -42,6 +42,7 @@ type ThreadRow = {
   subject: string | null;
   assistant_category: 'needs_reply' | 'no_reply' | null;
   assistant_processed_message_id: string | null;
+  assistant_extract_message_id: string | null;
   link_source: string | null;
 };
 
@@ -149,7 +150,7 @@ export async function runEmailAssistantPipeline(
   const { data: threadRows, error: threadsError } = await admin
     .from('email_threads')
     .select(
-      'id, subject, assistant_category, assistant_processed_message_id, link_source',
+      'id, subject, assistant_category, assistant_processed_message_id, assistant_extract_message_id, link_source',
     )
     .eq('user_id', userId)
     .eq('connection_id', owner.connectionId)
@@ -167,7 +168,7 @@ export async function runEmailAssistantPipeline(
     : 0;
   let extractsRemaining = MAX_AUTO_EXTRACT_PER_RUN;
 
-  for (const thread of (threadRows ?? []) as ThreadRow[]) {
+  for (const thread of (threadRows ?? []) as unknown as ThreadRow[]) {
     if (
       result.classified >= MAX_CLASSIFY_PER_RUN &&
       draftsRemaining <= 0 &&
@@ -233,13 +234,14 @@ export async function runEmailAssistantPipeline(
 
     if (thread.assistant_processed_message_id === latest.id) {
       // Already handled this message tip — do not reclassify every sync.
-      // Still backfill suggested tasks for needs_reply threads that never extracted.
+      // Backfill extract only when this tip has never been extracted.
       if (
         thread.assistant_category === 'needs_reply' &&
+        thread.assistant_extract_message_id !== latest.id &&
         extractsRemaining > 0
       ) {
         try {
-          const extractedCount = await autoExtractEmailActionItems({
+          const extractResult = await autoExtractEmailActionItems({
             admin,
             userId,
             threadId: thread.id,
@@ -248,9 +250,13 @@ export async function runEmailAssistantPipeline(
             preferredAccountId,
             billingAccountId,
           });
-          if (extractedCount > 0) {
-            result.extracted += extractedCount;
+          if (extractResult.itemsInserted > 0) {
+            result.extracted += extractResult.itemsInserted;
+          }
+          if (extractResult.attempted) {
             extractsRemaining -= 1;
+          } else {
+            result.skipped += 1;
           }
         } catch (error) {
           result.errors.push(
@@ -491,9 +497,13 @@ export async function runEmailAssistantPipeline(
       }
     }
 
-    if (category === 'needs_reply' && extractsRemaining > 0) {
+    if (
+      category === 'needs_reply' &&
+      extractsRemaining > 0 &&
+      thread.assistant_extract_message_id !== latest.id
+    ) {
       try {
-        const extractedCount = await autoExtractEmailActionItems({
+        const extractResult = await autoExtractEmailActionItems({
           admin,
           userId,
           threadId: thread.id,
@@ -502,8 +512,10 @@ export async function runEmailAssistantPipeline(
           preferredAccountId,
           billingAccountId,
         });
-        if (extractedCount > 0) {
-          result.extracted += extractedCount;
+        if (extractResult.itemsInserted > 0) {
+          result.extracted += extractResult.itemsInserted;
+        }
+        if (extractResult.attempted) {
           extractsRemaining -= 1;
         }
       } catch (error) {

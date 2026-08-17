@@ -22,8 +22,14 @@ import { Trans } from '@kit/ui/trans';
 import billingConfig from '~/config/billing.config';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import {
-  clampBillableSeats,
-  estimateMonthlyGbp,
+  aiCreditsForBillableSeats,
+  clampBillableSeats as clampBusinessBillableSeats,
+  estimateMonthlyGbp as estimateBusinessMonthlyGbp,
+  maxProjectGuestsForBillableSeats,
+} from '~/lib/billing/business-graduated-pricing';
+import {
+  clampBillableSeats as clampCommercialBillableSeats,
+  estimateMonthlyGbp as estimateCommercialMonthlyGbp,
   freeSupportSeats,
 } from '~/lib/billing/commercial-graduated-pricing';
 import { productIdsForWorkspaceProfile } from '~/lib/billing/ozer-plan-catalog';
@@ -59,16 +65,30 @@ export function OzerWorkspaceCheckoutForm(params: {
     undefined,
   );
 
+  const isCommercial = params.workspaceProfile === 'commercial_property';
+  const isBusiness = params.workspaceProfile === 'work_design';
+  const usesGraduatedSeats = isCommercial || isBusiness;
+
   const seatsFromQuery = Number(searchParams.get('seats'));
+  const clampSeats = isCommercial
+    ? clampCommercialBillableSeats
+    : clampBusinessBillableSeats;
   const [billableSeats, setBillableSeats] = useState(() =>
     Number.isFinite(seatsFromQuery) && seatsFromQuery >= 1
-      ? clampBillableSeats(seatsFromQuery)
+      ? clampSeats(seatsFromQuery)
       : 1,
   );
 
-  const isCommercial = params.workspaceProfile === 'commercial_property';
-  const monthlyEstimate = estimateMonthlyGbp(billableSeats);
-  const supportSeats = freeSupportSeats(billableSeats);
+  const monthlyEstimate = isCommercial
+    ? estimateCommercialMonthlyGbp(billableSeats)
+    : estimateBusinessMonthlyGbp(billableSeats);
+  const supportSeats = isCommercial ? freeSupportSeats(billableSeats) : 0;
+  const businessGuests = isBusiness
+    ? maxProjectGuestsForBillableSeats(billableSeats)
+    : 0;
+  const businessCredits = isBusiness
+    ? aiCreditsForBillableSeats(billableSeats)
+    : 0;
 
   const filteredConfig = useMemo(() => {
     const allowedProductIds = new Set(
@@ -124,10 +144,12 @@ export function OzerWorkspaceCheckoutForm(params: {
 
         <CardDescription>
           {params.upgradeFromLite ? (
-            'Business Solo includes clients, projects, invoicing, and finances. Your installed apps stay on this workspace.'
+            'Paid Business includes clients, projects, invoicing, and finances with graduated seats. Your installed apps stay on this workspace.'
           ) : setupMode ? (
             isCommercial ? (
               'Graduated per-seat pricing in GBP. Seat 1 is £89, seats 2–7 are £55, seats 8+ are £39.'
+            ) : isBusiness ? (
+              'Graduated per-seat pricing in GBP. Seat 1 is £29, seats 2–5 are £22, seats 6+ are £16.'
             ) : (
               'Start a 14-day trial or subscribe to unlock this workspace. All prices in GBP.'
             )
@@ -138,7 +160,7 @@ export function OzerWorkspaceCheckoutForm(params: {
       </CardHeader>
 
       <CardContent className="space-y-6">
-        {isCommercial ? (
+        {usesGraduatedSeats ? (
           <div className="space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/40 p-4">
             <div className="space-y-2">
               <Label htmlFor="billable-seats">Billable seats</Label>
@@ -150,7 +172,7 @@ export function OzerWorkspaceCheckoutForm(params: {
                 value={billableSeats}
                 onChange={(event) =>
                   setBillableSeats(
-                    clampBillableSeats(Number(event.target.value) || 1),
+                    clampSeats(Number(event.target.value) || 1),
                   )
                 }
               />
@@ -162,14 +184,30 @@ export function OzerWorkspaceCheckoutForm(params: {
               </span>
             </p>
             <ul className="space-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
-              <li>
-                {supportSeats > 0
-                  ? `${supportSeats} free support seats included`
-                  : 'No free support seats on a single billable seat'}
-              </li>
-              <li>
-                Portal publishing included (Rightmove, EACH, Property Hive)
-              </li>
+              {isCommercial ? (
+                <>
+                  <li>
+                    {supportSeats > 0
+                      ? `${supportSeats} free support seats included`
+                      : 'No free support seats on a single billable seat'}
+                  </li>
+                  <li>
+                    Portal publishing included (Rightmove, EACH, Property Hive)
+                  </li>
+                </>
+              ) : (
+                <>
+                  <li>
+                    {businessCredits.toLocaleString()} shared AI credits /
+                    month
+                  </li>
+                  <li>
+                    {businessGuests} project guest
+                    {businessGuests === 1 ? '' : 's'}
+                  </li>
+                  <li>Unlimited client portal access</li>
+                </>
+              )}
             </ul>
           </div>
         ) : null}
@@ -198,7 +236,7 @@ export function OzerWorkspaceCheckoutForm(params: {
                     productId,
                     slug,
                     accountId: params.accountId,
-                    seats: isCommercial ? billableSeats : undefined,
+                    seats: usesGraduatedSeats ? billableSeats : undefined,
                   });
 
                 setCheckoutToken(token);

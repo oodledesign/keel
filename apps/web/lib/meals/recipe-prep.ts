@@ -5,12 +5,17 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import type { Database } from '@kit/supabase/database';
 
 import { callAI } from '~/lib/ai/router';
+import {
+  contentHasIngredientTokens,
+  tokeniseIngredientMentions,
+} from '~/lib/meals/recipe-measurements';
 import { hashRecipeIngredients } from '~/lib/meals/recipe-nutrition';
 import {
   PREP_STEP_SORT_ORDER,
   PREP_STEP_TITLE,
   normalisePrepContent,
 } from '~/lib/meals/recipe-prep-utils';
+import { replaceStepIngredientLinks } from '~/lib/meals/recipe-step-ingredients';
 
 export {
   PREP_STEP_SORT_ORDER,
@@ -31,11 +36,13 @@ Get out: pan, chopping board
 
 Rules:
 - Only use ingredients from the list. Do not invent items.
+- Use the ingredient names exactly as given (so amounts can be linked later).
 - Skip grouping that adds no value (e.g. do not list "salt" under Measure unless useful).
 - Prefer verbs: Chop, Slice, Dice, Mince, Measure out, Drain, Open, Get out, Soften, Bring to room temperature.
 - One line per group. Max 8 lines.
 - If almost nothing needs prep, return a single short line like "No special prep — ingredients are ready to use."
-- Never wrap the answer in quotes or code fences.`;
+- Never wrap the answer in quotes or code fences.
+- Do not include numeric amounts yourself — names only.`;
 
 export async function generatePrepContent(
   ingredients: string[],
@@ -77,20 +84,28 @@ export async function refreshRecipePrepStep(input: {
       ? hashRecipeIngredients(input.ingredients)
       : null;
 
-  if (nextHash && nextHash === input.previousHash) {
-    const { data: existingPrep, error: existingError } = await input.client
-      .from('family_recipe_steps')
-      .select('id')
-      .eq('recipe_id', input.recipeId)
-      .eq('title', PREP_STEP_TITLE)
-      .eq('sort_order', PREP_STEP_SORT_ORDER)
-      .maybeSingle();
+  const { data: existingPrep, error: existingError } = await input.client
+    .from('family_recipe_steps')
+    .select('id, content')
+    .eq('recipe_id', input.recipeId)
+    .eq('title', PREP_STEP_TITLE)
+    .eq('sort_order', PREP_STEP_SORT_ORDER)
+    .maybeSingle();
 
-    if (existingError) throw existingError;
-    if (existingPrep) {
-      return { hash: nextHash };
-    }
-    // Hash matches but Prep step missing — fall through and regenerate.
+  if (existingError) throw existingError;
+
+  const existing = existingPrep as { id: string; content: string } | null;
+  const hasTokens = existing
+    ? contentHasIngredientTokens(existing.content)
+    : false;
+
+  if (
+    nextHash &&
+    nextHash === input.previousHash &&
+    existing &&
+    hasTokens
+  ) {
+    return { hash: nextHash };
   }
 
   if (!nextHash) {
@@ -115,43 +130,73 @@ export async function refreshRecipePrepStep(input: {
     return { hash: null };
   }
 
-  const content = await generatePrepContent(input.ingredients, {
+  const { data: structured, error: structuredError } = await input.client
+    .from('family_recipe_ingredients')
+    .select('id, name, original_text')
+    .eq('recipe_id', input.recipeId)
+    .order('sort_order', { ascending: true });
+
+  if (structuredError) throw structuredError;
+
+  const structuredIngredients = (structured ?? []) as Array<{
+    id: string;
+    name: string;
+    original_text: string;
+  }>;
+
+  // Prefer structured names for the model so token matching is reliable.
+  const promptLines =
+    structuredIngredients.length > 0
+      ? structuredIngredients.map((row) => row.name || row.original_text)
+      : input.ingredients;
+
+  const plainContent = await generatePrepContent(promptLines, {
     accountId: input.accountId,
     supabase: input.client,
   });
 
-  const { data: existing, error: readError } = await input.client
-    .from('family_recipe_steps')
-    .select('id')
-    .eq('recipe_id', input.recipeId)
-    .eq('title', PREP_STEP_TITLE)
-    .eq('sort_order', PREP_STEP_SORT_ORDER)
-    .maybeSingle();
-
-  if (readError) throw readError;
+  const tokenised = tokeniseIngredientMentions(
+    plainContent,
+    structuredIngredients.map((row) => ({
+      id: row.id,
+      name: row.name || row.original_text,
+    })),
+  );
 
   if (existing) {
     const { error: updateError } = await input.client
       .from('family_recipe_steps')
       .update({
-        content,
+        content: tokenised.content,
         updated_at: new Date().toISOString(),
       })
-      .eq('id', (existing as { id: string }).id);
+      .eq('id', existing.id);
 
     if (updateError) throw updateError;
+    await replaceStepIngredientLinks(
+      input.client,
+      existing.id,
+      tokenised.ingredientIds,
+    );
   } else {
-    const { error: insertError } = await input.client
+    const { data: inserted, error: insertError } = await input.client
       .from('family_recipe_steps')
       .insert({
         recipe_id: input.recipeId,
         sort_order: PREP_STEP_SORT_ORDER,
         title: PREP_STEP_TITLE,
-        content,
+        content: tokenised.content,
         timer_seconds: null,
-      });
+      })
+      .select('id')
+      .single();
 
     if (insertError) throw insertError;
+    await replaceStepIngredientLinks(
+      input.client,
+      (inserted as { id: string }).id,
+      tokenised.ingredientIds,
+    );
   }
 
   const { error: hashError } = await input.client

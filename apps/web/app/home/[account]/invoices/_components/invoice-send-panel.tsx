@@ -818,39 +818,39 @@ export function InvoiceSendPanel({
           <div className="space-y-3 rounded-lg border border-[color:var(--workspace-shell-border)] p-3">
             {isRecurring ? (
               <>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={
-                      recurringSendMode === 'automatic' ? 'default' : 'outline'
-                    }
-                    className={
-                      recurringSendMode === 'automatic'
-                        ? 'bg-[var(--ozer-accent)] text-[#09111F]'
-                        : undefined
-                    }
-                    disabled={loading != null}
-                    onClick={() => void handleRecurringSendMode('automatic')}
-                  >
-                    Automatic
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={
-                      recurringSendMode === 'manual' ? 'default' : 'outline'
-                    }
-                    className={
-                      recurringSendMode === 'manual'
-                        ? 'bg-[var(--ozer-accent)] text-[#09111F]'
-                        : undefined
-                    }
-                    disabled={loading != null}
-                    onClick={() => void handleRecurringSendMode('manual')}
-                  >
-                    Manual
-                  </Button>
+                <div
+                  role="tablist"
+                  aria-label="Recurring send mode"
+                  className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 p-0.5"
+                >
+                  {(
+                    [
+                      { value: 'automatic', label: 'Automatic' },
+                      { value: 'manual', label: 'Manual' },
+                    ] as const
+                  ).map((option) => {
+                    const active = recurringSendMode === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        disabled={loading != null}
+                        onClick={() =>
+                          void handleRecurringSendMode(option.value)
+                        }
+                        className={cn(
+                          'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                          active
+                            ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)] shadow-sm'
+                            : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
                 </div>
                 <p className="text-muted-foreground text-xs">
                   {recurringSendMode === 'automatic'
@@ -860,33 +860,36 @@ export function InvoiceSendPanel({
               </>
             ) : (
               <>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={sendMode === 'now' ? 'default' : 'outline'}
-                    className={
-                      sendMode === 'now'
-                        ? 'bg-[var(--ozer-accent)] text-[#09111F]'
-                        : undefined
-                    }
-                    onClick={() => setSendMode('now')}
-                  >
-                    Send now
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant={sendMode === 'schedule' ? 'default' : 'outline'}
-                    className={
-                      sendMode === 'schedule'
-                        ? 'bg-[var(--ozer-accent)] text-[#09111F]'
-                        : undefined
-                    }
-                    onClick={() => setSendMode('schedule')}
-                  >
-                    Schedule
-                  </Button>
+                <div
+                  role="tablist"
+                  aria-label="Send timing"
+                  className="inline-flex rounded-lg border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)]/50 p-0.5"
+                >
+                  {(
+                    [
+                      { value: 'now', label: 'Send now' },
+                      { value: 'schedule', label: 'Schedule' },
+                    ] as const
+                  ).map((option) => {
+                    const active = sendMode === option.value;
+                    return (
+                      <button
+                        key={option.value}
+                        type="button"
+                        role="tab"
+                        aria-selected={active}
+                        onClick={() => setSendMode(option.value)}
+                        className={cn(
+                          'rounded-md px-3 py-1.5 text-sm font-medium transition-colors',
+                          active
+                            ? 'bg-[var(--workspace-shell-panel-hover)] text-[var(--workspace-shell-text)] shadow-sm'
+                            : 'text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]',
+                        )}
+                      >
+                        {option.label}
+                      </button>
+                    );
+                  })}
                 </div>
 
                 {currentScheduledAt ? (

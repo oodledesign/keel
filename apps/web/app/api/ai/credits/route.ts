@@ -7,6 +7,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import {
   getOrCreateCreditBalance,
+  roundAiCredits,
   totalCreditsAvailable,
 } from '~/lib/ai/router';
 import { userIsAccountMember } from '~/lib/rankly/account-membership';
@@ -52,9 +53,9 @@ export async function GET(request: NextRequest) {
 
   const balance = await getOrCreateCreditBalance(accountId, admin);
 
-  const limit = balance.credits_monthly_limit;
-  const monthlyRemaining = balance.credits_remaining;
-  const purchasedRemaining = balance.credits_purchased ?? 0;
+  const limit = roundAiCredits(balance.credits_monthly_limit);
+  const monthlyRemaining = roundAiCredits(balance.credits_remaining);
+  const purchasedRemaining = roundAiCredits(balance.credits_purchased ?? 0);
   const remaining = totalCreditsAvailable(balance);
   const percentUsed =
     limit > 0

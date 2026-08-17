@@ -4,7 +4,7 @@ UK GDPR Article 28 terms for customers who use Ozer as a processor.
 
 **Under active legal review.** This Data Processing Agreement reflects Ozer's current Article 28 terms and is in effect for customers relying on it today. Counsel review of the full agreement remains in progress.
 
-**Version:** 30 July 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
+**Version:** 17 August 2026. Operated by Oodle Designs Ltd ("Processor" / "Ozer"). This DPA is incorporated by reference into the Terms of Service for business accounts. A countersigned copy is available on request via privacy@ozer.so.
 
 ## 1. Roles and subject matter
 
@@ -102,7 +102,8 @@ The authoritative register, kept current, is published on the Trust Centre. As a
 | Supabase / AWS | Database, auth, storage | Workspace and account data | EU West (Ireland) | Not a restricted transfer |
 | Stripe | Billing and Connect payments | Billing identifiers, subscription status | US | Stripe Data Transfers Addendum (UK IDTA; EU-US DPF incl. UK Extension) |
 | Anthropic | AI language model features | Workspace/email/transcript text prompts | US | DPA with EU SCCs and UK Addendum; EU-US DPF |
-| Google | Gmail, Calendar, Workspace directory | Mailbox, calendar, directory data | US/global | Google Data Processing Terms (SCCs and UK Addendum) |
+| Google (Gemini API) | High-volume AI (email triage/extract and other Flash-Lite routes) | Workspace/email text prompts | US/global | Paid Gemini API under Google Data Processing Addendum (EU SCCs and UK Addendum); EU-US DPF (Google LLC). Free AI Studio tier is not used for customer personal data. |
+| Google Workspace APIs | Gmail, Calendar, Workspace directory | Mailbox, calendar, directory data | US/global | Google Data Processing Terms (SCCs and UK Addendum) |
 | Microsoft | Signatures directory sync | Staff profile and photo data | US/global | Microsoft Products and Services DPA (SCCs and UK Addendum) |
 | ZeptoMail (Zoho) | Transactional email | Recipient, subject, body | EU data centre | Zoho DPA with standard contractual clauses |
 | Bunny.net (BunnyWay d.o.o.) | Video hosting | Media files, video metadata | Slovenia (EU) | Not a restricted transfer; DPA in place |

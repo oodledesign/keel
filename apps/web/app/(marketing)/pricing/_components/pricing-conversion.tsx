@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
+import { BusinessSeatCalculator } from '~/(marketing)/_components/business-seat-calculator';
 import { MarketingFaqsSection } from '~/(marketing)/_components/marketing-faqs';
 import {
   annualSavingPercent,
@@ -10,6 +11,7 @@ import {
   formatGbp,
   listBusinessWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
+import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 import {
   MARKETING_FREE_SIGNUP_URL,
   buildPricingSignupUrl,
@@ -38,254 +40,89 @@ const FEATURE_MATRIX: Array<{
   href?: string;
   hint?: string;
   lite: boolean | string;
-  solo: boolean | string;
-  team: boolean | string;
-  scale: boolean | string;
+  business: boolean | string;
 }> = [
   {
     feature: 'Monthly price',
+    hint: 'Business uses graduated per-seat pricing',
     lite: 'Free',
-    solo: '£29',
-    team: '£79',
-    scale: '£149',
+    business: 'From £29 / seat',
   },
   {
-    feature: 'Team members included',
-    hint: 'Seats in this workspace. On Scale, request more users anytime.',
-    lite: 'Up to 3',
-    solo: '1',
-    team: 'Up to 5',
-    scale: 'Up to 15 (request more)',
+    feature: 'Billable seats',
+    hint: 'Owners, admins, staff, and contractors',
+    lite: 'Up to 3 members',
+    business: 'Pay per seat (graduated)',
+  },
+  {
+    feature: 'Project guests',
+    hint: 'External collaborators on one project — not paid seats',
+    lite: '1',
+    business: '3 per billable seat',
+  },
+  {
+    feature: 'Client portal contacts',
+    lite: 'Unlimited',
+    business: 'Unlimited',
+  },
+  {
+    feature: 'Share with other paid workspaces',
+    lite: false,
+    business: true,
   },
   {
     feature: '14-day free trial',
     hint: 'On your first paid workspace — no card required',
     lite: false,
-    solo: true,
-    team: true,
-    scale: true,
+    business: true,
   },
   {
     feature: 'Apps marketplace',
     href: '/apps',
-    hint: 'Install Signatures, Site Studio, Media Generate, and future apps',
     lite: true,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Team & brand settings',
-    lite: true,
-    solo: true,
-    team: true,
-    scale: true,
+    business: true,
   },
   {
     feature: 'Monthly AI credits',
-    hint: 'Shared pool — buy Boost (£5), Studio (£10), or Agency (£20) packs anytime',
-    lite: '500',
-    solo: '2,000',
-    team: '5,000',
-    scale: '12,000',
+    hint: 'Shared pool — scales with seats on Business',
+    lite: '200',
+    business: 'From 3,000',
   },
   {
     feature: 'Clients & pipeline',
     href: '/features/pipeline',
     lite: false,
-    solo: true,
-    team: true,
-    scale: true,
+    business: true,
   },
   {
     feature: 'Jobs & projects',
     href: '/features/project-management',
     lite: false,
-    solo: true,
-    team: true,
-    scale: true,
+    business: true,
   },
   {
-    feature: 'Tasks & planner',
-    href: '/features/planner',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Scheduling',
-    hint: 'Schedule module for delivery and bookings',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Invoices, proposals & contracts',
+    feature: 'Invoices & client portal',
     href: '/features/invoicing',
     lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Activity tracking',
-    href: '/features/activity',
-    hint: 'Mac sessions assigned to clients and projects',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Client portal',
-    href: '/features/client-portals',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Team & client messaging',
-    href: '/features/messaging',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'SOPs & playbook checklists',
-    href: '/features/sops',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Docs & notes',
-    href: '/features/notes',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Finances',
-    href: '/features/finances',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Support tickets',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Websites',
-    hint: 'Core websites module on Solo+',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Second Brain',
-    href: '/features/second-brain',
-    hint: 'Search meetings, email, notes, and projects with citations',
-    lite: false,
-    solo: true,
-    team: true,
-    scale: true,
+    business: true,
   },
   {
     feature: 'Meeting Assistant',
     href: '/features/desktop-assistant',
-    hint: 'Mac meetings → tasks. 2 hrs/mo on Lite; unlimited on Solo+',
     lite: '2 hrs/mo',
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Dictation',
-    href: '/features/dictation',
-    hint: 'Mac hotkey — bundled with Meeting Assistant (not a separate add-on)',
-    lite: true,
-    solo: true,
-    team: true,
-    scale: true,
+    business: true,
   },
   {
     feature: 'Email Assistant',
     href: '/features/email-assistant',
-    hint: 'Gmail sync & drafts — £9/mo personal add-on',
     lite: 'Add-on',
-    solo: 'Add-on',
-    team: 'Add-on',
-    scale: 'Add-on',
+    business: 'Add-on',
   },
   {
-    feature: 'AI Planner',
-    href: '/features/planner',
-    hint: 'Today view across workspaces — included with personal home',
-    lite: true,
-    solo: true,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Signatures',
-    href: '/apps/signatures',
-    hint: 'Flat mailbox tiers from £9/mo',
-    lite: 'Add-on',
-    solo: 'Add-on',
-    team: 'Add-on',
-    scale: 'Add-on',
-  },
-  {
-    feature: 'Site Studio',
+    feature: 'Signatures / Media Generate',
     href: '/apps',
-    hint: 'AI website planning & export packs from £19/mo',
     lite: 'Add-on',
-    solo: 'Add-on',
-    team: 'Add-on',
-    scale: 'Add-on',
-  },
-  {
-    feature: 'Media Generate',
-    href: '/apps',
-    hint: 'AI image & video units from £5/mo — separate from text AI credits',
-    lite: 'Add-on',
-    solo: 'Add-on',
-    team: 'Add-on',
-    scale: 'Add-on',
-  },
-  {
-    feature: 'Shared client & project work',
-    hint: 'Multi-member collaboration on the same clients and jobs',
-    lite: false,
-    solo: false,
-    team: true,
-    scale: true,
-  },
-  {
-    feature: 'Priority support',
-    lite: false,
-    solo: false,
-    team: false,
-    scale: true,
-  },
-  {
-    feature: 'Ozer subscription transaction fees',
-    lite: 'None',
-    solo: 'None',
-    team: 'None',
-    scale: 'None',
+    business: 'Add-on',
   },
 ];
 
@@ -298,10 +135,7 @@ function cell(value: boolean | string) {
 export function PricingConversion() {
   const tiers = businessTierCards();
   const stackMonthly = replacedStackMonthlyTotal();
-  const team = listBusinessWorkspacePrices().find(
-    (p) => p.productId === 'ozer-business-team',
-  );
-  const teamMonthly = team?.monthlyPriceGbp ?? 79;
+  const teamMonthly = estimateMonthlyGbp(4);
   const faqs = pricingFaqs();
 
   return (
@@ -310,7 +144,7 @@ export function PricingConversion() {
       <section className="text-center">
         <p className={marketingEyebrow}>Pricing</p>
         <h1 className="font-heading mt-4 text-4xl font-bold tracking-tight text-[var(--workspace-shell-text)] md:text-5xl">
-          Flat price for the whole team
+          Graduated seats for your studio
         </h1>
         <p
           className={cn(
@@ -329,7 +163,7 @@ export function PricingConversion() {
         <h2 id="tier-cards-heading" className="sr-only">
           Business workspace tiers
         </h2>
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+        <div className="grid gap-4 md:grid-cols-2">
           {tiers.map((plan) => {
             const saving = formatAnnualSavingPercent(plan);
             const signup = buildPricingSignupUrl({
@@ -403,6 +237,9 @@ export function PricingConversion() {
         <p className={cn('mt-4 text-center text-sm', marketingMutedText)}>
           Personal and family workspaces are free forever.
         </p>
+        <div className="mt-10">
+          <BusinessSeatCalculator variant="light" />
+        </div>
       </section>
 
       <PlanRecommender />
@@ -447,8 +284,8 @@ export function PricingConversion() {
           Typical stack total:{' '}
           <strong>{formatGbp(stackMonthly)} per month</strong> (
           {formatGbp(stackMonthly * 12)} per year). Ozer Business Team is{' '}
-          <strong>{formatGbp(teamMonthly)} per month</strong> — flat price for
-          the whole team (up to {team?.maxTeamMembers ?? 5} members).
+          <strong>{formatGbp(teamMonthly)} per month</strong> for a typical
+          4-seat studio on graduated Business pricing.
         </p>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
           Run your own numbers in the{' '}
@@ -471,18 +308,15 @@ export function PricingConversion() {
           Feature-by-tier compare
         </h2>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
-          Explicit includes and excludes. Seat limits are stated as numbers, not
-          “unlimited”.
+          Lite vs paid Business. Use the seat calculator above for exact monthly totals.
         </p>
         <div className="mt-4 overflow-x-auto rounded-2xl border border-[color:var(--workspace-shell-border)]">
-          <table className="w-full min-w-[40rem] text-left text-sm">
+          <table className="w-full min-w-[28rem] text-left text-sm">
             <thead>
               <tr className="border-b border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]">
                 <th className="px-4 py-3 font-semibold">Feature</th>
                 <th className="px-4 py-3 font-semibold">Lite</th>
-                <th className="px-4 py-3 font-semibold">Solo</th>
-                <th className="px-4 py-3 font-semibold">Team</th>
-                <th className="px-4 py-3 font-semibold">Scale</th>
+                <th className="px-4 py-3 font-semibold">Business</th>
               </tr>
             </thead>
             <tbody>
@@ -517,13 +351,7 @@ export function PricingConversion() {
                     {cell(row.lite)}
                   </td>
                   <td className={cn('px-4 py-3', marketingMutedText)}>
-                    {cell(row.solo)}
-                  </td>
-                  <td className={cn('px-4 py-3', marketingMutedText)}>
-                    {cell(row.team)}
-                  </td>
-                  <td className={cn('px-4 py-3', marketingMutedText)}>
-                    {cell(row.scale)}
+                    {cell(row.business)}
                   </td>
                 </tr>
               ))}

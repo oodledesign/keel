@@ -35,9 +35,7 @@ export type MarketingAddonPlan = {
 const PRODUCT_PROFILE: Record<string, WorkspaceProfile> = {
   'ozer-community': 'community',
   'ozer-business-lite': 'work_design',
-  'ozer-business-solo': 'work_design',
-  'ozer-business-team': 'work_design',
-  'ozer-business-scale': 'work_design',
+  'ozer-business': 'work_design',
   'ozer-property-starter': 'work_property',
   'ozer-property-portfolio': 'work_property',
   'ozer-commercial-property': 'commercial_property',
@@ -81,20 +79,21 @@ const ADDON_PRODUCT_IDS = [
 
 const PRODUCT_URL_ALIASES = {
   'ozer-business-lite': 'business-lite',
-  'ozer-business-solo': 'business-solo',
-  'ozer-business-team': 'business-team',
-  'ozer-business-scale': 'business-scale',
+  'ozer-business': 'business',
   'ozer-addon-signatures': 'signatures',
   'ozer-addon-site-studio': 'site-studio',
   'ozer-addon-media-starter': 'media-generate',
 } as const;
 
-const PRODUCT_ID_BY_URL_ALIAS = new Map<string, string>(
-  Object.entries(PRODUCT_URL_ALIASES).map(([productId, alias]) => [
-    alias,
-    productId,
-  ]),
-);
+const PRODUCT_ID_BY_URL_ALIAS = new Map<string, string>([
+  ...Object.entries(PRODUCT_URL_ALIASES).map(
+    ([productId, alias]) => [alias, productId] as const,
+  ),
+  // Legacy Solo/Team/Scale URL aliases → graduated Business
+  ['business-solo', 'ozer-business'],
+  ['business-team', 'ozer-business'],
+  ['business-scale', 'ozer-business'],
+]);
 
 /** Derived from billing.config.ts. */
 export const MARKETING_ADDON_PLANS: MarketingAddonPlan[] =

@@ -41,19 +41,22 @@ const ADDON_ENTITLEMENTS = [
 
 const QUICK_PLANS = [
   {
-    label: 'Business Solo',
-    productId: 'ozer-business-solo',
-    planId: 'business-solo-monthly',
+    label: 'Business Solo (1 seat)',
+    productId: 'ozer-business',
+    planId: 'business-monthly',
+    billableSeats: 1,
   },
   {
-    label: 'Business Team',
-    productId: 'ozer-business-team',
-    planId: 'business-team-monthly',
+    label: 'Business Team (4 seats)',
+    productId: 'ozer-business',
+    planId: 'business-monthly',
+    billableSeats: 4,
   },
   {
-    label: 'Business Scale',
-    productId: 'ozer-business-scale',
-    planId: 'business-scale-monthly',
+    label: 'Business Scale (10 seats)',
+    productId: 'ozer-business',
+    planId: 'business-monthly',
+    billableSeats: 10,
   },
   {
     label: 'Business Lite',
@@ -154,13 +157,18 @@ export function AdminBillingGrantsPanel(props: {
     });
   };
 
-  const applyPlan = (productId: string, planId: string) => {
+  const applyPlan = (
+    productId: string,
+    planId: string,
+    billableSeats?: number,
+  ) => {
     startTransition(async () => {
       try {
         const result = (await adminApplyPlanLimitsAction({
           accountId: props.accountId,
           productId,
           planId,
+          billableSeats,
         })) as {
           success?: boolean;
           aiCreditsGranted?: number | null;
@@ -223,7 +231,15 @@ export function AdminBillingGrantsPanel(props: {
                 size="sm"
                 variant="outline"
                 disabled={pending}
-                onClick={() => applyPlan(plan.productId, plan.planId)}
+                onClick={() =>
+                  applyPlan(
+                    plan.productId,
+                    plan.planId,
+                    'billableSeats' in plan
+                      ? (plan.billableSeats as number | undefined)
+                      : undefined,
+                  )
+                }
               >
                 {plan.label}
               </Button>

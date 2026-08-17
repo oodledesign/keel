@@ -29,6 +29,12 @@ type Props = {
   fallbackInstructions: string | null;
 };
 
+const UNIT_OPTIONS: Array<{ id: MeasurementSystem; label: string }> = [
+  { id: 'metric', label: 'Metric' },
+  { id: 'imperial', label: 'Imperial' },
+  { id: 'cups', label: 'Cups & spoons' },
+];
+
 export function RecipeMethodPanel({
   baseServings,
   ingredients,
@@ -39,6 +45,7 @@ export function RecipeMethodPanel({
   const defaultServings = Math.max(1, baseServings ?? 1);
   const [servings, setServings] = useState(defaultServings);
   const [system, setSystem] = useState<MeasurementSystem>('metric');
+  const [showAmountsInMethod, setShowAmountsInMethod] = useState(true);
 
   const servingsScale = servings / defaultServings;
 
@@ -97,10 +104,17 @@ export function RecipeMethodPanel({
           stepMultipliers: multipliers,
           servingsScale,
           system,
+          includeAmount: showAmountsInMethod,
         }),
       };
     });
-  }, [steps, ingredientsById, servingsScale, system]);
+  }, [
+    steps,
+    ingredientsById,
+    servingsScale,
+    system,
+    showAmountsInMethod,
+  ]);
 
   return (
     <div className="space-y-4">
@@ -110,37 +124,51 @@ export function RecipeMethodPanel({
           'flex flex-wrap items-center justify-between gap-3 p-4',
         )}
       >
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Servings
-          </span>
-          <div className="flex items-center gap-1">
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              aria-label="Fewer servings"
-              disabled={servings <= 1}
-              onClick={() => setServings((value) => Math.max(1, value - 1))}
-            >
-              <Minus className="h-3.5 w-3.5" />
-            </Button>
-            <span className="min-w-8 text-center text-sm font-medium text-[var(--workspace-shell-text)] tabular-nums">
-              {servings}
+        <div className="flex flex-wrap items-center gap-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-[var(--workspace-shell-text-muted)]">
+              Servings
             </span>
-            <Button
-              type="button"
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              aria-label="More servings"
-              disabled={servings >= 50}
-              onClick={() => setServings((value) => Math.min(50, value + 1))}
-            >
-              <Plus className="h-3.5 w-3.5" />
-            </Button>
+            <div className="flex items-center gap-1">
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="Fewer servings"
+                disabled={servings <= 1}
+                onClick={() => setServings((value) => Math.max(1, value - 1))}
+              >
+                <Minus className="h-3.5 w-3.5" />
+              </Button>
+              <span className="min-w-8 text-center text-sm font-medium text-[var(--workspace-shell-text)] tabular-nums">
+                {servings}
+              </span>
+              <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="h-8 w-8"
+                aria-label="More servings"
+                disabled={servings >= 50}
+                onClick={() => setServings((value) => Math.min(50, value + 1))}
+              >
+                <Plus className="h-3.5 w-3.5" />
+              </Button>
+            </div>
           </div>
+
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
+            <input
+              type="checkbox"
+              checked={showAmountsInMethod}
+              onChange={(event) =>
+                setShowAmountsInMethod(event.target.checked)
+              }
+              className="h-4 w-4 accent-[var(--ozer-cool-blue)]"
+            />
+            Amounts in method
+          </label>
         </div>
 
         <div className="flex items-center gap-2">
@@ -150,14 +178,9 @@ export function RecipeMethodPanel({
           <div
             role="group"
             aria-label="Measurement units"
-            className="flex items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] p-0.5"
+            className="flex flex-wrap items-center gap-1 rounded-full border border-[color:var(--workspace-shell-border)] p-0.5"
           >
-            {(
-              [
-                { id: 'metric', label: 'Metric' },
-                { id: 'imperial', label: 'Imperial' },
-              ] as const
-            ).map((option) => {
+            {UNIT_OPTIONS.map((option) => {
               const active = system === option.id;
               return (
                 <button

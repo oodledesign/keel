@@ -1,4 +1,4 @@
-import { getBillingProductPrice } from '~/lib/billing/billing-config-prices';
+import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 
 export type StackTool = {
   id: string;
@@ -85,14 +85,13 @@ export const STACK_TOOLS: StackTool[] = [
   },
 ];
 
+/** 4-seat Business annual (10× monthly) for stack comparisons. */
 export function ozerAnnualFromBilling(): number {
-  const team = getBillingProductPrice('ozer-business-team');
-  return team?.yearlyPriceGbp ?? (team?.monthlyPriceGbp ?? 79) * 12;
+  return estimateMonthlyGbp(4) * 10;
 }
 
 export function ozerMonthlyFromBilling(): number {
-  const team = getBillingProductPrice('ozer-business-team');
-  return team?.monthlyPriceGbp ?? 79;
+  return estimateMonthlyGbp(4);
 }
 
 export const CALCULATOR_FAQS = [
@@ -100,7 +99,7 @@ export const CALCULATOR_FAQS = [
     question:
       'How much does business software cost for a small agency in the UK?',
     answer:
-      'It depends on seats and fees. Many studios pay separate subscriptions for PM, CRM, invoicing, portals, and meeting tools. This calculator totals your stack in pounds per year so you can compare it to Ozer’s flat team price.',
+      'It depends on seats and fees. Many studios pay separate subscriptions for PM, CRM, invoicing, portals, and meeting tools. This calculator totals your stack in pounds per year so you can compare it to Ozer Business on graduated seats.',
   },
   {
     question: 'Are the default prices accurate?',
@@ -115,6 +114,6 @@ export const CALCULATOR_FAQS = [
   {
     question: 'Is Ozer’s comparison price per seat?',
     answer:
-      'No. The Ozer figure is Business Team from billing config — a flat workspace price for up to five members.',
+      'Ozer Business uses graduated per-seat pricing on one product. The comparison figure is a 4-seat worked total (£29 + 3 × £22 = £95/mo), not a flat Team product.',
   },
 ];

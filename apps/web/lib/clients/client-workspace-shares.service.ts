@@ -458,6 +458,38 @@ export async function createShareInvite(input: {
   }
 
   const admin = getSupabaseServerAdminClient();
+
+  const { data: planLimits } = await admin
+    .from('account_plan_limits')
+    .select('plan_family')
+    .eq('account_id', input.ownerAccountId)
+    .maybeSingle();
+
+  const planFamily =
+    (planLimits as { plan_family?: string | null } | null)?.plan_family ?? null;
+
+  const { data: entitlements } = await admin
+    .from('account_entitlements')
+    .select('entitlement_key')
+    .eq('account_id', input.ownerAccountId)
+    .in('entitlement_key', [
+      'workspace_business',
+      'workspace_commercial_property',
+      'workspace_property',
+    ]);
+
+  const isPaidWorkspace =
+    planFamily === 'business' ||
+    planFamily === 'commercial_property' ||
+    planFamily === 'property' ||
+    (entitlements ?? []).length > 0;
+
+  if (!isPaidWorkspace) {
+    throw new Error(
+      'Client and project sharing between workspaces requires a paid Business (or Commercial) plan. Upgrade to share with other workspaces.',
+    );
+  }
+
   const inviteToken = createSupportPublicToken(24);
   const expiresAt = new Date();
   expiresAt.setDate(expiresAt.getDate() + DEFAULT_EXPIRE_DAYS);

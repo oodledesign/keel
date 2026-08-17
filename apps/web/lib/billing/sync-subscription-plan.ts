@@ -6,8 +6,16 @@ import type { UpsertSubscriptionParams } from '@kit/billing/types';
 
 import { syncAccountCreditLimit } from '~/lib/ai/tiers';
 
+import {
+  maxMembersForBillableSeats as businessMaxMembersForBillableSeats,
+  maxProjectGuestsForBillableSeats,
+  clampBillableSeats as clampBusinessBillableSeats,
+} from './business-graduated-pricing';
 import { markBusinessUpgradedFromLite } from './business-lite';
-import { maxMembersForBillableSeats } from './commercial-graduated-pricing';
+import {
+  maxMembersForBillableSeats as commercialMaxMembersForBillableSeats,
+  clampBillableSeats as clampCommercialBillableSeats,
+} from './commercial-graduated-pricing';
 import { findPlanByStripePriceId } from './ozer-plan-catalog';
 import { syncAddonModulesFromEntitlements } from './sync-addon-modules-from-entitlements';
 import { syncFullBusinessModules } from './sync-workspace-modules-from-plan';
@@ -107,14 +115,26 @@ export async function syncKeelPlanFromSubscription(
     );
 
     if (plan.workspaceProfiles?.length) {
+      const isGraduatedBusiness = plan.family === 'business';
+      const isCommercial = plan.family === 'commercial_property';
       const billableQuantity =
-        plan.family === 'commercial_property'
-          ? Math.max(1, item.quantity ?? 1)
+        isGraduatedBusiness || isCommercial
+          ? (isCommercial
+              ? clampCommercialBillableSeats
+              : clampBusinessBillableSeats)(item.quantity ?? 1)
           : null;
-      const maxMembers =
-        billableQuantity != null
-          ? maxMembersForBillableSeats(billableQuantity)
-          : plan.limits.maxMembers;
+
+      let maxMembers = plan.limits.maxMembers;
+      let maxProjectGuests: number | null = null;
+
+      if (billableQuantity != null && isCommercial) {
+        maxMembers = commercialMaxMembersForBillableSeats(billableQuantity);
+      } else if (billableQuantity != null && isGraduatedBusiness) {
+        maxMembers = businessMaxMembersForBillableSeats(billableQuantity);
+        maxProjectGuests = maxProjectGuestsForBillableSeats(billableQuantity);
+      } else if (plan.family === 'business_lite') {
+        maxProjectGuests = 1;
+      }
 
       await admin.from('account_plan_limits').upsert(
         {
@@ -125,8 +145,9 @@ export async function syncKeelPlanFromSubscription(
           max_members: maxMembers,
           max_properties: plan.limits.maxProperties,
           max_videos: plan.limits.maxVideos,
+          max_project_guests: maxProjectGuests,
           updated_at: new Date().toISOString(),
-        },
+        } as never,
         { onConflict: 'account_id' },
       );
       workspacePlanSynced = true;
@@ -141,8 +162,27 @@ export async function syncKeelPlanFromSubscription(
         plan.family === 'business_lite' ||
         plan.family === 'commercial_property'
       ) {
+        const previousLimitRow = await admin
+          .from('ai_credit_balances')
+          .select('credits_monthly_limit')
+          .eq('account_id', accountId)
+          .maybeSingle();
+        const previousLimit =
+          (
+            previousLimitRow.data as {
+              credits_monthly_limit?: number;
+            } | null
+          )?.credits_monthly_limit ?? null;
+
+        // Business seat bumps: raise limit + grant delta (refillRemaining false).
+        // Lite / Commercial / first grant: refill the period pool.
+        const refillRemaining =
+          plan.family !== 'business' ||
+          previousLimit == null ||
+          previousLimit <= 200;
+
         await syncAccountCreditLimit(accountId, admin, {
-          refillRemaining: true,
+          refillRemaining,
         }).catch((error) => {
           console.error(
             '[billing] syncAccountCreditLimit after subscription:',
@@ -152,7 +192,10 @@ export async function syncKeelPlanFromSubscription(
       }
 
       // Clear pending seat downgrade once Stripe quantity matches (or is lower).
-      if (plan.family === 'commercial_property' && billableQuantity != null) {
+      if (
+        (isCommercial || isGraduatedBusiness) &&
+        billableQuantity != null
+      ) {
         const { data: limits } = await admin
           .from('account_plan_limits')
           .select('pending_billable_seats')

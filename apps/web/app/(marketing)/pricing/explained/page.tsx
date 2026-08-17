@@ -8,6 +8,11 @@ import {
   getBillingProductPrice,
   listBusinessWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
+import {
+  BUSINESS_GRADUATED_TIERS,
+  estimateMonthlyGbp,
+  formatGraduatedWorkedExample,
+} from '~/lib/billing/business-graduated-pricing';
 import { MARKETING_FREE_TIER } from '~/lib/billing/pricing-marketing';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
@@ -32,19 +37,17 @@ import {
 
 const FAQS = () => {
   const lite = getBillingProductPrice('ozer-business-lite');
-  const solo = getBillingProductPrice('ozer-business-solo');
-  const team = getBillingProductPrice('ozer-business-team');
-  const scale = getBillingProductPrice('ozer-business-scale');
+  const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
 
   return [
     {
       question: 'How much does Ozer cost per month?',
-      answer: `Personal and family are free. Business Lite is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Business Solo is ${formatGbp(solo?.monthlyPriceGbp ?? 29)} per month. Business Team is ${formatGbp(team?.monthlyPriceGbp ?? 79)} per month. Business Scale is ${formatGbp(scale?.monthlyPriceGbp ?? 149)} per month. Personal and family workspaces are free forever.`,
+      answer: `Personal and family are free. Business Lite is ${formatGbp(lite?.monthlyPriceGbp ?? 0)} per month. Paid Business is graduated: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to5!.unitGbp)} for seats 2–5, then ${formatGbp(seats6plus!.unitGbp)} for seats 6+. Personal and family workspaces are free forever.`,
     },
     {
       question: 'Does Ozer charge per user?',
       answer:
-        'No. Each paid workspace is a flat price for the whole team up to the seat limit on that tier. You do not multiply Solo by headcount.',
+        'Yes — billable seats use graduated bands on one Business product. Seat 1 is £29; extra seats get cheaper unit rates. You stay on the same plan as you grow.',
     },
     {
       question: 'Does Ozer take a cut of my invoices?',
@@ -58,7 +61,7 @@ const FAQS = () => {
     {
       question: 'How does Ozer pricing compare to Bonsai and HoneyBook?',
       answer:
-        'Bonsai and HoneyBook often use per-user or tiered US pricing, sometimes with card fees. Ozer uses flat GBP workspace prices. See the comparison pages for worked examples.',
+        'Bonsai and HoneyBook often use per-user or tiered US pricing, sometimes with card fees. Ozer uses graduated GBP seat pricing on one Business product. See the comparison pages for worked examples.',
     },
   ];
 };
@@ -66,7 +69,7 @@ const FAQS = () => {
 export const metadata = buildMarketingMetadata({
   title: 'How much does Ozer cost? — Ozer',
   description:
-    'Exact Ozer prices in £: personal free; Business Lite £0; Solo £29; Team £79; Scale £149 per month. Flat price for the whole team. No per-user charge.',
+    'Exact Ozer prices in £: personal free; Business Lite £0; paid Business from £29 for seat 1, then cheaper add-on seats. Graduated pricing — not separate Solo/Team/Scale products.',
   path: '/pricing/explained',
   ogType: 'pricing',
   keywords: [
@@ -83,8 +86,9 @@ function PricingExplainedPage() {
   const ten = annualCostForTeamSize(10);
   const business = listBusinessWorkspacePrices();
   const faqs = FAQS();
+  const [seat1, seats2to5, seats6plus] = BUSINESS_GRADUATED_TIERS;
 
-  const answerFirst = `Ozer costs ${formatGbp(0)} per month for personal and family workspaces. Business Lite is ${formatGbp(business.find((p) => p.productId === 'ozer-business-lite')?.monthlyPriceGbp ?? 0)} per month. Business Solo is ${formatGbp(solo.monthlyGbp)} per month for one member. Business Team is ${formatGbp(four.monthlyGbp)} per month for up to five members. Business Scale is ${formatGbp(ten.monthlyGbp)} per month for up to fifteen members. Prices are flat for the whole team, in pounds, with no per-user charge and no Ozer cut on invoices.`;
+  const answerFirst = `Ozer costs ${formatGbp(0)} per month for personal and family workspaces. Business Lite is ${formatGbp(business.find((p) => p.productId === 'ozer-business-lite')?.monthlyPriceGbp ?? 0)} per month. Paid Business is one graduated product: ${formatGbp(seat1!.unitGbp)} for seat 1, then ${formatGbp(seats2to5!.unitGbp)} for seats 2–5, then ${formatGbp(seats6plus!.unitGbp)} for seats 6+. Examples: one seat ${formatGbp(solo.monthlyGbp)}/mo; four seats ${formatGbp(four.monthlyGbp)}/mo; ten seats ${formatGbp(ten.monthlyGbp)}/mo. No Ozer cut on invoices.`;
 
   return (
     <main className={cn('relative overflow-hidden', marketingShellClass)}>
@@ -117,7 +121,7 @@ function PricingExplainedPage() {
         </p>
         <p className={cn('mt-2 text-sm', marketingMutedText)}>
           Last verified {PRICING_LAST_VERIFIED}. Figures read from billing
-          config.
+          config and graduated seat maths.
         </p>
 
         <p className={cn('mt-6 text-sm', marketingBodyText)}>
@@ -133,23 +137,22 @@ function PricingExplainedPage() {
           </h2>
           <ul className={cn('mt-4 space-y-4', marketingBodyText)}>
             <li>
-              <strong>Solo freelancer:</strong> Business Solo at{' '}
-              {formatGbp(solo.monthlyGbp)} per month (
+              <strong>Solo freelancer:</strong>{' '}
+              {formatGraduatedWorkedExample(1, formatGbp)} (
               {formatGbp(solo.yearlyGbp)} per year on annual billing). Last
               verified {PRICING_LAST_VERIFIED}.
             </li>
             <li>
-              <strong>4-person studio:</strong> Business Team at{' '}
-              {formatGbp(four.monthlyGbp)} per month (
-              {formatGbp(four.yearlyGbp)} per year) — flat price for the whole
-              team, up to {four.plan.maxTeamMembers} members. Last verified{' '}
-              {PRICING_LAST_VERIFIED}.
+              <strong>4-person studio:</strong>{' '}
+              {formatGraduatedWorkedExample(4, formatGbp)} (
+              {formatGbp(four.yearlyGbp)} per year) — same Business product,
+              graduated seats. Last verified {PRICING_LAST_VERIFIED}.
             </li>
             <li>
-              <strong>10-person agency:</strong> Business Scale at{' '}
-              {formatGbp(ten.monthlyGbp)} per month ({formatGbp(ten.yearlyGbp)}{' '}
-              per year) — up to {ten.plan.maxTeamMembers} members. Last verified{' '}
-              {PRICING_LAST_VERIFIED}.
+              <strong>10-person agency:</strong>{' '}
+              {formatGraduatedWorkedExample(10, formatGbp)} (
+              {formatGbp(ten.yearlyGbp)} per year) — still one Business plan.
+              Last verified {PRICING_LAST_VERIFIED}.
             </li>
           </ul>
         </section>
@@ -169,9 +172,15 @@ function PricingExplainedPage() {
             </li>
             {business.map((plan) => (
               <li key={plan.productId}>
-                {plan.productName}: {formatGbp(plan.monthlyPriceGbp)} per month
-                {plan.yearlyPriceGbp != null
+                {plan.productId === 'ozer-business'
+                  ? `${plan.productName}: from ${formatGbp(estimateMonthlyGbp(1))} per month (graduated seats)`
+                  : `${plan.productName}: ${formatGbp(plan.monthlyPriceGbp)} per month`}
+                {plan.productId !== 'ozer-business' &&
+                plan.yearlyPriceGbp != null
                   ? ` (or ${formatGbp(plan.yearlyPriceGbp)} per year)`
+                  : null}
+                {plan.productId === 'ozer-business'
+                  ? ` — annual is 10× monthly (e.g. ${formatGbp(estimateMonthlyGbp(1) * 10)}/year for seat 1)`
                   : null}
                 {plan.trialDays
                   ? ` — ${plan.trialDays}-day trial on first paid workspace`

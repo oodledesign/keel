@@ -44,6 +44,7 @@ import {
 import { getSegmentPricingComparison } from '~/lib/marketing/pricing-comparison';
 import type { SegmentLandingConfig } from '~/lib/marketing/segment-landing-pages';
 
+import { BusinessSeatCalculator } from './business-seat-calculator';
 import { CommercialBrochurePreview } from './commercial-brochure-preview';
 import { CommercialSeatCalculator } from './commercial-seat-calculator';
 import { InterconnectedWorkspacesSection } from './interconnected-workspaces-section';
@@ -57,6 +58,8 @@ type SegmentLandingPageProps = {
 export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
   const isPersonal = config.slug === 'personal';
   const isCommercial = config.slug === 'commercial-property';
+  const isWork = config.slug === 'work';
+  const usesGraduatedPricing = isCommercial || isWork;
   const primarySignup = buildPricingSignupUrl({
     profile: config.signupProfile,
     productId:
@@ -70,7 +73,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
       config.pricingPlans.find((p) => p.priceGbp > 0)?.seats,
   });
   const pricingComparison = getSegmentPricingComparison(config.slug);
-  const pricingLink = isPersonal || isCommercial ? '#pricing' : '/pricing';
+  const pricingLink = isPersonal || usesGraduatedPricing ? '#pricing' : '/pricing';
   const includedFeatures = config.features.slice(0, 4);
 
   return (
@@ -398,6 +401,8 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
 
         {isCommercial ? (
           <CommercialPricingGrid plans={config.pricingPlans} />
+        ) : isWork ? (
+          <BusinessPricingGrid plans={config.pricingPlans} />
         ) : (
           <div
             className={cn(
@@ -422,7 +427,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
           />
         ) : null}
 
-        {!isCommercial ? (
+        {!usesGraduatedPricing ? (
           <p className={`mt-8 text-center text-sm ${marketingMutedText}`}>
             <Link
               href="/pricing"
@@ -691,6 +696,40 @@ function SegmentPricingPlanCard({
         <div className="mt-auto pt-4" />
       )}
     </article>
+  );
+}
+
+function BusinessPricingGrid({
+  plans,
+}: {
+  plans: SegmentLandingConfig['pricingPlans'];
+}) {
+  const lite = plans.find((plan) => plan.productId === 'ozer-business-lite');
+  const ordered = (['solo', 'team', 'scale'] as const)
+    .map((id) => plans.find((plan) => plan.id === id))
+    .filter((plan): plan is NonNullable<typeof plan> => Boolean(plan));
+
+  const bandPlans = ordered.length > 0 ? ordered : plans.filter((p) => p.id);
+
+  return (
+    <div className="space-y-8">
+      {lite ? (
+        <div className="mx-auto max-w-md">
+          <SegmentPricingPlanCard plan={lite} />
+        </div>
+      ) : null}
+      <div className="grid gap-6 lg:grid-cols-3 lg:items-stretch">
+        {bandPlans.map((plan) => (
+          <SegmentPricingPlanCard
+            key={plan.id ?? plan.name}
+            plan={plan}
+            hideCta
+          />
+        ))}
+      </div>
+
+      <BusinessSeatCalculator />
+    </div>
   );
 }
 

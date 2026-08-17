@@ -10,6 +10,7 @@ import {
   formatGbp,
   listBusinessWorkspacePrices,
 } from '~/lib/billing/billing-config-prices';
+import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 import { MARKETING_FREE_TIER } from '~/lib/billing/pricing-marketing';
 import { withI18n } from '~/lib/i18n/with-i18n';
 import {
@@ -55,16 +56,16 @@ function stackSavingPercent(
 }
 
 export const metadata = buildMarketingMetadata({
-  title: 'Pricing — flat team price — Ozer',
+  title: 'Pricing — graduated Business seats — Ozer',
   description:
-    'Ozer pricing: personal and family free; business from £0–£149 per month. Flat price for the whole team — no per-seat maths, no subscription transaction fees.',
+    'Ozer pricing: personal and family free; Business Lite £0; paid Business from £29 for seat 1 with cheaper add-on seats. No subscription transaction fees.',
   path: '/pricing',
   ogType: 'pricing',
   keywords: [
     'Ozer pricing',
     'freelance software pricing UK',
     'agency CRM cost',
-    'flat team pricing',
+    'graduated seat pricing',
   ],
 });
 
@@ -89,7 +90,7 @@ async function PricingPage() {
     softwareApplicationJsonLd({
       name: 'Ozer',
       description:
-        'Workspace OS pricing in GBP — flat price for the whole team per workspace.',
+        'Workspace OS pricing in GBP — graduated Business seats from £29 for seat 1.',
       url: absoluteUrl('/pricing'),
       offers,
     }),
@@ -101,9 +102,9 @@ async function PricingPage() {
   ]);
 
   const stackYear = replacedStackMonthlyTotal() * 12;
-  const team = business.find((p) => p.productId === 'ozer-business-team');
-  const teamYear = team?.yearlyPriceGbp ?? 790;
-  const savingPct = stackSavingPercent(stackYear, teamYear);
+  const fourSeatMonthly = estimateMonthlyGbp(4);
+  const fourSeatYear = fourSeatMonthly * 10;
+  const savingPct = stackSavingPercent(stackYear, fourSeatYear);
 
   return (
     <div className={cn('relative overflow-hidden', marketingShellClass)}>
@@ -128,8 +129,9 @@ async function PricingPage() {
             </h2>
             <p className="mt-2 max-w-3xl text-sm leading-relaxed text-[var(--workspace-shell-text-muted)]">
               A typical UK tool stack in our strip totals about{' '}
-              {formatGbp(stackYear)} per year. Ozer Business Team is{' '}
-              {formatGbp(teamYear)} per year — flat price for the whole team
+              {formatGbp(stackYear)} per year. Ozer Business for four seats is
+              about {formatGbp(fourSeatYear)} per year (
+              {formatGbp(fourSeatMonthly)}/mo on graduated pricing)
               {savingPct != null ? (
                 <>
                   {' '}

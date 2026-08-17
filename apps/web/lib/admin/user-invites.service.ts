@@ -57,8 +57,8 @@ const WORKSPACE_PLAN_PRESETS: Partial<
 };
 
 const FULL_BUSINESS_PLAN = {
-  productId: 'ozer-business-solo',
-  planId: 'business-solo-monthly',
+  productId: 'ozer-business',
+  planId: 'business-monthly',
 };
 
 function slugifyName(name: string): string {

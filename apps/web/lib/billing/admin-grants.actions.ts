@@ -218,7 +218,12 @@ export const adminSetBillingExemptAction = enhanceAction(
 );
 
 export const adminApplyPlanLimitsAction = enhanceAction(
-  async (input: { accountId: string; productId: string; planId: string }) => {
+  async (input: {
+    accountId: string;
+    productId: string;
+    planId: string;
+    billableSeats?: number;
+  }) => {
     const { user } = await requireSuperAdmin();
     const admin = getSupabaseServerAdminClient();
 
@@ -232,11 +237,37 @@ export const adminApplyPlanLimitsAction = enhanceAction(
         account_id: input.accountId,
         entitlement_key: plan.entitlementKey,
         source: 'admin_grant',
-        metadata: { productId: plan.productId, planId: plan.planId },
+        metadata: {
+          productId: plan.productId,
+          planId: plan.planId,
+          billableSeats: input.billableSeats ?? null,
+        },
         updated_at: new Date().toISOString(),
       },
       { onConflict: 'account_id,entitlement_key' },
     );
+
+    let maxMembers = plan.limits.maxMembers;
+    let maxProjectGuests: number | null = null;
+
+    if (plan.family === 'business') {
+      const {
+        maxMembersForBillableSeats,
+        maxProjectGuestsForBillableSeats,
+      } = await import('~/lib/billing/business-graduated-pricing');
+      const seats = Math.max(1, input.billableSeats ?? 1);
+      maxMembers = maxMembersForBillableSeats(seats);
+      maxProjectGuests = maxProjectGuestsForBillableSeats(seats);
+    } else if (plan.family === 'business_lite') {
+      maxProjectGuests = 1;
+    } else if (plan.family === 'commercial_property') {
+      const { maxMembersForBillableSeats } = await import(
+        '~/lib/billing/commercial-graduated-pricing'
+      );
+      maxMembers =
+        plan.limits.maxMembers ??
+        maxMembersForBillableSeats(Math.max(1, input.billableSeats ?? 4));
+    }
 
     await admin.from('account_plan_limits').upsert(
       {
@@ -244,11 +275,12 @@ export const adminApplyPlanLimitsAction = enhanceAction(
         plan_product_id: plan.productId,
         plan_id: plan.planId,
         plan_family: plan.family,
-        max_members: plan.limits.maxMembers,
+        max_members: maxMembers,
         max_properties: plan.limits.maxProperties,
         max_videos: plan.limits.maxVideos,
+        max_project_guests: maxProjectGuests,
         updated_at: new Date().toISOString(),
-      },
+      } as never,
       { onConflict: 'account_id' },
     );
 
@@ -263,6 +295,7 @@ export const adminApplyPlanLimitsAction = enhanceAction(
       metadata: {
         productId: input.productId,
         planId: input.planId,
+        billableSeats: input.billableSeats ?? null,
         entitlementKey: plan.entitlementKey,
         aiCreditsGranted: usage.aiCredits,
         mediaUnitsGranted: usage.mediaUnits,
@@ -284,6 +317,7 @@ export const adminApplyPlanLimitsAction = enhanceAction(
       accountId: z.string().uuid(),
       productId: z.string().min(1),
       planId: z.string().min(1),
+      billableSeats: z.number().int().min(1).max(200).optional(),
     }),
   },
 );

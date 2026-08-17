@@ -8,11 +8,13 @@ import authConfig, { getSignUpAuthProviders } from '~/config/auth.config';
 import pathsConfig from '~/config/paths.config';
 import {
   buildAuthLinkWithNext,
+  isBusinessSignupIntent,
   resolveSignupContext,
 } from '~/lib/auth/signup-context';
 import { withI18n } from '~/lib/i18n/with-i18n';
 
 import { AuthSplitShell } from '../_components/auth-split-shell';
+import { BusinessSignUpFlow } from './_components/business-sign-up-flow';
 import { CommercialSignUpFlow } from './_components/commercial-sign-up-flow';
 import { SignupContextPanel } from './_components/signup-context-panel';
 
@@ -36,14 +38,18 @@ async function SignUpPage({ searchParams }: SignUpPageProps) {
   const context = resolveSignupContext(next);
 
   if (context.showPlanConfirm) {
-    return (
-      <CommercialSignUpFlow
-        initialContext={context}
-        captchaSiteKey={authConfig.captchaTokenSiteKey}
-        displayTermsCheckbox={authConfig.displayTermsCheckbox}
-        providers={getSignUpAuthProviders()}
-      />
-    );
+    const flowProps = {
+      initialContext: context,
+      captchaSiteKey: authConfig.captchaTokenSiteKey,
+      displayTermsCheckbox: authConfig.displayTermsCheckbox ?? false,
+      providers: getSignUpAuthProviders(),
+    };
+
+    if (isBusinessSignupIntent(context.intent)) {
+      return <BusinessSignUpFlow {...flowProps} />;
+    }
+
+    return <CommercialSignUpFlow {...flowProps} />;
   }
 
   const paths = {

@@ -1,8 +1,8 @@
 import {
   PRICING_LAST_VERIFIED,
   formatGbp,
-  getBillingProductPrice,
 } from '~/lib/billing/billing-config-prices';
+import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 import type { SourcedValue } from '~/lib/marketing/compare/types';
 
 const OZER_PRICING = 'https://ozer.so/pricing';
@@ -16,21 +16,20 @@ export function ozerSourced<T>(value: T): SourcedValue<T> {
   };
 }
 
-const team = getBillingProductPrice('ozer-business-team');
-const teamMonthly = team?.monthlyPriceGbp ?? 79;
-const teamYearly = team?.yearlyPriceGbp ?? teamMonthly * 12;
-const teamSeats = team?.maxTeamMembers ?? 5;
+/** Illustrative 4-seat Business total from graduated pricing. */
+const fourSeatMonthly = estimateMonthlyGbp(4);
+const fourSeatYearly = fourSeatMonthly * 10;
 
-/** Business Team figures from billing.config.ts. */
+/** Business (4-seat example) figures from graduated pricing. */
 export const OZER_TEAM_OF_FOUR = {
   pricingModel: ozerSourced(
-    `Flat workspace price (not per seat); Business Team covers up to ${teamSeats} members`,
+    'Graduated per-seat pricing on one Business product; seat 1 at £29, then cheaper add-on seats',
   ),
   teamOfFourGbpYear: ozerSourced(
-    `${formatGbp(teamYearly)}/year on Business Team annual billing (${formatGbp(teamMonthly)}/month)`,
+    `${formatGbp(fourSeatYearly)}/year for 4 billable seats on annual billing (${formatGbp(fourSeatMonthly)}/month)`,
   ),
-  teamOfFourAnnualGbp: ozerSourced(teamYearly),
-  teamOfFourMonthlyGbp: ozerSourced(teamMonthly),
+  teamOfFourAnnualGbp: ozerSourced(fourSeatYearly),
+  teamOfFourMonthlyGbp: ozerSourced(fourSeatMonthly),
   transactionFees: ozerSourced(
     'Stripe card fees on client invoices only (no platform cut on subscription)',
   ),

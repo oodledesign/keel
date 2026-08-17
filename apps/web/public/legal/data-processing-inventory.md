@@ -2,7 +2,7 @@
 
 **Status:** Audit only. No policy prose.  
 **Generated from:** `apps/web`, `packages/*`, `supabase/migrations`, and `/Users/danjamespotter/OzerAssistant` (Swift).  
-**Last audited:** 28 July 2026   
+**Last audited:** 17 August 2026  
 **Composio:** Not built — exclude from compliance copy until shipped.
 
 ---
@@ -13,7 +13,7 @@
 |---------|--------------|---------|---------|----------------------|--------|
 | Core workspace CRM | `clients` (name, email, phone, address, picture); `contacts` / `client_contacts`; tasks/notes/projects links | Run customer’s CRM/workspace | Supabase `public` (EU West per trust copy) | None for storage | Live |
 | Invoicing / proposals / contracts | Invoice + recipient emails, email templates, PDF metadata; portal tokens | Bill & contract clients | Supabase; PDFs generated in-app | Stripe Connect (payment); ZeptoMail (send) | Live |
-| Gmail Email Assistant | OAuth tokens (AES-256-GCM via `@kit/google-auth`); `email_threads`, `email_messages` (**body_text/body_html**); drafts; action items | Sync mailbox, triage, extract, draft | Supabase + Google | Gmail scopes: `gmail.readonly`, `gmail.modify`, `gmail.settings.basic`; Anthropic Sonnet for classify/extract/draft (thread text, not HTML) | Live |
+| Gmail Email Assistant | OAuth tokens (AES-256-GCM via `@kit/google-auth`); `email_threads`, `email_messages` (**body_text/body_html**); drafts; action items | Sync mailbox, triage, extract, draft | Supabase + Google | Gmail scopes: `gmail.readonly`, `gmail.modify`, `gmail.settings.basic`; **Google Gemini Flash-Lite** (paid API) for triage/extract; Anthropic for drafting and richer paths | Live |
 | Google Calendar | Calendar events/attendees via calendar OAuth | Planner / meeting context | Supabase connection rows + Google | `calendar.readonly`, `calendar.events` | Live |
 | Public scheduler | `bookings.invitee_name/email/timezone/notes`, guests, form answers (incl. phone), `management_token` | Public booking / manage links | Supabase; emails via ZeptoMail | Google Calendar write when connected | Live |
 | Meeting transcripts | `meeting_transcripts.content`, speaker segments/mappings, attendee emails; summaries/action items | Meeting memory & tasks | Supabase | **Keel web:** Soniox cloud STT (`stt-rt-v5`); **OzerAssistant Mac:** WhisperKit on-device + SpeakerKit diarisation local; transcript text uploaded to Ozer | Live (both paths) |
@@ -21,7 +21,7 @@
 | Ozer Signatures | Staff: name, email, job title, dept, phones, photos; signature HTML; MS/Google tokens | Deploy email signatures | Supabase `signatures.*` + `signatures-photos` | **MS Graph:** `MailboxSettings.ReadWrite`, `User.Read.All`, `ProfilePhoto.Read.All`, `offline_access`; **Google:** `admin.directory.user.readonly`, `gmail.settings.basic`. Gmail sendAs push live; Outlook Graph HTML push placeholder | Live (Google push); MS profile sync live |
 | Platform billing | `billing_customers`, subscription status — **no PAN** | SaaS subscription | Supabase + Stripe | Stripe Checkout/Portal | Live |
 | Client payments (Connect) | Connect account IDs, customer IDs, bank fields on payment settings | Invoice Pay Now / bank instructions | Supabase + Stripe Connect | Stripe Connect | Live |
-| AI (non-email) | Workspace text for Site Studio, Brain, proposals, meetings, Rankly, etc. | Feature outputs | Prompt/content not in credit log; `ai_credit_transactions` logs tokens/model only | Anthropic Haiku/Sonnet; Gemini Flash-Lite **configured but unwired** for triage; Voyage embeddings when keyed | Mostly live; Gemini unwired |
+| AI (non-email) | Workspace text for Site Studio, Brain, proposals, meetings, Rankly, etc. | Feature outputs | Prompt/content not in credit log; `ai_credit_transactions` logs tokens/model only | Anthropic Haiku/Sonnet; Google Gemini Flash-Lite (paid API) for configured routes; Voyage embeddings when keyed | Live |
 | Transactional email | to/from/subject/html; `platform_email_log` metadata | Product emails | ZeptoMail EU API (+ optional Resend) | ZeptoMail (default) | Live |
 | Video hosting | title, description, filename, Bunny IDs | Host/play videos | Supabase metadata + Bunny Stream binary | Bunny.net | Live |
 | MCP (`/api/mcp`) | Tasks, projects, deals, clients, notes (RLS-scoped) — **not** email bodies | External AI clients | Same Supabase | Customer’s MCP client | Live |
@@ -83,7 +83,7 @@
 
 ### International transfers
 - Anthropic / Google Gemini processing may occur outside UK/EEA
-- Transfer mechanism: **TBD — pending legal review** (do not assert SCCs/UK IDTA without confirmation)
+- Transfer mechanism (public register): Anthropic DPA (EU SCCs + UK Addendum; EU-US DPF); Paid Gemini API under Google Data Processing Addendum (EU SCCs + UK Addendum; EU-US DPF for Google LLC). Free AI Studio is not used for customer personal data.
 
 ---
 
@@ -93,8 +93,9 @@
 |------|---------|------------------------------|---------------|
 | Supabase / AWS | Primary database, auth, storage | All workspace & account data | EU West (Ireland) per trust copy |
 | Stripe | SaaS billing + Connect payments | Customer IDs, subscription status; card PAN stays with Stripe | Stripe (UK/EU entities as applicable) |
-| Anthropic | LLM features | Workspace/email/transcript text prompts | [LEGAL REVIEW NEEDED: processing location / transfer tool] |
-| Google (Gmail, Calendar, Workspace APIs; Gemini if enabled) | Email/calendar/signatures; future Flash-Lite | Mailbox/calendar/directory; AI prompts if wired | [LEGAL REVIEW NEEDED] |
+| Anthropic | LLM features | Workspace/email/transcript text prompts | US — DPA with EU SCCs and UK Addendum; EU-US DPF |
+| Google (Gemini API) | High-volume AI (triage/extract Flash-Lite) | Workspace/email text prompts | US/global — Paid Gemini API; Google Data Processing Addendum (SCCs + UK Addendum); EU-US DPF |
+| Google Workspace APIs | Gmail, Calendar, Workspace directory / signatures | Mailbox/calendar/directory | US/global — Google Data Processing Terms (SCCs + UK Addendum) |
 | Microsoft Graph | Signatures directory + mailbox settings | Staff profile, photo, mailbox settings | [LEGAL REVIEW NEEDED] |
 | ZeptoMail | Transactional email | Recipient, subject, HTML body | EU API endpoint used in code |
 | Bunny.net Stream | Video hosting | Media files + video metadata | [LEGAL REVIEW NEEDED: region] |
@@ -108,4 +109,4 @@
 
 ## Trust Centre gap
 
-File: `apps/web/app/(marketing)/trust/page.tsx` — no dedicated Sub-processors section. Stripe/Supabase mentioned in prose only.
+File: `apps/web/app/(marketing)/trust/page.tsx` — Sub-processors section is published; keep in sync with Privacy Policy, DPA Annex B, and `admin/subprocessors`.

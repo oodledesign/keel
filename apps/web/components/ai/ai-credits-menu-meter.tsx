@@ -12,6 +12,11 @@ type CreditsSnapshot = {
   percentUsed: number;
 };
 
+function formatAiCredits(value: number): string {
+  const rounded = Math.round(value * 10) / 10;
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1);
+}
+
 export function AiCreditsMenuMeter({
   accountId,
   billingHref,
@@ -105,8 +110,8 @@ export function AiCreditsMenuMeter({
             {remaining === null
               ? '…'
               : limit > 0
-                ? `${remaining} left / ${limit}`
-                : `${remaining} left`}
+                ? `${formatAiCredits(remaining)} left / ${formatAiCredits(limit)}`
+                : `${formatAiCredits(remaining)} left`}
           </span>
         </div>
         <div

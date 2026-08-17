@@ -20,29 +20,14 @@ export const OZER_STRIPE_PRICES = {
     'STRIPE_PRICE_BUSINESS_LITE_MONTHLY',
     'price_ozer_business_lite_monthly',
   ),
-  business_solo_monthly: price(
-    'STRIPE_PRICE_BUSINESS_SOLO_MONTHLY',
-    'price_ozer_business_solo_monthly',
+  /** Graduated per-seat Price (seat 1 £29, 2–5 £22, 6+ £16). */
+  business_monthly: price(
+    'STRIPE_PRICE_BUSINESS_MONTHLY',
+    'price_ozer_business_monthly',
   ),
-  business_solo_yearly: price(
-    'STRIPE_PRICE_BUSINESS_SOLO_YEARLY',
-    'price_ozer_business_solo_yearly',
-  ),
-  business_team_monthly: price(
-    'STRIPE_PRICE_BUSINESS_TEAM_MONTHLY',
-    'price_ozer_business_team_monthly',
-  ),
-  business_team_yearly: price(
-    'STRIPE_PRICE_BUSINESS_TEAM_YEARLY',
-    'price_ozer_business_team_yearly',
-  ),
-  business_scale_monthly: price(
-    'STRIPE_PRICE_BUSINESS_SCALE_MONTHLY',
-    'price_ozer_business_scale_monthly',
-  ),
-  business_scale_yearly: price(
-    'STRIPE_PRICE_BUSINESS_SCALE_YEARLY',
-    'price_ozer_business_scale_yearly',
+  business_yearly: price(
+    'STRIPE_PRICE_BUSINESS_YEARLY',
+    'price_ozer_business_yearly',
   ),
   property_starter_monthly: price(
     'STRIPE_PRICE_PROPERTY_STARTER_MONTHLY',

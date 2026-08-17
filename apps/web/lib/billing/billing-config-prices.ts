@@ -114,12 +114,7 @@ export function listBillingProductPlanPrices(
 }
 
 export function listBusinessWorkspacePrices(): BillingPlanPrice[] {
-  return [
-    'ozer-business-lite',
-    'ozer-business-solo',
-    'ozer-business-team',
-    'ozer-business-scale',
-  ]
+  return ['ozer-business-lite', 'ozer-business']
     .map((id) => productPrices(id))
     .filter((p): p is BillingPlanPrice => Boolean(p));
 }

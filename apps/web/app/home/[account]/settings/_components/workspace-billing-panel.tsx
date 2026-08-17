@@ -18,6 +18,7 @@ import pathsConfig from '~/config/paths.config';
 import { loadTeamAccountBillingPage } from '~/home/[account]/_lib/server/team-account-billing-page.loader';
 import { loadTeamWorkspace } from '~/home/[account]/_lib/server/team-account-workspace.loader';
 import { CommercialSeatQuantityCard } from '~/home/[account]/billing/_components/commercial-seat-quantity-card';
+import { BusinessSeatQuantityCard } from '~/home/[account]/billing/_components/business-seat-quantity-card';
 import { OzerWorkspaceCheckoutForm } from '~/home/[account]/billing/_components/ozer-workspace-checkout-form';
 import { createBillingPortalSession } from '~/home/[account]/billing/_lib/server/server-actions';
 import { isBillingRecoveryStatus } from '~/lib/billing/billing-recovery';
@@ -67,6 +68,7 @@ export async function WorkspaceBillingPanel({
   const accountId = workspace.account.id as string;
   const canManageBilling = access.canManageBilling;
   const isCommercial = workspace.workspaceProfile === 'commercial_property';
+  const isBusinessWorkspace = workspace.workspaceProfile === 'work_design';
 
   const [subscription, order, customerId] =
     await loadTeamAccountBillingPage(accountId);
@@ -126,18 +128,36 @@ export async function WorkspaceBillingPanel({
   const commercialBreakdown = isCommercial
     ? await getCommercialSeatBreakdown(billingClient, accountId)
     : null;
-  const planLimits = isCommercial
-    ? await loadAccountPlanLimits(billingClient, accountId)
-    : null;
+  const planLimits =
+    isCommercial || isBusinessWorkspace
+      ? await loadAccountPlanLimits(billingClient, accountId)
+      : null;
   const pendingBillableSeats = planLimits?.pending_billable_seats ?? null;
   const pendingSeatsEffectiveAt =
     planLimits?.pending_seats_effective_at ?? null;
 
+  let businessSubscribedSeats = 1;
+  let businessMemberCount = 0;
+  if (isBusinessWorkspace && subscriptionIsWorkspacePlan) {
+    const quantity =
+      subscription?.items?.find((item) => item.type === 'per_seat')?.quantity ??
+      planLimits?.max_members ??
+      1;
+    businessSubscribedSeats = Math.max(1, quantity);
+    const { count } = await billingClient
+      .from('accounts_memberships')
+      .select('user_id', { count: 'exact', head: true })
+      .eq('account_id', accountId);
+    businessMemberCount = count ?? 0;
+  }
+
   const billingDescription = isCommercial
     ? 'Workspace plan, seats, AI credits, and Stripe billing portal.'
-    : hasAnyActiveAddon
-      ? 'Workspace plan, your apps, AI credits, and Stripe billing portal.'
-      : 'Workspace plan, AI credits, and Stripe billing portal.';
+    : isBusinessWorkspace
+      ? 'Workspace plan, seats, AI credits, and Stripe billing portal.'
+      : hasAnyActiveAddon
+        ? 'Workspace plan, your apps, AI credits, and Stripe billing portal.'
+        : 'Workspace plan, AI credits, and Stripe billing portal.';
 
   const addonsCatalogPath = pathsConfig.app.accountAddonsSettings.replace(
     '[account]',
@@ -211,6 +231,20 @@ export async function WorkspaceBillingPanel({
             subscribedBillable={commercialBreakdown.subscribedBillable}
             billableAssigned={commercialBreakdown.billableCount}
             supportAssigned={commercialBreakdown.supportCount}
+            pendingBillableSeats={pendingBillableSeats}
+            pendingEffectiveAt={pendingSeatsEffectiveAt}
+          />
+        ) : null}
+
+        {isBusinessWorkspace &&
+        !isBusinessLite &&
+        subscriptionIsWorkspacePlan ? (
+          <BusinessSeatQuantityCard
+            accountId={accountId}
+            accountSlug={accountSlug}
+            canManageBilling={canManageBilling}
+            subscribedBillable={businessSubscribedSeats}
+            membersAssigned={businessMemberCount}
             pendingBillableSeats={pendingBillableSeats}
             pendingEffectiveAt={pendingSeatsEffectiveAt}
           />

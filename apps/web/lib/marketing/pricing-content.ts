@@ -8,6 +8,7 @@ import {
   translationLine,
   trialLabel,
 } from '~/lib/billing/billing-config-prices';
+import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 
 export { PRICING_LAST_VERIFIED, BILLING_TRIAL_DAYS };
 
@@ -75,7 +76,7 @@ export function businessTierCards(): Array<
     const excludes =
       higher.length === 0
         ? [
-            'Nothing above this tier — contact us if you need more than 15 members.',
+            'Nothing above this tier — use the seat calculator to add more billable seats.',
           ]
         : [
             ...higher.flatMap((h) =>
@@ -110,33 +111,27 @@ export function annualCostForTeamSize(teamSize: number): {
   monthlyGbp: number;
   yearlyGbp: number;
 } {
-  const tiers = listBusinessWorkspacePrices().filter(
-    (p) => p.monthlyPriceGbp > 0,
-  );
-  const plan =
-    tiers.find(
-      (p) => p.maxTeamMembers != null && p.maxTeamMembers >= teamSize,
-    ) ?? tiers[tiers.length - 1]!;
+  const plan = getBillingProductPrice('ozer-business')!;
+  const seats = Math.max(1, teamSize);
+  const monthlyGbp = estimateMonthlyGbp(seats);
 
   return {
     plan,
-    monthlyGbp: plan.monthlyPriceGbp,
-    yearlyGbp: plan.yearlyPriceGbp ?? plan.monthlyPriceGbp * 12,
+    monthlyGbp,
+    yearlyGbp: monthlyGbp * 10,
   };
 }
 
 export function philosophyLine(): string {
-  return 'Flat price for the whole team, in pounds — no per-seat maths, no transaction fees on your Ozer subscription.';
+  return 'Graduated per-seat pricing in pounds — seat 1 at £29, then cheaper add-on seats, with shared AI and project guests that scale with your team.';
 }
 
 export function ozerTeamAnnualGbp(): number {
-  const team = getBillingProductPrice('ozer-business-team');
-  return team?.yearlyPriceGbp ?? (team?.monthlyPriceGbp ?? 79) * 12;
+  return estimateMonthlyGbp(4) * 10;
 }
 
 export function pricingFaqs() {
-  const team = getBillingProductPrice('ozer-business-team');
-  const solo = getBillingProductPrice('ozer-business-solo');
+  const business = getBillingProductPrice('ozer-business');
   const lite = getBillingProductPrice('ozer-business-lite');
 
   return [
@@ -152,7 +147,7 @@ export function pricingFaqs() {
     },
     {
       question: 'What happens when the team grows?',
-      answer: `Business Solo is ${formatGbp(solo?.monthlyPriceGbp ?? 29)} per month for one member. Business Team is ${formatGbp(team?.monthlyPriceGbp ?? 79)} per month for up to ${team?.maxTeamMembers ?? 5} members. Business Scale is for up to 15 members — and you can request more users if you need them. You change tier — you do not multiply seats on Solo.`,
+      answer: `Business uses graduated seats from ${formatGbp(business?.monthlyPriceGbp ?? 29)} for seat 1, then £22 for seats 2–5, then £16 for seats 6+. Shared AI credits and project guests (3 per seat) scale with the seats you buy. Client portals stay unlimited.`,
     },
     {
       question: 'Is there a free trial?',
@@ -166,7 +161,7 @@ export function pricingFaqs() {
     {
       question: 'Does Ozer take a cut of my invoices?',
       answer:
-        'No. Your Ozer subscription is a flat workspace price. Client card payments use Stripe; those card fees are Stripe’s, not an Ozer platform cut on your subscription.',
+        'No. Your Ozer subscription is a workspace seat price. Client card payments use Stripe; those card fees are Stripe’s, not an Ozer platform cut on your subscription.',
     },
   ];
 }

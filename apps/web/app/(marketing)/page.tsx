@@ -12,10 +12,8 @@ import {
 import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
-import {
-  formatGbp,
-  getBillingProductPrice,
-} from '~/lib/billing/billing-config-prices';
+import { formatGbp } from '~/lib/billing/billing-config-prices';
+import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 import {
   MARKETING_FREE_SIGNUP_URL,
   MARKETING_FREE_TIER,
@@ -235,21 +233,13 @@ async function Home() {
             id="home-pricing-heading"
             className="font-heading text-3xl font-semibold text-[var(--workspace-shell-text)]"
           >
-            Flat price for the whole team
+            Graduated pricing from {formatGbp(estimateMonthlyGbp(1))}
           </h2>
           <p className="mx-auto mt-3 max-w-xl text-[var(--workspace-shell-text-muted)]">
-            From{' '}
-            {formatGbp(
-              getBillingProductPrice('ozer-business-solo')?.monthlyPriceGbp ??
-                29,
-            )}
-            /month for solo freelancers.{' '}
-            {formatGbp(
-              getBillingProductPrice('ozer-business-team')?.monthlyPriceGbp ??
-                79,
-            )}
-            /month flat for a team of five — no per-seat maths, no transaction
-            fees on your subscription.
+            Seat 1 is {formatGbp(estimateMonthlyGbp(1))}/month. A 4-seat studio
+            is about {formatGbp(estimateMonthlyGbp(4))}/month on the same
+            Business plan — cheaper add-on seats, shared AI, no transaction fees
+            on your subscription.
           </p>
           <div className="mt-6 flex flex-wrap justify-center gap-3">
             <Button asChild className={marketingBtnGradient}>

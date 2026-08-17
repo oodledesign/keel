@@ -9,7 +9,11 @@ import { GoogleGenAI } from '@google/genai';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { INSUFFICIENT_AI_CREDITS_CODE } from '~/lib/ai/ai-credits-exhausted';
-import { notifyAiCreditsExhausted } from '~/lib/ai/notify-ai-credits-exhausted';
+import {
+  notifyAiCreditThresholds,
+  notifyAiCreditsExhausted,
+} from '~/lib/ai/notify-ai-credit-thresholds';
+
 
 export const GEMINI_FLASH_LITE_MODEL = 'gemini-3.1-flash-lite';
 export const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
@@ -87,17 +91,17 @@ type FeatureConfig = {
 
 export const FEATURE_CONFIG: Record<OzerAIFeatureKey, FeatureConfig> = {
   email_triage: {
-    provider: 'anthropic',
-    model: HAIKU_MODEL,
-    credits: 1,
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 0.5,
     batchable: false,
     maxOutputTokens: 512,
     structuredOutput: true,
   },
   task_extract: {
-    provider: 'anthropic',
-    model: HAIKU_MODEL,
-    credits: 1,
+    provider: 'google',
+    model: GEMINI_FLASH_LITE_MODEL,
+    credits: 0.5,
     batchable: false,
     maxOutputTokens: 2048,
     structuredOutput: true,
@@ -525,10 +529,31 @@ export type AiCreditBalanceRow = {
   updated_at: string;
 };
 
+/** Round to one decimal place (half-credit metering). */
+export function roundAiCredits(value: number): number {
+  return Math.round(Number(value) * 10) / 10;
+}
+
+function coerceCreditBalance(row: Record<string, unknown>): AiCreditBalanceRow {
+  return {
+    id: String(row.id),
+    account_id: String(row.account_id),
+    credits_remaining: roundAiCredits(Number(row.credits_remaining ?? 0)),
+    credits_monthly_limit: roundAiCredits(
+      Number(row.credits_monthly_limit ?? 0),
+    ),
+    credits_purchased: roundAiCredits(Number(row.credits_purchased ?? 0)),
+    period_start: String(row.period_start),
+    period_end: String(row.period_end),
+    created_at: String(row.created_at),
+    updated_at: String(row.updated_at),
+  };
+}
+
 export function totalCreditsAvailable(balance: AiCreditBalanceRow): number {
-  return (
+  return roundAiCredits(
     Math.max(0, balance.credits_remaining) +
-    Math.max(0, balance.credits_purchased ?? 0)
+      Math.max(0, balance.credits_purchased ?? 0),
   );
 }
 
@@ -558,6 +583,35 @@ const getAnthropicClient = () =>
 const getGoogleClient = () =>
   new GoogleGenAI({ apiKey: process.env.GOOGLE_AI_API_KEY });
 
+function hasGoogleAiApiKey(): boolean {
+  return Boolean(process.env.GOOGLE_AI_API_KEY?.trim());
+}
+
+/**
+ * Resolve runtime provider config. High-volume Flash features fall back to Haiku
+ * (full 1-credit price) when GOOGLE_AI_API_KEY is not configured.
+ */
+export function resolveFeatureConfig(
+  feature: OzerAIFeatureKey,
+): FeatureConfig {
+  const config = FEATURE_CONFIG[feature];
+
+  if (
+    config.provider === 'google' &&
+    !hasGoogleAiApiKey() &&
+    (feature === 'task_extract' || feature === 'email_triage')
+  ) {
+    return {
+      ...config,
+      provider: 'anthropic',
+      model: HAIKU_MODEL,
+      credits: 1,
+    };
+  }
+
+  return config;
+}
+
 /**
  * Credit balance mutations are service-role only (see ai_credits migrations).
  * Callers still pass a user-scoped client for auth context elsewhere; credit
@@ -583,7 +637,7 @@ export async function getOrCreateCreditBalance(
   }
 
   if (existing) {
-    return existing as AiCreditBalanceRow;
+    return coerceCreditBalance(existing as Record<string, unknown>);
   }
 
   const { data: inserted, error: insertError } = await supabase
@@ -603,7 +657,7 @@ export async function getOrCreateCreditBalance(
     );
   }
 
-  return inserted as AiCreditBalanceRow;
+  return coerceCreditBalance(inserted as Record<string, unknown>);
 }
 
 export async function checkAndDeductCredits(
@@ -613,6 +667,7 @@ export async function checkAndDeductCredits(
   attempt = 0,
 ): Promise<AiCreditBalanceRow> {
   const supabase = aiCreditsDb();
+  const creditsNeeded = roundAiCredits(credits);
   const { error: resetError } = await supabase.rpc(
     'reset_ai_credits_if_expired',
     {
@@ -653,28 +708,28 @@ export async function checkAndDeductCredits(
     balance = refreshed.data;
   }
 
-  const row = balance as AiCreditBalanceRow;
+  const row = coerceCreditBalance(balance as Record<string, unknown>);
   const monthly = Math.max(0, row.credits_remaining);
   const purchased = Math.max(0, row.credits_purchased ?? 0);
-  const available = monthly + purchased;
+  const available = roundAiCredits(monthly + purchased);
 
-  if (available < credits) {
+  if (available < creditsNeeded) {
     await notifyAiCreditsExhausted({
       accountId,
       creditsRemaining: available,
-      creditsRequired: credits,
+      creditsRequired: creditsNeeded,
     });
     throw new OzerInsufficientCreditsError({
       creditsRemaining: available,
-      creditsRequired: credits,
+      creditsRequired: creditsNeeded,
     });
   }
 
   // Spend plan pool first, then purchased top-ups.
-  const fromMonthly = Math.min(monthly, credits);
-  const fromPurchased = credits - fromMonthly;
-  const nextMonthly = monthly - fromMonthly;
-  const nextPurchased = purchased - fromPurchased;
+  const fromMonthly = Math.min(monthly, creditsNeeded);
+  const fromPurchased = roundAiCredits(creditsNeeded - fromMonthly);
+  const nextMonthly = roundAiCredits(monthly - fromMonthly);
+  const nextPurchased = roundAiCredits(purchased - fromPurchased);
 
   const { data: updated, error: updateError } = await supabase
     .from('ai_credit_balances')
@@ -701,24 +756,25 @@ export async function checkAndDeductCredits(
       .maybeSingle();
 
     const latestRow = latest as {
-      credits_remaining?: number;
-      credits_purchased?: number;
+      credits_remaining?: number | string;
+      credits_purchased?: number | string;
     } | null;
 
-    const creditsRemaining =
-      Math.max(0, latestRow?.credits_remaining ?? 0) +
-      Math.max(0, latestRow?.credits_purchased ?? 0);
+    const creditsRemaining = roundAiCredits(
+      Math.max(0, Number(latestRow?.credits_remaining ?? 0)) +
+        Math.max(0, Number(latestRow?.credits_purchased ?? 0)),
+    );
 
-    if (creditsRemaining < credits) {
+    if (creditsRemaining < creditsNeeded) {
       await notifyAiCreditsExhausted({
         accountId,
         creditsRemaining,
-        creditsRequired: credits,
+        creditsRequired: creditsNeeded,
       });
 
       throw new OzerInsufficientCreditsError({
         creditsRemaining,
-        creditsRequired: credits,
+        creditsRequired: creditsNeeded,
       });
     }
 
@@ -727,10 +783,29 @@ export async function checkAndDeductCredits(
       throw new Error('AI credit balance changed concurrently — please retry');
     }
 
-    return checkAndDeductCredits(accountId, credits, _supabase, attempt + 1);
+    return checkAndDeductCredits(
+      accountId,
+      creditsNeeded,
+      _supabase,
+      attempt + 1,
+    );
   }
 
-  return updated as AiCreditBalanceRow;
+  const nextBalance = coerceCreditBalance(updated as Record<string, unknown>);
+  void notifyAiCreditThresholds({
+    accountId,
+    balance: {
+      ...nextBalance,
+      credit_alerts_sent: Number(
+        (updated as { credit_alerts_sent?: number }).credit_alerts_sent ?? 0,
+      ),
+      credit_alert_period_start:
+        (updated as { credit_alert_period_start?: string | null })
+          .credit_alert_period_start ?? null,
+    },
+  });
+
+  return nextBalance;
 }
 
 export type OzerAICallParams = {
@@ -769,7 +844,7 @@ export async function invokeAIProvider({
   OzerAICallParams,
   'accountId' | 'supabase'
 >): Promise<AIProviderResult> {
-  const config = FEATURE_CONFIG[feature];
+  const config = resolveFeatureConfig(feature);
   let text = '';
   let inputTokens: number | null = null;
   let outputTokens: number | null = null;
@@ -804,11 +879,10 @@ export async function invokeAIProvider({
       config: {
         systemInstruction: systemPrompt,
         maxOutputTokens: config.maxOutputTokens,
-        ...(config.structuredOutput &&
-          responseSchema && {
-            responseMimeType: 'application/json',
-            responseJsonSchema: responseSchema,
-          }),
+        ...(config.structuredOutput && {
+          responseMimeType: 'application/json',
+          ...(responseSchema && { responseJsonSchema: responseSchema }),
+        }),
       },
     });
 
@@ -836,7 +910,7 @@ export async function callAI({
   usePromptCaching = false,
   responseSchema,
 }: OzerAICallParams): Promise<string> {
-  const config = FEATURE_CONFIG[feature];
+  const config = resolveFeatureConfig(feature);
   await checkAndDeductCredits(accountId, config.credits, supabase);
 
   const result = await invokeAIProvider({
@@ -852,7 +926,7 @@ export async function callAI({
     feature,
     provider: result.provider,
     model: result.model,
-    credits: result.credits,
+    credits: roundAiCredits(result.credits),
     inputTokens: result.inputTokens,
     outputTokens: result.outputTokens,
   });
@@ -902,7 +976,7 @@ export async function streamAI({
   supabase,
   usePromptCaching = false,
 }: OzerAICallParams): Promise<ReadableStream<Uint8Array>> {
-  const config = FEATURE_CONFIG[feature];
+  const config = resolveFeatureConfig(feature);
   if (config.provider !== 'anthropic') {
     throw new Error(
       `streamAI only supports Anthropic features (got ${feature})`,
@@ -1006,7 +1080,7 @@ export async function withMeteredAI<T>({
     outputTokens?: number | null;
   }>;
 }): Promise<T> {
-  const config = FEATURE_CONFIG[feature];
+  const config = resolveFeatureConfig(feature);
   await checkAndDeductCredits(accountId, config.credits, supabase);
 
   const { result, inputTokens = null, outputTokens = null } = await run();

@@ -11,6 +11,12 @@ import { Button } from '@kit/ui/button';
 import { cn } from '@kit/ui/utils';
 
 import { listBillingProductPlanPrices } from '~/lib/billing/billing-config-prices';
+import {
+  BUSINESS_GRADUATED_PLAN_ID,
+  BUSINESS_GRADUATED_PRODUCT_ID,
+  estimateMonthlyGbp,
+  illustrativeTierForSeats,
+} from '~/lib/billing/business-graduated-pricing';
 import { catalogPlansForAddonProduct } from '~/lib/billing/ozer-plan-catalog';
 import {
   MARKETING_WORKSPACE_PLANS,
@@ -427,6 +433,14 @@ function RecommendationCard({
   );
 }
 
+function seatsForPeopleAnswer(answer: PeopleAnswer | undefined): number {
+  if (answer === 'solo') return 1;
+  if (answer === 'team') return 4;
+  if (answer === 'scale') return 10;
+  if (answer === 'larger') return 16;
+  return 1;
+}
+
 function buildRecommendation(
   answers: Answers,
   businessPlans: typeof MARKETING_WORKSPACE_PLANS,
@@ -437,6 +451,12 @@ function buildRecommendation(
   const businessPlan = signaturesOnly
     ? getBusinessPlan('lite', businessPlans)
     : getBusinessPlan(answers.people, businessPlans);
+  const billableSeats = seatsForPeopleAnswer(answers.people);
+  const businessMonthly = signaturesOnly
+    ? 0
+    : estimateMonthlyGbp(billableSeats);
+  const businessYearly = signaturesOnly ? 0 : businessMonthly * 10;
+  const bandLabel = illustrativeTierForSeats(billableSeats).label;
 
   if (!businessPlan && !signaturesOnly) return null;
 
@@ -451,16 +471,12 @@ function buildRecommendation(
     return {
       title: signaturesOnly
         ? 'Business Lite (free) + Signatures custom'
-        : `${businessPlan?.name ?? 'Business Scale'} + Signatures custom`,
-      monthlyPriceGbp: signaturesOnly
-        ? 0
-        : (businessPlan?.monthlyPriceGbp ?? null),
-      yearlyPriceGbp: signaturesOnly
-        ? 0
-        : (businessPlan?.yearlyPriceGbp ?? null),
+        : `${bandLabel} + Signatures custom`,
+      monthlyPriceGbp: signaturesOnly ? 0 : businessMonthly,
+      yearlyPriceGbp: signaturesOnly ? 0 : businessYearly,
       why: signaturesOnly
         ? 'Business Lite keeps the workspace free forever while we set a custom flat Signatures tier for your mailbox count.'
-        : `${businessPlan?.name ?? 'Business Scale'} covers your team workspace, and we will sort a custom flat Signatures tier for your mailbox count.`,
+        : `${bandLabel} on graduated Business covers your team workspace, and we will sort a custom flat Signatures tier for your mailbox count.`,
       note: 'For teams past 150 mailboxes, book a setup call and we will sort seats and pricing.',
       ctaLabel: 'Book a setup call',
       ctaHref: SETUP_CALL_HREF,
@@ -468,14 +484,14 @@ function buildRecommendation(
   }
 
   const monthly =
-    (businessPlan?.monthlyPriceGbp ?? 0) +
+    businessMonthly +
     (includeSignatures ? (signatureTier?.monthlyPriceGbp ?? 0) : 0);
   const yearly =
-    (businessPlan?.yearlyPriceGbp ?? 0) +
+    businessYearly +
     (includeSignatures ? (signatureTier?.yearlyPriceGbp ?? 0) : 0);
 
   const names = [
-    signaturesOnly ? 'Business Lite (free)' : businessPlan?.name,
+    signaturesOnly ? 'Business Lite (free)' : bandLabel,
     includeSignatures && signatureTier
       ? `Signatures ${signatureTier.name}`
       : null,
@@ -485,10 +501,15 @@ function buildRecommendation(
     title: names.join(' + '),
     monthlyPriceGbp: monthly,
     yearlyPriceGbp: yearly,
-    why: buildWhy(answers, businessPlan, signatureTier, signaturesOnly),
+    why: buildWhy(
+      answers,
+      billableSeats,
+      signatureTier,
+      signaturesOnly,
+    ),
     note:
       answers.people === 'larger'
-        ? "For teams past 15, book a call and we'll sort seats and pricing."
+        ? "For larger desks, start on graduated Business and we'll confirm seat count on a call if you need help."
         : signaturesOnly
           ? 'The Business Lite workspace itself is free forever.'
           : undefined,
@@ -502,9 +523,11 @@ function buildRecommendation(
           }
         : {
             profile: 'work_design',
-            productId: businessPlan?.productId,
-            planId: businessPlan?.monthlyPlanId,
+            productId: BUSINESS_GRADUATED_PRODUCT_ID,
+            planId:
+              businessPlan?.monthlyPlanId ?? BUSINESS_GRADUATED_PLAN_ID,
             interval: 'month',
+            seats: billableSeats,
           },
     ),
   };
@@ -512,7 +535,7 @@ function buildRecommendation(
 
 function buildWhy(
   answers: Answers,
-  businessPlan: (typeof MARKETING_WORKSPACE_PLANS)[number] | undefined,
+  billableSeats: number,
   signatureTier: SignatureTier | undefined,
   signaturesOnly: boolean,
 ) {
@@ -520,12 +543,12 @@ function buildWhy(
     return `${signatureTier.name} covers ${mailboxBandText(signatureTier)} with centrally managed signatures — flat, never per person.`;
   }
 
+  const band = illustrativeTierForSeats(billableSeats);
+  const total = formatGbp(estimateMonthlyGbp(billableSeats));
   const businessWhy =
-    businessPlan?.productId === 'ozer-business-solo'
-      ? 'Solo covers one freelancer with clients, projects, and invoices — flat, no per-seat maths.'
-      : businessPlan?.productId === 'ozer-business-team'
-        ? 'Team covers up to 5 people with shared clients and projects — flat, no per-seat maths.'
-        : 'Scale covers up to 15 people with shared clients, projects, and priority support — flat, no per-seat maths. Need more seats? Request extra users anytime.';
+    band.id === 'solo'
+      ? `Business from ${total}/mo for one billable seat — clients, projects, and invoices on graduated pricing.`
+      : `${band.label} is an illustrative band on the same Business plan — about ${total}/mo for ${billableSeats} billable seats with shared clients and projects.`;
 
   if (answers.signatures === 'yes' && signatureTier) {
     return `${businessWhy} Signatures ${signatureTier.name} adds ${mailboxBandText(signatureTier)}.`;
@@ -583,14 +606,15 @@ function getBusinessPlan(
   if (answer === 'lite') {
     return plans.find((plan) => plan.productId === 'ozer-business-lite');
   }
-  if (answer === 'solo') {
-    return plans.find((plan) => plan.maxTeamMembers === 1);
-  }
-  if (answer === 'team') {
-    return plans.find((plan) => plan.maxTeamMembers === 5);
-  }
-  if (answer === 'scale' || answer === 'larger') {
-    return plans.find((plan) => plan.maxTeamMembers === 15);
+  if (
+    answer === 'solo' ||
+    answer === 'team' ||
+    answer === 'scale' ||
+    answer === 'larger'
+  ) {
+    return plans.find(
+      (plan) => plan.productId === BUSINESS_GRADUATED_PRODUCT_ID,
+    );
   }
   return undefined;
 }

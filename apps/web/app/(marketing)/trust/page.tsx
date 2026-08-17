@@ -297,7 +297,27 @@ function TrustCenterPage() {
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
-                      <td className="py-2.5 pr-3 align-top">Google</td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Google (Gemini API)
+                      </td>
+                      <td className="py-2.5 pr-3 align-top">
+                        High-volume AI (email triage/extract and other
+                        Flash-Lite routes)
+                      </td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Workspace / email text prompts
+                      </td>
+                      <td className="py-2.5 align-top">
+                        US/global — Paid Gemini API under Google Data Processing
+                        Addendum (EU SCCs and UK Addendum); EU-US Data Privacy
+                        Framework (Google LLC). Free AI Studio tier is not used
+                        for customer personal data.
+                      </td>
+                    </tr>
+                    <tr className="border-border/60 border-b">
+                      <td className="py-2.5 pr-3 align-top">
+                        Google Workspace APIs
+                      </td>
                       <td className="py-2.5 pr-3 align-top">
                         Gmail, Calendar, Workspace directory
                       </td>

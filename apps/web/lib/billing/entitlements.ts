@@ -25,6 +25,7 @@ export type AccountPlanLimitsRow = {
   max_members: number | null;
   max_properties: number | null;
   max_videos: number | null;
+  max_project_guests?: number | null;
   pending_billable_seats?: number | null;
   pending_seats_effective_at?: string | null;
 };
@@ -54,7 +55,7 @@ export async function loadAccountPlanLimits(
   )
     .from('account_plan_limits')
     .select(
-      'account_id, plan_product_id, plan_id, plan_family, max_members, max_properties, max_videos, pending_billable_seats, pending_seats_effective_at',
+      'account_id, plan_product_id, plan_id, plan_family, max_members, max_properties, max_videos, max_project_guests, pending_billable_seats, pending_seats_effective_at',
     )
     .eq('account_id', accountId)
     .maybeSingle();

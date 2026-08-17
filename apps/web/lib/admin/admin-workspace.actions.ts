@@ -159,8 +159,8 @@ async function applyWorkspaceDefaults(
   let planId: string | null = null;
 
   if (profile === 'work_design' && businessMode === 'full') {
-    productId = 'ozer-business-solo';
-    planId = 'business-solo-monthly';
+    productId = 'ozer-business';
+    planId = 'business-monthly';
   } else if (profile === 'work_design') {
     productId = 'ozer-business-lite';
     planId = 'business-lite-free';

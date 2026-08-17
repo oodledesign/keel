@@ -51,7 +51,7 @@ We process data to perform our contract with you, for legitimate interests (secu
 
 **UK GDPR basis:** contract performance and your instructions; you must ensure staff/customer email content is processed lawfully.
 
-**Sub-processors:** Google (Gmail API); Anthropic (AI classification, extraction, and drafting on message text).
+**Sub-processors:** Google (Gmail API); Anthropic and Google (Gemini API) for AI classification, extraction, and drafting on message text (model route depends on feature).
 
 **Retention:** synced email content and drafts are deleted within 30 days of disconnecting the integration. OAuth tokens are deleted immediately on disconnect.
 
@@ -169,7 +169,7 @@ Ozer's Microsoft access is read-only: we read directory profiles and photos to b
 
 When you use AI features, relevant workspace text is sent to our AI sub-processors to generate responses. We log usage volume and model identifiers for billing purposes; prompt content is not stored in usage logs.
 
-**Providers:** Anthropic (language model features); Voyage AI (semantic search embeddings).
+**Providers:** Anthropic (language model features); Google (Gemini API — paid tier for high-volume routes such as email triage and extract); Voyage AI (semantic search embeddings).
 
 We do not use your private workspace data to train public foundation models. You should not submit special category data unless you have a lawful basis and appropriate safeguards. AI outputs are assistive and may be inaccurate — you remain responsible for decisions made in your business.
 
@@ -220,7 +220,8 @@ We use the following sub-processors to operate Ozer. A matching register is publ
 | Supabase / AWS | Database, auth, storage | Workspace and account data | EU West (Ireland) — no restricted transfer |
 | Stripe | SaaS billing and Connect payments | Customer IDs, subscription status; card numbers stay with Stripe | US — Stripe Data Transfers Addendum (UK IDTA incorporated; EU-US Data Privacy Framework incl. UK Extension) |
 | Anthropic | AI language model features | Workspace / email / transcript text prompts | US — DPA with EU SCCs and UK Addendum (incorporated in commercial terms); EU-US Data Privacy Framework |
-| Google | Gmail, Calendar, Workspace directory | Mailbox, calendar, and directory data | US/global — Google Data Processing Terms (SCCs and UK Addendum incorporated) |
+| Google (Gemini API) | High-volume AI (email triage/extract and other Flash-Lite routes) | Workspace / email text prompts | US/global — Paid Gemini API under Google Data Processing Addendum (EU SCCs and UK Addendum); EU-US Data Privacy Framework (Google LLC). Free AI Studio tier is not used for customer personal data. |
+| Google Workspace APIs | Gmail, Calendar, Workspace directory | Mailbox, calendar, and directory data | US/global — Google Data Processing Terms (SCCs and UK Addendum incorporated) |
 | Microsoft | Signatures directory sync | Staff profile and photo data | US/global — Microsoft Products and Services Data Protection Addendum (SCCs and UK Addendum incorporated) |
 | ZeptoMail (Zoho) | Transactional email | Recipient, subject, message body | EU data centre — Zoho DPA with standard contractual clauses |
 | Bunny.net (BunnyWay d.o.o.) | Video hosting and streaming | Media files and video metadata | Slovenia (EU) — EU-headquartered; DPA in place; EU storage region |

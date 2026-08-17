@@ -63,10 +63,20 @@ export const ADMIN_SUBPROCESSORS: AdminSubprocessor[] = [
   {
     id: 'anthropic',
     name: 'Anthropic',
-    purpose: 'LLM features (briefs, email, transcripts, Rankly AI)',
+    purpose: 'LLM features (drafts, richer analysis, Rankly AI, Sonnet/Haiku paths)',
     category: 'AI',
     href: 'https://www.anthropic.com',
     logoDomain: 'anthropic.com',
+    isSubprocessor: true,
+  },
+  {
+    id: 'google-gemini',
+    name: 'Google (Gemini API)',
+    purpose:
+      'High-volume AI (email triage/extract and other Flash-Lite routes) — paid API only',
+    category: 'AI',
+    href: 'https://ai.google.dev',
+    logoDomain: 'google.com',
     isSubprocessor: true,
   },
   {
@@ -89,9 +99,8 @@ export const ADMIN_SUBPROCESSORS: AdminSubprocessor[] = [
   },
   {
     id: 'google',
-    name: 'Google',
-    purpose:
-      'Gmail, Calendar, Search Console, Workspace APIs, PageSpeed, Gemini',
+    name: 'Google Workspace APIs',
+    purpose: 'Gmail, Calendar, Search Console, Workspace directory, PageSpeed',
     category: 'Google & Microsoft',
     href: 'https://cloud.google.com',
     logoDomain: 'google.com',

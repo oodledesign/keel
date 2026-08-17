@@ -13,12 +13,31 @@ import {
   shouldIncludeExtractedItem,
 } from './account-members';
 import { linkFieldsFromThread } from './action-item-links';
+import {
+  isAddressIgnored,
+  normalizeIgnoredDomains,
+  normalizeIgnoredSenders,
+} from './ignored-senders';
 import { createMeteredEmailGenerateText } from './metered-generate-text';
 import { buildThreadText } from './thread-text';
 
+/** Minimum thread text length before spending an extract call. */
+const MIN_THREAD_TEXT_CHARS = 40;
+
+export type AutoExtractEmailActionItemsResult = {
+  /** Number of suggested action items inserted. */
+  itemsInserted: number;
+  /**
+   * True when an AI extract call ran (credits may have been charged).
+   * False when skipped before the model (already extracted tip, ignore list, etc.).
+   */
+  attempted: boolean;
+};
+
 /**
  * Extract concrete action items from a needs_reply thread into the suggested holding list.
- * Skips when non-dismissed suggestions already exist for the thread.
+ * Skips when non-dismissed suggestions already exist, or when this message tip was
+ * already extracted (including empty results).
  */
 export async function autoExtractEmailActionItems(params: {
   admin: SupabaseClient;
@@ -29,7 +48,7 @@ export async function autoExtractEmailActionItems(params: {
   preferredAccountId?: string | null;
   /** Workspace to bill AI against (business mailbox). Defaults to userId. */
   billingAccountId?: string | null;
-}): Promise<number> {
+}): Promise<AutoExtractEmailActionItemsResult> {
   const {
     admin,
     userId,
@@ -51,13 +70,11 @@ export async function autoExtractEmailActionItems(params: {
     throw new Error(existingError.message);
   }
 
-  if ((existingCount ?? 0) > 0) {
-    return 0;
-  }
-
   const { data: thread, error: threadError } = await admin
     .from('email_threads')
-    .select('id, account_id, client_id, project_id')
+    .select(
+      'id, account_id, client_id, project_id, connection_id, assistant_extract_message_id',
+    )
     .eq('id', threadId)
     .eq('user_id', userId)
     .maybeSingle();
@@ -67,7 +84,7 @@ export async function autoExtractEmailActionItems(params: {
   }
 
   if (!thread) {
-    return 0;
+    return { itemsInserted: 0, attempted: false };
   }
 
   const { data: messages, error: messagesError } = await admin
@@ -83,9 +100,77 @@ export async function autoExtractEmailActionItems(params: {
     throw new Error(messagesError.message);
   }
 
+  const latestMessageId =
+    (messages?.at(-1) as { id?: string } | undefined)?.id ?? null;
+
+  if (!latestMessageId) {
+    return { itemsInserted: 0, attempted: false };
+  }
+
+  if ((existingCount ?? 0) > 0) {
+    // Suggestions already exist — stamp tip so sync stops re-checking forever.
+    if (
+      (thread as { assistant_extract_message_id?: string | null })
+        .assistant_extract_message_id !== latestMessageId
+    ) {
+      await stampExtractTip(admin, {
+        threadId,
+        userId,
+        messageId: latestMessageId,
+      });
+    }
+    return { itemsInserted: 0, attempted: false };
+  }
+
+  const priorExtractTip = (
+    thread as { assistant_extract_message_id?: string | null }
+  ).assistant_extract_message_id;
+
+  if (priorExtractTip === latestMessageId) {
+    return { itemsInserted: 0, attempted: false };
+  }
+
+  const connectionId = (thread as { connection_id?: string | null })
+    .connection_id;
+
+  if (connectionId) {
+    const { data: settingsRow } = await admin
+      .from('email_assistant_settings')
+      .select('ignored_senders, ignored_domains')
+      .eq('connection_id', connectionId)
+      .maybeSingle();
+
+    const settings = settingsRow as {
+      ignored_senders?: string[] | null;
+      ignored_domains?: string[] | null;
+    } | null;
+
+    const latestFrom = (messages?.at(-1) as { from_address?: string | null })
+      ?.from_address;
+
+    if (
+      isAddressIgnored(latestFrom, {
+        senders: normalizeIgnoredSenders(settings?.ignored_senders ?? []),
+        domains: normalizeIgnoredDomains(settings?.ignored_domains ?? []),
+      })
+    ) {
+      await stampExtractTip(admin, {
+        threadId,
+        userId,
+        messageId: latestMessageId,
+      });
+      return { itemsInserted: 0, attempted: false };
+    }
+  }
+
   const threadText = buildThreadText(messages ?? []);
-  if (!threadText.trim()) {
-    return 0;
+  if (threadText.trim().length < MIN_THREAD_TEXT_CHARS) {
+    await stampExtractTip(admin, {
+      threadId,
+      userId,
+      messageId: latestMessageId,
+    });
+    return { itemsInserted: 0, attempted: false };
   }
 
   const accountId =
@@ -117,7 +202,13 @@ export async function autoExtractEmailActionItems(params: {
     if (isInsufficientCreditsError(error)) {
       throw error;
     }
-    return 0;
+    // Non-credit failures: still stamp so we do not burn credits every sync.
+    await stampExtractTip(admin, {
+      threadId,
+      userId,
+      messageId: latestMessageId,
+    });
+    return { itemsInserted: 0, attempted: true };
   }
 
   const filteredItems = items.filter((item) =>
@@ -125,7 +216,12 @@ export async function autoExtractEmailActionItems(params: {
   );
 
   if (filteredItems.length === 0) {
-    return 0;
+    await stampExtractTip(admin, {
+      threadId,
+      userId,
+      messageId: latestMessageId,
+    });
+    return { itemsInserted: 0, attempted: true };
   }
 
   const threadLink = linkFieldsFromThread(
@@ -135,9 +231,6 @@ export async function autoExtractEmailActionItems(params: {
       project_id?: string | null;
     },
   );
-
-  const latestMessageId =
-    (messages?.at(-1) as { id?: string } | undefined)?.id ?? null;
 
   const rows = filteredItems.map((item) => ({
     user_id: userId,
@@ -168,5 +261,32 @@ export async function autoExtractEmailActionItems(params: {
     throw new Error(insertError.message);
   }
 
-  return inserted?.length ?? 0;
+  await stampExtractTip(admin, {
+    threadId,
+    userId,
+    messageId: latestMessageId,
+  });
+
+  return {
+    itemsInserted: inserted?.length ?? 0,
+    attempted: true,
+  };
+}
+
+async function stampExtractTip(
+  admin: SupabaseClient,
+  input: { threadId: string; userId: string; messageId: string },
+): Promise<void> {
+  const { error } = await admin
+    .from('email_threads')
+    .update({
+      assistant_extract_message_id: input.messageId,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', input.threadId)
+    .eq('user_id', input.userId);
+
+  if (error) {
+    throw new Error(error.message);
+  }
 }

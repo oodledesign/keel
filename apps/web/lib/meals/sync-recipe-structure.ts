@@ -4,7 +4,12 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type { Database } from '@kit/supabase/database';
 
-import { parseIngredientLine } from '~/lib/meals/recipe-measurements';
+import {
+  contentHasIngredientTokens,
+  parseIngredientLine,
+  tokeniseIngredientMentions,
+} from '~/lib/meals/recipe-measurements';
+import { replaceStepIngredientLinks } from '~/lib/meals/recipe-step-ingredients';
 
 type Client = SupabaseClient<Database>;
 
@@ -12,6 +17,9 @@ type Client = SupabaseClient<Database>;
  * Rebuild structured ingredients from free-text lines and ensure a Method step
  * exists (or refresh a sole auto Method step). Additive — does not wipe custom
  * multi-step methods when more than one step is already present.
+ *
+ * Method text is tokenised with `{ingredient_id}` placeholders where names match,
+ * so amounts can live-update with servings / unit system.
  */
 export async function syncRecipeStructure(
   client: Client,
@@ -33,8 +41,10 @@ export async function syncRecipeStructure(
 
   if (deleteIngredientsError) throw deleteIngredientsError;
 
+  let structuredIngredients: Array<{ id: string; name: string }> = [];
+
   if (parsed.length > 0) {
-    const { error: insertIngredientsError } = await client
+    const { data: inserted, error: insertIngredientsError } = await client
       .from('family_recipe_ingredients')
       .insert(
         parsed.map((line, index) => ({
@@ -45,14 +55,19 @@ export async function syncRecipeStructure(
           unit: line.unit,
           original_text: line.original_text,
         })),
-      );
+      )
+      .select('id, name');
 
     if (insertIngredientsError) throw insertIngredientsError;
+    structuredIngredients = (inserted ?? []) as Array<{
+      id: string;
+      name: string;
+    }>;
   }
 
   const { data: steps, error: stepsError } = await client
     .from('family_recipe_steps')
-    .select('id, title, sort_order')
+    .select('id, title, sort_order, content')
     .eq('recipe_id', input.recipeId)
     .order('sort_order', { ascending: true });
 
@@ -62,27 +77,47 @@ export async function syncRecipeStructure(
     id: string;
     title: string;
     sort_order: number;
+    content: string;
   }>;
 
-  const methodContent = input.instructions?.trim() || 'No instructions yet.';
+  const rawMethod = input.instructions?.trim() || 'No instructions yet.';
+  const tokenised = tokeniseIngredientMentions(
+    rawMethod,
+    structuredIngredients,
+  );
+  const methodContent = tokenised.content;
 
   const methodStep = existing.find((step) => step.title === 'Method');
 
   if (methodStep) {
-    // Refresh Method content; leave other steps (e.g. Prep) alone.
-    const { error: updateStepError } = await client
-      .from('family_recipe_steps')
-      .update({
-        content: methodContent,
-        updated_at: new Date().toISOString(),
-      })
-      .eq('id', methodStep.id);
+    // Skip the write when the content is identical and already tokenised so
+    // we avoid unnecessary DB churn on repeated saves. For recipes created
+    // before tokenisation was introduced, `!contentHasIngredientTokens` forces
+    // the update even when the raw instructions text has not changed.
+    const alreadyUpToDate =
+      methodStep.content === methodContent &&
+      contentHasIngredientTokens(methodStep.content);
 
-    if (updateStepError) throw updateStepError;
+    if (!alreadyUpToDate) {
+      const { error: updateStepError } = await client
+        .from('family_recipe_steps')
+        .update({
+          content: methodContent,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', methodStep.id);
+
+      if (updateStepError) throw updateStepError;
+      await replaceStepIngredientLinks(
+        client,
+        methodStep.id,
+        tokenised.ingredientIds,
+      );
+    }
     return;
   }
 
-  const { error: insertStepError } = await client
+  const { data: insertedStep, error: insertStepError } = await client
     .from('family_recipe_steps')
     .insert({
       recipe_id: input.recipeId,
@@ -90,6 +125,15 @@ export async function syncRecipeStructure(
       title: 'Method',
       content: methodContent,
       timer_seconds: null,
-    });
+    })
+    .select('id')
+    .single();
+
   if (insertStepError) throw insertStepError;
+
+  await replaceStepIngredientLinks(
+    client,
+    (insertedStep as { id: string }).id,
+    tokenised.ingredientIds,
+  );
 }

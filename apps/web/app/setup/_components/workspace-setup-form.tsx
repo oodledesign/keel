@@ -19,6 +19,7 @@ import pathsConfig from '~/config/paths.config';
 import { workspaceColorForSpaceType } from '~/home/(user)/_lib/workspace-accent';
 import type { WorkspaceProfile } from '~/home/[account]/_lib/workspace-profile';
 import { spaceTypeFromProfile } from '~/home/[account]/_lib/workspace-profile';
+import { estimateMonthlyGbp } from '~/lib/billing/business-graduated-pricing';
 import {
   MARKETING_WORKSPACE_PLANS,
   type SetupIntent,
@@ -54,8 +55,7 @@ function planPriceGbp(productId: string) {
   );
 }
 
-const SOLO_PRICE = planPriceGbp('ozer-business-solo');
-const TEAM_PRICE = planPriceGbp('ozer-business-team');
+const BUSINESS_SEAT1_PRICE = estimateMonthlyGbp(1);
 const PROPERTY_PRICE = planPriceGbp('ozer-property-starter');
 const COMMERCIAL_PRICE = planPriceGbp('ozer-commercial-property');
 const COMMUNITY_PRICE = planPriceGbp('ozer-community');
@@ -67,13 +67,9 @@ function businessCardBlurb(fullBusinessMode: boolean, propertyMode: boolean) {
     return `${price}properties, tenants & maintenance`;
   }
   if (fullBusinessMode) {
-    const solo =
-      SOLO_PRICE != null ? `Solo from ${formatGbp(SOLO_PRICE)}/mo` : 'Solo';
-    const team =
-      TEAM_PRICE != null ? `Team from ${formatGbp(TEAM_PRICE)}/mo` : 'Team';
-    return `${solo} · ${team} — clients, projects & invoices`;
+    return `Business from ${formatGbp(BUSINESS_SEAT1_PRICE)}/mo — clients, projects & invoices`;
   }
-  return 'Lite (free) for apps — or enable full CRM below (Solo / Team)';
+  return 'Lite (free) for apps — or enable full CRM below (Business)';
 }
 
 function commercialCardBlurb() {
@@ -307,13 +303,11 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
             </p>
             {hasBillingIntent ? (
               <p className="text-sm text-[var(--ozer-accent)]">
-                {props.intent?.productId === 'ozer-business-solo'
-                  ? 'Recommended: Business Solo (14-day trial).'
-                  : props.intent?.productId === 'ozer-business-team'
-                    ? 'Recommended: Business Team (14-day trial).'
-                    : props.intent?.productId === 'ozer-business-lite'
-                      ? 'Next: free Business Lite for apps.'
-                      : 'Your selected plan will open after you create the workspace.'}
+                {props.intent?.productId === 'ozer-business'
+                  ? 'Recommended: Business (14-day trial).'
+                  : props.intent?.productId === 'ozer-business-lite'
+                    ? 'Next: free Business Lite for apps.'
+                    : 'Your selected plan will open after you create the workspace.'}
               </p>
             ) : null}
           </div>
@@ -432,11 +426,8 @@ export function WorkspaceSetupForm(props: { intent?: SetupIntent }) {
                               }
                               className="rounded border-[color:var(--workspace-shell-border)]"
                             />
-                            Full business (Solo / Team) — clients, jobs,
-                            invoices
-                            {SOLO_PRICE != null
-                              ? ` · 14-day trial from ${formatGbp(SOLO_PRICE)}/mo`
-                              : ' · 14-day trial'}
+                            Full business — clients, jobs, invoices
+                            {` · 14-day trial from ${formatGbp(BUSINESS_SEAT1_PRICE)}/mo`}
                           </label>
                         ) : null}
                       </div>

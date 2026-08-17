@@ -4,6 +4,7 @@ import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client'
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { isAccountBillingExempt } from '~/lib/billing/entitlements';
 import { formatEmailDeliveryError } from '~/lib/email/format-email-delivery-error';
 import {
   escapeNotificationHtml,
@@ -277,9 +278,41 @@ export async function createProjectGuestInvite(input: {
     .eq('invited_email', email)
     .maybeSingle();
 
+  const existingRow = existing as { id: string; status?: string } | null;
+  const reusesActiveSlot =
+    existingRow?.status === 'pending' || existingRow?.status === 'accepted';
+
+  const { data: limits } = await admin
+    .from('account_plan_limits')
+    .select('max_project_guests')
+    .eq('account_id', input.accountId)
+    .maybeSingle();
+
+  const maxGuests =
+    (limits as { max_project_guests?: number | null } | null)
+      ?.max_project_guests ?? null;
+
+  const isExempt = await isAccountBillingExempt(admin, input.accountId);
+
+  // Soft app-level quota (count then insert); concurrent invites can race.
+  if (!isExempt && maxGuests != null && !reusesActiveSlot) {
+    const { count, error: countError } = await guestsTable(admin)
+      .select('id', { count: 'exact', head: true })
+      .eq('account_id', input.accountId)
+      .in('status', ['pending', 'accepted']);
+
+    if (countError) throw new Error(countError.message);
+
+    if ((count ?? 0) >= maxGuests) {
+      throw new Error(
+        `This workspace can have up to ${maxGuests} project guest${maxGuests === 1 ? '' : 's'}. Upgrade seats or revoke an existing guest to invite more.`,
+      );
+    }
+  }
+
   let row: Record<string, unknown>;
 
-  if (existing) {
+  if (existingRow) {
     const { data, error } = await guestsTable(admin)
       .update({
         status: 'pending',
@@ -289,7 +322,7 @@ export async function createProjectGuestInvite(input: {
         user_id: null,
         accepted_at: null,
       })
-      .eq('id', (existing as { id: string }).id)
+      .eq('id', existingRow.id)
       .select('*')
       .single();
 
