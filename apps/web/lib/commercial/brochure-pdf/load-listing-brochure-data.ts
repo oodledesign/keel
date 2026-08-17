@@ -154,7 +154,7 @@ export async function loadListingBrochureData(
   }
   if (!row) return null;
 
-  const listing = mapListingRow(row as Record<string, unknown>);
+  const listing = mapListingRow(row as unknown as Record<string, unknown>);
 
   const [{ data: accountRow }, { data: agentRows }, { data: mediaRows }] =
     await Promise.all([

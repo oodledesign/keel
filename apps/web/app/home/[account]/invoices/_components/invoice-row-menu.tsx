@@ -32,7 +32,6 @@ import {
   archiveInvoiceAction,
   deleteInvoice,
   duplicateInvoiceAction,
-  getInvoicePortalLink,
   resendInvoiceAction,
   setInvoiceStatus,
   voidInvoiceAction,
@@ -70,7 +69,14 @@ export function InvoiceRowMenu({
       await fn();
       toast.success(success);
       onChanged?.();
-      router.refresh();
+      if (key === 'delete') {
+        router.push(
+          pathsConfig.app.accountInvoices.replace('[account]', accountSlug),
+        );
+        router.refresh();
+      } else {
+        router.refresh();
+      }
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {

@@ -50,7 +50,7 @@ import {
   updateRecurringSeriesStatusAction,
 } from '../_lib/server/server-actions';
 import { InvoiceRowMenu } from './invoice-row-menu';
-import { InvoiceStatusBadge } from './invoice-status-badge';
+import { InvoiceStatusBadge, RecurringSeriesStatusBadge } from './invoice-status-badge';
 import { InvoicesIncomeSummary } from './invoices-income-summary';
 import {
   RecurringSeriesEditDialog,
@@ -533,8 +533,10 @@ export function InvoicesPageContent({
                           ? `${series.due_days} day${series.due_days === 1 ? '' : 's'}`
                           : '7 days'}
                       </td>
-                      <td className="py-3 pr-4 text-[var(--workspace-shell-text-muted)] capitalize">
-                        {String(series.status ?? '')}
+                      <td className="py-3 pr-4">
+                        <RecurringSeriesStatusBadge
+                          status={String(series.status ?? 'active')}
+                        />
                       </td>
                       <td className="py-3">
                         <div className="flex flex-wrap items-center justify-end gap-2">

@@ -313,7 +313,8 @@ export async function buildInvoicePdf(
   const showLogo = invoice.show_logo !== false;
   const showPaymentLink = invoice.show_payment_link !== false;
   const currency = (invoice.currency || 'GBP').toUpperCase();
-  const reference = invoice.reference_number?.trim() || invoice.invoice_number;
+  // Bank payment reference must always be the invoice number (not a custom title).
+  const paymentReference = invoice.invoice_number;
   const invoiceTitle = invoice.title?.trim() || null;
   const tableWidth = PAGE_WIDTH - MARGIN * 2;
   const columnGap = 24;
@@ -354,7 +355,7 @@ export async function buildInvoicePdf(
               : null,
             invoice.bank.bank_iban ? `IBAN: ${invoice.bank.bank_iban}` : null,
             invoice.bank.bank_bic ? `BIC: ${invoice.bank.bank_bic}` : null,
-            `Reference: ${reference}`,
+            `Reference: ${paymentReference}`,
             invoice.bank.bank_transfer_instructions,
           ].filter(Boolean) as string[]
         ).flatMap((line) => wrapText(line, font, 9, columnWidth))

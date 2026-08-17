@@ -20,6 +20,7 @@ export { generateListingBrochurePdf } from './generate-listing-brochure-pdf';
 export { loadListingBrochureData } from './load-listing-brochure-data';
 export {
   buildBrochureMapStaticUrl,
+  buildBrochureMapStaticUrls,
   fetchBrochureMapImageBytes,
 } from './mapbox-static';
 export { renderBrochurePdf } from './render-brochure-pdf';

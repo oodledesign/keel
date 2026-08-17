@@ -57,6 +57,12 @@ async function landingAfterAuth(
   return resolvePostAuthLandingPath(client, user.id, nextPath, HOME);
 }
 
+export async function HEAD() {
+  // Email scanners prefetch with HEAD. Never verify OTPs here — Next would
+  // otherwise run GET and burn one-time recovery/magic links.
+  return new Response(null, { status: 200 });
+}
+
 export async function GET(request: NextRequest) {
   const client = getSupabaseServerClient();
   const service = createAuthCallbackService(client);

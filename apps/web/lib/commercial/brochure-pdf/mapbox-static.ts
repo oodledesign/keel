@@ -2,6 +2,10 @@ import 'server-only';
 
 /**
  * Mapbox Static Images API helper for brochure map pages.
+ *
+ * Prefer a server token without URL restrictions for PDF generation.
+ * Browser-restricted NEXT_PUBLIC_MAPBOX_TOKEN often works for the disposals
+ * map (client) but returns 401/403 when fetched from the server.
  */
 
 export type BrochureMapAmenity = {
@@ -22,78 +26,155 @@ export type FetchBrochureMapImageInput = {
   amenities?: BrochureMapAmenity[];
 };
 
-function mapboxToken(): string | null {
-  const token = process.env.NEXT_PUBLIC_MAPBOX_TOKEN?.trim();
-  return token || null;
+type TokenSource =
+  | 'MAPBOX_SECRET_TOKEN'
+  | 'MAPBOX_ACCESS_TOKEN'
+  | 'MAPBOX_TOKEN'
+  | 'NEXT_PUBLIC_MAPBOX_TOKEN';
+
+function resolveMapboxToken(): { token: string; source: TokenSource } | null {
+  const candidates: Array<{ source: TokenSource; value: string | undefined }> =
+    [
+      // Server tokens first — typically no URL restrictions
+      { source: 'MAPBOX_SECRET_TOKEN', value: process.env.MAPBOX_SECRET_TOKEN },
+      { source: 'MAPBOX_ACCESS_TOKEN', value: process.env.MAPBOX_ACCESS_TOKEN },
+      { source: 'MAPBOX_TOKEN', value: process.env.MAPBOX_TOKEN },
+      {
+        source: 'NEXT_PUBLIC_MAPBOX_TOKEN',
+        value: process.env.NEXT_PUBLIC_MAPBOX_TOKEN,
+      },
+    ];
+
+  for (const candidate of candidates) {
+    const token = candidate.value?.trim();
+    if (token) return { token, source: candidate.source };
+  }
+  return null;
+}
+
+function clampSize(n: number): number {
+  return Math.min(1280, Math.max(200, Math.round(n)));
 }
 
 /**
- * Build a Static Images API URL with numbered property + amenity pins.
+ * Build Static Images API URLs. Returns several variants so callers can retry
+ * if a restricted token or overlay format fails.
  */
+export function buildBrochureMapStaticUrls(
+  input: FetchBrochureMapImageInput,
+  token: string,
+): string[] {
+  const width = clampSize(input.width);
+  const height = clampSize(input.height);
+  const zoom = input.zoom ?? 14;
+  const { longitude: lng, latitude: lat } = input;
+  const style = 'mapbox/light-v11';
+  const base = `https://api.mapbox.com/styles/v1/${style}/static`;
+  const tokenQs = `access_token=${encodeURIComponent(token)}`;
+
+  // Simple coloured pin (no Maki icon name — fewer 422s)
+  const pin = `pin-l+FF5C34(${lng},${lat})`;
+
+  return [
+    `${base}/${pin}/${lng},${lat},${zoom},0/${width}x${height}@2x?${tokenQs}`,
+    `${base}/${pin}/${lng},${lat},${zoom},0/${width}x${height}?${tokenQs}`,
+    // Bare map, no overlay — last resort
+    `${base}/${lng},${lat},${zoom},0/${width}x${height}@2x?${tokenQs}`,
+  ];
+}
+
+/** @deprecated Prefer buildBrochureMapStaticUrls — kept for callers/tests. */
 export function buildBrochureMapStaticUrl(
   input: FetchBrochureMapImageInput,
 ): string | null {
-  const token = mapboxToken();
-  if (!token) return null;
+  const resolved = resolveMapboxToken();
+  if (!resolved) return null;
+  return buildBrochureMapStaticUrls(input, resolved.token)[0] ?? null;
+}
 
-  const width = Math.min(1280, Math.max(200, Math.round(input.width)));
-  const height = Math.min(1280, Math.max(200, Math.round(input.height)));
-  const zoom = input.zoom ?? 13;
-
-  const overlays: string[] = [
-    `pin-l-building+FF5C34(${input.longitude},${input.latitude})`,
-  ];
-
-  for (const amenity of input.amenities ?? []) {
-    if (
-      amenity.longitude == null ||
-      amenity.latitude == null ||
-      !Number.isFinite(amenity.longitude) ||
-      !Number.isFinite(amenity.latitude)
-    ) {
-      continue;
+async function fetchMapBytes(
+  url: string,
+): Promise<{ bytes: Uint8Array; contentType: string } | { error: string }> {
+  try {
+    const res = await fetch(url, {
+      // Avoid Next data-cache retaining a failed Mapbox response
+      cache: 'no-store',
+      headers: { Accept: 'image/png,image/jpeg,image/*' },
+    });
+    if (!res.ok) {
+      const body = await res.text().catch(() => '');
+      return {
+        error: `${res.status} ${body.slice(0, 240)}`,
+      };
     }
-    const n = Math.min(99, Math.max(1, amenity.index));
-    overlays.push(
-      `pin-s-${n}+351E28(${amenity.longitude},${amenity.latitude})`,
-    );
+    const contentType = res.headers.get('content-type') ?? '';
+    const isImage =
+      contentType.startsWith('image/') ||
+      contentType.includes('octet-stream') ||
+      contentType === '';
+    if (!isImage) {
+      return { error: `non-image content-type: ${contentType}` };
+    }
+    return {
+      bytes: new Uint8Array(await res.arrayBuffer()),
+      contentType,
+    };
+  } catch (err) {
+    return {
+      error: err instanceof Error ? err.message : 'fetch failed',
+    };
   }
-
-  const overlayPath = overlays.join(',');
-  const style = 'mapbox/light-v11';
-
-  return `https://api.mapbox.com/styles/v1/${style}/static/${overlayPath}/${input.longitude},${input.latitude},${zoom},0/${width}x${height}@2x?access_token=${encodeURIComponent(token)}`;
 }
 
 /**
- * Fetch map PNG bytes for embedding in the PDF.
+ * Fetch map image bytes for embedding in the PDF.
  */
 export async function fetchBrochureMapImageBytes(
   input: FetchBrochureMapImageInput,
 ): Promise<Uint8Array | null> {
-  const url = buildBrochureMapStaticUrl(input);
-  if (!url) return null;
+  if (!Number.isFinite(input.latitude) || !Number.isFinite(input.longitude)) {
+    console.warn('[brochure-pdf] map skipped: invalid coordinates');
+    return null;
+  }
 
-  try {
-    const res = await fetch(url, {
-      // Map tiles are public with token; cache briefly on the edge/server
-      next: { revalidate: 3600 },
-    });
-    if (!res.ok) {
-      console.error(
-        '[brochure-pdf] mapbox static fetch failed:',
-        res.status,
-        await res.text().catch(() => ''),
-      );
-      return null;
-    }
-    const buf = await res.arrayBuffer();
-    return new Uint8Array(buf);
-  } catch (err) {
-    console.error(
-      '[brochure-pdf] mapbox static error:',
-      err instanceof Error ? err.message : err,
+  const resolved = resolveMapboxToken();
+  if (!resolved) {
+    console.warn(
+      '[brochure-pdf] Map unavailable: set MAPBOX_SECRET_TOKEN (preferred) or NEXT_PUBLIC_MAPBOX_TOKEN',
     );
     return null;
   }
+
+  const urls = buildBrochureMapStaticUrls(input, resolved.token);
+  const errors: string[] = [];
+
+  for (const url of urls) {
+    const result = await fetchMapBytes(url);
+    if ('bytes' in result) {
+      if (result.bytes.length < 500) {
+        errors.push('image too small');
+        continue;
+      }
+      return result.bytes;
+    }
+    errors.push(result.error);
+  }
+
+  console.error(
+    '[brochure-pdf] mapbox static failed after retries:',
+    `tokenSource=${resolved.source}`,
+    `tokenIsPublic=${resolved.source === 'NEXT_PUBLIC_MAPBOX_TOKEN'}`,
+    errors.join(' | '),
+  );
+
+  if (
+    resolved.source === 'NEXT_PUBLIC_MAPBOX_TOKEN' &&
+    errors.some((e) => e.startsWith('401') || e.startsWith('403'))
+  ) {
+    console.error(
+      '[brochure-pdf] Hint: NEXT_PUBLIC_MAPBOX_TOKEN may have URL restrictions that block server-side fetches. Add MAPBOX_SECRET_TOKEN (sk.… or unrestricted pk.…) in Vercel for brochure PDFs.',
+    );
+  }
+
+  return null;
 }

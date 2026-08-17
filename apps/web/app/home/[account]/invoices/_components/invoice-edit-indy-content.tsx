@@ -316,9 +316,6 @@ export function InvoiceEditIndyContent({
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
 
   const [title, setTitle] = useState(invoice.title ?? '');
-  const [referenceNumber, setReferenceNumber] = useState(
-    invoice.reference_number?.trim() || invoice.invoice_number || '',
-  );
   const [issuedAt, setIssuedAt] = useState(
     toDateInputValue(invoice.issued_at) ||
       new Date().toISOString().slice(0, 10),
@@ -463,7 +460,6 @@ export function InvoiceEditIndyContent({
   const dirtyFingerprint = useMemo(
     () => ({
       title,
-      referenceNumber,
       issuedAt,
       dueAt,
       currency,
@@ -499,7 +495,6 @@ export function InvoiceEditIndyContent({
     }),
     [
       title,
-      referenceNumber,
       issuedAt,
       dueAt,
       currency,
@@ -842,7 +837,7 @@ export function InvoiceEditIndyContent({
         currency,
         notes: notes.trim() || null,
         title: title.trim() || null,
-        reference_number: referenceNumber.trim() || invoice.invoice_number,
+        reference_number: invoice.invoice_number,
         footer_message: footerMessage.trim() || null,
         private_note: privateNote.trim() || null,
         discount_type: showDiscount && discountType ? discountType : null,
@@ -918,7 +913,6 @@ export function InvoiceEditIndyContent({
     parsedTaxRateBp,
     privateNote,
     projectId,
-    referenceNumber,
     router,
     showDeposit,
     showDiscount,
@@ -985,7 +979,7 @@ export function InvoiceEditIndyContent({
         template: {
           project_id: projectId || null,
           title: title.trim() || null,
-          reference_number: referenceNumber.trim() || invoice.invoice_number,
+          reference_number: invoice.invoice_number,
           notes: notes.trim() || null,
           footer_message: footerMessage.trim() || null,
           discount_type: showDiscount && discountType ? discountType : null,
@@ -1054,11 +1048,9 @@ export function InvoiceEditIndyContent({
     parsedLateFeeValue,
     parsedTaxRateBp,
     projectId,
-    referenceNumber,
     showDeposit,
     showDiscount,
     showLateFee,
-    showTax,
     depositType,
     discountType,
     lateFeeType,
@@ -1349,17 +1341,16 @@ export function InvoiceEditIndyContent({
                 {showReferenceField ? (
                   <div>
                     <Label className="text-[var(--workspace-shell-text-muted)]">
-                      Reference
+                      Payment reference
                     </Label>
                     <Input
-                      value={referenceNumber}
-                      onChange={(e) => setReferenceNumber(e.target.value)}
-                      disabled={readOnly}
-                      placeholder={invoice.invoice_number}
+                      value={invoice.invoice_number}
+                      readOnly
+                      disabled
                       className={`mt-1 ${inputClassName}`}
                     />
                     <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                      Defaults to the invoice number. Used for bank payments.
+                      Always the invoice number — used for bank payments.
                     </p>
                   </div>
                 ) : null}
@@ -2292,7 +2283,7 @@ export function InvoiceEditIndyContent({
           <div className="space-y-3">
             {(
               [
-                ['Reference', showReferenceField, setShowReferenceField],
+                ['Payment reference', showReferenceField, setShowReferenceField],
                 ['Issue date', showIssuedField, setShowIssuedField],
                 ['Due date', showDueField, setShowDueField],
                 ['Notes', showNotesField, setShowNotesField],

@@ -147,6 +147,7 @@ function coverSlots(data: PublicBrochureData): Record<string, BrochureSlotValue>
 function photoPages(
   data: PublicBrochureData,
   templateId: BrochureTemplateId,
+  orientation: BrochureOrientation,
 ): BrochurePage[] {
   // Prefer non-cover for gallery; fall back to remaining images after cover
   const gallery =
@@ -161,12 +162,15 @@ function photoPages(
   let i = 0;
   let section = 1;
 
-  const preferFullBleed = templateId === 'editorial';
+  // Editorial + landscape classic: prefer full-bleed so photos aren't squeezed
+  const preferFullBleed =
+    templateId === 'editorial' ||
+    (orientation === 'landscape' && templateId === 'classic');
 
   while (i < pool.length) {
     const remaining = pool.length - i;
 
-    if (preferFullBleed || remaining === 1) {
+    if (preferFullBleed || remaining === 1 || templateId === 'compact') {
       const img = pool[i]!;
       pages.push(
         page(
@@ -185,7 +189,7 @@ function photoPages(
       continue;
     }
 
-    if (remaining >= 3 && templateId !== 'compact') {
+    if (remaining >= 3 && templateId === 'classic' && orientation === 'portrait') {
       const a = pool[i]!;
       const b = pool[i + 1]!;
       const c = pool[i + 2]!;
@@ -214,6 +218,38 @@ function photoPages(
   return pages;
 }
 
+function descriptionSlots(
+  data: PublicBrochureData,
+  templateId: BrochureTemplateId,
+): Record<string, BrochureSlotValue> | null {
+  const description =
+    data.listing.description?.trim() ||
+    data.listing.summary?.trim() ||
+    '';
+  const highlights = data.listing.keyPoints.slice(0, 8);
+  if (!description && highlights.length === 0) return null;
+
+  const bodyLimit =
+    templateId === 'editorial' ? 700 : templateId === 'compact' ? 900 : 1200;
+
+  return {
+    title: textSlot(
+      templateId === 'editorial'
+        ? 'Description'
+        : templateId === 'compact'
+          ? 'Highlights'
+          : 'About the property',
+    ),
+    body: textSlot(description.slice(0, bodyLimit)),
+    // Only populate when there are real key points — renderer omits empty section
+    highlights: textSlot(
+      highlights.length > 0
+        ? highlights.map((h) => `• ${h}`).join('\n')
+        : '',
+    ),
+  };
+}
+
 function floorplanPages(data: PublicBrochureData): BrochurePage[] {
   return data.floorplans.slice(0, 2).map((fp, index) =>
     page(
@@ -237,11 +273,7 @@ export function buildBrochureDocument(
   const { orientation, templateId } = options;
   const facts = buildFactsRows(data);
   const amenities = buildAmenities(data);
-  const description =
-    data.listing.description?.trim() ||
-    data.listing.summary?.trim() ||
-    '';
-  const highlights = data.listing.keyPoints.slice(0, 8);
+  const descSlots = descriptionSlots(data, templateId);
   const locationCopy = data.listing.locationCopy?.trim() ?? '';
 
   const pages: BrochurePage[] = [];
@@ -258,7 +290,7 @@ export function buildBrochureDocument(
   );
 
   if (templateId === 'compact') {
-    // Short pack: cover, one facts+copy spread feel via facts + description, contact
+    // Short pack: cover, facts, optional copy, one photo, map, contact
     if (facts.length > 0) {
       pages.push(
         page('facts_table', {
@@ -268,18 +300,11 @@ export function buildBrochureDocument(
       );
     }
 
-    if (description || highlights.length > 0) {
-      pages.push(
-        page('description_highlights', {
-          title: textSlot('Highlights'),
-          body: textSlot(description.slice(0, 900)),
-          highlights: textSlot(highlights.map((h) => `• ${h}`).join('\n')),
-        }),
-      );
+    if (descSlots) {
+      pages.push(page('description_highlights', descSlots));
     }
 
-    const gallery = photoPages(data, templateId).slice(0, 1);
-    pages.push(...gallery);
+    pages.push(...photoPages(data, templateId, orientation).slice(0, 1));
 
     if (data.listing.latitude != null && data.listing.longitude != null) {
       pages.push(
@@ -334,19 +359,11 @@ export function buildBrochureDocument(
     );
   }
 
-  if (description || highlights.length > 0) {
+  if (descSlots) {
     pages.push(
       page(
         'description_highlights',
-        {
-          title: textSlot(
-            templateId === 'editorial' ? 'Description' : 'About the property',
-          ),
-          body: textSlot(
-            description.slice(0, templateId === 'editorial' ? 700 : 1200),
-          ),
-          highlights: textSlot(highlights.map((h) => `• ${h}`).join('\n')),
-        },
+        descSlots,
         templateId === 'editorial'
           ? { sectionNumber: '03', sectionLabel: 'Description' }
           : undefined,
@@ -354,10 +371,18 @@ export function buildBrochureDocument(
     );
   }
 
-  const galleryLimit = templateId === 'editorial' ? 6 : 4;
-  pages.push(...photoPages(data, templateId).slice(0, galleryLimit));
+  const galleryLimit =
+    templateId === 'editorial' ? 6 : orientation === 'landscape' ? 5 : 4;
+  pages.push(
+    ...photoPages(data, templateId, orientation).slice(0, galleryLimit),
+  );
 
-  pages.push(...floorplanPages(data));
+  if (templateId === 'classic') {
+    pages.push(...floorplanPages(data));
+  } else {
+    // Editorial: at most one floorplan page to keep the pack photo-led
+    pages.push(...floorplanPages(data).slice(0, 1));
+  }
 
   if (data.listing.latitude != null && data.listing.longitude != null) {
     pages.push(

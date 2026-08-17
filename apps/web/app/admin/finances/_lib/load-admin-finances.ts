@@ -117,6 +117,86 @@ function estimateTxnCostUsd(
   return Math.max(0, Number(row.credits_used ?? 0)) * 0.002;
 }
 
+type AiCreditTxnRow = {
+  account_id: string;
+  feature: string;
+  model_used: string;
+  credits_used: number | null;
+  input_tokens: number | null;
+  output_tokens: number | null;
+};
+
+type AdminClient = {
+  from: (table: string) => {
+    select: (cols: string) => {
+      gte: (col: string, value: string) => {
+        lt: (col: string, value: string) => {
+          order: (
+            col: string,
+            opts: { ascending: boolean },
+          ) => {
+            range: (
+              from: number,
+              to: number,
+            ) => Promise<{
+              data: AiCreditTxnRow[] | null;
+              error: { message: string } | null;
+            }>;
+          };
+        };
+      };
+    };
+  };
+};
+
+/**
+ * PostgREST caps pages (~1000 rows). Paginate so admin totals match real usage.
+ */
+async function loadAiCreditTransactionsForPeriod(
+  admin: AdminClient,
+  periodStartIso: string,
+  periodEndIso: string,
+): Promise<AiCreditTxnRow[]> {
+  const pageSize = 1000;
+  const rows: AiCreditTxnRow[] = [];
+  let from = 0;
+
+  for (;;) {
+    const { data, error } = await admin
+      .from('ai_credit_transactions')
+      .select(
+        'account_id, feature, model_used, credits_used, input_tokens, output_tokens',
+      )
+      .gte('created_at', periodStartIso)
+      .lt('created_at', periodEndIso)
+      .order('created_at', { ascending: true })
+      .range(from, from + pageSize - 1);
+
+    if (error) {
+      throw new Error(error.message);
+    }
+
+    const page = (data ?? []) as AiCreditTxnRow[];
+    rows.push(...page);
+
+    if (page.length < pageSize) {
+      break;
+    }
+
+    from += pageSize;
+    // Safety valve for runaway periods.
+    if (from >= 200_000) {
+      console.warn(
+        '[loadAiCreditTransactionsForPeriod] Safety cap hit — AI cost totals may be partial',
+        { periodStartIso, periodEndIso, rowsLoaded: rows.length },
+      );
+      break;
+    }
+  }
+
+  return rows;
+}
+
 export const loadAdminFinances = cache(
   async (periodMonthParam?: string): Promise<AdminFinancesData> => {
     await requireSuperAdmin();
@@ -148,7 +228,7 @@ export const loadAdminFinances = cache(
     const periodEndIso = periodEnd.toISOString();
     const periodMonth = toIsoDate(periodStart);
 
-    const [ratesRes, costsRes, txnsRes, purchasesRes, activeSubsRes] =
+    const [ratesRes, costsRes, txnRows, purchasesRes, activeSubsRes] =
       await Promise.all([
         adminUntyped
           .from('ai_model_cost_rates')
@@ -163,14 +243,11 @@ export const loadAdminFinances = cache(
           )
           .eq('period_month', periodMonth)
           .order('category'),
-        admin
-          .from('ai_credit_transactions')
-          .select(
-            'account_id, feature, model_used, credits_used, input_tokens, output_tokens',
-          )
-          .gte('created_at', periodStartIso)
-          .lt('created_at', periodEndIso)
-          .limit(50_000),
+        loadAiCreditTransactionsForPeriod(
+          admin as unknown as AdminClient,
+          periodStartIso,
+          periodEndIso,
+        ),
         admin
           .from('ai_credit_purchases')
           .select('amount_total, currency')
@@ -184,7 +261,6 @@ export const loadAdminFinances = cache(
 
     if (ratesRes.error) throw new Error(ratesRes.error.message);
     if (costsRes.error) throw new Error(costsRes.error.message);
-    if (txnsRes.error) throw new Error(txnsRes.error.message);
     if (purchasesRes.error) throw new Error(purchasesRes.error.message);
     if (activeSubsRes.error) throw new Error(activeSubsRes.error.message);
 
@@ -282,15 +358,15 @@ export const loadAdminFinances = cache(
       }
     >();
 
-    for (const row of txnsRes.data ?? []) {
+    for (const row of txnRows) {
       const credits = Number(row.credits_used ?? 0);
       const input = Number(row.input_tokens ?? 0);
       const output = Number(row.output_tokens ?? 0);
       const cost = estimateTxnCostUsd(
         {
           model_used: String(row.model_used),
-          input_tokens: row.input_tokens as number | null,
-          output_tokens: row.output_tokens as number | null,
+          input_tokens: row.input_tokens,
+          output_tokens: row.output_tokens,
           credits_used: credits,
         },
         ratesMap,

@@ -25,11 +25,19 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    const message =
+      error.code === 'otp_expired'
+        ? 'auth:errors.otp_expired'
+        : error.message;
     return NextResponse.json(
-      { error: error.message, code: error.code },
+      { error: message, code: error.code },
       { status: 400 },
     );
   }
 
   return NextResponse.json({ ok: true });
+}
+
+export async function HEAD() {
+  return new NextResponse(null, { status: 200 });
 }

@@ -47,6 +47,15 @@ async function ListingBrochureEditorPage({ params, searchParams }: PageProps) {
       accountId={accountId}
       accountSlug={slug}
       listingName={listing.name}
+      accountName={brochureData?.accountName ?? workspace.account.name ?? ''}
+      brand={
+        brochureData?.brand ?? {
+          logoUrl: null,
+          primaryColor: '#351E28',
+          secondaryColor: '#41606F',
+          accentColor: '#FF5C34',
+        }
+      }
       initialDocument={document}
       images={brochureData?.images ?? []}
     />

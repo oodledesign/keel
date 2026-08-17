@@ -53,6 +53,13 @@ type ListingBrochureEditorProps = {
   accountId: string;
   accountSlug: string;
   listingName: string;
+  accountName: string;
+  brand: {
+    logoUrl: string | null;
+    primaryColor: string;
+    secondaryColor: string;
+    accentColor: string;
+  };
   initialDocument: BrochureDocument & { id: string };
   images: BrochureMediaItem[];
 };
@@ -61,57 +68,252 @@ function layoutLabel(id: BrochureLayoutId) {
   return BROCHURE_LAYOUT_OPTIONS.find((o) => o.id === id)?.label ?? id;
 }
 
+function slotText(
+  page: BrochurePage,
+  key: string,
+): string {
+  const s = page.slots[key];
+  return s?.type === 'text' ? s.text : '';
+}
+
+function slotImageUrl(page: BrochurePage, key: string): string | null {
+  const s = page.slots[key];
+  return s?.type === 'image' ? s.url : null;
+}
+
 function PreviewPage({
   page,
   orientation,
+  templateId,
   brandName,
+  brand,
 }: {
   page: BrochurePage;
   orientation: BrochureOrientation;
+  templateId: BrochureTemplateId;
   brandName: string;
+  brand: ListingBrochureEditorProps['brand'];
 }) {
+  const primary = brand.primaryColor || 'var(--ozer-plum-900, #351E28)';
+  const accent = brand.accentColor || 'var(--ozer-coral-500, #FF5C34)';
+  const paper = 'var(--ozer-cream-50, #FBF6EC)';
+  const landscape = orientation === 'landscape';
   const title =
-    page.slots.title?.type === 'text'
-      ? page.slots.title.text
-      : layoutLabel(page.layoutId);
-  const heroUrl =
-    page.slots.hero?.type === 'image'
-      ? page.slots.hero.url
-      : page.slots.photo?.type === 'image'
-        ? page.slots.photo.url
-        : page.slots.photo1?.type === 'image'
-          ? page.slots.photo1.url
-          : null;
+    slotText(page, 'title') ||
+    slotText(page, 'address') ||
+    layoutLabel(page.layoutId);
 
-  return (
-    <div
-      className={cn(
-        'overflow-hidden rounded-md border border-[var(--workspace-shell-border)] bg-white shadow-sm',
-        orientation === 'landscape' ? 'aspect-[297/210]' : 'aspect-[210/297]',
-      )}
-    >
-      <div className="flex h-full flex-col">
-        {heroUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={heroUrl}
-            alt=""
-            className="h-[55%] w-full object-cover"
-          />
-        ) : (
-          <div className="flex h-[40%] items-center justify-center bg-[var(--ozer-cream-100,#F5EFE3)] text-xs text-[var(--workspace-shell-text-muted)]">
-            {layoutLabel(page.layoutId)}
+  const frameClass = cn(
+    'overflow-hidden rounded-md border border-[var(--workspace-shell-border)] bg-white shadow-sm',
+    landscape ? 'aspect-[297/210]' : 'aspect-[210/297]',
+  );
+
+  if (page.layoutId === 'cover_hero_band') {
+    const hero = slotImageUrl(page, 'hero');
+    const disposal = slotText(page, 'disposal');
+    const bandPct = templateId === 'editorial' ? 26 : templateId === 'compact' ? 38 : 32;
+
+    if (landscape) {
+      return (
+        <div className={frameClass}>
+          <div className="flex h-full">
+            <div className="relative h-full flex-1 bg-[var(--ozer-cream-100,#F5EFE3)]">
+              {hero ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={hero} alt="" className="h-full w-full object-cover" />
+              ) : null}
+            </div>
+            <div
+              className="flex h-full flex-col gap-1.5 p-3"
+              style={{
+                width: `${bandPct}%`,
+                backgroundColor: primary,
+                color: paper,
+                borderLeft:
+                  templateId === 'editorial' ? `3px solid ${accent}` : undefined,
+              }}
+            >
+              {brand.logoUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={brand.logoUrl}
+                  alt=""
+                  className="mb-1 h-6 w-auto max-w-full object-contain object-left"
+                />
+              ) : (
+                <p className="text-[9px] font-semibold tracking-wide uppercase opacity-80">
+                  {brandName}
+                </p>
+              )}
+              {disposal ? (
+                <p className="text-[9px] font-semibold uppercase" style={{ color: accent }}>
+                  {disposal}
+                </p>
+              ) : null}
+              <p className="line-clamp-4 text-sm font-semibold leading-snug">
+                {title}
+              </p>
+              <p className="mt-auto text-[9px] opacity-50">Cover</p>
+            </div>
           </div>
-        )}
-        <div className="flex flex-1 flex-col gap-1 bg-[var(--ozer-plum-900,#351E28)] p-3 text-[var(--ozer-text-on-dark,#FBF6EC)]">
-          <p className="text-[10px] tracking-wide uppercase opacity-70">
-            {page.sectionNumber
-              ? `${page.sectionNumber} · ${page.sectionLabel ?? ''}`
-              : brandName}
-          </p>
-          <p className="line-clamp-3 text-sm font-semibold">{title || 'Untitled'}</p>
-          <p className="text-[10px] opacity-60">{layoutLabel(page.layoutId)}</p>
         </div>
+      );
+    }
+
+    return (
+      <div className={frameClass}>
+        <div className="flex h-full flex-col">
+          <div className="relative min-h-0 flex-1 bg-[var(--ozer-cream-100,#F5EFE3)]">
+            {hero ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={hero} alt="" className="h-full w-full object-cover" />
+            ) : null}
+          </div>
+          <div
+            className="flex flex-col gap-1 p-3"
+            style={{ backgroundColor: primary, color: paper, minHeight: '32%' }}
+          >
+            {brand.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={brand.logoUrl}
+                alt=""
+                className="mb-1 h-5 w-auto max-w-[40%] object-contain object-left"
+              />
+            ) : (
+              <p className="text-[9px] uppercase opacity-70">{brandName}</p>
+            )}
+            <p className="line-clamp-2 text-sm font-semibold">{title}</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (
+    page.layoutId === 'photo_full' ||
+    page.layoutId === 'photo_grid_2' ||
+    page.layoutId === 'photo_grid_3' ||
+    page.layoutId === 'floorplan'
+  ) {
+    const urls = [
+      slotImageUrl(page, 'photo'),
+      slotImageUrl(page, 'photo1'),
+      slotImageUrl(page, 'plan'),
+      slotImageUrl(page, 'photo2'),
+      slotImageUrl(page, 'photo3'),
+    ].filter(Boolean) as string[];
+
+    return (
+      <div className={frameClass}>
+        <div
+          className={cn(
+            'grid h-full gap-1 bg-[var(--ozer-cream-100,#F5EFE3)] p-1.5',
+            page.layoutId === 'photo_grid_2' && landscape
+              ? 'grid-rows-2'
+              : page.layoutId === 'photo_grid_2'
+                ? 'grid-rows-2'
+                : page.layoutId === 'photo_grid_3'
+                  ? 'grid-rows-[1.2fr_0.8fr]'
+                  : 'grid-rows-1',
+          )}
+        >
+          {urls.length === 0 ? (
+            <div className="flex items-center justify-center text-xs text-[var(--workspace-shell-text-muted)]">
+              {layoutLabel(page.layoutId)}
+            </div>
+          ) : page.layoutId === 'photo_grid_3' ? (
+            <>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src={urls[0]}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+              <div className="grid grid-cols-2 gap-1">
+                {urls.slice(1, 3).map((u) => (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    key={u}
+                    src={u}
+                    alt=""
+                    className="h-full w-full object-cover"
+                  />
+                ))}
+              </div>
+            </>
+          ) : (
+            urls.slice(0, page.layoutId === 'photo_grid_2' ? 2 : 1).map((u) => (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                key={u}
+                src={u}
+                alt=""
+                className="h-full w-full object-cover"
+              />
+            ))
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  if (page.layoutId === 'map_amenities') {
+    return (
+      <div className={frameClass}>
+        <div
+          className={cn(
+            'flex h-full gap-2 bg-white p-3',
+            landscape ? 'flex-row' : 'flex-col',
+          )}
+        >
+          <div className="min-w-0 flex-1 space-y-1">
+            <p className="text-xs font-semibold" style={{ color: primary }}>
+              {title || 'Location'}
+            </p>
+            <p className="line-clamp-4 text-[10px] text-[var(--workspace-shell-text-muted)]">
+              {slotText(page, 'body') || 'Map & amenities'}
+            </p>
+          </div>
+          <div
+            className={cn(
+              'rounded-sm bg-[var(--ozer-cream-100,#F5EFE3)]',
+              landscape ? 'w-[58%]' : 'h-[45%] w-full',
+            )}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  // facts / description / contact — text-led
+  const body = slotText(page, 'body');
+  const highlights = slotText(page, 'highlights').trim();
+  return (
+    <div className={frameClass}>
+      <div className="flex h-full flex-col gap-2 bg-white p-3">
+        <div
+          className="h-1 w-10 rounded-full"
+          style={{ backgroundColor: accent }}
+        />
+        <p className="text-xs font-semibold" style={{ color: primary }}>
+          {title}
+        </p>
+        {body ? (
+          <p className="line-clamp-5 text-[10px] leading-relaxed text-[var(--workspace-shell-text-muted)]">
+            {body}
+          </p>
+        ) : null}
+        {highlights ? (
+          <p className="line-clamp-4 whitespace-pre-line text-[10px] text-[var(--workspace-shell-text)]">
+            {highlights}
+          </p>
+        ) : null}
+        {!body && !highlights ? (
+          <p className="text-[10px] text-[var(--workspace-shell-text-muted)]">
+            {layoutLabel(page.layoutId)}
+          </p>
+        ) : null}
       </div>
     </div>
   );
@@ -303,6 +505,8 @@ export function ListingBrochureEditor({
   accountId,
   accountSlug: _accountSlug,
   listingName,
+  accountName,
+  brand,
   initialDocument,
   images,
 }: ListingBrochureEditorProps) {
@@ -425,10 +629,12 @@ export function ListingBrochureEditor({
         if (!res.ok) throw new Error('PDF generation failed');
         const blob = await res.blob();
         const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
+        const a = window.document.createElement('a');
         a.href = url;
         a.download = `${listingName || 'brochure'}.pdf`;
+        window.document.body.appendChild(a);
         a.click();
+        a.remove();
         URL.revokeObjectURL(url);
       } catch (error) {
         toast.error(
@@ -446,8 +652,9 @@ export function ListingBrochureEditor({
             Brochure editor
           </h2>
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Slot-based pages for {listingName}. Preview is indicative — download
-            PDF for the final layout.
+            Slot-based pages for {listingName}. Preview mirrors layout and brand
+            colours — download PDF for print-ready output. After changing
+            template, regenerate to rebuild pages.
           </p>
         </div>
         <div className="flex flex-wrap gap-2">
@@ -558,7 +765,9 @@ export function ListingBrochureEditor({
               <PreviewPage
                 page={selectedPage}
                 orientation={document.orientation}
-                brandName={listingName}
+                templateId={document.templateId}
+                brandName={accountName || listingName}
+                brand={brand}
               />
             </div>
           ) : (

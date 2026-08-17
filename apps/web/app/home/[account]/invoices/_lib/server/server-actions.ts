@@ -75,7 +75,13 @@ export const updateInvoice = enhanceAction(
 );
 
 export const deleteInvoice = enhanceAction(
-  async (input) => getService().deleteInvoice(input),
+  async (input) => {
+    await getService().deleteInvoice(input);
+    const { revalidatePath } = await import('next/cache');
+    // Clear list + any open edit route for the deleted invoice.
+    revalidatePath('/home', 'layout');
+    revalidatePath('/app', 'layout');
+  },
   { schema: DeleteInvoiceSchema },
 );
 

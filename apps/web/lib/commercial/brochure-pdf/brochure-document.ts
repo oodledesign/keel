@@ -58,17 +58,17 @@ export const BROCHURE_TEMPLATE_OPTIONS: Array<{
   {
     id: 'classic',
     label: 'Classic',
-    description: 'Cover, facts, copy, photos, map, contacts',
+    description: 'Balanced pack — facts table, copy, photos, map',
   },
   {
     id: 'editorial',
     label: 'Editorial',
-    description: 'Section numbers, bigger photography, less text',
+    description: 'Photo-led with section tabs and larger type',
   },
   {
     id: 'compact',
     label: 'Compact',
-    description: 'Short pack for smaller listings',
+    description: 'Short dense pack for smaller listings',
   },
 ];
 

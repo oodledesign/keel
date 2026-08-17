@@ -59,3 +59,29 @@ export function InvoiceStatusBadge({
 export function formatInvoiceMoney(pence: number, currency = 'GBP') {
   return formatPence(pence, currency);
 }
+
+const RECURRING_STATUS_STYLES: Record<string, string> = {
+  active: 'border-emerald-700/40 bg-emerald-500/18 text-emerald-900',
+  paused: 'border-amber-700/40 bg-amber-500/20 text-amber-950',
+  ended:
+    'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',
+  cancelled:
+    'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',
+  completed:
+    'border-[color:var(--workspace-shell-border)]/30 bg-[var(--workspace-shell-panel-hover)]/20 text-[var(--workspace-shell-text-muted)]',
+};
+
+export function RecurringSeriesStatusBadge({ status }: { status: string }) {
+  const key = status.trim().toLowerCase() || 'active';
+  const label = key.toUpperCase();
+  const classes =
+    RECURRING_STATUS_STYLES[key] ?? RECURRING_STATUS_STYLES.ended;
+
+  return (
+    <span
+      className={`inline-flex rounded-full border px-2.5 py-1 text-[10px] font-semibold tracking-[0.12em] ${classes}`}
+    >
+      {label}
+    </span>
+  );
+}

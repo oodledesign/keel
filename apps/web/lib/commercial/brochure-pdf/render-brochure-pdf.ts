@@ -6,7 +6,14 @@ import {
   type PDFImage,
   type PDFPage,
   StandardFonts,
+  clip,
+  closePath,
   degrees,
+  endPath,
+  lineTo,
+  moveTo,
+  popGraphicsState,
+  pushGraphicsState,
   rgb,
   type RGB,
 } from 'pdf-lib';
@@ -16,6 +23,7 @@ import type {
   BrochureOrientation,
   BrochurePage,
   BrochureSlotValue,
+  BrochureTemplateId,
 } from '~/lib/commercial/brochure-pdf/brochure-document';
 import { fetchBrochureMapImageBytes } from '~/lib/commercial/brochure-pdf/mapbox-static';
 import { sanitizePdfText } from '~/lib/invoices/pdf-text';
@@ -24,6 +32,9 @@ import type { PublicBrochureData } from '~/lib/commercial/public-brochure.shared
 const A4_PORTRAIT = { width: 595.28, height: 841.89 };
 const A4_LANDSCAPE = { width: 841.89, height: 595.28 };
 
+/** Avoid upscaling tiny photos into blurry full-bleed frames. */
+const MAX_UPSCALE = 1.35;
+
 type BrandColors = {
   primary: RGB;
   secondary: RGB;
@@ -31,8 +42,11 @@ type BrandColors = {
   ink: RGB;
   muted: RGB;
   paper: RGB;
+  paperMuted: RGB;
   soft: RGB;
 };
+
+type ImageFit = 'cover' | 'contain' | 'smart';
 
 function hexToRgb(hex: string, fallback: RGB): RGB {
   const cleaned = hex.replace('#', '').trim();
@@ -161,22 +175,63 @@ async function embedImage(
   bytes: Uint8Array | null,
 ): Promise<PDFImage | null> {
   if (!bytes || bytes.length === 0) return null;
+  // Mapbox Static usually returns PNG; try PNG first then JPEG.
   try {
-    return await pdf.embedJpg(bytes);
+    return await pdf.embedPng(bytes);
   } catch {
     try {
-      return await pdf.embedPng(bytes);
+      return await pdf.embedJpg(bytes);
     } catch {
+      console.error('[brochure-pdf] failed to embed image bytes');
       return null;
     }
   }
 }
 
-function drawImageCover(
+function clipToBox(
+  page: PDFPage,
+  box: { x: number; y: number; width: number; height: number },
+) {
+  page.pushOperators(
+    pushGraphicsState(),
+    moveTo(box.x, box.y),
+    lineTo(box.x + box.width, box.y),
+    lineTo(box.x + box.width, box.y + box.height),
+    lineTo(box.x, box.y + box.height),
+    closePath(),
+    clip(),
+    endPath(),
+  );
+}
+
+function resolveFit(
+  image: PDFImage,
+  box: { width: number; height: number },
+  fit: ImageFit,
+): 'cover' | 'contain' {
+  if (fit === 'cover') return 'cover';
+  if (fit === 'contain') return 'contain';
+
+  const coverScale = Math.max(box.width / image.width, box.height / image.height);
+  if (coverScale > MAX_UPSCALE) return 'contain';
+
+  const imgAspect = image.width / image.height;
+  const boxAspect = box.width / box.height;
+  // Landscape photo in a tall/narrow cell (or vice versa) — letterbox instead of heavy crop
+  const mismatch =
+    (imgAspect > 1.25 && boxAspect < 0.85) ||
+    (imgAspect < 0.85 && boxAspect > 1.25);
+  if (mismatch) return 'contain';
+
+  return 'cover';
+}
+
+function drawImageInBox(
   page: PDFPage,
   image: PDFImage | null,
   box: { x: number; y: number; width: number; height: number },
   placeholder: RGB,
+  fit: ImageFit = 'smart',
 ) {
   page.drawRectangle({
     x: box.x,
@@ -186,25 +241,27 @@ function drawImageCover(
     color: placeholder,
   });
 
-  if (!image) return;
+  if (!image || box.width <= 0 || box.height <= 0) return;
 
-  const iw = image.width;
-  const ih = image.height;
-  const scale = Math.max(box.width / iw, box.height / ih);
-  const drawW = iw * scale;
-  const drawH = ih * scale;
+  const mode = resolveFit(image, box, fit);
+  const scale =
+    mode === 'cover'
+      ? Math.max(box.width / image.width, box.height / image.height)
+      : Math.min(box.width / image.width, box.height / image.height);
+
+  const drawW = image.width * scale;
+  const drawH = image.height * scale;
   const dx = box.x + (box.width - drawW) / 2;
   const dy = box.y + (box.height - drawH) / 2;
 
+  clipToBox(page, box);
   page.drawImage(image, {
     x: dx,
     y: dy,
     width: drawW,
     height: drawH,
   });
-
-  // Clip approximation: re-draw margins if overflow (pdf-lib has no clip easily).
-  // For cover we accept slight overflow into page only if box is full-bleed.
+  page.pushOperators(popGraphicsState());
 }
 
 function slotText(slots: Record<string, BrochureSlotValue>, key: string): string {
@@ -225,6 +282,18 @@ function pageSize(orientation: BrochureOrientation) {
   return orientation === 'landscape' ? A4_LANDSCAPE : A4_PORTRAIT;
 }
 
+function templateMargins(templateId: BrochureTemplateId) {
+  if (templateId === 'compact') return 28;
+  if (templateId === 'editorial') return 48;
+  return 40;
+}
+
+function coverBandRatio(templateId: BrochureTemplateId) {
+  if (templateId === 'editorial') return 0.26;
+  if (templateId === 'compact') return 0.38;
+  return 0.32;
+}
+
 type RenderCtx = {
   pdf: PDFDocument;
   data: PublicBrochureData;
@@ -232,7 +301,9 @@ type RenderCtx = {
   font: PDFFont;
   fontBold: PDFFont;
   orientation: BrochureOrientation;
+  templateId: BrochureTemplateId;
   imageCache: Map<string, PDFImage | null>;
+  logo: PDFImage | null;
 };
 
 async function resolveImage(
@@ -247,6 +318,27 @@ async function resolveImage(
   return img;
 }
 
+function drawLogo(
+  page: PDFPage,
+  logo: PDFImage | null,
+  opts: { x: number; y: number; maxWidth: number; maxHeight: number },
+) {
+  if (!logo) return 0;
+  const scale = Math.min(
+    opts.maxWidth / logo.width,
+    opts.maxHeight / logo.height,
+  );
+  const w = logo.width * scale;
+  const h = logo.height * scale;
+  page.drawImage(logo, {
+    x: opts.x,
+    y: opts.y - h,
+    width: w,
+    height: h,
+  });
+  return h;
+}
+
 function drawSectionTab(
   page: PDFPage,
   ctx: RenderCtx,
@@ -254,9 +346,10 @@ function drawSectionTab(
   number: string | undefined,
   landscape: boolean,
 ) {
+  if (ctx.templateId === 'compact') return;
   if (!label && !number) return;
   const { width, height } = page.getSize();
-  if (landscape) {
+  if (landscape && ctx.templateId === 'editorial') {
     const tabW = 28;
     page.drawRectangle({
       x: width - tabW,
@@ -276,7 +369,7 @@ function drawSectionTab(
         rotate: degrees(90),
       });
     }
-  } else if (number) {
+  } else if (number && ctx.templateId === 'editorial') {
     page.drawText(sanitizePdfText(number), {
       x: 36,
       y: height - 36,
@@ -297,15 +390,19 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
   const disposal = slotText(brochurePage.slots, 'disposal');
   const headline = slotText(brochurePage.slots, 'headline');
   const brandName = slotText(brochurePage.slots, 'brandName');
+  const bandRatio = coverBandRatio(ctx.templateId);
+  const titleSize =
+    ctx.templateId === 'editorial' ? 26 : ctx.templateId === 'compact' ? 18 : 22;
 
   if (landscape) {
-    const bandW = Math.round(width * 0.32);
+    const bandW = Math.round(width * bandRatio);
     const heroW = width - bandW;
-    drawImageCover(
+    drawImageInBox(
       page,
       heroImg,
       { x: 0, y: 0, width: heroW, height },
       ctx.colors.soft,
+      'smart',
     );
     page.drawRectangle({
       x: heroW,
@@ -315,15 +412,39 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
       color: ctx.colors.primary,
     });
 
-    let y = height - 56;
-    page.drawText(sanitizePdfText(brandName || ctx.data.accountName || 'Agency'), {
+    if (ctx.templateId === 'editorial') {
+      page.drawRectangle({
+        x: heroW,
+        y: 0,
+        width: 4,
+        height,
+        color: ctx.colors.accent,
+      });
+    }
+
+    let y = height - 40;
+    const logoH = drawLogo(page, ctx.logo, {
       x: heroW + 28,
       y,
-      size: 11,
-      font: ctx.fontBold,
-      color: ctx.colors.paper,
+      maxWidth: bandW - 56,
+      maxHeight: 36,
     });
-    y -= 36;
+    if (logoH > 0) {
+      y -= logoH + 16;
+    } else {
+      page.drawText(
+        sanitizePdfText(brandName || ctx.data.accountName || 'Agency'),
+        {
+          x: heroW + 28,
+          y,
+          size: 11,
+          font: ctx.fontBold,
+          color: ctx.colors.paper,
+        },
+      );
+      y -= 28;
+    }
+
     if (disposal) {
       page.drawText(sanitizePdfText(disposal.toUpperCase()), {
         x: heroW + 28,
@@ -338,7 +459,7 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
       x: heroW + 28,
       y,
       font: ctx.fontBold,
-      size: 22,
+      size: titleSize,
       color: ctx.colors.paper,
       maxWidth: bandW - 56,
       maxLines: 4,
@@ -349,7 +470,7 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
       y,
       font: ctx.font,
       size: 10,
-      color: rgb(0.9, 0.88, 0.86),
+      color: ctx.colors.paperMuted,
       maxWidth: bandW - 56,
       maxLines: 4,
     });
@@ -366,13 +487,19 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
       });
     }
   } else {
-    const bandH = 150;
+    const bandH =
+      ctx.templateId === 'editorial'
+        ? 170
+        : ctx.templateId === 'compact'
+          ? 130
+          : 150;
     const heroH = height - bandH;
-    drawImageCover(
+    drawImageInBox(
       page,
       heroImg,
       { x: 0, y: bandH, width, height: heroH },
       ctx.colors.soft,
+      'smart',
     );
     page.drawRectangle({
       x: 0,
@@ -381,14 +508,36 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
       height: bandH,
       color: ctx.colors.primary,
     });
-    page.drawText(sanitizePdfText(brandName || ctx.data.accountName || 'Agency'), {
+    if (ctx.templateId === 'editorial') {
+      page.drawRectangle({
+        x: 0,
+        y: bandH - 4,
+        width,
+        height: 4,
+        color: ctx.colors.accent,
+      });
+    }
+
+    const logoH = drawLogo(page, ctx.logo, {
       x: 36,
-      y: bandH - 28,
-      size: 10,
-      font: ctx.fontBold,
-      color: ctx.colors.paper,
+      y: bandH - 16,
+      maxWidth: 140,
+      maxHeight: 32,
     });
-    let y = 110;
+    if (logoH <= 0) {
+      page.drawText(
+        sanitizePdfText(brandName || ctx.data.accountName || 'Agency'),
+        {
+          x: 36,
+          y: bandH - 28,
+          size: 10,
+          font: ctx.fontBold,
+          color: ctx.colors.paper,
+        },
+      );
+    }
+
+    let y = Math.min(110, bandH - 48);
     if (disposal) {
       page.drawText(sanitizePdfText(disposal.toUpperCase()), {
         x: 36,
@@ -403,7 +552,7 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
       x: 36,
       y,
       font: ctx.fontBold,
-      size: 20,
+      size: titleSize - 2,
       color: ctx.colors.paper,
       maxWidth: width - 72,
       maxLines: 2,
@@ -414,7 +563,7 @@ async function renderCover(page: PDFPage, brochurePage: BrochurePage, ctx: Rende
       y,
       font: ctx.font,
       size: 10,
-      color: rgb(0.9, 0.88, 0.86),
+      color: ctx.colors.paperMuted,
       maxWidth: width - 72,
       maxLines: 2,
     });
@@ -428,7 +577,7 @@ async function renderFacts(
 ) {
   const { width, height } = page.getSize();
   const landscape = ctx.orientation === 'landscape';
-  const margin = 40;
+  const margin = templateMargins(ctx.templateId);
   drawSectionTab(
     page,
     ctx,
@@ -438,13 +587,24 @@ async function renderFacts(
   );
 
   const title = slotText(brochurePage.slots, 'title') || 'Summary';
+  const titleSize = ctx.templateId === 'editorial' ? 22 : 18;
   page.drawText(sanitizePdfText(title), {
     x: margin,
     y: height - 48,
-    size: 18,
+    size: titleSize,
     font: ctx.fontBold,
     color: ctx.colors.ink,
   });
+
+  if (ctx.templateId === 'editorial') {
+    page.drawRectangle({
+      x: margin,
+      y: height - 56,
+      width: 48,
+      height: 3,
+      color: ctx.colors.accent,
+    });
+  }
 
   const factsSlot = brochurePage.slots.facts;
   const rows =
@@ -453,17 +613,21 @@ async function renderFacts(
       : ([] as Array<{ label: string; value: string }>);
 
   const tableX = margin;
-  const tableW = landscape ? width * 0.45 : width - margin * 2;
+  const tableW = landscape
+    ? width * (ctx.templateId === 'editorial' ? 0.4 : 0.45)
+    : width - margin * 2;
   let y = height - 80;
-  const rowH = 28;
+  const rowH = ctx.templateId === 'compact' ? 24 : 28;
 
-  page.drawRectangle({
-    x: tableX,
-    y: y - rows.length * rowH - 8,
-    width: tableW,
-    height: rows.length * rowH + 16,
-    color: ctx.colors.soft,
-  });
+  if (ctx.templateId !== 'editorial') {
+    page.drawRectangle({
+      x: tableX,
+      y: y - rows.length * rowH - 8,
+      width: tableW,
+      height: rows.length * rowH + 16,
+      color: ctx.colors.soft,
+    });
+  }
 
   for (const row of rows) {
     page.drawText(sanitizePdfText(row.label), {
@@ -482,18 +646,27 @@ async function renderFacts(
       maxWidth: tableW * 0.55,
       maxLines: 2,
     });
+    if (ctx.templateId === 'editorial') {
+      page.drawRectangle({
+        x: tableX,
+        y: y - rowH + 8,
+        width: tableW,
+        height: 0.5,
+        color: rgb(0.85, 0.82, 0.8),
+      });
+    }
     y -= rowH;
   }
 
   if (landscape && ctx.data.images[0]) {
     const img = await resolveImage(ctx, ctx.data.images[0].url);
     const box = {
-      x: width * 0.52,
+      x: width * (ctx.templateId === 'editorial' ? 0.48 : 0.52),
       y: 48,
-      width: width * 0.42,
+      width: width * (ctx.templateId === 'editorial' ? 0.44 : 0.42),
       height: height - 96,
     };
-    drawImageCover(page, img, box, ctx.colors.soft);
+    drawImageInBox(page, img, box, ctx.colors.soft, 'smart');
   }
 }
 
@@ -504,7 +677,7 @@ async function renderDescription(
 ) {
   const { width, height } = page.getSize();
   const landscape = ctx.orientation === 'landscape';
-  const margin = 40;
+  const margin = templateMargins(ctx.templateId);
   drawSectionTab(
     page,
     ctx,
@@ -514,28 +687,42 @@ async function renderDescription(
   );
 
   const title = slotText(brochurePage.slots, 'title') || 'About the property';
-  const body = slotText(brochurePage.slots, 'body');
-  const highlights = slotText(brochurePage.slots, 'highlights');
+  const body = slotText(brochurePage.slots, 'body').trim();
+  const highlightLines = slotText(brochurePage.slots, 'highlights')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .slice(0, 10);
+  const hasHighlights = highlightLines.length > 0;
 
   page.drawText(sanitizePdfText(title), {
     x: margin,
     y: height - 48,
-    size: 18,
+    size: ctx.templateId === 'editorial' ? 22 : 18,
     font: ctx.fontBold,
     color: ctx.colors.ink,
   });
 
-  const colW = landscape ? (width - margin * 3) / 2 : width - margin * 2;
+  const fullW = width - margin * 2;
+  const colW =
+    landscape && hasHighlights
+      ? (width - margin * 3) / 2
+      : fullW;
   let y = height - 80;
-  y = drawWrapped(page, body, {
-    x: margin,
-    y,
-    font: ctx.font,
-    size: 10,
-    color: ctx.colors.ink,
-    maxWidth: colW,
-    maxLines: landscape ? 22 : 28,
-  });
+
+  if (body) {
+    y = drawWrapped(page, body, {
+      x: margin,
+      y,
+      font: ctx.font,
+      size: ctx.templateId === 'compact' ? 9 : 10,
+      color: ctx.colors.ink,
+      maxWidth: colW,
+      maxLines: landscape ? 22 : 28,
+    });
+  }
+
+  if (!hasHighlights) return;
 
   const hx = landscape ? margin * 2 + colW : margin;
   let hy = landscape ? height - 80 : y - 24;
@@ -547,14 +734,14 @@ async function renderDescription(
     color: ctx.colors.primary,
   });
   hy -= 20;
-  for (const line of highlights.split('\n').filter(Boolean).slice(0, 10)) {
+  for (const line of highlightLines) {
     hy = drawWrapped(page, line, {
       x: hx,
       y: hy,
       font: ctx.font,
       size: 10,
       color: ctx.colors.ink,
-      maxWidth: colW,
+      maxWidth: landscape && hasHighlights ? colW : fullW,
       maxLines: 2,
     });
     hy -= 6;
@@ -569,7 +756,19 @@ async function renderPhotoFull(
   const { width, height } = page.getSize();
   const photo = slotImage(brochurePage.slots, 'photo');
   const img = await resolveImage(ctx, photo?.url ?? null);
-  drawImageCover(page, img, { x: 0, y: 0, width, height }, ctx.colors.soft);
+  const inset = ctx.templateId === 'editorial' ? 0 : 16;
+  drawImageInBox(
+    page,
+    img,
+    {
+      x: inset,
+      y: inset,
+      width: width - inset * 2,
+      height: height - inset * 2,
+    },
+    ctx.colors.soft,
+    'smart',
+  );
   drawSectionTab(
     page,
     ctx,
@@ -585,45 +784,31 @@ async function renderPhotoGrid2(
   ctx: RenderCtx,
 ) {
   const { width, height } = page.getSize();
-  const landscape = ctx.orientation === 'landscape';
   const gap = 12;
-  const margin = 24;
+  const margin = ctx.templateId === 'editorial' ? 20 : 24;
   const a = slotImage(brochurePage.slots, 'photo1');
   const b = slotImage(brochurePage.slots, 'photo2');
   const imgA = await resolveImage(ctx, a?.url ?? null);
   const imgB = await resolveImage(ctx, b?.url ?? null);
 
-  if (landscape) {
-    const w = (width - margin * 2 - gap) / 2;
-    const h = height - margin * 2;
-    drawImageCover(
-      page,
-      imgA,
-      { x: margin, y: margin, width: w, height: h },
-      ctx.colors.soft,
-    );
-    drawImageCover(
-      page,
-      imgB,
-      { x: margin + w + gap, y: margin, width: w, height: h },
-      ctx.colors.soft,
-    );
-  } else {
-    const h = (height - margin * 2 - gap) / 2;
-    const w = width - margin * 2;
-    drawImageCover(
-      page,
-      imgA,
-      { x: margin, y: margin + h + gap, width: w, height: h },
-      ctx.colors.soft,
-    );
-    drawImageCover(
-      page,
-      imgB,
-      { x: margin, y: margin, width: w, height: h },
-      ctx.colors.soft,
-    );
-  }
+  // Stack as two wide frames in both orientations — side-by-side tall cells
+  // crush landscape photos to a thin strip.
+  const h = (height - margin * 2 - gap) / 2;
+  const w = width - margin * 2;
+  drawImageInBox(
+    page,
+    imgA,
+    { x: margin, y: margin + h + gap, width: w, height: h },
+    ctx.colors.soft,
+    'smart',
+  );
+  drawImageInBox(
+    page,
+    imgB,
+    { x: margin, y: margin, width: w, height: h },
+    ctx.colors.soft,
+    'smart',
+  );
 }
 
 async function renderPhotoGrid3(
@@ -641,55 +826,56 @@ async function renderPhotoGrid3(
   ]);
 
   if (ctx.orientation === 'landscape') {
-    const leftW = (width - margin * 2 - gap) * 0.58;
-    const rightW = width - margin * 2 - gap - leftW;
-    const h = height - margin * 2;
-    drawImageCover(
+    const topH = (height - margin * 2 - gap) * 0.55;
+    const botH = height - margin * 2 - gap - topH;
+    const w = width - margin * 2;
+    drawImageInBox(
       page,
       imgs[0],
-      { x: margin, y: margin, width: leftW, height: h },
+      { x: margin, y: margin + botH + gap, width: w, height: topH },
       ctx.colors.soft,
+      'smart',
     );
-    const halfH = (h - gap) / 2;
-    drawImageCover(
+    const halfW = (w - gap) / 2;
+    drawImageInBox(
       page,
       imgs[1],
-      {
-        x: margin + leftW + gap,
-        y: margin + halfH + gap,
-        width: rightW,
-        height: halfH,
-      },
+      { x: margin, y: margin, width: halfW, height: botH },
       ctx.colors.soft,
+      'smart',
     );
-    drawImageCover(
+    drawImageInBox(
       page,
       imgs[2],
-      { x: margin + leftW + gap, y: margin, width: rightW, height: halfH },
+      { x: margin + halfW + gap, y: margin, width: halfW, height: botH },
       ctx.colors.soft,
+      'smart',
     );
   } else {
     const topH = (height - margin * 2 - gap) * 0.58;
     const botH = height - margin * 2 - gap - topH;
     const w = width - margin * 2;
-    drawImageCover(
+    drawImageInBox(
       page,
       imgs[0],
       { x: margin, y: margin + botH + gap, width: w, height: topH },
       ctx.colors.soft,
+      'smart',
     );
     const halfW = (w - gap) / 2;
-    drawImageCover(
+    drawImageInBox(
       page,
       imgs[1],
       { x: margin, y: margin, width: halfW, height: botH },
       ctx.colors.soft,
+      'smart',
     );
-    drawImageCover(
+    drawImageInBox(
       page,
       imgs[2],
       { x: margin + halfW + gap, y: margin, width: halfW, height: botH },
       ctx.colors.soft,
+      'smart',
     );
   }
 }
@@ -700,7 +886,7 @@ async function renderFloorplan(
   ctx: RenderCtx,
 ) {
   const { width, height } = page.getSize();
-  const margin = 40;
+  const margin = templateMargins(ctx.templateId);
   const caption = slotText(brochurePage.slots, 'caption') || 'Floor plan';
   page.drawText(sanitizePdfText(caption), {
     x: margin,
@@ -711,7 +897,7 @@ async function renderFloorplan(
   });
   const plan = slotImage(brochurePage.slots, 'plan');
   const img = await resolveImage(ctx, plan?.url ?? null);
-  drawImageCover(
+  drawImageInBox(
     page,
     img,
     {
@@ -721,7 +907,42 @@ async function renderFloorplan(
       height: height - margin - 56,
     },
     ctx.colors.soft,
+    'contain',
   );
+}
+
+function drawMapPlaceholder(
+  page: PDFPage,
+  box: { x: number; y: number; width: number; height: number },
+  ctx: RenderCtx,
+  lat: number,
+  lng: number,
+) {
+  page.drawRectangle({
+    x: box.x,
+    y: box.y,
+    width: box.width,
+    height: box.height,
+    color: ctx.colors.soft,
+  });
+  page.drawRectangle({
+    x: box.x + 12,
+    y: box.y + 12,
+    width: box.width - 24,
+    height: box.height - 24,
+    borderColor: ctx.colors.muted,
+    borderWidth: 1,
+  });
+  const label = sanitizePdfText(
+    `Map unavailable · ${lat.toFixed(4)}, ${lng.toFixed(4)}`,
+  );
+  page.drawText(label, {
+    x: box.x + 24,
+    y: box.y + box.height / 2,
+    size: 10,
+    font: ctx.font,
+    color: ctx.colors.muted,
+  });
 }
 
 async function renderMap(
@@ -731,7 +952,7 @@ async function renderMap(
 ) {
   const { width, height } = page.getSize();
   const landscape = ctx.orientation === 'landscape';
-  const margin = 40;
+  const margin = templateMargins(ctx.templateId);
   drawSectionTab(
     page,
     ctx,
@@ -744,9 +965,15 @@ async function renderMap(
   const body = slotText(brochurePage.slots, 'body');
   const mapSlot = brochurePage.slots.map;
   const amenities =
-    mapSlot?.type === 'map' ? mapSlot.amenities : ([] as Array<{ label: string; index: number }>);
-  const lat = mapSlot?.type === 'map' ? mapSlot.latitude : null;
-  const lng = mapSlot?.type === 'map' ? mapSlot.longitude : null;
+    mapSlot?.type === 'map'
+      ? mapSlot.amenities
+      : ([] as Array<{ label: string; index: number }>);
+  const lat =
+    (mapSlot?.type === 'map' ? mapSlot.latitude : null) ??
+    ctx.data.listing.latitude;
+  const lng =
+    (mapSlot?.type === 'map' ? mapSlot.longitude : null) ??
+    ctx.data.listing.longitude;
 
   page.drawText(sanitizePdfText(title), {
     x: margin,
@@ -771,67 +998,64 @@ async function renderMap(
     y -= 16;
   }
 
-  page.drawText('Nearby', {
-    x: margin,
-    y,
-    size: 11,
-    font: ctx.fontBold,
-    color: ctx.colors.primary,
-  });
-  y -= 18;
-
-  for (const amenity of amenities.slice(0, 8)) {
-    page.drawCircle({
-      x: margin + 6,
-      y: y + 3,
-      size: 7,
-      color: ctx.colors.accent,
-    });
-    page.drawText(String(amenity.index), {
-      x: margin + 3.5,
-      y: y + 0.5,
-      size: 7,
-      font: ctx.fontBold,
-      color: ctx.colors.paper,
-    });
-    drawWrapped(page, amenity.label, {
-      x: margin + 20,
+  if (amenities.length > 0) {
+    page.drawText('Nearby', {
+      x: margin,
       y,
-      font: ctx.font,
-      size: 10,
-      color: ctx.colors.ink,
-      maxWidth: listW - 28,
-      maxLines: 2,
+      size: 11,
+      font: ctx.fontBold,
+      color: ctx.colors.primary,
     });
-    y -= 22;
+    y -= 18;
+
+    for (const amenity of amenities.slice(0, 8)) {
+      page.drawCircle({
+        x: margin + 6,
+        y: y + 3,
+        size: 7,
+        color: ctx.colors.accent,
+      });
+      page.drawText(String(amenity.index), {
+        x: margin + 3.5,
+        y: y + 0.5,
+        size: 7,
+        font: ctx.fontBold,
+        color: ctx.colors.paper,
+      });
+      drawWrapped(page, amenity.label, {
+        x: margin + 20,
+        y,
+        font: ctx.font,
+        size: 10,
+        color: ctx.colors.ink,
+        maxWidth: listW - 28,
+        maxLines: 2,
+      });
+      y -= 22;
+    }
   }
 
   if (lat != null && lng != null) {
     const mapW = landscape ? width * 0.58 : width - margin * 2;
-    const mapH = landscape ? height - 96 : Math.min(280, y - margin - 20);
+    const mapH = landscape ? height - 96 : Math.min(280, Math.max(160, y - margin - 20));
     const mapX = landscape ? width - margin - mapW : margin;
     const mapY = landscape ? 48 : margin;
+    const box = { x: mapX, y: mapY, width: mapW, height: Math.max(120, mapH) };
 
+    // Only pin the property — fake amenity offsets produced misleading maps
     const bytes = await fetchBrochureMapImageBytes({
       latitude: lat,
       longitude: lng,
-      width: Math.round(mapW * 1.5),
-      height: Math.round(mapH * 1.5),
-      zoom: 13,
-      amenities: amenities.map((a) => ({
-        ...a,
-        // Offset amenity pins slightly so they don't stack on the property
-        longitude: lng + (a.index % 3) * 0.004,
-        latitude: lat + (a.index % 2 === 0 ? 0.003 : -0.002),
-      })),
+      width: Math.round(mapW * 2),
+      height: Math.round(box.height * 2),
+      zoom: 14,
     });
     const mapImg = await embedImage(ctx.pdf, bytes);
-    drawImageCover(
-      page,
-      mapImg,
-      { x: mapX, y: mapY, width: mapW, height: Math.max(120, mapH) },
-      ctx.colors.soft,
-    );
+    if (mapImg) {
+      drawImageInBox(page, mapImg, box, ctx.colors.soft, 'cover');
+    } else {
+      drawMapPlaceholder(page, box, ctx, lat, lng);
+    }
   }
 }
 
@@ -842,7 +1066,7 @@ async function renderContact(
 ) {
   const { width, height } = page.getSize();
   const landscape = ctx.orientation === 'landscape';
-  const margin = 40;
+  const margin = templateMargins(ctx.templateId);
   drawSectionTab(
     page,
     ctx,
@@ -867,21 +1091,36 @@ async function renderContact(
     font: ctx.fontBold,
     color: ctx.colors.paper,
   });
-  page.drawText(
-    sanitizePdfText(ctx.data.accountName || slotText(brochurePage.slots, 'brandName') || ''),
-    {
-      x: margin + 160,
-      y: height - 42,
-      size: 11,
-      font: ctx.font,
-      color: rgb(0.9, 0.88, 0.86),
-    },
-  );
+
+  const logoH = drawLogo(page, ctx.logo, {
+    x: width - margin - 120,
+    y: height - 20,
+    maxWidth: 120,
+    maxHeight: 36,
+  });
+  if (logoH <= 0) {
+    page.drawText(
+      sanitizePdfText(
+        ctx.data.accountName ||
+          slotText(brochurePage.slots, 'brandName') ||
+          '',
+      ),
+      {
+        x: margin + 160,
+        y: height - 42,
+        size: 11,
+        font: ctx.font,
+        color: ctx.colors.paperMuted,
+      },
+    );
+  }
 
   const agents = ctx.data.agents.slice(0, 4);
   let x = margin;
   let y = height - 120;
-  const cardW = landscape ? (width - margin * 2) / 4 - 8 : (width - margin * 2) / 2 - 8;
+  const cardW = landscape
+    ? (width - margin * 2) / 4 - 8
+    : (width - margin * 2) / 2 - 8;
 
   for (const agent of agents) {
     page.drawText(sanitizePdfText(agent.name), {
@@ -993,8 +1232,12 @@ export async function renderBrochurePdf(
     ink: rgb(0.12, 0.1, 0.11),
     muted: rgb(0.45, 0.4, 0.42),
     paper: rgb(0.98, 0.96, 0.93),
+    paperMuted: rgb(0.9, 0.88, 0.86),
     soft: rgb(0.94, 0.92, 0.9),
   };
+
+  const logoBytes = await fetchImageBytes(data.brand.logoUrl);
+  const logo = await embedImage(pdf, logoBytes);
 
   const ctx: RenderCtx = {
     pdf,
@@ -1003,7 +1246,9 @@ export async function renderBrochurePdf(
     font,
     fontBold,
     orientation: document.orientation,
+    templateId: document.templateId,
     imageCache: new Map(),
+    logo,
   };
 
   if (document.pages.length > 30) {

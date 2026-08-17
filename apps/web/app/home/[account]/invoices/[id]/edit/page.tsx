@@ -1,8 +1,9 @@
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import { PageBody } from '@kit/ui/page';
 
+import pathsConfig from '~/config/paths.config';
 import { loadAccountBrandResolved } from '~/lib/brand/account-brand';
 import { resolveWorkspaceTimezoneForAccount } from '~/lib/invoices/resolve-workspace-timezone';
 
@@ -49,9 +50,15 @@ async function InvoiceEditPage({ params }: InvoiceEditPageProps) {
   try {
     invoice = await getInvoice({ accountId, invoiceId: id });
   } catch {
-    notFound();
+    redirect(
+      pathsConfig.app.accountInvoices.replace('[account]', accountSlug),
+    );
   }
-  if (!invoice) notFound();
+  if (!invoice) {
+    redirect(
+      pathsConfig.app.accountInvoices.replace('[account]', accountSlug),
+    );
+  }
 
   const supabase = getSupabaseServerClient();
   const authUser = await supabase.auth.getUser();
