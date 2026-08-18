@@ -2,8 +2,17 @@
 
 import { useCallback, useState, useTransition } from 'react';
 
-import { Plus } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
 
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
 import { Input } from '@kit/ui/input';
 import {
@@ -17,7 +26,12 @@ import { toast } from '@kit/ui/sonner';
 
 import { getErrorMessage } from '../../_lib/error-message';
 import type { JobBoardTask } from '../../_lib/schema/project-phases.schema';
-import { createJobTask, updateJobTask } from '../../_lib/server/server-actions';
+import {
+  createJobTask,
+  deleteJobTask,
+  updateJobTask,
+} from '../../_lib/server/server-actions';
+import { AddProjectTaskForm } from '../job-project/add-project-task-form';
 import {
   PRIORITY_DOT,
   TASK_STATUS_LABELS,
@@ -51,7 +65,7 @@ export function PhaseTasksPanel({
   canEdit: boolean;
 }) {
   const [tasks, setTasks] = useState(initialTasks);
-  const [draftTitle, setDraftTitle] = useState('');
+  const [pendingDelete, setPendingDelete] = useState<JobBoardTask | null>(null);
   const [, startTransition] = useTransition();
 
   const patchTask = useCallback(
@@ -91,10 +105,7 @@ export function PhaseTasksPanel({
     [accountId, accountSlug, jobId, startTransition],
   );
 
-  const addTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    const title = draftTitle.trim();
-    if (!title) return;
+  const addTask = (title: string, subtaskTitles: string[]) => {
     startTransition(async () => {
       try {
         const task = await createJobTask({
@@ -104,14 +115,41 @@ export function PhaseTasksPanel({
           phaseId,
           title,
           priority: 'medium',
+          subtaskTitles,
         });
-        setTasks((prev) => [...prev, task as JobBoardTask]);
-        setDraftTitle('');
+        const created = task as JobBoardTask;
+        setTasks((prev) => [...prev, created, ...(created.subtasks ?? [])]);
       } catch (err) {
         toast.error(getErrorMessage(err));
       }
     });
   };
+
+  const removeTask = (task: JobBoardTask) => {
+    startTransition(async () => {
+      try {
+        await deleteJobTask({
+          accountId,
+          accountSlug,
+          jobId,
+          taskId: task.id,
+        });
+        setTasks((prev) =>
+          prev.filter(
+            (item) => item.id !== task.id && item.parent_task_id !== task.id,
+          ),
+        );
+        setPendingDelete(null);
+        toast.success('Task deleted');
+      } catch (err) {
+        toast.error(getErrorMessage(err));
+      }
+    });
+  };
+
+  const rootTasks = tasks.filter((task) => !task.parent_task_id);
+  const childTasks = (parentId: string) =>
+    tasks.filter((task) => task.parent_task_id === parentId);
 
   return (
     <section className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-4">
@@ -119,16 +157,16 @@ export function PhaseTasksPanel({
         Tasks
       </h2>
       <p className="mt-0.5 text-xs text-[var(--workspace-shell-text-muted)]">
-        {tasks.length} in this phase
+        {rootTasks.length} in this phase
       </p>
 
       <div className="mt-3 space-y-2">
-        {tasks.length === 0 && (
+        {rootTasks.length === 0 && (
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
             No tasks yet.
           </p>
         )}
-        {tasks.map((task) => (
+        {rootTasks.map((task) => (
           <div
             key={task.id}
             className="rounded-lg border border-[color:var(--workspace-shell-border)]/80 bg-[var(--workspace-shell-panel)]/40 p-2.5"
@@ -152,6 +190,18 @@ export function PhaseTasksPanel({
                   {task.title}
                 </span>
               )}
+              {canEdit ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  className="h-8 w-8 shrink-0 p-0 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
+                  aria-label={`Delete ${task.title}`}
+                  onClick={() => setPendingDelete(task)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              ) : null}
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {canEdit ? (
@@ -190,29 +240,72 @@ export function PhaseTasksPanel({
                 </span>
               )}
             </div>
+            {childTasks(task.id).length > 0 ? (
+              <ul className="mt-2 space-y-1 border-t border-[color:var(--workspace-shell-border)]/60 pt-2">
+                {childTasks(task.id).map((subtask) => (
+                  <li
+                    key={subtask.id}
+                    className="flex items-center justify-between gap-2 pl-4 text-xs text-[var(--workspace-shell-text-muted)]"
+                  >
+                    <span>
+                      {subtask.status === 'done' ? '✓ ' : '○ '}
+                      {subtask.title}
+                    </span>
+                    {canEdit ? (
+                      <button
+                        type="button"
+                        className="hover:text-red-400"
+                        aria-label={`Delete ${subtask.title}`}
+                        onClick={() => setPendingDelete(subtask)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </button>
+                    ) : null}
+                  </li>
+                ))}
+              </ul>
+            ) : null}
           </div>
         ))}
       </div>
 
       {canEdit && (
-        <form onSubmit={addTask} className="mt-3 flex gap-1">
-          <Input
-            value={draftTitle}
-            onChange={(e) => setDraftTitle(e.target.value)}
-            placeholder="Add task…"
-            className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
-          />
-          <Button
-            type="submit"
-            size="sm"
-            variant="ghost"
-            className="h-8 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-            disabled={!draftTitle.trim()}
-          >
-            <Plus className="h-4 w-4" />
-          </Button>
-        </form>
+        <div className="mt-3">
+          <AddProjectTaskForm onSubmit={addTask} />
+        </div>
       )}
+
+      <AlertDialog
+        open={Boolean(pendingDelete)}
+        onOpenChange={(open) => {
+          if (!open) setPendingDelete(null);
+        }}
+      >
+        <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+          <AlertDialogHeader>
+            <AlertDialogTitle>
+              Delete “{pendingDelete?.title}”?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              {pendingDelete && childTasks(pendingDelete.id).length > 0
+                ? `This will also delete ${childTasks(pendingDelete.id).length} subtask${childTasks(pendingDelete.id).length === 1 ? '' : 's'}. This can’t be undone.`
+                : 'This can’t be undone.'}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2 sm:gap-0">
+            <AlertDialogCancel className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
+              Cancel
+            </AlertDialogCancel>
+            <Button
+              variant="destructive"
+              className="bg-red-600 hover:bg-red-500"
+              onClick={() => pendingDelete && removeTask(pendingDelete)}
+            >
+              Delete task
+            </Button>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </section>
   );
 }

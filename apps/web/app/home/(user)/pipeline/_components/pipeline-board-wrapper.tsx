@@ -1,15 +1,18 @@
 'use client';
 
+import { useState } from 'react';
+
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 
-import pathsConfig from '~/config/paths.config';
+import { toast } from '@kit/ui/sonner';
 
 import type {
   PipelineData,
   PipelineDeal,
 } from '../../_lib/server/pipeline.loader';
-import { convertWonDealToProject, getDefaultAccountSlug } from '../actions';
+import { getDealWorkspace } from '../actions';
+import { WonDealFollowUp } from './won-deal-follow-up';
 
 const PipelineBoard = dynamic(
   () => import('./pipeline-board').then((mod) => mod.PipelineBoard),
@@ -20,35 +23,42 @@ type Props = { initialData: PipelineData };
 
 export function PipelineBoardWrapper({ initialData }: Props) {
   const router = useRouter();
+  const [wonDeal, setWonDeal] = useState<PipelineDeal | null>(null);
+  const [wonWorkspace, setWonWorkspace] = useState<{
+    accountId: string;
+    accountSlug: string;
+  } | null>(null);
 
   const handleDealWon = async (deal: PipelineDeal) => {
-    // Opportunity for an existing client → spin up a delivery project in its workspace.
-    if (deal.clientId) {
-      const converted = await convertWonDealToProject(deal.id);
-      if (converted.kind === 'project') {
-        const projectUrl = `${pathsConfig.app.accountProjects.replace('[account]', converted.accountSlug)}/${converted.projectId}`;
-        router.push(projectUrl);
-        return;
-      }
-      if (converted.kind === 'error') {
-        return;
-      }
+    const workspace = await getDealWorkspace(deal.id);
+    if (!workspace) {
+      toast.error('Could not find a workspace for this lead.');
+      return;
     }
 
-    const result = await getDefaultAccountSlug();
-    if (!result) return;
-    const params = new URLSearchParams({
-      create: 'client',
-      first_name: deal.contactName || '',
-      company_name: deal.companyName || '',
-    });
-    const url = `${pathsConfig.app.accountClients.replace('[account]', result.accountSlug)}?${params.toString()}`;
-    router.push(url);
+    setWonWorkspace(workspace);
+    setWonDeal(deal);
   };
 
   return (
     <div className="flex min-h-full min-w-0 flex-1 flex-col">
       <PipelineBoard initialData={initialData} onDealWon={handleDealWon} />
+      {wonWorkspace ? (
+        <WonDealFollowUp
+          deal={wonDeal}
+          accountId={wonWorkspace.accountId}
+          accountSlug={wonWorkspace.accountSlug}
+          onClose={() => {
+            setWonDeal(null);
+            setWonWorkspace(null);
+          }}
+          onCompleted={() => {
+            setWonDeal(null);
+            setWonWorkspace(null);
+            router.refresh();
+          }}
+        />
+      ) : null}
     </div>
   );
 }

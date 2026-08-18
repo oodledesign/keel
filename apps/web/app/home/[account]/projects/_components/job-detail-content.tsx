@@ -48,6 +48,7 @@ import type {
   DocListItem,
   LinkOption,
   NoteListItem,
+  SavedLinkListItem,
 } from '../../_lib/workspace-content/types';
 import { getErrorMessage } from '../_lib/error-message';
 import {
@@ -150,8 +151,10 @@ export function JobDetailContent({
   isContractorView,
   workspaceNotes,
   workspaceDocs,
+  workspaceLinks = [],
   notesTableAvailable,
   docsTableAvailable,
+  linksTableAvailable = true,
   linkOptions,
   defaultLink,
 }: {
@@ -165,8 +168,10 @@ export function JobDetailContent({
   isContractorView: boolean;
   workspaceNotes: NoteListItem[];
   workspaceDocs: DocListItem[];
+  workspaceLinks?: SavedLinkListItem[];
   notesTableAvailable: boolean;
   docsTableAvailable: boolean;
+  linksTableAvailable?: boolean;
   linkOptions: LinkOption[];
   defaultLink: LinkValue;
 }) {
@@ -183,11 +188,16 @@ export function JobDetailContent({
   const [docsContent, setDocsContent] = useState({
     notes: workspaceNotes,
     docs: workspaceDocs,
+    links: workspaceLinks,
     notesTableAvailable,
     docsTableAvailable,
+    linksTableAvailable,
     linkOptions,
     defaultLink,
-    loaded: workspaceNotes.length > 0 || workspaceDocs.length > 0,
+    loaded:
+      workspaceNotes.length > 0 ||
+      workspaceDocs.length > 0 ||
+      workspaceLinks.length > 0,
     loading: false,
   });
 
@@ -268,8 +278,10 @@ export function JobDetailContent({
         setDocsContent({
           notes: data.notes,
           docs: data.docs,
+          links: data.links,
           notesTableAvailable: data.notesTableAvailable,
           docsTableAvailable: data.docsTableAvailable,
+          linksTableAvailable: data.linksTableAvailable,
           linkOptions: data.linkOptions,
           defaultLink: data.defaultLink,
           loaded: true,
@@ -975,8 +987,10 @@ export function JobDetailContent({
                   accountSlug={accountSlug}
                   notes={docsContent.notes}
                   docs={docsContent.docs}
+                  links={docsContent.links}
                   tableAvailable={docsContent.notesTableAvailable}
                   docsTableAvailable={docsContent.docsTableAvailable}
+                  linksTableAvailable={docsContent.linksTableAvailable}
                   linkOptions={docsContent.linkOptions}
                   defaultLink={docsContent.defaultLink}
                   canEdit={canEditJobs}

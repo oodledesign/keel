@@ -8,6 +8,7 @@ import { requireUser } from '@kit/supabase/require-user';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { createTeamAccountsApi } from '@kit/team-accounts/api';
 
+import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import { queueBrainIndexSource } from '~/lib/brain/sync';
 import { Database } from '~/lib/database.types';
 import {
@@ -28,6 +29,7 @@ import {
   type ApplyPhaseTemplateInput,
   type CreateJobTaskInput,
   type CreatePhaseInput,
+  type DeleteJobTaskInput,
   type DeletePhaseInput,
   type EnsurePhasePageInput,
   type GetPhaseDetailInput,
@@ -98,7 +100,7 @@ const TASK_STATUSES = [
 ] as const;
 
 const JOB_BOARD_TASK_SELECT =
-  'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, assignee_contact_id, notes, links, note_refs' as const;
+  'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, assignee_contact_id, parent_task_id, notes, links, note_refs' as const;
 
 function normalizeTaskLinks(
   value: unknown,
@@ -133,6 +135,13 @@ function normalizeTaskNoteRefs(
   return refs;
 }
 
+function dueDateToYmd(value: Date | null | undefined): string | null {
+  if (!value || Number.isNaN(value.getTime()) || value.getTime() === 0) {
+    return null;
+  }
+  return value.toISOString().slice(0, 10);
+}
+
 function mapJobBoardTask(row: Record<string, unknown>): JobBoardTask {
   return {
     id: String(row.id),
@@ -145,6 +154,7 @@ function mapJobBoardTask(row: Record<string, unknown>): JobBoardTask {
     job_id: (row.project_id as string | null) ?? null,
     user_id: (row.user_id as string | null) ?? null,
     assignee_contact_id: (row.assignee_contact_id as string | null) ?? null,
+    parent_task_id: (row.parent_task_id as string | null) ?? null,
     notes: (row.notes as string | null) ?? null,
     links: normalizeTaskLinks(row.links),
     note_refs: normalizeTaskNoteRefs(row.note_refs),
@@ -578,6 +588,16 @@ class ProjectPhasesService {
       .single();
 
     if (error) this.throwErr(error);
+
+    const { error: cascadeErr } = await this.db
+      .from('tasks')
+      .update({ phase_id: input.phaseId })
+      .eq('parent_task_id', input.taskId)
+      .eq('project_id', input.jobId)
+      .eq('account_id', input.accountId);
+
+    if (cascadeErr) this.throwErr(cascadeErr);
+
     return mapJobBoardTask(data as Record<string, unknown>);
   }
 
@@ -640,7 +660,7 @@ class ProjectPhasesService {
       const fallback = await this.db
         .from('tasks')
         .select(
-          'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, notes',
+          'id, title, status, priority, due_date, sort_order, phase_id, project_id, user_id, parent_task_id, notes',
         )
         .eq('project_id', input.jobId)
         .order('sort_order', { ascending: true, nullsFirst: false })
@@ -984,6 +1004,20 @@ class ProjectPhasesService {
     }
 
     const assigneeUserId = input.assigneeUserId ?? user.id;
+    const dueDateYmd = dueDateToYmd(input.dueDate) ?? todayLocalYmd();
+    const parentTaskId = input.parentTaskId ?? null;
+
+    if (parentTaskId) {
+      const { data: parent, error: parentErr } = await this.db
+        .from('tasks')
+        .select('id, project_id')
+        .eq('id', parentTaskId)
+        .maybeSingle();
+      if (parentErr) this.throwErr(parentErr);
+      if (!parent || parent.project_id !== input.jobId) {
+        throw new Error('Parent task not found');
+      }
+    }
 
     const { data, error } = await this.db
       .from('tasks')
@@ -991,14 +1025,13 @@ class ProjectPhasesService {
         title: input.title.trim(),
         status: 'todo',
         priority: input.priority ?? 'medium',
-        due_date: input.dueDate
-          ? input.dueDate.toISOString().slice(0, 10)
-          : null,
+        due_date: dueDateYmd,
         user_id: assigneeUserId,
         project_id: input.jobId,
         phase_id: input.phaseId,
         account_id: input.accountId,
         client_id: (job.client_id as string | null) ?? null,
+        parent_task_id: parentTaskId,
         sort_order: sortOrder,
       })
       .select(JOB_BOARD_TASK_SELECT)
@@ -1006,17 +1039,53 @@ class ProjectPhasesService {
 
     if (error) this.throwErr(error);
 
-    await notifyJobTaskAssigned({
-      accountId: input.accountId,
-      accountSlug: input.accountSlug,
-      jobId: input.jobId,
-      jobTitle: ((job.title as string | null) ?? 'Project').trim() || 'Project',
-      taskTitle: (data.title as string) || input.title.trim(),
-      assigneeUserId,
-      actorUserId: user.id,
-    });
+    const created = mapJobBoardTask(data as Record<string, unknown>);
+    const subtaskTitles = parentTaskId
+      ? []
+      : (input.subtaskTitles ?? [])
+          .map((title) => title.trim())
+          .filter(Boolean);
 
-    return mapJobBoardTask(data as Record<string, unknown>);
+    if (subtaskTitles.length > 0) {
+      const subtaskRows = subtaskTitles.map((title, index) => ({
+        title,
+        status: 'todo' as const,
+        priority: input.priority ?? 'medium',
+        due_date: dueDateYmd,
+        user_id: assigneeUserId,
+        project_id: input.jobId,
+        phase_id: input.phaseId,
+        account_id: input.accountId,
+        client_id: (job.client_id as string | null) ?? null,
+        parent_task_id: created.id,
+        sort_order: index,
+      }));
+
+      const { data: subtaskData, error: subtaskErr } = await this.db
+        .from('tasks')
+        .insert(subtaskRows)
+        .select(JOB_BOARD_TASK_SELECT);
+
+      if (subtaskErr) this.throwErr(subtaskErr);
+      created.subtasks = (
+        (subtaskData ?? []) as Array<Record<string, unknown>>
+      ).map((row) => mapJobBoardTask(row));
+    }
+
+    if (!parentTaskId) {
+      await notifyJobTaskAssigned({
+        accountId: input.accountId,
+        accountSlug: input.accountSlug,
+        jobId: input.jobId,
+        jobTitle:
+          ((job.title as string | null) ?? 'Project').trim() || 'Project',
+        taskTitle: (data.title as string) || input.title.trim(),
+        assigneeUserId,
+        actorUserId: user.id,
+      });
+    }
+
+    return created;
   }
 
   async updateJobTask(input: UpdateJobTaskInput) {
@@ -1066,9 +1135,7 @@ class ProjectPhasesService {
       payload.assignee_contact_id = input.assigneeContactId;
     }
     if (input.dueDate !== undefined) {
-      payload.due_date = input.dueDate
-        ? input.dueDate.toISOString().slice(0, 10)
-        : null;
+      payload.due_date = dueDateToYmd(input.dueDate);
     }
     if (input.notes !== undefined) {
       payload.notes = input.notes?.trim() ? input.notes.trim() : null;
@@ -1146,6 +1213,34 @@ class ProjectPhasesService {
     }
 
     return mapJobBoardTask(data as Record<string, unknown>);
+  }
+
+  async deleteJobTask(input: DeleteJobTaskInput) {
+    await this.ensureUserAndPermission(input.accountId, 'jobs.edit');
+    await this.verifyJob(input.accountId, input.jobId);
+
+    const { data: task, error: taskErr } = await this.db
+      .from('tasks')
+      .select('id, project_id, phase_id')
+      .eq('id', input.taskId)
+      .eq('account_id', input.accountId)
+      .maybeSingle();
+
+    if (taskErr) this.throwErr(taskErr);
+    if (!task || task.project_id !== input.jobId) {
+      throw new Error('Task not found');
+    }
+
+    const { error } = await this.db
+      .from('tasks')
+      .delete()
+      .eq('id', input.taskId)
+      .eq('account_id', input.accountId)
+      .eq('project_id', input.jobId);
+
+    if (error) this.throwErr(error);
+
+    return { phaseId: (task.phase_id as string | null) ?? null };
   }
 
   async savePhasePageDoc(input: SavePhasePageDocInput) {
@@ -1480,7 +1575,7 @@ class ProjectPhasesService {
           title,
           status: 'todo' as const,
           priority: 'medium' as const,
-          due_date: null,
+          due_date: todayLocalYmd(),
           user_id: user.id,
           project_id: input.jobId,
           phase_id: inserted.id,

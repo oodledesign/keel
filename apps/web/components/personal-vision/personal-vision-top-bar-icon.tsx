@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 
-import { Sparkles } from 'lucide-react';
+import { Telescope } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@kit/ui/tooltip';
@@ -36,7 +36,7 @@ export function PersonalVisionTopBarIcon({ className }: Props) {
             href={pathsConfig.app.personalVision}
             aria-label="Personal Vision"
           >
-            <Sparkles className="h-4 w-4" />
+            <Telescope className="h-4 w-4" />
           </Link>
         </Button>
       </TooltipTrigger>

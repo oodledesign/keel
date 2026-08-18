@@ -32,6 +32,7 @@ import type {
   DocListItem,
   LinkOption,
   NoteListItem,
+  SavedLinkListItem,
   WorkspaceNotesVariant,
 } from '../../../_lib/workspace-content/types';
 import { PropertyFormModal } from '../../_components/property-form-modal';
@@ -48,8 +49,10 @@ interface PropertyDetailContentProps {
   accountSlug: string;
   workspaceNotes: NoteListItem[];
   workspaceDocs: DocListItem[];
+  workspaceLinks: SavedLinkListItem[];
   notesTableAvailable: boolean;
   docsTableAvailable: boolean;
+  linksTableAvailable: boolean;
   linkOptions: LinkOption[];
   defaultLink: LinkValue;
   notesVariant: WorkspaceNotesVariant;
@@ -121,8 +124,10 @@ export function PropertyDetailContent({
   accountSlug,
   workspaceNotes,
   workspaceDocs,
+  workspaceLinks,
   notesTableAvailable,
   docsTableAvailable,
+  linksTableAvailable,
   linkOptions,
   defaultLink,
   notesVariant,
@@ -442,8 +447,10 @@ export function PropertyDetailContent({
                 accountSlug={accountSlug}
                 notes={workspaceNotes}
                 docs={workspaceDocs}
+                links={workspaceLinks}
                 tableAvailable={notesTableAvailable}
                 docsTableAvailable={docsTableAvailable}
+                linksTableAvailable={linksTableAvailable}
                 linkOptions={linkOptions}
                 defaultLink={defaultLink}
                 variant={notesVariant}
@@ -467,8 +474,10 @@ export function PropertyDetailContent({
                   accountSlug={accountSlug}
                   notes={workspaceNotes}
                   docs={workspaceDocs}
+                  links={workspaceLinks}
                   tableAvailable={notesTableAvailable}
                   docsTableAvailable={docsTableAvailable}
+                  linksTableAvailable={linksTableAvailable}
                   linkOptions={linkOptions}
                   defaultLink={defaultLink}
                   variant={notesVariant}

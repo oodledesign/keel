@@ -59,6 +59,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
   const isPersonal = config.slug === 'personal';
   const isCommercial = config.slug === 'commercial-property';
   const isWork = config.slug === 'work';
+  const usesPlumHero = isCommercial || isWork;
   const usesGraduatedPricing = isCommercial || isWork;
   const primarySignup = buildPricingSignupUrl({
     profile: config.signupProfile,
@@ -73,13 +74,14 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
       config.pricingPlans.find((p) => p.priceGbp > 0)?.seats,
   });
   const pricingComparison = getSegmentPricingComparison(config.slug);
-  const pricingLink = isPersonal || usesGraduatedPricing ? '#pricing' : '/pricing';
+  const pricingLink =
+    isPersonal || usesGraduatedPricing ? '#pricing' : '/pricing';
   const includedFeatures = config.features.slice(0, 4);
 
   return (
     <main className="marketing-shell relative overflow-hidden">
       {/* Hero */}
-      {isCommercial ? (
+      {usesPlumHero ? (
         <section className="marketing-section-plum marketing-section-plum-hero -mb-4">
           <div className="relative mx-auto w-full max-w-7xl px-6 pt-24 pb-16 md:pt-28 md:pb-20">
             <div className="grid items-center gap-12 lg:grid-cols-[0.95fr,1.05fr] lg:gap-14">
@@ -130,18 +132,62 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 </div>
               </div>
 
-              <div className="relative overflow-hidden rounded-3xl border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-900)] shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
-                <Image
-                  src="/brand/marketing/commercial-agency-home.jpg"
-                  alt="Commercial Property agency home — unactioned enquiries, stock on market, recent disposals, and quick links"
-                  width={2880}
-                  height={1340}
-                  priority
-                  className="h-auto w-full object-contain object-left-top"
-                  sizes="(max-width: 1024px) 100vw, 52vw"
-                />
-              </div>
+              {isCommercial ? (
+                <div className="relative overflow-hidden rounded-3xl border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-900)] shadow-[0_24px_60px_rgba(0,0,0,0.35)]">
+                  <Image
+                    src="/brand/marketing/commercial-agency-home.jpg"
+                    alt="Commercial Property agency home — unactioned enquiries, stock on market, recent disposals, and quick links"
+                    width={2880}
+                    height={1340}
+                    priority
+                    className="h-auto w-full object-contain object-left-top"
+                    sizes="(max-width: 1024px) 100vw, 52vw"
+                  />
+                </div>
+              ) : (
+                <div className="relative overflow-hidden rounded-3xl border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-900)] p-5 shadow-[0_24px_60px_rgba(0,0,0,0.35)] sm:p-6">
+                  <p className="text-xs tracking-[0.12em] text-[var(--ozer-text-on-dark-muted)] uppercase">
+                    Included in {config.hero.eyebrow.toLowerCase()}
+                  </p>
+                  <ul className="mt-4 space-y-3">
+                    {includedFeatures.map((feature) => (
+                      <li
+                        key={feature.title}
+                        className="flex items-start gap-3 rounded-xl border border-[color:var(--ozer-border-on-light)] bg-[var(--ozer-cream-50)] px-3 py-3"
+                      >
+                        <feature.icon className="mt-0.5 h-4 w-4 shrink-0 text-[var(--ozer-accent)]" />
+                        <div>
+                          <p className="text-sm font-medium text-[var(--ozer-text-on-light)]">
+                            {feature.title}
+                          </p>
+                          <p className="mt-0.5 text-xs leading-relaxed text-[var(--ozer-text-on-light-muted)]">
+                            {feature.description}
+                          </p>
+                        </div>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
             </div>
+
+            {isWork ? (
+              <div className="mt-12 grid gap-4 sm:grid-cols-3">
+                {config.stats.map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="rounded-2xl border border-[color:var(--ozer-border-on-dark)] bg-[var(--ozer-on-dark-alpha-08)] px-5 py-4"
+                  >
+                    <p className="text-2xl font-semibold text-[var(--ozer-text-on-dark)]">
+                      {stat.value}
+                    </p>
+                    <p className="mt-1 text-xs tracking-[0.1em] text-[var(--ozer-text-on-dark-muted)] uppercase">
+                      {stat.label}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
           </div>
         </section>
       ) : (
@@ -255,16 +301,8 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         </section>
       )}
 
-      {!isCommercial ? (
-        <InterconnectedWorkspacesSection
-          variant={
-            config.slug === 'personal'
-              ? 'personal'
-              : config.slug === 'work'
-                ? 'work'
-                : 'default'
-          }
-        />
+      {isPersonal ? (
+        <InterconnectedWorkspacesSection variant="personal" />
       ) : null}
 
       {/* Features */}
@@ -272,17 +310,17 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
         id="features"
         className={cn(
           'relative pb-20',
-          isCommercial
+          usesPlumHero
             ? 'z-10 bg-[var(--workspace-shell-bg)] pt-20'
             : 'mx-auto w-full max-w-7xl px-6 pt-4',
         )}
         aria-labelledby="features-heading"
       >
-        <div className={cn(isCommercial && 'mx-auto w-full max-w-7xl px-6')}>
+        <div className={cn(usesPlumHero && 'mx-auto w-full max-w-7xl px-6')}>
           <div
             className={cn(
               'mb-10 max-w-2xl',
-              isCommercial && 'mx-auto text-center',
+              usesPlumHero && 'mx-auto text-center',
             )}
           >
             <h2
@@ -330,21 +368,25 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
 
       {isCommercial ? <CommercialSpotlightSections config={config} /> : null}
 
+      {isWork ? <InterconnectedWorkspacesSection variant="work" /> : null}
+
       {!isCommercial ? (
         <section
           className={cn('border-y py-20', marketingSectionMuted)}
           aria-labelledby="how-it-works-heading"
         >
           <div className="mx-auto w-full max-w-7xl px-6">
-            <h2
-              id="how-it-works-heading"
-              className={cn(
-                marketingSectionHeading,
-                'text-[var(--workspace-shell-text)]',
-              )}
-            >
-              How it works
-            </h2>
+            <div className={cn(isWork && 'mx-auto max-w-2xl text-center')}>
+              <h2
+                id="how-it-works-heading"
+                className={cn(
+                  marketingSectionHeading,
+                  'text-[var(--workspace-shell-text)]',
+                )}
+              >
+                How it works
+              </h2>
+            </div>
             <ol className="mt-10 grid gap-5 md:grid-cols-3 md:gap-6">
               {config.steps.map((step, index) => (
                 <li
@@ -441,31 +483,43 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
 
       <MarketingFaqsSection
         faqs={config.faqs}
-        tone={isCommercial ? 'light' : 'muted'}
+        tone={usesPlumHero ? 'light' : 'muted'}
         headingId="faq-heading"
-        headingAlign={isCommercial ? 'center' : 'start'}
+        headingAlign={usesPlumHero ? 'center' : 'start'}
         sectionClassName="marketing-section-muted"
       />
 
       {/* Related + CTA */}
       <section
         className={cn(
-          isCommercial
+          usesPlumHero
             ? 'marketing-section-plum py-20'
             : 'relative mx-auto w-full max-w-7xl px-6 py-20',
         )}
       >
         <div
           className={cn(
-            isCommercial && 'relative mx-auto w-full max-w-7xl px-6',
+            usesPlumHero && 'relative mx-auto w-full max-w-7xl px-6',
           )}
         >
           {!isCommercial && config.relatedSegments.length > 0 ? (
             <>
-              <h2 className="font-heading text-2xl font-semibold text-[var(--workspace-shell-text)]">
+              <h2
+                className={cn(
+                  'font-heading text-2xl font-semibold',
+                  usesPlumHero
+                    ? 'text-[var(--ozer-text-on-dark)]'
+                    : 'text-[var(--workspace-shell-text)]',
+                )}
+              >
                 More Ozer workspaces — all connected
               </h2>
-              <p className={`mt-2 max-w-2xl text-sm ${marketingMutedText}`}>
+              <p
+                className={cn(
+                  'mt-2 max-w-2xl text-sm',
+                  usesPlumHero ? marketingSectionDarkMuted : marketingMutedText,
+                )}
+              >
                 Add business, property, or community spaces anytime. Your
                 personal home keeps tasks, planner, and shortcuts unified across
                 every workspace.
@@ -503,19 +557,19 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
           <div
             className={cn(
               'rounded-2xl px-8 py-12 text-center',
-              isCommercial
+              usesPlumHero
                 ? 'border border-[color:var(--ozer-border-on-dark-strong)] bg-[var(--ozer-plum-900)]'
                 : cn(
                     'border border-[color:var(--workspace-shell-border)]',
                     marketingFeatureCard,
-                    config.relatedSegments.length > 0 ? 'mt-16' : '',
                   ),
+              !isCommercial && config.relatedSegments.length > 0 && 'mt-16',
             )}
           >
             <h2
               className={cn(
                 marketingSectionHeading,
-                isCommercial
+                usesPlumHero
                   ? 'text-[var(--ozer-text-on-dark)]'
                   : 'text-[var(--workspace-shell-text)]',
               )}
@@ -529,7 +583,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             <p
               className={cn(
                 'mx-auto mt-3 max-w-xl',
-                isCommercial ? marketingSectionDarkMuted : marketingBodyText,
+                usesPlumHero ? marketingSectionDarkMuted : marketingBodyText,
               )}
             >
               {isPersonal
@@ -548,7 +602,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
             <p
               className={cn(
                 'mt-4 text-xs',
-                isCommercial ? marketingSectionDarkMuted : marketingMutedText,
+                usesPlumHero ? marketingSectionDarkMuted : marketingMutedText,
               )}
             >
               Already have an account?{' '}
@@ -556,7 +610,7 @@ export function SegmentLandingPage({ config }: SegmentLandingPageProps) {
                 href={pathsConfig.auth.signIn}
                 className={cn(
                   'underline',
-                  isCommercial
+                  usesPlumHero
                     ? 'hover:text-[var(--ozer-text-on-dark)]'
                     : 'hover:text-[var(--workspace-shell-text)]',
                 )}

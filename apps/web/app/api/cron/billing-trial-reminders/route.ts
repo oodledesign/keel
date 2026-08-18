@@ -1,6 +1,7 @@
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { runBillingTrialLifecycleCron } from '~/lib/billing/billing-lifecycle-cron';
+import { runBillingRenewalNoticeCron } from '~/lib/billing/renewal-notices';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
 export const runtime = 'nodejs';
@@ -23,8 +24,9 @@ export async function GET(request: Request) {
 
   try {
     const admin = getSupabaseServerAdminClient();
-    const result = await runBillingTrialLifecycleCron(admin);
-    return jsonOk(result);
+    const trial = await runBillingTrialLifecycleCron(admin);
+    const renewal = await runBillingRenewalNoticeCron(admin);
+    return jsonOk({ trial, renewal });
   } catch (err) {
     return jsonErr(
       'INTERNAL_ERROR',

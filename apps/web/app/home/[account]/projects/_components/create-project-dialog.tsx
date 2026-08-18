@@ -56,6 +56,13 @@ const TYPE_ICONS = {
   campaign: LayoutGrid,
 } as const;
 
+type ProjectCreateDefaults = {
+  name?: string;
+  clientId?: string;
+  description?: string;
+  valueGbp?: string;
+};
+
 type Props = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -66,6 +73,10 @@ type Props = {
   defaultType?: ProjectType;
   personalScope?: boolean;
   projectDetailPathBuilder?: (id: string) => string;
+  defaults?: ProjectCreateDefaults;
+  hideTypePicker?: boolean;
+  dialogTitle?: string;
+  dialogDescription?: string;
 };
 
 export function CreateProjectDialog({
@@ -78,6 +89,10 @@ export function CreateProjectDialog({
   defaultType = 'delivery',
   personalScope = false,
   projectDetailPathBuilder,
+  defaults,
+  hideTypePicker = false,
+  dialogTitle: dialogTitleOverride,
+  dialogDescription: dialogDescriptionOverride,
 }: Props) {
   const router = useRouter();
   const isMaintenance = uiVariant === 'maintenance';
@@ -114,13 +129,24 @@ export function CreateProjectDialog({
     setIsPhased(false);
     setValuePence('');
     setCampaignTemplate('blank');
-    setProjectType(isMaintenance || isSimple ? 'delivery' : defaultType);
+    setProjectType(
+      isMaintenance || isSimple || hideTypePicker ? 'delivery' : defaultType,
+    );
   };
 
   useEffect(() => {
     if (!open) return;
-    setProjectType(isMaintenance || isSimple ? 'delivery' : defaultType);
-  }, [open, defaultType, isMaintenance, isSimple]);
+    setProjectType(
+      isMaintenance || isSimple || hideTypePicker ? 'delivery' : defaultType,
+    );
+    if (!defaults) return;
+    setName(defaults.name ?? '');
+    setClientId(defaults.clientId ?? '');
+    setDescription(defaults.description ?? '');
+    setValuePence(defaults.valueGbp ?? '');
+    // Apply prefills once when the dialog opens — not on every parent re-render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- open-only
+  }, [open]);
 
   useEffect(() => {
     if (!open || !accountId || projectType !== 'delivery' || isSimple) return;
@@ -213,11 +239,20 @@ export function CreateProjectDialog({
       toast.success(
         isMaintenance ? 'Maintenance job created' : 'Project created',
       );
+
+      const shouldOpenDetail =
+        Boolean(job?.id) &&
+        (isSimple ||
+          personalScope ||
+          Boolean(projectDetailPathBuilder) ||
+          hideTypePicker);
+
+      if (shouldOpenDetail && job?.id) {
+        router.push(resolveDetailPath(job.id));
+      }
       handleOpenChange(false);
       onSuccess();
-
-      if (job?.id && (isSimple || personalScope || projectDetailPathBuilder)) {
-        router.push(resolveDetailPath(job.id));
+      if (shouldOpenDetail) {
         router.refresh();
       }
     } catch (err) {
@@ -227,14 +262,16 @@ export function CreateProjectDialog({
     }
   };
 
-  const dialogTitle = isMaintenance
-    ? 'Create maintenance job'
-    : 'Create project';
-  const dialogDescription = isMaintenance
-    ? 'Track phased maintenance work for a client with tasks and timeline.'
-    : isSimple
-      ? 'Name a project for DIY, parties, holidays, or anything else you are planning.'
-      : 'Choose a delivery project or a multi-client campaign tracker, then fill in the details.';
+  const dialogTitle =
+    dialogTitleOverride ??
+    (isMaintenance ? 'Create maintenance job' : 'Create project');
+  const dialogDescription =
+    dialogDescriptionOverride ??
+    (isMaintenance
+      ? 'Track phased maintenance work for a client with tasks and timeline.'
+      : isSimple
+        ? 'Name a project for DIY, parties, holidays, or anything else you are planning.'
+        : 'Choose a delivery project or a multi-client campaign tracker, then fill in the details.');
 
   const submitLabel =
     projectType === 'campaign'
@@ -257,7 +294,7 @@ export function CreateProjectDialog({
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-5">
-          {!isMaintenance && !isSimple ? (
+          {!isMaintenance && !isSimple && !hideTypePicker ? (
             <div className="space-y-2">
               <Label className="text-xs text-[var(--workspace-shell-text-muted)]">
                 Project type

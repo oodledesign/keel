@@ -102,11 +102,12 @@ The authoritative register, kept current, is published on the Trust Centre. As a
 | Supabase / AWS | Database, auth, storage | Workspace and account data | EU West (Ireland) | Not a restricted transfer |
 | Stripe | Billing and Connect payments | Billing identifiers, subscription status | US | Stripe Data Transfers Addendum (UK IDTA; EU-US DPF incl. UK Extension) |
 | Anthropic | AI language model features | Workspace/email/transcript text prompts | US | DPA with EU SCCs and UK Addendum; EU-US DPF |
-| Google (Gemini API) | High-volume AI (email triage/extract and other Flash-Lite routes) | Workspace/email text prompts | US/global | Paid Gemini API under Google Data Processing Addendum (EU SCCs and UK Addendum); EU-US DPF (Google LLC). Free AI Studio tier is not used for customer personal data. |
+| Google (Gemini Flash / Flash-Lite) | High-volume AI (email triage/extract and other Flash-Lite routes) | Workspace/email text prompts | US/global | Paid Gemini API under Google Data Processing Addendum (EU SCCs and UK Addendum); EU-US DPF (Google LLC). Free AI Studio tier is not used for customer personal data. |
 | Google Workspace APIs | Gmail, Calendar, Workspace directory | Mailbox, calendar, directory data | US/global | Google Data Processing Terms (SCCs and UK Addendum) |
 | Microsoft | Signatures directory sync | Staff profile and photo data | US/global | Microsoft Products and Services DPA (SCCs and UK Addendum) |
 | ZeptoMail (Zoho) | Transactional email | Recipient, subject, body | EU data centre | Zoho DPA with standard contractual clauses |
 | Bunny.net (BunnyWay d.o.o.) | Video hosting | Media files, video metadata | Slovenia (EU) | Not a restricted transfer; DPA in place |
+| Mapbox | Commercial listing maps and address geocoding | Addresses and map coordinates | US/global | Mapbox Data Processing Agreement (SCCs / UK Addendum as applicable) |
 | Voyage AI | Semantic search embeddings | Text excerpts, search queries | US | Voyage AI DPA with EU SCCs and UK ICO Addendum |
 | PostHog, Inc. | Product analytics, feature flags, error/session diagnostics, session replay | Usage events, device/browser data, user/account identifiers; UI session recordings (inputs masked; 30-day retention) | EU (PostHog EU Cloud) | Not a restricted transfer for EU Cloud hosting; PostHog DPA applies |
 

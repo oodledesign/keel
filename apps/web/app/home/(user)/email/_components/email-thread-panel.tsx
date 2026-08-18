@@ -73,6 +73,28 @@ function formatDueDate(value: string | null) {
   });
 }
 
+function ActionItemStatusPill({ status }: { status: string }) {
+  const isAccepted = status === 'accepted';
+  const isDismissed = status === 'dismissed';
+
+  return (
+    <span
+      className={cn(
+        'shrink-0 rounded-full px-2 py-0.5 text-[10px] font-medium tracking-wide uppercase',
+        isAccepted &&
+          'bg-emerald-100 text-emerald-900 ring-1 ring-inset ring-emerald-200/80 dark:bg-emerald-500/15 dark:text-emerald-100 dark:ring-emerald-500/30',
+        isDismissed &&
+          'bg-zinc-100 text-zinc-600 ring-1 ring-inset ring-zinc-200/80 dark:bg-zinc-500/15 dark:text-zinc-300 dark:ring-zinc-500/30',
+        !isAccepted &&
+          !isDismissed &&
+          'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text-muted)]',
+      )}
+    >
+      {isAccepted ? 'Accepted' : isDismissed ? 'Dismissed' : status}
+    </span>
+  );
+}
+
 type Props = {
   threadId: string | null;
   connected: boolean;
@@ -643,19 +665,26 @@ export function EmailThreadPanel({
                   Resolved
                 </p>
                 <ul className="space-y-2">
-                  {resolvedItems.map((item) => (
-                    <li
-                      key={item.id}
-                      className="rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2 text-sm text-[var(--workspace-shell-text-muted)]"
-                    >
-                      <span className="text-[var(--workspace-shell-text-muted)]">
-                        {item.title}
-                      </span>
-                      <span className="ml-2 text-xs tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-                        {item.status}
-                      </span>
-                    </li>
-                  ))}
+                  {resolvedItems.map((item) => {
+                    const dismissed = item.status === 'dismissed';
+
+                    return (
+                      <li
+                        key={item.id}
+                        className="flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-2"
+                      >
+                        <span
+                          className={cn(
+                            'min-w-0 flex-1 text-sm text-[var(--workspace-shell-text-muted)]',
+                            dismissed && 'line-through',
+                          )}
+                        >
+                          {item.title}
+                        </span>
+                        <ActionItemStatusPill status={item.status} />
+                      </li>
+                    );
+                  })}
                 </ul>
               </div>
             ) : null}

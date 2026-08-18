@@ -7,6 +7,23 @@ import { z } from 'zod';
 import { getLogger } from '@kit/shared/logger';
 import { Database } from '@kit/supabase/database';
 
+type PrepareAccountStoragePurgeClient = {
+  rpc: (
+    fn: 'prepare_account_storage_purge',
+    args: {
+      target_account_id: string;
+      target_email: string | null;
+      target_name: string | null;
+    },
+  ) => PromiseLike<{ error: { message: string } | null }>;
+};
+
+function prepareAccountStoragePurgeClient(
+  admin: SupabaseClient<Database>,
+): PrepareAccountStoragePurgeClient {
+  return admin as unknown as PrepareAccountStoragePurgeClient;
+}
+
 export function createDeletePersonalAccountService() {
   return new DeletePersonalAccountService();
 }
@@ -46,6 +63,30 @@ class DeletePersonalAccountService {
       ctx,
       'User requested to delete their personal account. Processing...',
     );
+
+    // Snapshot owner email before deleteUser — auth.users is gone when the
+    // accounts trigger runs, and we still need 14-day / 3-day file-wipe emails.
+    try {
+      const { error: snapshotError } = await prepareAccountStoragePurgeClient(
+        params.adminClient,
+      ).rpc('prepare_account_storage_purge', {
+        target_account_id: userId,
+        target_email: params.account.email,
+        target_name: null,
+      });
+
+      if (snapshotError) {
+        logger.warn(
+          { ...ctx, error: snapshotError },
+          'Could not snapshot storage-purge notice email before account delete',
+        );
+      }
+    } catch (error) {
+      logger.warn(
+        { ...ctx, error },
+        'Could not snapshot storage-purge notice email before account delete',
+      );
+    }
 
     // execute the deletion of the user
     try {
@@ -112,9 +153,17 @@ class DeletePersonalAccountService {
     const { getMailer } = await import('@kit/mailers');
 
     const mailer = await getMailer();
+    const purgeDate = new Date(
+      Date.now() + 30 * 24 * 60 * 60 * 1000,
+    ).toLocaleDateString('en-GB', {
+      day: 'numeric',
+      month: 'long',
+      year: 'numeric',
+    });
 
     const { html, subject } = await renderAccountDeleteEmail({
       productName: emailSettings.productName,
+      purgeDate,
     });
 
     await mailer.sendEmail({

@@ -243,15 +243,10 @@ function businessPricingCards(): SegmentPricingCard[] {
       priceLabel: isSolo
         ? `${formatGbp(unitGbp)}/mo`
         : `${formatGbp(unitGbp)} ${thenLabel}`,
-      priceCaption: isSolo
-        ? seat1!.bandLabel
-        : undefined,
+      priceCaption: isSolo ? seat1!.bandLabel : undefined,
       priceExample: isSolo
         ? undefined
-        : formatBusinessGraduatedWorkedExample(
-            tier.billableSeats,
-            formatGbp,
-          ),
+        : formatBusinessGraduatedWorkedExample(tier.billableSeats, formatGbp),
       features,
       highlighted: tier.highlighted,
       badge: tier.highlighted ? 'Popular' : undefined,
@@ -680,29 +675,6 @@ export const SEGMENT_LANDING_PAGES: Record<SegmentSlug, SegmentLandingConfig> =
         {
           name: 'Property Hive',
           logoSrc: '/brand/integrations/property-hive.png',
-        },
-      ],
-      testimonials: [
-        {
-          quote:
-            'We finally stopped living in spreadsheets for instructions. Pipeline stages and interest matching mean the desk actually knows what’s live.',
-          name: 'Sarah Mitchell',
-          role: 'Partner',
-          firm: 'Northshore Commercial',
-        },
-        {
-          quote:
-            'Solo pricing with portals included was the unlock. I publish to Rightmove and EACH without stepping into a multi-seat plan I don’t need yet.',
-          name: 'James Okonkwo',
-          role: 'Principal',
-          firm: 'Okonkwo Agency',
-        },
-        {
-          quote:
-            'The online brochure link gets in front of landlords faster than exporting another PDF. Brand colours come with us automatically.',
-          name: 'Ellie Grant',
-          role: 'Head of Agency',
-          firm: 'Grant & Cole',
         },
       ],
       faqs: [

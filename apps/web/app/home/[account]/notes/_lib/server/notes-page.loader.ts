@@ -18,6 +18,7 @@ import {
   linkOptionsForProfile,
   loadWorkspaceLinkOptions,
 } from '../../../_lib/workspace-content/link-options.loader';
+import { loadAccountLinks } from '../../../_lib/workspace-content/links-loader';
 import { loadAccountNoteCategories } from '../../../_lib/workspace-content/note-categories.loader';
 import { loadAccountNoteFolders } from '../../../_lib/workspace-content/note-folders.loader';
 import { loadAccountNotes } from '../../../_lib/workspace-content/notes-loader';
@@ -44,12 +45,14 @@ export async function loadNotesPageData(accountSlug: string) {
   const [
     { notes, tableAvailable },
     docsResult,
+    linksResult,
     linkOpts,
     categoryResult,
     foldersResult,
   ] = await Promise.all([
     loadAccountNotes(accountId),
     loadAccountDocs(accountId),
+    loadAccountLinks(accountId),
     loadWorkspaceLinkOptions(accountId, profile),
     loadAccountNoteCategories(accountId),
     loadAccountNoteFolders(accountId),
@@ -62,8 +65,10 @@ export async function loadNotesPageData(accountSlug: string) {
     folders: foldersResult.folders,
     foldersAvailable: foldersResult.tableAvailable,
     docs: docsResult.docs,
+    links: linksResult.links,
     tableAvailable,
     docsTableAvailable: docsResult.tableAvailable,
+    linksTableAvailable: linksResult.tableAvailable,
     variant: notesVariantFromProfile(profile),
     linkOptions: linkOptionsForProfile(linkOpts, profile),
     customCategories: categoryResult.categories.map((c) => ({

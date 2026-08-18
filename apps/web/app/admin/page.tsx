@@ -6,9 +6,9 @@ import { OzerAdminDashboard } from '~/admin/_components/ozer-admin-dashboard';
 function AdminPage() {
   return (
     <>
-      <PageHeader description={`Super Admin`} />
+      <PageHeader className="px-4" description={`Super Admin`} />
 
-      <PageBody>
+      <PageBody className="px-4">
         <OzerAdminDashboard />
       </PageBody>
     </>

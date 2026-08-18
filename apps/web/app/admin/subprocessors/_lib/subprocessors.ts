@@ -63,7 +63,8 @@ export const ADMIN_SUBPROCESSORS: AdminSubprocessor[] = [
   {
     id: 'anthropic',
     name: 'Anthropic',
-    purpose: 'LLM features (drafts, richer analysis, Rankly AI, Sonnet/Haiku paths)',
+    purpose:
+      'LLM features (drafts, richer analysis, Rankly AI, Sonnet/Haiku paths)',
     category: 'AI',
     href: 'https://www.anthropic.com',
     logoDomain: 'anthropic.com',
@@ -73,7 +74,7 @@ export const ADMIN_SUBPROCESSORS: AdminSubprocessor[] = [
     id: 'google-gemini',
     name: 'Google (Gemini API)',
     purpose:
-      'High-volume AI (email triage/extract and other Flash-Lite routes) — paid API only',
+      'Paid Gemini Flash / Flash-Lite (email triage, extract, and other high-volume routes)',
     category: 'AI',
     href: 'https://ai.google.dev',
     logoDomain: 'google.com',
@@ -91,11 +92,11 @@ export const ADMIN_SUBPROCESSORS: AdminSubprocessor[] = [
   {
     id: 'soniox',
     name: 'Soniox',
-    purpose: 'Cloud realtime speech-to-text (web recorder path)',
+    purpose: 'Wired for possible web STT; not used in production',
     category: 'AI',
     href: 'https://soniox.com',
     logoDomain: 'soniox.com',
-    isSubprocessor: true,
+    isSubprocessor: false,
   },
   {
     id: 'google',
@@ -131,6 +132,15 @@ export const ADMIN_SUBPROCESSORS: AdminSubprocessor[] = [
     category: 'Media & SEO',
     href: 'https://bunny.net',
     logoDomain: 'bunny.net',
+    isSubprocessor: true,
+  },
+  {
+    id: 'mapbox',
+    name: 'Mapbox',
+    purpose: 'Geocoding and maps for commercial listings and brochures',
+    category: 'Media & SEO',
+    href: 'https://www.mapbox.com',
+    logoDomain: 'mapbox.com',
     isSubprocessor: true,
   },
   {

@@ -47,6 +47,7 @@ export type MeetingTranscriptListRow = {
   clientPictureUrl: string | null;
   dealTitle: string | null;
   participants: MeetingParticipant[];
+  hasExtractedTasks: boolean;
 };
 
 function mapClientOptions(
@@ -123,6 +124,7 @@ function mapTranscriptListRow(
   transcript: MeetingTranscriptListItem,
   clients: MeetingClientOption[],
   contacts: MeetingContactOption[],
+  extractedTranscriptIds: Set<string>,
 ): MeetingTranscriptListRow {
   const linkedClient = transcript.clientId
     ? clients.find((client) => client.id === transcript.clientId)
@@ -144,6 +146,7 @@ function mapTranscriptListRow(
       clients,
       contacts,
     ),
+    hasExtractedTasks: extractedTranscriptIds.has(transcript.id),
   };
 }
 
@@ -175,6 +178,31 @@ async function loadMeetingsPageDataImpl(accountSlug: string) {
     clientsService.listWorkspaceContacts({ accountId }),
   ]);
 
+  const extractedTranscriptIds = new Set<string>();
+  if (transcripts.length > 0) {
+    const { data: actionItems, error: actionItemsError } = await client
+      .from('meeting_action_items')
+      .select('meeting_transcript_id')
+      .eq('account_id', accountId)
+      .in(
+        'meeting_transcript_id',
+        transcripts.map((transcript) => transcript.id),
+      )
+      .in('status', ['pending_review', 'approved', 'auto_published']);
+
+    if (actionItemsError) {
+      throw new Error(actionItemsError.message);
+    }
+
+    for (const row of actionItems ?? []) {
+      const transcriptId = (row as { meeting_transcript_id?: string })
+        .meeting_transcript_id;
+      if (transcriptId) {
+        extractedTranscriptIds.add(transcriptId);
+      }
+    }
+  }
+
   const clients = mapClientOptions(clientsResult.data ?? []);
   const contacts = mapContactOptions(contactsResult.data ?? []);
 
@@ -182,7 +210,12 @@ async function loadMeetingsPageDataImpl(accountSlug: string) {
     accountId,
     accountSlug,
     transcripts: transcripts.map((transcript) =>
-      mapTranscriptListRow(transcript, clients, contacts),
+      mapTranscriptListRow(
+        transcript,
+        clients,
+        contacts,
+        extractedTranscriptIds,
+      ),
     ),
     clients,
     contacts,

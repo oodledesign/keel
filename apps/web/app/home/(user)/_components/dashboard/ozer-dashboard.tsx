@@ -8,8 +8,8 @@ import {
   ArrowRight,
   Cake,
   CalendarClock,
-  Sparkles,
   StickyNote,
+  Telescope,
   Users,
 } from 'lucide-react';
 
@@ -61,7 +61,7 @@ export function OzerDashboard({ data }: Props) {
           <div className="flex flex-wrap gap-2">
             <Button asChild className="ozer-gradient-btn w-full sm:w-auto">
               <Link href={pathsConfig.app.personalVision}>
-                <Sparkles className="mr-2 h-4 w-4" />
+                <Telescope className="mr-2 h-4 w-4" />
                 Personal Vision
               </Link>
             </Button>

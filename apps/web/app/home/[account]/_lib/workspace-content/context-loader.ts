@@ -9,6 +9,7 @@ import {
   linkOptionsForProfile,
   loadWorkspaceLinkOptions,
 } from './link-options.loader';
+import { loadAccountLinks } from './links-loader';
 import { loadAccountNotes } from './notes-loader';
 
 export async function loadContextWorkspaceContent(input: {
@@ -35,9 +36,10 @@ export async function loadContextWorkspaceContent(input: {
           ? { clientOrgId: input.scope.clientOrgId }
           : { propertyId: input.scope.propertyId };
 
-  const [notesResult, docsResult, linkOpts] = await Promise.all([
+  const [notesResult, docsResult, linksResult, linkOpts] = await Promise.all([
     loadAccountNotes(input.accountId, scope),
     loadAccountDocs(input.accountId, scope),
+    loadAccountLinks(input.accountId, scope),
     loadWorkspaceLinkOptions(input.accountId, profile),
   ]);
 
@@ -54,8 +56,10 @@ export async function loadContextWorkspaceContent(input: {
     profile,
     notes: notesResult.notes,
     docs: docsResult.docs,
+    links: linksResult.links,
     notesTableAvailable: notesResult.tableAvailable,
     docsTableAvailable: docsResult.tableAvailable,
+    linksTableAvailable: linksResult.tableAvailable,
     linkOptions: linkOptionsForProfile(linkOpts, profile),
     defaultLink,
   };

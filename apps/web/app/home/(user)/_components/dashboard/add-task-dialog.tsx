@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -32,8 +32,10 @@ import { createClient } from '~/home/[account]/clients/_lib/server/server-action
 import { PERSONAL_WORKSPACE_VALUE } from '~/lib/workspace-personal-switcher';
 
 import {
+  type CreateTaskWorkspaceChoice,
   type TaskAssignmentOption,
   createTask,
+  loadCreateTaskWorkspaceChoices,
   loadPersonalLifeAssignmentOptions,
   loadTaskAssignmentOptionsForWorkspace,
 } from '../../_lib/actions/task-actions';
@@ -59,11 +61,8 @@ type RecurrenceFrequency = (typeof FREQUENCIES)[number]['key'];
 function todayYmd() {
   return new Date().toISOString().slice(0, 10);
 }
-export type CreateTaskWorkspaceChoice = {
-  id: string;
-  name: string;
-  slug: string;
-};
+
+export type { CreateTaskWorkspaceChoice };
 
 type AddTaskDialogProps = {
   /** When set, default target is this team workspace. */
@@ -107,6 +106,9 @@ export function AddTaskDialog({
   const [error, setError] = useState<string | null>(null);
   const [options, setOptions] = useState<TaskAssignmentOption[]>([]);
   const [optionsLoading, setOptionsLoading] = useState(false);
+  const [loadedChoices, setLoadedChoices] = useState<
+    CreateTaskWorkspaceChoice[]
+  >([]);
   const [showNewClient, setShowNewClient] = useState(false);
   const [newClientName, setNewClientName] = useState('');
   const [creatingClient, setCreatingClient] = useState(false);
@@ -128,18 +130,34 @@ export function AddTaskDialog({
       : (workspaceAccountId ?? PERSONAL_WORKSPACE_VALUE),
   );
 
-  const teamChoices: CreateTaskWorkspaceChoice[] =
-    workspaceChoices && workspaceChoices.length > 0
-      ? workspaceChoices
-      : workspaceAccountId
-        ? [
-            {
-              id: workspaceAccountId,
-              name: 'This workspace',
-              slug: workspaceAccountSlug ?? '',
-            },
-          ]
-        : [];
+  const teamChoices = useMemo(() => {
+    const byId = new Map<string, CreateTaskWorkspaceChoice>();
+
+    for (const choice of loadedChoices) {
+      byId.set(choice.id, choice);
+    }
+
+    for (const choice of workspaceChoices ?? []) {
+      byId.set(choice.id, choice);
+    }
+
+    if (workspaceAccountId && !byId.has(workspaceAccountId)) {
+      byId.set(workspaceAccountId, {
+        id: workspaceAccountId,
+        name: 'This workspace',
+        slug: workspaceAccountSlug ?? '',
+      });
+    }
+
+    return [...byId.values()].sort((left, right) =>
+      left.name.localeCompare(right.name),
+    );
+  }, [
+    loadedChoices,
+    workspaceAccountId,
+    workspaceAccountSlug,
+    workspaceChoices,
+  ]);
 
   const canSwitchWorkspace = !lifeOnly && teamChoices.length > 0;
 
@@ -172,6 +190,12 @@ export function AddTaskDialog({
           : (workspaceAccountId ?? PERSONAL_WORKSPACE_VALUE),
       );
       return;
+    }
+
+    if (!lifeOnly) {
+      void loadCreateTaskWorkspaceChoices()
+        .then(setLoadedChoices)
+        .catch(() => setLoadedChoices([]));
     }
 
     void loadOptions();

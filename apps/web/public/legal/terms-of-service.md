@@ -1,6 +1,6 @@
 # Terms of Service
 
-**Last updated:** 28 July 2026
+**Last updated:** 18 August 2026
 
 These Terms govern use of Ozer, operated by Oodle Designs Ltd. By creating an account and accepting these Terms you agree to be bound by them.
 
@@ -56,9 +56,9 @@ Media Generate tokens (media units) are billed separately from Ozer AI text cred
 
 ## Termination and deletion
 
-You may cancel your subscription via the billing portal or by contacting us. After termination we will cease providing the service.
+You may cancel your subscription via the billing portal or by contacting us. Cancelling stops billing and may lock access; we keep your workspace data so you can reactivate. Deleting your account is a separate action.
 
-**Deletion:** we delete customer data across our systems (database and storage, video hosting, and email logs) within 30 days of account termination, except records we are required to retain by law — billing and tax records are retained for 6 years in line with HMRC requirements, and payment records held by Stripe are subject to Stripe's own retention obligations. Feature-specific retention periods are set out in our [Privacy Policy](/privacy-policy).
+**Deletion:** after you delete your account we remove customer data across our systems (database and storage, video hosting, and email logs) within 30 days. Database rows are removed immediately; remaining files are permanently deleted at the end of that window and cannot be recovered. We email the account owner before remaining files are wiped. Records we are required to retain by law are kept — billing and tax records for 6 years in line with HMRC requirements, and payment records held by Stripe are subject to Stripe's own retention obligations. Feature-specific retention periods are set out in our [Privacy Policy](/privacy-policy).
 
 ## Liability
 

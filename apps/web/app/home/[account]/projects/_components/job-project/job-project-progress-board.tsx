@@ -16,6 +16,7 @@ import {
   PROGRESS_STATUS_COLOURS,
   TASK_STATUS_LABELS,
   TASK_STATUS_STYLES,
+  UNPHASED_KEY,
   formatShortDate,
 } from './job-project.constants';
 
@@ -193,7 +194,11 @@ export function JobProjectProgressBoard({
   const [, startTransition] = useTransition();
   const [selectedTask, setSelectedTask] = useState<JobBoardTask | null>(null);
   const [taskSheetOpen, setTaskSheetOpen] = useState(false);
-  const tasks = useMemo(() => flattenBoardTasks(board), [board]);
+  const allTasks = useMemo(() => flattenBoardTasks(board), [board]);
+  const tasks = useMemo(
+    () => allTasks.filter((task) => !task.parent_task_id),
+    [allTasks],
+  );
 
   const memberLookup = useMemo(() => {
     const map: MemberLookup = new Map();
@@ -344,6 +349,28 @@ export function JobProjectProgressBoard({
         jobId={jobId}
         canEditJobs={canEditJobs}
         onUpdated={handleTaskUpdated}
+        subtasks={
+          selectedTask
+            ? allTasks.filter((item) => item.parent_task_id === selectedTask.id)
+            : []
+        }
+        onSubtaskCreated={(subtask) => {
+          const key = subtask.phase_id ?? UNPHASED_KEY;
+          const next = { ...board.tasksByPhase };
+          next[key] = [...(next[key] ?? []), subtask];
+          onBoardChange({ ...board, tasksByPhase: next });
+        }}
+        onDeleted={(deleted) => {
+          const next: Record<string, JobBoardTask[]> = {};
+          for (const [key, list] of Object.entries(board.tasksByPhase)) {
+            next[key] = (list ?? []).filter(
+              (item) =>
+                item.id !== deleted.id && item.parent_task_id !== deleted.id,
+            );
+          }
+          onBoardChange({ ...board, tasksByPhase: next });
+          setSelectedTask(null);
+        }}
       />
     </div>
   );

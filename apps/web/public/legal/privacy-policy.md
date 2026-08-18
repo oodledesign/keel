@@ -1,6 +1,6 @@
 # Privacy Policy
 
-**Last updated:** 30 July 2026
+**Last updated:** 18 August 2026
 
 Oodle Designs Ltd ("Ozer", "we", "us") is the data controller for personal data we process for our own purposes (account and authentication data, product analytics and security logs, and SaaS billing records). Where you use Ozer to store or process your clients', staff, or invitees' personal data, we typically act as a **processor** on your instructions. See our [Data Processing Agreement](/dpa) for that relationship. We comply with the UK GDPR, EU GDPR, and the Data Protection Act 2018.
 
@@ -169,7 +169,7 @@ Ozer's Microsoft access is read-only: we read directory profiles and photos to b
 
 When you use AI features, relevant workspace text is sent to our AI sub-processors to generate responses. We log usage volume and model identifiers for billing purposes; prompt content is not stored in usage logs.
 
-**Providers:** Anthropic (language model features); Google (Gemini API — paid tier for high-volume routes such as email triage and extract); Voyage AI (semantic search embeddings).
+**Providers:** Anthropic (language model features); Google Gemini Flash / Flash-Lite (paid API — high-volume routes such as email triage and extract); Voyage AI (semantic search embeddings).
 
 We do not use your private workspace data to train public foundation models. You should not submit special category data unless you have a lawful basis and appropriate safeguards. AI outputs are assistive and may be inaccurate — you remain responsible for decisions made in your business.
 
@@ -207,6 +207,16 @@ Further detail is available on our [Trust Centre](/trust).
 
 **Retention:** videos and metadata are deleted within 30 days of account closure, or when you delete them.
 
+## Commercial maps and geocoding
+
+**Data:** property addresses and map coordinates when you use commercial listings, matching maps, or brochure map pages.
+
+**Purpose:** show maps and geocode UK commercial addresses.
+
+**Sub-processors:** Mapbox (geocoding and map tiles).
+
+**Retention:** coordinates are stored with the listing/requirement record for the life of your workspace (then deleted within 30 days of account termination).
+
 ## MCP API
 
 If you connect an external AI client via our MCP API, that client can access tasks, projects, deals, clients, and notes within your own workspace permissions. Email message bodies are not exposed via this path. You are responsible for the external MCP client you choose to connect.
@@ -220,11 +230,12 @@ We use the following sub-processors to operate Ozer. A matching register is publ
 | Supabase / AWS | Database, auth, storage | Workspace and account data | EU West (Ireland) — no restricted transfer |
 | Stripe | SaaS billing and Connect payments | Customer IDs, subscription status; card numbers stay with Stripe | US — Stripe Data Transfers Addendum (UK IDTA incorporated; EU-US Data Privacy Framework incl. UK Extension) |
 | Anthropic | AI language model features | Workspace / email / transcript text prompts | US — DPA with EU SCCs and UK Addendum (incorporated in commercial terms); EU-US Data Privacy Framework |
-| Google (Gemini API) | High-volume AI (email triage/extract and other Flash-Lite routes) | Workspace / email text prompts | US/global — Paid Gemini API under Google Data Processing Addendum (EU SCCs and UK Addendum); EU-US Data Privacy Framework (Google LLC). Free AI Studio tier is not used for customer personal data. |
+| Google (Gemini Flash / Flash-Lite) | High-volume AI (email triage/extract and other Flash-Lite routes) | Workspace / email text prompts | US/global — Paid Gemini API under Google Data Processing Addendum (EU SCCs and UK Addendum); EU-US Data Privacy Framework (Google LLC). Free AI Studio tier is not used for customer personal data. |
 | Google Workspace APIs | Gmail, Calendar, Workspace directory | Mailbox, calendar, and directory data | US/global — Google Data Processing Terms (SCCs and UK Addendum incorporated) |
 | Microsoft | Signatures directory sync | Staff profile and photo data | US/global — Microsoft Products and Services Data Protection Addendum (SCCs and UK Addendum incorporated) |
 | ZeptoMail (Zoho) | Transactional email | Recipient, subject, message body | EU data centre — Zoho DPA with standard contractual clauses |
 | Bunny.net (BunnyWay d.o.o.) | Video hosting and streaming | Media files and video metadata | Slovenia (EU) — EU-headquartered; DPA in place; EU storage region |
+| Mapbox | Commercial listing maps and address geocoding | Addresses and map coordinates | US/global — Mapbox Data Processing Agreement (SCCs / UK Addendum as applicable) |
 | Voyage AI | Semantic search embeddings | Text excerpts and search queries | US — Voyage AI DPA with EU SCCs and UK ICO Addendum (incorporated in commercial terms) |
 | PostHog, Inc. | Product analytics, feature flags, error/session diagnostics, and session replay | Usage events, device/browser data, user/account identifiers; UI session recordings (inputs masked; 30-day recording retention) | EU (PostHog EU Cloud) — PostHog DPA with EU SCCs and UK Addendum |
 
@@ -234,7 +245,7 @@ Primary customer data storage is in AWS EU West (Ireland). Where a sub-processor
 
 ## Retention & rights
 
-Feature-specific retention periods are stated in the sections above. On account termination we delete customer data across our systems within 30 days, except records we must keep for legal reasons (for example, billing records retained for 6 years for tax purposes).
+Feature-specific retention periods are stated in the sections above. Ending a subscription does not delete your workspace. On account deletion we remove customer data across our systems within 30 days (database rows are removed immediately; a scheduled job deletes remaining Storage objects at the end of that window). We email the account owner before remaining files are permanently deleted and cannot be recovered, except records we must keep for legal reasons (for example, billing records retained for 6 years for tax purposes).
 
 You may access, rectify, erase, restrict, object, or port your data, and lodge a complaint with the ICO (UK) or your local supervisory authority. Contact: privacy@ozer.so.
 

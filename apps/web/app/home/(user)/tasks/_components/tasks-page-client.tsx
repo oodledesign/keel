@@ -622,6 +622,27 @@ function isHighPriority(task: TasksPageTask): boolean {
   return task.priority === 'urgent' || task.priority === 'high';
 }
 
+/**
+ * Completed tab should include nested done subtasks whose parent is still
+ * active. Completed roots keep their nested children so they are not listed twice.
+ */
+function flattenCompletedTasks(nodes: TasksPageTask[]): TasksPageTask[] {
+  const out: TasksPageTask[] = [];
+  const walk = (list: TasksPageTask[], ancestorCompleted: boolean) => {
+    for (const node of list) {
+      const isCompleted = node.status === 'completed';
+      if (isCompleted && !ancestorCompleted) {
+        out.push({ ...node, parentTaskId: null });
+      }
+      if (node.subtasks?.length) {
+        walk(node.subtasks, ancestorCompleted || isCompleted);
+      }
+    }
+  };
+  walk(nodes, false);
+  return out;
+}
+
 function isOverdue(task: TasksPageTask, today = todayISO()): boolean {
   if (task.status === 'completed') return false;
   const due = parseDueDateParts(task.dueDate);
@@ -1516,11 +1537,17 @@ export function TasksPageClient({
 
   const clientOptions = useMemo(() => {
     const set = new Map<string, string>();
-    for (const t of tasks) {
-      if (t.clientId && t.clientName) {
-        set.set(t.clientId, t.clientName);
+    const walk = (list: TasksPageTask[]) => {
+      for (const t of list) {
+        if (t.clientId && t.clientName) {
+          set.set(t.clientId, t.clientName);
+        }
+        if (t.subtasks?.length) {
+          walk(t.subtasks);
+        }
       }
-    }
+    };
+    walk(tasks);
     return [...set.entries()].sort((a, b) => a[1].localeCompare(b[1]));
   }, [tasks]);
 
@@ -1589,10 +1616,12 @@ export function TasksPageClient({
   );
 
   const filteredForList = useMemo(() => {
+    if (statusFilter === 'completed') {
+      return flattenCompletedTasks(tasks).filter((t) => matchesBaseFilters(t));
+    }
+
     return tasks.filter((t) => {
-      if (statusFilter === 'active' && t.status === 'completed') return false;
-      if (statusFilter === 'completed' && t.status !== 'completed')
-        return false;
+      if (t.status === 'completed') return false;
       return matchesBaseFilters(t);
     });
   }, [tasks, statusFilter, matchesBaseFilters]);
@@ -1834,7 +1863,12 @@ export function TasksPageClient({
             onContextFilterChange={setFilter}
             showContextFilter={variant === 'personal'}
             statusFilter={statusFilter}
-            onStatusFilterChange={setStatusFilter}
+            onStatusFilterChange={(value) => {
+              setStatusFilter(value);
+              if (value === 'completed') {
+                setDueDateFilter('all');
+              }
+            }}
             showStatusFilter={view === 'list' || view === 'byClient'}
           />
 

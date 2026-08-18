@@ -5,6 +5,7 @@ import { cache } from 'react';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import { getDbForWorkspaceTaskAssignmentOptions } from '~/home/_lib/server/workspace-scope';
+import { loadUserTeamMemberships } from '~/home/_lib/server/user-team-memberships.loader';
 import { requireUserInServerComponent } from '~/lib/server/require-user-in-server-component';
 
 import type { TaskAssignmentOption } from '../actions/task-actions';
@@ -149,5 +150,28 @@ export const loadTaskAssignmentOptions = cache(
     );
 
     return [...projects, ...areas];
+  },
+);
+
+export type CreateTaskWorkspaceChoice = {
+  id: string;
+  name: string;
+  slug: string;
+};
+
+/** Team workspaces the current user can create tasks in. */
+export const loadCreateTaskWorkspaceChoices = cache(
+  async (): Promise<CreateTaskWorkspaceChoice[]> => {
+    const user = await requireUserInServerComponent();
+    const memberships = await loadUserTeamMemberships(user.id);
+
+    return memberships
+      .filter((account) => Boolean(account.slug?.trim()))
+      .map((account) => ({
+        id: account.id,
+        name: account.name?.trim() || account.slug!.trim(),
+        slug: account.slug!.trim(),
+      }))
+      .sort((left, right) => left.name.localeCompare(right.name));
   },
 );

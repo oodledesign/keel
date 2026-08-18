@@ -74,10 +74,10 @@ function MonthlyIncomeChart({ actuals }: { actuals: VisionFinanceActuals }) {
 
   return (
     <div className="mt-4">
-      <div className="flex h-28 items-end gap-1.5 sm:gap-2">
+      <div className="flex h-36 items-stretch gap-1.5 sm:gap-2">
         {points.map((point) => {
           const height = Math.max(
-            6,
+            point.incomePence > 0 ? 8 : 0,
             Math.round((point.incomePence / max) * 100),
           );
           return (
@@ -90,15 +90,17 @@ function MonthlyIncomeChart({ actuals }: { actuals: VisionFinanceActuals }) {
                   ? formatVisionPence(point.incomePence)
                   : '—'}
               </span>
-              <div
-                className={`w-full max-w-8 rounded-t-sm ${
-                  point.isCurrent
-                    ? 'bg-[var(--ozer-coral-500)]'
-                    : 'bg-[var(--ozer-coral-500)]/45'
-                }`}
-                style={{ height: `${height}%` }}
-                title={`${point.monthLabel}: ${formatVisionPence(point.incomePence)}`}
-              />
+              <div className="flex w-full min-h-0 flex-1 items-end justify-center">
+                <div
+                  className={`w-full max-w-8 rounded-t-sm ${
+                    point.isCurrent
+                      ? 'bg-[var(--ozer-coral-500)]'
+                      : 'bg-[var(--ozer-coral-500)]/45'
+                  }`}
+                  style={{ height: `${height}%` }}
+                  title={`${point.monthLabel}: ${formatVisionPence(point.incomePence)}`}
+                />
+              </div>
               <span className="text-[10px] text-[var(--ozer-text-on-dark-muted)]">
                 {point.monthLabel}
               </span>

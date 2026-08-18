@@ -6,6 +6,11 @@ import Anthropic from '@anthropic-ai/sdk';
 
 import { todayLocalYmd } from '~/home/_lib/due-date-ymd';
 import { FEATURE_CONFIG, withMeteredAI } from '~/lib/ai/router';
+import {
+  AI_CRISIS_REPLY,
+  AI_SAFETY_SYSTEM_PROMPT,
+  detectCrisisIntent,
+} from '~/lib/ai/safety';
 
 import type { QuickActionContext } from './context';
 import {
@@ -49,7 +54,9 @@ Workflow:
 - If multiple workspaces or projects match, pick the best match and mention alternatives in your reply.
 - Do not claim an action was executed — proposing only prepares a preview for the user to confirm.
 
-Respond briefly in plain English when proposing actions.`;
+Respond briefly in plain English when proposing actions.
+
+${AI_SAFETY_SYSTEM_PROMPT}`;
 }
 
 function extractAssistantText(
@@ -73,6 +80,17 @@ async function runQuickActionPlanLoop(
   inputTokens: number | null;
   outputTokens: number | null;
 }> {
+  if (detectCrisisIntent(message)) {
+    return {
+      result: {
+        assistantMessage: AI_CRISIS_REPLY,
+        proposedActions: [],
+      },
+      inputTokens: null,
+      outputTokens: null,
+    };
+  }
+
   if (!process.env.ANTHROPIC_API_KEY?.trim()) {
     throw new Error(
       'ANTHROPIC_API_KEY is not set. Add it to your environment to use quick actions.',

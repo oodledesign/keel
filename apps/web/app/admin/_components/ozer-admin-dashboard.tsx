@@ -51,7 +51,7 @@ export async function OzerAdminDashboard() {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-5">
+      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5 lg:gap-4">
         <StatCard title="Users" value={data.accounts} />
         <StatCard title="Team workspaces" value={data.teamAccounts} />
         <StatCard title="Paying customers" value={data.subscriptions} />
@@ -85,12 +85,14 @@ export async function OzerAdminDashboard() {
 
 function StatCard(props: { title: string; value: number }) {
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm font-medium">{props.title}</CardTitle>
+    <Card className="min-w-0">
+      <CardHeader className="space-y-0 p-4 pb-2 sm:p-6 sm:pb-2">
+        <CardTitle className="text-xs font-medium sm:text-sm">
+          {props.title}
+        </CardTitle>
       </CardHeader>
-      <CardContent>
-        <p className="text-3xl font-bold">{props.value}</p>
+      <CardContent className="p-4 pt-0 sm:p-6 sm:pt-0">
+        <p className="text-2xl font-bold sm:text-3xl">{props.value}</p>
       </CardContent>
     </Card>
   );

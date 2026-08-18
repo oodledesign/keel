@@ -63,8 +63,9 @@ export const PRIORITY_DOT: Record<string, string> = {
 export const UNPHASED_KEY = '__unphased__';
 
 export function formatShortDate(iso: string | null | undefined): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-GB', {
+  const d = parseDateKey(iso);
+  if (!d) return '—';
+  return d.toLocaleDateString('en-GB', {
     day: 'numeric',
     month: 'short',
   });

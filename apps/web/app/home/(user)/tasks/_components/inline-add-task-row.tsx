@@ -27,6 +27,8 @@ export function InlineAddTaskRow({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
+  const needsAssignment = Boolean(workspaceAccountId) && !clientId;
+
   const submit = () => {
     const trimmed = title.trim();
     if (!trimmed) return;
@@ -90,7 +92,7 @@ export function InlineAddTaskRow({
               }
             }}
             placeholder="Task name, press Enter to save"
-            className="h-11 w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[var(--ozer-accent)]/50 focus:outline-none focus:ring-1 focus:ring-[var(--ozer-accent)]/30"
+            className="h-11 w-full rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-canvas)] px-3 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus:border-[var(--ozer-accent)]/50 focus:ring-1 focus:ring-[var(--ozer-accent)]/30 focus:outline-none"
             aria-label="New task title"
           />
           {error ? (

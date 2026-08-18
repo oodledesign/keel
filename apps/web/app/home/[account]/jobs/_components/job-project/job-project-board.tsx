@@ -772,6 +772,17 @@ export function JobProjectBoard({
         jobId={jobId}
         canEditJobs={canEditJobs}
         onUpdated={handleTaskUpdated}
+        onDeleted={(deleted) => {
+          const next: Record<string, JobBoardTask[]> = {};
+          for (const [key, list] of Object.entries(board.tasksByPhase)) {
+            next[key] = (list ?? []).filter(
+              (item) =>
+                item.id !== deleted.id && item.parent_task_id !== deleted.id,
+            );
+          }
+          onBoardChange({ ...board, tasksByPhase: next });
+          setSelectedTask(null);
+        }}
       />
     </div>
   );

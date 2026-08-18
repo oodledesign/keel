@@ -126,13 +126,8 @@ const RegisterUploadSchema = z.object({
 export const registerUploadedWorkspaceDocAction = enhanceAction(
   async (data, user) => {
     const client = getSupabaseServerClient();
-    const admin = getSupabaseServerAdminClient();
     const linkCols = linkToColumns(data.link);
     const tags = (data.tags ?? []).map((t) => t.trim()).filter(Boolean);
-
-    const { data: urlData } = admin.storage
-      .from(ACCOUNT_DOCS_BUCKET)
-      .getPublicUrl(data.filePath);
 
     const { data: inserted, error } = await client
       .from('docs')
@@ -149,7 +144,7 @@ export const registerUploadedWorkspaceDocAction = enhanceAction(
         storage_path: data.filePath,
         mime_type: data.mimeType ?? null,
         file_size_bytes: data.fileSizeBytes ?? null,
-        file_url: urlData?.publicUrl ?? null,
+        file_url: null,
         user_id: user.id,
         created_by: user.id,
         ...linkCols,
@@ -188,11 +183,6 @@ export const getWorkspaceDocDownloadUrlAction = enhanceAction(
     }
 
     const bucket = row.storage_bucket ?? ACCOUNT_DOCS_BUCKET;
-
-    if (row.file_url && bucket === ACCOUNT_DOCS_BUCKET) {
-      return { url: row.file_url };
-    }
-
     const path = row.file_path ?? row.storage_path;
     if (!path) return { url: null };
 

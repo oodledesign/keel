@@ -6,6 +6,7 @@ import type {
   DocListItem,
   LinkOption,
   NoteListItem,
+  SavedLinkListItem,
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
 import { NotesLibraryClient } from './notes-library-client';
@@ -19,8 +20,10 @@ export function NotesPageContent({
   folders = [],
   foldersAvailable = true,
   docs = [],
+  links = [],
   tableAvailable,
   docsTableAvailable = false,
+  linksTableAvailable = false,
   canEdit = true,
 }: {
   accountSlug: string;
@@ -28,8 +31,10 @@ export function NotesPageContent({
   folders?: NoteFolderListItem[];
   foldersAvailable?: boolean;
   docs?: DocListItem[];
+  links?: SavedLinkListItem[];
   tableAvailable: boolean;
   docsTableAvailable?: boolean;
+  linksTableAvailable?: boolean;
   variant?: WorkspaceNotesVariant;
   accountId: string;
   linkOptions?: LinkOption[];
@@ -42,9 +47,11 @@ export function NotesPageContent({
       accountSlug={accountSlug}
       notes={notes}
       docs={docs}
+      links={links}
       folders={folders}
       tableAvailable={tableAvailable}
       docsTableAvailable={docsTableAvailable}
+      linksTableAvailable={linksTableAvailable}
       foldersAvailable={foldersAvailable}
       canEdit={canEdit}
       personalScope={false}

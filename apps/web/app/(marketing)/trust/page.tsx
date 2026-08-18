@@ -82,7 +82,7 @@ function TrustCenterPage() {
             about how we do it.
           </p>
           <p className="text-muted-foreground text-xs tracking-wide uppercase">
-            Last updated: 30 July 2026
+            Last updated: 18 August 2026
           </p>
         </div>
       </div>
@@ -298,7 +298,7 @@ function TrustCenterPage() {
                     </tr>
                     <tr className="border-border/60 border-b">
                       <td className="py-2.5 pr-3 align-top">
-                        Google (Gemini API)
+                        Google (Gemini Flash / Flash-Lite)
                       </td>
                       <td className="py-2.5 pr-3 align-top">
                         High-volume AI (email triage/extract and other
@@ -370,6 +370,19 @@ function TrustCenterPage() {
                       <td className="py-2.5 align-top">
                         Slovenia (EU) — EU-headquartered; DPA in place; EU
                         storage region
+                      </td>
+                    </tr>
+                    <tr className="border-border/60 border-b">
+                      <td className="py-2.5 pr-3 align-top">Mapbox</td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Commercial listing maps and address geocoding
+                      </td>
+                      <td className="py-2.5 pr-3 align-top">
+                        Addresses and map coordinates
+                      </td>
+                      <td className="py-2.5 align-top">
+                        US/global — Mapbox Data Processing Agreement (SCCs / UK
+                        Addendum as applicable)
                       </td>
                     </tr>
                     <tr className="border-border/60 border-b">
@@ -543,10 +556,12 @@ function TrustCenterPage() {
                     >
                       Privacy Policy
                     </Link>
-                    . On account termination we delete customer data across our
-                    systems within 30 days, except records we must keep for
-                    legal reasons (for example, billing records retained for 6
-                    years for tax purposes).
+                    . Ending a subscription does not delete your workspace. On
+                    account deletion we remove customer data across our systems
+                    within 30 days (database rows immediately; remaining files
+                    at the end of that window, after warning emails). Records we
+                    must keep for legal reasons are retained (for example,
+                    billing records for 6 years for tax purposes).
                   </p>
                 </div>
               </div>

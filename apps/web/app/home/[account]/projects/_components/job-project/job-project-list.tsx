@@ -4,6 +4,18 @@ import { useCallback, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
+import { Trash2 } from 'lucide-react';
+
+import {
+  AlertDialog,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@kit/ui/alert-dialog';
+import { Button } from '@kit/ui/button';
 import {
   Collapsible,
   CollapsibleContent,
@@ -27,7 +39,7 @@ import type {
   JobBoardTask,
   PhaseListItem,
 } from '../../_lib/schema/project-phases.schema';
-import { updateJobTask } from '../../_lib/server/server-actions';
+import { deleteJobTask, updateJobTask } from '../../_lib/server/server-actions';
 import {
   PRIORITY_DOT,
   TASK_STATUS_LABELS,
@@ -52,20 +64,25 @@ function phasePath(accountSlug: string, jobId: string, phaseId: string) {
 
 function TaskRow({
   task,
+  subtaskCount,
   accountSlug,
   accountId,
   jobId,
   canEditJobs,
   onTaskUpdated,
+  onTaskDeleted,
 }: {
   task: JobBoardTask;
+  subtaskCount: number;
   accountSlug: string;
   accountId: string;
   jobId: string;
   canEditJobs: boolean;
   onTaskUpdated: (task: JobBoardTask) => void;
+  onTaskDeleted: (task: JobBoardTask) => void;
 }) {
   const [, startTransition] = useTransition();
+  const [deleteOpen, setDeleteOpen] = useState(false);
 
   const patch = useCallback(
     (updates: Partial<JobBoardTask>) => {
@@ -102,8 +119,26 @@ function TaskRow({
     [accountId, accountSlug, jobId, onTaskUpdated, startTransition, task],
   );
 
+  const handleDelete = () => {
+    startTransition(async () => {
+      try {
+        await deleteJobTask({
+          accountId,
+          accountSlug,
+          jobId,
+          taskId: task.id,
+        });
+        setDeleteOpen(false);
+        onTaskDeleted(task);
+        toast.success('Task deleted');
+      } catch (err) {
+        toast.error(getErrorMessage(err));
+      }
+    });
+  };
+
   return (
-    <div className="grid grid-cols-1 gap-2 border-b border-[color:var(--workspace-shell-border)]/80 py-3 sm:grid-cols-[1fr_140px_120px_100px] sm:items-center sm:gap-3">
+    <div className="grid grid-cols-1 gap-2 border-b border-[color:var(--workspace-shell-border)]/80 py-3 sm:grid-cols-[1fr_140px_120px_100px_36px] sm:items-center sm:gap-3">
       <div className="flex min-w-0 items-center gap-2">
         <span
           className={`h-2 w-2 shrink-0 rounded-full ${PRIORITY_DOT[task.priority] ?? PRIORITY_DOT.none}`}
@@ -191,6 +226,47 @@ function TaskRow({
           </span>
         )}
       </div>
+
+      {canEditJobs ? (
+        <>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-8 w-8 p-0 text-[var(--workspace-shell-text-muted)] hover:text-red-400"
+            aria-label={`Delete ${task.title}`}
+            onClick={() => setDeleteOpen(true)}
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </Button>
+          <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
+            <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
+              <AlertDialogHeader>
+                <AlertDialogTitle>Delete “{task.title}”?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  {subtaskCount > 0
+                    ? `This will also delete ${subtaskCount} subtask${subtaskCount === 1 ? '' : 's'}. This can’t be undone.`
+                    : 'This can’t be undone.'}
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter className="gap-2 sm:gap-0">
+                <AlertDialogCancel className="border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]">
+                  Cancel
+                </AlertDialogCancel>
+                <Button
+                  variant="destructive"
+                  className="bg-red-600 hover:bg-red-500"
+                  onClick={handleDelete}
+                >
+                  Delete task
+                </Button>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </>
+      ) : (
+        <span />
+      )}
     </div>
   );
 }
@@ -222,6 +298,18 @@ function PhaseGroup({
       onTasksChange(
         phaseKey,
         tasks.map((t) => (t.id === updated.id ? updated : t)),
+      );
+    },
+    [onTasksChange, phaseKey, tasks],
+  );
+
+  const handleTaskDeleted = useCallback(
+    (deleted: JobBoardTask) => {
+      onTasksChange(
+        phaseKey,
+        tasks.filter(
+          (t) => t.id !== deleted.id && t.parent_task_id !== deleted.id,
+        ),
       );
     },
     [onTasksChange, phaseKey, tasks],
@@ -259,7 +347,7 @@ function PhaseGroup({
         </span>
       </CollapsibleTrigger>
       <CollapsibleContent className="px-4 pb-2">
-        <div className="hidden border-b border-[color:var(--workspace-shell-border)] pb-2 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase sm:grid sm:grid-cols-[1fr_140px_120px_100px] sm:gap-3">
+        <div className="hidden border-b border-[color:var(--workspace-shell-border)] pb-2 text-[10px] font-medium tracking-wide text-[var(--workspace-shell-text-muted)] uppercase sm:grid sm:grid-cols-[1fr_140px_120px_100px_36px] sm:gap-3">
           <span>Task</span>
           <span>Status</span>
           <span>Due</span>
@@ -274,11 +362,15 @@ function PhaseGroup({
             <TaskRow
               key={task.id}
               task={task}
+              subtaskCount={
+                tasks.filter((item) => item.parent_task_id === task.id).length
+              }
               accountSlug={accountSlug}
               accountId={accountId}
               jobId={jobId}
               canEditJobs={canEditJobs}
               onTaskUpdated={handleTaskUpdated}
+              onTaskDeleted={handleTaskDeleted}
             />
           ))
         )}

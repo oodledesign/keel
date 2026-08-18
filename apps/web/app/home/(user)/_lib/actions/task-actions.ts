@@ -11,6 +11,7 @@ import type { TaskPersonAssigneeOption } from '~/lib/tasks/task-person-assignee'
 import { loadTaskPersonAssigneeOptions } from '~/lib/tasks/task-person-assignee.server';
 
 import {
+  loadCreateTaskWorkspaceChoices as loadCreateTaskWorkspaceChoicesCached,
   loadPersonalLifeAssignmentOptions as loadPersonalLifeAssignmentOptionsCached,
   loadTaskAssignmentOptions as loadTaskAssignmentOptionsCached,
   loadTaskAssignmentOptionsForWorkspace as loadTaskAssignmentOptionsForWorkspaceCached,
@@ -486,11 +487,17 @@ export type TaskAssignmentOption = {
   accountName?: string | null;
 };
 
+export type { CreateTaskWorkspaceChoice } from '../server/task-assignment-options.loader';
+
 /** Projects + CRM clients for one workspace — tasks list shows rows linked to either. */
 export async function loadTaskAssignmentOptionsForWorkspace(
   accountId: string,
 ): Promise<TaskAssignmentOption[]> {
   return loadTaskAssignmentOptionsForWorkspaceCached(accountId);
+}
+
+export async function loadCreateTaskWorkspaceChoices() {
+  return loadCreateTaskWorkspaceChoicesCached();
 }
 
 /** Life areas only — Personal create-task flow. */

@@ -15,6 +15,7 @@ import {
   FolderPlus,
   LayoutGrid,
   LayoutList,
+  Link2,
   MoreHorizontal,
   Pin,
   Plus,
@@ -50,7 +51,12 @@ import { toast } from '@kit/ui/sonner';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
+import { AddWorkspaceLinkDialog } from '~/home/[account]/_components/workspace-content/add-workspace-link-dialog';
 import { WorkspaceFilePreview } from '~/home/[account]/_components/workspace-content/workspace-file-preview';
+import {
+  WorkspaceLinkCard,
+  WorkspaceLinkRow,
+} from '~/home/[account]/_components/workspace-content/workspace-link-items';
 import { previewContent } from '~/home/[account]/_lib/workspace-content/context-resolve';
 import {
   deleteWorkspaceDocAction,
@@ -58,6 +64,7 @@ import {
   registerUploadedWorkspaceDocAction,
 } from '~/home/[account]/_lib/workspace-content/docs-actions';
 import { ACCOUNT_DOCS_BUCKET } from '~/home/[account]/_lib/workspace-content/docs-constants';
+import { deleteWorkspaceLinkAction } from '~/home/[account]/_lib/workspace-content/links-actions';
 import {
   createNoteFolderAction,
   deleteNoteFolderAction,
@@ -73,6 +80,7 @@ import {
 import type {
   DocListItem,
   NoteListItem,
+  SavedLinkListItem,
 } from '~/home/[account]/_lib/workspace-content/types';
 import {
   getDocTypeLabel,
@@ -84,7 +92,7 @@ type SidebarSelection = 'all' | 'pinned' | `folder:${string}`;
 
 type LayoutMode = 'list' | 'cards';
 
-type ContentMode = 'notes' | 'files';
+type ContentMode = 'notes' | 'files' | 'links';
 
 function formatDate(iso: string) {
   try {
@@ -129,9 +137,11 @@ export function NotesLibraryClient({
   accountSlug,
   notes: initialNotes,
   docs: initialDocs = [],
+  links: initialLinks = [],
   folders: initialFolders,
   tableAvailable,
   docsTableAvailable = false,
+  linksTableAvailable = false,
   foldersAvailable,
   canEdit = true,
   personalScope = false,
@@ -140,9 +150,11 @@ export function NotesLibraryClient({
   accountSlug: string;
   notes: NoteListItem[];
   docs?: DocListItem[];
+  links?: SavedLinkListItem[];
   folders: NoteFolderListItem[];
   tableAvailable: boolean;
   docsTableAvailable?: boolean;
+  linksTableAvailable?: boolean;
   foldersAvailable: boolean;
   canEdit?: boolean;
   personalScope?: boolean;
@@ -153,12 +165,14 @@ export function NotesLibraryClient({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [notes, setNotes] = useState(initialNotes);
   const [docs, setDocs] = useState(initialDocs);
+  const [links, setLinks] = useState(initialLinks);
   const [folders, setFolders] = useState(initialFolders);
   const [contentMode, setContentMode] = useState<ContentMode>('notes');
   const [selection, setSelection] = useState<SidebarSelection>('all');
   const [layout, setLayout] = useState<LayoutMode>('list');
   const [query, setQuery] = useState('');
   const [createFolderOpen, setCreateFolderOpen] = useState(false);
+  const [addLinkOpen, setAddLinkOpen] = useState(false);
   const [folderName, setFolderName] = useState('');
   const [deleteTarget, setDeleteTarget] = useState<NoteListItem | null>(null);
   const [activeFile, setActiveFile] = useState<DocListItem | null>(null);
@@ -174,11 +188,18 @@ export function NotesLibraryClient({
   }, [initialDocs]);
 
   useEffect(() => {
+    setLinks(initialLinks);
+  }, [initialLinks]);
+
+  useEffect(() => {
     setFolders(initialFolders);
   }, [initialFolders]);
 
   useEffect(() => {
-    if (contentMode === 'files' && selection.startsWith('folder:')) {
+    if (
+      (contentMode === 'files' || contentMode === 'links') &&
+      selection.startsWith('folder:')
+    ) {
       setSelection('all');
     }
   }, [contentMode, selection]);
@@ -248,6 +269,27 @@ export function NotesLibraryClient({
         return b.updatedAt.localeCompare(a.updatedAt);
       });
   }, [docs, query, selection]);
+
+  const filteredLinks = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    return links
+      .filter((link) => {
+        if (selection === 'pinned') return link.isPinned;
+        return true;
+      })
+      .filter((link) => {
+        if (!q) return true;
+        return (
+          link.title.toLowerCase().includes(q) ||
+          link.url.toLowerCase().includes(q) ||
+          link.description.toLowerCase().includes(q)
+        );
+      })
+      .sort((a, b) => {
+        if (a.isPinned !== b.isPinned) return a.isPinned ? -1 : 1;
+        return b.updatedAt.localeCompare(a.updatedAt);
+      });
+  }, [links, query, selection]);
 
   function openNote(noteId: string) {
     router.push(noteDetailHref(accountSlug, noteId, personalScope));
@@ -371,6 +413,26 @@ export function NotesLibraryClient({
         toast.success('File deleted');
       } catch {
         toast.error('Could not delete file');
+      }
+    });
+  }
+
+  function deleteLink(link: SavedLinkListItem) {
+    if (!window.confirm(`Delete “${link.title}”? This cannot be undone.`)) {
+      return;
+    }
+    startTransition(async () => {
+      try {
+        await deleteWorkspaceLinkAction({
+          accountId,
+          accountSlug,
+          linkId: link.id,
+          personalScope,
+        });
+        setLinks((current) => current.filter((item) => item.id !== link.id));
+        toast.success('Link deleted');
+      } catch {
+        toast.error('Could not delete link');
       }
     });
   }
@@ -544,7 +606,11 @@ export function NotesLibraryClient({
       <aside className="w-full shrink-0 border-[color:var(--workspace-shell-border)] lg:w-56 lg:border-r xl:w-64">
         <div className="flex items-center justify-between gap-2 px-3 py-3">
           <p className="text-xs font-semibold tracking-wide text-[var(--workspace-shell-text-muted)] uppercase">
-            {contentMode === 'files' ? 'Library' : 'Folders'}
+            {contentMode === 'files'
+              ? 'Library'
+              : contentMode === 'links'
+                ? 'Links'
+                : 'Folders'}
           </p>
           {canEdit && foldersAvailable && contentMode === 'notes' ? (
             <Button
@@ -567,12 +633,26 @@ export function NotesLibraryClient({
             icon={
               contentMode === 'files' ? (
                 <File className="h-4 w-4" />
+              ) : contentMode === 'links' ? (
+                <Link2 className="h-4 w-4" />
               ) : (
                 <FolderOpen className="h-4 w-4" />
               )
             }
-            label={contentMode === 'files' ? 'All Files' : 'All Notes'}
-            count={contentMode === 'files' ? docs.length : notes.length}
+            label={
+              contentMode === 'files'
+                ? 'All Files'
+                : contentMode === 'links'
+                  ? 'All Links'
+                  : 'All Notes'
+            }
+            count={
+              contentMode === 'files'
+                ? docs.length
+                : contentMode === 'links'
+                  ? links.length
+                  : notes.length
+            }
           />
           <SidebarButton
             active={selection === 'pinned'}
@@ -582,7 +662,9 @@ export function NotesLibraryClient({
             count={
               contentMode === 'files'
                 ? docs.filter((doc) => doc.isPinned).length
-                : notes.filter((note) => note.isPinned).length
+                : contentMode === 'links'
+                  ? links.filter((link) => link.isPinned).length
+                  : notes.filter((note) => note.isPinned).length
             }
           />
 
@@ -637,13 +719,17 @@ export function NotesLibraryClient({
               value={query}
               onChange={(event) => setQuery(event.target.value)}
               placeholder={
-                contentMode === 'files' ? 'Search files…' : 'Search notes…'
+                contentMode === 'files'
+                  ? 'Search files…'
+                  : contentMode === 'links'
+                    ? 'Search links…'
+                    : 'Search notes…'
               }
               className="h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)] pl-8"
             />
           </div>
 
-          {docsTableAvailable ? (
+          {docsTableAvailable || linksTableAvailable ? (
             <div className="flex items-center rounded-full border border-[color:var(--workspace-shell-border)] p-0.5">
               <Button
                 type="button"
@@ -658,19 +744,36 @@ export function NotesLibraryClient({
               >
                 Notes
               </Button>
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className={cn(
-                  'h-8 rounded-full px-3 text-xs font-medium',
-                  contentMode === 'files' &&
-                    'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
-                )}
-                onClick={() => setContentMode('files')}
-              >
-                Files
-              </Button>
+              {docsTableAvailable ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-8 rounded-full px-3 text-xs font-medium',
+                    contentMode === 'files' &&
+                      'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
+                  )}
+                  onClick={() => setContentMode('files')}
+                >
+                  Files
+                </Button>
+              ) : null}
+              {linksTableAvailable ? (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className={cn(
+                    'h-8 rounded-full px-3 text-xs font-medium',
+                    contentMode === 'links' &&
+                      'bg-[var(--ozer-accent-subtle)] text-[var(--ozer-accent)]',
+                  )}
+                  onClick={() => setContentMode('links')}
+                >
+                  Links
+                </Button>
+              ) : null}
             </div>
           ) : null}
 
@@ -725,6 +828,17 @@ export function NotesLibraryClient({
                   Upload
                 </Button>
               </>
+            ) : contentMode === 'links' ? (
+              <Button
+                type="button"
+                size="sm"
+                className={`rounded-full ${workspaceBtnPrimaryMd}`}
+                disabled={pending || !linksTableAvailable}
+                onClick={() => setAddLinkOpen(true)}
+              >
+                <Plus className="mr-1.5 h-4 w-4" />
+                Add link
+              </Button>
             ) : (
               <Button
                 type="button"
@@ -791,6 +905,53 @@ export function NotesLibraryClient({
                 ))}
               </ul>
             )
+          ) : contentMode === 'links' ? (
+            !linksTableAvailable ? (
+              <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
+                <p className="font-medium text-[var(--workspace-shell-text)]">
+                  Links unavailable
+                </p>
+                <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+                  Apply the latest database migrations to enable links.
+                </p>
+              </div>
+            ) : filteredLinks.length === 0 ? (
+              <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
+                <p className="font-medium text-[var(--workspace-shell-text)]">
+                  {query ? 'No matching links' : 'No links here yet'}
+                </p>
+                <p className={`mt-1 text-sm ${workspaceTextMuted}`}>
+                  {query
+                    ? 'Try a different search.'
+                    : 'Save a Google Doc, Sheet, or any web page to open it from this list.'}
+                </p>
+              </div>
+            ) : layout === 'cards' ? (
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredLinks.map((link) => (
+                  <WorkspaceLinkCard
+                    key={link.id}
+                    link={link}
+                    canEdit={canEdit}
+                    pending={pending}
+                    onDelete={() => deleteLink(link)}
+                  />
+                ))}
+              </div>
+            ) : (
+              <ul className="divide-y divide-[color:var(--workspace-shell-border)] overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]">
+                {filteredLinks.map((link) => (
+                  <li key={link.id}>
+                    <WorkspaceLinkRow
+                      link={link}
+                      canEdit={canEdit}
+                      pending={pending}
+                      onDelete={() => deleteLink(link)}
+                    />
+                  </li>
+                ))}
+              </ul>
+            )
           ) : filteredNotes.length === 0 ? (
             <div className="flex h-full min-h-48 flex-col items-center justify-center text-center">
               <p className="font-medium text-[var(--workspace-shell-text)]">
@@ -839,6 +1000,20 @@ export function NotesLibraryClient({
           )}
         </div>
       </section>
+
+      <AddWorkspaceLinkDialog
+        open={addLinkOpen}
+        onOpenChange={setAddLinkOpen}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        personalScope={personalScope}
+        onCreated={(link) => {
+          setLinks((current) => [
+            link,
+            ...current.filter((item) => item.id !== link.id),
+          ]);
+        }}
+      />
 
       <Dialog open={createFolderOpen} onOpenChange={setCreateFolderOpen}>
         <DialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)] sm:max-w-md">

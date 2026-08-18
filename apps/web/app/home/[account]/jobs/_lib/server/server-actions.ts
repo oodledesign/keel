@@ -7,10 +7,11 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
 
-import { createCalendarService } from './calendar.service';
-import { createJobEventsService } from './job-events.service';
-import { createJobsService } from './jobs.service';
-import { createProjectPhasesService } from './project-phases.service';
+import {
+  GetCalendarItemDetailsSchema,
+  GetJobCalendarItemsSchema,
+  GetOrgCalendarItemsSchema,
+} from '../schema/calendar.schema';
 import {
   AddJobEventAssignmentSchema,
   CreateJobEventSchema,
@@ -32,21 +33,17 @@ import {
   GetJobSchema,
   ListAccountMembersSchema,
   ListJobAssignmentsSchema,
-  ListJobsSchema,
   ListJobNotesSchema,
+  ListJobsSchema,
   RemoveJobAssignmentSchema,
   UpdateJobSchema,
 } from '../schema/jobs.schema';
 import {
-  GetCalendarItemDetailsSchema,
-  GetJobCalendarItemsSchema,
-  GetOrgCalendarItemsSchema,
-} from '../schema/calendar.schema';
-import {
-  ApplyPhaseTemplateSchema,
-  CreatePhaseSchema,
-  CreateJobTaskSchema,
   AddPhaseNoteSchema,
+  ApplyPhaseTemplateSchema,
+  CreateJobTaskSchema,
+  CreatePhaseSchema,
+  DeleteJobTaskSchema,
   DeletePhaseSchema,
   EnsurePhasePageSchema,
   GetPhaseDetailSchema,
@@ -57,10 +54,14 @@ import {
   ReorderPhasesSchema,
   SavePhasePageDocSchema,
   SaveProjectAsPhaseTemplateSchema,
-  UpdatePhaseSchema,
   UpdateJobTaskSchema,
   UpdatePhaseNoteSchema,
+  UpdatePhaseSchema,
 } from '../schema/project-phases.schema';
+import { createCalendarService } from './calendar.service';
+import { createJobEventsService } from './job-events.service';
+import { createJobsService } from './jobs.service';
+import { createProjectPhasesService } from './project-phases.service';
 
 function getService() {
   return createJobsService(getSupabaseServerClient());
@@ -411,6 +412,19 @@ export const updateJobTask = enhanceAction(
     return task;
   },
   { schema: UpdateJobTaskSchema },
+);
+
+export const deleteJobTask = enhanceAction(
+  async (input) => {
+    const service = getProjectPhasesService();
+    const result = await service.deleteJobTask(input);
+    revalidatePath(jobDetailPath(input.accountSlug, input.jobId));
+    if (result.phaseId) {
+      revalidatePhasePaths(input.accountSlug, input.jobId, result.phaseId);
+    }
+    return result;
+  },
+  { schema: DeleteJobTaskSchema },
 );
 
 export const savePhasePageDoc = enhanceAction(

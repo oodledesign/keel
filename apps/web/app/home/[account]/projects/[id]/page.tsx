@@ -158,8 +158,10 @@ async function ProjectDetailPage({
       : {
           notes: [],
           docs: [],
+          links: [],
           notesTableAvailable: true,
           docsTableAvailable: true,
+          linksTableAvailable: true,
           linkOptions: {
             projects: [],
             jobs: [],
@@ -183,8 +185,10 @@ async function ProjectDetailPage({
         isContractorView={isContractorView}
         workspaceNotes={workspaceContent.notes}
         workspaceDocs={workspaceContent.docs}
+        workspaceLinks={workspaceContent.links}
         notesTableAvailable={workspaceContent.notesTableAvailable}
         docsTableAvailable={workspaceContent.docsTableAvailable}
+        linksTableAvailable={workspaceContent.linksTableAvailable}
         linkOptions={workspaceContent.linkOptions}
         defaultLink={workspaceContent.defaultLink}
       />

@@ -5,6 +5,7 @@ import { redirect } from 'next/navigation';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
 import pathsConfig from '~/config/paths.config';
+import { loadAccountLinks } from '~/home/[account]/_lib/workspace-content/links-loader';
 import { loadAccountNoteCategories } from '~/home/[account]/_lib/workspace-content/note-categories.loader';
 import { loadAccountNoteFolders } from '~/home/[account]/_lib/workspace-content/note-folders.loader';
 import {
@@ -31,20 +32,27 @@ export async function requirePersonalAccountId() {
 export async function loadPersonalNotesPageData() {
   const { accountId } = await requirePersonalAccountId();
 
-  const [{ notes, tableAvailable }, categoryResult, foldersResult] =
-    await Promise.all([
-      loadAccountNotes(accountId),
-      loadAccountNoteCategories(accountId),
-      loadAccountNoteFolders(accountId),
-    ]);
+  const [
+    { notes, tableAvailable },
+    linksResult,
+    categoryResult,
+    foldersResult,
+  ] = await Promise.all([
+    loadAccountNotes(accountId),
+    loadAccountLinks(accountId),
+    loadAccountNoteCategories(accountId),
+    loadAccountNoteFolders(accountId),
+  ]);
 
   return {
     accountId,
     accountSlug: PERSONAL_NOTES_ACCOUNT_SLUG,
     notes,
+    links: linksResult.links,
     folders: foldersResult.folders,
     foldersAvailable: foldersResult.tableAvailable,
     tableAvailable,
+    linksTableAvailable: linksResult.tableAvailable,
     customCategories: categoryResult.categories.map((c) => ({
       slug: c.slug,
       label: c.label,

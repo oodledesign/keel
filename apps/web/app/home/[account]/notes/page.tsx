@@ -96,8 +96,10 @@ async function NotesPage({ params }: NotesPageProps) {
             folders={data.folders}
             foldersAvailable={data.foldersAvailable}
             docs={data.docs}
+            links={data.links}
             tableAvailable={data.tableAvailable}
             docsTableAvailable={data.docsTableAvailable}
+            linksTableAvailable={data.linksTableAvailable}
           />
         </Suspense>
       </PageBody>

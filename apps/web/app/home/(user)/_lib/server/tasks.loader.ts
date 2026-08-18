@@ -15,8 +15,11 @@ import { workspaceColorForSpaceType } from '../workspace-accent';
 
 /** Cap task payloads for faster SSR and hydration. */
 export const TASK_LIST_LIMIT = 300;
-/** Completed/done rows are loaded separately so they don't crowd out later active work. */
-export const COMPLETED_TASK_LIST_LIMIT = 100;
+/**
+ * Completed/done rows are loaded separately so they don't crowd out later active work.
+ * Ordered by recently updated so a just-completed task always lands in this slice.
+ */
+export const COMPLETED_TASK_LIST_LIMIT = 500;
 
 const ACTIVE_TASK_STATUSES = ['todo', 'in_progress', 'client_review'] as const;
 
@@ -136,6 +139,7 @@ export type TasksPageTask = {
   dueDateLabel: string;
   dueDate: string | null; // ISO date for edit form
   accentColor: string | null;
+  /** Direct `tasks.client_id`, or the linked project's client when the task is only on a project. */
   clientId: string | null;
   projectId: string | null;
   areaId: string | null;
@@ -463,7 +467,7 @@ function taskRowToPageTask(
     dueDateLabel: formatDueDateLabel(dueDateRaw),
     dueDate: toIsoDateString(dueDateRaw),
     accentColor,
-    clientId: row.client_id ?? null,
+    clientId: resolvedClientId,
     projectId: row.project_id ?? null,
     areaId: row.area_id ?? null,
     clientName,
@@ -506,8 +510,9 @@ function nestTaskTree(flat: TasksPageTask[]): TasksPageTask[] {
       return a.title.localeCompare(b.title);
     });
   }
+  const loadedIds = new Set(flat.map((t) => t.id));
   return flat
-    .filter((t) => !t.parentTaskId)
+    .filter((t) => !t.parentTaskId || !loadedIds.has(t.parentTaskId))
     .map((t) => ({
       ...t,
       subtasks: byParent.get(t.id) ?? [],
@@ -946,6 +951,7 @@ async function fetchActiveThenCompletedTaskRows(
       client.from('tasks').select(selectCols),
     )
       .eq('status', 'done')
+      .order('updated_at', { ascending: false, nullsLast: true })
       .order('due_date', { ascending: false, nullsLast: true })
       .limit(COMPLETED_TASK_LIST_LIMIT);
     return Promise.all([activePromise, completedPromise]);
@@ -1010,10 +1016,32 @@ export const loadTasksForClient = cache(
     const client = getSupabaseServerClient();
     const user = await requireUserInServerComponent();
 
+    if (
+      !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+        clientId,
+      )
+    ) {
+      return [];
+    }
+
     try {
-      const rows = await fetchActiveThenCompletedTaskRows(client, (q) =>
-        q.eq('user_id', user.id).eq('client_id', clientId),
-      );
+      const { data: projectRows } = await client
+        .from('projects')
+        .select('id')
+        .eq('client_id', clientId);
+      const projectIds = (projectRows ?? [])
+        .map((row) => row.id)
+        .filter((id): id is string => typeof id === 'string' && id.length > 0);
+
+      const rows = await fetchActiveThenCompletedTaskRows(client, (q) => {
+        const scoped = q.eq('user_id', user.id);
+        if (projectIds.length === 0) {
+          return scoped.eq('client_id', clientId);
+        }
+        return scoped.or(
+          `client_id.eq.${clientId},project_id.in.(${projectIds.join(',')})`,
+        );
+      });
       return enrichTaskRows(client, rows, 'work');
     } catch (err) {
       console.error(

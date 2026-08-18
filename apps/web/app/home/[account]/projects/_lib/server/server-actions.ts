@@ -47,6 +47,7 @@ import {
   ApplyPhaseTemplateSchema,
   CreateJobTaskSchema,
   CreatePhaseSchema,
+  DeleteJobTaskSchema,
   DeletePhaseSchema,
   EnsurePhasePageSchema,
   GetPhaseDetailSchema,
@@ -415,6 +416,19 @@ export const updateJobTask = enhanceAction(
     return task;
   },
   { schema: UpdateJobTaskSchema },
+);
+
+export const deleteJobTask = enhanceAction(
+  async (input) => {
+    const service = getProjectPhasesService();
+    const result = await service.deleteJobTask(input);
+    revalidatePath(jobDetailPath(input.accountSlug, input.jobId));
+    if (result.phaseId) {
+      revalidatePhasePaths(input.accountSlug, input.jobId, result.phaseId);
+    }
+    return result;
+  },
+  { schema: DeleteJobTaskSchema },
 );
 
 export const loadJobTaskPersonAssignees = enhanceAction(

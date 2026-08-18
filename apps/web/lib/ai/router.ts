@@ -13,7 +13,12 @@ import {
   notifyAiCreditThresholds,
   notifyAiCreditsExhausted,
 } from '~/lib/ai/notify-ai-credit-thresholds';
-
+import {
+  AI_CRISIS_REPLY,
+  detectCrisisIntent,
+  isConversationalAiFeature,
+  withAiSafetySystemPrompt,
+} from '~/lib/ai/safety';
 
 export const GEMINI_FLASH_LITE_MODEL = 'gemini-3.1-flash-lite';
 export const HAIKU_MODEL = 'claude-haiku-4-5-20251001';
@@ -591,9 +596,7 @@ function hasGoogleAiApiKey(): boolean {
  * Resolve runtime provider config. High-volume Flash features fall back to Haiku
  * (full 1-credit price) when GOOGLE_AI_API_KEY is not configured.
  */
-export function resolveFeatureConfig(
-  feature: OzerAIFeatureKey,
-): FeatureConfig {
+export function resolveFeatureConfig(feature: OzerAIFeatureKey): FeatureConfig {
   const config = FEATURE_CONFIG[feature];
 
   if (
@@ -848,6 +851,7 @@ export async function invokeAIProvider({
   let text = '';
   let inputTokens: number | null = null;
   let outputTokens: number | null = null;
+  const safeSystemPrompt = withAiSafetySystemPrompt(feature, systemPrompt);
 
   if (config.provider === 'anthropic') {
     const anthropic = getAnthropicClient();
@@ -855,11 +859,11 @@ export async function invokeAIProvider({
       ? [
           {
             type: 'text' as const,
-            text: systemPrompt,
+            text: safeSystemPrompt,
             cache_control: { type: 'ephemeral' as const },
           },
         ]
-      : systemPrompt;
+      : safeSystemPrompt;
 
     const response = await anthropic.messages.create({
       model: config.model,
@@ -877,7 +881,7 @@ export async function invokeAIProvider({
       model: config.model,
       contents: [{ role: 'user', parts: [{ text: userPrompt }] }],
       config: {
-        systemInstruction: systemPrompt,
+        systemInstruction: safeSystemPrompt,
         maxOutputTokens: config.maxOutputTokens,
         ...(config.structuredOutput && {
           responseMimeType: 'application/json',
@@ -910,6 +914,10 @@ export async function callAI({
   usePromptCaching = false,
   responseSchema,
 }: OzerAICallParams): Promise<string> {
+  if (isConversationalAiFeature(feature) && detectCrisisIntent(userPrompt)) {
+    return AI_CRISIS_REPLY;
+  }
+
   const config = resolveFeatureConfig(feature);
   await checkAndDeductCredits(accountId, config.credits, supabase);
 
@@ -983,18 +991,29 @@ export async function streamAI({
     );
   }
 
+  if (isConversationalAiFeature(feature) && detectCrisisIntent(userPrompt)) {
+    const encoder = new TextEncoder();
+    return new ReadableStream({
+      start(controller) {
+        controller.enqueue(encoder.encode(AI_CRISIS_REPLY));
+        controller.close();
+      },
+    });
+  }
+
   await checkAndDeductCredits(accountId, config.credits, supabase);
 
   const anthropic = getAnthropicClient();
+  const safeSystemPrompt = withAiSafetySystemPrompt(feature, systemPrompt);
   const system = usePromptCaching
     ? [
         {
           type: 'text' as const,
-          text: systemPrompt,
+          text: safeSystemPrompt,
           cache_control: { type: 'ephemeral' as const },
         },
       ]
-    : systemPrompt;
+    : safeSystemPrompt;
 
   const anthropicStream = anthropic.messages.stream({
     model: config.model,

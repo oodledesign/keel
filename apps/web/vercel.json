@@ -44,6 +44,10 @@
       "schedule": "0 8 * * *"
     },
     {
+      "path": "/api/cron/account-data-purge",
+      "schedule": "0 4 * * *"
+    },
+    {
       "path": "/api/cron/billing-dunning-reminders",
       "schedule": "0 9 * * *"
     },

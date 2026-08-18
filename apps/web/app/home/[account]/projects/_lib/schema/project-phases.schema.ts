@@ -12,7 +12,14 @@ export type PhaseStatus = z.infer<typeof PhaseStatusSchema>;
 const optionalString = z.string().optional();
 const optionalNullableString = z.string().nullable().optional();
 const optionalDate = z.coerce.date().optional();
-const optionalNullableDate = z.union([z.coerce.date(), z.null()]).optional();
+/**
+ * `z.coerce.date()` treats `null` as Unix epoch (1 Jan 1970).
+ * Normalise empty values first so omitted dates stay empty.
+ */
+const optionalNullableDate = z.preprocess(
+  (value) => (value == null || value === '' ? null : value),
+  z.union([z.null(), z.coerce.date()]).optional(),
+);
 const optionalNullableInt = z.number().int().nullable().optional();
 
 const accountJobFields = {
@@ -103,6 +110,8 @@ export const CreateJobTaskSchema = z.object({
   assigneeUserId: z.string().uuid().optional(),
   dueDate: optionalNullableDate,
   sortOrder: z.number().int().min(0).optional(),
+  parentTaskId: z.string().uuid().nullable().optional(),
+  subtaskTitles: z.array(z.string().trim().min(1).max(500)).max(25).optional(),
 });
 
 export const TaskLinkSchema = z.object({
@@ -129,6 +138,11 @@ export const UpdateJobTaskSchema = z.object({
   notes: z.string().max(20000).nullable().optional(),
   links: z.array(TaskLinkSchema).max(20).optional(),
   noteRefs: z.array(TaskNoteRefSchema).max(30).optional(),
+});
+
+export const DeleteJobTaskSchema = z.object({
+  ...accountJobSlugFields,
+  taskId: z.string().uuid(),
 });
 
 export const SavePhasePageDocSchema = z.object({
@@ -216,6 +230,7 @@ export type EnsurePhasePageInput = z.infer<typeof EnsurePhasePageSchema>;
 export type GetPhaseDetailInput = z.infer<typeof GetPhaseDetailSchema>;
 export type CreateJobTaskInput = z.infer<typeof CreateJobTaskSchema>;
 export type UpdateJobTaskInput = z.infer<typeof UpdateJobTaskSchema>;
+export type DeleteJobTaskInput = z.infer<typeof DeleteJobTaskSchema>;
 export type SavePhasePageDocInput = z.infer<typeof SavePhasePageDocSchema>;
 export type AddPhaseNoteInput = z.infer<typeof AddPhaseNoteSchema>;
 export type UpdatePhaseNoteInput = z.infer<typeof UpdatePhaseNoteSchema>;
@@ -275,9 +290,11 @@ export type JobBoardTask = {
   job_id: string | null;
   user_id: string | null;
   assignee_contact_id: string | null;
+  parent_task_id: string | null;
   notes: string | null;
   links: Array<{ url: string; label?: string | null }>;
   note_refs: Array<{ id: string; title: string }>;
+  subtasks?: JobBoardTask[];
 };
 
 export type JobBoardAssignee = {

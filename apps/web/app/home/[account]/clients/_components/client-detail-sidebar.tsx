@@ -67,6 +67,7 @@ import type {
   DocListItem,
   LinkOption,
   NoteListItem,
+  SavedLinkListItem,
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
 import { listMeetingTranscripts } from '../../meeting-transcripts/_lib/server/server-actions';
@@ -271,8 +272,10 @@ export function ClientDetailSidebar({
   portalHref = null,
   workspaceNotes,
   workspaceDocs,
+  workspaceLinks,
   notesTableAvailable,
   docsTableAvailable,
+  linksTableAvailable,
   linkOptions,
   defaultLink,
   notesVariant = 'work',
@@ -298,8 +301,10 @@ export function ClientDetailSidebar({
   portalHref?: string | null;
   workspaceNotes?: NoteListItem[];
   workspaceDocs?: DocListItem[];
+  workspaceLinks?: SavedLinkListItem[];
   notesTableAvailable?: boolean;
   docsTableAvailable?: boolean;
+  linksTableAvailable?: boolean;
   linkOptions?: LinkOption[];
   defaultLink?: LinkValue;
   notesVariant?: WorkspaceNotesVariant;
@@ -1229,8 +1234,10 @@ export function ClientDetailSidebar({
               accountSlug={accountSlug}
               notes={workspaceNotes}
               docs={workspaceDocs ?? []}
+              links={workspaceLinks ?? []}
               tableAvailable={notesTableAvailable ?? true}
               docsTableAvailable={docsTableAvailable ?? true}
+              linksTableAvailable={linksTableAvailable ?? true}
               linkOptions={linkOptions}
               defaultLink={defaultLink}
               variant={notesVariant}

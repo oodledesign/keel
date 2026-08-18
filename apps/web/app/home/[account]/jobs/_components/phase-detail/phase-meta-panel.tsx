@@ -4,7 +4,7 @@ import { useEffect, useState, useTransition } from 'react';
 
 import { useRouter } from 'next/navigation';
 
-import { CheckCircle2, Trash2 } from 'lucide-react';
+import { CheckCircle2, MoreHorizontal, Trash2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -14,9 +14,15 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-  AlertDialogTrigger,
 } from '@kit/ui/alert-dialog';
 import { Button } from '@kit/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@kit/ui/dropdown-menu';
 import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import {
@@ -59,6 +65,26 @@ const STATUS_OPTIONS: PhaseStatus[] = [
   'complete',
 ];
 
+type PhaseDraft = {
+  name: string;
+  status: PhaseStatus;
+  colour: string;
+  start_date: string;
+  due_date: string;
+  is_milestone: boolean;
+};
+
+function toDraft(phase: PhaseRecord): PhaseDraft {
+  return {
+    name: phase.name,
+    status: phase.status,
+    colour: phase.colour ?? '#FF5C34',
+    start_date: toDateInputValue(phase.start_date),
+    due_date: toDateInputValue(phase.due_date),
+    is_milestone: phase.is_milestone,
+  };
+}
+
 export function PhaseMetaPanel({
   accountId,
   accountSlug,
@@ -75,18 +101,33 @@ export function PhaseMetaPanel({
   onPhaseChange: (phase: PhaseRecord) => void;
 }) {
   const router = useRouter();
-  const [, startTransition] = useTransition();
-  const [name, setName] = useState(phase.name);
+  const [pending, startTransition] = useTransition();
+  const [draft, setDraft] = useState<PhaseDraft>(() => toDraft(phase));
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
-    setName(phase.name);
-  }, [phase.name, phase.id]);
+    setDraft(toDraft(phase));
+  }, [phase]);
 
-  const patch = (updates: Partial<PhaseRecord>) => {
-    const optimistic = { ...phase, ...updates };
+  const save = (next: PhaseDraft, successMessage: string) => {
+    const trimmed = next.name.trim();
+    if (!trimmed) {
+      toast.error('Phase name is required');
+      return;
+    }
+
+    const optimistic: PhaseRecord = {
+      ...phase,
+      name: trimmed,
+      status: next.status,
+      colour: next.colour,
+      start_date: next.start_date || null,
+      due_date: next.due_date || null,
+      is_milestone: next.is_milestone,
+    };
     onPhaseChange(optimistic);
+
     startTransition(async () => {
       try {
         const saved = await updatePhase({
@@ -94,25 +135,19 @@ export function PhaseMetaPanel({
           accountSlug,
           jobId,
           phaseId: phase.id,
-          name: updates.name,
-          description: updates.description ?? undefined,
-          status: updates.status,
-          is_milestone: updates.is_milestone,
-          colour: updates.colour,
-          start_date:
-            updates.start_date === undefined
-              ? undefined
-              : updates.start_date
-                ? new Date(`${updates.start_date}T12:00:00`)
-                : null,
-          due_date:
-            updates.due_date === undefined
-              ? undefined
-              : updates.due_date
-                ? new Date(`${updates.due_date}T12:00:00`)
-                : null,
+          name: trimmed,
+          status: next.status,
+          is_milestone: next.is_milestone,
+          colour: next.colour,
+          start_date: next.start_date
+            ? new Date(`${next.start_date}T12:00:00`)
+            : null,
+          due_date: next.due_date
+            ? new Date(`${next.due_date}T12:00:00`)
+            : null,
         });
         onPhaseChange({ ...optimistic, ...(saved as PhaseRecord) });
+        toast.success(successMessage);
       } catch (err) {
         toast.error(getErrorMessage(err));
         onPhaseChange(phase);
@@ -151,16 +186,11 @@ export function PhaseMetaPanel({
         <div className="min-w-0 flex-1 space-y-3">
           {canEdit ? (
             <Input
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              onBlur={() => {
-                const trimmed = name.trim();
-                if (trimmed && trimmed !== phase.name) {
-                  patch({ name: trimmed });
-                } else {
-                  setName(phase.name);
-                }
-              }}
+              value={draft.name}
+              disabled={pending || deleting}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, name: e.target.value }))
+              }
               className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-lg font-semibold text-[var(--workspace-shell-text)]"
             />
           ) : (
@@ -171,10 +201,10 @@ export function PhaseMetaPanel({
 
           <span
             className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-              PHASE_STATUS_STYLES[phase.status]
+              PHASE_STATUS_STYLES[draft.status]
             }`}
           >
-            {PHASE_STATUS_LABELS[phase.status]}
+            {PHASE_STATUS_LABELS[draft.status]}
           </span>
 
           {phase.completed_at && (
@@ -184,32 +214,61 @@ export function PhaseMetaPanel({
           )}
         </div>
 
-        <div className="flex flex-wrap items-center gap-2">
-          {canEdit && phase.status !== 'complete' && (
+        {canEdit ? (
+          <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
               size="sm"
+              disabled={pending || deleting}
               className="bg-[var(--ozer-accent)] text-[var(--ozer-white)] hover:bg-[var(--ozer-accent-hover)]"
-              onClick={() => patch({ status: 'complete' })}
+              onClick={() => save(draft, 'Phase saved')}
             >
-              <CheckCircle2 className="mr-1.5 h-4 w-4" />
-              Mark complete
+              {pending && !deleting ? 'Saving…' : 'Save'}
             </Button>
-          )}
 
-          {canEdit ? (
-            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
-              <AlertDialogTrigger asChild>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
                 <Button
                   type="button"
-                  size="sm"
                   variant="outline"
-                  className="border-red-500/40 text-red-700 hover:bg-red-500/10 hover:text-red-800"
+                  size="icon"
+                  disabled={pending || deleting}
+                  className="h-8 w-8 border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)]"
+                  aria-label="Phase actions"
                 >
-                  <Trash2 className="mr-1.5 h-4 w-4" />
-                  Delete phase
+                  <MoreHorizontal className="h-4 w-4" />
                 </Button>
-              </AlertDialogTrigger>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="end"
+                className="w-48 border-[color:var(--workspace-shell-border)] bg-[var(--ozer-surface-panel)] text-[var(--workspace-shell-text)]"
+              >
+                {draft.status !== 'complete' ? (
+                  <DropdownMenuItem
+                    className="cursor-pointer focus:bg-[var(--workspace-shell-sidebar-accent)] focus:text-[var(--workspace-shell-text)]"
+                    onSelect={() =>
+                      save(
+                        { ...draft, status: 'complete' },
+                        'Phase marked complete',
+                      )
+                    }
+                  >
+                    <CheckCircle2 className="mr-2 h-4 w-4" />
+                    Mark complete
+                  </DropdownMenuItem>
+                ) : null}
+                {draft.status !== 'complete' ? <DropdownMenuSeparator /> : null}
+                <DropdownMenuItem
+                  className="cursor-pointer text-red-700 focus:bg-red-500/10 focus:text-red-800"
+                  onSelect={() => setDeleteOpen(true)}
+                >
+                  <Trash2 className="mr-2 h-4 w-4" />
+                  Delete phase
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
+            <AlertDialog open={deleteOpen} onOpenChange={setDeleteOpen}>
               <AlertDialogContent className="border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                 <AlertDialogHeader>
                   <AlertDialogTitle>Delete “{phase.name}”?</AlertDialogTitle>
@@ -237,8 +296,8 @@ export function PhaseMetaPanel({
                 </AlertDialogFooter>
               </AlertDialogContent>
             </AlertDialog>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </div>
 
       <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
@@ -248,8 +307,11 @@ export function PhaseMetaPanel({
           </Label>
           {canEdit ? (
             <Select
-              value={phase.status}
-              onValueChange={(v) => patch({ status: v as PhaseStatus })}
+              value={draft.status}
+              disabled={pending || deleting}
+              onValueChange={(v) =>
+                setDraft((prev) => ({ ...prev, status: v as PhaseStatus }))
+              }
             >
               <SelectTrigger className="mt-1 h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]">
                 <SelectValue />
@@ -276,8 +338,11 @@ export function PhaseMetaPanel({
           {canEdit ? (
             <Input
               type="color"
-              value={phase.colour ?? '#FF5C34'}
-              onChange={(e) => patch({ colour: e.target.value })}
+              value={draft.colour}
+              disabled={pending || deleting}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, colour: e.target.value }))
+              }
               className="mt-1 h-9 w-full cursor-pointer border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1"
             />
           ) : (
@@ -295,14 +360,12 @@ export function PhaseMetaPanel({
           {canEdit ? (
             <Input
               type="date"
-              defaultValue={toDateInputValue(phase.start_date)}
+              value={draft.start_date}
+              disabled={pending || deleting}
               className="mt-1 h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-              onBlur={(e) => {
-                const val = e.target.value || null;
-                if (val !== toDateInputValue(phase.start_date)) {
-                  patch({ start_date: val });
-                }
-              }}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, start_date: e.target.value }))
+              }
             />
           ) : (
             <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -318,14 +381,12 @@ export function PhaseMetaPanel({
           {canEdit ? (
             <Input
               type="date"
-              defaultValue={toDateInputValue(phase.due_date)}
+              value={draft.due_date}
+              disabled={pending || deleting}
               className="mt-1 h-9 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-[var(--workspace-shell-text)]"
-              onBlur={(e) => {
-                const val = e.target.value || null;
-                if (val !== toDateInputValue(phase.due_date)) {
-                  patch({ due_date: val });
-                }
-              }}
+              onChange={(e) =>
+                setDraft((prev) => ({ ...prev, due_date: e.target.value }))
+              }
             />
           ) : (
             <p className="mt-1 text-sm text-[var(--workspace-shell-text-muted)]">
@@ -338,9 +399,11 @@ export function PhaseMetaPanel({
       <label className="mt-4 flex cursor-pointer items-center gap-2 text-sm text-[var(--workspace-shell-text-muted)]">
         <input
           type="checkbox"
-          checked={phase.is_milestone}
-          disabled={!canEdit}
-          onChange={(e) => patch({ is_milestone: e.target.checked })}
+          checked={draft.is_milestone}
+          disabled={!canEdit || pending || deleting}
+          onChange={(e) =>
+            setDraft((prev) => ({ ...prev, is_milestone: e.target.checked }))
+          }
           className="rounded border-[color:var(--workspace-shell-border)]"
         />
         Milestone phase

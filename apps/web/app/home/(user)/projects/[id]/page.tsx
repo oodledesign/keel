@@ -72,8 +72,10 @@ async function PersonalProjectDetailPage({
         isContractorView={false}
         workspaceNotes={[]}
         workspaceDocs={[]}
+        workspaceLinks={[]}
         notesTableAvailable
         docsTableAvailable
+        linksTableAvailable
         linkOptions={[]}
         defaultLink={{ type: 'job' as const, id }}
       />

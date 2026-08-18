@@ -40,12 +40,14 @@ export async function notificationAlreadySent(
   admin: AnyClient,
   subscriptionId: string,
   notificationType: BillingEmailKind,
+  periodKey = '',
 ): Promise<boolean> {
   const { data } = await admin
     .from('billing_notification_log')
     .select('id')
     .eq('subscription_id', subscriptionId)
     .eq('notification_type', notificationType)
+    .eq('period_key', periodKey)
     .maybeSingle();
 
   return Boolean(data);
@@ -57,6 +59,7 @@ export async function markNotificationSent(
     accountId: string;
     subscriptionId: string;
     notificationType: BillingEmailKind;
+    periodKey?: string;
   },
 ): Promise<void> {
   await admin.from('billing_notification_log').upsert(
@@ -64,8 +67,12 @@ export async function markNotificationSent(
       account_id: input.accountId,
       subscription_id: input.subscriptionId,
       notification_type: input.notificationType,
+      period_key: input.periodKey ?? '',
     },
-    { onConflict: 'subscription_id,notification_type', ignoreDuplicates: true },
+    {
+      onConflict: 'subscription_id,notification_type,period_key',
+      ignoreDuplicates: true,
+    },
   );
 }
 

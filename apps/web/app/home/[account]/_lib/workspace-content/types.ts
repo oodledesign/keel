@@ -86,6 +86,24 @@ export type ProposalContextRef = {
   title: string;
 };
 
+export type SavedLinkListItem = {
+  id: string;
+  title: string;
+  url: string;
+  description: string;
+  faviconUrl: string | null;
+  ogImageUrl: string | null;
+  isPinned: boolean;
+  projectId: string | null;
+  jobId: string | null;
+  clientOrgId: string | null;
+  clientId: string | null;
+  propertyId: string | null;
+  taskId: string | null;
+  context: NoteContextLink | null;
+  updatedAt: string;
+};
+
 export type DocListItem = {
   id: string;
   title: string;

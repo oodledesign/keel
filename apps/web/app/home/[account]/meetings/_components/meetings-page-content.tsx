@@ -17,6 +17,7 @@ import {
   Copy,
   Eye,
   FileText,
+  ListTodo,
   Loader2,
   Mic,
   MoreHorizontal,
@@ -45,6 +46,12 @@ import {
 } from '@kit/ui/select';
 import { toast } from '@kit/ui/sonner';
 import { Textarea } from '@kit/ui/textarea';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@kit/ui/tooltip';
 import { cn } from '@kit/ui/utils';
 
 import pathsConfig from '~/config/paths.config';
@@ -407,100 +414,118 @@ export function MeetingsPageContent({
               ) : null}
             </div>
           ) : (
-            <ul className="space-y-2">
-              {rows.map((row) => (
-                <li
-                  key={row.id}
-                  className={cn(
-                    'flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)]',
-                    'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--ozer-accent)]/30',
-                  )}
-                >
-                  {row.clientId ? (
-                    <Link
-                      href={clientPath(row.clientId)}
-                      className="mt-0.5 shrink-0"
-                      title={row.clientName ?? 'Client'}
-                    >
-                      <ProfileAvatar
-                        displayName={row.clientName ?? 'Client'}
-                        pictureUrl={row.clientPictureUrl}
-                        className="mx-0 h-8 w-8"
-                        fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-xs text-[var(--workspace-shell-text)]"
-                      />
-                    </Link>
-                  ) : null}
-                  <div className="min-w-0 flex-1">
-                    <Link
-                      href={meetingDetailPath(row.id)}
-                      className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)]"
-                    >
-                      {row.title}
-                    </Link>
-                    <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
-                      {meetingDisplayDate(row.meetingDate, row.createdAt)}
-                      {' · '}
-                      {row.clientId ? (
-                        <Link
-                          href={clientPath(row.clientId)}
-                          className="font-medium text-[var(--workspace-shell-text)] hover:underline"
-                        >
-                          {contextLabel(row)}
-                        </Link>
-                      ) : (
-                        <span className="font-medium text-[var(--workspace-shell-text)]">
-                          {contextLabel(row)}
-                        </span>
-                      )}
-                    </p>
-                  </div>
-                  <div className="flex shrink-0 items-center gap-1">
-                    <MeetingParticipantAvatars
-                      participants={row.participants}
-                    />
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          className="h-8 w-8 text-[var(--workspace-shell-text-muted)]"
-                          disabled={pending}
-                        >
-                          <MoreHorizontal className="h-4 w-4" />
-                          <span className="sr-only">Meeting actions</span>
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuItem asChild>
-                          <Link href={meetingDetailPath(row.id)}>
-                            <Eye className="mr-2 h-4 w-4" />
-                            View meeting
+            <TooltipProvider delayDuration={200}>
+              <ul className="space-y-2">
+                {rows.map((row) => (
+                  <li
+                    key={row.id}
+                    className={cn(
+                      'flex items-start justify-between gap-3 rounded-xl border border-[color:var(--workspace-shell-border)]',
+                      'bg-[var(--workspace-shell-panel)] px-4 py-3 transition-colors hover:border-[var(--ozer-accent)]/30',
+                    )}
+                  >
+                    {row.clientId ? (
+                      <Link
+                        href={clientPath(row.clientId)}
+                        className="mt-0.5 shrink-0"
+                        title={row.clientName ?? 'Client'}
+                      >
+                        <ProfileAvatar
+                          displayName={row.clientName ?? 'Client'}
+                          pictureUrl={row.clientPictureUrl}
+                          className="mx-0 h-8 w-8"
+                          fallbackClassName="bg-[var(--workspace-shell-panel-hover)] text-xs text-[var(--workspace-shell-text)]"
+                        />
+                      </Link>
+                    ) : null}
+                    <div className="min-w-0 flex-1">
+                      <Link
+                        href={meetingDetailPath(row.id)}
+                        className="truncate text-sm font-medium text-[var(--workspace-shell-text)] hover:text-[var(--ozer-accent)]"
+                      >
+                        {row.title}
+                      </Link>
+                      <p className="mt-1 text-xs text-[var(--workspace-shell-text-muted)]">
+                        {meetingDisplayDate(row.meetingDate, row.createdAt)}
+                        {' · '}
+                        {row.clientId ? (
+                          <Link
+                            href={clientPath(row.clientId)}
+                            className="font-medium text-[var(--workspace-shell-text)] hover:underline"
+                          >
+                            {contextLabel(row)}
                           </Link>
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={() => void handleCopyTranscript(row)}
-                        >
-                          <Copy className="mr-2 h-4 w-4" />
-                          Copy transcript
-                        </DropdownMenuItem>
-                        {canEdit ? (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onClick={() => handleDelete(row.id)}
+                        ) : (
+                          <span className="font-medium text-[var(--workspace-shell-text)]">
+                            {contextLabel(row)}
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-1">
+                      {row.hasExtractedTasks ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <span
+                              data-test="meeting-extracted-tasks-icon"
+                              className="inline-flex h-8 w-8 items-center justify-center text-[var(--ozer-accent)]"
+                              aria-label="Tasks have been extracted"
                             >
-                              <Trash2 className="mr-2 h-4 w-4" />
-                              Delete
-                            </DropdownMenuItem>
-                          </>
-                        ) : null}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
-                  </div>
-                </li>
-              ))}
-            </ul>
+                              <ListTodo className="h-4 w-4" />
+                            </span>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            Tasks have been extracted
+                          </TooltipContent>
+                        </Tooltip>
+                      ) : null}
+                      <MeetingParticipantAvatars
+                        participants={row.participants}
+                      />
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button
+                            size="icon"
+                            variant="ghost"
+                            className="h-8 w-8 text-[var(--workspace-shell-text-muted)]"
+                            disabled={pending}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                            <span className="sr-only">Meeting actions</span>
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem asChild>
+                            <Link href={meetingDetailPath(row.id)}>
+                              <Eye className="mr-2 h-4 w-4" />
+                              View meeting
+                            </Link>
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => void handleCopyTranscript(row)}
+                          >
+                            <Copy className="mr-2 h-4 w-4" />
+                            Copy transcript
+                          </DropdownMenuItem>
+                          {canEdit ? (
+                            <>
+                              <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                className="text-destructive focus:text-destructive"
+                                onClick={() => handleDelete(row.id)}
+                              >
+                                <Trash2 className="mr-2 h-4 w-4" />
+                                Delete
+                              </DropdownMenuItem>
+                            </>
+                          ) : null}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </TooltipProvider>
           )}
 
           <p className="pt-2 text-xs text-[var(--workspace-shell-text-muted)]">

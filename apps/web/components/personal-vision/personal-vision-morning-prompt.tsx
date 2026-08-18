@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 
 import Link from 'next/link';
 
-import { Sparkles } from 'lucide-react';
+import { Telescope } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -75,7 +75,7 @@ export function PersonalVisionMorningPrompt() {
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-[var(--ozer-coral-500)]" />
+            <Telescope className="h-5 w-5 text-[var(--ozer-coral-500)]" />
             Morning Vision
           </DialogTitle>
           <DialogDescription>

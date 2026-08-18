@@ -32,6 +32,7 @@ import type {
   DocListItem,
   LinkOption,
   NoteListItem,
+  SavedLinkListItem,
 } from '../../../_lib/workspace-content/types';
 import { createSchedulingService } from '../../../scheduling/_lib/server/scheduling.service';
 import type { ClientDetailOverviewSeed } from '../client-detail.types';
@@ -140,16 +141,20 @@ async function loadClientDetailPageDataImpl(
 
   let workspaceNotes: NoteListItem[] = [];
   let workspaceDocs: DocListItem[] = [];
+  let workspaceLinks: SavedLinkListItem[] = [];
   let notesTableAvailable = false;
   let docsTableAvailable = false;
+  let linksTableAvailable = false;
   let linkOptions: LinkOption[] = [];
   let defaultLink: LinkValue = { type: 'client', id: clientId };
 
   if (workspaceContentResult) {
     workspaceNotes = workspaceContentResult.notes;
     workspaceDocs = workspaceContentResult.docs;
+    workspaceLinks = workspaceContentResult.links;
     notesTableAvailable = workspaceContentResult.notesTableAvailable;
     docsTableAvailable = workspaceContentResult.docsTableAvailable;
+    linksTableAvailable = workspaceContentResult.linksTableAvailable;
     linkOptions = workspaceContentResult.linkOptions;
     defaultLink = workspaceContentResult.defaultLink;
   }
@@ -231,8 +236,10 @@ async function loadClientDetailPageDataImpl(
     accountHomeHref: pathsConfig.app.accountHome.replace('[account]', slug),
     workspaceNotes,
     workspaceDocs,
+    workspaceLinks,
     notesTableAvailable,
     docsTableAvailable,
+    linksTableAvailable,
     linkOptions,
     defaultLink,
     notesVariant: notesVariantFromProfile(workspaceProfile),

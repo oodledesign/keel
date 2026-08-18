@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { GripVertical, MoreHorizontal, Plus, Trash2 } from 'lucide-react';
+import { GripVertical, MoreHorizontal, Trash2 } from 'lucide-react';
 
 import {
   AlertDialog,
@@ -39,7 +39,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
-import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
 import { projectPhaseHref } from '~/lib/projects/project-paths';
@@ -56,6 +55,7 @@ import {
   deletePhase,
   moveTask,
 } from '../../_lib/server/server-actions';
+import { AddProjectTaskForm } from './add-project-task-form';
 import { JobProjectTaskSheet } from './job-project-task-sheet';
 import {
   PHASE_STATUS_LABELS,
@@ -80,11 +80,13 @@ function TaskCard({
   memberLookup,
   isOverlay,
   onOpen,
+  subtasks = [],
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
   isOverlay?: boolean;
   onOpen?: () => void;
+  subtasks?: JobBoardTask[];
 }) {
   const assignee = task.user_id ? memberLookup.get(task.user_id) : null;
   const priorityKey = task.priority || 'none';
@@ -148,6 +150,19 @@ function TaskCard({
               </span>
             )}
           </div>
+          {subtasks.length > 0 ? (
+            <ul className="mt-2 space-y-1 border-t border-[color:var(--workspace-shell-border)]/60 pt-2">
+              {subtasks.map((subtask) => (
+                <li
+                  key={subtask.id}
+                  className="truncate pl-1 text-[11px] text-[var(--workspace-shell-text-muted)]"
+                >
+                  {subtask.status === 'done' ? '✓ ' : '○ '}
+                  {subtask.title}
+                </li>
+              ))}
+            </ul>
+          ) : null}
         </div>
       </div>
     </div>
@@ -159,11 +174,13 @@ function SortableTaskCard({
   memberLookup,
   disabled,
   onOpen,
+  subtasks = [],
 }: {
   task: JobBoardTask;
   memberLookup: MemberLookup;
   disabled: boolean;
   onOpen: () => void;
+  subtasks?: JobBoardTask[];
 }) {
   const {
     attributes,
@@ -198,7 +215,12 @@ function SortableTaskCard({
           </button>
         )}
         <div className="min-w-0 flex-1">
-          <TaskCard task={task} memberLookup={memberLookup} onOpen={onOpen} />
+          <TaskCard
+            task={task}
+            memberLookup={memberLookup}
+            onOpen={onOpen}
+            subtasks={subtasks}
+          />
         </div>
       </div>
     </div>
@@ -224,7 +246,11 @@ function PhaseColumn({
   jobId: string;
   canEditJobs: boolean;
   memberLookup: MemberLookup;
-  onAddTask: (phaseId: string | null, title: string) => void;
+  onAddTask: (
+    phaseId: string | null,
+    title: string,
+    subtaskTitles: string[],
+  ) => void;
   addingTask: boolean;
   onDeletePhase?: (phaseId: string) => void;
   deletingPhase?: boolean;
@@ -235,8 +261,15 @@ function PhaseColumn({
     id: columnId,
     data: { phaseId: phase?.id ?? null },
   });
-  const [draftTitle, setDraftTitle] = useState('');
   const [deleteOpen, setDeleteOpen] = useState(false);
+  const rootTasks = tasks.filter((task) => !task.parent_task_id);
+  const subtasksByParent = new Map<string, JobBoardTask[]>();
+  for (const task of tasks) {
+    if (!task.parent_task_id) continue;
+    const list = subtasksByParent.get(task.parent_task_id) ?? [];
+    list.push(task);
+    subtasksByParent.set(task.parent_task_id, list);
+  }
 
   const colour = phase?.colour ?? '#64748B';
 
@@ -347,52 +380,32 @@ function PhaseColumn({
       </div>
 
       <SortableContext
-        items={tasks.map((t) => t.id)}
+        items={rootTasks.map((t) => t.id)}
         strategy={verticalListSortingStrategy}
       >
         <div className="flex min-h-0 flex-1 flex-col gap-2 overflow-y-auto p-2">
-          {tasks.map((task) => (
+          {rootTasks.map((task) => (
             <SortableTaskCard
               key={task.id}
               task={task}
               memberLookup={memberLookup}
               disabled={!canEditJobs}
               onOpen={() => onOpenTask(task)}
+              subtasks={subtasksByParent.get(task.id) ?? []}
             />
           ))}
         </div>
       </SortableContext>
 
       {canEditJobs && (
-        <form
-          className="border-t border-[color:var(--workspace-shell-border)]/80 p-2"
-          onSubmit={(e) => {
-            e.preventDefault();
-            const title = draftTitle.trim();
-            if (!title) return;
-            onAddTask(phase?.id ?? null, title);
-            setDraftTitle('');
-          }}
-        >
-          <div className="flex gap-1">
-            <Input
-              value={draftTitle}
-              onChange={(e) => setDraftTitle(e.target.value)}
-              placeholder="Add task…"
-              className="h-8 border-[color:var(--workspace-shell-border)] bg-[var(--workspace-control-surface)] text-sm text-[var(--workspace-shell-text)]"
-              disabled={addingTask}
-            />
-            <Button
-              type="submit"
-              size="sm"
-              variant="ghost"
-              className="h-8 shrink-0 px-2 text-[var(--workspace-shell-text-muted)] hover:text-[var(--workspace-shell-text)]"
-              disabled={!draftTitle.trim() || addingTask}
-            >
-              <Plus className="h-4 w-4" />
-            </Button>
-          </div>
-        </form>
+        <div className="border-t border-[color:var(--workspace-shell-border)]/80 p-2">
+          <AddProjectTaskForm
+            disabled={addingTask}
+            onSubmit={(title, subtaskTitles) =>
+              onAddTask(phase?.id ?? null, title, subtaskTitles)
+            }
+          />
+        </div>
       )}
     </div>
   );
@@ -405,7 +418,11 @@ function SortablePhaseColumn(props: {
   jobId: string;
   canEditJobs: boolean;
   memberLookup: MemberLookup;
-  onAddTask: (phaseId: string | null, title: string) => void;
+  onAddTask: (
+    phaseId: string | null,
+    title: string,
+    subtaskTitles: string[],
+  ) => void;
   addingTask: boolean;
   onDeletePhase?: (phaseId: string) => void;
   deletingPhase?: boolean;
@@ -523,12 +540,17 @@ export function JobProjectBoard({
       const targetKey = targetPhaseId ?? UNPHASED_KEY;
       if (sourceKey === targetKey && activeId === overId) return;
 
+      const childTasks = allTasks.filter(
+        (task) => task.parent_task_id === activeId,
+      );
+      const childIds = new Set(childTasks.map((task) => task.id));
+
       const next = { ...tasksByPhase };
       const sourceList = [...(next[sourceKey] ?? [])].filter(
-        (t) => t.id !== activeId,
+        (t) => t.id !== activeId && !childIds.has(t.id),
       );
       let targetList = [...(next[targetKey] ?? [])].filter(
-        (t) => t.id !== activeId,
+        (t) => t.id !== activeId && !childIds.has(t.id),
       );
 
       const moved: JobBoardTask = {
@@ -536,6 +558,10 @@ export function JobProjectBoard({
         phase_id: targetPhaseId,
         job_id: jobId,
       };
+      const movedChildren = childTasks.map((task) => ({
+        ...task,
+        phase_id: targetPhaseId,
+      }));
 
       if (
         overId !== targetKey &&
@@ -548,6 +574,8 @@ export function JobProjectBoard({
       } else {
         targetList.push(moved);
       }
+
+      targetList = [...targetList, ...movedChildren];
 
       targetList = targetList.map((t, i) => ({ ...t, sort_order: i }));
       next[sourceKey] = sourceList;
@@ -586,7 +614,7 @@ export function JobProjectBoard({
   );
 
   const handleAddTask = useCallback(
-    (phaseId: string | null, title: string) => {
+    (phaseId: string | null, title: string, subtaskTitles: string[]) => {
       setAddingTask(true);
       startTransition(async () => {
         try {
@@ -597,10 +625,15 @@ export function JobProjectBoard({
             phaseId,
             title,
             priority: 'medium',
+            subtaskTitles,
           });
           const key = phaseId ?? UNPHASED_KEY;
           const next = { ...tasksByPhase };
-          next[key] = [...(next[key] ?? []), task as JobBoardTask];
+          next[key] = [
+            ...(next[key] ?? []),
+            task as JobBoardTask,
+            ...((task as JobBoardTask).subtasks ?? []),
+          ];
           onBoardChange({ ...board, tasksByPhase: next });
         } catch (err) {
           toast.error(getErrorMessage(err));
@@ -664,6 +697,25 @@ export function JobProjectBoard({
     ],
   );
 
+  const openTask = useCallback((task: JobBoardTask) => {
+    setSelectedTask(task);
+    setTaskSheetOpen(true);
+  }, []);
+
+  const handleTaskUpdated = useCallback(
+    (updated: JobBoardTask) => {
+      setSelectedTask(updated);
+      const next: Record<string, JobBoardTask[]> = {};
+      for (const [key, tasks] of Object.entries(board.tasksByPhase)) {
+        next[key] = tasks.map((task) =>
+          task.id === updated.id ? { ...task, ...updated } : task,
+        );
+      }
+      onBoardChange({ ...board, tasksByPhase: next });
+    },
+    [board, onBoardChange],
+  );
+
   if (phases.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]/30 px-6 py-16 text-center">
@@ -688,25 +740,6 @@ export function JobProjectBoard({
   }
 
   const unphasedTasks = tasksByPhase[UNPHASED_KEY] ?? [];
-
-  const openTask = useCallback((task: JobBoardTask) => {
-    setSelectedTask(task);
-    setTaskSheetOpen(true);
-  }, []);
-
-  const handleTaskUpdated = useCallback(
-    (updated: JobBoardTask) => {
-      setSelectedTask(updated);
-      const next: Record<string, JobBoardTask[]> = {};
-      for (const [key, tasks] of Object.entries(board.tasksByPhase)) {
-        next[key] = tasks.map((task) =>
-          task.id === updated.id ? { ...task, ...updated } : task,
-        );
-      }
-      onBoardChange({ ...board, tasksByPhase: next });
-    },
-    [board, onBoardChange],
-  );
 
   return (
     <div className="flex h-full min-h-0 flex-1 flex-col">
@@ -769,6 +802,28 @@ export function JobProjectBoard({
         jobId={jobId}
         canEditJobs={canEditJobs}
         onUpdated={handleTaskUpdated}
+        subtasks={
+          selectedTask
+            ? allTasks.filter((item) => item.parent_task_id === selectedTask.id)
+            : []
+        }
+        onSubtaskCreated={(subtask) => {
+          const key = subtask.phase_id ?? UNPHASED_KEY;
+          const next = { ...board.tasksByPhase };
+          next[key] = [...(next[key] ?? []), subtask];
+          onBoardChange({ ...board, tasksByPhase: next });
+        }}
+        onDeleted={(deleted) => {
+          const next: Record<string, JobBoardTask[]> = {};
+          for (const [key, list] of Object.entries(board.tasksByPhase)) {
+            next[key] = (list ?? []).filter(
+              (item) =>
+                item.id !== deleted.id && item.parent_task_id !== deleted.id,
+            );
+          }
+          onBoardChange({ ...board, tasksByPhase: next });
+          setSelectedTask(null);
+        }}
       />
     </div>
   );

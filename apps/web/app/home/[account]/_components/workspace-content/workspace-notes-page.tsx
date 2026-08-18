@@ -11,6 +11,7 @@ import {
   FileImage,
   FileText,
   Globe,
+  Link2,
   ListFilter,
   Pin,
   Plus,
@@ -70,6 +71,7 @@ import {
 } from '../../_lib/workspace-content/docs-actions';
 import { ACCOUNT_DOCS_BUCKET } from '../../_lib/workspace-content/docs-constants';
 import { generateFinancialYearOptions } from '../../_lib/workspace-content/financial-year';
+import { deleteWorkspaceLinkAction } from '../../_lib/workspace-content/links-actions';
 import {
   deleteWorkspaceNoteAction,
   saveWorkspaceNoteAction,
@@ -81,6 +83,7 @@ import type {
   LinkOption,
   NoteFileCategory,
   NoteListItem,
+  SavedLinkListItem,
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
 import {
@@ -89,20 +92,23 @@ import {
   getDocTypeLabel,
   isPreviewableMimeType,
 } from '../../_lib/workspace-content/types';
+import { AddWorkspaceLinkDialog } from './add-workspace-link-dialog';
 import { CategoryBadge, CategorySelect } from './category-select';
 import { LinkToSelect, type LinkValue } from './link-to-select';
 import { PublicSharingSection } from './public-sharing-section';
 import { TagsInput } from './tags-input';
 import { WorkspaceFilePreview } from './workspace-file-preview';
+import { WorkspaceLinkRow } from './workspace-link-items';
 
 const panelClass =
   'rounded-2xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]';
 
-type ListFilter = 'all' | 'pinned' | 'notes' | 'files';
+type ListFilter = 'all' | 'pinned' | 'notes' | 'files' | 'links';
 
 type UnifiedItem =
   | { kind: 'note'; data: NoteListItem }
-  | { kind: 'file'; data: DocListItem };
+  | { kind: 'file'; data: DocListItem }
+  | { kind: 'link'; data: SavedLinkListItem };
 
 function formatDate(iso: string) {
   try {
@@ -140,14 +146,24 @@ function linkFromItem(item: NoteListItem | DocListItem): LinkValue {
   return null;
 }
 
-function matchesListFilter(item: UnifiedItem, listFilter: ListFilter) {
+function matchesListFilter(
+  item: UnifiedItem,
+  listFilter: ListFilter,
+  hideFilters: boolean,
+) {
+  if (item.kind === 'link') {
+    if (listFilter === 'links' || listFilter === 'all') return true;
+    if (listFilter === 'pinned') return item.data.isPinned;
+    return hideFilters && (listFilter === 'notes' || listFilter === 'files');
+  }
   if (listFilter === 'notes' && item.kind !== 'note') return false;
   if (listFilter === 'files' && item.kind !== 'file') return false;
+  if (listFilter === 'links') return false;
   if (listFilter === 'pinned' && !item.data.isPinned) return false;
   return true;
 }
 
-function isProjectLinked(item: NoteListItem | DocListItem) {
+function isProjectLinked(item: NoteListItem | DocListItem | SavedLinkListItem) {
   if (item.projectId || item.jobId) return true;
   return item.context?.type === 'project' || item.context?.type === 'job';
 }
@@ -157,8 +173,10 @@ export function WorkspaceNotesPage({
   accountSlug,
   notes: initialNotes,
   docs: initialDocs = [],
+  links: initialLinks = [],
   tableAvailable,
   docsTableAvailable = true,
+  linksTableAvailable = true,
   variant,
   linkOptions = [],
   canEdit = true,
@@ -171,8 +189,10 @@ export function WorkspaceNotesPage({
   accountSlug: string;
   notes: NoteListItem[];
   docs?: DocListItem[];
+  links?: SavedLinkListItem[];
   tableAvailable: boolean;
   docsTableAvailable?: boolean;
+  linksTableAvailable?: boolean;
   variant: WorkspaceNotesVariant;
   linkOptions: LinkOption[];
   canEdit?: boolean;
@@ -183,10 +203,12 @@ export function WorkspaceNotesPage({
 }) {
   const [notes, setNotes] = useState(initialNotes);
   const [docs, setDocs] = useState(initialDocs);
+  const [links, setLinks] = useState(initialLinks);
   const [listFilter, setListFilter] = useState<ListFilter>(initialListFilter);
   const [propertyFilterId, setPropertyFilterId] = useState('__all__');
   const [showProjectLinked, setShowProjectLinked] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
+  const [addLinkOpen, setAddLinkOpen] = useState(false);
   const [noteSheetOpen, setNoteSheetOpen] = useState(false);
   const [editingNote, setEditingNote] = useState<NoteListItem | null>(null);
   const [editingFile, setEditingFile] = useState<DocListItem | null>(null);
@@ -223,6 +245,7 @@ export function WorkspaceNotesPage({
 
   useEffect(() => setNotes(initialNotes), [initialNotes]);
   useEffect(() => setDocs(initialDocs), [initialDocs]);
+  useEffect(() => setLinks(initialLinks), [initialLinks]);
   useEffect(() => setListFilter(initialListFilter), [initialListFilter]);
 
   const propertyOptions = useMemo(
@@ -270,13 +293,31 @@ export function WorkspaceNotesPage({
     });
   };
 
+  const deleteLink = (linkId: string) => {
+    if (!confirm('Delete this link?')) return;
+    startDeleteTransition(async () => {
+      try {
+        await deleteWorkspaceLinkAction({
+          accountId,
+          accountSlug,
+          linkId,
+        });
+        toast.success('Link deleted');
+        router.refresh();
+      } catch {
+        toast.error('Could not delete link');
+      }
+    });
+  };
+
   const unified = useMemo(() => {
     const items: UnifiedItem[] = [
       ...notes.map((n) => ({ kind: 'note' as const, data: n })),
       ...docs.map((d) => ({ kind: 'file' as const, data: d })),
+      ...links.map((l) => ({ kind: 'link' as const, data: l })),
     ];
     return items
-      .filter((item) => matchesListFilter(item, listFilter))
+      .filter((item) => matchesListFilter(item, listFilter, hideFilters))
       .filter(
         (item) =>
           hideFilters || showProjectLinked || !isProjectLinked(item.data),
@@ -294,13 +335,14 @@ export function WorkspaceNotesPage({
   }, [
     notes,
     docs,
+    links,
     listFilter,
     hideFilters,
     showProjectLinked,
     propertyFilterId,
   ]);
 
-  if (!tableAvailable && !docsTableAvailable) {
+  if (!tableAvailable && !docsTableAvailable && !linksTableAvailable) {
     return (
       <p className="text-sm text-[var(--workspace-shell-text-muted)]">
         Notes and files are not available yet. Apply the latest database
@@ -328,6 +370,7 @@ export function WorkspaceNotesPage({
                 { key: 'pinned' as const, label: 'Pinned' },
                 { key: 'notes' as const, label: 'Notes' },
                 { key: 'files' as const, label: 'Files' },
+                { key: 'links' as const, label: 'Links' },
               ] as const
             ).map((f) => (
               <button
@@ -418,6 +461,12 @@ export function WorkspaceNotesPage({
                   Upload file
                 </DropdownMenuItem>
               ) : null}
+              {linksTableAvailable ? (
+                <DropdownMenuItem onClick={() => setAddLinkOpen(true)}>
+                  <Link2 className="mr-2 h-4 w-4" />
+                  Add link
+                </DropdownMenuItem>
+              ) : null}
             </DropdownMenuContent>
           </DropdownMenu>
         ) : null}
@@ -451,7 +500,7 @@ export function WorkspaceNotesPage({
                   />
                 </button>
               </li>
-            ) : (
+            ) : item.kind === 'file' ? (
               <li key={`file-${item.data.id}`}>
                 <FileListRow
                   doc={item.data}
@@ -461,6 +510,18 @@ export function WorkspaceNotesPage({
                   onDelete={() => deleteFile(item.data.id)}
                   onEdit={() => setEditingFile(item.data)}
                 />
+              </li>
+            ) : (
+              <li key={`link-${item.data.id}`}>
+                <div className={cn(panelClass, 'overflow-hidden')}>
+                  <WorkspaceLinkRow
+                    link={item.data}
+                    canEdit={canEdit}
+                    pending={deletePending}
+                    onDelete={() => deleteLink(item.data.id)}
+                    className="rounded-2xl"
+                  />
+                </div>
               </li>
             ),
           )}
@@ -505,6 +566,17 @@ export function WorkspaceNotesPage({
         financialYearOptions={financialYearOptions}
         onUploaded={() => {
           setUploadOpen(false);
+          router.refresh();
+        }}
+      />
+
+      <AddWorkspaceLinkDialog
+        open={addLinkOpen}
+        onOpenChange={setAddLinkOpen}
+        accountId={accountId}
+        accountSlug={accountSlug}
+        defaultLink={defaultLink ?? null}
+        onCreated={() => {
           router.refresh();
         }}
       />

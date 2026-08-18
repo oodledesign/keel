@@ -16,7 +16,8 @@
 | Gmail Email Assistant | OAuth tokens (AES-256-GCM via `@kit/google-auth`); `email_threads`, `email_messages` (**body_text/body_html**); drafts; action items | Sync mailbox, triage, extract, draft | Supabase + Google | Gmail scopes: `gmail.readonly`, `gmail.modify`, `gmail.settings.basic`; **Google Gemini Flash-Lite** (paid API) for triage/extract; Anthropic for drafting and richer paths | Live |
 | Google Calendar | Calendar events/attendees via calendar OAuth | Planner / meeting context | Supabase connection rows + Google | `calendar.readonly`, `calendar.events` | Live |
 | Public scheduler | `bookings.invitee_name/email/timezone/notes`, guests, form answers (incl. phone), `management_token` | Public booking / manage links | Supabase; emails via ZeptoMail | Google Calendar write when connected | Live |
-| Meeting transcripts | `meeting_transcripts.content`, speaker segments/mappings, attendee emails; summaries/action items | Meeting memory & tasks | Supabase | **Keel web:** Soniox cloud STT (`stt-rt-v5`); **OzerAssistant Mac:** WhisperKit on-device + SpeakerKit diarisation local; transcript text uploaded to Ozer | Live (both paths) |
+| Meeting transcripts | `meeting_transcripts.content`, speaker segments/mappings, attendee emails; summaries/action items | Meeting memory & tasks | Supabase | **OzerAssistant Mac:** WhisperKit on-device + SpeakerKit diarisation local; transcript text uploaded to Ozer. Soniox cloud STT is wired in the repo but **not used in production**. | Live (Mac on-device) |
+| Commercial maps | Addresses / lat-lng for listings, requirements, brochures | Maps and geocoding | Supabase + Mapbox | **Mapbox** Static / Geocoding / Map GL | Live |
 | Activity tracking | `activity_blocks`: app_name, bundle_id, domain, optional url, **window_title**, durations; **no keystrokes/audio/screens** | Day reconstruction / time attribution | Supabase; `tracking_enabled` **defaults false** | None beyond Ozer backend | Live, opt-in |
 | Ozer Signatures | Staff: name, email, job title, dept, phones, photos; signature HTML; MS/Google tokens | Deploy email signatures | Supabase `signatures.*` + `signatures-photos` | **MS Graph:** `MailboxSettings.ReadWrite`, `User.Read.All`, `ProfilePhoto.Read.All`, `offline_access`; **Google:** `admin.directory.user.readonly`, `gmail.settings.basic`. Gmail sendAs push live; Outlook Graph HTML push placeholder | Live (Google push); MS profile sync live |
 | Platform billing | `billing_customers`, subscription status — **no PAN** | SaaS subscription | Supabase + Stripe | Stripe Checkout/Portal | Live |
@@ -73,16 +74,17 @@
 
 ### STT
 - On-device: WhisperKit + SpeakerKit in OzerAssistant Swift app
-- Cloud (keel web session API): Soniox `stt-rt-v5`
-- Transcript **text** persisted in Supabase regardless of STT path
+- Cloud (Soniox): code exists under `lib/integrations/soniox` and `/api/recorder/transcribe-session`, but **not enabled in production** (route returns 503)
+- Transcript **text** persisted in Supabase from the Mac path
 
 ### Retention
-- No automated purge/TTL jobs found for clients, transcripts, activity_blocks, or bookings
+- Account deletion: DB cascades immediately; `account_storage_purges` queues storage object deletion for 30 days later (daily cron)
 - Billing cancel path: status only; comment says confirm retention before delete
-- Flag for policy: **TBD — needs a business decision**
+- Flag for policy: activity_blocks 12-month rolling TTL still TBD
 
 ### International transfers
-- Anthropic / Google Gemini processing may occur outside UK/EEA
+- Anthropic / Google Gemini Flash processing may occur outside UK/EEA
+- Mapbox geocoding/maps may process addresses outside UK/EEA
 - Transfer mechanism (public register): Anthropic DPA (EU SCCs + UK Addendum; EU-US DPF); Paid Gemini API under Google Data Processing Addendum (EU SCCs + UK Addendum; EU-US DPF for Google LLC). Free AI Studio is not used for customer personal data.
 
 ---
@@ -94,16 +96,17 @@
 | Supabase / AWS | Primary database, auth, storage | All workspace & account data | EU West (Ireland) per trust copy |
 | Stripe | SaaS billing + Connect payments | Customer IDs, subscription status; card PAN stays with Stripe | Stripe (UK/EU entities as applicable) |
 | Anthropic | LLM features | Workspace/email/transcript text prompts | US — DPA with EU SCCs and UK Addendum; EU-US DPF |
-| Google (Gemini API) | High-volume AI (triage/extract Flash-Lite) | Workspace/email text prompts | US/global — Paid Gemini API; Google Data Processing Addendum (SCCs + UK Addendum); EU-US DPF |
+| Google (Gemini Flash / Flash-Lite) | High-volume AI (triage/extract Flash-Lite) | Workspace/email text prompts | US/global — Paid Gemini API; Google Data Processing Addendum (SCCs + UK Addendum); EU-US DPF |
 | Google Workspace APIs | Gmail, Calendar, Workspace directory / signatures | Mailbox/calendar/directory | US/global — Google Data Processing Terms (SCCs + UK Addendum) |
 | Microsoft Graph | Signatures directory + mailbox settings | Staff profile, photo, mailbox settings | [LEGAL REVIEW NEEDED] |
 | ZeptoMail | Transactional email | Recipient, subject, HTML body | EU API endpoint used in code |
 | Bunny.net Stream | Video hosting | Media files + video metadata | [LEGAL REVIEW NEEDED: region] |
+| Mapbox | Commercial maps / geocoding | Addresses, coordinates | US/global — Mapbox DPA |
 | Voyage AI | Embeddings (Second Brain) when keyed | Chunk/query text | [LEGAL REVIEW NEEDED] |
 | PostHog, Inc. | Product analytics, feature flags, errors/replay | Usage events, device data, user/account IDs; session recordings (masked inputs, 30 days) | EU Cloud; PostHog DPA |
-| Soniox | Cloud realtime STT (web recorder path) | Audio stream / transcript | [LEGAL REVIEW NEEDED] |
+| Soniox | Cloud realtime STT (web recorder path) | Audio stream / transcript | **Not in production** — exclude from public register until enabled |
 
-**Exclude until shipped:** Composio.
+**Exclude until shipped:** Composio. Soniox (wired, unused).
 
 ---
 

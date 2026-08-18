@@ -19,6 +19,8 @@ import { initializeEmailI18n } from '../lib/i18n';
 interface Props {
   productName: string;
   language?: string;
+  /** Date remaining storage files will be permanently deleted (en-GB long date). */
+  purgeDate?: string;
 }
 
 export async function renderAccountDeleteEmail(props: Props) {
@@ -64,7 +66,9 @@ export async function renderAccountDeleteEmail(props: Props) {
               </Text>
 
               <Text className="text-[16px] leading-[24px] text-[#5A4450]">
-                {t(`${namespace}:paragraph2`)}
+                {t(`${namespace}:paragraph2`, {
+                  purgeDate: props.purgeDate ?? '30 days from now',
+                })}
               </Text>
 
               <Text className="text-[16px] leading-[24px] text-[#5A4450]">

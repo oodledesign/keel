@@ -343,6 +343,47 @@ export async function getDefaultAccountSlug(): Promise<{
   return slug ? { accountSlug: slug } : null;
 }
 
+/** Returns the deal's workspace, or the user's first team workspace. */
+export async function getDealWorkspace(dealId: string): Promise<{
+  accountId: string;
+  accountSlug: string;
+} | null> {
+  const client = getSupabaseServerClient();
+  await requireUserInServerComponent();
+
+  const { data: deal } = await client
+    .from('pipeline_deals')
+    .select('account_id')
+    .eq('id', dealId)
+    .maybeSingle();
+
+  let accountId =
+    (deal as { account_id?: string | null } | null)?.account_id ?? null;
+
+  if (!accountId) {
+    const fallback = await getDefaultAccountSlug();
+    if (!fallback) return null;
+
+    const { data: account } = await client
+      .from('accounts')
+      .select('id')
+      .eq('slug', fallback.accountSlug)
+      .maybeSingle();
+
+    accountId = (account as { id?: string | null } | null)?.id ?? null;
+    return accountId ? { accountId, accountSlug: fallback.accountSlug } : null;
+  }
+
+  const { data: account } = await client
+    .from('accounts')
+    .select('slug')
+    .eq('id', accountId)
+    .maybeSingle();
+
+  const slug = (account as { slug?: string | null } | null)?.slug ?? null;
+  return slug ? { accountId, accountSlug: slug } : null;
+}
+
 export type ConvertWonDealResult =
   | { kind: 'project'; accountSlug: string; projectId: string }
   | { kind: 'lead' }

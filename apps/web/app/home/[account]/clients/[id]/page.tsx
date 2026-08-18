@@ -31,8 +31,10 @@ export default async function ClientDetailPage({ params }: Props) {
           portalHref={data.portalHref}
           workspaceNotes={data.workspaceNotes}
           workspaceDocs={data.workspaceDocs}
+          workspaceLinks={data.workspaceLinks}
           notesTableAvailable={data.notesTableAvailable}
           docsTableAvailable={data.docsTableAvailable}
+          linksTableAvailable={data.linksTableAvailable}
           linkOptions={data.linkOptions}
           defaultLink={data.defaultLink}
           notesVariant={data.notesVariant}

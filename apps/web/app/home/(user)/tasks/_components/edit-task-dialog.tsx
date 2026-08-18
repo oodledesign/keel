@@ -538,11 +538,11 @@ export function EditTaskDialog({
         parentTaskId: task.id,
         parentTaskContext: {
           projectId: task.projectId,
-          clientId: task.clientId,
+          clientId: task.projectId ? null : task.clientId,
           areaId: task.areaId,
         },
         projectId: task.projectId ?? undefined,
-        clientId: task.clientId ?? undefined,
+        clientId: task.projectId ? undefined : (task.clientId ?? undefined),
         areaId: task.areaId ?? undefined,
       });
       if (!result.success) {
@@ -641,7 +641,7 @@ export function EditTaskDialog({
           priority,
           notes: notes.trim() || null,
           projectId: task.projectId ?? undefined,
-          clientId: task.clientId ?? undefined,
+          clientId: task.projectId ? undefined : (task.clientId ?? undefined),
           areaId: task.areaId ?? undefined,
           accountId: notesAccountId ?? workspaceAccountId,
           recurrence: {

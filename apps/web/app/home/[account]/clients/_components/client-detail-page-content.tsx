@@ -8,11 +8,12 @@ import type {
   RanklyProjectRow,
 } from '../../_lib/server/rankly-account-data';
 import type {
+  DocListItem,
   LinkOption,
   NoteListItem,
+  SavedLinkListItem,
   WorkspaceNotesVariant,
 } from '../../_lib/workspace-content/types';
-import type { DocListItem } from '../../_lib/workspace-content/types';
 import type { ClientDetailOverviewSeed } from '../_lib/client-detail.types';
 import { ClientDetailSidebar } from './client-detail-sidebar';
 
@@ -46,8 +47,10 @@ type Props = {
   portalHref: string | null;
   workspaceNotes: NoteListItem[];
   workspaceDocs: DocListItem[];
+  workspaceLinks: SavedLinkListItem[];
   notesTableAvailable: boolean;
   docsTableAvailable: boolean;
+  linksTableAvailable: boolean;
   linkOptions: LinkOption[];
   defaultLink: LinkValue;
   notesVariant: WorkspaceNotesVariant;
@@ -72,8 +75,10 @@ export function ClientDetailPageContent({
   portalHref,
   workspaceNotes,
   workspaceDocs,
+  workspaceLinks,
   notesTableAvailable,
   docsTableAvailable,
+  linksTableAvailable,
   linkOptions,
   defaultLink,
   notesVariant,
@@ -108,8 +113,10 @@ export function ClientDetailPageContent({
       fullPage
       workspaceNotes={workspaceNotes}
       workspaceDocs={workspaceDocs}
+      workspaceLinks={workspaceLinks}
       notesTableAvailable={notesTableAvailable}
       docsTableAvailable={docsTableAvailable}
+      linksTableAvailable={linksTableAvailable}
       linkOptions={linkOptions}
       defaultLink={defaultLink}
       notesVariant={notesVariant}

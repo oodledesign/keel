@@ -1,6 +1,6 @@
 # Cookie Policy
 
-**Last updated:** 28 July 2026. Oodle Designs Ltd ("Ozer") uses cookies and similar technologies on ozer.so and related services. This policy explains what we use and how you can control them.
+**Last updated:** 18 August 2026. Oodle Designs Ltd ("Ozer") uses cookies and similar technologies on ozer.so and related services. This policy explains what we use and how you can control them.
 
 ## Essential cookies
 
@@ -13,6 +13,10 @@ With your consent we use **PostHog** (EU Cloud) for product analytics (page view
 These technologies are only loaded after you accept analytics via the cookie banner (or an equivalent in-product preference control). You can withdraw consent at any time via the cookie banner or your browser settings; withdrawing consent does not delete historical analytics already processed.
 
 Further detail on what PostHog receives is in our [Privacy Policy](/privacy-policy) (Product analytics section).
+
+## Maps (commercial listings)
+
+When you use commercial listing or brochure maps, **Mapbox** may set cookies or use local storage for map tiles and usage. Address geocoding for listings and brochures is processed server-side via Mapbox APIs (see [Privacy Policy](/privacy-policy)).
 
 ## Preferences
 

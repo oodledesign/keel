@@ -251,7 +251,8 @@ export async function runBillingTrialLifecycleCron(
 
 /**
  * Dunning: grace reminder (3d), restrict (7d), suspend (14d unpaid), cancel (30d suspended).
- * Cancel sets status only — no data deletion (confirm retention with Dan before delete).
+ * Cancel sets status only — workspace data is kept. Deletion is a separate
+ * account-delete action, not a billing status change.
  */
 export async function runBillingDunningLifecycleCron(
   admin: AnyClient,
