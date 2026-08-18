@@ -105,18 +105,37 @@ export const INVOICE_SMART_FIELD_PILLS = [
   { token: '{{invoice.number}}', label: 'Invoice #' },
   { token: '{{invoice.total}}', label: 'Total' },
   { token: '{{invoice.dueDate}}', label: 'Due date' },
+  { token: '{{account.name}}', label: 'Workspace name' },
   { token: '{{your.firstName}}', label: 'Your first name' },
   { token: '{{your.lastName}}', label: 'Your last name' },
 ] as const;
 
-export const DEFAULT_INVOICE_EMAIL_SUBJECT =
+/** Previous default — used to migrate stored copy that still matches it. */
+export const LEGACY_INVOICE_EMAIL_SUBJECT =
   "Here's the invoice, ready for your payment";
+
+export const DEFAULT_INVOICE_EMAIL_SUBJECT =
+  'Invoice {{invoice.number}} from {{account.name}}';
 
 export const DEFAULT_INVOICE_EMAIL_BODY = `Hello {{contact.firstName}},
 
-Here is the link to view and pay the invoice online. Please let me know if you have any questions.
+Invoice {{invoice.number}} from {{account.name}} is ready to view online. Please let me know if you have any questions.
 
 Thanks for your business!`;
+
+/**
+ * Microsoft 365 treats "Acme Ltd <hi@ozer.so>" as display-name spoofing.
+ * Attribute the platform so the From name matches the sending domain.
+ */
+export function formatWorkspaceSenderName(
+  workspaceName: string | null | undefined,
+  productName = 'Ozer',
+): string {
+  const workspace = workspaceName?.trim();
+  if (!workspace) return productName;
+  if (workspace.toLowerCase() === productName.toLowerCase()) return workspace;
+  return `${workspace} via ${productName}`;
+}
 
 export const DEFAULT_INVOICE_EMAIL_SIGNATURE = `Sincerely,
 {{your.firstName}} {{your.lastName}}`;

@@ -17,10 +17,9 @@ import {
   DEFAULT_INVOICE_EMAIL_BODY,
   DEFAULT_INVOICE_EMAIL_SIGNATURE,
   DEFAULT_INVOICE_EMAIL_SUBJECT,
+  formatWorkspaceSenderName,
   renderSmartFields,
 } from '../invoice-smart-fields';
-import { buildInvoicePdf } from './invoice-pdf';
-import { buildInvoicePdfPayload } from './invoice-pdf-payload';
 
 type PaymentMethod = 'stripe' | 'cash' | 'bank_transfer';
 
@@ -36,7 +35,10 @@ function getMethodLabel(method: PaymentMethod) {
 }
 
 function buildInvoiceEmailFrom(accountName: string | null | undefined) {
-  return resolveTransactionalEmailFrom(accountName ?? undefined);
+  const productName = process.env.NEXT_PUBLIC_PRODUCT_NAME ?? 'Ozer';
+  return resolveTransactionalEmailFrom(
+    formatWorkspaceSenderName(accountName, productName),
+  );
 }
 
 /**
@@ -97,21 +99,6 @@ async function resolveInvoiceReplyToEmail(
   ) as { email?: string | null } | undefined;
 
   return ownerAdmin?.email?.trim().toLowerCase() || null;
-}
-
-function invoicePdfFilename(input: {
-  invoiceNumber: string;
-  clientCompany?: string | null;
-  brandName?: string | null;
-}) {
-  const party =
-    input.clientCompany?.trim() || input.brandName?.trim() || 'Invoice';
-  const safeParty = party
-    .replace(/[^\w\s-]/g, '')
-    .trim()
-    .replace(/\s+/g, ' ');
-  const safeNumber = input.invoiceNumber.replace(/[^\w-]/g, '');
-  return `Invoice_${safeParty}_${safeNumber}.pdf`.replace(/\s+/g, '_');
 }
 
 export async function sendInvoicePaidNotifications(params: {
@@ -416,23 +403,6 @@ export async function sendInvoiceIssuedEmail(params: {
     : '—';
   const amount = formatInvoiceMoney(invoice.total_pence ?? 0, invoice.currency);
 
-  const pdfPayload = await buildInvoicePdfPayload(
-    invoice,
-    params.accountId,
-    {},
-    params.sender ?? null,
-  );
-  const pdfBytes = await buildInvoicePdf(pdfPayload);
-  const pdfAttachment = {
-    name: invoicePdfFilename({
-      invoiceNumber: invoice.invoice_number,
-      clientCompany: client?.company_name,
-      brandName: account?.name,
-    }),
-    content: Buffer.from(pdfBytes).toString('base64'),
-    mimeType: 'application/pdf',
-  };
-
   const issuedInner = `
       <h2 style="margin:0 0 16px">${subject}</h2>
       <p>${bodyText.replace(/\n/g, '<br />')}</p>
@@ -442,7 +412,6 @@ export async function sendInvoiceIssuedEmail(params: {
         <p style="margin:0"><strong>Due date:</strong> ${dueDate}</p>
         <p style="margin:16px 0 0"><a href="${portalInvoiceUrl}">View and pay invoice</a></p>
       </div>
-      <p>A PDF copy of this invoice is attached for your records.</p>
       <p>${signature.replace(/\n/g, '<br />')}</p>
   `;
 
@@ -457,7 +426,6 @@ export async function sendInvoiceIssuedEmail(params: {
         brand,
         innerHtml: issuedInner,
       }),
-      attachments: [pdfAttachment],
       ...(replyTo ? { replyTo } : {}),
     },
     metadata: { invoice_id: params.invoiceId, event: 'issued' },
