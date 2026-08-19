@@ -16,6 +16,7 @@ export {
   loadPublicRequirementFormByToken,
   upsertRequirementFromPublicForm,
   type PublicRequirementForm,
+  type PublicRequirementOffice,
   type RequirementFormSubmission,
 } from './public-requirement-form';
 export {

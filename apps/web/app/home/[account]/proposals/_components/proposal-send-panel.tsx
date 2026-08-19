@@ -11,6 +11,8 @@ import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
 
+import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
+import { ConfirmSendEmailDialog } from '~/components/email/confirm-send-email-dialog';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 
 import {
@@ -23,7 +25,6 @@ import {
   getProposalPortalLink,
   sendProposal,
 } from '../_lib/server/server-actions';
-import { ContentTemplatePickerDialog } from '~/components/content-templates/content-template-picker-dialog';
 
 const SMART_FIELDS = [
   '{{client.firstName}}',
@@ -72,6 +73,7 @@ export function ProposalSendPanel({
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<'send' | 'test' | 'link' | null>(null);
   const [templateOpen, setTemplateOpen] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const loadPortalLink = async () => {
     if (portalUrl) return portalUrl;
@@ -107,7 +109,10 @@ export function ProposalSendPanel({
         send_test_to_self: testOnly,
       });
       toast.success(testOnly ? 'Test email sent' : 'Proposal sent');
-      if (!testOnly) onSent();
+      if (!testOnly) {
+        setConfirmOpen(false);
+        onSent();
+      }
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -220,7 +225,13 @@ export function ProposalSendPanel({
             <Button
               className="bg-[var(--ozer-accent)] text-[#09111F]"
               disabled={loading != null}
-              onClick={() => void handleSend(false)}
+              onClick={() => {
+                if (!email.trim()) {
+                  toast.error('Recipient email is required');
+                  return;
+                }
+                setConfirmOpen(true);
+              }}
             >
               {loading === 'send' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -299,6 +310,17 @@ export function ProposalSendPanel({
           if (template.signature) setSignature(template.signature);
           toast.success('Email template applied');
         }}
+      />
+      <ConfirmSendEmailDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Send this proposal?"
+        documentLabel={proposalTitle}
+        recipients={email.trim() ? [email.trim()] : []}
+        subject={subject}
+        confirmLabel="Send email"
+        pending={loading === 'send'}
+        onConfirm={() => void handleSend(false)}
       />
     </div>
   );

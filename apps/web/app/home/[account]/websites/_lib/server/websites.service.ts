@@ -13,6 +13,7 @@ import {
 import type {
   GetWebsiteInput,
   ListWebsitesInput,
+  SetWebsitePortalVisibleInput,
   UpdateWebsiteInput,
   WebsiteInput,
   WebsiteStack,
@@ -52,6 +53,8 @@ export type Website = {
   updatedAt: string;
   clientOrgName: string | null;
   linkedClientId: string | null;
+  jobId: string | null;
+  portalVisible: boolean;
 };
 
 export type ClientOrgOption = {
@@ -79,6 +82,8 @@ type WebsiteRow = {
   launched_at?: string | null;
   created_at?: string;
   updated_at?: string;
+  job_id?: string | null;
+  portal_visible?: boolean | null;
   client_orgs?: { name?: string | null } | { name?: string | null }[] | null;
 };
 
@@ -181,6 +186,8 @@ function mapWebsite(
     updatedAt: row.updated_at ?? row.created_at ?? new Date().toISOString(),
     clientOrgName: org?.name?.trim() ?? null,
     linkedClientId,
+    jobId: row.job_id ?? null,
+    portalVisible: row.portal_visible === true,
   };
 }
 
@@ -200,6 +207,7 @@ function toDbPayload(input: {
   launched_at?: string | null;
   umami_website_id?: string | null;
   umami_share_url?: string | null;
+  portal_visible?: boolean;
 }) {
   return {
     ...(input.name !== undefined && { name: input.name }),
@@ -232,6 +240,9 @@ function toDbPayload(input: {
     }),
     ...(input.umami_share_url !== undefined && {
       umami_share_url: input.umami_share_url,
+    }),
+    ...(input.portal_visible !== undefined && {
+      portal_visible: input.portal_visible,
     }),
   };
 }
@@ -278,6 +289,9 @@ class WebsitesService {
         row.client_org_id,
       ]);
       linkedClientId = linked.get(row.client_org_id) ?? null;
+    }
+    if (!linkedClientId && row.job_id) {
+      linkedClientId = await this.resolveClientIdFromJob(accountId, row.job_id);
     }
 
     return mapWebsite(enriched, linkedClientId);
@@ -389,6 +403,15 @@ class WebsitesService {
       query = query.eq('status', input.status);
     }
 
+    const clientFilter = await this.resolveClientWebsiteFilter(
+      input.accountId,
+      input.clientId,
+    );
+    if (clientFilter === 'none') return [];
+    if (clientFilter) {
+      query = query.or(clientFilter);
+    }
+
     const { data, error } = await query;
 
     if (!error) {
@@ -410,6 +433,10 @@ class WebsitesService {
 
     if (input.status) {
       fallbackQuery = fallbackQuery.eq('status', input.status);
+    }
+
+    if (clientFilter) {
+      fallbackQuery = fallbackQuery.or(clientFilter);
     }
 
     const fallback = await fallbackQuery;
@@ -488,6 +515,46 @@ class WebsitesService {
     return [await this.resolveBusinessIdForAccount(accountId)];
   }
 
+  /**
+   * Match websites by portal org **or** a delivery project already on this CRM
+   * client (so a site linked to a project still appears before client_org_id is set).
+   */
+  private async resolveClientWebsiteFilter(
+    accountId: string,
+    clientId: string | undefined,
+  ): Promise<string | 'none' | null> {
+    if (!clientId) return null;
+
+    const [{ data: clientRow }, { data: projects }] = await Promise.all([
+      this.db
+        .from('clients')
+        .select('client_org_id')
+        .eq('id', clientId)
+        .eq('account_id', accountId)
+        .maybeSingle(),
+      this.db
+        .from('projects')
+        .select('id')
+        .eq('client_id', clientId)
+        .eq('account_id', accountId),
+    ]);
+
+    const orgId = (clientRow as { client_org_id?: string | null } | null)
+      ?.client_org_id;
+    const jobIds = ((projects ?? []) as Array<{ id: string }>).map(
+      (row) => row.id,
+    );
+
+    const parts: string[] = [];
+    if (orgId) parts.push(`client_org_id.eq.${orgId}`);
+    if (jobIds.length > 0) {
+      parts.push(`job_id.in.(${jobIds.join(',')})`);
+    }
+
+    if (parts.length === 0) return 'none';
+    return parts.join(',');
+  }
+
   private async resolveLinkedClientIds(
     accountId: string,
     orgIds: string[],
@@ -510,6 +577,20 @@ class WebsitesService {
     return map;
   }
 
+  private async resolveClientIdFromJob(
+    accountId: string,
+    jobId: string,
+  ): Promise<string | null> {
+    const { data } = await this.db
+      .from('projects')
+      .select('client_id')
+      .eq('id', jobId)
+      .eq('account_id', accountId)
+      .maybeSingle();
+
+    return (data as { client_id?: string | null } | null)?.client_id ?? null;
+  }
+
   async listWebsites(input: ListWebsitesInput): Promise<Website[]> {
     await this.ensureCanView(input.accountId);
 
@@ -526,12 +607,36 @@ class WebsitesService {
       orgIds,
     );
 
+    const jobIdsNeedingClient = [
+      ...new Set(
+        rows
+          .filter((row) => !row.client_org_id && row.job_id)
+          .map((row) => row.job_id as string),
+      ),
+    ];
+    const jobClientIds = new Map<string, string>();
+    if (jobIdsNeedingClient.length > 0) {
+      const { data: projects } = await this.db
+        .from('projects')
+        .select('id, client_id')
+        .eq('account_id', input.accountId)
+        .in('id', jobIdsNeedingClient);
+      for (const row of (projects ?? []) as Array<{
+        id: string;
+        client_id?: string | null;
+      }>) {
+        if (row.client_id) jobClientIds.set(row.id, row.client_id);
+      }
+    }
+
     return rows.map((row) =>
       mapWebsite(
         row,
         row.client_org_id
           ? (linkedClients.get(row.client_org_id) ?? null)
-          : null,
+          : row.job_id
+            ? (jobClientIds.get(row.job_id) ?? null)
+            : null,
       ),
     );
   }
@@ -623,10 +728,22 @@ class WebsitesService {
   ): Promise<Website> {
     await this.ensureCanEdit(accountId);
 
-    const { websiteId, ...fields } = input;
+    const { websiteId, client_id: clientId, ...fields } = input;
+
+    let clientOrgId = fields.client_org_id;
+    if (clientId) {
+      const resolved = await this.resolveOrCreateClientOrgForCrmClient(
+        accountId,
+        clientId,
+      );
+      clientOrgId = resolved.clientOrgId;
+    } else if (clientId === null) {
+      clientOrgId = null;
+    }
+
     return this.saveWebsiteRow(
       accountId,
-      toDbPayload(fields),
+      toDbPayload({ ...fields, client_org_id: clientOrgId }),
       'update',
       websiteId,
     );
@@ -642,6 +759,39 @@ class WebsitesService {
       .eq('business_id', accountId);
 
     if (error) throw mapWebsiteWriteError(error);
+  }
+
+  async setPortalVisible(
+    input: SetWebsitePortalVisibleInput,
+  ): Promise<Website> {
+    await this.ensureCanEdit(input.accountId);
+
+    const current = await this.getWebsite({
+      accountId: input.accountId,
+      websiteId: input.websiteId,
+    });
+    if (!current) throw new Error('Website not found');
+
+    if (input.portal_visible && !current.clientOrgId) {
+      if (!current.linkedClientId) {
+        throw new Error(
+          'Link a CRM client before sharing this website to the portal.',
+        );
+      }
+      return this.updateWebsite(input.accountId, {
+        websiteId: input.websiteId,
+        name: current.name,
+        client_id: current.linkedClientId,
+        portal_visible: true,
+      });
+    }
+
+    return this.saveWebsiteRow(
+      input.accountId,
+      toDbPayload({ portal_visible: input.portal_visible }),
+      'update',
+      input.websiteId,
+    );
   }
 
   /**

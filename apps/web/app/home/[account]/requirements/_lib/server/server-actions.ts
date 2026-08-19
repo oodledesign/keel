@@ -6,6 +6,7 @@ import { getSupabaseServerClient } from '@kit/supabase/server-client';
 import {
   CreateRequirementSchema,
   DeleteRequirementSchema,
+  ListRequirementOfficesSchema,
   ListRequirementsSchema,
   UpdateRequirementSchema,
 } from '../schema/requirements.schema';
@@ -80,4 +81,9 @@ export const deleteRequirement = enhanceAction(
     return { success: true };
   },
   { schema: DeleteRequirementSchema },
+);
+
+export const listRequirementOffices = enhanceAction(
+  async (input) => getService().listOffices(input.accountId),
+  { schema: ListRequirementOfficesSchema },
 );

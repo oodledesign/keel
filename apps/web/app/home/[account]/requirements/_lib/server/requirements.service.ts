@@ -30,6 +30,7 @@ export type CommercialRequirement = {
   latitude: number | null;
   longitude: number | null;
   searchRadiusMiles: number | null;
+  branchId: string | null;
   sizeMinSqft: number | null;
   sizeMaxSqft: number | null;
   budgetMinPence: number | null;
@@ -75,6 +76,7 @@ function mapRequirement(row: Row): CommercialRequirement {
     latitude: num(row.latitude),
     longitude: num(row.longitude),
     searchRadiusMiles: num(row.search_radius_miles),
+    branchId: (row.branch_id as string | null) ?? null,
     sizeMinSqft: num(row.size_min_sqft),
     sizeMaxSqft: num(row.size_max_sqft),
     budgetMinPence: num(row.budget_min_pence),
@@ -166,6 +168,7 @@ export function createRequirementsService(client: SupabaseClient) {
           latitude,
           longitude,
           search_radius_miles: input.searchRadiusMiles ?? null,
+          branch_id: input.branchId ?? null,
           size_min_sqft: input.sizeMinSqft ?? null,
           size_max_sqft: input.sizeMaxSqft ?? null,
           budget_min_pence: input.budgetMinPence ?? null,
@@ -238,6 +241,7 @@ export function createRequirementsService(client: SupabaseClient) {
         ...(input.searchRadiusMiles !== undefined && {
           search_radius_miles: input.searchRadiusMiles,
         }),
+        ...(input.branchId !== undefined && { branch_id: input.branchId }),
         ...(input.sizeMinSqft !== undefined && {
           size_min_sqft: input.sizeMinSqft,
         }),
@@ -336,6 +340,31 @@ export function createRequirementsService(client: SupabaseClient) {
         .eq('id', requirementId)
         .eq('account_id', accountId);
       if (error) throw new Error(error.message);
+    },
+
+    async listOffices(
+      accountId: string,
+    ): Promise<Array<{ id: string; name: string; isDefault: boolean }>> {
+      const { data, error } = await client
+        .from('account_branches')
+        .select('id, name, is_default, sort_order')
+        .eq('account_id', accountId)
+        .order('sort_order', { ascending: true })
+        .order('name', { ascending: true });
+
+      if (error) throw new Error(error.message);
+
+      return (
+        (data ?? []) as Array<{
+          id: string;
+          name: string | null;
+          is_default?: boolean | null;
+        }>
+      ).map((row) => ({
+        id: row.id,
+        name: row.name?.trim() || 'Office',
+        isDefault: Boolean(row.is_default),
+      }));
     },
   };
 }

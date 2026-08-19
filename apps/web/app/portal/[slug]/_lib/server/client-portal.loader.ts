@@ -225,7 +225,8 @@ export const loadClientPortalContext = cache(
         client
           .from('websites')
           .select('id', { count: 'exact', head: true })
-          .eq('client_org_id', org.id),
+          .eq('client_org_id', org.id)
+          .eq('portal_visible', true),
         client
           .from('accounts_memberships')
           .select('account_id', { count: 'exact', head: true })

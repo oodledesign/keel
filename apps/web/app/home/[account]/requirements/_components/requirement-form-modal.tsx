@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useEffect, useState, useTransition } from 'react';
 
 import { Loader2, Sparkles } from 'lucide-react';
 
@@ -32,6 +32,11 @@ import {
   REQUIREMENT_STATUS_LABELS,
   type RequirementStatus,
 } from '~/lib/commercial/commercial-constants';
+import {
+  REQUIREMENT_LOCATION_RADIUS_OPTIONS,
+  REQUIREMENT_PROPERTY_TYPES,
+  radiusSelectValue,
+} from '~/lib/commercial/requirement-form-fields';
 import { normalizeRequirementUseClass } from '~/lib/commercial/requirement-use-class';
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
@@ -47,6 +52,7 @@ import { draftRequirementFromPaste } from '../_lib/server/requirement-draft-acti
 import type { CommercialRequirement } from '../_lib/server/requirements.service';
 import {
   createRequirement,
+  listRequirementOffices,
   updateRequirement,
 } from '../_lib/server/server-actions';
 
@@ -63,9 +69,12 @@ interface RequirementFormModalProps {
   onSaved: () => void;
 }
 
+type OfficeOption = { id: string; name: string; isDefault: boolean };
+
 type BriefForm = {
   locationText: string;
   searchRadiusMiles: string;
+  branchId: string;
   sector: string;
   tenure: '' | 'rent' | 'buy' | 'both';
   sizeMinSqft: string;
@@ -112,6 +121,7 @@ function briefFromDraft(draft?: RequirementDraftPrefill | null): BriefForm {
     return {
       locationText: '',
       searchRadiusMiles: '10',
+      branchId: '',
       sector: '',
       tenure: '',
       sizeMinSqft: '',
@@ -129,6 +139,7 @@ function briefFromDraft(draft?: RequirementDraftPrefill | null): BriefForm {
   return {
     locationText: draft.locationText ?? '',
     searchRadiusMiles: '10',
+    branchId: '',
     sector: draft.sector ?? '',
     tenure: draft.tenure ?? '',
     sizeMinSqft: draft.sizeMinSqft != null ? String(draft.sizeMinSqft) : '',
@@ -156,8 +167,9 @@ function briefFromRequirement(
     locationText: requirement.locationText ?? '',
     searchRadiusMiles:
       requirement.searchRadiusMiles != null
-        ? String(requirement.searchRadiusMiles)
+        ? radiusSelectValue(requirement.searchRadiusMiles)
         : '10',
+    branchId: requirement.branchId ?? '',
     sector: requirement.sector ?? '',
     tenure: requirement.tenure ?? '',
     sizeMinSqft:
@@ -219,6 +231,21 @@ function RequirementFormFields({
       : briefFromDraft(initialDraft),
   );
   const [linkedEnquiryId] = useState(sourceEnquiryId ?? null);
+  const [offices, setOffices] = useState<OfficeOption[]>([]);
+
+  useEffect(() => {
+    let cancelled = false;
+    listRequirementOffices({ accountId })
+      .then((rows) => {
+        if (!cancelled) setOffices(rows);
+      })
+      .catch(() => {
+        if (!cancelled) setOffices([]);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [accountId]);
 
   const field = <K extends keyof BriefForm>(key: K, value: BriefForm[K]) =>
     setForm((prev) => ({ ...prev, [key]: value }));
@@ -281,9 +308,11 @@ function RequirementFormFields({
           contactEmail: party.contactEmail.trim() || null,
           contactPhone: party.contactPhone.trim() || null,
           locationText: form.locationText.trim() || null,
-          searchRadiusMiles: form.searchRadiusMiles
-            ? parseFloat(form.searchRadiusMiles)
-            : null,
+          searchRadiusMiles:
+            form.searchRadiusMiles.trim() === ''
+              ? null
+              : parseFloat(form.searchRadiusMiles),
+          branchId: form.branchId || null,
           sector: form.sector.trim() || null,
           useClass: normalizeRequirementUseClass(form.sector.trim() || null),
           tenure: form.tenure || null,
@@ -415,17 +444,52 @@ function RequirementFormFields({
         ) : null}
       </div>
       <div className="space-y-1.5">
-        <Label>Search radius (miles)</Label>
-        <Input
-          type="number"
-          min={0.5}
-          max={100}
-          step={0.5}
-          value={form.searchRadiusMiles}
-          onChange={(e) => field('searchRadiusMiles', e.target.value)}
-          className={inputClass}
-        />
+        <Label>Search radius</Label>
+        <Select
+          value={form.searchRadiusMiles || '10'}
+          onValueChange={(v) => field('searchRadiusMiles', v)}
+        >
+          <SelectTrigger className={inputClass}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {REQUIREMENT_LOCATION_RADIUS_OPTIONS.map((option) => (
+              <SelectItem key={option.miles} value={String(option.miles)}>
+                {option.label}
+              </SelectItem>
+            ))}
+            {form.searchRadiusMiles &&
+            !REQUIREMENT_LOCATION_RADIUS_OPTIONS.some(
+              (option) => String(option.miles) === form.searchRadiusMiles,
+            ) ? (
+              <SelectItem value={form.searchRadiusMiles}>
+                {form.searchRadiusMiles} miles
+              </SelectItem>
+            ) : null}
+          </SelectContent>
+        </Select>
       </div>
+      {offices.length > 0 ? (
+        <div className="space-y-1.5">
+          <Label>Office</Label>
+          <Select
+            value={form.branchId || 'unset'}
+            onValueChange={(v) => field('branchId', v === 'unset' ? '' : v)}
+          >
+            <SelectTrigger className={inputClass}>
+              <SelectValue placeholder="Any office" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="unset">Any office</SelectItem>
+              {offices.map((office) => (
+                <SelectItem key={office.id} value={office.id}>
+                  {office.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      ) : null}
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-1.5">
           <Label>Tenure</Label>
@@ -510,13 +574,29 @@ function RequirementFormFields({
         </div>
       </div>
       <div className="space-y-1.5">
-        <Label>Use</Label>
-        <Input
-          value={form.sector}
-          onChange={(e) => field('sector', e.target.value)}
-          placeholder="Gym, office, industrial…"
-          className={inputClass}
-        />
+        <Label>Property type</Label>
+        <Select
+          value={form.sector || 'all'}
+          onValueChange={(v) => field('sector', v === 'all' ? '' : v)}
+        >
+          <SelectTrigger className={inputClass}>
+            <SelectValue placeholder="All property types" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All property types</SelectItem>
+            {REQUIREMENT_PROPERTY_TYPES.map((type) => (
+              <SelectItem key={type} value={type}>
+                {type}
+              </SelectItem>
+            ))}
+            {form.sector &&
+            !(REQUIREMENT_PROPERTY_TYPES as readonly string[]).includes(
+              form.sector,
+            ) ? (
+              <SelectItem value={form.sector}>{form.sector}</SelectItem>
+            ) : null}
+          </SelectContent>
+        </Select>
       </div>
       <div className="space-y-2 rounded-lg border border-[color:var(--workspace-shell-border)] px-3 py-3">
         <div className="flex items-center gap-2">

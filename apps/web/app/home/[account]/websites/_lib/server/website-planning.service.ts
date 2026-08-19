@@ -22,6 +22,7 @@ import {
   isMissingRelationError,
   logMissingRelation,
 } from '../../../_lib/server/supabase-errors';
+import { createWebsitesService } from './websites.service';
 
 function parseSitemapDocument(value: unknown): WebsiteSitemapDocument {
   return migrateSitemapDocument(value);
@@ -111,6 +112,18 @@ class WebsitePlanningService {
       throw new Error('Permission denied');
     }
     return user;
+  }
+
+  private async assertWebsiteInAccount(accountId: string, websiteId: string) {
+    const { data, error } = await this.adminDb
+      .from('websites')
+      .select('id')
+      .eq('id', websiteId)
+      .eq('business_id', accountId)
+      .maybeSingle();
+
+    if (error) throw error;
+    if (!data) throw new Error('Website not found');
   }
 
   private mapContentDoc(row: ContentDocRow): WebsiteContentDoc {
@@ -294,12 +307,49 @@ class WebsitePlanningService {
   async linkJob(accountId: string, websiteId: string, jobId: string | null) {
     await this.ensureCanEdit(accountId);
 
+    const payload: Record<string, unknown> = {
+      job_id: jobId,
+      updated_at: new Date().toISOString(),
+    };
+
+    if (jobId) {
+      const { data: website } = await this.adminDb
+        .from('websites')
+        .select('id, client_org_id')
+        .eq('id', websiteId)
+        .eq('business_id', accountId)
+        .maybeSingle();
+
+      if (!website) throw new Error('Website not found');
+
+      const { data: project } = await this.adminDb
+        .from('projects')
+        .select('id, client_id')
+        .eq('id', jobId)
+        .eq('account_id', accountId)
+        .maybeSingle();
+
+      if (!project) {
+        throw new Error('Project not found in this workspace');
+      }
+
+      const existingOrg = (website as { client_org_id?: string | null })
+        .client_org_id;
+
+      if (!existingOrg) {
+        const clientId = (project as { client_id?: string | null }).client_id;
+        if (clientId) {
+          const { clientOrgId } = await createWebsitesService(
+            this.client,
+          ).resolveOrCreateClientOrgForCrmClient(accountId, clientId);
+          payload.client_org_id = clientOrgId;
+        }
+      }
+    }
+
     const { error } = await this.adminDb
       .from('websites')
-      .update({
-        job_id: jobId,
-        updated_at: new Date().toISOString(),
-      })
+      .update(payload)
       .eq('id', websiteId)
       .eq('business_id', accountId);
 
@@ -380,6 +430,18 @@ class WebsitePlanningService {
     let jobId = input.existingJobId ?? null;
     let createdNew = false;
 
+    if (jobId) {
+      const { data: jobCheck } = await this.adminDb
+        .from('projects')
+        .select('id')
+        .eq('id', jobId)
+        .eq('account_id', input.accountId)
+        .maybeSingle();
+      if (!jobCheck) {
+        throw new Error('Project not found in this workspace');
+      }
+    }
+
     if (!jobId) {
       let clientId: string | null = null;
       if (website.client_org_id) {
@@ -401,6 +463,8 @@ class WebsitePlanningService {
         client_id: clientId ?? undefined,
         status: 'in_progress',
         priority: 'medium',
+        is_ongoing: false,
+        is_phased: true,
       });
 
       jobId = String((job as { id?: string }).id ?? '');
@@ -442,6 +506,7 @@ class WebsitePlanningService {
 
   async createContentDoc(accountId: string, websiteId: string, title: string) {
     const user = await this.ensureCanEdit(accountId);
+    await this.assertWebsiteInAccount(accountId, websiteId);
 
     const { data: maxRow, error: maxError } = await this.adminDb
       .from('website_content_docs')

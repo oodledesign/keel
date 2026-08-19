@@ -29,9 +29,11 @@ export type PortalWebsite = {
   id: string;
   name: string;
   domain: string | null;
+  stagingUrl: string | null;
   status: string;
   stack: string | null;
   cmsAdminUrl: string | null;
+  hostingNotes: string | null;
   portalShareScope: WebsitePortalShareScope;
   sitemap: WebsiteSitemapPage[];
   wireframes: WebsiteWireframePage[];
@@ -282,6 +284,8 @@ class ClientPortalService {
       status: String(row.status ?? 'in-progress'),
       stack: (row.stack as string | null) ?? null,
       cmsAdminUrl: (row.cms_admin_url as string | null) ?? null,
+      stagingUrl: (row.staging_url as string | null) ?? null,
+      hostingNotes: (row.hosting_notes as string | null) ?? null,
       portalShareScope: scope,
       sitemap: allowPlanning ? migrateSitemapPages(row.sitemap) : [],
       wireframes:
@@ -342,9 +346,10 @@ class ClientPortalService {
       this.db
         .from('websites')
         .select(
-          'id, name, domain, status, stack, cms_admin_url, portal_share_scope, sitemap, wireframes, business_id',
+          'id, name, domain, staging_url, status, stack, cms_admin_url, hosting_notes, portal_share_scope, sitemap, wireframes, business_id',
         )
         .eq('client_org_id', clientOrgId)
+        .eq('portal_visible', true)
         .order('created_at', { ascending: true })
         .limit(1)
         .maybeSingle(),
@@ -406,9 +411,10 @@ class ClientPortalService {
     const { data } = await this.db
       .from('websites')
       .select(
-        'id, name, domain, status, stack, cms_admin_url, portal_share_scope, sitemap, wireframes, business_id',
+        'id, name, domain, staging_url, status, stack, cms_admin_url, hosting_notes, portal_share_scope, sitemap, wireframes, business_id',
       )
       .eq('client_org_id', clientOrgId)
+      .eq('portal_visible', true)
       .order('created_at', { ascending: true })
       .limit(1)
       .maybeSingle();
@@ -434,6 +440,45 @@ class ClientPortalService {
     }
 
     return website;
+  }
+
+  async listWebsites(clientOrgId: string): Promise<PortalWebsite[]> {
+    await this.ensureMember(clientOrgId);
+
+    const { data, error } = await this.db
+      .from('websites')
+      .select(
+        'id, name, domain, staging_url, status, stack, cms_admin_url, hosting_notes, portal_share_scope, sitemap, wireframes, business_id',
+      )
+      .eq('client_org_id', clientOrgId)
+      .eq('portal_visible', true)
+      .order('created_at', { ascending: true });
+
+    if (error) {
+      console.error('[client-portal] listWebsites:', error.message);
+      return [];
+    }
+
+    const rows = (data ?? []) as Array<Record<string, unknown>>;
+    const websites = rows.map((row) => this.mapWebsite(row));
+
+    await Promise.all(
+      websites.map(async (website, index) => {
+        if (website.portalShareScope === 'off') return;
+        const accountId = String(rows[index]?.business_id ?? '');
+        if (!accountId) return;
+        const [brief, style] = await Promise.all([
+          this.loadWebsiteBrief(website.id, accountId),
+          website.portalShareScope === 'full'
+            ? this.loadWebsiteStyle(website.id, accountId)
+            : Promise.resolve(null),
+        ]);
+        website.brief = brief;
+        website.style = style;
+      }),
+    );
+
+    return websites;
   }
 
   async listTickets(
@@ -682,6 +727,8 @@ class ClientPortalService {
     projectId: string,
   ): Promise<PortalProjectPhase[]> {
     await this.ensureMember(clientOrgId);
+    const project = await this.getPortalProject(clientOrgId, projectId);
+    if (!project) return [];
 
     const { data, error } = await this.db
       .from('project_phases')
@@ -712,6 +759,8 @@ class ClientPortalService {
     projectId: string,
   ): Promise<PortalProjectTask[]> {
     await this.ensureMember(clientOrgId);
+    const project = await this.getPortalProject(clientOrgId, projectId);
+    if (!project) return [];
 
     const { data, error } = await this.db
       .from('tasks')
@@ -1191,6 +1240,22 @@ class ClientPortalService {
     body: string,
   ): Promise<PortalTaskComment> {
     const user = await this.ensureMember(clientOrgId);
+
+    const project = await this.getPortalProject(clientOrgId, projectId);
+    if (!project) {
+      throw new Error('Project not accessible');
+    }
+
+    const { data: taskRow } = await this.db
+      .from('tasks')
+      .select('id')
+      .eq('id', taskId)
+      .eq('project_id', projectId)
+      .maybeSingle();
+
+    if (!taskRow) {
+      throw new Error('Task not found');
+    }
 
     // task_comments may lag generated Database types.
     const { data, error } = await (this.db as SupabaseClient)

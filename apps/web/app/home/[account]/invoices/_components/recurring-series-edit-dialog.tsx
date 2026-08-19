@@ -39,6 +39,7 @@ import {
   normalizeInvoiceCurrency,
 } from '../_lib/invoice-currency';
 import { upsertRecurringSeriesAction } from '../_lib/server/server-actions';
+import { InvoiceRecipientContactPicker } from './invoice-recipient-contact-picker';
 
 type Frequency = 'weekly' | 'fortnightly' | 'monthly' | 'quarterly' | 'yearly';
 
@@ -548,23 +549,22 @@ export function RecurringSeriesEditDialog({
             <div>
               <p className="text-sm font-medium">Automatic email</p>
               <p className="text-muted-foreground text-xs">
-                On: email each invoice when it is created. Off: create as a draft
-                for manual send. Requires a recipient on the template.
+                On: email each invoice when it is created. Off: create as a
+                draft for manual send. Requires a recipient on the template.
               </p>
             </div>
             <Switch checked={autoSend} onCheckedChange={setAutoSend} />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="recurring-edit-recipient">Recipient email</Label>
-            <Input
-              id="recurring-edit-recipient"
-              type="email"
-              value={recipientEmail}
-              onChange={(e) => setRecipientEmail(e.target.value)}
-              placeholder="billing@client.com"
-            />
-          </div>
+          <InvoiceRecipientContactPicker
+            accountId={accountId}
+            clientId={series?.client_id ?? ''}
+            value={recipientEmail}
+            onChange={setRecipientEmail}
+            id="recurring-edit-recipient"
+            disabled={pending}
+            active={open && Boolean(series?.client_id)}
+          />
         </div>
 
         <DialogFooter>

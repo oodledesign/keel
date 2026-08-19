@@ -366,6 +366,8 @@ export function ProposalEditContent({
                 id: proposal.id,
                 status: proposal.status,
                 title: proposal.title,
+                sent_to_email: proposal.sent_to_email,
+                email_subject: proposal.email_subject,
               }}
               canEditProposals={canEditProposals}
             />

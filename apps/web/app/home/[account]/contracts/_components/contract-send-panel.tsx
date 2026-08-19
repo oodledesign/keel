@@ -11,6 +11,7 @@ import { toast } from '@kit/ui/sonner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@kit/ui/tabs';
 import { Textarea } from '@kit/ui/textarea';
 
+import { ConfirmSendEmailDialog } from '~/components/email/confirm-send-email-dialog';
 import { formatPence } from '~/home/[account]/invoices/_lib/invoice-totals';
 
 import {
@@ -67,6 +68,7 @@ export function ContractSendPanel({
   );
   const [portalUrl, setPortalUrl] = useState<string | null>(null);
   const [loading, setLoading] = useState<'send' | 'test' | 'link' | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const loadPortalLink = async () => {
     if (portalUrl) return portalUrl;
@@ -102,7 +104,10 @@ export function ContractSendPanel({
         send_test_to_self: testOnly,
       });
       toast.success(testOnly ? 'Test email sent' : 'Contract sent');
-      if (!testOnly) onSent();
+      if (!testOnly) {
+        setConfirmOpen(false);
+        onSent();
+      }
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -202,7 +207,13 @@ export function ContractSendPanel({
             <Button
               className="bg-[var(--ozer-accent)] text-[#09111F]"
               disabled={loading != null}
-              onClick={() => void handleSend(false)}
+              onClick={() => {
+                if (!email.trim()) {
+                  toast.error('Recipient email is required');
+                  return;
+                }
+                setConfirmOpen(true);
+              }}
             >
               {loading === 'send' ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -249,6 +260,18 @@ export function ContractSendPanel({
           </Button>
         </TabsContent>
       </Tabs>
+
+      <ConfirmSendEmailDialog
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title="Send this contract?"
+        documentLabel={contractTitle}
+        recipients={email.trim() ? [email.trim()] : []}
+        subject={subject}
+        confirmLabel="Send email"
+        pending={loading === 'send'}
+        onConfirm={() => void handleSend(false)}
+      />
     </div>
   );
 }

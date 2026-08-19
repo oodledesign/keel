@@ -9,6 +9,7 @@ import {
   DeleteWebsiteSchema,
   GetWebsiteSchema,
   ListWebsitesSchema,
+  SetWebsitePortalVisibleSchema,
   UpdateWebsiteSchema,
   WebsiteInputSchema,
 } from '../schema/websites.schema';
@@ -79,6 +80,14 @@ export const updateWebsite = enhanceAction(
     return service.updateWebsite(accountId, rest);
   },
   { schema: UpdateWebsiteActionSchema },
+);
+
+export const setWebsitePortalVisible = enhanceAction(
+  async (input) => {
+    const service = getService();
+    return service.setPortalVisible(input);
+  },
+  { schema: SetWebsitePortalVisibleSchema },
 );
 
 export const deleteWebsite = enhanceAction(

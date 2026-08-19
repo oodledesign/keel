@@ -123,6 +123,24 @@ describe('scoreListingRequirementMatch', () => {
     );
   });
 
+  it('treats this-area-only (0 miles) as a tight radius', () => {
+    const result = scoreListingRequirementMatch(
+      {
+        ...baseListing,
+        latitude: 53.48,
+        longitude: -2.24,
+      },
+      {
+        ...baseRequirement,
+        latitude: 53.48,
+        longitude: -2.241,
+        searchRadiusMiles: 0,
+        locationText: null,
+      },
+    );
+    expect(result.breakdown.location).toBe(20);
+  });
+
   it('differentiates incomplete briefs by size overlap', () => {
     const sparse = {
       ...baseRequirement,

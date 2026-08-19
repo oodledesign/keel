@@ -106,6 +106,7 @@ import { ClientRanklyBlock } from './client-rankly-block';
 import { ClientSupportBlock } from './client-support-block';
 import { ClientTasksBlock } from './client-tasks-block';
 import { ClientUpcomingBookingsBlock } from './client-upcoming-bookings-block';
+import { ClientWebsitesBlock } from './client-websites-block';
 
 type Client = {
   id: string;
@@ -134,6 +135,7 @@ type DetailTab =
   | 'overview'
   | 'contacts'
   | 'projects'
+  | 'websites'
   | 'invoices'
   | 'finance'
   | 'meetings'
@@ -561,6 +563,7 @@ export function ClientDetailSidebar({
           ? [['contacts', 'Contacts']]
           : []),
         ['projects', 'Projects'],
+        ['websites', 'Websites'],
         ['invoices', 'Invoices'],
         ['finance', 'Finance'],
         ['meetings', 'Meetings'],
@@ -1167,6 +1170,17 @@ export function ClientDetailSidebar({
           accountSlug={accountSlug}
           accountId={accountId}
           clientId={client.id}
+        />
+      );
+    }
+
+    if (activeTab === 'websites') {
+      return (
+        <ClientWebsitesBlock
+          accountSlug={accountSlug}
+          accountId={accountId}
+          clientId={client.id}
+          canEdit={canEditClients}
         />
       );
     }

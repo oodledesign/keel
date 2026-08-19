@@ -28,6 +28,7 @@ export default async function PublicRequirementFormPage({ params }: PageProps) {
           intro={form.intro}
           privacyPolicyUrl={form.privacyPolicyUrl}
           successMessage={form.successMessage}
+          offices={form.offices}
         />
       </div>
     </main>

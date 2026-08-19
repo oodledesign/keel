@@ -43,6 +43,14 @@ export function buildWorkspaceSettingsNav(input: {
       exact: true,
     },
     {
+      id: 'notifications',
+      label: 'Notifications',
+      href: settingsPath(
+        pathsConfig.app.accountNotificationsSettings,
+        accountSlug,
+      ),
+    },
+    {
       id: 'focus',
       label: 'Focus & Availability',
       href: settingsPath(pathsConfig.app.accountFocusSettings, accountSlug),

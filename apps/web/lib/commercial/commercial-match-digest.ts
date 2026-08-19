@@ -8,6 +8,7 @@ import {
   wrapNotificationEmail,
 } from '~/lib/email/wrap-notification-email';
 import { createInAppNotification } from '~/lib/notifications/create-in-app-notification';
+import { isEmailNotificationEnabled } from '~/lib/notifications/email-notification-preferences';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
 
 const MAX_ACCOUNTS = 80;
@@ -70,28 +71,53 @@ async function loadCommercialAccounts(
     }));
 }
 
-async function loadOwnerAdminEmails(
+async function loadOwnerAdminRecipients(
   admin: SupabaseClient,
   slug: string,
-): Promise<string[]> {
+): Promise<Array<{ userId: string; email: string }>> {
   const { data: members } = await admin.rpc('get_account_members', {
     account_slug: slug,
   });
 
-  return Array.from(
-    new Set(
-      (members ?? [])
-        .filter((member: { role?: string | null; email?: string | null }) => {
-          return (
-            (member.role === 'owner' || member.role === 'admin') &&
-            Boolean(member.email)
-          );
-        })
-        .map((member: { email?: string | null }) =>
-          member.email!.toLowerCase(),
-        ),
-    ),
-  );
+  const seen = new Set<string>();
+  const recipients: Array<{ userId: string; email: string }> = [];
+
+  for (const member of (members ?? []) as Array<{
+    user_id?: string | null;
+    role?: string | null;
+    email?: string | null;
+  }>) {
+    if (member.role !== 'owner' && member.role !== 'admin') continue;
+    const userId = member.user_id?.trim();
+    const email = member.email?.trim().toLowerCase();
+    if (!userId || !email || seen.has(email)) continue;
+    seen.add(email);
+    recipients.push({ userId, email });
+  }
+
+  return recipients;
+}
+
+async function loadEmailPreferenceMap(
+  admin: SupabaseClient,
+  userIds: string[],
+): Promise<Map<string, unknown>> {
+  const map = new Map<string, unknown>();
+  if (userIds.length === 0) return map;
+
+  const { data } = await admin
+    .from('user_settings')
+    .select('user_id, email_notification_preferences')
+    .in('user_id', userIds);
+
+  for (const row of (data ?? []) as Array<{
+    user_id: string;
+    email_notification_preferences?: unknown;
+  }>) {
+    map.set(row.user_id, row.email_notification_preferences);
+  }
+
+  return map;
 }
 
 export async function runCommercialMatchDigest(admin: SupabaseClient): Promise<{
@@ -145,8 +171,13 @@ export async function runCommercialMatchDigest(admin: SupabaseClient): Promise<{
         continue;
       }
 
-      const emails = await loadOwnerAdminEmails(admin, account.slug);
-      if (emails.length === 0) continue;
+      const recipients = await loadOwnerAdminRecipients(admin, account.slug);
+      if (recipients.length === 0) continue;
+
+      const prefsByUser = await loadEmailPreferenceMap(
+        admin,
+        recipients.map((r) => r.userId),
+      );
 
       const pipelineUrl = new URL(linkPath, siteUrl).toString();
       const topLines = digest.suggestions
@@ -184,14 +215,22 @@ export async function runCommercialMatchDigest(admin: SupabaseClient): Promise<{
         },
       );
 
-      for (const email of emails) {
+      for (const recipient of recipients) {
+        if (
+          !isEmailNotificationEnabled(
+            prefsByUser.get(recipient.userId),
+            'commercial_match_digest',
+          )
+        ) {
+          continue;
+        }
         try {
           await sendPlatformEmail({
             type: 'commercial_match_digest',
             accountId: account.accountId,
             mail: {
               from: sender,
-              to: email,
+              to: recipient.email,
               subject: `${productName}: ${digest.count} commercial match suggestion${
                 digest.count === 1 ? '' : 's'
               }`,
@@ -205,7 +244,7 @@ export async function runCommercialMatchDigest(admin: SupabaseClient): Promise<{
           emailed += 1;
         } catch (err) {
           errors.push(
-            `${account.slug}/${email}: ${
+            `${account.slug}/${recipient.email}: ${
               err instanceof Error ? err.message : String(err)
             }`,
           );

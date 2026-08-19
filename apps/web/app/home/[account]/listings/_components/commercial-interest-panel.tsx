@@ -76,6 +76,8 @@ type Props = {
   accountId: string;
   mode: Mode;
   compact?: boolean;
+  /** Overview preview: short suggestion list only, no schedule. */
+  preview?: boolean;
   /** When compact, link to the full Interest page with total count. */
   seeAllHref?: string | null;
   /** Fires when linked interest + suggested fits totals change (for Matches badges). */
@@ -103,6 +105,7 @@ export function CommercialInterestPanel({
   accountId,
   mode,
   compact = false,
+  preview = false,
   seeAllHref = null,
   onMatchTotalsChange,
 }: Props) {
@@ -276,8 +279,13 @@ export function CommercialInterestPanel({
   }, [matches, statusFilter]);
 
   const visibleSuggestions = useMemo(
-    () => (compact ? suggestions.slice(0, 5) : suggestions),
-    [compact, suggestions],
+    () =>
+      preview
+        ? suggestions.slice(0, 3)
+        : compact
+          ? suggestions.slice(0, 5)
+          : suggestions,
+    [compact, preview, suggestions],
   );
 
   useEffect(() => {
@@ -625,64 +633,66 @@ export function CommercialInterestPanel({
     ) : null;
 
   const suggestionsBlock = (
-    <div className="mb-5 space-y-2">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-            Suggested fits
-          </p>
-          <p className="text-xs text-[var(--workspace-shell-text)]/45">
-            Automatic matches from sector, size, location, tenure and budget —
-            then optionally explain with AI.
-            {suggestions.length > 0 ? (
-              <>
-                {' '}
-                Showing {visibleSuggestions.length}
-                {suggestions.length > visibleSuggestions.length
-                  ? ` of ${suggestions.length}`
-                  : ''}{' '}
-                suggested fit{suggestions.length === 1 ? '' : 's'}.
-              </>
-            ) : null}
-          </p>
-        </div>
-        {!compact && suggestions.length > 0 ? (
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              disabled={pending || suggestionsLoading}
-              onClick={() => onExplainSuggestions(false)}
-            >
-              <Sparkles className="h-3.5 w-3.5" />
-              Explain fits
-            </Button>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="outline"
-                  className="h-8 w-8"
-                  disabled={pending || suggestionsLoading}
-                  aria-label="More AI actions"
-                >
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  disabled={pending || suggestionsLoading}
-                  onClick={() => onExplainSuggestions(true)}
-                >
-                  Rank with AI
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+    <div className={preview ? 'space-y-2' : 'mb-5 space-y-2'}>
+      {preview ? null : (
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+              Suggested fits
+            </p>
+            <p className="text-xs text-[var(--workspace-shell-text)]/45">
+              Automatic matches from sector, size, location, tenure and budget —
+              then optionally explain with AI.
+              {suggestions.length > 0 ? (
+                <>
+                  {' '}
+                  Showing {visibleSuggestions.length}
+                  {suggestions.length > visibleSuggestions.length
+                    ? ` of ${suggestions.length}`
+                    : ''}{' '}
+                  suggested fit{suggestions.length === 1 ? '' : 's'}.
+                </>
+              ) : null}
+            </p>
           </div>
-        ) : null}
-      </div>
+          {!compact && suggestions.length > 0 ? (
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                disabled={pending || suggestionsLoading}
+                onClick={() => onExplainSuggestions(false)}
+              >
+                <Sparkles className="h-3.5 w-3.5" />
+                Explain fits
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="outline"
+                    className="h-8 w-8"
+                    disabled={pending || suggestionsLoading}
+                    aria-label="More AI actions"
+                  >
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    disabled={pending || suggestionsLoading}
+                    onClick={() => onExplainSuggestions(true)}
+                  >
+                    Rank with AI
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+          ) : null}
+        </div>
+      )}
       {!compact && suggestions.length > 0 ? (
         <p className="text-[11px] text-[var(--workspace-shell-text)]/40">
           Explain fits adds a short reason to each suggestion (uses AI credits).
@@ -804,7 +814,7 @@ export function CommercialInterestPanel({
             </Link>
           </Button>
         </div>
-      ) : compact && seeAllHref && suggestions.length > 0 ? (
+      ) : compact && !preview && seeAllHref && suggestions.length > 0 ? (
         <div className="pt-1">
           <Button asChild type="button" size="sm" variant="ghost">
             <Link href={seeAllHref}>
@@ -930,7 +940,13 @@ export function CommercialInterestPanel({
     <>
       {rankedBookBlock}
       {showUnifiedEmpty ? (
-        <div className="flex flex-col items-center justify-center gap-4 px-4 py-12 text-center">
+        <div
+          className={
+            preview
+              ? 'flex flex-col items-center justify-center gap-3 px-2 py-6 text-center'
+              : 'flex flex-col items-center justify-center gap-4 px-4 py-12 text-center'
+          }
+        >
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/40">
             <Search className="h-5 w-5" />
           </div>
@@ -956,7 +972,7 @@ export function CommercialInterestPanel({
               )}
               Find matches
             </Button>
-            {mode.kind === 'requirement' ? (
+            {mode.kind === 'requirement' && !preview ? (
               <Button
                 type="button"
                 variant="outline"
@@ -971,62 +987,87 @@ export function CommercialInterestPanel({
                 Rank stock
               </Button>
             ) : null}
-            <Button
-              type="button"
-              className={workspaceBtnPrimaryMd}
-              onClick={() => setAddOpen(true)}
-            >
-              <Plus className="h-4 w-4" />
-              Add interest
-            </Button>
+            {preview && seeAllHref ? (
+              <Button asChild type="button" className={workspaceBtnPrimaryMd}>
+                <Link href={seeAllHref}>Open Interest</Link>
+              </Button>
+            ) : preview ? null : (
+              <Button
+                type="button"
+                className={workspaceBtnPrimaryMd}
+                onClick={() => setAddOpen(true)}
+              >
+                <Plus className="h-4 w-4" />
+                Add interest
+              </Button>
+            )}
           </div>
         </div>
       ) : (
         <>
           {suggestionsBlock}
 
-          <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
-            <div>
-              <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
-                Interest schedule
-              </p>
-              <p className="text-xs text-[var(--workspace-shell-text)]/45">
-                {mode.kind === 'listing'
-                  ? 'Linked requirements and their progress on this disposal.'
-                  : 'Linked disposals and their progress on this requirement.'}
-              </p>
-            </div>
+          {!preview ? (
+            <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
+              <div>
+                <p className="text-sm font-medium text-[var(--workspace-shell-text)]">
+                  Interest schedule
+                </p>
+                <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                  {mode.kind === 'listing'
+                    ? 'Linked requirements and their progress on this disposal.'
+                    : 'Linked disposals and their progress on this requirement.'}
+                </p>
+              </div>
 
-            {mode.kind === 'listing' && !compact ? (
-              <div className="grid gap-3 sm:grid-cols-4">
-                <div className="space-y-1">
-                  <Label className="text-xs">Sector</Label>
-                  <Input
-                    value={sector}
-                    onChange={(e) => setSector(e.target.value)}
-                    placeholder="e.g. industrial"
-                    className="h-8"
-                  />
+              {mode.kind === 'listing' && !compact ? (
+                <div className="grid gap-3 sm:grid-cols-4">
+                  <div className="space-y-1">
+                    <Label className="text-xs">Sector</Label>
+                    <Input
+                      value={sector}
+                      onChange={(e) => setSector(e.target.value)}
+                      placeholder="e.g. industrial"
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Size min</Label>
+                    <Input
+                      type="number"
+                      value={sizeMin}
+                      onChange={(e) => setSizeMin(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Size max</Label>
+                    <Input
+                      type="number"
+                      value={sizeMax}
+                      onChange={(e) => setSizeMax(e.target.value)}
+                      className="h-8"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <Label className="text-xs">Activity</Label>
+                    <Select value={lastDays} onValueChange={setLastDays}>
+                      <SelectTrigger className="h-8">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">Any time</SelectItem>
+                        <SelectItem value="7">Last 7 days</SelectItem>
+                        <SelectItem value="30">Last 30 days</SelectItem>
+                        <SelectItem value="90">Last 90 days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
                 </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Size min</Label>
-                  <Input
-                    type="number"
-                    value={sizeMin}
-                    onChange={(e) => setSizeMin(e.target.value)}
-                    className="h-8"
-                  />
-                </div>
-                <div className="space-y-1">
-                  <Label className="text-xs">Size max</Label>
-                  <Input
-                    type="number"
-                    value={sizeMax}
-                    onChange={(e) => setSizeMax(e.target.value)}
-                    className="h-8"
-                  />
-                </div>
-                <div className="space-y-1">
+              ) : null}
+
+              {mode.kind === 'requirement' && !compact ? (
+                <div className="max-w-xs space-y-1">
                   <Label className="text-xs">Activity</Label>
                   <Select value={lastDays} onValueChange={setLastDays}>
                     <SelectTrigger className="h-8">
@@ -1040,78 +1081,61 @@ export function CommercialInterestPanel({
                     </SelectContent>
                   </Select>
                 </div>
-              </div>
-            ) : null}
+              ) : null}
 
-            {mode.kind === 'requirement' && !compact ? (
-              <div className="max-w-xs space-y-1">
-                <Label className="text-xs">Activity</Label>
-                <Select value={lastDays} onValueChange={setLastDays}>
-                  <SelectTrigger className="h-8">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="all">Any time</SelectItem>
-                    <SelectItem value="7">Last 7 days</SelectItem>
-                    <SelectItem value="30">Last 30 days</SelectItem>
-                    <SelectItem value="90">Last 90 days</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
+              {filteredHint ? (
+                <p className="text-xs text-[var(--workspace-shell-text)]/45">
+                  {filteredHint}
+                </p>
+              ) : null}
 
-            {filteredHint ? (
-              <p className="text-xs text-[var(--workspace-shell-text)]/45">
-                {filteredHint}
-              </p>
-            ) : null}
+              {!compact ? (
+                <div className="flex flex-wrap gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('all')}
+                    className={cn(
+                      'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                      statusFilter === 'all'
+                        ? 'bg-[var(--ozer-accent)] text-white'
+                        : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]',
+                    )}
+                  >
+                    All
+                    <span className="tabular-nums opacity-80">
+                      {matches.length}
+                    </span>
+                  </button>
+                  {INTEREST_STATUSES.map((status) => {
+                    const count = statusCounts[status] ?? 0;
+                    if (count === 0 && statusFilter !== status) return null;
+                    return (
+                      <button
+                        key={status}
+                        type="button"
+                        onClick={() => setStatusFilter(status)}
+                        className={cn(
+                          'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
+                          statusFilter === status
+                            ? 'bg-[var(--ozer-accent)] text-white'
+                            : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]',
+                        )}
+                      >
+                        {INTEREST_STATUS_LABELS[status]}
+                        <span className="tabular-nums opacity-80">{count}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              ) : null}
 
-            {!compact ? (
-              <div className="flex flex-wrap gap-1.5">
-                <button
-                  type="button"
-                  onClick={() => setStatusFilter('all')}
-                  className={cn(
-                    'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                    statusFilter === 'all'
-                      ? 'bg-[var(--ozer-accent)] text-white'
-                      : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]',
-                  )}
-                >
-                  All
-                  <span className="tabular-nums opacity-80">
-                    {matches.length}
-                  </span>
-                </button>
-                {INTEREST_STATUSES.map((status) => {
-                  const count = statusCounts[status] ?? 0;
-                  if (count === 0 && statusFilter !== status) return null;
-                  return (
-                    <button
-                      key={status}
-                      type="button"
-                      onClick={() => setStatusFilter(status)}
-                      className={cn(
-                        'inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium transition-colors',
-                        statusFilter === status
-                          ? 'bg-[var(--ozer-accent)] text-white'
-                          : 'bg-[var(--workspace-shell-sidebar-accent)] text-[var(--workspace-shell-text)]/70 hover:text-[var(--workspace-shell-text)]',
-                      )}
-                    >
-                      {INTEREST_STATUS_LABELS[status]}
-                      <span className="tabular-nums opacity-80">{count}</span>
-                    </button>
-                  );
-                })}
-              </div>
-            ) : null}
-
-            {scheduleList}
-          </div>
+              {scheduleList}
+            </div>
+          ) : null}
         </>
       )}
 
-      {addOpen ? (
+      {addOpen && !preview ? (
         <div className="mt-4 space-y-3 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-sidebar-accent)]/20 p-3">
           <div className="space-y-1">
             <Label className="text-xs">
@@ -1211,39 +1235,47 @@ export function CommercialInterestPanel({
 
   if (compact) {
     return (
-      <div className="space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4">
-        <div className="flex items-center justify-between gap-2">
-          <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
-            {title}
-          </h3>
-          <div className="flex items-center gap-1.5">
-            {mode.kind === 'requirement' ? (
+      <div
+        className={
+          preview
+            ? 'space-y-3'
+            : 'space-y-3 border-t border-[color:var(--workspace-shell-border)] pt-4'
+        }
+      >
+        {preview ? null : (
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-sm font-semibold text-[var(--workspace-shell-text)]">
+              {title}
+            </h3>
+            <div className="flex items-center gap-1.5">
+              {mode.kind === 'requirement' ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  disabled={rankLoading || pending}
+                  onClick={() => onRankStock(false)}
+                >
+                  {rankLoading ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Sparkles className="h-3.5 w-3.5" />
+                  )}
+                  Rank stock
+                </Button>
+              ) : null}
               <Button
                 type="button"
                 size="sm"
                 variant="outline"
-                disabled={rankLoading || pending}
-                onClick={() => onRankStock(false)}
+                onClick={() => setAddOpen(true)}
               >
-                {rankLoading ? (
-                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                ) : (
-                  <Sparkles className="h-3.5 w-3.5" />
-                )}
-                Rank stock
+                <Plus className="h-3.5 w-3.5" />
+                Add
               </Button>
-            ) : null}
-            <Button
-              type="button"
-              size="sm"
-              variant="outline"
-              onClick={() => setAddOpen(true)}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Add
-            </Button>
+            </div>
           </div>
-        </div>
+        )}
         {panel}
       </div>
     );

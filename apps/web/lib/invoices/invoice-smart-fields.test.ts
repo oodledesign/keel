@@ -39,4 +39,12 @@ describe('DEFAULT_INVOICE_EMAIL_SUBJECT', () => {
       }),
     ).toBe('Invoice INV-0455 from Oodle Design');
   });
+
+  it('leaves a gap when workspace name is missing from preview context', () => {
+    expect(
+      renderSmartFields(DEFAULT_INVOICE_EMAIL_SUBJECT, {
+        invoice: { invoice_number: 'INV-0456' },
+      }),
+    ).toBe('Invoice INV-0456 from ');
+  });
 });

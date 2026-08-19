@@ -33,8 +33,8 @@ import { Input } from '@kit/ui/input';
 import { Label } from '@kit/ui/label';
 import { Popover, PopoverContent, PopoverTrigger } from '@kit/ui/popover';
 import { toast } from '@kit/ui/sonner';
-import { cn } from '@kit/ui/utils';
 
+import { ConfirmSendEmailDialog } from '~/components/email/confirm-send-email-dialog';
 import {
   inviteAllContactsToPortalAction,
   inviteContactToPortalAction,
@@ -48,6 +48,7 @@ import {
   formatContactRoleLabel,
   normalizeContactRole,
 } from '~/lib/clients/contact-roles';
+import { uniqueEmails } from '~/lib/email/unique-emails';
 
 import {
   createContact,
@@ -783,6 +784,8 @@ export function ClientContactsBlock({
     null,
   );
   const [invitingAll, setInvitingAll] = useState(false);
+  const [inviteContact, setInviteContact] = useState<Contact | null>(null);
+  const [inviteAllOpen, setInviteAllOpen] = useState(false);
   const [accessByContactId, setAccessByContactId] = useState<
     Record<string, ContactPortalAccessStatus>
   >({});
@@ -901,6 +904,7 @@ export function ClientContactsBlock({
       });
       if (result.emailSent) {
         toast.success(`Portal invite sent to ${email}`);
+        setInviteContact(null);
       } else {
         toast.error(result.emailError ?? 'Invite created but email failed');
       }
@@ -943,6 +947,7 @@ export function ClientContactsBlock({
         toast.success(
           `Sent ${result.invited} portal invite${result.invited === 1 ? '' : 's'}`,
         );
+        setInviteAllOpen(false);
       }
       if (result.failures.length > 0) {
         toast.error(
@@ -991,7 +996,7 @@ export function ClientContactsBlock({
             size="sm"
             variant="outline"
             disabled={invitingAll}
-            onClick={() => void handleInviteAllContacts()}
+            onClick={() => setInviteAllOpen(true)}
             className="border-[color:var(--workspace-shell-border)] bg-transparent text-[var(--workspace-shell-text)] hover:bg-[var(--workspace-shell-sidebar-accent)]"
           >
             <Mail className="mr-2 h-3.5 w-3.5" />
@@ -1247,7 +1252,7 @@ export function ClientContactsBlock({
                               invitingContactId === contact.id ||
                               !resolveContactEmail(contact)
                             }
-                            onClick={() => void handleInviteContact(contact)}
+                            onClick={() => setInviteContact(contact)}
                           >
                             <Mail className="mr-2 h-4 w-4" />
                             {invitingContactId === contact.id
@@ -1322,6 +1327,45 @@ export function ClientContactsBlock({
           </Button>
         </div>
       )}
+      <ConfirmSendEmailDialog
+        open={Boolean(inviteContact)}
+        onOpenChange={(open) => {
+          if (!open) setInviteContact(null);
+        }}
+        title={
+          inviteContact && accessByContactId[inviteContact.id] === 'active'
+            ? 'Resend this portal invite?'
+            : 'Send this portal invite?'
+        }
+        documentLabel="Client portal invite"
+        recipients={uniqueEmails(
+          inviteContact ? resolveContactEmail(inviteContact) : null,
+        )}
+        confirmLabel={
+          inviteContact && accessByContactId[inviteContact.id] === 'active'
+            ? 'Resend invite'
+            : 'Send invite'
+        }
+        pending={invitingContactId === inviteContact?.id}
+        onConfirm={() => {
+          if (!inviteContact) return;
+          void handleInviteContact(inviteContact);
+        }}
+      />
+      <ConfirmSendEmailDialog
+        open={inviteAllOpen}
+        onOpenChange={setInviteAllOpen}
+        title="Send portal invites?"
+        documentLabel="Client portal invites"
+        recipients={uniqueEmails(
+          contacts.map((contact) => resolveContactEmail(contact) ?? ''),
+        )}
+        confirmLabel="Send invites"
+        pending={invitingAll}
+        onConfirm={() => {
+          void handleInviteAllContacts();
+        }}
+      />
     </div>
   );
 }

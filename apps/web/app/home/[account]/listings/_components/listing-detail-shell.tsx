@@ -29,6 +29,7 @@ import {
 import { workspaceBtnPrimaryMd } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
+import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingFormModal } from './listing-form-modal';
 import { ListingSectorPills } from './listing-sector-pills';
 
@@ -268,6 +269,23 @@ function OverviewHeader({
               </span>
             ) : null}
           </div>
+          {(listing.actingAgents?.length ?? 0) > 0 ? (
+            <div className="flex items-center gap-2">
+              <ListingAgentAvatarStack
+                agents={listing.actingAgents ?? []}
+                size="sm"
+              />
+              <span className="text-xs text-[var(--workspace-shell-text)]/50">
+                {(listing.actingAgents ?? [])
+                  .slice(0, 3)
+                  .map((agent) => agent.name)
+                  .join(', ')}
+                {(listing.actingAgents?.length ?? 0) > 3
+                  ? ` +${(listing.actingAgents?.length ?? 0) - 3}`
+                  : ''}
+              </span>
+            </div>
+          ) : null}
           {updatedLabel ? (
             <p className="text-xs text-[var(--workspace-shell-text)]/45">
               Updated {updatedLabel}

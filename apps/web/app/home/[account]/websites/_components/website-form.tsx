@@ -64,6 +64,7 @@ export function WebsiteForm({
   website,
   siteStudioEnabled = false,
   initialClients,
+  initialClientId,
 }: {
   mode: 'create' | 'edit';
   accountId: string;
@@ -73,6 +74,7 @@ export function WebsiteForm({
   siteStudioEnabled?: boolean;
   /** Optional SSR-fetched CRM clients (create flow). */
   initialClients?: ClientOption[];
+  initialClientId?: string;
 }) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
@@ -85,7 +87,7 @@ export function WebsiteForm({
     staging_url: website?.stagingUrl ?? '',
     stack: (website?.stack ?? 'other') as WebsiteStack,
     status: (website?.status ?? 'in-progress') as WebsiteStatus,
-    client_id: website?.linkedClientId ?? '',
+    client_id: website?.linkedClientId ?? initialClientId ?? '',
     cms_admin_url: website?.cmsAdminUrl ?? '',
     vercel_project_id: website?.vercelProjectId ?? '',
     github_repo_url: website?.githubRepoUrl ?? '',
@@ -95,9 +97,7 @@ export function WebsiteForm({
     launched_at: website?.launchedAt ? website.launchedAt.slice(0, 10) : '',
   });
 
-  const [createDeliveryProject, setCreateDeliveryProject] = useState(
-    mode === 'create' && siteStudioEnabled,
-  );
+  const [createDeliveryProject, setCreateDeliveryProject] = useState(false);
   const [linkExistingJob, setLinkExistingJob] = useState(false);
   const [existingJobId, setExistingJobId] = useState('');
 
@@ -163,11 +163,14 @@ export function WebsiteForm({
       return;
     }
 
-    if (mode === 'create' && (siteStudioEnabled || createDeliveryProject)) {
-      if (!form.client_id) {
-        toast.error('Pick a CRM client so the website can link to the portal');
-        return;
-      }
+    if (
+      mode === 'create' &&
+      createDeliveryProject &&
+      !linkExistingJob &&
+      !form.client_id
+    ) {
+      toast.error('Pick a CRM client so the website can link to the portal');
+      return;
     }
 
     if (createDeliveryProject && linkExistingJob && !existingJobId) {
@@ -223,7 +226,7 @@ export function WebsiteForm({
           staging_url: form.staging_url.trim() || null,
           stack: form.stack,
           status: form.status,
-          client_org_id: website.clientOrgId,
+          client_id: form.client_id || null,
           cms_admin_url: form.cms_admin_url.trim() || null,
           vercel_project_id: form.vercel_project_id.trim() || null,
           github_repo_url: form.github_repo_url.trim() || null,
@@ -359,7 +362,6 @@ export function WebsiteForm({
                 client_id: value === '__none__' ? '' : value,
               }))
             }
-            disabled={mode === 'edit'}
           >
             <SelectTrigger>
               <SelectValue placeholder="Link a CRM client" />
@@ -374,11 +376,9 @@ export function WebsiteForm({
             </SelectContent>
           </Select>
           <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-            {mode === 'create'
-              ? 'Resolves (or creates) the portal client organisation used for share/portal access.'
-              : website?.clientOrgName
-                ? `Portal org: ${website.clientOrgName}`
-                : 'Change the linked client org from Edit metadata later if needed.'}
+            Links this site to the client record, portal Website tab, hosting,
+            and CMS access. If you link a delivery project that already has a
+            client, we’ll copy that client here.
           </p>
         </div>
 
@@ -404,9 +404,10 @@ export function WebsiteForm({
             Delivery project
           </h2>
           <p className="text-sm text-[var(--workspace-shell-text-muted)]">
-            Apply the Website design template (Brief → Sitemap → Wireframes →
-            Design → SEO → Export → Build). Each phase deep-links to Site Studio
-            tabs.
+            Leave this off for simple website management (hosting, CMS, logins).
+            Turn it on for a full website plan, design, and build with the
+            Website design template (Brief → Sitemap → Wireframes → Design → SEO
+            → Export → Build).
           </p>
 
           <div className="flex items-center justify-between gap-4">
@@ -549,7 +550,7 @@ export function WebsiteForm({
         </div>
 
         <div className="space-y-2">
-          <Label htmlFor="hosting_notes">Hosting notes</Label>
+          <Label htmlFor="hosting_notes">Hosting & logins</Label>
           <Textarea
             id="hosting_notes"
             value={form.hosting_notes}
@@ -559,8 +560,13 @@ export function WebsiteForm({
                 hosting_notes: event.target.value,
               }))
             }
-            rows={2}
+            rows={3}
+            placeholder="CMS login, hosting panel, DNS, shared passwords — shown on the client portal Website tab."
           />
+          <p className="text-xs text-[var(--workspace-shell-text-muted)]">
+            Visible to the client on their portal. Don’t store secrets you
+            wouldn’t share with them.
+          </p>
         </div>
       </section>
 

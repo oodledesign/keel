@@ -169,6 +169,7 @@ export function InvoiceSendPanel({
   defaultRecipientName,
   client,
   sender = null,
+  accountName = null,
   initialSubject,
   initialBody,
   initialSignature,
@@ -200,6 +201,8 @@ export function InvoiceSendPanel({
     last_name?: string | null;
     email?: string | null;
   } | null;
+  /** Workspace / brand name for {{account.name}} preview. */
+  accountName?: string | null;
   initialSubject?: string | null;
   initialBody?: string | null;
   initialSignature?: string | null;
@@ -567,6 +570,7 @@ export function InvoiceSendPanel({
     client,
     contact: previewContact,
     sender,
+    accountName,
     invoice: {
       invoice_number: invoiceNumber,
       total_pence: totalPence,
@@ -1076,7 +1080,18 @@ export function InvoiceSendPanel({
           </DialogHeader>
           <div className="space-y-3 text-sm">
             <p className="text-xs text-[var(--workspace-shell-text-muted)]">
-              To: {recipients.map((r) => r.name).join(', ') || 'No recipients'}
+              To:{' '}
+              {recipients.length > 0
+                ? recipients
+                    .map((recipient) =>
+                      recipient.name &&
+                      recipient.name.toLowerCase() !==
+                        recipient.email.toLowerCase()
+                        ? `${recipient.name} <${recipient.email}>`
+                        : recipient.email,
+                    )
+                    .join(', ')
+                : 'No recipients'}
             </p>
             <div className="rounded-xl border border-[color:var(--workspace-shell-border)] bg-white p-4 text-[var(--ozer-text-on-light)] shadow-sm">
               <p className="mb-3 text-base font-semibold">{previewSubject}</p>

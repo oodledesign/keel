@@ -22,6 +22,7 @@ const APP_ROUTE_PREFIXES = [
   '/share',
   '/book',
   '/preview',
+  '/unsubscribe',
   '/api',
 ] as const;
 
@@ -68,7 +69,9 @@ export function isAppHostPublicConnectPath(pathname: string): boolean {
     pathname === '/preview' ||
     pathname.startsWith('/preview/') ||
     pathname === '/share' ||
-    pathname.startsWith('/share/')
+    pathname.startsWith('/share/') ||
+    pathname === '/unsubscribe' ||
+    pathname.startsWith('/unsubscribe/')
   );
 }
 

@@ -15,14 +15,16 @@ import { loadWebsitesPageData } from '../_lib/server/websites-page.loader';
 
 interface WebsiteNewPageProps {
   params: Promise<{ account: string }>;
+  searchParams: Promise<{ clientId?: string }>;
 }
 
 export const generateMetadata = async () => {
   return { title: 'Add website' };
 };
 
-async function WebsiteNewPage({ params }: WebsiteNewPageProps) {
+async function WebsiteNewPage({ params, searchParams }: WebsiteNewPageProps) {
   const accountSlug = (await params).account;
+  const { clientId: initialClientId } = await searchParams;
   const workspace = await loadTeamWorkspace(accountSlug);
   const { accountId, canViewWebsites, canEditWebsites } =
     await loadWebsitesPageData(accountSlug);
@@ -86,6 +88,7 @@ async function WebsiteNewPage({ params }: WebsiteNewPageProps) {
           accountSlug={accountSlug}
           siteStudioEnabled={siteStudioEnabled}
           initialClients={clientOptions}
+          initialClientId={initialClientId}
         />
       </PageBody>
     </>

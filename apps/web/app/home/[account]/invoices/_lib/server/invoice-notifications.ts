@@ -8,6 +8,7 @@ import {
   wrapEmailHtmlWithBrand,
 } from '~/lib/brand/account-brand';
 import { resolveClientRecipientEmail } from '~/lib/clients/resolve-client-recipient';
+import { alignedReplyTo } from '~/lib/email/aligned-reply-to';
 import { resolveTransactionalEmailFrom } from '~/lib/email/zeptomail-client';
 import { notifyInvoicePaidInApp } from '~/lib/invoices/invoice-in-app-notifications';
 import { sendPlatformEmail } from '~/lib/server/send-platform-email';
@@ -150,12 +151,15 @@ export async function sendInvoicePaidNotifications(params: {
   }
 
   const brand = await loadAccountBrandResolved(params.accountId);
-  const replyTo = await resolveInvoiceReplyToEmail(admin, {
-    accountId: params.accountId,
-    accountSlug: account.slug,
-    brandContactEmail: brand.contact_email,
-    accountEmail: account.email,
-  });
+  const replyTo = alignedReplyTo(
+    await resolveInvoiceReplyToEmail(admin, {
+      accountId: params.accountId,
+      accountSlug: account.slug,
+      brandContactEmail: brand.contact_email,
+      accountEmail: account.email,
+    }),
+    from,
+  );
 
   const { data: members } = await admin.rpc('get_account_members', {
     account_slug: account.slug,
@@ -334,13 +338,16 @@ export async function sendInvoiceIssuedEmail(params: {
   }
 
   const brand = await loadAccountBrandResolved(params.accountId);
-  const replyTo = await resolveInvoiceReplyToEmail(admin, {
-    accountId: params.accountId,
-    accountSlug: account?.slug,
-    brandContactEmail: brand.contact_email,
-    accountEmail: account?.email,
-    senderEmail: params.sender?.email,
-  });
+  const replyTo = alignedReplyTo(
+    await resolveInvoiceReplyToEmail(admin, {
+      accountId: params.accountId,
+      accountSlug: account?.slug,
+      brandContactEmail: brand.contact_email,
+      accountEmail: account?.email,
+      senderEmail: params.sender?.email,
+    }),
+    from,
+  );
 
   const recipient = invoice.client_id
     ? await resolveClientRecipientEmail(admin, invoice.client_id, {

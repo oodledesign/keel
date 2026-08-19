@@ -3,11 +3,11 @@ import { NextResponse } from 'next/server';
 import { enhanceRouteHandler } from '@kit/next/routes';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
-import { PublicRequirementFormSubmitSchema } from '~/lib/commercial/circulation/public-requirement-form.schema';
 import {
   loadPublicRequirementFormByToken,
   upsertRequirementFromPublicForm,
 } from '~/lib/commercial/circulation/public-requirement-form';
+import { PublicRequirementFormSubmitSchema } from '~/lib/commercial/circulation/public-requirement-form.schema';
 import {
   isRequirementFormRateLimited,
   requirementFormRateLimitResponse,
@@ -52,9 +52,11 @@ export const POST = enhanceRouteHandler(
         contactEmail: parsed.data.contactEmail,
         contactPhone: parsed.data.contactPhone,
         companyName: parsed.data.companyName,
+        branchId: parsed.data.branchId,
         sector: parsed.data.sector,
         tenure: parsed.data.tenure,
         locationText: parsed.data.locationText,
+        searchRadiusMiles: parsed.data.searchRadiusMiles,
         sizeMinSqft: parsed.data.sizeMinSqft,
         sizeMaxSqft: parsed.data.sizeMaxSqft,
         budgetMinPence: parsed.data.budgetMinPence,
@@ -71,6 +73,10 @@ export const POST = enhanceRouteHandler(
           'Thank you — we have received your requirement.',
       });
     } catch (err) {
+      const message = err instanceof Error ? err.message : '';
+      if (message === 'Unknown office') {
+        return NextResponse.json({ error: message }, { status: 400 });
+      }
       console.error(
         '[requirement-form] upsert failed:',
         err instanceof Error ? err.message : err,

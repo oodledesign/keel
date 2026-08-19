@@ -27,6 +27,11 @@ export function buildPersonalSettingsNav(): PersonalSettingsNavItem[] {
       href: pathsConfig.app.personalAccountRecorderSettings,
     },
     {
+      id: 'notifications',
+      label: 'Notifications',
+      href: pathsConfig.app.personalAccountNotificationsSettings,
+    },
+    {
       id: 'preferences',
       label: 'How you use Ozer',
       href: pathsConfig.app.personalAccountPreferencesSettings,

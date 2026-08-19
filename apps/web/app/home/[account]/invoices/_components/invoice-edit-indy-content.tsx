@@ -93,6 +93,7 @@ import {
   upsertRecurringSeriesAction,
 } from '../_lib/server/server-actions';
 import { InvoiceAiGenerateDialog } from './invoice-ai-generate-dialog';
+import { InvoiceRecipientContactPicker } from './invoice-recipient-contact-picker';
 import { InvoiceRowMenu } from './invoice-row-menu';
 import { InvoiceSendPanel } from './invoice-send-panel';
 
@@ -150,6 +151,7 @@ type InvoiceData = {
   email_body: string | null;
   email_signature: string | null;
   sent_to_email: string | null;
+  sent_to_emails?: string[] | null;
   items: InvoiceItem[];
   client: ClientInfo | null;
   project?: { id: string; title: string | null } | null;
@@ -160,6 +162,7 @@ type InvoiceData = {
   scheduled_send_to_emails?: string[] | null;
   recurring_series_id?: string | null;
   recurring_series?: { id: string; auto_send: boolean } | null;
+  public_token?: string | null;
 };
 
 const STATUS_STEPS = [
@@ -311,6 +314,7 @@ export function InvoiceEditIndyContent({
     String(defaultInvoiceDueDays ?? 7),
   );
   const [recurringAutoSend, setRecurringAutoSend] = useState(true);
+  const [recurringRecipientEmail, setRecurringRecipientEmail] = useState('');
   const [downloadingPdf, setDownloadingPdf] = useState(false);
   const [saving, setSaving] = useState(false);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
@@ -959,6 +963,7 @@ export function InvoiceEditIndyContent({
     setCreatingRecurring(true);
     try {
       const recipientEmail =
+        recurringRecipientEmail.trim() ||
         invoice.sent_to_email?.trim() ||
         invoice.preferred_send_email?.trim() ||
         (invoice.client as ClientInfo | null)?.email?.trim() ||
@@ -1033,6 +1038,7 @@ export function InvoiceEditIndyContent({
     recurringMonths,
     recurringDueDays,
     recurringAutoSend,
+    recurringRecipientEmail,
     currency,
     emailBody,
     emailSignature,
@@ -1134,6 +1140,14 @@ export function InvoiceEditIndyContent({
                       variant="outline"
                       onClick={() => {
                         setRecurringDueDays(String(defaultInvoiceDueDays ?? 7));
+                        setRecurringRecipientEmail(
+                          invoice.sent_to_email?.trim() ||
+                            invoice.preferred_send_email?.trim() ||
+                            (
+                              invoice.client as ClientInfo | null
+                            )?.email?.trim() ||
+                            '',
+                        );
                         setRecurringDialogOpen(true);
                       }}
                     >
@@ -1152,6 +1166,12 @@ export function InvoiceEditIndyContent({
                 id: invoice.id,
                 status: invoice.status,
                 invoice_number: invoice.invoice_number,
+                sent_to_email: invoice.sent_to_email,
+                sent_to_emails: invoice.sent_to_emails,
+                email_subject: invoice.email_subject,
+                preferred_send_email: invoice.preferred_send_email,
+                public_token: invoice.public_token,
+                paymentUrl,
               }}
               canEditInvoices={canEditInvoices}
               canManageInvoiceStatus={canManageInvoiceStatus}
@@ -1235,6 +1255,7 @@ export function InvoiceEditIndyContent({
             }
             client={invoice.client}
             sender={sender}
+            accountName={brandName}
             initialSubject={emailSubject}
             initialBody={emailBody}
             initialSignature={emailSignature}
@@ -2247,6 +2268,16 @@ export function InvoiceEditIndyContent({
                 onCheckedChange={setRecurringAutoSend}
               />
             </div>
+
+            <InvoiceRecipientContactPicker
+              accountId={accountId}
+              clientId={clientId}
+              value={recurringRecipientEmail}
+              onChange={setRecurringRecipientEmail}
+              id="recurring-create-recipient"
+              disabled={creatingRecurring}
+              active={recurringDialogOpen && Boolean(clientId)}
+            />
           </div>
           <DialogFooter>
             <Button
@@ -2283,7 +2314,11 @@ export function InvoiceEditIndyContent({
           <div className="space-y-3">
             {(
               [
-                ['Payment reference', showReferenceField, setShowReferenceField],
+                [
+                  'Payment reference',
+                  showReferenceField,
+                  setShowReferenceField,
+                ],
                 ['Issue date', showIssuedField, setShowIssuedField],
                 ['Due date', showDueField, setShowDueField],
                 ['Notes', showNotesField, setShowNotesField],

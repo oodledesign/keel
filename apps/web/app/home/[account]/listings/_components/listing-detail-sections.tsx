@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, useTransition } from 'react';
+import { useCallback, useEffect, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -54,7 +54,6 @@ import {
   updateListingEnquiry,
 } from '../_lib/server/server-actions';
 import { CommercialInterestPanel } from './commercial-interest-panel';
-import { ListingAgentAvatarStack } from './listing-agent-avatar-stack';
 import { ListingBrochureDownload } from './listing-brochure-download';
 import { ListingCirculateDialog } from './listing-circulate-dialog';
 import { ListingFormModal } from './listing-form-modal';
@@ -200,44 +199,15 @@ export function ListingOverviewSection({
     setMatchBadgeCount(listing.matchCount ?? 0);
   }, [listing.matchCount]);
 
+  const handleMatchTotalsChange = useCallback(
+    ({ linked, suggested }: { linked: number; suggested: number }) => {
+      setMatchBadgeCount(linked + suggested);
+    },
+    [],
+  );
+
   return (
     <div className="space-y-6">
-      <Card className={workspacePanelCard}>
-        <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
-          <div className="space-y-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-                Matches
-              </CardTitle>
-              <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--ozer-accent)] px-2.5 py-1 text-xs font-semibold text-white">
-                <Bell className="h-3.5 w-3.5" />
-                <span className="tabular-nums">{matchBadgeCount}</span>
-              </span>
-            </div>
-            <p className="text-sm text-[var(--workspace-shell-text)]/50">
-              Suggested requirement fits and linked interest on this disposal.
-            </p>
-          </div>
-          <Button asChild variant="outline" size="sm">
-            <Link href={interestHref}>
-              Open Interest
-              <ChevronRight className="h-4 w-4" />
-            </Link>
-          </Button>
-        </CardHeader>
-        <CardContent>
-          <CommercialInterestPanel
-            accountId={accountId}
-            mode={{ kind: 'listing', listingId: listing.id }}
-            compact
-            seeAllHref={interestHref}
-            onMatchTotalsChange={({ linked, suggested }) => {
-              setMatchBadgeCount(linked + suggested);
-            }}
-          />
-        </CardContent>
-      </Card>
-
       <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         <SummaryCard
           label="Asking rent"
@@ -272,45 +242,82 @@ export function ListingOverviewSection({
         />
       </div>
 
-      <Card className={workspacePanelCard}>
-        <CardHeader>
-          <CardTitle className="text-base text-[var(--workspace-shell-text)]">
-            Interest funnel
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
-            {(
-              [
-                { label: 'Enquiries', value: summary.total },
-                { label: 'Active', value: summary.active },
-                { label: 'Linked instructions', value: summary.linkedDeals },
-                { label: 'Archived', value: summary.archived },
-                {
-                  label: 'Upcoming viewings',
-                  value: summary.upcomingViewings ?? 0,
-                },
-                {
-                  label: 'Awaiting feedback',
-                  value: summary.awaitingFeedback ?? 0,
-                },
-              ] as const
-            ).map((item) => (
-              <div
-                key={item.label}
-                className="rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-3 text-center"
-              >
-                <p className="text-xl font-semibold text-[var(--workspace-shell-text)] tabular-nums">
-                  {item.value}
-                </p>
-                <p className="mt-0.5 text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
-                  {item.label}
-                </p>
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className={workspacePanelCard}>
+          <CardHeader>
+            <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+              Interest funnel
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+              {(
+                [
+                  { label: 'Enquiries', value: summary.total },
+                  { label: 'Active', value: summary.active },
+                  { label: 'Linked instructions', value: summary.linkedDeals },
+                  { label: 'Archived', value: summary.archived },
+                  {
+                    label: 'Upcoming viewings',
+                    value: summary.upcomingViewings ?? 0,
+                  },
+                  {
+                    label: 'Awaiting feedback',
+                    value: summary.awaitingFeedback ?? 0,
+                  },
+                ] as const
+              ).map((item) => (
+                <div
+                  key={item.label}
+                  className="rounded-xl border border-[color:var(--workspace-shell-border)] px-3 py-3 text-center"
+                >
+                  <p className="text-xl font-semibold text-[var(--workspace-shell-text)] tabular-nums">
+                    {item.value}
+                  </p>
+                  <p className="mt-0.5 text-[11px] tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
+                    {item.label}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className={workspacePanelCard}>
+          <CardHeader className="flex flex-row items-start justify-between gap-3 space-y-0">
+            <div className="space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <CardTitle className="text-base text-[var(--workspace-shell-text)]">
+                  Matches
+                </CardTitle>
+                <span className="inline-flex items-center gap-1.5 rounded-lg bg-[var(--ozer-accent)] px-2.5 py-1 text-xs font-semibold text-white">
+                  <Bell className="h-3.5 w-3.5" />
+                  <span className="tabular-nums">{matchBadgeCount}</span>
+                </span>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+              <p className="text-sm text-[var(--workspace-shell-text)]/50">
+                Suggested requirement fits for this disposal.
+              </p>
+            </div>
+            <Button asChild variant="outline" size="sm">
+              <Link href={interestHref}>
+                Open Interest
+                <ChevronRight className="h-4 w-4" />
+              </Link>
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <CommercialInterestPanel
+              accountId={accountId}
+              mode={{ kind: 'listing', listingId: listing.id }}
+              compact
+              preview
+              seeAllHref={interestHref}
+              onMatchTotalsChange={handleMatchTotalsChange}
+            />
+          </CardContent>
+        </Card>
+      </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
         <Card className={workspacePanelCard}>
@@ -391,17 +398,6 @@ export function ListingOverviewSection({
                 }
               />
             </dl>
-            {(listing.actingAgents?.length ?? 0) > 0 ? (
-              <div className="mt-4 border-t border-[color:var(--workspace-shell-border)] pt-4">
-                <p className="mb-2 text-[11px] font-medium tracking-wide text-[var(--workspace-shell-text)]/45 uppercase">
-                  Team
-                </p>
-                <ListingAgentAvatarStack
-                  agents={listing.actingAgents ?? []}
-                  size="md"
-                />
-              </div>
-            ) : null}
           </CardContent>
         </Card>
 

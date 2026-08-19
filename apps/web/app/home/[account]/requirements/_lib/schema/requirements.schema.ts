@@ -7,6 +7,10 @@ export const ListRequirementsSchema = z.object({
   stage: z.enum(REQUIREMENT_STATUSES).optional(),
 });
 
+export const ListRequirementOfficesSchema = z.object({
+  accountId: z.string().uuid(),
+});
+
 export const CreateRequirementSchema = z.object({
   accountId: z.string().uuid(),
   clientId: z.string().uuid().optional().nullable(),
@@ -24,7 +28,8 @@ export const CreateRequirementSchema = z.object({
   locationText: z.string().optional().nullable(),
   latitude: z.number().finite().optional().nullable(),
   longitude: z.number().finite().optional().nullable(),
-  searchRadiusMiles: z.number().min(0.5).max(100).optional().nullable(),
+  searchRadiusMiles: z.number().min(0).max(100).optional().nullable(),
+  branchId: z.string().uuid().optional().nullable(),
   sizeMinSqft: z.number().min(0).optional().nullable(),
   sizeMaxSqft: z.number().min(0).optional().nullable(),
   budgetMinPence: z.number().int().min(0).optional().nullable(),

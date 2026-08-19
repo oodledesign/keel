@@ -554,48 +554,99 @@ class PlanTemplatesService {
 
     const businessId = await this.resolveBusinessId(input.accountId);
 
-    const { data: subRow, error: subError } = await this.db
+    let existingQuery = this.db
       .from('client_subscriptions')
-      .insert({
-        account_id: input.accountId,
-        business_id: businessId,
-        client_id: input.clientId,
-        client_org_id: clientOrgId,
-        website_id: input.websiteId ?? null,
-        plan_template_id: template.id,
-        plan_name: template.name,
-        subscription_kind: template.kind,
-        monthly_amount: template.amount,
-        currency: template.currency,
-        status: 'incomplete',
-        stripe_price_id: template.stripePriceId,
-        stripe_customer_id: stripeCustomerId,
-        stripe_customer_id_connect: stripeCustomerId,
-      })
       .select('*')
-      .single();
-    if (subError) throw subError;
+      .eq('account_id', input.accountId)
+      .eq('plan_template_id', template.id)
+      .eq('client_id', input.clientId)
+      .in('status', ['incomplete', 'pending'])
+      .order('created_at', { ascending: false })
+      .limit(1);
+    if (input.websiteId) {
+      existingQuery = existingQuery.eq('website_id', input.websiteId);
+    } else {
+      existingQuery = existingQuery.is('website_id', null);
+    }
 
-    const subscription = mapSubscription(subRow as Record<string, unknown>);
+    const { data: existingSub } = await existingQuery.maybeSingle();
 
-    const { data: lineRow, error: lineError } = await this.db
+    let subRow = existingSub as Record<string, unknown> | null;
+    if (!subRow) {
+      const { data: inserted, error: subError } = await this.db
+        .from('client_subscriptions')
+        .insert({
+          account_id: input.accountId,
+          business_id: businessId,
+          client_id: input.clientId,
+          client_org_id: clientOrgId,
+          website_id: input.websiteId ?? null,
+          plan_template_id: template.id,
+          plan_name: template.name,
+          subscription_kind: template.kind,
+          monthly_amount: template.amount,
+          currency: template.currency,
+          status: 'incomplete',
+          stripe_price_id: template.stripePriceId,
+          stripe_customer_id: stripeCustomerId,
+          stripe_customer_id_connect: stripeCustomerId,
+        })
+        .select('*')
+        .single();
+      if (subError) throw subError;
+      subRow = inserted as Record<string, unknown>;
+    }
+
+    const subscription = mapSubscription(subRow);
+
+    const { data: existingLine } = await this.db
       .from('subscription_line_items')
-      .insert({
-        client_subscription_id: subscription.id,
-        account_id: input.accountId,
-        plan_template_id: template.id,
-        kind: template.kind,
-        description: template.name,
-        amount: template.amount,
-        currency: template.currency,
-        billing_interval: template.interval,
-        stripe_price_id: template.stripePriceId,
-        item_type: 'recurring_price',
-        status: 'active',
-      })
       .select('*')
-      .single();
-    if (lineError) throw lineError;
+      .eq('client_subscription_id', subscription.id)
+      .eq('account_id', input.accountId)
+      .limit(1)
+      .maybeSingle();
+
+    let lineRow = existingLine as Record<string, unknown> | null;
+    if (!lineRow) {
+      const { data: insertedLine, error: lineError } = await this.db
+        .from('subscription_line_items')
+        .insert({
+          client_subscription_id: subscription.id,
+          account_id: input.accountId,
+          plan_template_id: template.id,
+          kind: template.kind,
+          description: template.name,
+          amount: template.amount,
+          currency: template.currency,
+          billing_interval: template.interval,
+          stripe_price_id: template.stripePriceId,
+          item_type: 'recurring_price',
+          status: 'active',
+        })
+        .select('*')
+        .single();
+      if (lineError) {
+        if (!existingSub) {
+          const { error: cleanupError } = await this.db
+            .from('client_subscriptions')
+            .delete()
+            .eq('id', subscription.id)
+            .eq('account_id', input.accountId);
+          if (cleanupError) {
+            console.error(
+              '[attachPlan] failed to clean up incomplete subscription',
+              subscription.id,
+              cleanupError.message,
+            );
+          }
+        }
+        throw new Error(
+          lineError.message || 'Could not save the hosting line item',
+        );
+      }
+      lineRow = insertedLine as Record<string, unknown>;
+    }
 
     const origin = getSiteOrigin();
     const successUrl = `${origin}/api/client-subscriptions/checkout?subscriptionId=${encodeURIComponent(subscription.id)}&completed=1&session_id={CHECKOUT_SESSION_ID}`;

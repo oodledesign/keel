@@ -7,6 +7,12 @@ import {
   createCommercialCirculationService,
 } from '~/lib/commercial/circulation/circulation.service';
 import { geocodeListingAddress } from '~/lib/commercial/geocode-listing';
+import { inferRequirementUseClass } from '~/lib/commercial/requirement-use-class';
+
+export type PublicRequirementOffice = {
+  id: string;
+  name: string;
+};
 
 export type PublicRequirementForm = {
   token: string;
@@ -17,6 +23,7 @@ export type PublicRequirementForm = {
   privacyPolicyUrl: string | null;
   successMessage: string | null;
   consentCopyVersion: string;
+  offices: PublicRequirementOffice[];
 };
 
 export type RequirementFormSubmission = {
@@ -24,9 +31,11 @@ export type RequirementFormSubmission = {
   contactEmail: string;
   contactPhone?: string | null;
   companyName?: string | null;
+  branchId?: string | null;
   sector?: string | null;
   tenure?: 'rent' | 'buy' | 'both' | null;
   locationText?: string | null;
+  searchRadiusMiles?: number | null;
   sizeMinSqft?: number | null;
   sizeMaxSqft?: number | null;
   budgetMinPence?: number | null;
@@ -53,15 +62,35 @@ export async function loadPublicRequirementFormByToken(
 
   if (error || !form) return null;
 
-  const { data: account } = await admin
-    .from('accounts')
-    .select('name')
-    .eq('id', form.account_id)
-    .maybeSingle();
+  const accountId = form.account_id as string;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = admin as any;
+
+  const [{ data: account }, { data: branchRows }] = await Promise.all([
+    admin.from('accounts').select('name').eq('id', accountId).maybeSingle(),
+    db
+      .from('account_branches')
+      .select('id, name, is_default, sort_order')
+      .eq('account_id', accountId)
+      .order('sort_order', { ascending: true })
+      .order('name', { ascending: true }),
+  ]);
+
+  const offices = (
+    (branchRows ?? []) as Array<{
+      id: string;
+      name: string | null;
+    }>
+  )
+    .map((row) => ({
+      id: row.id,
+      name: row.name?.trim() || 'Office',
+    }))
+    .filter((row) => row.id);
 
   return {
     token,
-    accountId: form.account_id as string,
+    accountId,
     accountName:
       (account as { name?: string | null } | null)?.name?.trim() || 'Agency',
     title: (form.title as string) || 'Register your requirement',
@@ -70,6 +99,7 @@ export async function loadPublicRequirementFormByToken(
     successMessage: (form.success_message as string | null) ?? null,
     consentCopyVersion:
       (form.consent_copy_version as string) || CONSENT_COPY_VERSION,
+    offices,
   };
 }
 
@@ -104,6 +134,16 @@ export async function upsertRequirementFromPublicForm(
     .limit(1)
     .maybeSingle();
 
+  const branchId: string | null = submission.branchId?.trim() || null;
+  if (branchId) {
+    const office = form.offices.find((item) => item.id === branchId);
+    if (!office) {
+      throw new Error('Unknown office');
+    }
+  }
+
+  const sector = submission.sector?.trim() || null;
+
   let latitude: number | null = null;
   let longitude: number | null = null;
   if (submission.locationText?.trim()) {
@@ -126,11 +166,14 @@ export async function upsertRequirementFromPublicForm(
     contact_email: email,
     contact_phone: submission.contactPhone?.trim() || null,
     company_name: submission.companyName?.trim() || null,
-    sector: submission.sector?.trim() || null,
+    branch_id: branchId,
+    sector,
+    use_class: inferRequirementUseClass(sector),
     tenure: submission.tenure ?? null,
     location_text: submission.locationText?.trim() || null,
     latitude,
     longitude,
+    search_radius_miles: submission.searchRadiusMiles ?? null,
     size_min_sqft: submission.sizeMinSqft ?? null,
     size_max_sqft: submission.sizeMaxSqft ?? null,
     budget_min_pence: submission.budgetMinPence ?? null,

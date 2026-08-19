@@ -3,6 +3,7 @@ import 'server-only';
 import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 import { getSupabaseServerClient } from '@kit/supabase/server-client';
 
+import { convertMinorUnits, getUnitsPerGbp } from '~/lib/currency/estimate-fx';
 import { getWorkspaceCurrencyWithClient } from '~/lib/currency/get-workspace-currency';
 import { addDaysIso, clampDueDays } from '~/lib/invoices/invoice-due-date';
 import { notifyInvoiceViewedInApp } from '~/lib/invoices/invoice-in-app-notifications';
@@ -137,41 +138,62 @@ export async function getInvoiceSummary(
 
   const normalizedDisplayCurrency = normalizeInvoiceCurrency(displayCurrency);
 
-  const currencies = new Set(
-    [...(data ?? []), ...(draftRows ?? [])].map(
-      (row: { currency?: string | null }) =>
-        normalizeInvoiceCurrency(row.currency),
-    ),
-  );
-  const mixedCurrencies = currencies.size > 1;
+  type NativeBucket = {
+    issued: number;
+    paid: number;
+    unpaid: number;
+    overdue: number;
+    draft: number;
+  };
 
-  let issued = 0;
-  let paid = 0;
-  let unpaid = 0;
-  let overdue = 0;
-  let draft = 0;
-  const byDay = new Map<string, number>();
+  const native = new Map<
+    ReturnType<typeof normalizeInvoiceCurrency>,
+    NativeBucket
+  >();
+  const emptyBucket = (): NativeBucket => ({
+    issued: 0,
+    paid: 0,
+    unpaid: 0,
+    overdue: 0,
+    draft: 0,
+  });
+  const bucketFor = (currency: ReturnType<typeof normalizeInvoiceCurrency>) => {
+    const existing = native.get(currency);
+    if (existing) return existing;
+    const created = emptyBucket();
+    native.set(currency, created);
+    return created;
+  };
+
+  const byDay = new Map<
+    string,
+    Array<{
+      amount: number;
+      currency: ReturnType<typeof normalizeInvoiceCurrency>;
+    }>
+  >();
 
   for (const row of data ?? []) {
     const rowCurrency = normalizeInvoiceCurrency(
       (row as { currency?: string | null }).currency,
     );
-    if (rowCurrency !== normalizedDisplayCurrency) continue;
-
+    const bucket = bucketFor(rowCurrency);
     const total = row.total_pence ?? 0;
     const amountPaid = row.amount_paid_pence ?? 0;
     if (['sent', 'read', 'paid', 'overdue'].includes(row.status)) {
-      issued += total;
+      bucket.issued += total;
     }
     if (row.status === 'paid') {
-      paid += total;
+      bucket.paid += total;
     } else if (['sent', 'read'].includes(row.status)) {
-      unpaid += total - amountPaid;
-      if (isInvoiceOverdue(row)) overdue += total - amountPaid;
+      bucket.unpaid += total - amountPaid;
+      if (isInvoiceOverdue(row)) bucket.overdue += total - amountPaid;
     }
     if (row.issued_at) {
       const day = row.issued_at.slice(0, 10);
-      byDay.set(day, (byDay.get(day) ?? 0) + total);
+      const dayRows = byDay.get(day) ?? [];
+      dayRows.push({ amount: total, currency: rowCurrency });
+      byDay.set(day, dayRows);
     }
   }
 
@@ -179,9 +201,49 @@ export async function getInvoiceSummary(
     const rowCurrency = normalizeInvoiceCurrency(
       (row as { currency?: string | null }).currency,
     );
-    if (rowCurrency !== normalizedDisplayCurrency) continue;
-    draft += row.total_pence ?? 0;
+    bucketFor(rowCurrency).draft += row.total_pence ?? 0;
   }
+
+  const mixedCurrencies = [...native.keys()].some(
+    (currency) => currency !== normalizedDisplayCurrency,
+  );
+  const fx = mixedCurrencies ? await getUnitsPerGbp() : null;
+
+  const toDisplay = (
+    amount: number,
+    currency: ReturnType<typeof normalizeInvoiceCurrency>,
+  ) => {
+    if (!fx || currency === normalizedDisplayCurrency) return amount;
+    return convertMinorUnits(
+      amount,
+      currency,
+      normalizedDisplayCurrency,
+      fx.unitsPerGbp,
+    );
+  };
+
+  let issued = 0;
+  let paid = 0;
+  let unpaid = 0;
+  let overdue = 0;
+  let draft = 0;
+  const currency_breakdown = [...native.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([currency, bucket]) => {
+      issued += toDisplay(bucket.issued, currency);
+      paid += toDisplay(bucket.paid, currency);
+      unpaid += toDisplay(bucket.unpaid, currency);
+      overdue += toDisplay(bucket.overdue, currency);
+      draft += toDisplay(bucket.draft, currency);
+      return {
+        currency,
+        issued_pence: bucket.issued,
+        paid_pence: bucket.paid,
+        unpaid_pence: bucket.unpaid,
+        overdue_pence: bucket.overdue,
+        draft_pence: bucket.draft,
+      };
+    });
 
   return {
     issued_pence: issued,
@@ -191,9 +253,18 @@ export async function getInvoiceSummary(
     draft_pence: draft,
     currency: normalizedDisplayCurrency,
     mixed_currencies: mixedCurrencies,
+    fx_estimated: mixedCurrencies,
+    fx_as_of: fx?.asOf ?? null,
+    currency_breakdown,
     chart: [...byDay.entries()]
       .sort(([a], [b]) => a.localeCompare(b))
-      .map(([date, amount_pence]) => ({ date, amount_pence })),
+      .map(([date, rows]) => ({
+        date,
+        amount_pence: rows.reduce(
+          (sum, row) => sum + toDisplay(row.amount, row.currency),
+          0,
+        ),
+      })),
   };
 }
 

@@ -1,4 +1,5 @@
 import {
+  Bell,
   Building2,
   CalendarDays,
   CheckSquare,
@@ -185,6 +186,11 @@ export function buildCommercialPropertySettingsChildren(
       label: 'Workspace settings',
       path: createPath(pathsConfig.app.accountSettings, account),
       Icon: <Settings className={iconClasses} />,
+    },
+    {
+      label: 'Notifications',
+      path: createPath(pathsConfig.app.accountNotificationsSettings, account),
+      Icon: <Bell className={iconClasses} />,
     },
     {
       label: 'Website & portals',

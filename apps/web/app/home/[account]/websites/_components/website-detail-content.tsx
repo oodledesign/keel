@@ -28,6 +28,7 @@ import {
   formatWebsiteDate,
 } from './website-badges';
 import { WebsitePlanningPanel } from './website-planning-panel';
+import { WebsitePortalAccessToggle } from './website-portal-access-toggle';
 
 function DetailField({
   label,
@@ -168,6 +169,14 @@ export function WebsiteDetailContent({
           </div>
         </div>
 
+        <WebsitePortalAccessToggle
+          accountId={accountId}
+          websiteId={website.id}
+          hasClient={Boolean(website.clientOrgId || website.linkedClientId)}
+          initialPortalVisible={website.portalVisible}
+          canManage={canEditWebsites}
+        />
+
         <WebsitePlanningPanel
           accountId={accountId}
           accountSlug={accountSlug}
@@ -186,6 +195,7 @@ export function WebsiteDetailContent({
           clientHref={clientHref}
           phases={phases}
           approvals={approvals}
+          managedOnly={!planning.jobId}
         />
 
         {showWebsiteMeta ? (
@@ -208,7 +218,7 @@ export function WebsiteDetailContent({
                   href={stagingHref}
                 />
                 <DetailField
-                  label="Client org"
+                  label="Client"
                   value={website.clientOrgName}
                   href={clientHref}
                 />
@@ -283,7 +293,7 @@ export function WebsiteDetailContent({
               {website.hostingNotes ? (
                 <div>
                   <p className="mb-2 text-xs tracking-wide text-[var(--workspace-shell-text)]/40 uppercase">
-                    Hosting notes
+                    Hosting & logins
                   </p>
                   <p className="text-sm whitespace-pre-wrap text-[var(--workspace-shell-text)]/80">
                     {website.hostingNotes}

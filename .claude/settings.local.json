@@ -3,7 +3,17 @@
     "allow": [
       "Bash(mkdir -p \"/Users/danjamespotter/projects/keel/.claude/worktrees/nostalgic-pike-21ec04/apps/web/app/home/[account]/properties/_components\" \"/Users/danjamespotter/projects/keel/.claude/worktrees/nostalgic-pike-21ec04/apps/web/app/home/[account]/properties/_lib/server\" \"/Users/danjamespotter/projects/keel/.claude/worktrees/nostalgic-pike-21ec04/apps/web/app/home/[account]/properties/[id]\")",
       "Read(//Users/danjamespotter/projects/keel/**)",
-      "Bash(npx turbo *)"
+      "Bash(npx turbo *)",
+      "Bash(cd /Users/danjamespotter/OzerAssistant/OzerAssistant && grep -n \"coalesce\\\\|var segments\\\\|segments =\\\\|segments\\\\.append\\\\|MeetingSegmentDraft\\\\|@Published.*segments\" TranscriptionSession.swift | head -60)",
+      "Bash(cd /Users/danjamespotter/OzerAssistant/OzerAssistant && wc -l TranscriptionSession.swift; grep -rn \"MeetingTranscriptCoalescer\" --include=\"*.swift\" .)",
+      "Bash(cd /Users/danjamespotter/OzerAssistant && grep -m1 \"MACOSX_DEPLOYMENT_TARGET\" OzerAssistant.xcodeproj/project.pbxproj)",
+      "Bash(xcodebuild -list -project OzerAssistant.xcodeproj)",
+      "Bash(xcodebuild -project OzerAssistant.xcodeproj -scheme OzerAssistant -configuration Debug -destination 'platform=macOS' build)",
+      "Bash(xcodebuild -project OzerAssistant.xcodeproj -scheme OzerAssistant -configuration Debug -destination 'platform=macOS' -only-testing:OzerAssistantTests/VocabularyCorrectorTests test)",
+      "Bash(xcodebuild -project OzerAssistant.xcodeproj -scheme OzerAssistant -configuration Debug -destination 'platform=macOS' -only-testing:OzerAssistantTests/VocabularyCorrectorTests/testMultiWordVariantPhrase test)",
+      "Read(//tmp/**)",
+      "Bash(xcodebuild -project OzerAssistant.xcodeproj -scheme OzerAssistant -configuration Debug -destination 'platform=macOS' test)",
+      "Bash(python3 /Users/danjamespotter/OzerAssistant/Tools/analyze_diagnostics.py /tmp/test-diagnostics2.json)"
     ]
   },
   "enableAllProjectMcpServers": true,

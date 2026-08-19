@@ -131,6 +131,23 @@ describe('resolveAppSubdomainRedirect', () => {
     ).toBeNull();
   });
 
+  it('serves public unsubscribe pages on the app host without redirecting to /app', () => {
+    vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
+    vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://app.ozer.so/unsubscribe/circulation'),
+      ),
+    ).toBeNull();
+
+    expect(
+      resolveAppSubdomainRedirect(
+        new URL('https://www.ozer.so/unsubscribe/circulation'),
+      ),
+    ).toBe('https://app.ozer.so/unsubscribe/circulation');
+  });
+
   it('serves landlord listing share links on the app host without redirecting to /app', () => {
     vi.stubEnv('NEXT_PUBLIC_SITE_URL', 'https://app.ozer.so');
     vi.stubEnv('NEXT_PUBLIC_MARKETING_SITE_URL', 'https://www.ozer.so');

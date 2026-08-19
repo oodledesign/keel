@@ -72,6 +72,7 @@ export function WebsitePlanningPanel({
   clientHref,
   phases = [],
   approvals = [],
+  managedOnly = false,
 }: {
   accountId: string;
   accountSlug: string;
@@ -90,6 +91,8 @@ export function WebsitePlanningPanel({
   clientHref?: string | null;
   phases?: PhaseListItem[];
   approvals?: WebsiteApprovalRecord[];
+  /** No delivery project — hosting/CMS/overview only, not full Site Studio tabs. */
+  managedOnly?: boolean;
 }) {
   const siteStudioEnabled = useSiteStudioAccess();
   const [forceSiteTab, setForceSiteTab] = useState(
@@ -99,9 +102,11 @@ export function WebsitePlanningPanel({
     forceSiteTab ||
     siteStudio.hasOzerSite ||
     siteStudio.brief?.stackPreference === 'ozer_sites';
-  const tabs = SITE_STUDIO_PLANNING_TABS.filter(
-    (item) => item !== 'site' || showSiteTab,
-  );
+  const tabs = managedOnly
+    ? (['overview'] as WebsitePlanningTab[])
+    : SITE_STUDIO_PLANNING_TABS.filter(
+        (item) => item !== 'site' || showSiteTab,
+      );
   const safeInitial = tabs.includes(initialTab) ? initialTab : 'overview';
   const [tab, setTab] = useState<WebsitePlanningTab>(safeInitial);
   const [sitemap, setSitemap] = useState<WebsiteSitemapPage[]>(
@@ -129,12 +134,14 @@ export function WebsitePlanningPanel({
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div>
             <h2 className="text-base font-semibold text-[var(--workspace-shell-text)]">
-              Website planning
+              {managedOnly ? 'Website' : 'Website planning'}
             </h2>
             <p className="mt-1 text-sm text-[var(--workspace-shell-text)]/60">
-              {siteStudioEnabled
-                ? 'Site Studio — brief, sitemap, wireframes, design, search, export, and build.'
-                : 'Core planning is free. Brief, Design, Search, Export, and Build unlock with Site Studio.'}
+              {managedOnly
+                ? 'Hosting, CMS, and client access. Link a delivery project when you need a full plan, design, and build.'
+                : siteStudioEnabled
+                  ? 'Site Studio — brief, sitemap, wireframes, design, search, export, and build.'
+                  : 'Core planning is free. Brief, Design, Search, Export, and Build unlock with Site Studio.'}
             </p>
           </div>
           {jobHref ? (
@@ -148,42 +155,44 @@ export function WebsitePlanningPanel({
         </div>
 
         <div className="-mx-4 mt-4 overflow-x-auto px-4 md:-mx-6 md:px-6">
-          <div
-            className="flex min-w-full gap-2 pb-0.5"
-            role="tablist"
-            aria-label="Website planning tabs"
-          >
-            {tabs.map((item) => {
-              const gated = isSiteStudioGatedTab(item);
-              const itemLocked = gated && !siteStudioEnabled;
+          {managedOnly ? null : (
+            <div
+              className="flex min-w-full gap-2 pb-0.5"
+              role="tablist"
+              aria-label="Website planning tabs"
+            >
+              {tabs.map((item) => {
+                const gated = isSiteStudioGatedTab(item);
+                const itemLocked = gated && !siteStudioEnabled;
 
-              return (
-                <button
-                  key={item}
-                  type="button"
-                  role="tab"
-                  aria-selected={tab === item}
-                  aria-disabled={itemLocked || undefined}
-                  onClick={() => {
-                    setTab(item);
-                    onTabChange?.(item);
-                  }}
-                  className={cn(
-                    'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors',
-                    tab === item
-                      ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
-                      : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
-                    itemLocked && tab !== item && 'opacity-70',
-                  )}
-                >
-                  {TAB_LABELS[item]}
-                  {itemLocked ? (
-                    <Lock className="h-3 w-3 opacity-80" aria-hidden />
-                  ) : null}
-                </button>
-              );
-            })}
-          </div>
+                return (
+                  <button
+                    key={item}
+                    type="button"
+                    role="tab"
+                    aria-selected={tab === item}
+                    aria-disabled={itemLocked || undefined}
+                    onClick={() => {
+                      setTab(item);
+                      onTabChange?.(item);
+                    }}
+                    className={cn(
+                      'inline-flex shrink-0 items-center gap-1.5 rounded-full px-3 py-1.5 text-sm transition-colors',
+                      tab === item
+                        ? 'bg-[var(--ozer-accent)] text-[var(--ozer-white)]'
+                        : 'border border-[color:var(--workspace-shell-border)] text-[var(--workspace-shell-text-muted)] hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-[var(--workspace-shell-text)]',
+                      itemLocked && tab !== item && 'opacity-70',
+                    )}
+                  >
+                    {TAB_LABELS[item]}
+                    {itemLocked ? (
+                      <Lock className="h-3 w-3 opacity-80" aria-hidden />
+                    ) : null}
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </div>
       </div>
 
@@ -197,7 +206,7 @@ export function WebsitePlanningPanel({
 
         {!locked && tab === 'overview' ? (
           <div className="space-y-6">
-            {!siteStudioEnabled ? (
+            {!siteStudioEnabled && !managedOnly ? (
               <SiteStudioUpsell accountSlug={accountSlug} />
             ) : null}
 

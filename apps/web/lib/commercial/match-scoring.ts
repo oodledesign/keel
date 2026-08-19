@@ -3,6 +3,7 @@ import {
   disposalIncludesForSale,
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
+import { effectiveSearchRadiusMiles } from '~/lib/commercial/requirement-form-fields';
 
 export type MatchListingSnapshot = {
   id: string;
@@ -185,7 +186,7 @@ function scoreLocation(
   const listingLng = listing.longitude;
   const reqLat = requirement.latitude;
   const reqLng = requirement.longitude;
-  const radius = requirement.searchRadiusMiles;
+  const radius = effectiveSearchRadiusMiles(requirement.searchRadiusMiles);
 
   const hasCoords =
     listingLat != null &&

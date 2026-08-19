@@ -21,6 +21,7 @@ export const WebsiteStatusSchema = z.enum([
 export const ListWebsitesSchema = z.object({
   accountId: z.string().uuid(),
   status: WebsiteStatusSchema.optional(),
+  clientId: z.string().uuid().optional(),
 });
 
 export const GetWebsiteSchema = z.object({
@@ -51,6 +52,7 @@ export const WebsiteInputSchema = z.object({
   create_delivery_project: z.boolean().optional().default(false),
   /** Link an existing delivery project instead of creating one. */
   existing_job_id: optionalNullableUuid,
+  portal_visible: z.boolean().optional(),
 });
 
 export const UpdateWebsiteSchema = WebsiteInputSchema.extend({
@@ -59,7 +61,12 @@ export const UpdateWebsiteSchema = WebsiteInputSchema.extend({
   accountId: true,
   create_delivery_project: true,
   existing_job_id: true,
-  client_id: true,
+});
+
+export const SetWebsitePortalVisibleSchema = z.object({
+  accountId: z.string().uuid(),
+  websiteId: z.string().uuid(),
+  portal_visible: z.boolean(),
 });
 
 export const DeleteWebsiteSchema = z.object({
@@ -74,3 +81,6 @@ export type GetWebsiteInput = z.infer<typeof GetWebsiteSchema>;
 export type WebsiteInput = z.infer<typeof WebsiteInputSchema>;
 export type UpdateWebsiteInput = z.infer<typeof UpdateWebsiteSchema>;
 export type DeleteWebsiteInput = z.infer<typeof DeleteWebsiteSchema>;
+export type SetWebsitePortalVisibleInput = z.infer<
+  typeof SetWebsitePortalVisibleSchema
+>;
