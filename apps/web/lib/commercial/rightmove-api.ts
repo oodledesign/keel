@@ -370,7 +370,12 @@ function absoluteRightmoveDisplayUrl(pathOrUrl: string | null): string | null {
   if (!pathOrUrl) return null;
   if (/^https?:\/\//i.test(pathOrUrl)) return pathOrUrl;
   const path = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
-  return `https://www.rightmove.co.uk${path}`;
+  const env = getRightmoveEnv();
+  const origin =
+    env.environment === 'production'
+      ? 'https://www.rightmove.co.uk'
+      : 'https://www.adftest.rightmove.com';
+  return `${origin}${path}`;
 }
 
 /**

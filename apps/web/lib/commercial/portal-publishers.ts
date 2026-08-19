@@ -495,7 +495,7 @@ export async function publishToRightmove(
       listingId,
       portal: 'rightmove',
       lastError:
-        'RIGHTMOVE_CLIENT_ID / RIGHTMOVE_CLIENT_KEY are not configured on the server',
+        'Rightmove ADF credentials not configured (RIGHTMOVE_CLIENT_ID / RIGHTMOVE_CLIENT_KEY missing on this server)',
       metadata: { stage: 'pending_credentials' },
     });
   }
@@ -611,7 +611,7 @@ export async function unpublishFromRightmove(
       listingId,
       portal: 'rightmove',
       lastError:
-        'RIGHTMOVE_CLIENT_ID / RIGHTMOVE_CLIENT_KEY are not configured on the server',
+        'Rightmove ADF credentials not configured (RIGHTMOVE_CLIENT_ID / RIGHTMOVE_CLIENT_KEY missing on this server)',
       metadata: { stage: 'pending_credentials' },
     });
   }

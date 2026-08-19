@@ -115,23 +115,75 @@ const SECTOR_RULES: Array<{ test: RegExp; subType: RightmoveSubType }> = [
   { test: /student/i, subType: 'STUDENT_HOUSING' },
 ];
 
-const USE_CLASS_ALIASES: Record<string, string> = {
+/** Rightmove ADF `building.useClasses` enum (rejects anything else). */
+const RIGHTMOVE_USE_CLASSES = new Set([
+  'CLASS_1A',
+  'CLASS_3',
+  'CLASS_4',
+  'CLASS_5',
+  'CLASS_6',
+  'CLASS_7',
+  'CLASS_8',
+  'CLASS_9',
+  'CLASS_10',
+  'CLASS_11',
+  'CLASS_B2',
+  'CLASS_B8',
+  'CLASS_C1',
+  'CLASS_C2',
+  'CLASS_C2A',
+  'CLASS_C3',
+  'CLASS_C4',
+  'CLASS_E',
+  'CLASS_F1',
+  'CLASS_F2',
+  'SUI_GENERIS',
+]);
+
+const USE_CLASS_TOKEN_ALIASES: Record<string, string> = {
   e: 'CLASS_E',
-  'class e': 'CLASS_E',
-  class_e: 'CLASS_E',
-  b2: 'CLASS_B2',
-  'class b2': 'CLASS_B2',
-  b8: 'CLASS_B8',
-  'class b8': 'CLASS_B8',
-  c1: 'CLASS_C1',
-  c2: 'CLASS_C2',
-  c3: 'CLASS_C3',
-  c4: 'CLASS_C4',
+  f: 'CLASS_F1',
   f1: 'CLASS_F1',
   f2: 'CLASS_F2',
-  'sui generis': 'SUI_GENERIS',
-  sui_generis: 'SUI_GENERIS',
+  b1: 'CLASS_E',
+  b2: 'CLASS_B2',
+  b8: 'CLASS_B8',
+  c1: 'CLASS_C1',
+  c2: 'CLASS_C2',
+  c2a: 'CLASS_C2A',
+  c3: 'CLASS_C3',
+  c4: 'CLASS_C4',
+  a1: 'CLASS_1A',
+  a2: 'CLASS_E',
+  a3: 'CLASS_E',
+  a4: 'SUI_GENERIS',
+  a5: 'SUI_GENERIS',
+  '1a': 'CLASS_1A',
+  '3': 'CLASS_3',
+  '4': 'CLASS_4',
+  '5': 'CLASS_5',
+  '6': 'CLASS_6',
+  '7': 'CLASS_7',
+  '8': 'CLASS_8',
+  '9': 'CLASS_9',
+  '10': 'CLASS_10',
+  '11': 'CLASS_11',
 };
+
+function tokenToRightmoveUseClass(token: string): string | null {
+  const key = token
+    .trim()
+    .toLowerCase()
+    .replace(/^class[\s_-]*/, '')
+    .replace(/[\s_-]+/g, '');
+  if (!key) return null;
+  const aliased = USE_CLASS_TOKEN_ALIASES[key];
+  if (aliased && RIGHTMOVE_USE_CLASSES.has(aliased)) return aliased;
+  const asClass = `CLASS_${key.toUpperCase()}`;
+  if (RIGHTMOVE_USE_CLASSES.has(asClass)) return asClass;
+  if (RIGHTMOVE_USE_CLASSES.has(key.toUpperCase())) return key.toUpperCase();
+  return null;
+}
 
 function clip(value: string, max: number): string {
   const trimmed = value.trim();
@@ -256,25 +308,47 @@ function mapTenure(
   return undefined;
 }
 
-function mapUseClasses(useClass: string | null): string[] | undefined {
+/**
+ * Map free-text listing use class (e.g. "Class E - Commercial, Business and
+ * Service") onto Rightmove's closed enum. Passing through `CLASS_*` prefixes
+ * without a whitelist produced invalid values such as `CLASS_E_-_COMMERCIAL`.
+ */
+export function mapUseClasses(useClass: string | null): string[] | undefined {
   if (!useClass?.trim()) return undefined;
-  const parts = useClass
-    .split(/[,/;+|]+/)
-    .map((p) => p.trim())
-    .filter(Boolean);
-  const mapped = parts
-    .map((part) => {
-      const key = part.toLowerCase().replace(/^class\s+/i, 'class ');
-      if (USE_CLASS_ALIASES[key]) return USE_CLASS_ALIASES[key];
-      const upper = part.toUpperCase().replace(/\s+/g, '_');
-      if (upper.startsWith('CLASS_') || upper === 'SUI_GENERIS') return upper;
-      if (/^[A-Z0-9]+$/i.test(part)) {
-        return `CLASS_${part.toUpperCase()}`;
-      }
-      return null;
-    })
-    .filter((v): v is string => Boolean(v));
-  return mapped.length ? [...new Set(mapped)] : undefined;
+  const text = useClass.trim();
+  const mapped: string[] = [];
+
+  if (/sui[\s_-]*generis/i.test(text)) {
+    mapped.push('SUI_GENERIS');
+  }
+
+  const classToken =
+    /class[\s_-]*(c2a|f1|f2|b1|b2|b8|c1|c2|c3|c4|a1|a2|a3|a4|a5|1a|10|11|[3-9]|e|f)(?![a-z0-9])/gi;
+  for (const match of text.matchAll(classToken)) {
+    const converted = tokenToRightmoveUseClass(match[1] ?? '');
+    if (converted) mapped.push(converted);
+  }
+
+  if (mapped.length === 0) {
+    const parts = text
+      .split(/[,/;+|]+/)
+      .map((part) =>
+        part
+          .replace(/\([^)]*\)/g, ' ')
+          .replace(/\s*[-–—].*$/, '')
+          .trim(),
+      )
+      .filter(Boolean);
+    for (const part of parts) {
+      const converted = tokenToRightmoveUseClass(part);
+      if (converted) mapped.push(converted);
+    }
+  }
+
+  const unique = [...new Set(mapped)].filter((value) =>
+    RIGHTMOVE_USE_CLASSES.has(value),
+  );
+  return unique.length ? unique : undefined;
 }
 
 function mapMeasurementType(standard: string | null): string | undefined {

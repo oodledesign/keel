@@ -5,6 +5,7 @@ import {
   asOptionalNumber,
   mapListingToRightmovePayload,
   mapSectorToSubType,
+  mapUseClasses,
   roundCoordinate,
 } from '../rightmove-mapper';
 
@@ -69,6 +70,40 @@ describe('mapSectorToSubType', () => {
   });
 });
 
+describe('mapUseClasses', () => {
+  it('maps descriptive Class E strings to CLASS_E', () => {
+    expect(mapUseClasses('Class E - Commercial, Business and Service')).toEqual(
+      ['CLASS_E'],
+    );
+    expect(mapUseClasses('CLASS_E_-_COMMERCIAL')).toEqual(['CLASS_E']);
+  });
+
+  it('maps mixed industrial classes without descriptions', () => {
+    expect(mapUseClasses('E / B2 / B8')).toEqual([
+      'CLASS_E',
+      'CLASS_B2',
+      'CLASS_B8',
+    ]);
+  });
+
+  it('maps Class B2 and Class E in one permitted-use string', () => {
+    expect(
+      mapUseClasses(
+        'Class B2 - General Industrial, Class E - Commercial, Business and Service',
+      ),
+    ).toEqual(['CLASS_B2', 'CLASS_E']);
+  });
+
+  it('omits values that are not in the Rightmove enum', () => {
+    expect(mapUseClasses('unknown')).toBeUndefined();
+    expect(mapUseClasses(null)).toBeUndefined();
+  });
+
+  it('maps sui generis', () => {
+    expect(mapUseClasses('Sui Generis')).toEqual(['SUI_GENERIS']);
+  });
+});
+
 describe('mapListingToRightmovePayload', () => {
   it('emits numeric sizing when sizes arrive as numeric strings', () => {
     const { payload } = mapListingToRightmovePayload({
@@ -116,5 +151,16 @@ describe('mapListingToRightmovePayload', () => {
     expect(payload.building.primaryPropertyClassification.subType).toBe(
       'LIGHT_INDUSTRIAL',
     );
+  });
+
+  it('emits a valid Rightmove useClasses enum for descriptive Class E', () => {
+    const { payload } = mapListingToRightmovePayload({
+      listing: baseListing({
+        useClass: 'Class E - Commercial, Business and Service',
+      }),
+      agentId: 283634,
+    });
+
+    expect(payload.building.useClasses).toEqual(['CLASS_E']);
   });
 });
