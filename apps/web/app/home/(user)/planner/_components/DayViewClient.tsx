@@ -63,6 +63,7 @@ import type {
   DayViewPipeline,
   PlannerTask,
 } from '~/lib/planner/types';
+import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
 
 import { createTask, updateTask } from '../../_lib/actions/task-actions';
 import { DayScheduleEditor } from './DayScheduleEditor';
@@ -432,7 +433,11 @@ export function DayViewClient({ initialData, dayViewHref }: Props) {
         const override = plannedTaskOverrides[task.id];
         return override ? { ...task, status: override } : task;
       })
-      .filter((task) => task.status !== 'completed');
+      .filter(
+        (task) =>
+          task.status !== 'completed' ||
+          plannedTaskOverrides[task.id] === 'completed',
+      );
   }, [plannedExtraTasks, plannedTaskOverrides]);
 
   const replanUserContext = useMemo(() => {
@@ -1064,7 +1069,9 @@ function TaskRow({
   onTaskUpdated?: () => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
-  const done = task.status === 'completed';
+  const { isDone: done, setOptimisticDone } = useOptimisticDone(
+    task.status === 'completed',
+  );
   const clientName = task.clientName?.trim();
   const metaLabel = plannerTaskMetaWithoutClient(task);
   const pageTask = plannerTaskToPageTask(task);
@@ -1079,7 +1086,11 @@ function TaskRow({
       >
         <button
           type="button"
-          onClick={() => onToggle(task)}
+          onClick={() => {
+            const nowDone = !done;
+            setOptimisticDone(nowDone);
+            onToggle(task);
+          }}
           aria-label={done ? 'Mark as not done' : 'Mark as done'}
           className="mt-0.5 shrink-0 text-[var(--workspace-shell-text)]/30 transition-colors hover:text-[var(--ozer-accent-muted)]"
         >

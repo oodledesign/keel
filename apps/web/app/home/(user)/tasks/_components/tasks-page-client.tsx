@@ -1,13 +1,6 @@
 'use client';
 
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  useTransition,
-} from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -73,6 +66,7 @@ import {
   isAssignedToSomeoneElse,
   taskAssigneeDisplayName,
 } from '~/lib/tasks/task-assignee';
+import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
 
 import {
   compareYmd,
@@ -1471,6 +1465,9 @@ export function TasksPageClient({
   const [clientFilter, setClientFilter] = useState<string>('all');
   const [dueDateFilter, setDueDateFilter] = useState<DueDateFilter>('all');
   const [search, setSearch] = useState('');
+  const [lingeringCompletedIds, setLingeringCompletedIds] = useState<
+    Set<string>
+  >(() => new Set());
 
   const [expandedRootTaskIds, setExpandedRootTaskIds] = useState<Set<string>>(
     () => new Set(),
@@ -1519,6 +1516,7 @@ export function TasksPageClient({
   // Re-sync local state when the server returns a fresh list (after router.refresh / nav).
   useEffect(() => {
     setTasks(initialTasks);
+    setLingeringCompletedIds(new Set());
   }, [initialTasks]);
 
   // New server payload → collapse all parent groups again.
@@ -1621,10 +1619,12 @@ export function TasksPageClient({
     }
 
     return tasks.filter((t) => {
-      if (t.status === 'completed') return false;
+      if (t.status === 'completed' && !lingeringCompletedIds.has(t.id)) {
+        return false;
+      }
       return matchesBaseFilters(t);
     });
-  }, [tasks, statusFilter, matchesBaseFilters]);
+  }, [tasks, statusFilter, matchesBaseFilters, lingeringCompletedIds]);
 
   // Board mode shows all statuses, but still respects search/client/scope filters.
   const filteredForBoard = useMemo(
@@ -1722,6 +1722,21 @@ export function TasksPageClient({
       tasksRef.current = nextTasks;
       setTasks(nextTasks);
 
+      if (nextStatus === 'completed') {
+        setLingeringCompletedIds((prev) => {
+          const next = new Set(prev);
+          next.add(taskId);
+          return next;
+        });
+      } else {
+        setLingeringCompletedIds((prev) => {
+          if (!prev.has(taskId)) return prev;
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
+      }
+
       const result = await updateTask(taskId, { status: nextStatus });
       if (!result.success) {
         const reverted = updateTaskStatusInTree(
@@ -1731,6 +1746,12 @@ export function TasksPageClient({
         );
         tasksRef.current = reverted;
         setTasks(reverted);
+        setLingeringCompletedIds((prev) => {
+          if (!prev.has(taskId)) return prev;
+          const next = new Set(prev);
+          next.delete(taskId);
+          return next;
+        });
         toast.error(result.error ?? 'Could not update task');
         return;
       }
@@ -2146,8 +2167,9 @@ function TaskRow({
   onToggleSubtasks?: () => void;
 }) {
   const [editOpen, setEditOpen] = useState(false);
-  const [isPending, startTransition] = useTransition();
-  const isDone = task.status === 'completed';
+  const { isDone, setOptimisticDone } = useOptimisticDone(
+    task.status === 'completed',
+  );
   const isRoot = !task.parentTaskId;
   const subtasks = task.subtasks ?? [];
   const subCount = subtasks.length;
@@ -2156,9 +2178,8 @@ function TaskRow({
 
   const handleCheckedChange = (checked: boolean) => {
     const next: TaskStatus = checked ? 'completed' : 'pending';
-    startTransition(() => {
-      void onStatusChanged?.(task.id, next);
-    });
+    setOptimisticDone(checked);
+    void onStatusChanged?.(task.id, next);
   };
 
   const showSubtasks = subtasksExpanded && subtasks.length > 0;
@@ -2199,13 +2220,13 @@ function TaskRow({
             'border-l-[3px] border-l-rose-500 bg-rose-500/[0.07] ring-1 ring-rose-400/20 ring-inset hover:bg-rose-500/[0.09]',
           !overdue && 'hover:bg-white/[0.035]',
           !isRoot && !overdue && 'bg-transparent hover:bg-white/[0.025]',
+          isDone && 'opacity-50',
           'relative cursor-pointer border-b border-[color:var(--workspace-shell-border)] transition-colors',
         )}
       >
         <div className="flex justify-start pt-0.5" data-task-row-action>
           <Checkbox
             checked={isDone}
-            disabled={isPending}
             onClick={(e) => e.stopPropagation()}
             onCheckedChange={(value) => {
               if (value === 'indeterminate') return;

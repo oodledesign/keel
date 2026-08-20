@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 
 import { draft } from '@kit/email-assistant';
+import { getSupabaseServerAdminClient } from '@kit/supabase/server-admin-client';
 
 import { resolveAnthropicModel } from '~/lib/ai/default-anthropic-model';
 import {
@@ -9,6 +10,7 @@ import {
 } from '~/lib/ai/router';
 import { createMeteredEmailGenerateText } from '~/lib/email-assistant/metered-generate-text';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { resolveEmailAssistantBillingAccountId } from '~/lib/email-assistant/resolve-email-assistant-billing-account';
 import { resolveEmailAssistantSignature } from '~/lib/email-assistant/resolve-signature';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
@@ -34,7 +36,7 @@ export async function POST(_request: Request, context: RouteContext) {
     await Promise.all([
       auth.client
         .from('email_threads')
-        .select('id, user_id, subject, connection_id')
+        .select('id, user_id, subject, connection_id, account_id')
         .eq('id', threadId)
         .eq('user_id', auth.user.id)
         .maybeSingle(),
@@ -60,12 +62,12 @@ export async function POST(_request: Request, context: RouteContext) {
     connectionId
       ? auth.client
           .from('google_connections')
-          .select('google_email')
+          .select('google_email, mailbox_kind')
           .eq('id', connectionId)
           .maybeSingle()
       : auth.client
           .from('google_connections')
-          .select('google_email')
+          .select('google_email, mailbox_kind')
           .eq('user_id', auth.user.id)
           .eq('mailbox_kind', 'business')
           .maybeSingle(),
@@ -82,6 +84,21 @@ export async function POST(_request: Request, context: RouteContext) {
           .limit(1)
           .maybeSingle(),
   ]);
+
+  const mailboxKindRaw = (
+    connection as { mailbox_kind?: string | null } | null
+  )?.mailbox_kind;
+  const mailboxKind =
+    mailboxKindRaw === 'personal' || mailboxKindRaw === 'business'
+      ? mailboxKindRaw
+      : 'business';
+
+  const admin = getSupabaseServerAdminClient();
+  const billingAccountId = await resolveEmailAssistantBillingAccountId(admin, {
+    userId: auth.user.id,
+    mailboxKind,
+    preferredAccountId: (thread as { account_id?: string | null }).account_id,
+  });
 
   const ownerEmail =
     (
@@ -163,7 +180,7 @@ export async function POST(_request: Request, context: RouteContext) {
       signature.plain,
       createMeteredEmailGenerateText({
         feature: 'email_draft',
-        accountId: auth.user.id,
+        accountId: billingAccountId,
         supabase: auth.client,
       }),
     );

@@ -30,7 +30,14 @@ describe('resolveCommercialMediaPublicUrl', () => {
 
 describe('media path helpers', () => {
   it('sanitizes file names and builds account/listing paths', () => {
-    expect(safeMediaFileName('../a/b.jpg')).toBe('__a_b.jpg');
+    expect(safeMediaFileName('../a/b.jpg')).toBe('_a_b.jpg');
+    expect(
+      safeMediaFileName(
+        'Energy performance certificate (EPC) – Find an energy certificate – GOV.pdf',
+      ),
+    ).toBe(
+      'Energy_performance_certificate_EPC_Find_an_energy_certificate_GOV.pdf',
+    );
     expect(
       buildStoragePath({
         accountId: 'acc',

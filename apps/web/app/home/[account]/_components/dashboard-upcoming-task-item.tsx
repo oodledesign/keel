@@ -7,6 +7,7 @@ import { useRouter } from 'next/navigation';
 import { Check, MoreHorizontal, Pencil, Trash2 } from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
+import { Checkbox } from '@kit/ui/checkbox';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -24,6 +25,7 @@ import {
 } from '~/home/(user)/_lib/actions/task-actions';
 import type { TasksPageTask } from '~/home/(user)/_lib/server/tasks.loader';
 import { EditTaskDialog } from '~/home/(user)/tasks/_components/edit-task-dialog';
+import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
 
 import type { DashboardTaskSummary } from '../_lib/server/dashboard-page.loader';
 
@@ -37,6 +39,7 @@ export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
   const [open, setOpen] = useState(false);
   const [editTask, setEditTask] = useState<TasksPageTask | null>(null);
   const [isPending, startTransition] = useTransition();
+  const { isDone, setOptimisticDone } = useOptimisticDone(false);
 
   const refresh = useCallback(() => {
     router.refresh();
@@ -61,17 +64,20 @@ export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
   }, [task.id, workspaceAccountId]);
 
   function markComplete() {
-    startTransition(async () => {
+    if (isDone) return;
+    setOptimisticDone(true);
+    void (async () => {
       const result = await updateTask(task.id, { status: 'completed' });
 
       if (!result.success) {
+        setOptimisticDone(false);
         toast.error(result.error ?? 'Could not complete task');
         return;
       }
 
       toast.success('Task completed');
       refresh();
-    });
+    })();
   }
 
   function removeTask() {
@@ -93,15 +99,32 @@ export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
       <li
         className={cn(
           'flex items-stretch gap-1 rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]',
-          isPending && 'pointer-events-none opacity-60',
+          isDone && 'opacity-50',
+          isPending && !isDone && 'pointer-events-none opacity-60',
         )}
       >
+        <div className="flex items-start pt-3 pl-3">
+          <Checkbox
+            checked={isDone}
+            onCheckedChange={(value) => {
+              if (value === 'indeterminate' || isDone) return;
+              markComplete();
+            }}
+            aria-label={isDone ? 'Task completed' : 'Mark task as done'}
+            className="h-5 w-5 shrink-0 rounded-full border-[color:var(--workspace-shell-border)] shadow-none data-[state=checked]:border-[var(--ozer-accent)] data-[state=checked]:bg-[var(--ozer-accent-subtle)] data-[state=checked]:text-[var(--ozer-accent)]"
+          />
+        </div>
         <button
           type="button"
           onClick={openTask}
           className="min-w-0 flex-1 rounded-xl px-3 py-2.5 text-left transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)] focus-visible:ring-2 focus-visible:ring-[var(--ozer-accent)]/50 focus-visible:outline-none"
         >
-          <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
+          <span
+            className={cn(
+              'block text-sm font-medium text-[var(--workspace-shell-text)]',
+              isDone && 'text-[var(--workspace-shell-text-muted)] line-through',
+            )}
+          >
             {task.title}
           </span>
           <span className="mt-0.5 block text-xs text-[var(--workspace-shell-text-muted)]">
@@ -128,7 +151,7 @@ export function DashboardUpcomingTaskItem({ task, workspaceAccountId }: Props) {
               <Pencil className="mr-2 h-3.5 w-3.5" />
               Open
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={markComplete}>
+            <DropdownMenuItem disabled={isDone} onSelect={markComplete}>
               <Check className="mr-2 h-3.5 w-3.5" />
               Mark complete
             </DropdownMenuItem>

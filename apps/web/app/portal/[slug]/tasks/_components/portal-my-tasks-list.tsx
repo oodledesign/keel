@@ -27,6 +27,10 @@ export function PortalMyTasksList({
   const doneTasks = tasks.filter((t) => t.status === 'done');
 
   const markDone = (taskId: string) => {
+    const previous = tasks.find((t) => t.id === taskId);
+    setTasks((prev) =>
+      prev.map((t) => (t.id === taskId ? { ...t, status: 'done' } : t)),
+    );
     setPendingId(taskId);
     startTransition(async () => {
       try {
@@ -34,10 +38,14 @@ export function PortalMyTasksList({
         if (updated) {
           setTasks((prev) => prev.map((t) => (t.id === taskId ? updated : t)));
           toast.success('Marked complete');
-        } else {
+        } else if (previous) {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? previous : t)));
           toast.error('Could not update task');
         }
       } catch (e) {
+        if (previous) {
+          setTasks((prev) => prev.map((t) => (t.id === taskId ? previous : t)));
+        }
         toast.error(e instanceof Error ? e.message : 'Could not update task');
       } finally {
         setPendingId(null);

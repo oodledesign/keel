@@ -72,6 +72,17 @@ export const CreateListingSchema = z.object({
   buildStatus: z.string().trim().max(200).optional().nullable(),
   planningStatus: z.string().trim().max(200).optional().nullable(),
   fittedSpace: z.boolean().optional().nullable(),
+  landSizeMin: z.number().min(0).optional().nullable(),
+  landSizeMax: z.number().min(0).optional().nullable(),
+  landSizeMetric: z
+    .enum(['hectare', 'acres', 'sqft', 'sqm'])
+    .optional()
+    .nullable(),
+  insuranceType: z.string().trim().max(200).optional().nullable(),
+  streetViewPanoId: z.string().trim().max(120).optional().nullable(),
+  streetViewHeading: z.number().optional().nullable(),
+  streetViewPitch: z.number().optional().nullable(),
+  streetViewZoom: z.number().optional().nullable(),
   summary: z.string().max(140).optional().nullable(),
   description: z.string().optional().nullable(),
   locationCopy: z.string().optional().nullable(),

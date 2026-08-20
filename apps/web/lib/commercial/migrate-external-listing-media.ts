@@ -3,7 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { randomUUID } from 'node:crypto';
 
 export const COMMERCIAL_LISTING_MEDIA_BUCKET = 'commercial-listing-media';
-export const EXTERNAL_MEDIA_MAX_BYTES = 20 * 1024 * 1024;
+export const EXTERNAL_MEDIA_MAX_BYTES = 50 * 1024 * 1024;
 export const EXTERNAL_MEDIA_FETCH_TIMEOUT_MS = 30_000;
 
 export type ExternalListingMediaRow = {
@@ -33,7 +33,14 @@ export type MigrateExternalMediaBatchSummary = {
 };
 
 export function safeMediaFileName(name: string): string {
-  return name.replace(/[/\\]/g, '_').replace(/\.\./g, '_').trim().slice(0, 180);
+  const ascii = name
+    .normalize('NFKD')
+    .replace(/[^\w.\-]+/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^\.+/, '_')
+    .replace(/\.\./g, '_')
+    .replace(/^_|_$/g, '');
+  return (ascii || 'file').slice(0, 120);
 }
 
 export function extensionFromMime(mime: string | null | undefined): string {

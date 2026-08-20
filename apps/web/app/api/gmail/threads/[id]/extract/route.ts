@@ -22,6 +22,7 @@ import {
 } from '~/lib/email-assistant/ignored-senders';
 import { createMeteredEmailGenerateText } from '~/lib/email-assistant/metered-generate-text';
 import { requireEmailAssistantApiUser } from '~/lib/email-assistant/require-email-assistant-api-user';
+import { resolveEmailAssistantBillingAccountId } from '~/lib/email-assistant/resolve-email-assistant-billing-account';
 import { buildThreadText } from '~/lib/email-assistant/thread-text';
 import { jsonErr, jsonOk } from '~/lib/rankly/api-response';
 
@@ -159,6 +160,12 @@ export async function POST(request: Request, context: RouteContext) {
     );
   }
 
+  const billingAccountId = await resolveEmailAssistantBillingAccountId(admin, {
+    userId: auth.user.id,
+    mailboxKind,
+    preferredAccountId: accountId,
+  });
+
   let items: EmailActionItem[];
 
   try {
@@ -173,7 +180,7 @@ export async function POST(request: Request, context: RouteContext) {
       },
       createMeteredEmailGenerateText({
         feature: 'task_extract',
-        accountId: auth.user.id,
+        accountId: billingAccountId,
         supabase: auth.client,
       }),
     );

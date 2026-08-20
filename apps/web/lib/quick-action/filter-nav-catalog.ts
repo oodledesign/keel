@@ -46,14 +46,24 @@ export function filterNavCatalog(
   items: NavSearchItem[],
   query: string,
   limit = 12,
+  options?: { preferAccountSlug?: string },
 ): NavSearchItem[] {
   const q = query.trim();
   if (!q) {
     return items.slice(0, limit);
   }
 
+  const slug = options?.preferAccountSlug?.trim();
+  const workspacePrefix = slug ? `/app/${slug}/` : null;
+
   return items
-    .map((item) => ({ item, score: scoreItem(q, item) }))
+    .map((item) => {
+      let score = scoreItem(q, item);
+      if (workspacePrefix && score > 0 && item.href.includes(workspacePrefix)) {
+        score += 15;
+      }
+      return { item, score };
+    })
     .filter((row) => row.score > 0)
     .sort(
       (a, b) => b.score - a.score || a.item.label.localeCompare(b.item.label),

@@ -74,6 +74,10 @@ const emptyForm = {
   buildStatus: '',
   planningStatus: '',
   fittedSpace: '' as '' | 'yes' | 'no',
+  landSizeMin: '',
+  landSizeMax: '',
+  landSizeMetric: '' as '' | 'hectare' | 'acres' | 'sqft' | 'sqm',
+  insuranceType: '',
   summary: '',
   description: '',
   locationCopy: '',
@@ -225,6 +229,13 @@ function ListingFormFields({
               : listing.fittedSpace
                 ? 'yes'
                 : 'no',
+          landSizeMin:
+            listing.landSizeMin != null ? String(listing.landSizeMin) : '',
+          landSizeMax:
+            listing.landSizeMax != null ? String(listing.landSizeMax) : '',
+          landSizeMetric:
+            (listing.landSizeMetric as typeof emptyForm.landSizeMetric) ?? '',
+          insuranceType: listing.insuranceType ?? '',
           summary: listing.summary ?? '',
           description: listing.description ?? '',
           locationCopy: listing.locationCopy ?? '',
@@ -305,6 +316,10 @@ function ListingFormFields({
           planningStatus: form.planningStatus.trim() || null,
           fittedSpace:
             form.fittedSpace === '' ? null : form.fittedSpace === 'yes',
+          landSizeMin: form.landSizeMin ? parseFloat(form.landSizeMin) : null,
+          landSizeMax: form.landSizeMax ? parseFloat(form.landSizeMax) : null,
+          landSizeMetric: form.landSizeMetric || null,
+          insuranceType: form.insuranceType.trim() || null,
           summary: form.summary.trim() || null,
           description: form.description.trim() || null,
           locationCopy: form.locationCopy.trim() || null,
@@ -716,8 +731,73 @@ function ListingFormFields({
                 <SelectItem value="nia">NIA</SelectItem>
                 <SelectItem value="gea">GEA</SelectItem>
                 <SelectItem value="ipms">IPMS</SelectItem>
+                <SelectItem value="site">Site area</SelectItem>
               </SelectContent>
             </Select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Insurance
+            </Label>
+            <Input
+              value={form.insuranceType}
+              onChange={(e) => field('insuranceType', e.target.value)}
+              placeholder="FRI, IRI…"
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Land size unit
+            </Label>
+            <Select
+              value={form.landSizeMetric || 'unset'}
+              onValueChange={(v) =>
+                field('landSizeMetric', v === 'unset' ? '' : v)
+              }
+            >
+              <SelectTrigger className={inputClass}>
+                <SelectValue placeholder="—" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unset">—</SelectItem>
+                <SelectItem value="hectare">Hectare</SelectItem>
+                <SelectItem value="acres">Acres</SelectItem>
+                <SelectItem value="sqft">Sq ft</SelectItem>
+                <SelectItem value="sqm">Sq m</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Land size from
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.landSizeMin}
+              onChange={(e) => field('landSizeMin', e.target.value)}
+              className={inputClass}
+            />
+          </div>
+          <div className="space-y-1.5">
+            <Label className="text-[var(--workspace-shell-text)]/70">
+              Land size to
+            </Label>
+            <Input
+              type="number"
+              min={0}
+              step="0.01"
+              value={form.landSizeMax}
+              onChange={(e) => field('landSizeMax', e.target.value)}
+              className={inputClass}
+            />
           </div>
         </div>
       </section>

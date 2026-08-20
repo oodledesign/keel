@@ -9,6 +9,7 @@ import {
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
 
+import { RIGHTMOVE_MEDIA_URL_MAX_LENGTH } from './listing-media-public-url';
 import type {
   RightmoveAreaSizeUnit,
   RightmoveBuildingPriceDisplayQualifier,
@@ -488,14 +489,33 @@ function mediaAsset(
   url: string,
   order: number,
   description?: string | null,
-): RightmoveMediaAsset {
+): RightmoveMediaAsset | null {
+  // Rightmove OpenAPI: url maxLength 250. Never truncate — that produces
+  // invalid URLs (and we used to append an ellipsis).
+  if (url.length > RIGHTMOVE_MEDIA_URL_MAX_LENGTH) return null;
+  try {
+    // eslint-disable-next-line no-new
+    new URL(url);
+  } catch {
+    return null;
+  }
+
   return {
-    url: clip(url, 250),
+    url,
     order,
     ...(description?.trim()
       ? { description: clip(description.trim(), 200) }
       : {}),
   };
+}
+
+function pathEndsWithPdf(url: string): boolean {
+  try {
+    const pathname = new URL(url).pathname.toLowerCase();
+    return pathname.endsWith('.pdf');
+  } catch {
+    return /\.pdf(?:$|[?#])/i.test(url);
+  }
 }
 
 export function mapListingMediaToRightmove(
@@ -519,20 +539,25 @@ export function mapListingMediaToRightmove(
     const order = item.sortOrder;
 
     if (item.mediaType === 'floorplan') {
-      floorPlans.push(mediaAsset(url, order, label));
+      const asset = mediaAsset(url, order, label);
+      if (asset) floorPlans.push(asset);
       continue;
     }
     if (item.mediaType === 'epc') {
-      epcs.push(mediaAsset(url, order, label));
+      const asset = mediaAsset(url, order, label);
+      if (asset) epcs.push(asset);
       continue;
     }
     if (item.mediaType === 'brochure') {
-      if (!url.toLowerCase().includes('.pdf')) continue;
-      brochures.push(mediaAsset(url, order, label));
+      // Rightmove: brochure URLs must have a .pdf extension.
+      if (!pathEndsWithPdf(url)) continue;
+      const asset = mediaAsset(url, order, label);
+      if (asset) brochures.push(asset);
       continue;
     }
     if (item.mediaType === 'video') {
-      virtualTours.push(mediaAsset(url, order, label));
+      const asset = mediaAsset(url, order, label);
+      if (asset) virtualTours.push(asset);
       continue;
     }
     if (
@@ -540,7 +565,8 @@ export function mapListingMediaToRightmove(
       item.mimeType?.startsWith('image/') ||
       item.mediaType === 'other'
     ) {
-      photos.push(mediaAsset(url, order, label));
+      const asset = mediaAsset(url, order, label);
+      if (asset) photos.push(asset);
     }
   }
 

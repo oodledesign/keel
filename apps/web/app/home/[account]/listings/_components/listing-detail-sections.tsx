@@ -397,6 +397,24 @@ export function ListingOverviewSection({
                       : 'No'
                 }
               />
+              <DetailItem label="Insurance" value={listing.insuranceType} />
+              <DetailItem
+                label="Land size"
+                value={
+                  listing.landSizeMin == null
+                    ? null
+                    : [
+                        listing.landSizeMin,
+                        listing.landSizeMax != null &&
+                        listing.landSizeMax !== listing.landSizeMin
+                          ? `– ${listing.landSizeMax}`
+                          : null,
+                        listing.landSizeMetric,
+                      ]
+                        .filter(Boolean)
+                        .join(' ')
+                }
+              />
             </dl>
           </CardContent>
         </Card>

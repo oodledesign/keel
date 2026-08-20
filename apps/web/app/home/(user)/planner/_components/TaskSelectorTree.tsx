@@ -1,6 +1,6 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useMemo, useState } from 'react';
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
@@ -11,7 +11,6 @@ import {
   ChevronRight,
   Flag,
   ListTodo,
-  Loader2,
   Pencil,
   Plus,
   Search,
@@ -39,6 +38,7 @@ import type {
   PlannerTask,
   PlannerWorkspaceNode,
 } from '~/lib/planner/types';
+import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
 
 import { PlannerClientAvatar, PlannerClientPill } from './planner-client-pill';
 
@@ -394,16 +394,20 @@ function TaskRow({
 }) {
   const router = useRouter();
   const [editOpen, setEditOpen] = useState(false);
-  const [isCompleting, startCompleteTransition] = useTransition();
+  const { isDone, setOptimisticDone } = useOptimisticDone(false);
   const clientName = task.clientName?.trim();
 
   const handleMarkDone = () => {
-    startCompleteTransition(async () => {
+    setOptimisticDone(true);
+    void (async () => {
       const result = await updateTask(task.id, { status: 'completed' });
       if (result.success) {
         router.refresh();
+      } else {
+        setOptimisticDone(false);
+        toast.error('Could not complete task');
       }
-    });
+    })();
   };
 
   return (
@@ -412,6 +416,7 @@ function TaskRow({
         className={cn(
           'group flex items-start gap-2 rounded-md px-1 py-1.5 text-sm transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]',
           task.overdue && 'bg-amber-400/5',
+          isDone && 'opacity-50',
         )}
       >
         <Checkbox
@@ -426,7 +431,13 @@ function TaskRow({
           onClick={() => setEditOpen(true)}
         >
           <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
-            <span className="leading-snug text-[var(--workspace-shell-text)]/90">
+            <span
+              className={cn(
+                'leading-snug text-[var(--workspace-shell-text)]/90',
+                isDone &&
+                  'text-[var(--workspace-shell-text-muted)] line-through',
+              )}
+            >
               {task.title}
             </span>
             {clientName ? (
@@ -468,14 +479,12 @@ function TaskRow({
             variant="ghost"
             className="h-7 w-7 text-[var(--workspace-shell-text)]/45 hover:bg-[var(--workspace-shell-sidebar-accent)] hover:text-emerald-300"
             aria-label={`Mark ${task.title} as done`}
-            disabled={isCompleting}
+            disabled={isDone}
             onClick={handleMarkDone}
           >
-            {isCompleting ? (
-              <Loader2 className="h-3.5 w-3.5 animate-spin" />
-            ) : (
-              <CheckCircle2 className="h-3.5 w-3.5" />
-            )}
+            <CheckCircle2
+              className={cn('h-3.5 w-3.5', isDone && 'text-emerald-300')}
+            />
           </Button>
           <Button
             type="button"

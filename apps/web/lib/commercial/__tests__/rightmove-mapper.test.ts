@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type RightmoveMapperListing,
   asOptionalNumber,
+  mapListingMediaToRightmove,
   mapListingToRightmovePayload,
   mapSectorToSubType,
   mapUseClasses,
@@ -101,6 +102,55 @@ describe('mapUseClasses', () => {
 
   it('maps sui generis', () => {
     expect(mapUseClasses('Sui Generis')).toEqual(['SUI_GENERIS']);
+  });
+});
+
+describe('mapListingMediaToRightmove', () => {
+  it('keeps short brochure .pdf URLs and drops overlong signed URLs', () => {
+    const longSigned = `https://example.supabase.co/storage/v1/object/sign/commercial-listing-media/path/brochure.pdf?token=${'a'.repeat(300)}`;
+    const shortProxy =
+      'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure.pdf';
+
+    const media = mapListingMediaToRightmove([
+      {
+        mediaType: 'brochure',
+        mimeType: 'application/pdf',
+        fileName: 'brochure.pdf',
+        url: longSigned,
+        sortOrder: 0,
+        isCover: false,
+      },
+      {
+        mediaType: 'brochure',
+        mimeType: 'application/pdf',
+        fileName: 'brochure.pdf',
+        url: shortProxy,
+        sortOrder: 1,
+        isCover: false,
+      },
+    ]);
+
+    expect(media?.brochures).toEqual([
+      {
+        url: shortProxy,
+        order: 1,
+        description: 'brochure.pdf',
+      },
+    ]);
+  });
+
+  it('rejects brochure URLs that do not end with .pdf', () => {
+    const media = mapListingMediaToRightmove([
+      {
+        mediaType: 'brochure',
+        mimeType: 'application/pdf',
+        fileName: 'brochure.pdf',
+        url: 'https://cdn.example/files/brochure?id=1',
+        sortOrder: 0,
+        isCover: false,
+      },
+    ]);
+    expect(media?.brochures).toBeUndefined();
   });
 });
 

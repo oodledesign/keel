@@ -139,8 +139,13 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
 
   const trimmedQuery = query.trim();
   const matches = useMemo(
-    () => (trimmedQuery ? filterNavCatalog(catalog, trimmedQuery, 12) : []),
-    [catalog, trimmedQuery],
+    () =>
+      trimmedQuery
+        ? filterNavCatalog(catalog, trimmedQuery, 16, {
+            preferAccountSlug: props.pageContext.accountSlug,
+          })
+        : [],
+    [catalog, props.pageContext.accountSlug, trimmedQuery],
   );
 
   const goTo = useCallback(
@@ -200,7 +205,7 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
               <CommandRawInput
                 ref={inputRef}
                 autoFocus
-                placeholder="Search pages…"
+                placeholder="Search pages, clients, projects…"
                 value={query}
                 onValueChange={setQuery}
                 className={cn(
@@ -226,9 +231,9 @@ export function QuickActionDialog(props: QuickActionDialogProps) {
                     Searching…
                   </span>
                 ) : showNoMatches ? (
-                  'No matching pages'
+                  'No matching pages or records'
                 ) : (
-                  'Type to search pages'
+                  'Type to search pages, clients, projects…'
                 )}
               </CommandEmpty>
             ) : null}

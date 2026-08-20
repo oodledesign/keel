@@ -13,6 +13,11 @@ import {
   disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
 import { recordListingEvent } from '~/lib/commercial/listing-events';
+import {
+  RIGHTMOVE_MEDIA_URL_MAX_LENGTH,
+  buildCommercialListingMediaPublicUrl,
+  resolveSiteUrlForPublicMedia,
+} from '~/lib/commercial/listing-media-public-url';
 import { resolveCommercialMediaPublicUrl } from '~/lib/commercial/migrate-external-listing-media';
 import {
   RightmoveApiError,
@@ -190,7 +195,7 @@ async function loadPublicMediaForRightmove(
   const { data, error } = await db()
     .from('commercial_listing_media')
     .select(
-      'media_type, mime_type, file_name, storage_path, external_url, sort_order, is_cover',
+      'id, media_type, mime_type, file_name, storage_path, external_url, sort_order, is_cover',
     )
     .eq('listing_id', listingId)
     .eq('account_id', accountId)
@@ -200,20 +205,25 @@ async function loadPublicMediaForRightmove(
 
   if (error) throw new Error(error.message);
 
+  const siteUrl = resolveSiteUrlForPublicMedia();
   const client = db();
   const rows = data ?? [];
-  const storagePaths = [
-    ...new Set(
-      rows
-        .map((row) => (row.storage_path as string | null)?.trim() || null)
-        .filter((path): path is string => Boolean(path)),
-    ),
-  ];
+
+  // Prefer short public proxy URLs (≤250 chars, brochure ends with .pdf).
+  // Fall back to signed / external URLs only when they already fit Rightmove's limit.
+  const needsSigned: string[] = [];
+  if (!siteUrl) {
+    for (const row of rows) {
+      const storagePath = (row.storage_path as string | null)?.trim() || null;
+      if (storagePath) needsSigned.push(storagePath);
+    }
+  }
 
   const signedByPath = new Map<string, string>();
+  const uniquePaths = [...new Set(needsSigned)];
   const CHUNK = 100;
-  for (let i = 0; i < storagePaths.length; i += CHUNK) {
-    const chunk = storagePaths.slice(i, i + CHUNK);
+  for (let i = 0; i < uniquePaths.length; i += CHUNK) {
+    const chunk = uniquePaths.slice(i, i + CHUNK);
     const { data: signedRows, error: signError } = await client.storage
       .from('commercial-listing-media')
       .createSignedUrls(chunk, RIGHTMOVE_MEDIA_URL_TTL_SECONDS);
@@ -234,21 +244,48 @@ async function loadPublicMediaForRightmove(
   }
 
   return rows.map((row) => {
+    const mediaId = (row.id as string | null)?.trim() || null;
+    const mediaType = (row.media_type as string) ?? 'image';
+    const mimeType = (row.mime_type as string | null) ?? null;
+    const fileName = (row.file_name as string | null) ?? null;
     const externalUrl = (row.external_url as string | null)?.trim() || null;
     const storagePath = (row.storage_path as string | null)?.trim() || null;
-    const storageSignedUrl = storagePath
-      ? (signedByPath.get(storagePath) ?? null)
-      : null;
 
-    const url = resolveCommercialMediaPublicUrl({
-      storageSignedUrl,
-      externalUrl,
-    });
+    let url: string | null = null;
+    if (siteUrl && mediaId) {
+      const proxyUrl = buildCommercialListingMediaPublicUrl({
+        siteUrl,
+        mediaId,
+        mediaType,
+        fileName,
+        mimeType,
+      });
+      if (proxyUrl.length <= RIGHTMOVE_MEDIA_URL_MAX_LENGTH) {
+        url = proxyUrl;
+      }
+    }
+
+    if (!url) {
+      const storageSignedUrl = storagePath
+        ? (signedByPath.get(storagePath) ?? null)
+        : null;
+      const resolved = resolveCommercialMediaPublicUrl({
+        storageSignedUrl,
+        externalUrl,
+      });
+      if (
+        resolved &&
+        resolved.length <= RIGHTMOVE_MEDIA_URL_MAX_LENGTH &&
+        /^https?:\/\//i.test(resolved)
+      ) {
+        url = resolved;
+      }
+    }
 
     return {
-      mediaType: (row.media_type as string) ?? 'image',
-      mimeType: (row.mime_type as string | null) ?? null,
-      fileName: (row.file_name as string | null) ?? null,
+      mediaType,
+      mimeType,
+      fileName,
       url,
       sortOrder: (row.sort_order as number) ?? 0,
       isCover: Boolean(row.is_cover),

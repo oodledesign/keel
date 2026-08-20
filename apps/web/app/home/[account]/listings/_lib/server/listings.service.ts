@@ -146,6 +146,14 @@ export type CommercialListing = {
   buildStatus: string | null;
   planningStatus: string | null;
   fittedSpace: boolean | null;
+  landSizeMin: number | null;
+  landSizeMax: number | null;
+  landSizeMetric: string | null;
+  insuranceType: string | null;
+  streetViewPanoId: string | null;
+  streetViewHeading: number | null;
+  streetViewPitch: number | null;
+  streetViewZoom: number | null;
   summary: string | null;
   description: string | null;
   locationCopy: string | null;
@@ -464,6 +472,14 @@ function mapListing(row: ListingRow): CommercialListing {
     buildStatus: (row.build_status as string | null) ?? null,
     planningStatus: (row.planning_status as string | null) ?? null,
     fittedSpace: row.fitted_space == null ? null : Boolean(row.fitted_space),
+    landSizeMin: num(row.land_size_min),
+    landSizeMax: num(row.land_size_max),
+    landSizeMetric: (row.land_size_metric as string | null) ?? null,
+    insuranceType: (row.insurance_type as string | null) ?? null,
+    streetViewPanoId: (row.street_view_pano_id as string | null) ?? null,
+    streetViewHeading: num(row.street_view_heading),
+    streetViewPitch: num(row.street_view_pitch),
+    streetViewZoom: num(row.street_view_zoom),
     summary: (row.summary as string | null) ?? null,
     description: (row.description as string | null) ?? null,
     locationCopy: (row.location_copy as string | null) ?? null,
@@ -691,6 +707,30 @@ function writeColumns(input: Partial<CreateListingInput>) {
     }),
     ...(input.fittedSpace !== undefined && {
       fitted_space: input.fittedSpace,
+    }),
+    ...(input.landSizeMin !== undefined && {
+      land_size_min: input.landSizeMin,
+    }),
+    ...(input.landSizeMax !== undefined && {
+      land_size_max: input.landSizeMax,
+    }),
+    ...(input.landSizeMetric !== undefined && {
+      land_size_metric: input.landSizeMetric,
+    }),
+    ...(input.insuranceType !== undefined && {
+      insurance_type: input.insuranceType,
+    }),
+    ...(input.streetViewPanoId !== undefined && {
+      street_view_pano_id: input.streetViewPanoId,
+    }),
+    ...(input.streetViewHeading !== undefined && {
+      street_view_heading: input.streetViewHeading,
+    }),
+    ...(input.streetViewPitch !== undefined && {
+      street_view_pitch: input.streetViewPitch,
+    }),
+    ...(input.streetViewZoom !== undefined && {
+      street_view_zoom: input.streetViewZoom,
     }),
     ...(input.summary !== undefined && { summary: input.summary }),
     ...(input.description !== undefined && { description: input.description }),
@@ -1160,6 +1200,14 @@ export function createListingsService(client: SupabaseClient) {
           build_status: input.buildStatus ?? null,
           planning_status: input.planningStatus ?? null,
           fitted_space: input.fittedSpace ?? null,
+          land_size_min: input.landSizeMin ?? null,
+          land_size_max: input.landSizeMax ?? null,
+          land_size_metric: input.landSizeMetric ?? null,
+          insurance_type: input.insuranceType ?? null,
+          street_view_pano_id: input.streetViewPanoId ?? null,
+          street_view_heading: input.streetViewHeading ?? null,
+          street_view_pitch: input.streetViewPitch ?? null,
+          street_view_zoom: input.streetViewZoom ?? null,
           summary: input.summary ?? null,
           description: input.description ?? null,
           location_copy: input.locationCopy ?? null,

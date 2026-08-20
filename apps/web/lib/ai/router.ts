@@ -663,14 +663,10 @@ export async function getOrCreateCreditBalance(
   return coerceCreditBalance(inserted as Record<string, unknown>);
 }
 
-export async function checkAndDeductCredits(
+async function loadCreditBalanceForDebit(
   accountId: string,
-  credits: number,
-  _supabase?: SupabaseClient,
-  attempt = 0,
 ): Promise<AiCreditBalanceRow> {
   const supabase = aiCreditsDb();
-  const creditsNeeded = roundAiCredits(credits);
   const { error: resetError } = await supabase.rpc(
     'reset_ai_credits_if_expired',
     {
@@ -687,31 +683,69 @@ export async function checkAndDeductCredits(
     .select('*')
     .eq('account_id', accountId)
     .maybeSingle();
-  let balance = balanceQuery.data;
-  const balanceError = balanceQuery.error;
 
-  if (balanceError) {
-    throw new Error(balanceError.message);
+  if (balanceQuery.error) {
+    throw new Error(balanceQuery.error.message);
   }
 
-  if (!balance) {
-    await getOrCreateCreditBalance(accountId, supabase);
-    const refreshed = await supabase
-      .from('ai_credit_balances')
-      .select('*')
-      .eq('account_id', accountId)
-      .single();
-
-    if (refreshed.error || !refreshed.data) {
-      throw new Error(
-        refreshed.error?.message ?? 'Failed to load AI credit balance',
-      );
-    }
-
-    balance = refreshed.data;
+  if (balanceQuery.data) {
+    return coerceCreditBalance(balanceQuery.data as Record<string, unknown>);
   }
 
-  const row = coerceCreditBalance(balance as Record<string, unknown>);
+  await getOrCreateCreditBalance(accountId, supabase);
+  const refreshed = await supabase
+    .from('ai_credit_balances')
+    .select('*')
+    .eq('account_id', accountId)
+    .single();
+
+  if (refreshed.error || !refreshed.data) {
+    throw new Error(
+      refreshed.error?.message ?? 'Failed to load AI credit balance',
+    );
+  }
+
+  return coerceCreditBalance(refreshed.data as Record<string, unknown>);
+}
+
+/**
+ * Soft balance check before calling a provider. Does not debit — pair with
+ * checkAndDeductCredits after a successful response so failed/timed-out calls
+ * cannot silently burn the wallet.
+ */
+export async function assertSufficientCredits(
+  accountId: string,
+  credits: number,
+  _supabase?: SupabaseClient,
+): Promise<AiCreditBalanceRow> {
+  const creditsNeeded = roundAiCredits(credits);
+  const row = await loadCreditBalanceForDebit(accountId);
+  const available = totalCreditsAvailable(row);
+
+  if (available < creditsNeeded) {
+    await notifyAiCreditsExhausted({
+      accountId,
+      creditsRemaining: available,
+      creditsRequired: creditsNeeded,
+    });
+    throw new OzerInsufficientCreditsError({
+      creditsRemaining: available,
+      creditsRequired: creditsNeeded,
+    });
+  }
+
+  return row;
+}
+
+export async function checkAndDeductCredits(
+  accountId: string,
+  credits: number,
+  _supabase?: SupabaseClient,
+  attempt = 0,
+): Promise<AiCreditBalanceRow> {
+  const supabase = aiCreditsDb();
+  const creditsNeeded = roundAiCredits(credits);
+  const row = await loadCreditBalanceForDebit(accountId);
   const monthly = Math.max(0, row.credits_remaining);
   const purchased = Math.max(0, row.credits_purchased ?? 0);
   const available = roundAiCredits(monthly + purchased);
@@ -919,7 +953,9 @@ export async function callAI({
   }
 
   const config = resolveFeatureConfig(feature);
-  await checkAndDeductCredits(accountId, config.credits, supabase);
+  // Soft-check first; debit only after a successful provider response so
+  // timeouts/provider errors cannot drain the wallet without a ledger row.
+  await assertSufficientCredits(accountId, config.credits, supabase);
 
   const result = await invokeAIProvider({
     feature,
@@ -929,6 +965,7 @@ export async function callAI({
     responseSchema,
   });
 
+  await checkAndDeductCredits(accountId, config.credits, supabase);
   await logCreditTransaction({
     accountId,
     feature,
@@ -1001,7 +1038,7 @@ export async function streamAI({
     });
   }
 
-  await checkAndDeductCredits(accountId, config.credits, supabase);
+  await assertSufficientCredits(accountId, config.credits, supabase);
 
   const anthropic = getAnthropicClient();
   const safeSystemPrompt = withAiSafetySystemPrompt(feature, systemPrompt);
@@ -1025,11 +1062,12 @@ export async function streamAI({
   const encoder = new TextEncoder();
   let inputTokens: number | null = null;
   let outputTokens: number | null = null;
-  let logged = false;
+  let settled = false;
 
-  const logOnce = async () => {
-    if (logged) return;
-    logged = true;
+  const chargeOnce = async () => {
+    if (settled) return;
+    settled = true;
+    await checkAndDeductCredits(accountId, config.credits, supabase);
     await logCreditTransaction({
       accountId,
       feature,
@@ -1051,15 +1089,15 @@ export async function streamAI({
         const finalMessage = await anthropicStream.finalMessage();
         inputTokens = finalMessage.usage?.input_tokens ?? null;
         outputTokens = finalMessage.usage?.output_tokens ?? null;
-        await logOnce();
+        await chargeOnce();
         controller.close();
       } catch (error) {
-        await logOnce();
+        settled = true;
         controller.error(error);
       }
     },
     async cancel() {
-      await logOnce();
+      settled = true;
       try {
         anthropicStream.abort();
       } catch {
@@ -1100,10 +1138,11 @@ export async function withMeteredAI<T>({
   }>;
 }): Promise<T> {
   const config = resolveFeatureConfig(feature);
-  await checkAndDeductCredits(accountId, config.credits, supabase);
+  await assertSufficientCredits(accountId, config.credits, supabase);
 
   const { result, inputTokens = null, outputTokens = null } = await run();
 
+  await checkAndDeductCredits(accountId, config.credits, supabase);
   await logCreditTransaction({
     accountId,
     feature,

@@ -5,7 +5,8 @@ import 'server-only';
  *
  * - Personal: buildPersonalShortcutRoutes() (sidebar + supplements)
  * - Workspace: build*SpaceNavChildren() for each workspace the user can access
- * - Dynamic entities: dynamic-providers.ts (Rankly projects, etc.)
+ * - Dynamic entities: dynamic-providers.ts (clients, projects, disposals, meetings, Rankly)
+
  *
  * When you add a sidebar nav item for a new feature, it appears in the shortcut
  * picker automatically. For sub-entities (e.g. per-project pages), add a provider.
@@ -138,6 +139,7 @@ async function catalogForWorkspaceSlug(
       accountId: account.id,
       accountSlug: slug,
       workspaceName,
+      workspaceProfile: workspace.workspaceProfile,
       moduleSettings: workspace.moduleSettings,
     });
 

@@ -181,6 +181,14 @@ export async function autoExtractEmailActionItems(params: {
     ? await loadAccountMembersForExtraction(admin, accountId)
     : [];
 
+  // Claim this tip before the model call. If the serverless function times out
+  // mid-request, sync must not retry the same tip and silently burn credits.
+  await stampExtractTip(admin, {
+    threadId,
+    userId,
+    messageId: latestMessageId,
+  });
+
   let items: EmailActionItem[];
   try {
     items = await extract(
@@ -199,15 +207,11 @@ export async function autoExtractEmailActionItems(params: {
     );
   } catch (error) {
     // Re-throw credit errors so the sync pipeline can stop early.
+    // Tip stays stamped — retrying would not help until the user has credits
+    // and a new message tip arrives.
     if (isInsufficientCreditsError(error)) {
       throw error;
     }
-    // Non-credit failures: still stamp so we do not burn credits every sync.
-    await stampExtractTip(admin, {
-      threadId,
-      userId,
-      messageId: latestMessageId,
-    });
     return { itemsInserted: 0, attempted: true };
   }
 
@@ -216,11 +220,6 @@ export async function autoExtractEmailActionItems(params: {
   );
 
   if (filteredItems.length === 0) {
-    await stampExtractTip(admin, {
-      threadId,
-      userId,
-      messageId: latestMessageId,
-    });
     return { itemsInserted: 0, attempted: true };
   }
 
@@ -260,12 +259,6 @@ export async function autoExtractEmailActionItems(params: {
   if (insertError) {
     throw new Error(insertError.message);
   }
-
-  await stampExtractTip(admin, {
-    threadId,
-    userId,
-    messageId: latestMessageId,
-  });
 
   return {
     itemsInserted: inserted?.length ?? 0,

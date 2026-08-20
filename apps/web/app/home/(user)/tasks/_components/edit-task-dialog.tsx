@@ -57,6 +57,7 @@ import {
   parsePersonAssigneeSelectValue,
   personAssigneeSelectValue,
 } from '~/lib/tasks/task-person-assignee';
+import { useOptimisticDone } from '~/lib/tasks/use-optimistic-done';
 
 import {
   type TaskAssignmentOption,
@@ -174,7 +175,9 @@ function SubtaskEditorRow({
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const isDone = subtask.status === 'completed';
+  const { isDone, setOptimisticDone } = useOptimisticDone(
+    subtask.status === 'completed',
+  );
   const title = draftTitle ?? subtask.title;
 
   useEffect(() => {
@@ -188,14 +191,16 @@ function SubtaskEditorRow({
   const toggleStatus = useCallback(
     async (checked: boolean) => {
       const next = checked ? 'completed' : 'pending';
-      setBusy(true);
+      const previous = subtask;
+      setOptimisticDone(checked);
+      onChange({ ...subtask, status: next });
       const result = await updateTask(subtask.id, { status: next });
-      setBusy(false);
-      if (result.success) {
-        onChange({ ...subtask, status: next });
+      if (!result.success) {
+        setOptimisticDone(!checked);
+        onChange(previous);
       }
     },
-    [onChange, subtask],
+    [onChange, setOptimisticDone, subtask],
   );
 
   const saveTitle = useCallback(async () => {
@@ -226,10 +231,15 @@ function SubtaskEditorRow({
   }, [onRemove, subtask.id]);
 
   return (
-    <div className="group flex items-center gap-2 rounded-md py-1 pr-0.5 pl-1 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]/60">
+    <div
+      className={cn(
+        'group flex items-center gap-2 rounded-md py-1 pr-0.5 pl-1 transition-colors hover:bg-[var(--workspace-shell-sidebar-accent)]/60',
+        isDone && 'opacity-50',
+      )}
+    >
       <Checkbox
         checked={isDone}
-        disabled={disabled || busy}
+        disabled={disabled}
         onCheckedChange={(value) => {
           if (value === 'indeterminate') return;
           void toggleStatus(Boolean(value));

@@ -4,6 +4,10 @@ import { MapPin } from 'lucide-react';
 
 import { Card, CardContent, CardHeader, CardTitle } from '@kit/ui/card';
 
+import {
+  googleStreetViewEmbedUrl,
+  googleStreetViewMapsUrl,
+} from '~/lib/commercial/street-view-url';
 import { workspacePanelCard } from '~/lib/workspace-ui';
 
 import type { CommercialListing } from '../_lib/server/listings.service';
@@ -37,6 +41,22 @@ export function ListingMapCard({ listing }: { listing: CommercialListing }) {
     ? `https://maps.google.com/maps?q=${encodeURIComponent(query)}&z=15&output=embed`
     : null;
 
+  const streetViewEmbed = googleStreetViewEmbedUrl({
+    panoId: listing.streetViewPanoId,
+    heading: listing.streetViewHeading,
+    pitch: listing.streetViewPitch,
+    latitude: listing.latitude,
+    longitude: listing.longitude,
+  });
+  const streetViewLink = googleStreetViewMapsUrl({
+    panoId: listing.streetViewPanoId,
+    heading: listing.streetViewHeading,
+    pitch: listing.streetViewPitch,
+    latitude: listing.latitude,
+    longitude: listing.longitude,
+  });
+  const showStreetView = Boolean(listing.streetViewPanoId);
+
   return (
     <Card className={workspacePanelCard}>
       <CardHeader>
@@ -61,10 +81,31 @@ export function ListingMapCard({ listing }: { listing: CommercialListing }) {
             Add an address or latitude/longitude on Edit to show a map.
           </p>
         )}
+        {showStreetView && streetViewEmbed ? (
+          <div className="mt-3 overflow-hidden rounded-xl border border-[color:var(--workspace-shell-border)]">
+            <iframe
+              title="Street View"
+              src={streetViewEmbed}
+              className="h-64 w-full border-0"
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        ) : null}
         {listing.latitude != null && listing.longitude != null ? (
           <p className="mt-2 text-xs text-[var(--workspace-shell-text)]/45">
             {listing.latitude.toFixed(5)}, {listing.longitude.toFixed(5)}
           </p>
+        ) : null}
+        {streetViewLink && showStreetView ? (
+          <a
+            href={streetViewLink}
+            target="_blank"
+            rel="noreferrer"
+            className="mt-2 inline-block text-xs text-[var(--workspace-shell-text)]/70 underline underline-offset-2"
+          >
+            Open Street View in Google Maps
+          </a>
         ) : null}
       </CardContent>
     </Card>
