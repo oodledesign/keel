@@ -1,10 +1,30 @@
 'use client';
 
-import { useMemo, useState, useTransition } from 'react';
+import { useCallback, useMemo, useState, useTransition } from 'react';
 
 import Link from 'next/link';
 
-import { ChevronDown, ChevronRight, ExternalLink } from 'lucide-react';
+import {
+  DndContext,
+  type DragEndEvent,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
+import {
+  ChevronDown,
+  ChevronRight,
+  ExternalLink,
+  GripVertical,
+} from 'lucide-react';
 
 import { Button } from '@kit/ui/button';
 import {
@@ -19,8 +39,14 @@ import { toast } from '@kit/ui/sonner';
 import pathsConfig from '~/config/paths.config';
 import type { PipelineDeal } from '~/home/(user)/_lib/server/pipeline.loader';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
-import { moveDealToStage } from '~/home/(user)/pipeline/actions';
-import { COMMERCIAL_PIPELINE_WON_STAGE } from '~/lib/commercial/commercial-constants';
+import {
+  moveDealToStage,
+  reorderPipelineDeals,
+} from '~/home/(user)/pipeline/actions';
+import {
+  COMMERCIAL_PIPELINE_LOST_STAGE,
+  COMMERCIAL_PIPELINE_WON_STAGE,
+} from '~/lib/commercial/commercial-constants';
 import { normalizeCommercialPipelineStage } from '~/lib/commercial/pipeline-stage-config';
 import { wipStageColour } from '~/lib/commercial/wip-stage-colours';
 import {
@@ -41,6 +67,7 @@ type Props = {
   deals: PipelineDeal[];
   stages: StageColumn[];
   deskActivity: WipDeskActivityItem[];
+  latestCareByDealId?: Record<string, string>;
   listings?: PipelineListingOption[];
   onDealsChange: (
     next: PipelineDeal[] | ((prev: PipelineDeal[]) => PipelineDeal[]),
@@ -92,6 +119,7 @@ export function WipLadderView({
   deals,
   stages,
   deskActivity,
+  latestCareByDealId = {},
   listings = [],
   onDealsChange,
   onEditInstruction,
@@ -127,8 +155,94 @@ export function WipLadderView({
       if (list) list.push(deal);
       else map.set(key, [deal]);
     }
+    for (const [key, list] of map) {
+      list.sort((a, b) => {
+        // Fallen-through rows always sort after non-fallen within a bucket.
+        const aFallen = a.stage === COMMERCIAL_PIPELINE_LOST_STAGE ? 1 : 0;
+        const bFallen = b.stage === COMMERCIAL_PIPELINE_LOST_STAGE ? 1 : 0;
+        if (aFallen !== bFallen) return aFallen - bFallen;
+        return (
+          (a.ladderPosition ?? 0) - (b.ladderPosition ?? 0) ||
+          a.id.localeCompare(b.id)
+        );
+      });
+      map.set(key, list);
+    }
     return map;
   }, [deals, stages]);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
+  );
+
+  const persistLadderOrder = useCallback(
+    (_stageKey: string, orderedIds: string[]) => {
+      const previous = new Map(
+        deals.map((deal) => [deal.id, deal.ladderPosition] as const),
+      );
+      const positionById = new Map(
+        orderedIds.map((id, index) => [id, index + 1]),
+      );
+
+      onDealsChange((prev) =>
+        prev.map((deal) => {
+          const nextPos = positionById.get(deal.id);
+          return typeof nextPos === 'number'
+            ? { ...deal, ladderPosition: nextPos }
+            : deal;
+        }),
+      );
+
+      startTransition(async () => {
+        try {
+          const result = await reorderPipelineDeals(
+            orderedIds.map((id, index) => ({
+              id,
+              ladderPosition: index + 1,
+            })),
+            { accountSlug },
+          );
+          if (!result.success) {
+            onDealsChange((prev) =>
+              prev.map((deal) => ({
+                ...deal,
+                ladderPosition: previous.get(deal.id) ?? deal.ladderPosition,
+              })),
+            );
+            toast.error(result.error ?? 'Could not reorder ladder');
+          }
+        } catch (error) {
+          onDealsChange((prev) =>
+            prev.map((deal) => ({
+              ...deal,
+              ladderPosition: previous.get(deal.id) ?? deal.ladderPosition,
+            })),
+          );
+          toast.error(
+            error instanceof Error ? error.message : 'Could not reorder ladder',
+          );
+        }
+      });
+    },
+    [accountSlug, deals, onDealsChange],
+  );
+
+  const onLadderDragEnd = useCallback(
+    (stageKey: string, event: DragEndEvent) => {
+      const { active, over } = event;
+      if (!over || active.id === over.id) return;
+      const stageDeals = dealsByStage.get(stageKey) ?? [];
+      // Do not reorder within fallen-through via drag — they stay pinned last.
+      if (stageKey === COMMERCIAL_PIPELINE_LOST_STAGE) return;
+
+      const ids = stageDeals.map((deal) => deal.id);
+      const fromIndex = ids.indexOf(String(active.id));
+      const toIndex = ids.indexOf(String(over.id));
+      if (fromIndex < 0 || toIndex < 0) return;
+      persistLadderOrder(stageKey, arrayMove(ids, fromIndex, toIndex));
+    },
+    [dealsByStage, persistLadderOrder],
+  );
 
   const allDealIds = useMemo(() => deals.map((deal) => deal.id), [deals]);
   const allExpanded =
@@ -189,8 +303,17 @@ export function WipLadderView({
     });
   };
 
-  // Ladder climbs upward: completed / exchanged at the top.
-  const ladderStages = useMemo(() => [...stages].reverse(), [stages]);
+  // Ladder climbs upward: completed / exchanged at the top; fallen-through always last.
+  const ladderStages = useMemo(() => {
+    const reversed = [...stages].reverse();
+    const fallen = reversed.filter(
+      (stage) => stage.key === COMMERCIAL_PIPELINE_LOST_STAGE,
+    );
+    const rest = reversed.filter(
+      (stage) => stage.key !== COMMERCIAL_PIPELINE_LOST_STAGE,
+    );
+    return [...rest, ...fallen];
+  }, [stages]);
 
   return (
     <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-6 md:px-6 lg:px-8">
@@ -238,172 +361,262 @@ export function WipLadderView({
                 No instructions in this stage
               </p>
             ) : (
-              <ul className="divide-y divide-[color:var(--workspace-shell-border)]/70">
-                <li
-                  className={`hidden border-b border-[color:var(--workspace-shell-border)]/50 px-3 py-1.5 text-[10px] font-medium tracking-wide uppercase sm:grid sm:grid-cols-[minmax(0,1fr)_6.5rem_5.5rem_9.5rem_auto] sm:gap-3 ${workspaceTextMuted}`}
-                  aria-hidden
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={(event) => onLadderDragEnd(stage.key, event)}
+              >
+                <SortableContext
+                  items={stageDeals.map((deal) => deal.id)}
+                  strategy={verticalListSortingStrategy}
                 >
-                  <span className="pl-6">Instruction</span>
-                  <span>Last activity</span>
-                  <span className="text-right">Value</span>
-                  <span>Stage</span>
-                  <span />
-                </li>
-                {stageDeals.map((deal) => {
-                  const open = expandedIds.has(deal.id);
-                  const latest = latestByDeal.get(deal.id);
-                  const oneLiner =
-                    previewText(latest?.content ?? '') ||
-                    (deal.nextAction?.trim() ? deal.nextAction.trim() : null);
-                  const listing = deal.commercialListingId
-                    ? listingById.get(deal.commercialListingId)
-                    : null;
-                  const lastActivityIso = latest?.createdAt ?? null;
-
-                  return (
-                    <li key={deal.id}>
-                      <div className="grid grid-cols-1 items-center gap-2 px-3 py-2.5 sm:grid-cols-[minmax(0,1fr)_6.5rem_5.5rem_9.5rem_auto] sm:gap-3">
-                        <button
-                          type="button"
-                          className="flex min-w-0 items-start gap-2 text-left"
-                          onClick={() => toggleExpanded(deal.id)}
-                          aria-expanded={open}
-                          aria-label={
-                            open
-                              ? `Collapse ${instructionTitle(deal)}`
-                              : `Expand ${instructionTitle(deal)}`
-                          }
-                        >
-                          {open ? (
-                            <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
-                          ) : (
-                            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
-                          )}
-                          <span className="min-w-0">
-                            <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
-                              {instructionTitle(deal)}
-                              {normalizeWipWorkType(deal.workType) &&
-                              normalizeWipWorkType(deal.workType) !==
-                                'agency' ? (
-                                <span
-                                  className={`ml-2 text-[11px] font-normal ${workspaceTextMuted}`}
-                                >
-                                  {
-                                    WIP_WORK_TYPE_LABELS[
-                                      normalizeWipWorkType(deal.workType)!
-                                    ]
-                                  }
-                                </span>
-                              ) : null}
-                            </span>
-                            {deal.commercialListingId && listing?.name ? (
-                              <Link
-                                href={pathsConfig.app.accountListingDetail
-                                  .replace('[account]', accountSlug)
-                                  .replace('[id]', deal.commercialListingId)}
-                                onClick={(event) => event.stopPropagation()}
-                                className="mt-0.5 inline-flex max-w-full truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
-                              >
-                                {listing.name}
-                              </Link>
-                            ) : null}
-                            <span
-                              className={`mt-0.5 block text-xs ${workspaceTextMuted}`}
-                            >
-                              {oneLiner ? (
-                                <>
-                                  {oneLiner}
-                                  {latest?.assignedTo ? (
-                                    <span>
-                                      {' → '}
-                                      {latest.assignedTo.name}
-                                    </span>
-                                  ) : null}
-                                </>
-                              ) : (
-                                'No chase update yet'
-                              )}
-                            </span>
-                          </span>
-                        </button>
-
-                        <div
-                          className={`pl-6 text-xs tabular-nums sm:pl-0 ${workspaceTextMuted}`}
-                          title="Last activity"
-                        >
-                          <span className="sm:hidden">Last activity · </span>
-                          {lastActivityIso
-                            ? formatTimelineDate(lastActivityIso)
-                            : '—'}
-                        </div>
-
-                        <span className="pl-6 text-sm text-[var(--workspace-shell-text)] tabular-nums sm:pl-0 sm:text-right">
-                          {formatCurrency(deal.value || 0)}
-                        </span>
-
-                        <div className="pl-6 sm:pl-0">
-                          <Select
-                            value={normalizeCommercialPipelineStage(deal.stage)}
-                            onValueChange={(next) => changeStage(deal, next)}
-                          >
-                            <SelectTrigger className="h-8 w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent className="z-[100] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
-                              {stages.map((option) => (
-                                <SelectItem key={option.key} value={option.key}>
-                                  {option.label}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="pl-6 sm:pl-0">
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-8 gap-1 text-xs text-[var(--workspace-shell-text-muted)]"
-                            onClick={() => onEditInstruction(deal)}
-                          >
-                            Open
-                            <ExternalLink className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </div>
-
-                      {open ? (
-                        <div className="border-t border-[color:var(--workspace-shell-border)]/60 bg-[var(--workspace-shell-sidebar-accent)]/25 px-4 py-3">
-                          <WipAttachmentsStrip
-                            accountId={accountId}
-                            accountSlug={accountSlug}
-                            pipelineDealId={deal.id}
-                            activityOnly
-                            previewCount={3}
-                            onActivityChanged={onActivityChanged}
-                          />
-                          <div className="mt-3">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              className="border-[color:var(--workspace-shell-border)]"
-                              onClick={() => onEditInstruction(deal)}
-                            >
-                              Full instruction
-                            </Button>
-                          </div>
-                        </div>
-                      ) : null}
+                  <ul className="divide-y divide-[color:var(--workspace-shell-border)]/70">
+                    <li
+                      className={`hidden border-b border-[color:var(--workspace-shell-border)]/50 px-3 py-1.5 text-[10px] font-medium tracking-wide uppercase sm:grid sm:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.5rem_9.5rem_auto] sm:gap-3 ${workspaceTextMuted}`}
+                      aria-hidden
+                    >
+                      <span />
+                      <span>Instruction</span>
+                      <span>Last contact</span>
+                      <span className="text-right">Value</span>
+                      <span>Stage</span>
+                      <span />
                     </li>
-                  );
-                })}
-              </ul>
+                    {stageDeals.map((deal) => {
+                      const open = expandedIds.has(deal.id);
+                      const latest = latestByDeal.get(deal.id);
+                      const oneLiner =
+                        previewText(latest?.content ?? '') ||
+                        (deal.nextAction?.trim()
+                          ? deal.nextAction.trim()
+                          : null);
+                      const listing = deal.commercialListingId
+                        ? (listingById.get(deal.commercialListingId) ??
+                          undefined)
+                        : undefined;
+                      const lastContactIso =
+                        latestCareByDealId[deal.id] ??
+                        latest?.createdAt ??
+                        null;
+
+                      return (
+                        <LadderSortableRow
+                          key={deal.id}
+                          deal={deal}
+                          canDrag={stage.key !== COMMERCIAL_PIPELINE_LOST_STAGE}
+                          open={open}
+                          oneLiner={oneLiner}
+                          latest={latest}
+                          listing={listing}
+                          lastContactIso={lastContactIso}
+                          accountSlug={accountSlug}
+                          accountId={accountId}
+                          stages={stages}
+                          onToggle={() => toggleExpanded(deal.id)}
+                          onChangeStage={(next) => changeStage(deal, next)}
+                          onEdit={() => onEditInstruction(deal)}
+                          onActivityChanged={onActivityChanged}
+                        />
+                      );
+                    })}
+                  </ul>
+                </SortableContext>
+              </DndContext>
             )}
           </section>
         );
       })}
     </div>
+  );
+}
+
+function LadderSortableRow({
+  deal,
+  canDrag,
+  open,
+  oneLiner,
+  latest,
+  listing,
+  lastContactIso,
+  accountSlug,
+  accountId,
+  stages,
+  onToggle,
+  onChangeStage,
+  onEdit,
+  onActivityChanged,
+}: {
+  deal: PipelineDeal;
+  canDrag: boolean;
+  open: boolean;
+  oneLiner: string | null;
+  latest: WipDeskActivityItem | undefined;
+  listing: PipelineListingOption | undefined;
+  lastContactIso: string | null;
+  accountSlug: string;
+  accountId: string;
+  stages: StageColumn[];
+  onToggle: () => void;
+  onChangeStage: (next: string) => void;
+  onEdit: () => void;
+  onActivityChanged?: () => void;
+}) {
+  const {
+    attributes,
+    listeners,
+    setNodeRef,
+    transform,
+    transition,
+    isDragging,
+  } = useSortable({ id: deal.id, disabled: !canDrag });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{
+        transform: CSS.Transform.toString(transform),
+        transition,
+        opacity: isDragging ? 0.5 : 1,
+      }}
+    >
+      <div className="grid grid-cols-1 items-center gap-2 px-3 py-2.5 sm:grid-cols-[1.25rem_minmax(0,1fr)_6.5rem_5.5rem_9.5rem_auto] sm:gap-3">
+        <button
+          type="button"
+          className={`hidden touch-none items-center justify-center text-[var(--workspace-shell-text-muted)] sm:flex ${
+            canDrag
+              ? 'cursor-grab active:cursor-grabbing'
+              : 'cursor-default opacity-30'
+          }`}
+          aria-label={canDrag ? 'Drag to reorder' : 'Reorder unavailable'}
+          disabled={!canDrag}
+          {...(canDrag ? { ...attributes, ...listeners } : {})}
+        >
+          <GripVertical className="h-4 w-4" />
+        </button>
+        <button
+          type="button"
+          className="flex min-w-0 items-start gap-2 text-left"
+          onClick={onToggle}
+          aria-expanded={open}
+          aria-label={
+            open
+              ? `Collapse ${instructionTitle(deal)}`
+              : `Expand ${instructionTitle(deal)}`
+          }
+        >
+          {open ? (
+            <ChevronDown className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+          ) : (
+            <ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-[var(--workspace-shell-text-muted)]" />
+          )}
+          <span className="min-w-0">
+            <span className="block text-sm font-medium text-[var(--workspace-shell-text)]">
+              {instructionTitle(deal)}
+              {normalizeWipWorkType(deal.workType) &&
+              normalizeWipWorkType(deal.workType) !== 'agency' ? (
+                <span
+                  className={`ml-2 text-[11px] font-normal ${workspaceTextMuted}`}
+                >
+                  {WIP_WORK_TYPE_LABELS[normalizeWipWorkType(deal.workType)!]}
+                </span>
+              ) : null}
+            </span>
+            {deal.commercialListingId && listing?.name ? (
+              <Link
+                href={pathsConfig.app.accountListingDetail
+                  .replace('[account]', accountSlug)
+                  .replace('[id]', deal.commercialListingId)}
+                onClick={(event) => event.stopPropagation()}
+                className="mt-0.5 inline-flex max-w-full truncate text-xs font-medium text-[var(--ozer-info)] underline-offset-2 hover:underline"
+              >
+                {listing.name}
+              </Link>
+            ) : null}
+            <span className={`mt-0.5 block text-xs ${workspaceTextMuted}`}>
+              {oneLiner ? (
+                <>
+                  {oneLiner}
+                  {latest?.assignedTo ? (
+                    <span>
+                      {' → '}
+                      {latest.assignedTo.name}
+                    </span>
+                  ) : null}
+                </>
+              ) : (
+                'No chase update yet'
+              )}
+            </span>
+          </span>
+        </button>
+
+        <div
+          className={`pl-6 text-xs tabular-nums sm:pl-0 ${workspaceTextMuted}`}
+          title="Last contact"
+        >
+          <span className="sm:hidden">Last contact · </span>
+          {lastContactIso ? formatTimelineDate(lastContactIso) : '—'}
+        </div>
+
+        <span className="pl-6 text-sm text-[var(--workspace-shell-text)] tabular-nums sm:pl-0 sm:text-right">
+          {formatCurrency(deal.value || 0)}
+        </span>
+
+        <div className="pl-6 sm:pl-0">
+          <Select
+            value={normalizeCommercialPipelineStage(deal.stage)}
+            onValueChange={onChangeStage}
+          >
+            <SelectTrigger className="h-8 w-full border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="z-[100] border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)]">
+              {stages.map((option) => (
+                <SelectItem key={option.key} value={option.key}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
+        <div className="pl-6 sm:pl-0">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="h-8 gap-1 text-xs text-[var(--workspace-shell-text-muted)]"
+            onClick={onEdit}
+          >
+            Open
+            <ExternalLink className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      </div>
+
+      {open ? (
+        <div className="border-t border-[color:var(--workspace-shell-border)]/60 bg-[var(--workspace-shell-sidebar-accent)]/25 px-4 py-3">
+          <WipAttachmentsStrip
+            accountId={accountId}
+            accountSlug={accountSlug}
+            pipelineDealId={deal.id}
+            activityOnly
+            previewCount={3}
+            onActivityChanged={onActivityChanged}
+          />
+          <div className="mt-3">
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              className="border-[color:var(--workspace-shell-border)]"
+              onClick={onEdit}
+            >
+              Full instruction
+            </Button>
+          </div>
+        </div>
+      ) : null}
+    </li>
   );
 }

@@ -19,6 +19,7 @@ import { isWorkModuleEnabled } from '../_lib/server/account-modules';
 import { loadTeamWorkspace } from '../_lib/server/team-account-workspace.loader';
 import { redirectIfSpaceNotIn } from '../_lib/server/workspace-route-guard';
 import { WorkspacePipelineBoardWrapper } from './_components/workspace-pipeline-board-wrapper';
+import { loadLatestCareLogByInstruction } from './_lib/server/instruction-care-compliance.actions';
 import { loadPipelineBoardSettings } from './_lib/server/pipeline-stage-settings.loader';
 import { loadWipAttentionDigest } from './_lib/server/wip-attention.loader';
 import { loadWipDeskActivity } from './_lib/server/wip-desk-activity.loader';
@@ -91,6 +92,7 @@ async function TeamAccountPipelinePage({
     ReturnType<typeof loadWipAttentionDigest>
   > | null;
   let deskActivity = [] as Awaited<ReturnType<typeof loadWipDeskActivity>>;
+  let latestCareByDealId: Record<string, string> = {};
 
   if (isCommercial) {
     // commercial_* tables may lag generated Database types
@@ -184,6 +186,10 @@ async function TeamAccountPipelinePage({
     }));
     stageConfig = boardSettings.stages;
     boardName = boardSettings.boardName;
+
+    latestCareByDealId = await loadLatestCareLogByInstruction(
+      data.deals.map((deal) => deal.id),
+    );
   }
 
   const activeDeals = data.deals.filter((d) => {
@@ -221,6 +227,7 @@ async function TeamAccountPipelinePage({
           initialRequirements={requirements}
           attentionDigest={attentionDigest}
           deskActivity={deskActivity}
+          latestCareByDealId={latestCareByDealId}
           hideBoardTitle
         />
       </PageBody>

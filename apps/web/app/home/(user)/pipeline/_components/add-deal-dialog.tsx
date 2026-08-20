@@ -265,6 +265,7 @@ export function AddDealDialog({
         description: description || null,
         value,
         stage,
+        workType: null,
         nextAction,
         nextActionDate: nextActionDate || null,
         businessId: resolvedBusinessId,
@@ -281,6 +282,8 @@ export function AddDealDialog({
         hotsTargetExchangeDate: null,
         hotsNotes: null,
         completedAt: null,
+        ladderPosition: 0,
+        boardPosition: 0,
       });
 
       setOpen(false);

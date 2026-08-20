@@ -40,6 +40,7 @@ import {
   MoreHorizontal,
   Pencil,
   Plus,
+  Search,
   Table2,
 } from 'lucide-react';
 
@@ -59,6 +60,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@kit/ui/dropdown-menu';
+import { Input } from '@kit/ui/input';
 import { toast } from '@kit/ui/sonner';
 
 import pathsConfig from '~/config/paths.config';
@@ -69,7 +71,10 @@ import type {
 import { AddDealDialog } from '~/home/(user)/pipeline/_components/add-deal-dialog';
 import { EditDealDialog } from '~/home/(user)/pipeline/_components/edit-deal-dialog';
 import type { PipelineListingOption } from '~/home/(user)/pipeline/_components/pipeline-board';
-import { moveDealToStage } from '~/home/(user)/pipeline/actions';
+import {
+  moveDealToStage,
+  reorderPipelineDeals,
+} from '~/home/(user)/pipeline/actions';
 import { CustomizePipelinePhasesDialog } from '~/home/[account]/pipeline/_components/customize-pipeline-phases-dialog';
 import type { ClientOption } from '~/home/[account]/projects/_components/client-combobox';
 import { RequirementFormModal } from '~/home/[account]/requirements/_components/requirement-form-modal';
@@ -162,6 +167,7 @@ type Props = {
   boardName?: string;
   attentionDigest?: WipAttentionDigest | null;
   deskActivity?: WipDeskActivityItem[];
+  latestCareByDealId?: Record<string, string>;
   onDealWon?: (deal: PipelineDeal) => void;
   onRequestCreateDisposal?: (deal: PipelineDeal) => void;
   onInstructionCreated?: (deal: PipelineDeal) => void;
@@ -235,6 +241,7 @@ export function CommercialWipBoard({
   boardName = DEFAULT_COMMERCIAL_WIP_BOARD_NAME,
   attentionDigest = null,
   deskActivity: initialDeskActivity = [],
+  latestCareByDealId: initialLatestCareByDealId = {},
   onDealWon,
   onRequestCreateDisposal,
   onInstructionCreated,
@@ -263,6 +270,9 @@ export function CommercialWipBoard({
   );
   const [deskActivity, setDeskActivity] =
     useState<WipDeskActivityItem[]>(initialDeskActivity);
+  const [latestCareByDealId, setLatestCareByDealId] = useState(
+    initialLatestCareByDealId,
+  );
   const [createDismissed, setCreateDismissed] = useState(false);
   const [isViewSwitching, setIsViewSwitching] = useState(false);
   const viewSwitchTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -272,6 +282,9 @@ export function CommercialWipBoard({
 
   const [deals, setDeals] = useState<PipelineDeal[]>(initialData.deals);
   const [requirements, setRequirements] = useState(initialRequirements);
+  const [requirementSearch, setRequirementSearch] = useState('');
+  const [requirementSearchDebounced, setRequirementSearchDebounced] =
+    useState('');
   const [activeCard, setActiveCard] = useState<BoardCard | null>(null);
   const [dealToEdit, setDealToEdit] = useState<PipelineDeal | null>(null);
   const [editDealOpen, setEditDealOpen] = useState(false);
@@ -309,12 +322,36 @@ export function CommercialWipBoard({
   }, [initialData.deals]);
 
   useEffect(() => {
+    const timer = setTimeout(
+      () => setRequirementSearchDebounced(requirementSearch),
+      300,
+    );
+    return () => clearTimeout(timer);
+  }, [requirementSearch]);
+
+  const filteredRequirements = useMemo(() => {
+    const q = requirementSearchDebounced.trim().toLowerCase();
+    if (!q) return requirements;
+    return requirements.filter((requirement) => {
+      const contact = requirement.contactName?.toLowerCase() ?? '';
+      const company = requirement.companyName?.toLowerCase() ?? '';
+      return contact.includes(q) || company.includes(q);
+    });
+  }, [requirements, requirementSearchDebounced]);
+
+  const showRequirementSearch = view === 'requirements' || view === 'both';
+
+  useEffect(() => {
     setRequirements(initialRequirements);
   }, [initialRequirements]);
 
   useEffect(() => {
     setDeskActivity(initialDeskActivity);
   }, [initialDeskActivity]);
+
+  useEffect(() => {
+    setLatestCareByDealId(initialLatestCareByDealId);
+  }, [initialLatestCareByDealId]);
 
   // Do not sync view from useSearchParams after mount — Next's router URL can
   // lag behind history.replaceState, and router.refresh() would snap the tab
@@ -498,7 +535,7 @@ export function CommercialWipBoard({
     }
 
     if (view === 'requirements' || view === 'both') {
-      for (const requirement of requirements) {
+      for (const requirement of filteredRequirements) {
         const key =
           view === 'both'
             ? toSharedStatus('requirement', requirement.stage)
@@ -509,8 +546,25 @@ export function CommercialWipBoard({
       }
     }
 
+    for (const [key, list] of map) {
+      list.sort((a, b) => {
+        if (a.kind === 'instruction' && b.kind === 'instruction') {
+          return (
+            (a.deal.boardPosition ?? 0) - (b.deal.boardPosition ?? 0) ||
+            a.deal.id.localeCompare(b.deal.id)
+          );
+        }
+        if (a.kind === 'requirement' && b.kind === 'requirement') {
+          return a.requirement.id.localeCompare(b.requirement.id);
+        }
+        if (a.kind === 'instruction') return -1;
+        return 1;
+      });
+      map.set(key, list);
+    }
+
     return map;
-  }, [columns, deals, requirements, view]);
+  }, [columns, deals, filteredRequirements, view]);
 
   useEffect(() => {
     const kanban = kanbanScrollRef.current;
@@ -530,11 +584,20 @@ export function CommercialWipBoard({
   );
 
   const persistInstructionStage = useCallback(
-    (dealId: string, nextStage: string, previousStage: string) => {
+    (
+      dealId: string,
+      nextStage: string,
+      previousStage: string,
+      boardPosition?: number,
+    ) => {
       const current = deals.find((deal) => deal.id === dealId);
       if (!current) return;
 
-      const updated = { ...current, stage: nextStage };
+      const updated = {
+        ...current,
+        stage: nextStage,
+        ...(typeof boardPosition === 'number' ? { boardPosition } : {}),
+      };
       setDeals((prev) =>
         prev.map((deal) => (deal.id === dealId ? updated : deal)),
       );
@@ -543,11 +606,18 @@ export function CommercialWipBoard({
         try {
           const result = await moveDealToStage(dealId, nextStage, {
             accountSlug,
+            boardPosition,
           });
           if (!result.success) {
             setDeals((prev) =>
               prev.map((deal) =>
-                deal.id === dealId ? { ...deal, stage: previousStage } : deal,
+                deal.id === dealId
+                  ? {
+                      ...deal,
+                      stage: previousStage,
+                      boardPosition: current.boardPosition,
+                    }
+                  : deal,
               ),
             );
             toast.error(result.error ?? 'Could not update instruction stage');
@@ -559,7 +629,13 @@ export function CommercialWipBoard({
         } catch (error) {
           setDeals((prev) =>
             prev.map((deal) =>
-              deal.id === dealId ? { ...deal, stage: previousStage } : deal,
+              deal.id === dealId
+                ? {
+                    ...deal,
+                    stage: previousStage,
+                    boardPosition: current.boardPosition,
+                  }
+                : deal,
             ),
           );
           toast.error(
@@ -571,6 +647,60 @@ export function CommercialWipBoard({
       });
     },
     [accountSlug, deals, onDealWon],
+  );
+
+  const persistInstructionBoardOrder = useCallback(
+    (orderedIds: string[]) => {
+      const positionById = new Map(
+        orderedIds.map((id, index) => [id, index + 1]),
+      );
+      const previous = new Map(
+        deals.map((deal) => [deal.id, deal.boardPosition] as const),
+      );
+
+      setDeals((prev) =>
+        prev.map((deal) => {
+          const nextPos = positionById.get(deal.id);
+          return typeof nextPos === 'number'
+            ? { ...deal, boardPosition: nextPos }
+            : deal;
+        }),
+      );
+
+      startTransition(async () => {
+        try {
+          const result = await reorderPipelineDeals(
+            orderedIds.map((id, index) => ({
+              id,
+              boardPosition: index + 1,
+            })),
+            { accountSlug },
+          );
+          if (!result.success) {
+            setDeals((prev) =>
+              prev.map((deal) => ({
+                ...deal,
+                boardPosition: previous.get(deal.id) ?? deal.boardPosition,
+              })),
+            );
+            toast.error(result.error ?? 'Could not reorder instructions');
+          }
+        } catch (error) {
+          setDeals((prev) =>
+            prev.map((deal) => ({
+              ...deal,
+              boardPosition: previous.get(deal.id) ?? deal.boardPosition,
+            })),
+          );
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'Could not reorder instructions',
+          );
+        }
+      });
+    },
+    [accountSlug, deals],
   );
 
   const persistRequirementStage = useCallback(
@@ -662,6 +792,7 @@ export function CommercialWipBoard({
       if (!parsed) return;
 
       const overId = String(over.id);
+      const overParsed = parseCardCompositeId(overId);
       const overStage = (over.data.current as { stage?: string } | undefined)
         ?.stage;
       const dropKey = resolveDropStageKey(overId, overStage);
@@ -672,8 +803,39 @@ export function CommercialWipBoard({
         const deal = deals.find((item) => item.id === parsed.id);
         if (!deal) return;
         const currentKey = normalizeCommercialPipelineStage(deal.stage);
-        if (currentKey === dropKey) return;
-        persistInstructionStage(deal.id, dropKey, deal.stage);
+
+        if (currentKey === dropKey) {
+          const columnCards =
+            cardsByStage
+              .get(currentKey)
+              ?.filter(
+                (card): card is { kind: 'instruction'; deal: PipelineDeal } =>
+                  card.kind === 'instruction',
+              ) ?? [];
+          const orderedIds = columnCards.map((card) => card.deal.id);
+          const fromIndex = orderedIds.indexOf(deal.id);
+          let toIndex = fromIndex;
+          if (overParsed?.kind === 'instruction') {
+            toIndex = orderedIds.indexOf(overParsed.id);
+          }
+          if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+          const nextIds = [...orderedIds];
+          const [moved] = nextIds.splice(fromIndex, 1);
+          if (!moved) return;
+          nextIds.splice(toIndex, 0, moved);
+          persistInstructionBoardOrder(nextIds);
+          return;
+        }
+
+        const targetCards =
+          cardsByStage
+            .get(dropKey)
+            ?.filter(
+              (card): card is { kind: 'instruction'; deal: PipelineDeal } =>
+                card.kind === 'instruction',
+            ) ?? [];
+        const boardPosition = targetCards.length + 1;
+        persistInstructionStage(deal.id, dropKey, deal.stage, boardPosition);
         return;
       }
 
@@ -697,7 +859,28 @@ export function CommercialWipBoard({
         const deal = deals.find((item) => item.id === parsed.id);
         if (!deal) return;
         const currentShared = toSharedStatus('instruction', deal.stage);
-        if (currentShared === shared) return;
+        if (currentShared === shared) {
+          const columnCards =
+            cardsByStage
+              .get(shared)
+              ?.filter(
+                (card): card is { kind: 'instruction'; deal: PipelineDeal } =>
+                  card.kind === 'instruction',
+              ) ?? [];
+          const orderedIds = columnCards.map((card) => card.deal.id);
+          const fromIndex = orderedIds.indexOf(deal.id);
+          let toIndex = fromIndex;
+          if (overParsed?.kind === 'instruction') {
+            toIndex = orderedIds.indexOf(overParsed.id);
+          }
+          if (fromIndex < 0 || toIndex < 0 || fromIndex === toIndex) return;
+          const nextIds = [...orderedIds];
+          const [moved] = nextIds.splice(fromIndex, 1);
+          if (!moved) return;
+          nextIds.splice(toIndex, 0, moved);
+          persistInstructionBoardOrder(nextIds);
+          return;
+        }
 
         if (shared === 'closed') {
           setPendingClosed({
@@ -709,7 +892,19 @@ export function CommercialWipBoard({
         }
 
         const nextStage = fromSharedStatus('instruction', shared);
-        persistInstructionStage(deal.id, nextStage, deal.stage);
+        const targetCards =
+          cardsByStage
+            .get(shared)
+            ?.filter(
+              (card): card is { kind: 'instruction'; deal: PipelineDeal } =>
+                card.kind === 'instruction',
+            ) ?? [];
+        persistInstructionStage(
+          deal.id,
+          nextStage,
+          deal.stage,
+          targetCards.length + 1,
+        );
         return;
       }
 
@@ -737,7 +932,9 @@ export function CommercialWipBoard({
       pendingClosed,
       resolveDropStageKey,
       persistInstructionStage,
+      persistInstructionBoardOrder,
       persistRequirementStage,
+      cardsByStage,
     ],
   );
 
@@ -778,7 +975,7 @@ export function CommercialWipBoard({
     [deals],
   );
   const instructionCount = activeInstructions.length;
-  const requirementCount = requirements.length;
+  const requirementCount = filteredRequirements.length;
   const totalValue = useMemo(
     () => activeInstructions.reduce((sum, deal) => sum + (deal.value || 0), 0),
     [activeInstructions],
@@ -863,6 +1060,20 @@ export function CommercialWipBoard({
             total value
           </span>
         </p>
+
+        {showRequirementSearch ? (
+          <div className="relative min-w-[12rem] flex-1 sm:max-w-xs">
+            <Search className="pointer-events-none absolute top-1/2 left-3 h-3.5 w-3.5 -translate-y-1/2 text-[var(--workspace-shell-text-muted)]" />
+            <Input
+              type="search"
+              value={requirementSearch}
+              onChange={(e) => setRequirementSearch(e.target.value)}
+              placeholder="Search by name…"
+              aria-label="Search requirements by name"
+              className="h-8 border border-[color:var(--workspace-control-border)] bg-[var(--workspace-control-surface)] pl-8 text-sm text-[var(--workspace-shell-text)] placeholder:text-[var(--workspace-shell-text-muted)] focus-visible:ring-[var(--ozer-accent)]"
+            />
+          </div>
+        ) : null}
 
         <div className="ml-auto flex flex-wrap items-center gap-2">
           <div className="flex rounded-xl border border-[color:var(--workspace-shell-border)] bg-[var(--workspace-shell-panel)] p-1 text-xs">
@@ -1077,6 +1288,12 @@ export function CommercialWipBoard({
               }
             : undefined
         }
+        onCareLogAdded={(instructionId, createdAt) => {
+          setLatestCareByDealId((prev) => ({
+            ...prev,
+            [instructionId]: createdAt,
+          }));
+        }}
       />
 
       <RequirementFormModal
@@ -1109,7 +1326,7 @@ export function CommercialWipBoard({
           accountSlug={accountSlug}
           view={view}
           deals={deals}
-          requirements={requirements}
+          requirements={filteredRequirements}
           instructionStages={selectableInstructionStages}
           listings={listings}
           onDealsChange={setDeals}
@@ -1135,6 +1352,7 @@ export function CommercialWipBoard({
             label: stage.label,
           }))}
           deskActivity={deskActivity}
+          latestCareByDealId={latestCareByDealId}
           listings={listings}
           onDealsChange={setDeals}
           onEditInstruction={(deal) => {
@@ -1169,6 +1387,7 @@ export function CommercialWipBoard({
                     cards={cards}
                     accountSlug={accountSlug}
                     listingById={listingById}
+                    latestCareByDealId={latestCareByDealId}
                     onEditInstruction={(deal) => {
                       setDealToEdit(deal);
                       setEditDealOpen(true);
@@ -1283,6 +1502,7 @@ function StageColumn({
   cards,
   accountSlug,
   listingById,
+  latestCareByDealId,
   onEditInstruction,
   onEditRequirement,
 }: {
@@ -1291,6 +1511,7 @@ function StageColumn({
   cards: BoardCard[];
   accountSlug: string;
   listingById: Map<string, PipelineListingOption>;
+  latestCareByDealId: Record<string, string>;
   onEditInstruction: (deal: PipelineDeal) => void;
   onEditRequirement: (requirement: CommercialRequirement) => void;
 }) {
@@ -1361,6 +1582,7 @@ function StageColumn({
                       ? (listingById.get(card.deal.commercialListingId) ?? null)
                       : null
                   }
+                  lastContactAt={latestCareByDealId[card.deal.id] ?? null}
                   onEdit={() => onEditInstruction(card.deal)}
                 />
               ) : (
@@ -1382,12 +1604,14 @@ function InstructionCard({
   deal,
   accountSlug,
   listing,
+  lastContactAt = null,
   onEdit,
   overlay = false,
 }: {
   deal: PipelineDeal;
   accountSlug: string;
   listing?: PipelineListingOption | null;
+  lastContactAt?: string | null;
   onEdit: () => void;
   overlay?: boolean;
 }) {
@@ -1399,6 +1623,7 @@ function InstructionCard({
         deal={deal}
         accountSlug={accountSlug}
         listing={listing}
+        lastContactAt={lastContactAt}
         onEdit={onEdit}
         overlay
       />
@@ -1410,6 +1635,7 @@ function InstructionCard({
       deal={deal}
       accountSlug={accountSlug}
       listing={listing}
+      lastContactAt={lastContactAt}
       onEdit={onEdit}
     />
   );
@@ -1419,11 +1645,13 @@ function SortableInstructionCard({
   deal,
   accountSlug,
   listing,
+  lastContactAt = null,
   onEdit,
 }: {
   deal: PipelineDeal;
   accountSlug: string;
   listing?: PipelineListingOption | null;
+  lastContactAt?: string | null;
   onEdit: () => void;
 }) {
   const id = cardCompositeId('instruction', deal.id);
@@ -1441,6 +1669,7 @@ function SortableInstructionCard({
       deal={deal}
       accountSlug={accountSlug}
       listing={listing}
+      lastContactAt={lastContactAt}
       onEdit={onEdit}
       ref={setNodeRef}
       style={{
@@ -1457,6 +1686,7 @@ const InstructionCardBody = ({
   deal,
   accountSlug,
   listing,
+  lastContactAt = null,
   onEdit,
   overlay = false,
   ref,
@@ -1466,6 +1696,7 @@ const InstructionCardBody = ({
   deal: PipelineDeal;
   accountSlug: string;
   listing?: PipelineListingOption | null;
+  lastContactAt?: string | null;
   onEdit: () => void;
   overlay?: boolean;
   ref?: Ref<HTMLDivElement>;
@@ -1552,6 +1783,15 @@ const InstructionCardBody = ({
                 </span>
               ) : null}
             </div>
+          ) : null}
+          {lastContactAt ? (
+            <p className="mt-1.5 text-[10px] text-[var(--workspace-shell-text-muted)]">
+              Last contact{' '}
+              {new Date(lastContactAt).toLocaleDateString('en-GB', {
+                day: 'numeric',
+                month: 'short',
+              })}
+            </p>
           ) : null}
         </div>
         <button

@@ -48,7 +48,7 @@ function revalidatePipelinePaths(accountSlug?: string | null) {
 export async function moveDealToStage(
   dealId: string,
   newStage: string,
-  options?: { accountSlug?: string | null },
+  options?: { accountSlug?: string | null; boardPosition?: number },
 ) {
   try {
     const client = getSupabaseServerClient();
@@ -90,6 +90,9 @@ export async function moveDealToStage(
     }
 
     const updates: Record<string, unknown> = { stage: newStage };
+    if (typeof options?.boardPosition === 'number') {
+      updates.board_position = options.boardPosition;
+    }
     if (
       newStage === 'completed' ||
       newStage === 'signed' ||
@@ -106,7 +109,9 @@ export async function moveDealToStage(
 
     const { error } = await client
       .from('pipeline_deals')
-      .update(updates)
+      // New position columns may lag generated Database types
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .update(updates as any)
       .eq('id', dealId);
 
     if (error) {
@@ -121,6 +126,98 @@ export async function moveDealToStage(
       success: false as const,
       error:
         error instanceof Error ? error.message : 'Could not update deal stage',
+    };
+  }
+}
+
+/** Persist manual order for moved instruction rows only (ladder or board). */
+export async function reorderPipelineDeals(
+  updates: Array<{
+    id: string;
+    ladderPosition?: number;
+    boardPosition?: number;
+    stage?: string;
+  }>,
+  options?: { accountSlug?: string | null },
+) {
+  try {
+    if (updates.length === 0) {
+      return { success: true as const };
+    }
+
+    const client = getSupabaseServerClient();
+    const {
+      data: { user },
+      error: authError,
+    } = await client.auth.getUser();
+    if (authError || !user) {
+      return { success: false as const, error: 'Not authenticated' };
+    }
+
+    const firstId = updates[0]?.id;
+    if (firstId) {
+      const { data: dealRow } = await client
+        .from('pipeline_deals')
+        .select('account_id')
+        .eq('id', firstId)
+        .maybeSingle();
+      const dealAccountId = (dealRow as { account_id?: string | null } | null)
+        ?.account_id;
+      if (dealAccountId) {
+        try {
+          const { assertCommercialBillableMember } =
+            await import('~/lib/commercial/commercial-seat-access');
+          await assertCommercialBillableMember({
+            client,
+            accountId: dealAccountId,
+            userId: user.id,
+            action: 'reorder instructions',
+          });
+        } catch (seatError) {
+          return {
+            success: false as const,
+            error:
+              seatError instanceof Error
+                ? seatError.message
+                : 'Support seats cannot reorder instructions',
+          };
+        }
+      }
+    }
+
+    for (const update of updates) {
+      const payload: Record<string, unknown> = {};
+      if (typeof update.ladderPosition === 'number') {
+        payload.ladder_position = update.ladderPosition;
+      }
+      if (typeof update.boardPosition === 'number') {
+        payload.board_position = update.boardPosition;
+      }
+      if (typeof update.stage === 'string') {
+        payload.stage = update.stage;
+      }
+      if (Object.keys(payload).length === 0) continue;
+
+      const { error } = await client
+        .from('pipeline_deals')
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        .update(payload as any)
+        .eq('id', update.id);
+
+      if (error) {
+        return { success: false as const, error: error.message };
+      }
+    }
+
+    revalidatePipelinePaths(options?.accountSlug);
+    return { success: true as const };
+  } catch (error) {
+    return {
+      success: false as const,
+      error:
+        error instanceof Error
+          ? error.message
+          : 'Could not reorder instructions',
     };
   }
 }

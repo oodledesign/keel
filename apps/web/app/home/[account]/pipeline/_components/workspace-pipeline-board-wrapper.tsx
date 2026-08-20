@@ -60,6 +60,7 @@ type Props = {
   initialRequirements?: CommercialRequirement[];
   attentionDigest?: WipAttentionDigest | null;
   deskActivity?: WipDeskActivityItem[];
+  latestCareByDealId?: Record<string, string>;
   /** When true, rely on the page header for title/description. */
   hideBoardTitle?: boolean;
 };
@@ -76,6 +77,7 @@ export function WorkspacePipelineBoardWrapper({
   initialRequirements = [],
   attentionDigest = null,
   deskActivity = [],
+  latestCareByDealId = {},
   hideBoardTitle = false,
 }: Props) {
   const router = useRouter();
@@ -126,6 +128,7 @@ export function WorkspacePipelineBoardWrapper({
           boardName={boardName}
           attentionDigest={attentionDigest}
           deskActivity={deskActivity}
+          latestCareByDealId={latestCareByDealId}
           onDealWon={handleDealWon}
           onRequestCreateDisposal={openDisposalForm}
           onInstructionCreated={(deal) => setNewInstructionDeal(deal)}

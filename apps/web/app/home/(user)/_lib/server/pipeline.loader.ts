@@ -45,6 +45,8 @@ export type PipelineDeal = {
   hotsTargetExchangeDate: string | null;
   hotsNotes: string | null;
   completedAt: string | null;
+  ladderPosition: number;
+  boardPosition: number;
 };
 
 export type PipelineData = {
@@ -82,6 +84,8 @@ type PipelineDealRow = {
   hots_target_exchange_date?: string | null;
   hots_notes?: string | null;
   completed_at?: string | null;
+  ladder_position?: number | null;
+  board_position?: number | null;
 };
 
 type BusinessRow = {
@@ -142,13 +146,15 @@ function mapDealRow(row: PipelineDealRow): PipelineDeal {
     hotsTargetExchangeDate: row.hots_target_exchange_date ?? null,
     hotsNotes: row.hots_notes?.trim() || null,
     completedAt: row.completed_at ?? null,
+    ladderPosition: row.ladder_position ?? 0,
+    boardPosition: row.board_position ?? 0,
   };
 }
 
 export { PIPELINE_WORKSPACE_BUSINESS_PREFIX } from '~/home/(user)/_lib/pipeline-constants';
 
 const DEAL_SELECT =
-  'id, name, contact_name, company_name, notes, value, stage, work_type, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, businesses(name, colour), accounts(name), clients(display_name)';
+  'id, name, contact_name, company_name, notes, value, stage, work_type, next_action, next_action_date, business_id, account_id, client_id, commercial_listing_id, hots_rent_psf, hots_size_sqft, hots_lease_years, hots_incentives, hots_solicitor_name, hots_target_exchange_date, hots_notes, completed_at, ladder_position, board_position, businesses(name, colour), accounts(name), clients(display_name)';
 
 // ─── Loader ──────────────────────────────────────────────────────────
 
@@ -187,7 +193,9 @@ export const loadPipelineData = cache(async (): Promise<PipelineData> => {
   let deals: PipelineDeal[] = [];
 
   if (orParts.length > 0) {
-    let dealsQuery = client
+    // ladder_position / board_position may lag generated Database types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let dealsQuery = (client as any)
       .from('pipeline_deals')
       .select(DEAL_SELECT)
       .order('created_at', { ascending: false });
@@ -198,8 +206,8 @@ export const loadPipelineData = cache(async (): Promise<PipelineData> => {
         : dealsQuery.or(orParts.join(','));
 
     const dealsResult = await dealsQuery;
-    deals = (dealsResult.data ?? []).map((row) =>
-      mapDealRow(row as PipelineDealRow),
+    deals = (dealsResult.data ?? []).map((row: PipelineDealRow) =>
+      mapDealRow(row),
     );
   }
 
@@ -262,14 +270,16 @@ export const loadPipelineDataForAccount = cache(
       orParts.push(`business_id.in.(${businessIds.join(',')})`);
     }
 
-    const dealsResult = await client
+    // ladder_position / board_position may lag generated Database types
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const dealsResult = await (client as any)
       .from('pipeline_deals')
       .select(DEAL_SELECT)
       .or(orParts.join(','))
       .order('created_at', { ascending: false });
 
-    const deals: PipelineDeal[] = (dealsResult.data ?? []).map((row) =>
-      mapDealRow(row as PipelineDealRow),
+    const deals: PipelineDeal[] = (dealsResult.data ?? []).map(
+      (row: PipelineDealRow) => mapDealRow(row),
     );
 
     const bizRows: BusinessRow[] = [];
