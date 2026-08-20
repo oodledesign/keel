@@ -185,16 +185,11 @@ export function OzerWorkspaceCheckoutForm(params: {
             </p>
             <ul className="space-y-1 text-xs text-[var(--workspace-shell-text-muted)]">
               {isCommercial ? (
-                <>
-                  <li>
-                    {supportSeats > 0
-                      ? `${supportSeats} free support seats included`
-                      : 'No free support seats on a single billable seat'}
-                  </li>
-                  <li>
-                    Portal publishing included (Rightmove, EACH, Property Hive)
-                  </li>
-                </>
+                <li>
+                  {supportSeats > 0
+                    ? `${supportSeats} free support seats included`
+                    : 'No free support seats on a single billable seat'}
+                </li>
               ) : (
                 <>
                   <li>
@@ -217,6 +212,9 @@ export function OzerWorkspaceCheckoutForm(params: {
           config={filteredConfig as typeof billingConfig}
           canStartTrial={canStartTrial}
           value={defaultPickerValue}
+          displayCostOverride={
+            usesGraduatedSeats ? monthlyEstimate : undefined
+          }
           onSubmit={({ planId, productId }) => {
             startTransition(async () => {
               const slug = routeParams.account as string;

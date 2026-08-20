@@ -40,7 +40,8 @@ type AccountMembersTableProps = {
   currentAccountId: string;
   userRoleHierarchy: number;
   isPrimaryOwner: boolean;
-  canManageRoles: boolean;
+  /** members.manage — admins can update/remove lower-hierarchy members */
+  canManageMembers: boolean;
   /** Commercial Property: userId → seat kind */
   seatKindByUserId?: Record<string, 'billable' | 'support'>;
   showSeatKind?: boolean;
@@ -52,7 +53,7 @@ export function AccountMembersTable({
   currentAccountId,
   isPrimaryOwner,
   userRoleHierarchy,
-  canManageRoles,
+  canManageMembers,
   seatKindByUserId,
   showSeatKind = false,
 }: AccountMembersTableProps) {
@@ -63,17 +64,19 @@ export function AccountMembersTable({
     () => ({
       canUpdateRole: (targetRole: number) => {
         return (
-          isPrimaryOwner || (canManageRoles && userRoleHierarchy < targetRole)
+          isPrimaryOwner ||
+          (canManageMembers && userRoleHierarchy < targetRole)
         );
       },
       canRemoveFromAccount: (targetRole: number) => {
         return (
-          isPrimaryOwner || (canManageRoles && userRoleHierarchy < targetRole)
+          isPrimaryOwner ||
+          (canManageMembers && userRoleHierarchy < targetRole)
         );
       },
       canTransferOwnership: isPrimaryOwner,
     }),
-    [isPrimaryOwner, canManageRoles, userRoleHierarchy],
+    [isPrimaryOwner, canManageMembers, userRoleHierarchy],
   );
 
   const filteredMembers = members

@@ -1,0 +1,28 @@
+{
+  "dryRun": false,
+  "environment": "test",
+  "accountId": "c4e7c6b1-e4f0-43ee-a768-6b3782e50d62",
+  "okCount": 2,
+  "errCount": 0,
+  "count": 2,
+  "results": [
+    {
+      "id": "c9b7658f-43c3-4f26-8528-a2bcf57e5cbf",
+      "name": "141 & 151 London Road, Tunbridge Wells, TN4 0NA",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019722545424",
+      "error": null
+    },
+    {
+      "id": "b34edb11-fba3-4e85-b2a0-f1e326ffd72c",
+      "name": "Weald Business Centre",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019729061761",
+      "error": null
+    }
+  ]
+}

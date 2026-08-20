@@ -34,7 +34,12 @@ export function MembershipRoleSelector({
         className={cn('min-w-[8.5rem]', triggerClassName)}
         data-test={'role-selector-trigger'}
       >
-        <SelectValue placeholder="Role" />
+        {/* Keep the closed trigger label short — descriptions stay in the menu only. */}
+        <SelectValue placeholder="Role">
+          <span className="capitalize">
+            <Trans i18nKey={`common:roles.${value}.label`} defaults={value} />
+          </span>
+        </SelectValue>
       </SelectTrigger>
 
       <SelectContent

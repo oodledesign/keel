@@ -122,8 +122,8 @@ async function TeamAccountMembersPage({
       row.seat_kind === 'support' ? 'support' : 'billable';
   }
 
-  const canManageRoles =
-    account.permissions?.includes('roles.manage') || access.canManageRoles;
+  const canManageMembers =
+    account.permissions?.includes('members.manage') || access.canManageMembers;
   const canManageInvitations =
     account.permissions?.includes('invites.manage') || access.canManageInvites;
 
@@ -205,7 +205,7 @@ async function TeamAccountMembersPage({
                 currentAccountId={account.id}
                 members={members}
                 isPrimaryOwner={isPrimaryOwner}
-                canManageRoles={canManageRoles}
+                canManageMembers={canManageMembers}
                 showSeatKind={isCommercial}
                 seatKindByUserId={seatKindByUserId}
               />

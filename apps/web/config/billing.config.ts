@@ -253,7 +253,7 @@ export default createBillingSchema({
       id: 'ozer-commercial-property',
       name: 'Commercial Property',
       description:
-        'Graduated per-seat pricing for commercial agencies — instructions, requirements, and marketing',
+        'Instructions, requirements, marketing, and portal publishing for commercial agencies',
       currency: OZER_BILLING_CURRENCY,
       enableDiscountField: true,
       highlighted: true,
@@ -284,9 +284,7 @@ export default createBillingSchema({
         },
       ],
       features: [
-        'Graduated per-seat pricing (from £89/mo)',
         'Listings, pipeline & requirements',
-        'Free support seats on Team and Scale sizes',
         'Portal publishing (Rightmove, EACH, Property Hive)',
         'Online brochures & branded presentations',
       ],

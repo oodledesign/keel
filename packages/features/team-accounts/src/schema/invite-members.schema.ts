@@ -1,6 +1,8 @@
 import { z } from 'zod';
 
 const InviteSchema = z.object({
+  firstName: z.string().trim().min(1).max(100),
+  lastName: z.string().trim().min(1).max(100),
   email: z.string().email(),
   role: z.string().min(1).max(100),
   projectId: z.string().uuid().optional().nullable(),

@@ -1,16 +1,12 @@
 import 'server-only';
 
-import type { SupabaseClient } from '@supabase/supabase-js';
+import { createRequire } from 'node:module';
 
-import { getSupabaseServerClient } from '@kit/supabase/server-client';
+import type { SupabaseClient } from '@supabase/supabase-js';
 
 import type {
   DisposalType,
   ListingStatus,
-} from '~/lib/commercial/commercial-constants';
-import {
-  disposalIncludesForSale,
-  disposalIncludesToLet,
 } from '~/lib/commercial/commercial-constants';
 import { recordListingEvent } from '~/lib/commercial/listing-events';
 import {
@@ -34,10 +30,13 @@ import {
   type RightmoveMapperMedia,
   type RightmoveMapperUnit,
   asOptionalNumber,
+  deriveAskingRentPenceFromUnits,
   mapListingToRightmovePayload,
   resolveRightmovePropertyReference,
 } from '~/lib/commercial/rightmove-mapper';
 import type { RightmoveRemovalReason } from '~/lib/commercial/rightmove-types';
+
+const require = createRequire(import.meta.url);
 
 type CommercialPortal = 'property_hive' | 'rightmove' | 'each' | 'other';
 type PublicationStatus = 'draft' | 'published' | 'unpublished' | 'error';
@@ -61,8 +60,30 @@ export type CommercialPortalPublication = {
 /** Media signed URL TTL for portal fetchers (Rightmove HEAD/ETag). */
 const RIGHTMOVE_MEDIA_URL_TTL_SECONDS = 60 * 60 * 24 * 7;
 
+/** Optional override for ops scripts (e.g. bulk Rightmove publish). */
+let portalPublishersClientOverride: SupabaseClient | null = null;
+
+/**
+ * Use a service-role (or other) client instead of the request-scoped server
+ * client. Pass `null` to clear. Intended for one-off scripts only.
+ */
+export function setPortalPublishersClient(
+  client: SupabaseClient | null,
+): void {
+  portalPublishersClientOverride = client;
+}
+
 /** Untyped until `pnpm supabase:web:typegen` includes commercial_* tables. */
 function db(): SupabaseClient {
+  if (portalPublishersClientOverride) {
+    return portalPublishersClientOverride;
+  }
+
+  // Lazy-load so ops scripts can inject a service-role client without pulling
+  // Next.js request cookies / headers at module import time.
+  const { getSupabaseServerClient } =
+    require('@kit/supabase/server-client') as typeof import('@kit/supabase/server-client');
+
   return getSupabaseServerClient() as unknown as SupabaseClient;
 }
 
@@ -170,7 +191,7 @@ async function loadUnitsForRightmove(
   const { data, error } = await db()
     .from('commercial_listing_units')
     .select(
-      'id, label, floor_or_unit, size_sqft, measurement_standard, sort_order, external_id',
+      'id, label, floor_or_unit, size_sqft, measurement_standard, sort_order, external_id, asking_rent_pence, rent_per_sqft',
     )
     .eq('listing_id', listingId)
     .eq('account_id', accountId)
@@ -186,6 +207,8 @@ async function loadUnitsForRightmove(
     measurementStandard: (row.measurement_standard as string | null) ?? null,
     sortOrder: asOptionalNumber(row.sort_order) ?? 0,
     externalId: (row.external_id as string | null) ?? null,
+    askingRentPence: asOptionalNumber(row.asking_rent_pence),
+    rentPerSqft: asOptionalNumber(row.rent_per_sqft),
   }));
 }
 
@@ -319,28 +342,11 @@ function validateRightmoveCommercialFields(listing: {
   if (!listing.name?.trim()) missing.push('name');
   if (!listing.postcode?.trim()) missing.push('postcode');
   if (!listing.address_line_1?.trim()) missing.push('address_line_1');
-  const disposalType = listing.disposal_type as DisposalType;
-  if (
-    disposalIncludesToLet(disposalType) &&
-    listing.asking_rent_pence == null
-  ) {
-    missing.push('asking_rent_pence');
-  }
-  if (
-    disposalIncludesForSale(disposalType) &&
-    !disposalIncludesToLet(disposalType) &&
-    listing.asking_price_pence == null
-  ) {
-    missing.push('asking_price_pence');
-  }
-  if (
-    disposalIncludesForSale(disposalType) &&
-    disposalIncludesToLet(disposalType) &&
-    listing.asking_rent_pence == null &&
-    listing.asking_price_pence == null
-  ) {
-    missing.push('asking_rent_pence');
-  }
+  // Rent / price may be absent — mapper emits PRICE_ON_APPLICATION (POA).
+  // Unit-level rents are applied before this check when available.
+  void listing.disposal_type;
+  void listing.asking_rent_pence;
+  void listing.asking_price_pence;
   return missing;
 }
 
@@ -573,6 +579,24 @@ export async function publishToRightmove(
       loadPublicMediaForRightmove(accountId, listingId),
     ]);
 
+    let derivedRentFromUnits = false;
+    if (listing.askingRentPence == null) {
+      const derived = deriveAskingRentPenceFromUnits(units);
+      if (derived != null) {
+        listing.askingRentPence = derived;
+        derivedRentFromUnits = true;
+        // Persist so the workspace stays in sync with what we published.
+        await db()
+          .from('commercial_listings')
+          .update({
+            asking_rent_pence: derived,
+            updated_at: new Date().toISOString(),
+          })
+          .eq('id', listingId)
+          .eq('account_id', accountId);
+      }
+    }
+
     mediaSampleUrls = media
       .filter((m) => m.url)
       .slice(0, 4)
@@ -619,6 +643,7 @@ export async function publishToRightmove(
         accountBranchId: resolved.accountBranchId,
         accountBranchName: resolved.accountBranchName,
         agentId: resolved.agentId,
+        derivedRentFromUnits,
         note,
       },
     });

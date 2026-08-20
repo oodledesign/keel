@@ -15,6 +15,11 @@ type PlanCostDisplayProps = {
   interval?: string;
   alwaysDisplayMonthlyPrice?: boolean;
   className?: string;
+  /**
+   * When set (e.g. graduated seat totals), overrides the flat line-item cost.
+   * Values are in major currency units (same as `primaryLineItem.cost`).
+   */
+  displayCostOverride?: number;
 };
 
 /**
@@ -29,12 +34,14 @@ export function PlanCostDisplay({
   interval,
   alwaysDisplayMonthlyPrice = true,
   className,
+  displayCostOverride,
 }: PlanCostDisplayProps) {
   const { i18n } = useTranslation();
 
   const { shouldDisplayTier, lowestTier, tierTranslationKey, displayCost } =
     useMemo(() => {
       const shouldDisplayTier =
+        displayCostOverride == null &&
         primaryLineItem.type === 'metered' &&
         Array.isArray(primaryLineItem.tiers) &&
         primaryLineItem.tiers.length > 0;
@@ -52,10 +59,17 @@ export function PlanCostDisplay({
 
       const isYearlyPricing = interval === 'year';
 
-      const cost =
-        isYearlyPricing && alwaysDisplayMonthlyPrice
-          ? Number(primaryLineItem.cost / 12)
+      const baseCost =
+        displayCostOverride != null
+          ? displayCostOverride
           : primaryLineItem.cost;
+
+      const cost =
+        isYearlyPricing &&
+        alwaysDisplayMonthlyPrice &&
+        displayCostOverride == null
+          ? Number(baseCost / 12)
+          : baseCost;
 
       return {
         shouldDisplayTier,
@@ -66,7 +80,12 @@ export function PlanCostDisplay({
           : 'billing:priceUnit',
         displayCost: cost,
       };
-    }, [primaryLineItem, interval, alwaysDisplayMonthlyPrice]);
+    }, [
+      primaryLineItem,
+      interval,
+      alwaysDisplayMonthlyPrice,
+      displayCostOverride,
+    ]);
 
   if (shouldDisplayTier) {
     const formattedCost = formatCurrency({

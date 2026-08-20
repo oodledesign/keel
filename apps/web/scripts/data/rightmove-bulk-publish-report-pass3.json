@@ -1,0 +1,433 @@
+{
+  "dryRun": false,
+  "environment": "test",
+  "accountId": "c4e7c6b1-e4f0-43ee-a768-6b3782e50d62",
+  "okCount": 45,
+  "errCount": 2,
+  "count": 47,
+  "results": [
+    {
+      "id": "41e055c5-da2e-4559-8643-0a8f96f91d26",
+      "name": "132-134 & 134A Camden Road, Tunbridge Wells, TN1 2QZ",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019118567249",
+      "error": null
+    },
+    {
+      "id": "c9b7658f-43c3-4f26-8528-a2bcf57e5cbf",
+      "name": "141 & 151 London Road, Tunbridge Wells, TN4 ONA",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred. — building.location.postcode: postcode is invalid"
+    },
+    {
+      "id": "1fdf391c-38e1-481b-a340-7d46d46675da",
+      "name": "176 Tonbridge Road, Hildenborough",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019131374256",
+      "error": null
+    },
+    {
+      "id": "73895ca3-57a5-46ec-a29a-12566574bcff",
+      "name": "20 Chapman Way, Tunbridge Wells, TN2 3EF",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019135342593",
+      "error": null
+    },
+    {
+      "id": "7593c2be-2be8-4cc7-8957-d8d47bd2bce9",
+      "name": "32 Monson Road, Tunbridge Wells, TN1 1LU",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019141857409",
+      "error": null
+    },
+    {
+      "id": "527bbf03-a38a-4445-91e1-fe726a21b2f6",
+      "name": "38 Eldon Way, Paddock Wood, TN12 6BE",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019147924224",
+      "error": null
+    },
+    {
+      "id": "2fd673e6-822f-4fb5-a8a6-30521ac34cfb",
+      "name": "47 & 47A St. Johns Road, Tunbridge Wells, TN4 9TP",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019154215936",
+      "error": null
+    },
+    {
+      "id": "227fb9fc-94e2-42ed-b5e3-7ea664d4b8ef",
+      "name": "7 Vale Avenue, Tunbridge Wells, TN1 1DJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019158635120",
+      "error": null
+    },
+    {
+      "id": "ef92dc33-f632-4bf6-9f58-d7a810721d91",
+      "name": "82 London Road, Tunbridge Wells, TN4 0PP",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019164929329",
+      "error": null
+    },
+    {
+      "id": "404861fb-6e7d-4030-8c26-d03a3dbe681b",
+      "name": "89 High Street, Tonbridge, TN9 1DR",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019168897857",
+      "error": null
+    },
+    {
+      "id": "2c013350-c3d8-4ef1-896e-d946e4fd885e",
+      "name": "Crowborough Business Park, Crowborough, TN6 2GZ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019175415425",
+      "error": null
+    },
+    {
+      "id": "c8066bfb-95d8-4bf3-abee-1047b97a7bd7",
+      "name": "Enterprise House",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019181481296",
+      "error": null
+    },
+    {
+      "id": "63941c8a-544d-4dbf-ac09-347cf26e9c51",
+      "name": "First Floor & Second Floor 105-109 High Street, Tonbridge, TN9 1HD",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019185899056",
+      "error": null
+    },
+    {
+      "id": "cc08561b-14ea-4a7b-bde5-e26ee34196ed",
+      "name": "Lodge Road, Staplehurst, TN12 0RX",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019191966561",
+      "error": null
+    },
+    {
+      "id": "1ad21120-d61c-43f3-99b1-adadd6f99ba8",
+      "name": "Lonsdale Gate, Tunbridge Wells, TN1 1NU",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019198480928",
+      "error": null
+    },
+    {
+      "id": "0fc127d1-c14a-402f-a87d-d3406d7e5c86",
+      "name": "Lower Ground Floor",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019202676352",
+      "error": null
+    },
+    {
+      "id": "5c3b66ac-1689-4cfc-bd0e-aa58a3d08778",
+      "name": "Mount Pleasant House, Tunbridge Wells, TN1 1HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019208742833",
+      "error": null
+    },
+    {
+      "id": "39c5cca0-392f-44aa-9afe-bf127a521eae",
+      "name": "Pantiles Chambers, Tunbridge Wells, TN1 1XP",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019212938128",
+      "error": null
+    },
+    {
+      "id": "268781ba-7cea-43b8-8cfe-9e191d23caea",
+      "name": "Priory Shopping Centre, Dartford, DA1 2HS",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019219228512",
+      "error": null
+    },
+    {
+      "id": "0a0362f4-0180-4542-8655-831dbbc0f7fc",
+      "name": "Secure hard standing surfaced yards",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019225744384",
+      "error": null
+    },
+    {
+      "id": "43efe707-9cb6-4239-82c1-190f5e327087",
+      "name": "Serviced Offices In Crowborough - From Single To 12 Person",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019242297345",
+      "error": null
+    },
+    {
+      "id": "36dcaf9a-5681-447e-afaa-ee0631ddadba",
+      "name": "Unit 10, Spa Trade Park, Tunbridge Wells, TN2 3EN",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019410068448",
+      "error": null
+    },
+    {
+      "id": "8baf341b-b56c-40ef-a430-66b57a327913",
+      "name": "Unit 15, Tonbridge, TN12 6BE",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019429167617",
+      "error": null
+    },
+    {
+      "id": "8aa6cf26-733c-429b-b5ac-a4bf1852aeba",
+      "name": "Unit 21, Colebrook Industrial Estate, Tunbridge Wells, TN2 3DG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019433363665",
+      "error": null
+    },
+    {
+      "id": "bdab03f6-a5c4-4385-b9a4-5e060dac8678",
+      "name": "Unit 23, Colebrook Industrial Estate, Tunbridge Wells, TN2 3DG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019439656401",
+      "error": null
+    },
+    {
+      "id": "3cfe27e7-4f7f-4e18-b6f6-e4eac7a7e895",
+      "name": "Unit 6, Colebrook Industrial Estate, Tunbridge Wells, TN2 3DG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019443622689",
+      "error": null
+    },
+    {
+      "id": "af84f71c-83ef-4a19-96c4-b4bc202635e7",
+      "name": "Unit 8, Deacon Trading Estate, Tonbridge",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019449914480",
+      "error": null
+    },
+    {
+      "id": "e452221c-7851-4c5d-970b-814ca5173768",
+      "name": "Unit 9, Deacon Trading Estate, Tonbridge, TN9 1SU",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019456430129",
+      "error": null
+    },
+    {
+      "id": "d0999276-2e3f-4662-a2f1-ae2a537a1113",
+      "name": "Unit 9, Tonbridge, TN9 1GN",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019460401137",
+      "error": null
+    },
+    {
+      "id": "e448b912-28b5-436b-aaf4-c05b6db3cd44",
+      "name": "Unit B1, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019466919008",
+      "error": null
+    },
+    {
+      "id": "fe0317db-1d89-47a9-91d6-214c470845f8",
+      "name": "Unit B10, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019473208016",
+      "error": null
+    },
+    {
+      "id": "c6570b1c-e161-4552-95b2-fc31e800f030",
+      "name": "Unit B11, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019477403025",
+      "error": null
+    },
+    {
+      "id": "960e9ec5-4061-4a8e-9081-f20928c5592a",
+      "name": "Unit B12, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019483471009",
+      "error": null
+    },
+    {
+      "id": "f7a13200-12be-44ab-ad17-9a114197c125",
+      "name": "Unit B13, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019487890065",
+      "error": null
+    },
+    {
+      "id": "b3ae1792-3b4a-4c5b-8f04-382c902e1771",
+      "name": "Unit B18, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019494179568",
+      "error": null
+    },
+    {
+      "id": "37075e58-e036-4c29-b184-3d5e21c39f6d",
+      "name": "Unit B19, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019500473056",
+      "error": null
+    },
+    {
+      "id": "23471994-7ab7-41b0-9399-c1297c76e505",
+      "name": "Unit B2, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019506538400",
+      "error": null
+    },
+    {
+      "id": "326e399e-f099-4dbf-b72c-7370f0010be7",
+      "name": "Unit B20, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019510732384",
+      "error": null
+    },
+    {
+      "id": "665929b5-c6db-4b14-8e1a-34713375c543",
+      "name": "Unit B21, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019517024176",
+      "error": null
+    },
+    {
+      "id": "c27dd57c-b953-4c68-a323-e09c3cd156c9",
+      "name": "Unit B4, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019523315824",
+      "error": null
+    },
+    {
+      "id": "59f9b5fe-7cc7-4078-b334-09ee9155491d",
+      "name": "Unit B5, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019527736561",
+      "error": null
+    },
+    {
+      "id": "86201bc6-2ef1-4ff9-8c3f-32b351aab636",
+      "name": "Unit B6, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019534025633",
+      "error": null
+    },
+    {
+      "id": "df9eeaef-09ef-4125-8cae-ef328e59a830",
+      "name": "Unit B7, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019649371425",
+      "error": null
+    },
+    {
+      "id": "1318e11f-d958-4588-8395-4f2618cc3fcc",
+      "name": "Unit B8, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019655436033",
+      "error": null
+    },
+    {
+      "id": "eb012251-9b68-42fb-86c7-363e64707084",
+      "name": "Unit B9, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019659629633",
+      "error": null
+    },
+    {
+      "id": "3214c204-67b7-41b6-9cb7-ecb02a5dfc42",
+      "name": "Units 8 & 9, Deacon Trading Estate, Tonbridge, TN9 1SU",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770019666146577",
+      "error": null
+    },
+    {
+      "id": "b34edb11-fba3-4e85-b2a0-f1e326ffd72c",
+      "name": "Weald Business Centre",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred. — building.location.postcode: postcode is invalid"
+    }
+  ]
+}

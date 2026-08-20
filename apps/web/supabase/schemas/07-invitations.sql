@@ -16,6 +16,8 @@ create table if not exists
     created_at timestamptz default current_timestamp not null,
     updated_at timestamptz default current_timestamp not null,
     expires_at timestamptz default current_timestamp + interval '7 days' not null,
+    first_name text,
+    last_name text,
     unique (email, account_id)
   );
 

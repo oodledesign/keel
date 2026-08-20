@@ -48,6 +48,11 @@ export function PlanPicker(
       planId: string;
       productId: string;
     };
+    /**
+     * Override the plan card price (major currency units). Used for graduated
+     * seat totals that differ from the flat primary line-item cost.
+     */
+    displayCostOverride?: number;
   }>,
 ) {
   const { t } = useTranslation(`billing`);
@@ -326,6 +331,9 @@ export function PlanPicker(
                                     currencyCode={product.currency}
                                     interval={selectedInterval}
                                     alwaysDisplayMonthlyPrice={true}
+                                    displayCostOverride={
+                                      props.displayCostOverride
+                                    }
                                   />
                                 </Price>
 

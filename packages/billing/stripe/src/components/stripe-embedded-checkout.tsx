@@ -18,6 +18,13 @@ const { publishableKey } = StripeClientEnvSchema.parse({
 
 const stripePromise = loadStripe(publishableKey);
 
+/**
+ * Served from apps/web/public. Stripe Embedded Checkout does not render
+ * Dashboard logo/icon assets inside the iframe, so we brand the dialog chrome.
+ */
+const OZER_ICON_SRC = '/brand/ozer-icon.svg';
+const OZER_WORDMARK_SRC = '/brand/ozer-wordmark-on-light.svg';
+
 export function StripeCheckout({
   checkoutToken,
   onClose,
@@ -44,7 +51,7 @@ function EmbeddedCheckoutPopup({
   onClose?: () => void;
 }>) {
   const [open, setOpen] = useState(true);
-  const className = `bg-white p-4 overflow-y-auto shadow-transparent border`;
+  const className = `bg-[#FBF6EC] p-4 overflow-y-auto shadow-transparent border`;
 
   return (
     <Dialog
@@ -67,7 +74,23 @@ function EmbeddedCheckoutPopup({
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
       >
-        <DialogTitle className={'hidden'}>Checkout</DialogTitle>
+        <DialogTitle className={'sr-only'}>Ozer checkout</DialogTitle>
+        <div className="mb-3 flex items-center gap-2.5">
+          <img
+            src={OZER_ICON_SRC}
+            alt=""
+            width={28}
+            height={28}
+            className="size-7 shrink-0"
+          />
+          <img
+            src={OZER_WORDMARK_SRC}
+            alt="Ozer"
+            width={92}
+            height={22}
+            className="h-[22px] w-auto"
+          />
+        </div>
         <div>{children}</div>
       </DialogContent>
     </Dialog>

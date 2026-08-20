@@ -120,6 +120,13 @@ export async function createStripeCheckout(
     line_items: lineItems,
     client_reference_id: clientReferenceId,
     subscription_data: subscriptionData,
+    // Embedded Checkout does not render logo/icon assets; colors + display name do apply.
+    branding_settings: {
+      display_name: 'Ozer',
+      background_color: '#FBF6EC',
+      button_color: '#FF5C34',
+      border_style: 'rounded',
+    },
     ...customerCreation,
     ...customerData,
     ...urls,

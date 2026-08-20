@@ -1,0 +1,1504 @@
+{
+  "dryRun": false,
+  "environment": "test",
+  "accountId": "c4e7c6b1-e4f0-43ee-a768-6b3782e50d62",
+  "okCount": 45,
+  "errCount": 121,
+  "count": 166,
+  "results": [
+    {
+      "id": "fca0307d-1dd5-421c-ac97-dfa64fcc0821",
+      "name": "1 Little Mount Sion, Tunbridge Wells",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015643585328",
+      "error": null
+    },
+    {
+      "id": "0a42c2a6-b1e8-41ab-8750-0ed171d63089",
+      "name": "1 Quarry Hill Road, Tonbridge, TN9 2RH",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015649874544",
+      "error": null
+    },
+    {
+      "id": "06ece422-1579-497c-ae59-ebb05df16ad0",
+      "name": "1 Riding Lane, Tonbridge, TN11 9HX",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015673170721",
+      "error": null
+    },
+    {
+      "id": "e54a4c5c-60ab-4553-a3d4-cc6fddf8901c",
+      "name": "1 The Pantiles, Tunbridge Wells, TN2 5TD",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015677138416",
+      "error": null
+    },
+    {
+      "id": "96386f9e-851b-4393-88a7-1fe83328cfb5",
+      "name": "10 High Street, Sevenoaks, TN14 5PQ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015679235488",
+      "error": null
+    },
+    {
+      "id": "611e924d-014f-4826-af34-0d634b436262",
+      "name": "10-12 Chapel Place, Tunbridge Wells, TN1 1YQ",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015683657104",
+      "error": null
+    },
+    {
+      "id": "21ded68c-beea-4286-a240-1509146c0660",
+      "name": "115 High Street, Tonbridge, TN9 1DL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015685527232",
+      "error": null
+    },
+    {
+      "id": "9295f6f1-f30e-4357-b548-9d8ca8a2796b",
+      "name": "119 High Street, Tonbridge, TN9 1DL",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015689720448",
+      "error": null
+    },
+    {
+      "id": "2d028982-8f93-4153-962e-1e355cba8ff5",
+      "name": "12 Mount Ephraim, Tunbridge Wells, TN4 8AS",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015692042976",
+      "error": null
+    },
+    {
+      "id": "2b1a3c06-814c-4a53-bde9-6e4bd87e7b7d",
+      "name": "124 High Street, Tonbridge, TN9 1AS",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015696237056",
+      "error": null
+    },
+    {
+      "id": "ce425e04-4350-48ee-9ce0-05fe6d226e94",
+      "name": "13 Colebrook Industrial Estate, Tunbridge Wells, TN2 3DG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015698110272",
+      "error": null
+    },
+    {
+      "id": "41e055c5-da2e-4559-8643-0a8f96f91d26",
+      "name": "132-134 & 134A Camden Road, Tunbridge Wells, TN1 2QZ",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "d7f97673-0801-4e30-9a31-30234670cbc1",
+      "name": "136B",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015702531296",
+      "error": null
+    },
+    {
+      "id": "260c919d-048c-4a80-b87a-eaa39ff272ab",
+      "name": "14-16 Eldon Way, Tonbridge, TN12 6BE",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015706722816",
+      "error": null
+    },
+    {
+      "id": "c9b7658f-43c3-4f26-8528-a2bcf57e5cbf",
+      "name": "141 & 151 London Road, Tunbridge Wells, TN4 ONA",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_price_pence"
+    },
+    {
+      "id": "327a87af-86b1-4941-8bf1-4d03bcfe6751",
+      "name": "150-152 High Street, Tonbridge, TN9 1BB",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015710693968",
+      "error": null
+    },
+    {
+      "id": "1fdf391c-38e1-481b-a340-7d46d46675da",
+      "name": "176 Tonbridge Road, Hildenborough",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Assign an Office / branch on the disposal Management tab before publishing to Rightmove"
+    },
+    {
+      "id": "07ce93f6-139f-4894-8382-dec7c45f88e2",
+      "name": "177 High Street, Tonbridge, TN9 1BX",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015715114177",
+      "error": null
+    },
+    {
+      "id": "e6bee328-39c8-4162-b6af-32a3d4eab29e",
+      "name": "178 Tonbridge Road, Tonbridge, TN11 9HP",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015719081649",
+      "error": null
+    },
+    {
+      "id": "e7034629-7863-4997-8e21-f54947209e1d",
+      "name": "192 High Street, Tonbridge, TN9 1BE",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015723276977",
+      "error": null
+    },
+    {
+      "id": "45476cce-8e5c-4c41-8c10-8948b0f99642",
+      "name": "194 High Street, Tonbridge, TN9 1BE",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015725599072",
+      "error": null
+    },
+    {
+      "id": "3fd6d85b-863f-4d8f-bd75-ad96d69f2c94",
+      "name": "1st & 2nd Floor Town Centre Premises",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015729569521",
+      "error": null
+    },
+    {
+      "id": "cf227183-846e-41da-af97-be53ad726fe0",
+      "name": "2 Mount Ephraim Road, Tunbridge Wells, TN1 1EE",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015733986369",
+      "error": null
+    },
+    {
+      "id": "0389a727-3ce7-4859-9a61-3a112678687a",
+      "name": "2 Railway Approach, Tonbridge, TN9 2RQ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/769971085619809",
+      "error": null
+    },
+    {
+      "id": "73895ca3-57a5-46ec-a29a-12566574bcff",
+      "name": "20 Chapman Way, Tunbridge Wells, TN2 3EF",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "843de214-9bbc-4138-85ea-bee6d328a85d",
+      "name": "25 The Pantiles, Tunbridge Wells, TN2 5TD",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "01f50515-62fe-4e34-9990-97c8ba70ed90",
+      "name": "2b",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "c0211ec9-e308-49e6-83fb-bbf7365bbeda",
+      "name": "2B Valley Industries, Tonbridge, TN11 0AH",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "c4c6234d-b5cf-4abf-aaa2-3ef9d87676d3",
+      "name": "2nd Floor Office, Chapman House, Tunbridge Wells, TN2 3EF",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "39996779-7242-40b4-93b3-e04376bc2206",
+      "name": "3 & 5, Church Street, Edenbridge, TN8 5BD",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "f661e6d0-798d-4284-873c-a0b2b9a6d664",
+      "name": "3 Church Street, Edenbridge, TN8 5BD",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "c79e556f-c979-478c-9183-f94c552900d5",
+      "name": "3 The Broadway, Tonbridge, TN11 0BZ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "f2439de0-da05-4b8f-a6a3-0ab44d90be7d",
+      "name": "3,4,5,6 High Street, Hadlow, TN11 0BZ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "1fccf0b5-ff19-4e83-9857-d6f365e7bfd1",
+      "name": "31 Commercial Road, Paddock Wood, TN12 6EN",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "7593c2be-2be8-4cc7-8957-d8d47bd2bce9",
+      "name": "32 Monson Road, Tunbridge Wells, TN1 1LU",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "f545bbbd-6fe9-4cd0-bd0f-3d7c71fdb80b",
+      "name": "35 High Brooms Road, Tunbridge Wells, TN4 9DA",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "527bbf03-a38a-4445-91e1-fe726a21b2f6",
+      "name": "38 Eldon Way, Paddock Wood, TN12 6BE",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "8dfbac92-2556-440f-9286-efbef235886a",
+      "name": "39 High Street, Tonbridge, TN9 1SQ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "0833e354-e6cb-4cd0-a9fa-d9035a936e0f",
+      "name": "4 Commercial Road, Tonbridge, TN12 6EL",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "b97d6dd4-4f1d-4411-8a1b-ae08b527f94c",
+      "name": "4-6 The Broadway, Tonbridge, TN11 0BZ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "f1d46987-bdbe-40cd-ab85-7a63ce63b00d",
+      "name": "43 High Street, Tunbridge Wells, TN1 1XL",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "203367c6-bbe8-4340-afc6-37fc2acb3b7d",
+      "name": "45 High Street, Tunbridge Wells, TN1 1XL",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "2fd673e6-822f-4fb5-a8a6-30521ac34cfb",
+      "name": "47 & 47A St. Johns Road, Tunbridge Wells, TN4 9TP",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_price_pence"
+    },
+    {
+      "id": "f12e8731-c56e-45e8-bc04-5a748e3ad2d8",
+      "name": "47 London Road, Tunbridge Wells, TN4 0PB",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "87e61c2c-5b88-4481-9ec1-a274edb72316",
+      "name": "49 High Street, Tunbridge Wells, TN1 1XU",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "c60953e7-6a41-4664-ad83-2e8b59a223df",
+      "name": "49 London Road, Tunbridge Wells, TN1 1DT",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "ac6dc915-ef81-47a3-bad4-2fe4fe19d705",
+      "name": "49 London Road, Tunbridge Wells, TN1 1DT",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "0875d705-f0ce-443b-8bac-1e67395daa36",
+      "name": "4B valley industries",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "1a5b7dbb-89a3-401e-b7c2-15a2c21972d4",
+      "name": "4B Valley Industries, Tonbridge, TN11 0AG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "75ee073d-0ecb-4491-80a9-6c7560a2e60a",
+      "name": "5 Angel Walk, Tonbridge, TN9 1TJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "01dacf09-3552-4046-8c7e-6fc6f54351d4",
+      "name": "57 High Brooms Road, Tunbridge Wells, TN4 9BW",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "f4e867a4-e4f4-4c7e-aac2-89df369ce675",
+      "name": "60 Mount Pleasant Road, Tunbridge Wells, TN1 1RB",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "4789e05d-bdf2-410a-ab2c-95d1f27b3d4a",
+      "name": "63 High Street, Tenterden, TN30 6BD",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "ef557af4-ddd8-49a5-973c-88ff75afdfe8",
+      "name": "63A High Street, Tenterden, TN30 6BD",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "e2e7bcb0-a744-4c19-ab61-db634f9c6f2e",
+      "name": "64 Calverley Road, Tunbridge Wells, TN1 2UG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "3737f21b-ec0b-4ef0-b0dc-b517e069aac6",
+      "name": "65-67 St. Johns Road, Tunbridge Wells, TN4 9TT",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "227fb9fc-94e2-42ed-b5e3-7ea664d4b8ef",
+      "name": "7 Vale Avenue, Tunbridge Wells, TN1 1DJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "f485dc59-fd09-4e32-8a17-0b61cbe83fc5",
+      "name": "71 Calverley Road, Tunbridge Wells, TN1 2UY",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "1461a016-2837-4419-bb2b-427e908e1c93",
+      "name": "77-81 High Street, Tonbridge, TN9 1RX",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "54609cd9-a397-41af-8119-159f3b460bde",
+      "name": "77-81 High Street, Tonbridge, TN9 1RX",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "ef92dc33-f632-4bf6-9f58-d7a810721d91",
+      "name": "82 London Road, Tunbridge Wells, TN4 0PP",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "404861fb-6e7d-4030-8c26-d03a3dbe681b",
+      "name": "89 High Street, Tonbridge, TN9 1DR",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "caadc22a-18e6-41db-b505-39eec13a854d",
+      "name": "90-92 Mount Pleasant Road, Tunbridge Wells, TN1 1RT",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "6cfaffa7-0d92-41fe-a674-002c783c7e34",
+      "name": "Chequers Barn, Edenbridge, TN8 7PD",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "cfe854c1-e099-4824-94e7-c3891f06da5f",
+      "name": "Chequers Barn, Edenbridge, TN8 7PD",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "88e96aa4-b257-4378-adea-d88e58a3d4e8",
+      "name": "Crane Chambers, 58 High Street, Cranbrook, TN17 3DL",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "2c013350-c3d8-4ef1-896e-d946e4fd885e",
+      "name": "Crowborough Business Park, Crowborough, TN6 2GZ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "8cb5c1d7-3ddf-41fc-b984-f8ea97fda9bd",
+      "name": "Douglas House, Tonbridge, TN9 2RH",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "c8066bfb-95d8-4bf3-abee-1047b97a7bd7",
+      "name": "Enterprise House",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "2e76b4b9-6f30-4f5b-82df-a33908efea35",
+      "name": "First Floor",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "63941c8a-544d-4dbf-ac09-347cf26e9c51",
+      "name": "First Floor & Second Floor 105-109 High Street, Tonbridge, TN9 1HD",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "8985a319-a966-4a2e-940f-6333bff9db65",
+      "name": "First Floor Offices",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "9ce53d05-9fbf-4626-a3d1-3d3ea0330c2a",
+      "name": "First Floor, Mount Pleasant House, Tunbridge Wells, TN1 1HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "3141333b-69e8-4a7b-b3cb-11a782561e0a",
+      "name": "Flexible Space / Use, Goudhurst, TN17 1EU",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "b6ca992d-95b1-470e-9110-35ccccf0a8a0",
+      "name": "GF Office",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "084a3ff2-86a8-4771-bea3-e8911849db1d",
+      "name": "Hard Standing Surfaced Yard",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "a604a18d-2875-4879-a6a7-31850f429bd0",
+      "name": "Harmony Centre",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "c12581aa-7544-438f-8421-47380c9ea238",
+      "name": "Hildenborough, Tonbridge, TN11 8LX",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "fac08ae5-0808-4bab-adc0-f260843007e3",
+      "name": "Hop Drying Building 2, Forstal Farm Business park, Tunbridge Wells, TN3 8AG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "fb83f3ef-223a-43da-82ce-8a66dc256339",
+      "name": "Kelly House (Third Floor), Tunbridge Wells, TN1 1YL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015836521937",
+      "error": null
+    },
+    {
+      "id": "61931d53-53b2-4f6f-b72e-bacab87342be",
+      "name": "Kelly House, Tunbridge Wells, TN1 1YL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015840716705",
+      "error": null
+    },
+    {
+      "id": "fb37f234-c03c-4f72-b3da-d70e26656c08",
+      "name": "Kenwood House, Tunbridge Wells, TN1 2DU",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015843039648",
+      "error": null
+    },
+    {
+      "id": "b30adf45-212a-4105-b722-c79876b4a227",
+      "name": "Kiosk",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015847235392",
+      "error": null
+    },
+    {
+      "id": "e3ad7269-7ce6-4151-bdad-8261219a2cbd",
+      "name": "Land At Goods Yard",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015849105040",
+      "error": null
+    },
+    {
+      "id": "9436fa76-48ea-4a63-b8ab-30fa30f03b81",
+      "name": "Larchwood, Sevenoaks, TN15 0EY",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015853525825",
+      "error": null
+    },
+    {
+      "id": "b0137b09-2e09-43f7-a468-12dd485be02f",
+      "name": "Live - Work Premises, Tong Farm, Tonbridge, TN12 7HS",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015855622592",
+      "error": null
+    },
+    {
+      "id": "cc08561b-14ea-4a7b-bde5-e26ee34196ed",
+      "name": "Lodge Road, Staplehurst, TN12 0RX",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "1ad21120-d61c-43f3-99b1-adadd6f99ba8",
+      "name": "Lonsdale Gate, Tunbridge Wells, TN1 1NU",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "0fc127d1-c14a-402f-a87d-d3406d7e5c86",
+      "name": "Lower Ground Floor",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "88f50955-967d-461a-b40e-daf5a5d0cd30",
+      "name": "Lower Ground Floor",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015863786737",
+      "error": null
+    },
+    {
+      "id": "021e14ee-fa2a-476f-98aa-9580d276c7a0",
+      "name": "Maidstone Road, Tonbridge, TN12 6PY",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015865882145",
+      "error": null
+    },
+    {
+      "id": "5c3b66ac-1689-4cfc-bd0e-aa58a3d08778",
+      "name": "Mount Pleasant House, Tunbridge Wells, TN1 1HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_price_pence"
+    },
+    {
+      "id": "961c1ef4-f207-4943-8609-371d71274260",
+      "name": "New Medical / Surgery Premises",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015870302784",
+      "error": null
+    },
+    {
+      "id": "cac6b4dd-a86a-412c-918e-b401054ddc4f",
+      "name": "New offices with Parking, Tong Farm, Tonbridge, TN12 7HS",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015874271280",
+      "error": null
+    },
+    {
+      "id": "7a00df55-b619-4789-b6ca-2fad2bb37a8f",
+      "name": "Norheads House, Westerham, TN16 3GA",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015876368993",
+      "error": null
+    },
+    {
+      "id": "39c5cca0-392f-44aa-9afe-bf127a521eae",
+      "name": "Pantiles Chambers, Tunbridge Wells, TN1 1XP",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "cba1d421-bc6b-4f61-8397-acb316549922",
+      "name": "Part Fourth Floor (1,448 sq ft), Mount Pleasant House, Tunbridge Wells, TN1 1HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015880787280",
+      "error": null
+    },
+    {
+      "id": "e9cb6436-6d02-4549-ac31-2c4ef51aeecd",
+      "name": "Part Fourth Floor (2,596 sq ft), Mount Pleasant House, Tunbridge Wells",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015893144416",
+      "error": null
+    },
+    {
+      "id": "a5106d35-7fab-4e36-9288-4df498f782c6",
+      "name": "Petts Cottage, Rotherfield, TN6 3LL",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "2ab78c72-994f-4a2d-ad58-722b643f30ae",
+      "name": "Plot 6",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015897566048",
+      "error": null
+    },
+    {
+      "id": "268781ba-7cea-43b8-8cfe-9e191d23caea",
+      "name": "Priory Shopping Centre, Dartford, DA1 2HS",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "8b68e7ed-fe5d-4616-9af9-1b1ebea44907",
+      "name": "Riverside House, Tonbridge, TN9 1EP",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "6f0c5687-f726-41ed-aaed-114b50068bfe",
+      "name": "Second Floor Offices / Stores",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "57a667cf-229d-4a6a-8bc6-71a736d092d0",
+      "name": "Second Floor, Mount Pleasant House, Tunbridge Wells, TN1 1HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "0a0362f4-0180-4542-8655-831dbbc0f7fc",
+      "name": "Secure hard standing surfaced yards",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "b9275497-1452-4e34-a840-e223641ced4d",
+      "name": "SERVICED OFFICES / CO-WORKING - Town Hall, Tunbridge Wells, TN1 1RS",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "43efe707-9cb6-4239-82c1-190f5e327087",
+      "name": "Serviced Offices In Crowborough - From Single To 12 Person",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "3256eb91-5450-40a2-9f7e-ad977ada01ff",
+      "name": "Shop 1, Abacus House, Hawkhurst, TN18 4AR",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "5daa6bf9-ce0c-4f73-a3e0-0ed7f7471a8f",
+      "name": "Shoreham Goods Yard",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "b9065962-3800-45f9-87a3-210518ce3a36",
+      "name": "South Lodge, Bullen Court Business Centre, East Peckham, TN12 5LX",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "09780ea4-8952-42c9-8060-4b58b211fdfe",
+      "name": "Stafford House, Tonbridge, TN9 1HG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "9dd8f980-2bed-4222-87cb-d0fa91b5ff07",
+      "name": "Storage Compound B, Forstal Farm Business Park, Tunbridge Wells, TN3 8AG",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "134f7440-b35d-4296-a1c8-556a2836dada",
+      "name": "Storage King Business Centre, Tunbridge Wells, TN2 3EY",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "41de3166-5a70-49dc-9133-f1f2258771d0",
+      "name": "The Crown",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "efb7649b-e880-44f9-aba0-efd0b273afba",
+      "name": "The Crown, Sevenoaks, TN15 0AJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "7ea354e9-53fb-48c8-8bed-8db869081bac",
+      "name": "The Hop Pole",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "b43200f1-5a50-445c-826d-b7d92c0856c3",
+      "name": "The Old Post Office, Hawkhurst, TN18 4AA",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "9d70c75b-b954-470e-a880-f39ce16d59ba",
+      "name": "The Studio, Tunbridge Wells, TN2 4HS",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "a4fe6db4-7e1a-49d9-babf-5263ecce7da5",
+      "name": "Third Floor, 45 High Street, Tunbridge Wells, TN1 1XL",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "902a665f-57b8-4522-adeb-2beb1465f3f9",
+      "name": "Unit 10, Pickhill Business Centre, Tenterden, TN30 7LZ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "36dcaf9a-5681-447e-afaa-ee0631ddadba",
+      "name": "Unit 10, Spa Trade Park, Tunbridge Wells, TN2 3EN",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "308a193c-6970-4da5-ae3c-2dc04614bbb7",
+      "name": "Unit 10, Tonbridge, TN9 1RA",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "8baf341b-b56c-40ef-a430-66b57a327913",
+      "name": "Unit 15, Tonbridge, TN12 6BE",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "d595dc50-e643-43fe-b5d3-325b7c8f7d7c",
+      "name": "Unit 19, Tonbridge, TN9 1QF",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015937412081",
+      "error": null
+    },
+    {
+      "id": "e7b7132a-5e6d-48a3-a887-315638c54aaa",
+      "name": "Unit 2",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "7102d16a-4efa-4d3d-af37-0bd82cbce994",
+      "name": "Unit 2, Enterprise Centre, Tunbridge Wells, TN2 3DR",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "a3573550-2b0a-4f62-9753-e5e69025db68",
+      "name": "Unit 2, Tonbridge, TN9 1QG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015943702417",
+      "error": null
+    },
+    {
+      "id": "8aa6cf26-733c-429b-b5ac-a4bf1852aeba",
+      "name": "Unit 21, Colebrook Industrial Estate, Tunbridge Wells, TN2 3DG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "39665ba0-b327-458f-bf48-c36e4f0b06a1",
+      "name": "Unit 22, Tunbridge Wells, TN2 3EF",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015947673552",
+      "error": null
+    },
+    {
+      "id": "bdab03f6-a5c4-4385-b9a4-5e060dac8678",
+      "name": "Unit 23, Colebrook Industrial Estate, Tunbridge Wells, TN2 3DG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "d99dc2cd-083d-4a81-b224-c57ffbbd6b53",
+      "name": "Unit 2b, Hammonds Farm, Goudhurst, TN17 1EU",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015952090273",
+      "error": null
+    },
+    {
+      "id": "5977e30f-ec94-4e56-ab53-db821455b84b",
+      "name": "Unit 3, Colebrook Industrial Estate, Tunbridge Wells, TN2 3DG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015953962289",
+      "error": null
+    },
+    {
+      "id": "ae7d9ba7-0f64-4a90-bd77-fc44ec3f1925",
+      "name": "Unit 3, Tonbridge, TN9 1QG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015958155472",
+      "error": null
+    },
+    {
+      "id": "3cfe27e7-4f7f-4e18-b6f6-e4eac7a7e895",
+      "name": "Unit 6, Colebrook Industrial Estate, Tunbridge Wells, TN2 3DG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "111fa470-421d-42c5-ab0f-57f256e5f1a4",
+      "name": "Unit 6, Hammonds Farm, Goudhurst, TN17 1EU",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015962351601",
+      "error": null
+    },
+    {
+      "id": "af84f71c-83ef-4a19-96c4-b4bc202635e7",
+      "name": "Unit 8, Deacon Trading Estate, Tonbridge",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "53ad1a53-bfc8-4261-b9f3-86ce995916f5",
+      "name": "Unit 9 & 10",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015966769297",
+      "error": null
+    },
+    {
+      "id": "e452221c-7851-4c5d-970b-814ca5173768",
+      "name": "Unit 9, Deacon Trading Estate, Tonbridge, TN9 1SU",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "d0999276-2e3f-4662-a2f1-ae2a537a1113",
+      "name": "Unit 9, Tonbridge, TN9 1GN",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "5b47614f-ff9d-4e17-a5c6-96273a4abe1d",
+      "name": "Unit A5, Speldhurst Business Park, Tunbridge Wells, TN3 0AQ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770015972838673",
+      "error": null
+    },
+    {
+      "id": "3d73acaa-3ff9-40ac-9179-8de0c56c45bc",
+      "name": "Unit A6, Speldhurst Business Park, Speldhurst, TN3 0AQ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "1b628e67-7868-49d3-a41a-2d42185a1e02",
+      "name": "Unit B, The Dales Building, Lamberhurst, TN3 8AG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "e448b912-28b5-436b-aaf4-c05b6db3cd44",
+      "name": "Unit B1, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "fe0317db-1d89-47a9-91d6-214c470845f8",
+      "name": "Unit B10, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "c6570b1c-e161-4552-95b2-fc31e800f030",
+      "name": "Unit B11, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "960e9ec5-4061-4a8e-9081-f20928c5592a",
+      "name": "Unit B12, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "f7a13200-12be-44ab-ad17-9a114197c125",
+      "name": "Unit B13, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "b3ae1792-3b4a-4c5b-8f04-382c902e1771",
+      "name": "Unit B18, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "37075e58-e036-4c29-b184-3d5e21c39f6d",
+      "name": "Unit B19, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "23471994-7ab7-41b0-9399-c1297c76e505",
+      "name": "Unit B2, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "326e399e-f099-4dbf-b72c-7370f0010be7",
+      "name": "Unit B20, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "665929b5-c6db-4b14-8e1a-34713375c543",
+      "name": "Unit B21, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "c27dd57c-b953-4c68-a323-e09c3cd156c9",
+      "name": "Unit B4, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "59f9b5fe-7cc7-4078-b334-09ee9155491d",
+      "name": "Unit B5, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "86201bc6-2ef1-4ff9-8c3f-32b351aab636",
+      "name": "Unit B6, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "df9eeaef-09ef-4125-8cae-ef328e59a830",
+      "name": "Unit B7, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "1318e11f-d958-4588-8395-4f2618cc3fcc",
+      "name": "Unit B8, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "eb012251-9b68-42fb-86c7-363e64707084",
+      "name": "Unit B9, Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence, asking_rent_pence"
+    },
+    {
+      "id": "d19a26e1-be52-448c-a9df-78dba5fd1c40",
+      "name": "Units 5 & 8, Forstal Farm Business Park, Lamberhurst, TN3 8AG",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "3214c204-67b7-41b6-9cb7-ecb02a5dfc42",
+      "name": "Units 8 & 9, Deacon Trading Estate, Tonbridge, TN9 1SU",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "cda82bc1-46cd-4ca1-a676-5c91aab739e5",
+      "name": "Units C, D & E (Rear Office), Lamberhurst Vineyard, Tunbridge Wells, TN3 8ER",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "999ed441-480a-4ec5-aaa3-62e8b722c1cc",
+      "name": "Upper Hayesden Lane, Tonbridge, TN11 8AA",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "b34edb11-fba3-4e85-b2a0-f1e326ffd72c",
+      "name": "Weald Business Centre",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Missing Rightmove commercial fields: asking_rent_pence"
+    },
+    {
+      "id": "f4f84de8-798a-4a2c-8131-67bcfee408a6",
+      "name": "Weald Court, Tonbridge, TN11 9HL",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "c74ac0a1-2b8a-4861-83bb-61e18a665e94",
+      "name": "Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    },
+    {
+      "id": "c8e960ca-6917-48f6-9843-30d4fb3382f3",
+      "name": "Yard",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (429): \n            {\"message\":\"API rate limit exceeded\"}\n        "
+    }
+  ]
+}

@@ -22,6 +22,8 @@ export class InvitationsPageObject {
     invites: Array<{
       email: string;
       role: string;
+      firstName?: string;
+      lastName?: string;
     }>,
   ) {
     const form = this.getInviteForm();
@@ -36,15 +38,24 @@ export class InvitationsPageObject {
       console.log(`Inviting ${invite.email} with role ${invite.role}...`);
 
       const nth = index + 1;
+      const item = `[data-test="invite-member-form-item"]:nth-child(${nth})`;
 
       await this.page.fill(
-        `[data-test="invite-member-form-item"]:nth-child(${nth}) [data-test="invite-email-input"]`,
+        `${item} [data-test="invite-first-name-input"]`,
+        invite.firstName ?? 'Invite',
+      );
+
+      await this.page.fill(
+        `${item} [data-test="invite-last-name-input"]`,
+        invite.lastName ?? `Member${nth}`,
+      );
+
+      await this.page.fill(
+        `${item} [data-test="invite-email-input"]`,
         invite.email,
       );
 
-      await this.page.click(
-        `[data-test="invite-member-form-item"]:nth-child(${nth}) [data-test="role-selector-trigger"]`,
-      );
+      await this.page.click(`${item} [data-test="role-selector-trigger"]`);
 
       await this.page.click(`[data-test="role-option-${invite.role}"]`);
 

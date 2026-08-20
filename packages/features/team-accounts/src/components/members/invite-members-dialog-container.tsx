@@ -26,6 +26,7 @@ import {
   FormMessage,
 } from '@kit/ui/form';
 import { If } from '@kit/ui/if';
+import { Input } from '@kit/ui/input';
 import {
   InputGroup,
   InputGroupAddon,
@@ -47,6 +48,7 @@ import {
   TooltipTrigger,
 } from '@kit/ui/tooltip';
 import { Trans } from '@kit/ui/trans';
+import { cn } from '@kit/ui/utils';
 
 import { InviteMembersSchema } from '../../schema/invite-members.schema';
 import { createInvitationsAction } from '../../server/actions/team-invitations-server-actions';
@@ -118,7 +120,10 @@ export function InviteMembersDialogContainer({
     <Dialog open={isOpen} onOpenChange={setIsOpen} modal>
       <DialogTrigger asChild>{children}</DialogTrigger>
 
-      <DialogContent onInteractOutside={(e) => e.preventDefault()}>
+      <DialogContent
+        className="sm:max-w-xl"
+        onInteractOutside={(e) => e.preventDefault()}
+      >
         <DialogHeader>
           <DialogTitle>
             <Trans i18nKey={'teams:inviteMembersHeading'} />
@@ -277,6 +282,8 @@ function InviteMembersForm({
 }: {
   onSubmit: (data: {
     invitations: {
+      firstName: string;
+      lastName: string;
       email: string;
       role: string;
       projectId?: string | null;
@@ -313,191 +320,246 @@ function InviteMembersForm({
         data-test={'invite-members-form'}
         onSubmit={form.handleSubmit(onSubmit)}
       >
-        <div className="flex flex-col gap-y-2.5">
+        <div className="flex flex-col gap-y-4">
           {fieldArray.fields.map((field, index) => {
+            const firstNameInputName =
+              `invitations.${index}.firstName` as const;
+            const lastNameInputName = `invitations.${index}.lastName` as const;
             const emailInputName = `invitations.${index}.email` as const;
             const roleInputName = `invitations.${index}.role` as const;
             const projectInputName = `invitations.${index}.projectId` as const;
             const seatKindInputName = `invitations.${index}.seatKind` as const;
+            const seatKind = form.watch(seatKindInputName) ?? 'billable';
 
             return (
-              <div data-test={'invite-member-form-item'} key={field.id}>
-                <div className={'flex items-center gap-x-2'}>
-                  <InputGroup className={'bg-background min-w-0 flex-1'}>
-                    <InputGroupAddon align="inline-start">
-                      <Mail className="h-4 w-4" />
-                    </InputGroupAddon>
-
+              <div
+                data-test={'invite-member-form-item'}
+                key={field.id}
+                className={cn(
+                  'flex flex-col gap-2.5',
+                  index > 0 && 'border-border/60 border-t pt-4',
+                )}
+              >
+                <div className="flex items-start gap-2">
+                  <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 sm:grid-cols-2">
                     <FormField
-                      name={emailInputName}
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="min-w-0 flex-1">
-                            <FormControl>
-                              <InputGroupInput
-                                data-test={'invite-email-input'}
-                                placeholder={t('emailPlaceholder')}
-                                type="email"
-                                required
-                                {...field}
-                              />
-                            </FormControl>
-
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
-                    />
-                  </InputGroup>
-
-                  <FormField
-                    name={roleInputName}
-                    render={({ field }) => {
-                      return (
-                        <FormItem className="shrink-0">
+                      name={firstNameInputName}
+                      render={({ field: nameField }) => (
+                        <FormItem className="min-w-0">
                           <FormControl>
-                            <MembershipRoleSelector
-                              triggerClassName={
-                                'm-0 w-[8.5rem] shrink-0 capitalize'
-                              }
-                              roles={roles}
-                              value={field.value}
-                              onChange={(role) => {
-                                form.setValue(field.name, role);
-                              }}
+                            <Input
+                              data-test="invite-first-name-input"
+                              placeholder={t('firstNamePlaceholder')}
+                              autoComplete="given-name"
+                              required
+                              {...nameField}
                             />
                           </FormControl>
-
                           <FormMessage />
                         </FormItem>
-                      );
-                    }}
+                      )}
+                    />
+
+                    <FormField
+                      name={lastNameInputName}
+                      render={({ field: nameField }) => (
+                        <FormItem className="min-w-0">
+                          <FormControl>
+                            <Input
+                              data-test="invite-last-name-input"
+                              placeholder={t('lastNamePlaceholder')}
+                              autoComplete="family-name"
+                              required
+                              {...nameField}
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant={'ghost'}
+                          size={'icon'}
+                          type={'button'}
+                          className="mt-0.5 shrink-0"
+                          disabled={fieldArray.fields.length <= 1}
+                          data-test={'remove-invite-button'}
+                          aria-label={t('removeInviteButtonLabel')}
+                          onClick={() => {
+                            fieldArray.remove(index);
+                            form.clearErrors([
+                              firstNameInputName,
+                              lastNameInputName,
+                              emailInputName,
+                            ]);
+                          }}
+                        >
+                          <X className={'h-4'} />
+                        </Button>
+                      </TooltipTrigger>
+
+                      <TooltipContent>
+                        {t('removeInviteButtonLabel')}
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
+
+                <FormField
+                  name={emailInputName}
+                  render={({ field: emailField }) => (
+                    <FormItem className="w-full min-w-0">
+                      <FormControl>
+                        <InputGroup className="bg-background w-full">
+                          <InputGroupAddon align="inline-start">
+                            <Mail className="h-4 w-4" />
+                          </InputGroupAddon>
+                          <InputGroupInput
+                            data-test={'invite-email-input'}
+                            placeholder={t('emailPlaceholder')}
+                            type="email"
+                            autoComplete="email"
+                            required
+                            {...emailField}
+                          />
+                        </InputGroup>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div
+                  className={cn(
+                    'grid gap-2',
+                    showSeatKind ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1',
+                  )}
+                >
+                  <FormField
+                    name={roleInputName}
+                    render={({ field: roleField }) => (
+                      <FormItem className="min-w-0">
+                        <FormControl>
+                          <MembershipRoleSelector
+                            triggerClassName="bg-background m-0 w-full capitalize"
+                            roles={roles}
+                            value={roleField.value}
+                            onChange={(role) => {
+                              form.setValue(roleField.name, role);
+                            }}
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
 
                   <If condition={showSeatKind}>
                     <FormField
                       name={seatKindInputName}
-                      render={({ field }) => {
-                        return (
-                          <FormItem className="shrink-0">
-                            <FormControl>
-                              <Select
-                                value={field.value ?? 'billable'}
-                                onValueChange={(value) => {
-                                  form.setValue(
-                                    seatKindInputName,
-                                    value as 'billable' | 'support',
-                                  );
-                                }}
-                              >
-                                <SelectTrigger className="bg-background w-[9.5rem]">
-                                  <SelectValue placeholder="Seat type" />
-                                </SelectTrigger>
-                                <SelectContent className="min-w-[16rem]">
-                                  <SelectItem value="billable">
-                                    <div className="flex flex-col items-start gap-0.5 py-0.5 text-left">
-                                      <span>
-                                        <Trans i18nKey="teams:seatKindBillableLabel" />
-                                      </span>
-                                      <span className="text-muted-foreground text-xs font-normal whitespace-normal">
-                                        <Trans i18nKey="teams:seatKindBillableDescription" />
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                  <SelectItem value="support">
-                                    <div className="flex flex-col items-start gap-0.5 py-0.5 text-left">
-                                      <span>
-                                        <Trans i18nKey="teams:seatKindSupportLabel" />
-                                      </span>
-                                      <span className="text-muted-foreground text-xs font-normal whitespace-normal">
-                                        <Trans i18nKey="teams:seatKindSupportDescription" />
-                                      </span>
-                                    </div>
-                                  </SelectItem>
-                                </SelectContent>
-                              </Select>
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        );
-                      }}
+                      render={({ field: seatField }) => (
+                        <FormItem className="min-w-0">
+                          <FormControl>
+                            <Select
+                              value={seatField.value ?? 'billable'}
+                              onValueChange={(value) => {
+                                form.setValue(
+                                  seatKindInputName,
+                                  value as 'billable' | 'support',
+                                );
+                              }}
+                            >
+                              <SelectTrigger className="bg-background w-full">
+                                <SelectValue placeholder="Seat type">
+                                  <Trans
+                                    i18nKey={
+                                      seatKind === 'support'
+                                        ? 'teams:seatKindSupportLabel'
+                                        : 'teams:seatKindBillableLabel'
+                                    }
+                                  />
+                                </SelectValue>
+                              </SelectTrigger>
+                              <SelectContent className="min-w-[16rem]">
+                                <SelectItem
+                                  value="billable"
+                                  textValue="Billable"
+                                >
+                                  <div className="flex flex-col items-start gap-0.5 py-0.5 text-left">
+                                    <span>
+                                      <Trans i18nKey="teams:seatKindBillableLabel" />
+                                    </span>
+                                    <span className="text-muted-foreground text-xs font-normal whitespace-normal">
+                                      <Trans i18nKey="teams:seatKindBillableDescription" />
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="support" textValue="Support">
+                                  <div className="flex flex-col items-start gap-0.5 py-0.5 text-left">
+                                    <span>
+                                      <Trans i18nKey="teams:seatKindSupportLabel" />
+                                    </span>
+                                    <span className="text-muted-foreground text-xs font-normal whitespace-normal">
+                                      <Trans i18nKey="teams:seatKindSupportDescription" />
+                                    </span>
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
                     />
                   </If>
-
-                  <div className={'flex shrink-0 items-center justify-end'}>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={'ghost'}
-                            size={'icon'}
-                            type={'button'}
-                            disabled={fieldArray.fields.length <= 1}
-                            data-test={'remove-invite-button'}
-                            aria-label={t('removeInviteButtonLabel')}
-                            onClick={() => {
-                              fieldArray.remove(index);
-                              form.clearErrors(emailInputName);
-                            }}
-                          >
-                            <X className={'h-4'} />
-                          </Button>
-                        </TooltipTrigger>
-
-                        <TooltipContent>
-                          {t('removeInviteButtonLabel')}
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
                 </div>
 
                 <If condition={projects.length > 0}>
                   <FormField
                     name={projectInputName}
-                    render={({ field }) => {
-                      return (
-                        <FormItem className="mt-2">
-                          <FormControl>
-                            <Select
-                              value={field.value ?? NO_PROJECT_VALUE}
-                              onValueChange={(value) => {
-                                form.setValue(
-                                  projectInputName,
-                                  value === NO_PROJECT_VALUE ? null : value,
-                                );
-                              }}
+                    render={({ field: projectField }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Select
+                            value={projectField.value ?? NO_PROJECT_VALUE}
+                            onValueChange={(value) => {
+                              form.setValue(
+                                projectInputName,
+                                value === NO_PROJECT_VALUE ? null : value,
+                              );
+                            }}
+                          >
+                            <SelectTrigger
+                              className="bg-background w-full"
+                              data-test="invite-project-selector"
                             >
-                              <SelectTrigger
-                                className="bg-background w-full"
-                                data-test="invite-project-selector"
-                              >
-                                <SelectValue
-                                  placeholder={t('inviteProjectPlaceholder')}
-                                />
-                              </SelectTrigger>
+                              <SelectValue
+                                placeholder={t('inviteProjectPlaceholder')}
+                              />
+                            </SelectTrigger>
 
-                              <SelectContent>
-                                <SelectItem value={NO_PROJECT_VALUE}>
-                                  <Trans i18nKey="teams:inviteProjectNone" />
+                            <SelectContent>
+                              <SelectItem value={NO_PROJECT_VALUE}>
+                                <Trans i18nKey="teams:inviteProjectNone" />
+                              </SelectItem>
+
+                              {projects.map((project) => (
+                                <SelectItem key={project.id} value={project.id}>
+                                  {project.name}
                                 </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </FormControl>
 
-                                {projects.map((project) => (
-                                  <SelectItem
-                                    key={project.id}
-                                    value={project.id}
-                                  >
-                                    {project.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </FormControl>
-
-                          <FormMessage />
-                        </FormItem>
-                      );
-                    }}
+                        <FormMessage />
+                      </FormItem>
+                    )}
                   />
                 </If>
               </div>
@@ -542,13 +604,14 @@ function InviteMembersForm({
 
 function createEmptyInviteModel(role: Role = 'staff') {
   return {
+    firstName: '',
+    lastName: '',
     email: '',
     role,
     projectId: null as string | null,
     seatKind: 'billable' as 'billable' | 'support',
   };
 }
-
 function useFetchInvitationsPolicies({
   accountSlug,
   isOpen,

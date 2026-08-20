@@ -64,6 +64,8 @@ export type RightmoveMapperUnit = {
   measurementStandard: string | null;
   sortOrder: number;
   externalId: string | null;
+  askingRentPence: number | null;
+  rentPerSqft: number | null;
 };
 
 export type RightmoveMapperMedia = {
@@ -224,6 +226,38 @@ export function sanitizeRightmoveReference(raw: string): string {
     .replace(/^-|-$/g, '')
     .slice(0, 100);
   return cleaned || 'listing';
+}
+
+/**
+ * Derive a listing-level asking rent (pence / year) from unit rows when the
+ * listing itself has no rent. Prefers explicit unit rents; otherwise
+ * size × £/sqft.
+ */
+export function deriveAskingRentPenceFromUnits(
+  units: Array<
+    Pick<RightmoveMapperUnit, 'askingRentPence' | 'rentPerSqft' | 'sizeSqft'>
+  >,
+): number | null {
+  const explicit = units
+    .map((u) => asOptionalNumber(u.askingRentPence))
+    .filter((v): v is number => v != null && v > 0);
+  if (explicit.length) {
+    return Math.min(...explicit);
+  }
+
+  const fromPsf: number[] = [];
+  for (const unit of units) {
+    const psf = asOptionalNumber(unit.rentPerSqft);
+    const size = asOptionalNumber(unit.sizeSqft);
+    if (psf == null || size == null || psf <= 0 || size <= 0) continue;
+    // rent_per_sqft is stored in pounds; convert to pence / year.
+    fromPsf.push(Math.round(psf * size * 100));
+  }
+  if (fromPsf.length) {
+    return Math.min(...fromPsf);
+  }
+
+  return null;
 }
 
 export function resolveRightmovePropertyReference(
@@ -423,22 +457,26 @@ function buildBuildingPricing(listing: RightmoveMapperListing): {
   const rent = penceToPounds(listing.askingRentPence);
   const price = penceToPounds(listing.askingPricePence);
 
-  // Prefer lettings channel pricing when dual / to-let.
-  if (isLettings && (!isSales || rent != null || hideRent)) {
-    if (hideRent) {
+  // Prefer lettings channel pricing when dual / to-let and we have a rent
+  // (or explicit POA). Pure to-let with no rent → POA. Dual with only a
+  // sale price falls through to the sales branch below.
+  if (isLettings) {
+    if (hideRent || (rent == null && !isSales)) {
       return {
         price: rent ?? price ?? 0,
         displayQualifier: 'PRICE_ON_APPLICATION',
         frequency: mapRentFrequency(listing.rentFrequency) ?? 'YEARLY',
       };
     }
-    return {
-      price: rent ?? 0,
-      frequency: mapRentFrequency(listing.rentFrequency) ?? 'YEARLY',
-    };
+    if (rent != null) {
+      return {
+        price: rent,
+        frequency: mapRentFrequency(listing.rentFrequency) ?? 'YEARLY',
+      };
+    }
   }
 
-  if (hidePrice) {
+  if (hidePrice || (isSales && price == null)) {
     return {
       price: price ?? rent ?? 0,
       displayQualifier: 'PRICE_ON_APPLICATION',
@@ -546,7 +584,9 @@ export function mapListingMediaToRightmove(
     const url = item.url?.trim();
     if (!url || !/^https?:\/\//i.test(url)) continue;
     const label = item.fileName ?? undefined;
-    const order = item.sortOrder;
+    // Temporary placeholder — Rightmove requires unique 1-based order
+    // *within each media type*, not the shared listing sort_order.
+    const order = 0;
 
     if (item.mediaType === 'floorplan') {
       const asset = mediaAsset(url, order, label);
@@ -580,12 +620,15 @@ export function mapListingMediaToRightmove(
     }
   }
 
+  const withUniqueOrder = (assets: RightmoveMediaAsset[]) =>
+    assets.map((asset, index) => ({ ...asset, order: index + 1 }));
+
   const result: RightmoveMedia = {};
-  if (photos.length) result.photos = photos;
-  if (floorPlans.length) result.floorPlans = floorPlans;
-  if (epcs.length) result.epcs = epcs;
-  if (brochures.length) result.brochures = brochures;
-  if (virtualTours.length) result.virtualTours = virtualTours;
+  if (photos.length) result.photos = withUniqueOrder(photos);
+  if (floorPlans.length) result.floorPlans = withUniqueOrder(floorPlans);
+  if (epcs.length) result.epcs = withUniqueOrder(epcs);
+  if (brochures.length) result.brochures = withUniqueOrder(brochures);
+  if (virtualTours.length) result.virtualTours = withUniqueOrder(virtualTours);
 
   return Object.keys(result).length ? result : undefined;
 }

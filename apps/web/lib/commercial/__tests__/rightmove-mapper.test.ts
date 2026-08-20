@@ -183,10 +183,50 @@ describe('mapListingMediaToRightmove', () => {
     expect(media?.brochures).toEqual([
       {
         url: 'https://app.ozer.so/api/commercial/listing-media/702cafa5-a1bf-4a80-b7be-f498fbc52f33/brochure-v1.pdf',
-        order: 2,
+        order: 1,
         description: 'brochure.pdf',
       },
     ]);
+  });
+
+  it('assigns unique 1-based order within each media type', () => {
+    const media = mapListingMediaToRightmove([
+      {
+        mediaType: 'epc',
+        mimeType: 'application/pdf',
+        fileName: 'epc-a.pdf',
+        url: 'https://app.ozer.so/api/commercial/listing-media/aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa/epc.pdf',
+        sortOrder: 0,
+        isCover: false,
+      },
+      {
+        mediaType: 'epc',
+        mimeType: 'application/pdf',
+        fileName: 'epc-b.pdf',
+        url: 'https://app.ozer.so/api/commercial/listing-media/bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb/epc.pdf',
+        sortOrder: 0,
+        isCover: false,
+      },
+      {
+        mediaType: 'brochure',
+        mimeType: 'application/pdf',
+        fileName: 'brochure-a.pdf',
+        url: 'https://app.ozer.so/api/commercial/listing-media/cccccccc-cccc-cccc-cccc-cccccccccccc/brochure.pdf',
+        sortOrder: 0,
+        isCover: false,
+      },
+      {
+        mediaType: 'brochure',
+        mimeType: 'application/pdf',
+        fileName: 'brochure-b.pdf',
+        url: 'https://app.ozer.so/api/commercial/listing-media/dddddddd-dddd-dddd-dddd-dddddddddddd/brochure.pdf',
+        sortOrder: 0,
+        isCover: false,
+      },
+    ]);
+
+    expect(media?.epcs?.map((a) => a.order)).toEqual([1, 2]);
+    expect(media?.brochures?.map((a) => a.order)).toEqual([1, 2]);
   });
 });
 

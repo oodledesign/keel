@@ -1,0 +1,730 @@
+{
+  "dryRun": false,
+  "environment": "test",
+  "accountId": "c4e7c6b1-e4f0-43ee-a768-6b3782e50d62",
+  "okCount": 74,
+  "errCount": 6,
+  "count": 80,
+  "results": [
+    {
+      "id": "843de214-9bbc-4138-85ea-bee6d328a85d",
+      "name": "25 The Pantiles, Tunbridge Wells, TN2 5TD",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016314900449",
+      "error": null
+    },
+    {
+      "id": "01f50515-62fe-4e34-9990-97c8ba70ed90",
+      "name": "2b",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016335868880",
+      "error": null
+    },
+    {
+      "id": "c0211ec9-e308-49e6-83fb-bbf7365bbeda",
+      "name": "2B Valley Industries, Tonbridge, TN11 0AH",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016342161473",
+      "error": null
+    },
+    {
+      "id": "c4c6234d-b5cf-4abf-aaa2-3ef9d87676d3",
+      "name": "2nd Floor Office, Chapman House, Tunbridge Wells, TN2 3EF",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016348453008",
+      "error": null
+    },
+    {
+      "id": "39996779-7242-40b4-93b3-e04376bc2206",
+      "name": "3 & 5, Church Street, Edenbridge, TN8 5BD",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016354517249",
+      "error": null
+    },
+    {
+      "id": "f661e6d0-798d-4284-873c-a0b2b9a6d664",
+      "name": "3 Church Street, Edenbridge, TN8 5BD",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016361036400",
+      "error": null
+    },
+    {
+      "id": "c79e556f-c979-478c-9183-f94c552900d5",
+      "name": "3 The Broadway, Tonbridge, TN11 0BZ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016367102432",
+      "error": null
+    },
+    {
+      "id": "f2439de0-da05-4b8f-a6a3-0ab44d90be7d",
+      "name": "3,4,5,6 High Street, Hadlow, TN11 0BZ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016371523488",
+      "error": null
+    },
+    {
+      "id": "1fccf0b5-ff19-4e83-9857-d6f365e7bfd1",
+      "name": "31 Commercial Road, Paddock Wood, TN12 6EN",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016377587456",
+      "error": null
+    },
+    {
+      "id": "7593c2be-2be8-4cc7-8957-d8d47bd2bce9",
+      "name": "32 Monson Road, Tunbridge Wells, TN1 1LU",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "f545bbbd-6fe9-4cd0-bd0f-3d7c71fdb80b",
+      "name": "35 High Brooms Road, Tunbridge Wells, TN4 9DA",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016388296993",
+      "error": null
+    },
+    {
+      "id": "527bbf03-a38a-4445-91e1-fe726a21b2f6",
+      "name": "38 Eldon Way, Paddock Wood, TN12 6BE",
+      "status": "under_offer",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "8dfbac92-2556-440f-9286-efbef235886a",
+      "name": "39 High Street, Tonbridge, TN9 1SQ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016398559504",
+      "error": null
+    },
+    {
+      "id": "0833e354-e6cb-4cd0-a9fa-d9035a936e0f",
+      "name": "4 Commercial Road, Tonbridge, TN12 6EL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016405077537",
+      "error": null
+    },
+    {
+      "id": "b97d6dd4-4f1d-4411-8a1b-ae08b527f94c",
+      "name": "4-6 The Broadway, Tonbridge, TN11 0BZ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016409043105",
+      "error": null
+    },
+    {
+      "id": "f1d46987-bdbe-40cd-ab85-7a63ce63b00d",
+      "name": "43 High Street, Tunbridge Wells, TN1 1XL",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016415559681",
+      "error": null
+    },
+    {
+      "id": "203367c6-bbe8-4340-afc6-37fc2acb3b7d",
+      "name": "45 High Street, Tunbridge Wells, TN1 1XL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016421851841",
+      "error": null
+    },
+    {
+      "id": "f12e8731-c56e-45e8-bc04-5a748e3ad2d8",
+      "name": "47 London Road, Tunbridge Wells, TN4 0PB",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016427917328",
+      "error": null
+    },
+    {
+      "id": "87e61c2c-5b88-4481-9ec1-a274edb72316",
+      "name": "49 High Street, Tunbridge Wells, TN1 1XU",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016432337969",
+      "error": null
+    },
+    {
+      "id": "c60953e7-6a41-4664-ad83-2e8b59a223df",
+      "name": "49 London Road, Tunbridge Wells, TN1 1DT",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016438631760",
+      "error": null
+    },
+    {
+      "id": "ac6dc915-ef81-47a3-bad4-2fe4fe19d705",
+      "name": "49 London Road, Tunbridge Wells, TN1 1DT",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016444920896",
+      "error": null
+    },
+    {
+      "id": "0875d705-f0ce-443b-8bac-1e67395daa36",
+      "name": "4B valley industries",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016450987008",
+      "error": null
+    },
+    {
+      "id": "1a5b7dbb-89a3-401e-b7c2-15a2c21972d4",
+      "name": "4B Valley Industries, Tonbridge, TN11 0AG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016455409360",
+      "error": null
+    },
+    {
+      "id": "75ee073d-0ecb-4491-80a9-6c7560a2e60a",
+      "name": "5 Angel Walk, Tonbridge, TN9 1TJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016765562001",
+      "error": null
+    },
+    {
+      "id": "01dacf09-3552-4046-8c7e-6fc6f54351d4",
+      "name": "57 High Brooms Road, Tunbridge Wells, TN4 9BW",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016784435281",
+      "error": null
+    },
+    {
+      "id": "f4e867a4-e4f4-4c7e-aac2-89df369ce675",
+      "name": "60 Mount Pleasant Road, Tunbridge Wells, TN1 1RB",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016788630240",
+      "error": null
+    },
+    {
+      "id": "4789e05d-bdf2-410a-ab2c-95d1f27b3d4a",
+      "name": "63 High Street, Tenterden, TN30 6BD",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016795144208",
+      "error": null
+    },
+    {
+      "id": "ef557af4-ddd8-49a5-973c-88ff75afdfe8",
+      "name": "63A High Street, Tenterden, TN30 6BD",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016801212097",
+      "error": null
+    },
+    {
+      "id": "e2e7bcb0-a744-4c19-ab61-db634f9c6f2e",
+      "name": "64 Calverley Road, Tunbridge Wells, TN1 2UG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016807727904",
+      "error": null
+    },
+    {
+      "id": "3737f21b-ec0b-4ef0-b0dc-b517e069aac6",
+      "name": "65-67 St. Johns Road, Tunbridge Wells, TN4 9TT",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016811699441",
+      "error": null
+    },
+    {
+      "id": "227fb9fc-94e2-42ed-b5e3-7ea664d4b8ef",
+      "name": "7 Vale Avenue, Tunbridge Wells, TN1 1DJ",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "f485dc59-fd09-4e32-8a17-0b61cbe83fc5",
+      "name": "71 Calverley Road, Tunbridge Wells, TN1 2UY",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016824507409",
+      "error": null
+    },
+    {
+      "id": "1461a016-2837-4419-bb2b-427e908e1c93",
+      "name": "77-81 High Street, Tonbridge, TN9 1RX",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016828699377",
+      "error": null
+    },
+    {
+      "id": "54609cd9-a397-41af-8119-159f3b460bde",
+      "name": "77-81 High Street, Tonbridge, TN9 1RX",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016834765697",
+      "error": null
+    },
+    {
+      "id": "ef92dc33-f632-4bf6-9f58-d7a810721d91",
+      "name": "82 London Road, Tunbridge Wells, TN4 0PP",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "404861fb-6e7d-4030-8c26-d03a3dbe681b",
+      "name": "89 High Street, Tonbridge, TN9 1DR",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "caadc22a-18e6-41db-b505-39eec13a854d",
+      "name": "90-92 Mount Pleasant Road, Tunbridge Wells, TN1 1RT",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016849446832",
+      "error": null
+    },
+    {
+      "id": "6cfaffa7-0d92-41fe-a674-002c783c7e34",
+      "name": "Chequers Barn, Edenbridge, TN8 7PD",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016855737825",
+      "error": null
+    },
+    {
+      "id": "cfe854c1-e099-4824-94e7-c3891f06da5f",
+      "name": "Chequers Barn, Edenbridge, TN8 7PD",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016862253920",
+      "error": null
+    },
+    {
+      "id": "88e96aa4-b257-4378-adea-d88e58a3d4e8",
+      "name": "Crane Chambers, 58 High Street, Cranbrook, TN17 3DL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016868322337",
+      "error": null
+    },
+    {
+      "id": "8cb5c1d7-3ddf-41fc-b984-f8ea97fda9bd",
+      "name": "Douglas House, Tonbridge, TN9 2RH",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016872739889",
+      "error": null
+    },
+    {
+      "id": "2e76b4b9-6f30-4f5b-82df-a33908efea35",
+      "name": "First Floor",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016878805312",
+      "error": null
+    },
+    {
+      "id": "8985a319-a966-4a2e-940f-6333bff9db65",
+      "name": "First Floor Offices",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016885322801",
+      "error": null
+    },
+    {
+      "id": "9ce53d05-9fbf-4626-a3d1-3d3ea0330c2a",
+      "name": "First Floor, Mount Pleasant House, Tunbridge Wells, TN1 1HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016891613744",
+      "error": null
+    },
+    {
+      "id": "3141333b-69e8-4a7b-b3cb-11a782561e0a",
+      "name": "Flexible Space / Use, Goudhurst, TN17 1EU",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016897680080",
+      "error": null
+    },
+    {
+      "id": "b6ca992d-95b1-470e-9110-35ccccf0a8a0",
+      "name": "GF Office",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016904197616",
+      "error": null
+    },
+    {
+      "id": "084a3ff2-86a8-4771-bea3-e8911849db1d",
+      "name": "Hard Standing Surfaced Yard",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770016920748081",
+      "error": null
+    },
+    {
+      "id": "a604a18d-2875-4879-a6a7-31850f429bd0",
+      "name": "Harmony Centre",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017090845937",
+      "error": null
+    },
+    {
+      "id": "c12581aa-7544-438f-8421-47380c9ea238",
+      "name": "Hildenborough, Tonbridge, TN11 8LX",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017096910129",
+      "error": null
+    },
+    {
+      "id": "fac08ae5-0808-4bab-adc0-f260843007e3",
+      "name": "Hop Drying Building 2, Forstal Farm Business park, Tunbridge Wells, TN3 8AG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017103200257",
+      "error": null
+    },
+    {
+      "id": "a5106d35-7fab-4e36-9288-4df498f782c6",
+      "name": "Petts Cottage, Rotherfield, TN6 3LL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017109718608",
+      "error": null
+    },
+    {
+      "id": "8b68e7ed-fe5d-4616-9af9-1b1ebea44907",
+      "name": "Riverside House, Tonbridge, TN9 1EP",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017116009744",
+      "error": null
+    },
+    {
+      "id": "6f0c5687-f726-41ed-aaed-114b50068bfe",
+      "name": "Second Floor Offices / Stores",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017120204625",
+      "error": null
+    },
+    {
+      "id": "57a667cf-229d-4a6a-8bc6-71a736d092d0",
+      "name": "Second Floor, Mount Pleasant House, Tunbridge Wells, TN1 1HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017126497009",
+      "error": null
+    },
+    {
+      "id": "b9275497-1452-4e34-a840-e223641ced4d",
+      "name": "SERVICED OFFICES / CO-WORKING - Town Hall, Tunbridge Wells, TN1 1RS",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/769975642732001",
+      "error": null
+    },
+    {
+      "id": "3256eb91-5450-40a2-9f7e-ad977ada01ff",
+      "name": "Shop 1, Abacus House, Hawkhurst, TN18 4AR",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017138852480",
+      "error": null
+    },
+    {
+      "id": "5daa6bf9-ce0c-4f73-a3e0-0ed7f7471a8f",
+      "name": "Shoreham Goods Yard",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017145145281",
+      "error": null
+    },
+    {
+      "id": "b9065962-3800-45f9-87a3-210518ce3a36",
+      "name": "South Lodge, Bullen Court Business Centre, East Peckham, TN12 5LX",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017149562976",
+      "error": null
+    },
+    {
+      "id": "09780ea4-8952-42c9-8060-4b58b211fdfe",
+      "name": "Stafford House, Tonbridge, TN9 1HG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017155856801",
+      "error": null
+    },
+    {
+      "id": "9dd8f980-2bed-4222-87cb-d0fa91b5ff07",
+      "name": "Storage Compound B, Forstal Farm Business Park, Tunbridge Wells, TN3 8AG",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017162148497",
+      "error": null
+    },
+    {
+      "id": "134f7440-b35d-4296-a1c8-556a2836dada",
+      "name": "Storage King Business Centre, Tunbridge Wells, TN2 3EY",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017166118529",
+      "error": null
+    },
+    {
+      "id": "41de3166-5a70-49dc-9133-f1f2258771d0",
+      "name": "The Crown",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770008221988033",
+      "error": null
+    },
+    {
+      "id": "efb7649b-e880-44f9-aba0-efd0b273afba",
+      "name": "The Crown, Sevenoaks, TN15 0AJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017178926576",
+      "error": null
+    },
+    {
+      "id": "7ea354e9-53fb-48c8-8bed-8db869081bac",
+      "name": "The Hop Pole",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017184993056",
+      "error": null
+    },
+    {
+      "id": "b43200f1-5a50-445c-826d-b7d92c0856c3",
+      "name": "The Old Post Office, Hawkhurst, TN18 4AA",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017189187537",
+      "error": null
+    },
+    {
+      "id": "9d70c75b-b954-470e-a880-f39ce16d59ba",
+      "name": "The Studio, Tunbridge Wells, TN2 4HS",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017195477792",
+      "error": null
+    },
+    {
+      "id": "a4fe6db4-7e1a-49d9-babf-5263ecce7da5",
+      "name": "Third Floor, 45 High Street, Tunbridge Wells, TN1 1XL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017201994881",
+      "error": null
+    },
+    {
+      "id": "902a665f-57b8-4522-adeb-2beb1465f3f9",
+      "name": "Unit 10, Pickhill Business Centre, Tenterden, TN30 7LZ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017205963617",
+      "error": null
+    },
+    {
+      "id": "308a193c-6970-4da5-ae3c-2dc04614bbb7",
+      "name": "Unit 10, Tonbridge, TN9 1RA",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017212479329",
+      "error": null
+    },
+    {
+      "id": "8baf341b-b56c-40ef-a430-66b57a327913",
+      "name": "Unit 15, Tonbridge, TN12 6BE",
+      "status": "marketing",
+      "ok": false,
+      "publicationStatus": "error",
+      "externalUrl": null,
+      "error": "Rightmove PUT failed (400): Bad Request — Validation error occurred."
+    },
+    {
+      "id": "e7b7132a-5e6d-48a3-a887-315638c54aaa",
+      "name": "Unit 2",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017222965265",
+      "error": null
+    },
+    {
+      "id": "7102d16a-4efa-4d3d-af37-0bd82cbce994",
+      "name": "Unit 2, Enterprise Centre, Tunbridge Wells, TN2 3DR",
+      "status": "under_offer",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017457622496",
+      "error": null
+    },
+    {
+      "id": "3d73acaa-3ff9-40ac-9179-8de0c56c45bc",
+      "name": "Unit A6, Speldhurst Business Park, Speldhurst, TN3 0AQ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017461814305",
+      "error": null
+    },
+    {
+      "id": "1b628e67-7868-49d3-a41a-2d42185a1e02",
+      "name": "Unit B, The Dales Building, Lamberhurst, TN3 8AG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017468331153",
+      "error": null
+    },
+    {
+      "id": "d19a26e1-be52-448c-a9df-78dba5fd1c40",
+      "name": "Units 5 & 8, Forstal Farm Business Park, Lamberhurst, TN3 8AG",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017474399472",
+      "error": null
+    },
+    {
+      "id": "cda82bc1-46cd-4ca1-a676-5c91aab739e5",
+      "name": "Units C, D & E (Rear Office), Lamberhurst Vineyard, Tunbridge Wells, TN3 8ER",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017480913969",
+      "error": null
+    },
+    {
+      "id": "999ed441-480a-4ec5-aaa3-62e8b722c1cc",
+      "name": "Upper Hayesden Lane, Tonbridge, TN11 8AA",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017484883168",
+      "error": null
+    },
+    {
+      "id": "f4f84de8-798a-4a2c-8131-67bcfee408a6",
+      "name": "Weald Court, Tonbridge, TN11 9HL",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017491401489",
+      "error": null
+    },
+    {
+      "id": "c74ac0a1-2b8a-4861-83bb-61e18a665e94",
+      "name": "Yalding Enterprise Park, Yalding, ME18 6HJ",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017497692865",
+      "error": null
+    },
+    {
+      "id": "c8e960ca-6917-48f6-9843-30d4fb3382f3",
+      "name": "Yard",
+      "status": "marketing",
+      "ok": true,
+      "publicationStatus": "published",
+      "externalUrl": "https://www.adftest.rightmove.com/commercial-property/770017501661872",
+      "error": null
+    }
+  ]
+}

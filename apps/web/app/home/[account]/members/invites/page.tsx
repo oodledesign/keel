@@ -88,8 +88,6 @@ async function TeamAccountInvitesPage({ params }: TeamAccountInvitesPageProps) {
     ),
   ]);
 
-  const canManageRoles =
-    account.permissions?.includes('roles.manage') || access.canManageRoles;
   const canManageInvitations =
     account.permissions?.includes('invites.manage') || access.canManageInvites;
   const currentUserRoleHierarchy = account.role_hierarchy_level;
@@ -163,8 +161,8 @@ async function TeamAccountInvitesPage({ params }: TeamAccountInvitesPageProps) {
               <SeatUsageSummary {...seatUsage} />
               <AccountInvitationsTable
                 permissions={{
-                  canUpdateInvitation: canManageRoles,
-                  canRemoveInvitation: canManageRoles,
+                  canUpdateInvitation: canManageInvitations,
+                  canRemoveInvitation: canManageInvitations,
                   currentUserRoleHierarchy,
                 }}
                 invitations={invitations}
